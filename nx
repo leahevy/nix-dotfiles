@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+NAME="nx"
+VERSION="0.0.1"
+
+HELP_MSG=$(
+cat <<EOF
+Usage: $NAME <command> [args...]
+       $NAME --help
+       $NAME --version
+
+Description:
+  The $NAME tool manages home-manager (via Nix) or whole NixOS system.
+
+Commands:
+
+  Configuration:
+    profile <\$1>    # Configures to use profile <\$1>. To revert it remove
+                      the file .nx-profile.conf in the nxcore directory.
+
+
+  Switch Commands:
+    sync            # Sync/deploys the system state.
+    build           # Test build configuration without deploying.
+    gc              # Run the garbage collection.
+    update          # Updates the flake in git (without switching).
+
+
+  NixOS Only:
+    dry             # Tests the configuration without deploying it.
+    test            # Activates the system state without adding it to the
+                      bootloader menu.
+    boot            # Add the configuration to the bootloader without
+                      switching right yet.
+    rollback        # Rollback to the previous configuration.
+    impermanence    # Manage ephemeral root filesystems.
+
+
+  Home-Manager only:
+    news            # Shows recent news.
+
+
+  Folder Commands:
+    config          # Open a shell in the config directory.
+    core            # Open a shell in the core directory.
+    format          # Formats directories with treefmt.
+    exec            # Runs any command in the core directory.
+
+
+  Git Commands:
+    log             # Runs the git log command.
+    diff            # Runs the git diff command.
+    diffc           # Runs the git diff command with --cached.
+    status          # Runs the git status command.
+    commit          # Runs the git commit command.
+    pull            # Runs the git pull command.
+    push            # Runs the git push command.
+    add             # Runs the git add command.
+    addp            # Runs the git add command with --patch.
+    stash           # Runs the git stash command.
+
+
+Options:
+    --help|-h       # Shows this help message.
+    --version       # Shows version information.
+EOF
+)
+
+if [[ "$UID" == 0 ]]; then
+  RED='\033[1;31m'
+  RESET='\033[0m'
+  echo -e "${RED}Error: Do not run directly as root due to config dir resolution${RESET}" >&2
+  exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_PATH="$SCRIPT_DIR"
+SCRIPTS_PATH="$SCRIPT_DIR/scripts/deployment"
+
+source "$SCRIPTS_PATH/../utils/pre-check.sh"
+check_config_directory "help" "deployment"
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || "${1:-}" == "help" ]]; then
+    echo "$HELP_MSG" >&2
+    exit 0
+fi
+
+if [[ "${1:-}" == "--version" ]]; then
+    echo "$NAME version $VERSION" >&2
+    exit 0
+fi
+
+if [[ $# -eq 0 ]]; then
+  if [[ "${ACTUAL_PWD:-$PWD}" == "$(realpath "$NXCORE_DIR")" ]]; then
+    SCRIPT_NAME="status"
+  else
+    SCRIPT_NAME="core"
+  fi
+else
+  SCRIPT_NAME="$1"
+  shift
+fi
+
+SCRIPT_FILE="$SCRIPTS_PATH/$SCRIPT_NAME"
+
+if [[ -e "${SCRIPT_FILE}.sh" ]]; then
+    bash "${SCRIPT_FILE}.sh" "$@"
+elif [[ -e "${SCRIPT_FILE}.py" ]]; then
+    python "${SCRIPT_FILE}.py" "$@"
+else
+    echo -e "${RED}Error: command '${WHITE}${SCRIPT_NAME:-}${RED}' not found or not executable. Try ${WHITE}$NAME --help${RESET}" >&2
+    exit 1
+fi

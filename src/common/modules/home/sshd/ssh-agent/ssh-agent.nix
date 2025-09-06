@@ -1,0 +1,25 @@
+args@{
+  lib,
+  pkgs,
+  pkgs-unstable,
+  funcs,
+  helpers,
+  defs,
+  self,
+  ...
+}:
+{
+  configuration =
+    context@{ config, options, ... }:
+    {
+      services = {
+        ssh-agent.enable = true;
+      };
+
+      home.persistence."${self.persist}" = {
+        directories = [
+          ".ssh"
+        ];
+      };
+    };
+}

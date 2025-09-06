@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: treefmt
+        name: Check code formatting with treefmt
+        entry:  treefmt --ci --fail-on-change
+        language: system
+        types: [nix]
+        pass_filenames: false
+        always_run: true

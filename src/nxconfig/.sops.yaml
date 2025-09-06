@@ -1,0 +1,23 @@
+keys:
+  - &master some-age-key
+  - &gpg-key some-gpg-key
+
+universal_pgp: &universal_pgp [*gpg-key]
+all_age: &all_age [*master]
+
+creation_rules:
+  - path_regex: secrets/.+$
+    key_groups:
+      - pgp: *universal_pgp
+        age: *all_age
+        
+  - path_regex: profiles/(nixos|darwin|home-integrated|home-standalone)/[^/]+/(secrets|files)/.+$
+    key_groups:
+      - pgp: *universal_pgp
+        age: *all_age
+        
+  - path_regex: modules/(system|home)/[^/]+/[^/]+/.+$
+    key_groups:
+      - pgp: *universal_pgp
+        age: *all_age
+

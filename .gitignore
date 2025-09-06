@@ -1,0 +1,4 @@
+/.nx-profile.conf
+/result
+**/profiles/nixos/**/*.nix
+!/templates/profiles/nixos/**/*.nix

@@ -1,0 +1,59 @@
+# vi/vim
+*~
+*.un~
+Session.vim
+.netrwhist
+
+# Emacs
+.\#*
+
+# Thumbnail cache files
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Python
+__pycache__/
+*.py[cod]
+pyrightconfig.json
+pip-log.txt
+.venv
+
+# General
+dist/
+eggs/
+sdist/
+*.egg-info
+*.egg
+*.mo
+.coverage
+.cache
+coverage.xml
+
+# Sphinx documentation
+docs/_build/
+
+# Git bundles
+*.bundle
+
+# Ruby
+.vendor
+.local
+.envrc
+.vscode/
+
+# Direnv
+.envrc*
+.direnv
+
+# Devenv
+.devenv
+
+# Linux files
+nohup.out
+
+# AI
+CLAUDE.md
+.claude

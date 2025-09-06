@@ -1,0 +1,410 @@
+#!/usr/bin/env bash
+
+RED='\033[1;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[1;32m'
+WHITE='\033[1;37m'
+MAGENTA='\033[1;35m'
+BLUE='\033[1;34m'
+CYAN='\033[1;36m'
+GRAY='\033[1;90m'
+RESET='\033[0m'
+
+deployment_script_setup() {
+    local script_name="$1"
+    
+    if [[ -z "${NX_INSTALL_PATH:-}" ]]; then
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[1]}")" && pwd)"
+    else
+        SCRIPT_DIR="${NX_INSTALL_PATH}/scripts/deployment"
+    fi
+    cd "${NXCORE_DIR:-$HOME/.config/nx/nxcore}"
+    
+    if [[ "$UID" == 0 ]]; then
+        echo -e "${RED}Do NOT run as root!${RESET}" >&2
+        exit 1
+    fi
+    
+    perm=$(ls -ld "$PWD" | awk '{print $1}')
+    owner=$(ls -ld "$PWD" | awk '{print $3}')
+    
+    if [[ ! -d $PWD || $perm != drwx------* || $owner != "$USER" ]]; then
+        echo -e "${RED}Permissions of enclosing configuration directory are too open!${RESET}" >&2
+        exit 1
+    fi
+    
+    source "$SCRIPT_DIR/../utils/pre-check.sh"
+    check_config_directory "$script_name" "deployment"
+    
+    export SCRIPT_DIR
+}
+
+parse_common_deployment_args() {
+    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR")
+    
+    while [[ $# -gt 0 ]]; do
+        case "${1:-}" in
+            --offline)
+                EXTRA_ARGS+=("--option" "substitute" "false")
+                shift
+                ;;
+            --show-trace)
+                EXTRA_ARGS+=("--show-trace")
+                shift
+                ;;
+            -*|--*)
+                echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
+                exit 1
+                ;;
+            *)
+                echo -e "${RED}Unknown argument ${WHITE}${1:-}${RESET}"
+                exit 1
+                ;;
+        esac
+    done
+    
+    export EXTRA_ARGS
+}
+
+parse_build_deployment_args() {
+    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR")
+    TIMEOUT=600
+    DRY_RUN=""
+    
+    while [[ $# -gt 0 ]]; do
+        case "${1:-}" in
+            --offline)
+                EXTRA_ARGS+=("--option" "substitute" "false")
+                shift
+                ;;
+            --timeout)
+                TIMEOUT="${2:-3600}"
+                shift 2
+                ;;
+            --dry-run)
+                DRY_RUN="--dry-run"
+                shift
+                ;;
+            -*|--*)
+                echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
+                exit 1
+                ;;
+            *)
+                echo -e "${RED}Unknown argument ${WHITE}${1:-}${RESET}"
+                exit 1
+                ;;
+        esac
+    done
+    
+    export EXTRA_ARGS TIMEOUT DRY_RUN
+}
+
+ensure_nixos_only() {
+    local command_name="$1"
+    if [[ ! -e /etc/NIXOS ]]; then
+        echo -e "${RED}Command '${WHITE}$command_name${RED}' only available on NixOS${RESET}" >&2
+        exit 1
+    fi
+}
+
+ensure_standalone_only() {
+    local command_name="$1"
+    if [[ -e /etc/NIXOS ]]; then
+        echo -e "${RED}Command '${WHITE}$command_name${RED}' only available on Standalone${RESET}" >&2
+        exit 1
+    fi
+}
+
+parse_no_args() {
+    EXTRA_ARGS=()
+    
+    while [[ $# -gt 0 ]]; do
+        case "${1:-}" in
+            -*|--*)
+                echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
+                exit 1
+                ;;
+            *)
+                echo -e "${RED}Unknown argument ${WHITE}${1:-}${RESET}"
+                exit 1
+                ;;
+        esac
+    done
+    
+    export EXTRA_ARGS
+}
+
+simple_deployment_script_setup() {
+    local script_name="$1"
+    
+    if [[ -z "${NX_INSTALL_PATH:-}" ]]; then
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[1]}")" && pwd)"
+    else
+        SCRIPT_DIR="${NX_INSTALL_PATH}/scripts/deployment"
+    fi
+    cd "${NXCORE_DIR:-$HOME/.config/nx/nxcore}"
+    
+    if [[ "$UID" == 0 ]]; then
+        echo -e "${RED}Do NOT run as root!${RESET}" >&2
+        exit 1
+    fi
+    
+    perm=$(ls -ld "$PWD" | awk '{print $1}')
+    owner=$(ls -ld "$PWD" | awk '{print $3}')
+    
+    if [[ ! -d $PWD || $perm != drwx------* || $owner != "$USER" ]]; then
+        echo -e "${RED}Permissions of enclosing configuration directory are too open!${RESET}" >&2
+        exit 1
+    fi
+    
+    export SCRIPT_DIR
+}
+
+ensure_nix_path() {
+  if ! command -v nix >/dev/null 2>&1; then
+    export PATH="/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH"
+    if ! command -v nix >/dev/null 2>&1; then
+      echo -e "${RED}Error: Nix not found in PATH even after adding standard locations${RESET}" >&2
+      echo "Please ensure Nix was installed correctly or run in a new shell" >&2
+      exit 1
+    fi
+  fi
+}
+
+if [[ "${BOOTSTRAP_NEEDS_NIX:-false}" == "true" ]]; then
+  ensure_nix_path
+fi
+
+check_config_directory() {
+    local OPERATION="$1"
+    local CONTEXT="${2:-deployment}"
+    local REQUIRED="${3:-true}"
+    
+    if [[ -f /etc/NIXOS && "$CONTEXT" != "deployment" ]]; then
+        NXCORE_DIR="/nxcore"
+        CONFIG_DIR="/nxconfig"
+        
+        local errors=()
+        [[ -d "$NXCORE_DIR" ]] || errors+=("Core repository not found at /nxcore")
+        [[ -d "$CONFIG_DIR" ]] || errors+=("Config repository not found at /nxconfig")
+        [[ -d "$NXCORE_DIR/.git" ]] || errors+=("Core repository at /nxcore is not a git repository")
+        [[ -d "$CONFIG_DIR/.git" ]] || errors+=("Config repository at /nxconfig is not a git repository")
+        [[ -f "$NXCORE_DIR/flake.nix" ]] || errors+=("Core repository missing flake.nix")
+        [[ -d "$CONFIG_DIR/profiles" ]] || errors+=("Config repository missing profiles directory")
+        
+        if [[ ${#errors[@]} -gt 0 && "$REQUIRED" == "true" ]]; then
+            echo -e "${RED}Error: Live disk setup incomplete for operation '${WHITE}$OPERATION${RED}'${RESET}" >&2
+            echo "" >&2
+            printf "  ${WHITE}- ${RED}%s${RESET}\n" "${errors[@]}" >&2
+            echo "" >&2
+            echo "${RED}Expected live disk setup:${RESET}" >&2
+            echo -e "  ${WHITE}git clone <core-repo> /nxcore${RESET}" >&2
+            echo -e "  ${WHITE}git clone <config-repo> /nxconfig${RESET}" >&2
+            echo "" >&2
+            exit 1
+        fi
+    else
+        NXCORE_DIR="$HOME/.config/nx/nxcore"
+        CONFIG_DIR="$HOME/.config/nx/nxconfig"
+        
+        if [[ ! -d "$CONFIG_DIR" && "$REQUIRED" == "true" ]]; then
+            echo -e "${RED}Error: Config directory not found!${RESET}" >&2
+            echo "" >&2
+            echo -e "Expected path: ${WHITE}$CONFIG_DIR${RESET}" >&2
+            echo -e "Operation '${WHITE}$OPERATION${RESET}' requires access to config data." >&2
+            exit 1
+        fi
+        
+        if [[ ! -d "$CONFIG_DIR" ]]; then
+            CONFIG_DIR=""
+        fi
+    fi
+
+    export NXCORE_DIR CONFIG_DIR
+}
+
+check_config_directory_optional() {
+    local OPERATION="$1"
+    local CONTEXT="${2:-deployment}"
+    check_config_directory "$OPERATION" "$CONTEXT" "false"
+}
+
+check_git_worktrees_clean() {
+    local main_dirty=false
+    local config_dirty=false
+    
+    if [[ "$(git status --porcelain)" != "" ]]; then
+        main_dirty=true
+    fi
+    
+    if [[ -n "${CONFIG_DIR:-}" ]] && [[ -d "$CONFIG_DIR" ]]; then
+        if [[ "$(cd "$CONFIG_DIR" && git status --porcelain 2>/dev/null)" != "" ]]; then
+            config_dirty=true
+        fi
+    fi
+    
+    if [[ "$main_dirty" == true ]] || [[ "$config_dirty" == true ]]; then
+        echo -e "${YELLOW}!!! Git worktree(s) are dirty!${RESET}" >&2
+        echo >&2
+        
+        if [[ "$main_dirty" == true ]]; then
+            echo -e "${WHITE}Main repository (.config/nx/nxcore):${RESET}" >&2
+            git status --porcelain >&2
+            echo >&2
+        fi
+        
+        if [[ "$config_dirty" == true ]]; then
+            echo -e "${WHITE}Config repository (.config/nx/nxconfig):${RESET}" >&2
+            (cd "$CONFIG_DIR" && git status --porcelain) >&2
+            echo >&2
+        fi
+        
+        exit 1
+    fi
+}
+
+export_nixos_label() {
+    commit_msg=$(cd "$CONFIG_DIR" && git log -1 --pretty=format:"%s" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9-]//g' | awk '{if(length($0)>25) print substr($0,1,24)"-"; else print $0}' | sed 's/--$/-/')
+    export NIXOS_LABEL="$(cd "$CONFIG_DIR" && git log -1 --pretty=format:"$(git branch --show-current).%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
+}
+
+detect_system_architecture() {
+    local uname_system="$(uname -s)"
+    local uname_machine="$(uname -m)"
+    
+    case "$uname_system" in
+        Linux)
+            case "$uname_machine" in
+                x86_64)
+                    echo "x86_64-linux"
+                    ;;
+                aarch64|arm64)
+                    echo "aarch64-linux"
+                    ;;
+                *)
+                    echo -e "${RED}Error: Unsupported Linux architecture: ${WHITE}$uname_machine${RESET}" >&2
+                    exit 1
+                    ;;
+            esac
+            ;;
+        Darwin)
+            case "$uname_machine" in
+                x86_64)
+                    echo "x86_64-darwin"
+                    ;;
+                arm64)
+                    echo "aarch64-darwin"
+                    ;;
+                *)
+                    echo -e "${RED}Error: Unsupported Darwin architecture: ${WHITE}$uname_machine${RESET}" >&2
+                    exit 1
+                    ;;
+            esac
+            ;;
+        *)
+            echo -e "${RED}Error: Unsupported system: ${WHITE}$uname_system${RESET}" >&2
+            exit 1
+            ;;
+    esac
+}
+
+construct_profile_name() {
+    local base_profile="$1"
+    local architecture="$(detect_system_architecture)"
+    echo "${base_profile}--${architecture}"
+}
+
+retrieve_active_profile() {
+    local base_profile
+    local target_profile
+    if [[ -e .nx-profile.conf ]]; then
+        base_profile="$(cat .nx-profile.conf)"
+        echo -e "Found base profile in ${WHITE}$PWD/.nx-profile.conf${RESET} file: ${WHITE}$base_profile${RESET}" >&2
+    else
+        if [[ -e /etc/nixos ]]; then
+            base_profile="$HOSTNAME"
+        else
+            base_profile="$USER"
+        fi
+    fi
+    
+    target_profile="$(construct_profile_name "$base_profile")"
+    local arch="${target_profile#$base_profile--}"
+    echo -e "${GREEN}Selected profile: ${YELLOW}$base_profile ${RED}(${arch})${RESET}\n" >&2
+    echo "$target_profile"
+}
+
+copy_config_to_target() {
+    local USERNAME="$1"
+    local TARGET_HOME="$2"
+    local USER_ID="$3"
+    local GROUP_ID="$4"
+    
+    if [[ -z "$CONFIG_DIR" ]]; then
+        echo -e "${RED}Error: CONFIG_DIR not set. Call check_config_directory first.${RESET}" >&2
+        exit 1
+    fi
+    
+    local TARGET_CONFIG="/mnt$TARGET_HOME/.config/nx/nxconfig"
+    
+    echo -e "${WHITE}Copying config to target system...${RESET}"
+    mkdir -p "/mnt$TARGET_HOME/.config/nx"
+    cp -R --verbose -T "$CONFIG_DIR" "$TARGET_CONFIG"
+    chown -R "$USER_ID:$GROUP_ID" "$TARGET_CONFIG"
+    echo -e "${GREEN}Config copied to ${WHITE}$TARGET_CONFIG${GREEN}.${RESET}"
+}
+
+configure_target_git_remotes() {
+    local TARGET_HOME="$1"
+    local USER_ID="$2"
+    local GROUP_ID="$3"
+    
+    if [[ -z "$CONFIG_DIR" ]]; then
+        echo -e "${RED}Error: CONFIG_DIR not set. Call check_config_directory first.${RESET}" >&2
+        exit 1
+    fi
+    
+    local TARGET_CORE="/mnt$TARGET_HOME/.config/nx/nxcore"
+    local TARGET_CONFIG="/mnt$TARGET_HOME/.config/nx/nxconfig"
+    
+    local CORE_INSTALL_URL
+    local CONFIG_INSTALL_URL
+    
+    CORE_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
+    if [[ "$CORE_INSTALL_URL" == "null" || "$CORE_INSTALL_URL" == "\"null\"" ]]; then
+        CORE_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
+    fi
+    CORE_INSTALL_URL="${CORE_INSTALL_URL//\"/}"
+    
+    CONFIG_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
+    if [[ "$CONFIG_INSTALL_URL" == "null" || "$CONFIG_INSTALL_URL" == "\"null\"" ]]; then
+        CONFIG_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#variables.configRepoIsoUrl" 2>/dev/null)"
+    fi
+    CONFIG_INSTALL_URL="${CONFIG_INSTALL_URL//\"/}"
+    
+    echo -e "${WHITE}Configuring git remotes for target system...${RESET}"
+    
+    if [[ -d "$TARGET_CORE/.git" && -n "$CORE_INSTALL_URL" ]]; then
+        echo -e "Setting core repository remote to: ${WHITE}$CORE_INSTALL_URL${RESET}"
+        cd "$TARGET_CORE"
+        if git remote get-url origin >/dev/null 2>&1; then
+            git remote set-url origin "$CORE_INSTALL_URL"
+        else
+            git remote add origin "$CORE_INSTALL_URL"
+        fi
+        chown -R "$USER_ID:$GROUP_ID" "$TARGET_CORE/.git"
+    fi
+    
+    if [[ -d "$TARGET_CONFIG/.git" && -n "$CONFIG_INSTALL_URL" ]]; then
+        echo -e "Setting config repository remote to: ${WHITE}$CONFIG_INSTALL_URL${RESET}"
+        cd "$TARGET_CONFIG"
+        if git remote get-url origin >/dev/null 2>&1; then
+            git remote set-url origin "$CONFIG_INSTALL_URL"
+        else
+            git remote add origin "$CONFIG_INSTALL_URL"
+        fi
+        chown -R "$USER_ID:$GROUP_ID" "$TARGET_CONFIG/.git"
+    fi
+    
+    echo -e "${GREEN}Git remotes configured for target system.${RESET}"
+}
