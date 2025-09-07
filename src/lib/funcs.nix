@@ -112,6 +112,7 @@ rec {
         userSettings = if moduleSettings == true then { } else moduleSettings;
       in
       lib.recursiveUpdate moduleDefaults userSettings;
+
   processModules =
     modules:
     builtins.filter (x: x != null) (

@@ -25,9 +25,12 @@ in
     context@{ config, options, ... }:
     {
       config = lib.mkIf self.isLinux {
-        home.file = lib.mapAttrs' (xdgName: dirName: lib.nameValuePair dirName {
-          source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.data/${dirName}";
-        }) userDirs;
+        home.file = lib.mapAttrs' (
+          xdgName: dirName:
+          lib.nameValuePair dirName {
+            source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.data/${dirName}";
+          }
+        ) userDirs;
 
         xdg.userDirs = {
           enable = true;
