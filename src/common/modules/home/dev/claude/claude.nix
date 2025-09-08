@@ -16,6 +16,15 @@ args@{
         packages = with pkgs-unstable; [
           claude-code
         ];
+
+        persistence."${self.persist}" = {
+          directories = [
+            ".claude"
+          ];
+          files = [
+            ".claude.json"
+          ];
+        };
       };
     };
 }
