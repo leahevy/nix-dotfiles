@@ -25,12 +25,16 @@ in
     context@{ config, options, ... }:
     {
       config = lib.mkIf self.isLinux {
-        home.file = lib.mapAttrs' (
-          xdgName: dirName:
-          lib.nameValuePair dirName {
-            source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.data/${dirName}";
-          }
-        ) userDirs;
+        home.file =
+          (lib.mapAttrs' (
+            xdgName: dirName:
+            lib.nameValuePair dirName {
+              source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.data/${dirName}";
+            }
+          ) userDirs)
+          // {
+            "data".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.data/data";
+          };
 
         xdg.userDirs = {
           enable = true;
@@ -38,7 +42,7 @@ in
         // lib.mapAttrs (xdgName: dirName: "${config.home.homeDirectory}/${dirName}") userDirs;
 
         home.persistence."${self.persist}" = {
-          directories = map (dir: ".data/${dir}") (lib.attrValues userDirs);
+          directories = (map (dir: ".data/${dir}") (lib.attrValues userDirs)) ++ [ ".data/data" ];
         };
       };
     };
