@@ -25,6 +25,9 @@ args@{
           xdg = {
             user-dirs = true;
           };
+          services = {
+            ssh-agent = true;
+          };
           utils = {
             archive-tools = true;
           };
@@ -104,6 +107,9 @@ args@{
           xdg = {
             user-dirs = true;
           };
+          services = {
+            ssh-agent = true;
+          };
           utils = {
             archive-tools = true;
           };
@@ -181,6 +187,9 @@ args@{
         common = {
           utils = {
             archive-tools = true;
+          };
+          services = {
+            ssh-agent = true;
           };
           browser = {
             qutebrowser = true;
