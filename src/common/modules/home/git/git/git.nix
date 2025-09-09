@@ -225,7 +225,7 @@ args@{
 
         difftastic = {
           enable = true;
-          display = "side-by-side-show-both";
+          display = "inline";
           background = "dark";
           enableAsDifftool = true;
         };
