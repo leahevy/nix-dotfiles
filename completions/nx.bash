@@ -16,6 +16,9 @@ _complete_nx() {
             sync|dry|test|boot)
                 COMPREPLY=($(compgen -W "--offline --show-trace" -- "${cur}"))
                 ;;
+            log|diff|diffc|status|commit|pull|push|add|addp|stash)
+                COMPREPLY=($(compgen -W "--only-core --only-config" -- "${cur}"))
+                ;;
             impermanence)
                 COMPREPLY=($(compgen -W "check logs help" -- "${cur}"))
                 ;;

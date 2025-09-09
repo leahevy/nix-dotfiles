@@ -37,6 +37,9 @@ complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandli
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -f
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -l offline -d "Run without network access"
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -l show-trace -d "Show detailed trace output"
+complete -c nx -n "__fish_seen_subcommand_from log diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -f
+complete -c nx -n "__fish_seen_subcommand_from log diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -l only-core -d "Run only on core repository"
+complete -c nx -n "__fish_seen_subcommand_from log diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -l only-config -d "Run only on config repository"
 
 # 'nx impermanence'
 complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "not __fish_seen_subcommand_from check logs help" -f

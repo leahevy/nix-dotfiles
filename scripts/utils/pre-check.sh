@@ -263,6 +263,36 @@ check_git_worktrees_clean() {
     fi
 }
 
+parse_git_args() {
+    ONLY_CORE=false
+    ONLY_CONFIG=false
+    EXTRA_ARGS=()
+    
+    while [[ $# -gt 0 ]]; do
+        case "${1:-}" in
+            --only-core)
+                ONLY_CORE=true
+                shift
+                ;;
+            --only-config)
+                ONLY_CONFIG=true
+                shift
+                ;;
+            *)
+                EXTRA_ARGS+=("$1")
+                shift
+                ;;
+        esac
+    done
+    
+    if [[ "$ONLY_CORE" == true && "$ONLY_CONFIG" == true ]]; then
+        echo -e "${RED}Error: Cannot specify both ${WHITE}--only-core${RED} and ${WHITE}--only-config${RED} at the same time${RESET}" >&2
+        exit 1
+    fi
+    
+    export ONLY_CORE ONLY_CONFIG EXTRA_ARGS
+}
+
 export_nixos_label() {
     commit_msg=$(cd "$CONFIG_DIR" && git log -1 --pretty=format:"%s" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9-]//g' | awk '{if(length($0)>25) print substr($0,1,24)"-"; else print $0}' | sed 's/--$/-/')
     export NIXOS_LABEL="$(cd "$CONFIG_DIR" && git log -1 --pretty=format:"$(git branch --show-current).%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"

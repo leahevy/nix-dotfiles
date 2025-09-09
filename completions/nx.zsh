@@ -70,6 +70,15 @@ _nx() {
                             ;;
                     esac
                     ;;
+                log|diff|diffc|status|commit|pull|push|add|addp|stash)
+                    case $CURRENT in
+                        2)
+                            _arguments \
+                                '--only-core[Run only on core repository]' \
+                                '--only-config[Run only on config repository]'
+                            ;;
+                    esac
+                    ;;
                 impermanence)
                     case $CURRENT in
                         2)
