@@ -116,7 +116,7 @@ args@{
               Ubuntu = "🐧";
               Debian = "🐧";
             };
-            format = "[$symbol]($style)";
+            format = "[$symbol]($style) ";
             style = "blue";
           };
 
