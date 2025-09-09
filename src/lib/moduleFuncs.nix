@@ -279,7 +279,7 @@ rec {
 
   userFuncs = {
     # Get absolute path to user profile secrets file
-    # Usage: secrets $SELF $SUBPATH
+    # Usage: self.user.secrets $SELF $SUBPATH
     secrets =
       self: subpath:
       let
@@ -295,7 +295,7 @@ rec {
         throw "Secret file not found: config/profiles/${profileType}/${user.profileName}/secrets/${subpath}";
 
     # Get absolute path to user profile files
-    # Usage: files $SELF $SUBPATH
+    # Usage: self.user.files $SELF $SUBPATH
     files =
       self: subpath:
       let
@@ -311,7 +311,7 @@ rec {
         throw "File not found: config/profiles/${profileType}/${user.profileName}/files/${subpath}";
 
     # Get relative path string to user profile secrets file
-    # Usage: secretsRel $SELF $SUBPATH
+    # Usage: self.user.secretsRel $SELF $SUBPATH
     secretsRel =
       self: subpath:
       let
@@ -327,7 +327,7 @@ rec {
         throw "Secret file not found: config/profiles/${profileType}/${user.profileName}/secrets/${subpath}";
 
     # Get relative path string to user profile files
-    # Usage: filesRel $SELF $SUBPATH
+    # Usage: self.user.filesRel $SELF $SUBPATH
     filesRel =
       self: subpath:
       let
@@ -343,7 +343,7 @@ rec {
         throw "File not found: config/profiles/${profileType}/${user.profileName}/files/${subpath}";
 
     # Create symlink to user profile secrets file
-    # Usage: symlinkSecrets $SELF $CONFIG $SUBPATH
+    # Usage: self.user.symlinkSecrets $SELF $CONFIG $SUBPATH
     symlinkSecrets =
       self: config: subpath:
       let
@@ -369,7 +369,7 @@ rec {
         throw "Secret file not found: config/profiles/${profileType}/${user.profileName}/secrets/${subpath}";
 
     # Create symlink to user profile files
-    # Usage: symlinkFiles $SELF $CONFIG $SUBPATH
+    # Usage: self.user.symlinkFiles $SELF $CONFIG $SUBPATH
     symlinkFiles =
       self: config: subpath:
       let
@@ -419,12 +419,49 @@ rec {
       if lib.hasAttrByPath pathParts modules then
         lib.attrByPath pathParts { } modules
       else
-        throw "Required user module '${path}' is not enabled in user modules";
+        throw "Required home module '${path}' is not enabled in user modules";
+
+    # Check if a host module is enabled by dotted path
+    # Usage: self.user.isHostModuleEnabledByName "common.vim.nixvim"
+    isHostModuleEnabledByName =
+      self: path:
+      let
+        pathParts = lib.splitString "." path;
+        modules = if !self.user.isStandalone then self.host.modules else { };
+      in
+      lib.hasAttrByPath pathParts modules;
+
+    # Get config for host module by dotted path, returns {} if not found
+    # Usage: self.user.getHostConfigForModuleByName "common.vim.nixvim"
+    getHostConfigForModuleByName =
+      self: path:
+      let
+        pathParts = lib.splitString "." path;
+        modules = if !self.user.isStandalone then self.host.modules else { };
+      in
+      lib.attrByPath pathParts { } modules;
+
+    # Require config for host module by dotted path, fails if not found
+    # Usage: self.user.requireHostConfigForModuleByName "common.vim.nixvim"
+    requireHostConfigForModuleByName =
+      self: path:
+      let
+        pathParts = lib.splitString "." path;
+        modules =
+          if !self.user.isStandalone then
+            self.host.modules
+          else
+            throw "This module requires a specific host module and cannot work on standalone!";
+      in
+      if lib.hasAttrByPath pathParts modules then
+        lib.attrByPath pathParts { } modules
+      else
+        throw "Required host module '${path}' is not enabled in host modules";
   };
 
   hostFuncs = {
     # Get absolute path to host profile secrets file
-    # Usage: secrets $SELF $SUBPATH
+    # Usage: self.host.secrets $SELF $SUBPATH
     secrets =
       self: subpath:
       let
@@ -438,7 +475,7 @@ rec {
         throw "Secret file not found: config/profiles/nixos/${host.profileName}/secrets/${subpath}";
 
     # Get absolute path to host profile files
-    # Usage: files $SELF $SUBPATH
+    # Usage: self.host.files $SELF $SUBPATH
     files =
       self: subpath:
       let
@@ -452,7 +489,7 @@ rec {
         throw "File not found: config/profiles/nixos/${host.profileName}/files/${subpath}";
 
     # Get relative path string to host profile secrets file
-    # Usage: secretsRel $SELF $SUBPATH
+    # Usage: self.host.secretsRel $SELF $SUBPATH
     secretsRel =
       self: subpath:
       let
@@ -466,7 +503,7 @@ rec {
         throw "Secret file not found: config/profiles/nixos/${host.profileName}/secrets/${subpath}";
 
     # Get relative path string to host profile files
-    # Usage: filesRel $SELF $SUBPATH
+    # Usage: self.host.filesRel $SELF $SUBPATH
     filesRel =
       self: subpath:
       let
@@ -480,7 +517,7 @@ rec {
         throw "File not found: config/profiles/nixos/${host.profileName}/files/${subpath}";
 
     # Create symlink to host profile secrets file
-    # Usage: symlinkSecrets $SELF $CONFIG $SUBPATH
+    # Usage: self.host.symlinkSecrets $SELF $CONFIG $SUBPATH
     symlinkSecrets =
       self: config: subpath:
       let
@@ -498,7 +535,7 @@ rec {
         throw "Secret file not found: config/profiles/nixos/${host.profileName}/secrets/${subpath}";
 
     # Create symlink to host profile files
-    # Usage: symlinkFiles $SELF $CONFIG $SUBPATH
+    # Usage: self.host.symlinkFiles $SELF $CONFIG $SUBPATH
     symlinkFiles =
       self: config: subpath:
       let
@@ -547,5 +584,38 @@ rec {
         lib.attrByPath pathParts { } modules
       else
         throw "Required host module '${path}' is not enabled in host modules";
+
+    # Check if a mainUser module is enabled by dotted path
+    # Usage: self.host.isMainUserModuleEnabledByName "common.vim.nixvim"
+    isMainUserModuleEnabledByName =
+      self: path:
+      let
+        pathParts = lib.splitString "." path;
+        modules = self.host.mainUser.modules;
+      in
+      lib.hasAttrByPath pathParts modules;
+
+    # Get config for mainUser module by dotted path, returns {} if not found
+    # Usage: self.host.getMainUserConfigForModuleByName "common.vim.nixvim"
+    getMainUserConfigForModuleByName =
+      self: path:
+      let
+        pathParts = lib.splitString "." path;
+        modules = self.host.mainUser.modules;
+      in
+      lib.attrByPath pathParts { } modules;
+
+    # Require config for host module by dotted path, fails if not found
+    # Usage: self.host.requireMainUserConfigForModuleByName "common.vim.nixvim"
+    requireMainUserConfigForModuleByName =
+      self: path:
+      let
+        pathParts = lib.splitString "." path;
+        modules = self.host.mainUser.modules;
+      in
+      if lib.hasAttrByPath pathParts modules then
+        lib.attrByPath pathParts { } modules
+      else
+        throw "Required home module '${path}' is not enabled in mainUser modules";
   };
 }
