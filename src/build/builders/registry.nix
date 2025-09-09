@@ -124,31 +124,11 @@ let
                           ) (findSubmodules moduleDir)
                         );
 
-                        extractSubmoduleMeta =
-                          filePath: submoduleName:
-                          let
-                            submodulePath = moduleDir + "/" + filePath;
-                            submoduleFunc = import submodulePath;
-                            subResult = builtins.tryEval (
-                              if builtins.isFunction submoduleFunc then
-                                (submoduleFunc minimalArgs).meta or { }
-                              else
-                                submoduleFunc.meta or { }
-                            );
-                          in
-                          if subResult.success then
-                            {
-                              name = submoduleName;
-                              description = "";
-                              path = filePath;
-                            }
-                            // subResult.value
-                          else
-                            {
-                              name = submoduleName;
-                              description = "";
-                              path = filePath;
-                            };
+                        extractSubmoduleMeta = filePath: submoduleName: {
+                          name = submoduleName;
+                          description = "";
+                          path = filePath;
+                        };
 
                         submodules = builtins.attrValues (builtins.mapAttrs extractSubmoduleMeta submoduleFiles);
                       in

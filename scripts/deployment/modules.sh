@@ -298,7 +298,7 @@ subcommand_info() {
   echo -e "  ${GREEN}group:${RESET} ${RED}\"$group\"${RESET}"
   echo -e "  ${GREEN}input:${RESET} ${RED}\"$input\"${RESET}"
   echo -e "  ${GREEN}moduleType:${RESET} ${RED}\"$moduleType\"${RESET}"
-  echo -e "  ${GREEN}path:${RESET} ${RED}\"$path$\"{RESET}"
+  echo -e "  ${GREEN}path:${RESET} ${RED}\"$path\"${RESET}"
 }
 
 subcommand_edit() {
@@ -330,7 +330,14 @@ subcommand_edit() {
     exit 1
   fi
   
-  local full_path="$PWD/src/$input_name/$module_path"
+  local base_path
+  if [[ "$input_name" == "config" ]]; then
+    base_path="$CONFIG_DIR"
+  else
+    base_path="$PWD/src/$input_name"
+  fi
+
+  local full_path="$base_path/$module_path"
   if [[ ! -f "$full_path" ]]; then
     echo -e "${RED}Error: Module file not found: ${WHITE}$full_path${RESET}" >&2
     exit 1
