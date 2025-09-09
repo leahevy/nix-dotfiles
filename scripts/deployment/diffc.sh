@@ -7,7 +7,11 @@ parse_git_args "$@"
 
 if [[ "$ONLY_CONFIG" != true ]]; then
     echo -e "${GREEN}Diff ${YELLOW}--cached ${GREEN}of main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
-    git diff --cached "${EXTRA_ARGS[@]}"
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+        git diff --cached "${EXTRA_ARGS[@]}"
+    else
+        git diff --cached
+    fi
 fi
 
 if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
@@ -15,7 +19,11 @@ if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
         echo
     fi
     echo -e "${GREEN}Diff ${YELLOW}--cached ${GREEN}of config repository ${WHITE}(.config/nx/nxconfig)${RESET}..."
-    (cd "$CONFIG_DIR" && git diff --cached "${EXTRA_ARGS[@]}")
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+        (cd "$CONFIG_DIR" && git diff --cached "${EXTRA_ARGS[@]}")
+    else
+        (cd "$CONFIG_DIR" && git diff --cached)
+    fi
 elif [[ "$ONLY_CORE" != true ]] && [[ "$ONLY_CONFIG" != true ]]; then
     echo
     echo -e "${YELLOW}Warning: Config directory does not exist or is no directory.${RESET}"

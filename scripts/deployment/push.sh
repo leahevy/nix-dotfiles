@@ -7,7 +7,11 @@ parse_git_args "$@"
 
 if [[ "$ONLY_CONFIG" != true ]]; then
     echo -e "${GREEN}Pushing main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
-    git push "${EXTRA_ARGS[@]}"
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+        git push "${EXTRA_ARGS[@]}"
+    else
+        git push
+    fi
 fi
 
 if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
@@ -15,7 +19,11 @@ if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
         echo
     fi
     echo -e "${GREEN}Pushing config repository ${WHITE}(.config/nx/nxconfig)${RESET}..."
-    (cd "$CONFIG_DIR" && git push "${EXTRA_ARGS[@]}")
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+        (cd "$CONFIG_DIR" && git push "${EXTRA_ARGS[@]}")
+    else
+        (cd "$CONFIG_DIR" && git push)
+    fi
     if [[ "$ONLY_CONFIG" == true ]]; then
         echo
         echo -e "${GREEN}Config repository pushed successfully.${RESET}"

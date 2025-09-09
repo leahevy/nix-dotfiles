@@ -5,7 +5,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
 deployment_script_setup "commit"
 parse_git_args "$@"
 
-if [[ ${#EXTRA_ARGS[@]} -eq 0 ]]; then
+if [[ ${#EXTRA_ARGS[@]:-} -eq 0 ]]; then
   echo -e "${RED}Commit message is missing: Usage: ${WHITE}<COMMIT_MESSAGE>${RESET}" >&2
   exit 1
 fi
@@ -17,7 +17,7 @@ if [[ "$COMMIT_MESSAGE" =~ ^- ]]; then
   exit 1
 fi
 
-if [[ ${#EXTRA_ARGS[@]} -gt 1 ]]; then
+if [[ ${#EXTRA_ARGS[@]:-} -gt 1 ]]; then
   echo -e "${RED}Additional argument given: Usage: ${WHITE}<COMMIT_MESSAGE>${RESET}" >&2
   exit 1
 fi

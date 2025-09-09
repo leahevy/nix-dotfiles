@@ -7,7 +7,11 @@ parse_git_args "$@"
 
 if [[ "$ONLY_CONFIG" != true ]]; then
     echo -e "${GREEN}Add files in main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
-    git add . --verbose "${EXTRA_ARGS[@]}" || true
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+        git add . --verbose "${EXTRA_ARGS[@]}" || true
+    else
+        git add . --verbose || true
+    fi
 fi
 
 if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
@@ -15,7 +19,11 @@ if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
         echo
     fi
     echo -e "${GREEN}Add files in config repository ${WHITE}(.config/nx/nxconfig)${RESET}..."
-    (cd "$CONFIG_DIR" && git add . --verbose "${EXTRA_ARGS[@]}" || true)
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+        (cd "$CONFIG_DIR" && git add . --verbose "${EXTRA_ARGS[@]}" || true)
+    else
+        (cd "$CONFIG_DIR" && git add . --verbose || true)
+    fi
 elif [[ "$ONLY_CORE" != true ]] && [[ "$ONLY_CONFIG" != true ]]; then
     echo
     echo -e "${YELLOW}Warning: Config directory does not exist or is no directory.${RESET}"
