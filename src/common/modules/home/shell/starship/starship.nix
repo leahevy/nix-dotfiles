@@ -111,7 +111,7 @@ args@{
           };
 
           os = {
-            disabled = !self.user.isStandalone;
+            disabled = true;
             symbols = {
               Ubuntu = "🐧";
               Debian = "🐧";
