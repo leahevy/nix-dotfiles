@@ -188,9 +188,6 @@ args@{
           utils = {
             archive-tools = true;
           };
-          services = {
-            ssh-agent = true;
-          };
           browser = {
             qutebrowser = true;
           };
