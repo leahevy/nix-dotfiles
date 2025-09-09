@@ -84,7 +84,6 @@ in
           packages =
             with pkgs;
             [ ]
-            ++ (map (pkg: pkgs.${pkg}) (ifSet user.additionalPackages [ ]))
             ++ (
               if (ifSet user.system.shell "bash") == "bash" then
                 [ pkgs.bash ]

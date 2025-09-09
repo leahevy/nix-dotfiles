@@ -71,7 +71,7 @@ in
     username = user.username;
 
     packages =
-      (map (pkg: pkgs.${pkg}) (user.additionalPackages or [ ]))
+      (user.additionalPackages or [ ])
       ++ [
         (pkgs.stdenv.mkDerivation {
           name = "nx";

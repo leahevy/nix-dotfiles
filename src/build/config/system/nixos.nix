@@ -81,7 +81,7 @@ in
       };
 
       environment = {
-        systemPackages = (map (pkg: pkgs.${pkg}) (host.additionalPackages or [ ]));
+        systemPackages = host.additionalPackages or [ ];
       };
 
       system.stateVersion =

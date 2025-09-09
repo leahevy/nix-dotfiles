@@ -81,7 +81,7 @@ in
     username = user.username;
 
     packages =
-      (map (pkg: pkgs.${pkg}) (user.additionalPackages or [ ]))
+      (user.additionalPackages or [ ])
       ++ (
         if user.isMainUser then
           [

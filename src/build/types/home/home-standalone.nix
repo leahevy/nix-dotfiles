@@ -41,7 +41,7 @@ with lib;
     };
 
     additionalPackages = mkOption {
-      type = types.listOf types.str;
+      type = types.listOf types.package;
       default = [ ];
       description = "Additional packages for the user";
     };
