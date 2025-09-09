@@ -111,7 +111,7 @@ subcommand_list() {
         echo -e "${RED}Error: User profile not found: ${WHITE}$base_profile${RESET}" >&2
         exit 1
       fi
-    elif [[ -e /etc/nixos ]] || [[ "${force_nixos:-false}" == "true" ]]; then
+    elif [[ -e /etc/NIXOS ]] || [[ "${force_nixos:-false}" == "true" ]]; then
       local full_profile="$(construct_profile_name "$base_profile")"
       local host_exists="$(nix eval --override-input config "path:$CONFIG_DIR" ".#hosts" --apply "hosts: builtins.hasAttr \"$full_profile\" hosts" 2>/dev/null || echo "false")"
       if [[ "$host_exists" != "true" ]]; then
@@ -228,7 +228,7 @@ subcommand_list() {
     local show_system_modules=false
     if [[ "${force_nixos:-false}" == "true" ]]; then
       show_system_modules=true
-    elif [[ -e /etc/nixos ]]; then
+    elif [[ -e /etc/NIXOS ]]; then
       show_system_modules=true
     fi
     
@@ -513,7 +513,7 @@ subcommand_config() {
   if [[ "${force_standalone:-false}" == "true" ]]; then
     local config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" 2>/dev/null)"
     format_config_yaml "$config_json" "Standalone User Modules"
-  elif [[ -e /etc/nixos ]] || [[ "${force_nixos:-false}" == "true" ]]; then
+  elif [[ -e /etc/NIXOS ]] || [[ "${force_nixos:-false}" == "true" ]]; then
     local host_config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.modules" 2>/dev/null)"
     format_config_yaml "$host_config_json" "Host System Modules"
     echo
