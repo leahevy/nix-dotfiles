@@ -159,10 +159,12 @@ subcommand_list() {
     while IFS='|' read -r module_id description; do
       [[ -z "$module_id" ]] && continue
       
+      local input_name="${module_id%%.*}"
+      [[ "$input_name" == "build" ]] && continue
+      
       local is_active=false
       
       if [[ "$module_type" == "system" && -n "${host_modules:-}" && "$host_modules" != "{}" ]]; then
-        local input_name="${module_id%%.*}"
         local rest="${module_id#*.}"
         local namespace_name="${rest%%.*}"
         local rest2="${rest#*.}"
@@ -175,7 +177,6 @@ subcommand_list() {
         fi
       elif [[ "$module_type" == "home" && -n "${user_modules:-$active_modules}" ]]; then
         local check_modules="${user_modules:-$active_modules}"
-        local input_name="${module_id%%.*}"
         local rest="${module_id#*.}"
         local rest2="${rest#*.}"
         local group_name="${rest2%%.*}"
