@@ -37,6 +37,7 @@ _nx() {
                 'impermanence:Manage ephemeral root filesystems'
                 'spec:Manage specializations'
                 'modules:Manage and inspect NX modules'
+                'eval:Evaluate a flake path with config override'
             )
             _describe 'commands' commands
             ;;

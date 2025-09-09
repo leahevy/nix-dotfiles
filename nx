@@ -37,6 +37,10 @@ Commands:
     impermanence    # Manage ephemeral root filesystems.
 
 
+  Evaluation:
+    eval <path>     # Evaluate a flake path with config override.
+
+
   Home-Manager only:
     news            # Shows recent news.
 
