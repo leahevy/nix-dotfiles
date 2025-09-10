@@ -3,11 +3,11 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
 deployment_script_setup "sync"
+
+parse_common_deployment_args "$@"
 check_git_worktrees_clean
 
 PROFILE="$(retrieve_active_profile)"
-
-parse_common_deployment_args "$@"
 
 
 if [[ -e /etc/NIXOS ]]; then

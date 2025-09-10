@@ -41,6 +41,7 @@ deployment_script_setup() {
 
 parse_common_deployment_args() {
     EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR")
+    ALLOW_DIRTY_GIT=false
     
     while [[ $# -gt 0 ]]; do
         case "${1:-}" in
@@ -50,6 +51,10 @@ parse_common_deployment_args() {
                 ;;
             --show-trace)
                 EXTRA_ARGS+=("--show-trace")
+                shift
+                ;;
+            --allow-dirty-git)
+                ALLOW_DIRTY_GIT=true
                 shift
                 ;;
             -*|--*)
@@ -63,7 +68,7 @@ parse_common_deployment_args() {
         esac
     done
     
-    export EXTRA_ARGS
+    export EXTRA_ARGS ALLOW_DIRTY_GIT
 }
 
 parse_build_deployment_args() {
@@ -115,11 +120,16 @@ ensure_standalone_only() {
     fi
 }
 
-parse_no_args() {
+parse_minimal_deployment_args() {
     EXTRA_ARGS=()
+    ALLOW_DIRTY_GIT=false
     
     while [[ $# -gt 0 ]]; do
         case "${1:-}" in
+            --allow-dirty-git)
+                ALLOW_DIRTY_GIT=true
+                shift
+                ;;
             -*|--*)
                 echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
                 exit 1
@@ -131,7 +141,7 @@ parse_no_args() {
         esac
     done
     
-    export EXTRA_ARGS
+    export EXTRA_ARGS ALLOW_DIRTY_GIT
 }
 
 simple_deployment_script_setup() {
@@ -259,7 +269,12 @@ check_git_worktrees_clean() {
             echo >&2
         fi
         
-        exit 1
+        if [[ "${ALLOW_DIRTY_GIT:-false}" == "true" ]]; then
+            echo -e "${YELLOW}WARNING: Proceeding with dirty git worktree(s) due to --allow-dirty-git flag${RESET}" >&2
+            echo >&2
+        else
+            exit 1
+        fi
     fi
 }
 
