@@ -36,6 +36,7 @@ in
               ) userDirs)
               // {
                 "data".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.data/data";
+                "develop".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.data/develop";
               };
 
             xdg.userDirs = {
@@ -44,7 +45,10 @@ in
             // lib.mapAttrs (xdgName: dirName: "${config.home.homeDirectory}/${dirName}") userDirs;
 
             home.persistence."${self.persist}" = {
-              directories = (map (dir: ".data/${dir}") (lib.attrValues userDirs)) ++ [ ".data/data" ];
+              directories = (map (dir: ".data/${dir}") (lib.attrValues userDirs)) ++ [
+                ".data/data"
+                ".data/develop"
+              ];
             };
           }
         else
@@ -62,6 +66,8 @@ in
               // {
                 "data".source =
                   config.lib.file.mkOutOfStoreSymlink "${mountPoint}/${self.host.hostname}/${self.user.home}/data";
+                "develop".source =
+                  config.lib.file.mkOutOfStoreSymlink "${mountPoint}/${self.host.hostname}/${self.user.home}/develop";
               };
 
             xdg.userDirs = {

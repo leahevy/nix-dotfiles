@@ -27,6 +27,7 @@ args@{
       "templates"
       "videos"
       "data"
+      "develop"
     ];
     mountpoint = "/data";
     mappedName = "cryptdata";
