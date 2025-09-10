@@ -62,13 +62,50 @@ installed system during the live ISO installation process.
 
 ## NX Utility
 
-- `nx sync` - Deploy current configuration
-- `nx build` - Test build configuration without deploying
-- `nx dry` - Test configuration without deploying (NixOS only)
-- `nx test` - Activate without adding to bootloader (NixOS only)
-- `nx boot` - Add to bootloader without switching (NixOS only)
-- `nx rollback` - Rollback to previous configuration (NixOS only)
-- `nx update` - Update flake inputs
-- `nx modules list` - Show activated modules
-- `nx modules config` - Show active module configuration
-- `nx help` - Show additional command in nx utility
+### Configuration:
+
+- `nx profile <$1>`: Configures to use profile <$1>. To revert it remove the file .nx-profile.conf in the nxcore directory.
+
+### Switch Commands:
+
+- `nx sync`: Sync/deploys the system state.
+- `nx build`: Test build configuration without deploying.
+- `nx gc`: Run the garbage collection.
+- `nx update`: Updates the flake in git (without switching).
+
+### NixOS Only:
+
+- `nx dry`: Tests the configuration without deploying it.
+- `nx test`: Activates the system state without adding it to the bootloader menu.
+- `nx boot`: Add the configuration to the bootloader without switching right yet.
+- `nx rollback`: Rollback to the previous configuration.
+- `nx impermanence`: Manage ephemeral root filesystems.
+
+### Evaluation:
+
+- `nx eval <path>`: Evaluate a flake path with config override.
+
+### Home-Manager only:
+
+- `nx news`: Shows recent news.
+
+### Folder Commands:
+
+- `nx config`: Open a shell in the config directory.
+- `nx core`: Open a shell in the core directory.
+- `nx format`: Formats directories with treefmt.
+- `nx exec`: Runs any command in the core directory.
+
+### Git Commands:
+
+- `nx log`: Runs the git log command.
+- `nx head`: Runs the git show HEAD command.
+- `nx diff`: Runs the git diff command.
+- `nx diffc`: Runs the git diff command with --cached.
+- `nx status`: Runs the git status command.
+- `nx commit`: Runs the git commit command.
+- `nx pull`: Runs the git pull command.
+- `nx push`: Runs the git push command.
+- `nx add`: Runs the git add command.
+- `nx addp`: Runs the git add command with --patch.
+- `nx stash`: Runs the git stash command.
