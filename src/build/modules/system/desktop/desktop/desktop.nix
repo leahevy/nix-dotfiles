@@ -39,5 +39,12 @@ in
       services.xserver.desktopManager.plasma5.excludePackages = with pkgs.libsForQt5; [
         plasma-welcome
       ];
+
+      systemd.targets = {
+        sleep.enable = false;
+        suspend.enable = false;
+        hibernate.enable = false;
+        hybrid-sleep.enable = false;
+      };
     };
 }
