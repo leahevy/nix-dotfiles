@@ -44,10 +44,44 @@ let
   }) (user.specialisations or { });
 
   extraUserModule =
-    if (user.extraModulePath or null) != null && builtins.pathExists user.extraModulePath then
-      [ (import user.extraModulePath args) ]
-    else
-      [ ];
+    let
+      buildModules =
+        if (user.extraModulePath or null) != null && builtins.pathExists user.extraModulePath then
+          [ (import user.extraModulePath args) ]
+        else
+          [ ];
+
+      virtualModule =
+        if user.configuration != (args: context: { }) then
+          let
+            moduleContext = {
+              inputs = inputs;
+              variables = variables;
+              configInputs = args.configInputs or { };
+              moduleBasePath = "profiles/home-integrated/${user.profileName}";
+              moduleInput = args.configInputs.config or inputs.config;
+              moduleInputName = "config";
+              user = user;
+              host = host;
+              persist = "${variables.persist.home}/${user.username}";
+            };
+
+            enhancedContext =
+              moduleContext
+              // (lib.mapAttrs (name: func: func moduleContext) funcs.commonFuncs)
+              // {
+                user = moduleContext.user // (lib.mapAttrs (name: func: func moduleContext) funcs.userFuncs);
+              };
+
+            enhancedArgs = args // {
+              self = enhancedContext;
+            };
+          in
+          [ (user.configuration enhancedArgs) ]
+        else
+          [ ];
+    in
+    buildModules ++ virtualModule;
 in
 { config, options, ... }:
 

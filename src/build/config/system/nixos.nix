@@ -54,12 +54,45 @@ let
     };
 
   ifSet = helpers.ifSet;
+
+  virtualModule =
+    if host.configuration != (args: context: { }) then
+      let
+        moduleContext = {
+          inputs = inputs;
+          variables = variables;
+          configInputs = args.configInputs or { };
+          moduleBasePath = "profiles/nixos/${host.profileName}";
+          moduleInput = args.configInputs.config or inputs.config;
+          moduleInputName = "config";
+          host = host;
+          users = users;
+          persist = variables.persist.system;
+        };
+
+        enhancedContext =
+          moduleContext
+          // (lib.mapAttrs (name: func: func moduleContext) funcs.commonFuncs)
+          // {
+            host = moduleContext.host // (lib.mapAttrs (name: func: func moduleContext) funcs.hostFuncs);
+          };
+
+        enhancedArgs = args // {
+          self = enhancedContext;
+        };
+      in
+      [ (host.configuration enhancedArgs) ]
+    else
+      [ ];
 in
 { config, options, ... }:
 {
-  imports = extraModules ++ [
-    (import ../../assertions/system/nixos.nix args)
-  ];
+  imports =
+    extraModules
+    ++ virtualModule
+    ++ [
+      (import ../../assertions/system/nixos.nix args)
+    ];
 
   config = lib.mkMerge [
     {

@@ -388,10 +388,43 @@ in
           isMainUser = true;
         };
         extraUserModule =
-          if extraUserModulePath != null then
-            [ (import extraUserModulePath buildContext.buildArgs) ]
-          else
-            [ ];
+          let
+            buildModules =
+              if extraUserModulePath != null then
+                [ (import extraUserModulePath buildContext.buildArgs) ]
+              else
+                [ ];
+
+            virtualModule =
+              if userEval.config.user.configuration != (args: context: { }) then
+                let
+                  moduleContext = {
+                    inputs = inputs;
+                    variables = variables;
+                    configInputs = config.configInputs or { };
+                    moduleBasePath = "profiles/home-standalone/${profileName}";
+                    moduleInput = config;
+                    moduleInputName = "config";
+                    user = finalUserConfig;
+                    persist = "${variables.persist.home}/${finalUserConfig.username}";
+                  };
+
+                  enhancedContext =
+                    moduleContext
+                    // (lib.mapAttrs (name: func: func moduleContext) funcs.commonFuncs)
+                    // {
+                      user = moduleContext.user // (lib.mapAttrs (name: func: func moduleContext) funcs.userFuncs);
+                    };
+
+                  enhancedArgs = buildContext.buildArgs // {
+                    self = enhancedContext;
+                  };
+                in
+                [ (userEval.config.user.configuration enhancedArgs) ]
+              else
+                [ ];
+          in
+          buildModules ++ virtualModule;
       };
     in
     {

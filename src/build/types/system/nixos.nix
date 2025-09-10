@@ -272,5 +272,11 @@ with lib;
       default = { };
       description = "Additional untyped settings to add to the host configuration";
     };
+
+    configuration = mkOption {
+      type = types.functionTo (types.functionTo types.attrs);
+      default = args: context: { };
+      description = "Virtual module configuration function with signature: args@{ ... }: context@{ config, options, ... }: { ... }";
+    };
   };
 }
