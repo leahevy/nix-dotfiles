@@ -32,6 +32,7 @@ args@{
             qutebrowser = true;
           };
           dev = {
+            devenv = true;
             cmake = true;
             utils = true;
             direnv = true;
@@ -114,6 +115,7 @@ args@{
             qutebrowser = true;
           };
           dev = {
+            devenv = true;
             cmake = true;
             utils = true;
             direnv = true;
@@ -192,6 +194,7 @@ args@{
             qutebrowser = true;
           };
           dev = {
+            devenv = true;
             cmake = true;
             utils = true;
             direnv = true;
