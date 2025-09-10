@@ -72,9 +72,9 @@ let
 
         enhancedContext =
           moduleContext
-          // (lib.mapAttrs (name: func: func moduleContext) funcs.commonFuncs)
+          // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.commonFuncs)
           // {
-            host = moduleContext.host // (lib.mapAttrs (name: func: func moduleContext) funcs.hostFuncs);
+            host = moduleContext.host // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.hostFuncs);
           };
 
         enhancedArgs = args // {

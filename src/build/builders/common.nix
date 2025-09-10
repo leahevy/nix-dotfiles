@@ -411,9 +411,9 @@ in
 
                   enhancedContext =
                     moduleContext
-                    // (lib.mapAttrs (name: func: func moduleContext) funcs.commonFuncs)
+                    // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.commonFuncs)
                     // {
-                      user = moduleContext.user // (lib.mapAttrs (name: func: func moduleContext) funcs.userFuncs);
+                      user = moduleContext.user // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.userFuncs);
                     };
 
                   enhancedArgs = buildContext.buildArgs // {

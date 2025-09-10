@@ -22,6 +22,8 @@ let
     input + "/modules/${moduleType}/${group}/${name}/${name}.nix";
 in
 rec {
+  inherit moduleFuncs;
+
   validateModule =
     moduleResult: filePath:
     let
