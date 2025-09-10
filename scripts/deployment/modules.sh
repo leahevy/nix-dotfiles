@@ -519,15 +519,39 @@ subcommand_config() {
   local full_profile="${base_profile}--${arch}"
   
   if [[ "${force_standalone:-false}" == "true" ]]; then
+    if ! nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" >/dev/null 2>&1; then
+      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" 2>&1)"
+      echo -e "${RED}Error: Failed to evaluate standalone user modules configuration${RESET}" >&2
+      echo -e "${WHITE}Details: $error_output${RESET}" >&2
+      return 1
+    fi
     local config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" 2>/dev/null)"
     format_config_yaml "$config_json" "Standalone User Modules"
   elif [[ -e /etc/NIXOS ]] || [[ "${force_nixos:-false}" == "true" ]]; then
+    if ! nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.modules" >/dev/null 2>&1; then
+      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.modules" 2>&1)"
+      echo -e "${RED}Error: Failed to evaluate host system modules configuration${RESET}" >&2
+      echo -e "${WHITE}Details: $error_output${RESET}" >&2
+      return 1
+    fi
     local host_config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.modules" 2>/dev/null)"
     format_config_yaml "$host_config_json" "Host System Modules"
     echo
+    if ! nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.modules" >/dev/null 2>&1; then
+      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.modules" 2>&1)"
+      echo -e "${RED}Error: Failed to evaluate main user modules configuration${RESET}" >&2
+      echo -e "${WHITE}Details: $error_output${RESET}" >&2
+      return 1
+    fi
     local user_config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.modules" 2>/dev/null)"
     format_config_yaml "$user_config_json" "Main User Modules"
   else
+    if ! nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" >/dev/null 2>&1; then
+      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" 2>&1)"
+      echo -e "${RED}Error: Failed to evaluate standalone user modules configuration${RESET}" >&2
+      echo -e "${WHITE}Details: $error_output${RESET}" >&2
+      return 1
+    fi
     local config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" 2>/dev/null)"
     format_config_yaml "$config_json" "Standalone User Modules"
   fi
