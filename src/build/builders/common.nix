@@ -413,7 +413,8 @@ in
                     moduleContext
                     // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.commonFuncs)
                     // {
-                      user = moduleContext.user // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.userFuncs);
+                      user =
+                        moduleContext.user // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.userFuncs);
                     };
 
                   enhancedArgs = buildContext.buildArgs // {

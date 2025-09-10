@@ -74,7 +74,8 @@ let
           moduleContext
           // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.commonFuncs)
           // {
-            host = moduleContext.host // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.hostFuncs);
+            host =
+              moduleContext.host // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.hostFuncs);
           };
 
         enhancedArgs = args // {
