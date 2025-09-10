@@ -25,9 +25,6 @@ args@{
           xdg = {
             user-dirs = true;
           };
-          services = {
-            ssh-agent = true;
-          };
           utils = {
             archive-tools = true;
           };
@@ -90,6 +87,9 @@ args@{
             keyring = true;
             gtk = true;
           };
+          services = {
+            ssh-agent = true;
+          };
         };
         groups = {
           shell = {
@@ -106,9 +106,6 @@ args@{
         common = {
           xdg = {
             user-dirs = true;
-          };
-          services = {
-            ssh-agent = true;
           };
           utils = {
             archive-tools = true;
@@ -170,6 +167,9 @@ args@{
           };
           gnome = {
             keyring = true;
+          };
+          services = {
+            ssh-agent = true;
           };
         };
         groups = {
