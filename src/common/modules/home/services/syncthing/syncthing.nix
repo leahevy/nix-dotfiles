@@ -54,6 +54,15 @@ args@{
         sopsFile = self.user.secrets "syncthing.password";
       };
 
+      systemd.user.services.syncthing =
+        lib.mkIf (self.user.isModuleEnabledByName "linux.storage.luks-data-drive")
+          {
+            Unit = {
+              After = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
+              Requires = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
+            };
+          };
+
       services.syncthing = {
         enable = true;
         overrideDevices = true;
@@ -90,6 +99,9 @@ args@{
       home.persistence."${self.persist}" = {
         directories = [
           ".local/state/syncthing"
+        ];
+        files = lib.mkIf self.settings.trayEnabled [
+          ".config/syncthingtray.ini"
         ];
       };
     };
