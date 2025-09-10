@@ -54,6 +54,7 @@ Commands:
 
   Git Commands:
     log             # Runs the git log command.
+    head            # Runs the git show HEAD command.
     diff            # Runs the git diff command.
     diffc           # Runs the git diff command with --cached.
     status          # Runs the git status command.

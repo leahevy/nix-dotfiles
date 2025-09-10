@@ -1,7 +1,7 @@
 _complete_nx() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local commands="profile sync build gc update dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval"
+    local commands="profile sync build gc update dry test boot rollback news config core format exec log head diff diffc status commit pull push add addp stash impermanence spec modules eval"
     
     if [[ ${COMP_CWORD} -eq 1 ]]; then
         COMPREPLY=($(compgen -W "${commands} --help --version" -- "${cur}"))
@@ -16,7 +16,7 @@ _complete_nx() {
             sync|dry|test|boot)
                 COMPREPLY=($(compgen -W "--offline --show-trace" -- "${cur}"))
                 ;;
-            log|diff|diffc|status|commit|pull|push|add|addp|stash)
+            log|head|diff|diffc|status|commit|pull|push|add|addp|stash)
                 COMPREPLY=($(compgen -W "--only-core --only-config" -- "${cur}"))
                 ;;
             impermanence)

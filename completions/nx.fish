@@ -12,8 +12,9 @@ complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update 
 complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "core" -d "Open a shell in the core directory"
 complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "format" -d "Format directories with treefmt"
 complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "exec" -d "Run any command in the directory"
-complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "log" -d "Run git log command"
-complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "diff" -d "Run git diff command"
+complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log head diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "log" -d "Run git log command"
+complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log head diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "head" -d "Run git show HEAD command"
+complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log head diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "diff" -d "Run git diff command"
 complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "diffc" -d "Run git diff command with --cached"
 complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "status" -d "Run git status command"
 complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "commit" -d "Run git commit command"
@@ -38,8 +39,8 @@ complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (cou
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -l offline -d "Run without network access"
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -l show-trace -d "Show detailed trace output"
 complete -c nx -n "__fish_seen_subcommand_from log diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -f
-complete -c nx -n "__fish_seen_subcommand_from log diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -l only-core -d "Run only on core repository"
-complete -c nx -n "__fish_seen_subcommand_from log diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -l only-config -d "Run only on config repository"
+complete -c nx -n "__fish_seen_subcommand_from log head diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -l only-core -d "Run only on core repository"
+complete -c nx -n "__fish_seen_subcommand_from log head diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -l only-config -d "Run only on config repository"
 
 # 'nx impermanence'
 complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "not __fish_seen_subcommand_from check logs help" -f

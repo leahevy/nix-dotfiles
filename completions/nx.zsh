@@ -25,6 +25,7 @@ _nx() {
                 'format:Format directories with treefmt'
                 'exec:Run any command in the directory'
                 'log:Run git log command'
+                'head:Run git show HEAD command'
                 'diff:Run git diff command'
                 'diffc:Run git diff command with --cached'
                 'status:Run git status command'
@@ -70,7 +71,7 @@ _nx() {
                             ;;
                     esac
                     ;;
-                log|diff|diffc|status|commit|pull|push|add|addp|stash)
+                log|head|diff|diffc|status|commit|pull|push|add|addp|stash)
                     case $CURRENT in
                         2)
                             _arguments \
