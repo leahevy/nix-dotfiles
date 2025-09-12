@@ -79,6 +79,9 @@ args@{
           nvim = {
             nixvim = true;
           };
+          emacs = {
+            emacs = true;
+          };
         };
         linux = {
           utils = {
@@ -162,6 +165,9 @@ args@{
           nvim = {
             nixvim = true;
           };
+          emacs = {
+            emacs = true;
+          };
         };
         linux = {
           utils = {
@@ -240,6 +246,9 @@ args@{
           };
           nvim = {
             nixvim = true;
+          };
+          emacs = {
+            emacs = true;
           };
         };
         groups = {
