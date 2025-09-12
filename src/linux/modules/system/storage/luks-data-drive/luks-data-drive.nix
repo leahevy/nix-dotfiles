@@ -39,6 +39,10 @@ args@{
       assertion = self.settings.uuid != null;
       message = "UUID for crypted device must be set!";
     }
+    {
+      assertion = self.host.isMainUserModuleEnabledByName "linux.storage.luks-data-drive";
+      message = "linux/storage/luks-data-drive system module requires home-manager module to be enabled: linux/storage/luks-data-drive";
+    }
   ];
 
   configuration =

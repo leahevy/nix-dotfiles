@@ -9,6 +9,13 @@ args@{
   ...
 }:
 {
+  assertions = [
+    {
+      assertion = self.user.isHostModuleEnabledByName "linux.storage.luks-data-drive";
+      message = "linux/storage/luks-data-drive home-manager module requires system module to be enabled: linux/storage/luks-data-drive";
+    }
+  ];
+
   configuration =
     context@{ config, options, ... }:
     {
