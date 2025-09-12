@@ -278,6 +278,10 @@ rec {
   };
 
   userFuncs = {
+    # Get Home Manager library functions
+    # Usage: self.user.lib $SELF $CONFIG
+    lib = self: config: if self.user.isStandalone then lib.hm else config.lib;
+
     # Get absolute path to user profile secrets file
     # Usage: self.user.secrets $SELF $SUBPATH
     secrets =
