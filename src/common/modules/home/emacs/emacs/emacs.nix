@@ -101,9 +101,9 @@ args@{
 
       home.persistence."${self.persist}" = {
         directories = [
-          ".emacs.d"
           ".config/emacs"
           ".cache/emacs"
+          ".local/cache/emacs"
         ];
       };
     };

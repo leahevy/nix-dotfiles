@@ -16,6 +16,7 @@
   allowedUnfreePackages = [
     "prl-tools"
     "claude-code"
+    "copilot-language-server"
   ];
 
   persist = {

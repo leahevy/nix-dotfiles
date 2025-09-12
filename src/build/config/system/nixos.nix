@@ -21,6 +21,7 @@ let
         i18n = true;
         network = true;
         users = true;
+        nix-ld = true;
       };
       desktop = {
         desktop = true;
