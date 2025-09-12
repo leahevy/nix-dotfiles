@@ -50,6 +50,9 @@ args@{
             excludesFile = "~/.config/git/gitignore_global";
             whitespace = "-trailing-space";
             autocrlf = "input";
+          }
+          // lib.optionalAttrs (config.programs.nixvim.enable or false) {
+            editor = "nvim";
           };
 
           help = {
