@@ -28,6 +28,7 @@ args@{
         directories = [
           ".config/qutebrowser"
           ".local/share/qutebrowser"
+          ".cache/qutebrowser"
         ];
       };
     };
