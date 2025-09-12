@@ -141,6 +141,10 @@ args@{
         ];
       };
 
+      programs.neovide = lib.mkIf self.isLinux {
+        enable = true;
+      };
+
       home = {
         sessionVariables = {
           EDITOR = lib.mkForce "nvim";
