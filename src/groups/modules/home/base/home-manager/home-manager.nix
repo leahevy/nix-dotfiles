@@ -76,7 +76,7 @@ args@{
           tmux = {
             tmux = true;
           };
-          vim = {
+          nvim = {
             nixvim = true;
           };
         };
@@ -159,7 +159,7 @@ args@{
           tmux = {
             tmux = true;
           };
-          vim = {
+          nvim = {
             nixvim = true;
           };
         };
@@ -238,7 +238,7 @@ args@{
           tmux = {
             tmux = true;
           };
-          vim = {
+          nvim = {
             nixvim = true;
           };
         };

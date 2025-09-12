@@ -9,14 +9,31 @@ args@{
   ...
 }:
 {
+  submodules = {
+    common = {
+      nvim-modules = {
+        auto-create-dirs = true;
+        highlight-dead-chars = true;
+        nvim-tree = true;
+      };
+    };
+  };
+
   configuration =
     context@{ config, options, ... }:
     let
-      additionalLuaModules = map (mod: mod.extraLuaCode) (
-        map (self.importFileCustom args) [
-          "functions/auto-create-dirs.nix"
-        ]
-      );
+      nvim_init_dir_loader = ''
+        local nvim_init_dir = vim.fn.expand('~/.config/nvim-init')
+
+        if vim.fn.isdirectory(nvim_init_dir) == 1 then
+          local files = vim.fn.glob(nvim_init_dir .. '/*.lua', false, true)
+          table.sort(files)
+          
+          for _, file in ipairs(files) do
+            dofile(file)
+          end
+        end
+      '';
     in
     {
       # See https://nix-community.github.io/nixvim/search/ for available options:
@@ -69,21 +86,7 @@ args@{
           backup = false;
         };
 
-        extraConfigLua = lib.concatStringsSep "\n" (
-          [
-            ''
-              vim.api.nvim_set_hl(0, "Whitespace", { fg = "#404040" })
-              vim.api.nvim_set_hl(0, "NonText", { fg = "#404040" })
-
-              -- Setup nvim-tree with netrw coexistence
-              require("nvim-tree").setup({
-                disable_netrw = false,
-                hijack_netrw = false,
-              })
-            ''
-          ]
-          ++ additionalLuaModules
-        );
+        extraConfigLua = nvim_init_dir_loader;
 
         plugins = {
           startify = {
@@ -135,7 +138,6 @@ args@{
           vim-css-color
           vim-closer
           vim-smoothie
-          nvim-tree-lua
         ];
       };
 
