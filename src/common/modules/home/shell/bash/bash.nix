@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "bash";
+
   configuration =
     context@{ config, options, ... }:
     {

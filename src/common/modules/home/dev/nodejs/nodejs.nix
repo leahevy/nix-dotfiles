@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "nodejs";
+
   defaults = {
     basePackages = [
       "npm"

@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "nix-index";
+
   configuration =
     context@{ config, options, ... }:
     {

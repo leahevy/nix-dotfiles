@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "claude";
+
   configuration =
     context@{ config, options, ... }:
     {

@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "direnv";
+
   configuration =
     context@{ config, options, ... }:
     {

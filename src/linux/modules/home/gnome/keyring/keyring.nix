@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "keyring";
+
   configuration =
     context@{ config, options, ... }:
     {

@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "syncthing";
+
   defaults = {
     syncName = "";
     syncID = "";

@@ -10,9 +10,8 @@ args@{
 }:
 
 {
-  meta = {
-    description = "NixOS base group module";
-  };
+  name = "nixos";
+  description = "NixOS base group module";
 
   submodules =
     if self ? isLinux && self.isLinux then

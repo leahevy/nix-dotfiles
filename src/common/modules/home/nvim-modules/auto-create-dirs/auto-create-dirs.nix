@@ -9,10 +9,8 @@ args@{
   ...
 }:
 {
-  meta = {
-    name = "auto-create-dirs";
-    description = "Automatically creates parent directories when saving files in Neovim";
-  };
+  name = "auto-create-dirs";
+  description = "Automatically creates parent directories when saving files in Neovim";
 
   configuration =
     context@{ config, options, ... }:

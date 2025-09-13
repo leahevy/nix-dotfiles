@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "copilot";
+
   configuration =
     context@{ config, options, ... }:
     {

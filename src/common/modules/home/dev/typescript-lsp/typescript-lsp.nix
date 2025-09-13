@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "typescript-lsp";
+
   configuration =
     context@{ config, options, ... }:
     {

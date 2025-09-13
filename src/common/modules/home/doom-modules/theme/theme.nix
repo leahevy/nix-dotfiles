@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "theme";
+
   configuration =
     context@{ config, options, ... }:
     {

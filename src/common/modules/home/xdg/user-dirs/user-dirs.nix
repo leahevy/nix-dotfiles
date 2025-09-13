@@ -21,6 +21,8 @@ let
   };
 in
 {
+  name = "user-dirs";
+
   configuration =
     context@{ config, options, ... }:
     {

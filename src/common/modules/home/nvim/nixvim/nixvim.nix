@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "nixvim";
+
   submodules = {
     common = {
       nvim-modules = {

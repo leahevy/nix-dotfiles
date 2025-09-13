@@ -10,9 +10,8 @@ args@{
 }:
 
 {
-  meta = {
-    description = "Home Manager base group";
-  };
+  name = "home-manager";
+  description = "Home Manager base group";
 
   submodules =
     # NixOS Integrated

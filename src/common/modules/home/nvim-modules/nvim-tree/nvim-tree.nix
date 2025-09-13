@@ -9,10 +9,8 @@ args@{
   ...
 }:
 {
-  meta = {
-    name = "nvim-tree";
-    description = "File explorer for Neovim (with netrw coexistence)";
-  };
+  name = "nvim-tree";
+  description = "File explorer for Neovim (with netrw coexistence)";
 
   configuration =
     context@{ config, options, ... }:

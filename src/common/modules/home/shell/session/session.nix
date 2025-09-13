@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "session";
+
   configuration =
     context@{ config, options, ... }:
     {

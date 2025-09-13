@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "vim";
+
   configuration =
     context@{ config, options, ... }:
     {

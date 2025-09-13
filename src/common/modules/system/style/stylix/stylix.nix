@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "stylix";
+
   defaults = {
     themeName = "atelier-seaside";
     polarity = "dark";

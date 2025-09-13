@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "gpg";
+
   configuration =
     context@{ config, options, ... }:
     {

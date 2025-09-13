@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "doom-dashboard";
+
   configuration =
     context@{ config, options, ... }:
     {

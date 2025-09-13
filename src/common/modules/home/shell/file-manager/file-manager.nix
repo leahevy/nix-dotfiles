@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "file-manager";
+
   configuration =
     context@{ config, options, ... }:
     {

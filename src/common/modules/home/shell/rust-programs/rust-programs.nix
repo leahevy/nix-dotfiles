@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "rust-programs";
+
   configuration =
     context@{ config, options, ... }:
     {

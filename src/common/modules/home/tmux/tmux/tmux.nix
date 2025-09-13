@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "tmux";
+
   configuration =
     context@{ config, options, ... }:
     {

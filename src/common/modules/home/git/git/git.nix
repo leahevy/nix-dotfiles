@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "git";
+
   submodules = {
     common = {
       shell = {

@@ -26,7 +26,7 @@ _complete_nx() {
                 COMPREPLY=($(compgen -W "--home list switch reset" -- "${cur}"))
                 ;;
             modules)
-                COMPREPLY=($(compgen -W "list config info edit create help" -- "${cur}"))
+                COMPREPLY=($(compgen -W "list config info edit help" -- "${cur}"))
                 ;;
         esac
     elif [[ ${COMP_CWORD} -eq 3 ]]; then
@@ -66,7 +66,7 @@ _complete_nx() {
                     config)
                         COMPREPLY=($(compgen -W "--profile --arch --nixos --standalone" -- "${cur}"))
                         ;;
-                    info|edit|create)
+                    info|edit)
                         COMPREPLY=()
                         ;;
                 esac

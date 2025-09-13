@@ -13,6 +13,8 @@ let
   ifSet = helpers.ifSet;
 in
 {
+  name = "sound";
+
   configuration =
     context@{ config, options, ... }:
     {

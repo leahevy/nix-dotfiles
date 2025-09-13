@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "doom";
+
   submodules = {
     common = {
       doom-modules = {

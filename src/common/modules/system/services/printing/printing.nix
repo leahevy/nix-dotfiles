@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "printing";
+
   configuration =
     context@{ config, options, ... }:
     {

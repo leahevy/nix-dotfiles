@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "go-programs";
+
   configuration =
     context@{ config, options, ... }:
     {

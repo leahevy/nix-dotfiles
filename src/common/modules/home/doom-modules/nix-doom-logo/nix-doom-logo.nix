@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "nix-doom-logo";
+
   configuration =
     context@{ config, options, ... }:
     {

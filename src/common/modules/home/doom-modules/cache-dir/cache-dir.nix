@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "cache-dir";
+
   configuration =
     context@{ config, options, ... }:
     {

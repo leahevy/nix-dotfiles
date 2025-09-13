@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "git-credential-manager";
+
   configuration =
     context@{ config, options, ... }:
     {

@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "emacs";
+
   configuration =
     context@{ config, options, ... }:
     let

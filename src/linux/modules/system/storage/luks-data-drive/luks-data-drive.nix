@@ -9,6 +9,7 @@ args@{
   ...
 }:
 {
+  name = "luks-data-drive";
 
   defaults = {
     fsType = "btrfs";

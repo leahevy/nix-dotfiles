@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "fontconfig";
+
   configuration =
     context@{ config, options, ... }:
     {

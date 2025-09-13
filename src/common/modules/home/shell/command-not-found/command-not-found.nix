@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "command-not-found";
+
   configuration =
     context@{ config, options, ... }:
     {

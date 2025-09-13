@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "luks-data-drive";
+
   assertions = [
     {
       assertion = self.user.isHostModuleEnabledByName "linux.storage.luks-data-drive";

@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "sudo";
+
   configuration =
     context@{ config, options, ... }:
     {

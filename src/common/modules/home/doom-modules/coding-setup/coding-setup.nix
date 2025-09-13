@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "coding-setup";
+
   configuration =
     context@{ config, options, ... }:
     {

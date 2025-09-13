@@ -14,6 +14,8 @@ let
   ifSet = helpers.ifSet;
 in
 {
+  name = "users";
+
   configuration =
     context@{ config, options, ... }:
     {

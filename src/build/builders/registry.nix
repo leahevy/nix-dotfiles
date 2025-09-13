@@ -75,9 +75,18 @@ let
 
                         result = builtins.tryEval (
                           if builtins.isFunction moduleFunc then
-                            (moduleFunc minimalArgs).meta or { }
+                            let
+                              moduleResult = moduleFunc minimalArgs;
+                            in
+                            {
+                              name = moduleResult.name or moduleName;
+                              description = moduleResult.description or "";
+                            }
                           else
-                            moduleFunc.meta or { }
+                            {
+                              name = moduleFunc.name or moduleName;
+                              description = moduleFunc.description or "";
+                            }
                         );
                       in
                       let

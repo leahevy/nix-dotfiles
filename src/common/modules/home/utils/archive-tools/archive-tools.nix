@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "archive-tools";
+
   configuration =
     context@{ config, options, ... }:
     {

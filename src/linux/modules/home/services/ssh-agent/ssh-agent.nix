@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "ssh-agent";
+
   configuration =
     context@{ config, options, ... }:
     {

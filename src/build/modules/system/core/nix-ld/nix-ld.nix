@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "nix-ld";
+
   configuration =
     context@{ config, options, ... }:
     {

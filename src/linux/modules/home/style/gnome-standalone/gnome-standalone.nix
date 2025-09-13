@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "gnome-standalone";
+
   configuration =
     context@{ config, options, ... }:
     {

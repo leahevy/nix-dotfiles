@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "cmake";
+
   configuration =
     context@{ config, options, ... }:
     {

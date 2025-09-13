@@ -12,6 +12,8 @@ let
   host = self.host;
 in
 {
+  name = "i18n";
+
   configuration =
     context@{ config, options, ... }:
     {

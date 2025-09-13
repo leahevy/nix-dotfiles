@@ -9,10 +9,8 @@ args@{
   ...
 }:
 {
-  meta = {
-    name = "highlight-dead-chars";
-    description = "Highlights whitespace and non-text characters in Neovim";
-  };
+  name = "highlight-dead-chars";
+  description = "Highlights whitespace and non-text characters in Neovim";
 
   configuration =
     context@{ config, options, ... }:

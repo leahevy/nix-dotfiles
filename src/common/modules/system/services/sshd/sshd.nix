@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "sshd";
+
   configuration =
     context@{ config, options, ... }:
     {

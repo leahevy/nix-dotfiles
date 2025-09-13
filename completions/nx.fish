@@ -88,13 +88,12 @@ complete -c nx -n "__fish_seen_subcommand_from spec" -n "__fish_seen_subcommand_
 complete -c nx -n "__fish_seen_subcommand_from spec" -n "__fish_seen_subcommand_from reset" -f
 
 # 'nx modules'
-complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit create help" -f
-complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit create help" -a "list" -d "List available modules"
-complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit create help" -a "config" -d "Show complete active configuration"
-complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit create help" -a "info" -d "Show detailed module information"
-complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit create help" -a "edit" -d "Open module file in editor"
-complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit create help" -a "create" -d "Create new module from template"
-complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit create help" -a "help" -d "Show help message"
+complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit help" -f
+complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit help" -a "list" -d "List available modules"
+complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit help" -a "config" -d "Show complete active configuration"
+complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit help" -a "info" -d "Show detailed module information"
+complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit help" -a "edit" -d "Open module file in editor (creates if doesn't exist)"
+complete -c nx -n "__fish_seen_subcommand_from modules" -n "not __fish_seen_subcommand_from list config info edit help" -a "help" -d "Show help message"
 
 # 'nx modules list'
 complete -c nx -n "__fish_seen_subcommand_from modules" -n "__fish_seen_subcommand_from list" -f
@@ -111,8 +110,8 @@ complete -c nx -n "__fish_seen_subcommand_from modules" -n "__fish_seen_subcomma
 complete -c nx -n "__fish_seen_subcommand_from modules" -n "__fish_seen_subcommand_from config" -l nixos -d "Force NixOS mode"
 complete -c nx -n "__fish_seen_subcommand_from modules" -n "__fish_seen_subcommand_from config" -l standalone -d "Force standalone mode"
 
-# 'nx modules info', 'nx modules edit', and 'nx modules create'
-complete -c nx -n "__fish_seen_subcommand_from modules" -n "__fish_seen_subcommand_from info edit create" -f
+# 'nx modules info' and 'nx modules edit'
+complete -c nx -n "__fish_seen_subcommand_from modules" -n "__fish_seen_subcommand_from info edit" -f
 
 # Other commands
 complete -c nx -n "__fish_seen_subcommand_from gc rollback news config core update eval" -f

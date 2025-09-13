@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "dummy-files";
+
   configuration =
     context@{ config, options, ... }:
     {

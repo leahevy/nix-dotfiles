@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "kde-standalone";
+
   configuration =
     context@{ config, options, ... }:
     {

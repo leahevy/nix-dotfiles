@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "qutebrowser";
+
   configuration =
     context@{ config, options, ... }:
     {

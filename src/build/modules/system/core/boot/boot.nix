@@ -12,6 +12,7 @@ let
   host = self.host;
 in
 {
+  name = "boot";
 
   configuration =
     context@{ config, options, ... }:

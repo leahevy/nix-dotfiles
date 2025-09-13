@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "devenv";
+
   configuration =
     context@{ config, options, ... }:
     {

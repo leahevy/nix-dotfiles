@@ -13,6 +13,8 @@ let
   ifSet = helpers.ifSet;
 in
 {
+  name = "network";
+
   configuration =
     context@{ config, options, ... }:
     {

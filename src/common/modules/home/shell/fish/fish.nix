@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "fish";
+
   submodules = {
     common = {
       shell = {

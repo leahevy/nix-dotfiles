@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "keepassxc";
+
   configuration =
     context@{ config, options, ... }:
     {

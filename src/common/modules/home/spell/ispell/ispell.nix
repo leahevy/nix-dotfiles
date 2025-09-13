@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "ispell";
+
   configuration =
     context@{ config, options, ... }:
     {

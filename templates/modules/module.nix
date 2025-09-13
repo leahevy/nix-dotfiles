@@ -9,14 +9,11 @@ args@{
   ...
 }:
 {
-  # All fields are optional and can be removed if not required for a
-  # specific module.
+  name = "<MODULE>";
 
-  # Meta information about this module appearing in the module registry.
-  meta = {
-    name = "<MODULE>";
-    description = "";
-  };
+  # All following fields are optional and can be removed if not required for a
+  # specific module.
+  description = "";
 
   # Submodules to import, same syntax as in profiles:
   #   INPUT = { GROUP = { MODULE = true or CONFIG_ATTRIBUTESET, ...}; };

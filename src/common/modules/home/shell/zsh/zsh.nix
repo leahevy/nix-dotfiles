@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "zsh";
+
   configuration =
     context@{ config, options, ... }:
     {

@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "tmp";
+
   configuration =
     context@{ config, options, ... }:
     {

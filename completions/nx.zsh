@@ -138,8 +138,7 @@ _nx() {
                                 'list:List available modules'
                                 'config:Show complete active configuration'
                                 'info:Show detailed module information'
-                                'edit:Open module file in editor'
-                                'create:Create new module from template'
+                                'edit:Open module file in editor (creates if doesn'\''t exist)'
                                 'help:Show help message'
                             )
                             _describe 'modules subcommands' subcommands
@@ -161,7 +160,7 @@ _nx() {
                                         '--nixos[Force NixOS mode]' \
                                         '--standalone[Force standalone mode]'
                                     ;;
-                                info|edit|create)
+                                info|edit)
                                     _message "module name (INPUT.GROUP.MODULENAME)"
                                     ;;
                             esac

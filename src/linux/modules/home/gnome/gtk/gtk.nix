@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "gtk";
+
   configuration =
     context@{ config, options, ... }:
     {

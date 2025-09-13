@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "nerdfonts";
+
   configuration =
     context@{ config, options, ... }:
     {

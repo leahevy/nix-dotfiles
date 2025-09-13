@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "eat";
+
   configuration =
     context@{ config, options, ... }:
     {

@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "impermanence";
+
   configuration =
     context@{ config, options, ... }:
     {

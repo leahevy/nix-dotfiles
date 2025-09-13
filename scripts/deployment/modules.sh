@@ -31,8 +31,7 @@ SUBCOMMANDS:
                               --standalone      Force standalone mode (user modules only)
 
     info <MODULE>           Show detailed module information
-    edit <MODULE>           Open module file in editor
-    create <MODULE>         Create new module from template
+    edit <MODULE>           Open module file in editor (creates if doesn't exist)
     help                    Show this help message
 
 MODULE FORMAT:
@@ -219,9 +218,9 @@ subcommand_list() {
       $group.key as $group_name |
       $group.value | to_entries[] as $module |
       $module.key as $module_name |
-      $module.value as $meta |
-      select($meta.moduleType == $mt) |
-      "\($input_name).\($modtype_name).\($group_name).\($module_name)|\($meta.description // "No description")"
+      $module.value as $module_data |
+      select($module_data.moduleType == $mt) |
+      "\($input_name).\($modtype_name).\($group_name).\($module_name)|\($module_data.description // "No description")"
     ')
   done
   
@@ -322,12 +321,17 @@ subcommand_edit() {
   local group_name="${rest2%%.*}"
   local module_name="${rest2#*.}"
   
-  echo "Finding module file path..."
-  local module_path
-  module_path="$(nix eval --raw --override-input config "path:$CONFIG_DIR" ".#modules.$input_name.$namespace_name.$group_name.$module_name.path" 2>/dev/null || echo "")"
+  local core_inputs=("common" "linux" "darwin" "groups" "build" "config")
+  local input_allowed=false
+  for allowed_input in "${core_inputs[@]}"; do
+    if [[ "$input_name" == "$allowed_input" ]]; then
+      input_allowed=true
+      break
+    fi
+  done
   
-  if [[ -z "$module_path" ]]; then
-    echo -e "${RED}Error: Module not found: ${WHITE}$module_id${RESET}" >&2
+  if [[ "$input_allowed" != "true" ]]; then
+    echo -e "${RED}Error: Module editing only allowed for core inputs: ${WHITE}${core_inputs[*]}${RESET}" >&2
     exit 1
   fi
   
@@ -337,16 +341,12 @@ subcommand_edit() {
   else
     base_path="$PWD/src/$input_name"
   fi
-
-  local full_path="$base_path/$module_path"
-  if [[ ! -f "$full_path" ]]; then
-    echo -e "${RED}Error: Module file not found: ${WHITE}$full_path${RESET}" >&2
-    exit 1
-  fi
+  
+  local target_file="$base_path/modules/$namespace_name/$group_name/$module_name/$module_name.nix"
   
   local editor="${EDITOR:-nano}"
-  echo -e "Opening ${WHITE}$module_path${RESET} with ${WHITE}$editor${RESET}..."
-  "$editor" "$full_path"
+  echo -e "Opening ${WHITE}$target_file${RESET} with ${WHITE}$editor${RESET}..."
+  "$editor" "$target_file"
 }
 
 subcommand_config() {
@@ -557,71 +557,6 @@ subcommand_config() {
   fi
 }
 
-subcommand_create() {
-  if [[ $# -eq 0 ]]; then
-    echo -e "${RED}Error: MODULE argument required${RESET}" >&2
-    echo -e "Usage: ${WHITE}nx modules create INPUT.NAMESPACE.GROUP.MODULENAME${RESET}" >&2
-    exit 1
-  fi
-  
-  local module_id="$1"
-  if [[ ! "$module_id" =~ ^[^.]+\.[^.]+\.[^.]+\.[^.]+$ ]]; then
-    echo -e "${RED}Error: Invalid module format. Expected: INPUT.NAMESPACE.GROUP.MODULENAME${RESET}" >&2
-    exit 1
-  fi
-  
-  local input_name="${module_id%%.*}"
-  local rest="${module_id#*.}"
-  local namespace_name="${rest%%.*}"
-  local rest2="${rest#*.}"
-  local group_name="${rest2%%.*}"
-  local module_name="${rest2#*.}"
-  
-  local core_inputs=("common" "linux" "darwin" "groups" "build" "config")
-  local input_allowed=false
-  for allowed_input in "${core_inputs[@]}"; do
-    if [[ "$input_name" == "$allowed_input" ]]; then
-      input_allowed=true
-      break
-    fi
-  done
-  
-  if [[ "$input_allowed" != "true" ]]; then
-    echo -e "${RED}Error: Module creation only allowed for core inputs: ${WHITE}${core_inputs[*]}${RESET}" >&2
-    exit 1
-  fi
-  
-  local base_path
-  if [[ "$input_name" == "config" ]]; then
-    base_path="$CONFIG_DIR"
-  else
-    base_path="$PWD/src/$input_name"
-  fi
-  
-  local target_dir="$base_path/modules/$namespace_name/$group_name/$module_name"
-  local target_file="$target_dir/$module_name.nix"
-  
-  if [[ -f "$target_file" ]]; then
-    echo -e "${RED}Error: Module already exists: ${WHITE}$module_id${RESET}" >&2
-    exit 1
-  fi
-  
-  echo -e "Creating module directory: ${WHITE}$target_dir${RESET}"
-  mkdir -p "$target_dir"
-  
-  local template_file="$PWD/templates/modules/module.nix"
-  if [[ ! -f "$template_file" ]]; then
-    echo -e "${RED}Error: Template file not found: ${WHITE}$template_file${RESET}" >&2
-    exit 1
-  fi
-  
-  echo -e "Creating module from template: ${WHITE}$target_file${RESET}"
-  sed "s/<MODULE>/$module_name/g" "$template_file" > "$target_file"
-  
-  local editor="${EDITOR:-nano}"
-  echo -e "Opening ${WHITE}$target_file${RESET} with ${WHITE}$editor${RESET}..."
-  "$editor" "$target_file"
-}
 
 main() {
   case "${1:-help}" in
@@ -640,10 +575,6 @@ main() {
     edit)
       shift
       subcommand_edit "$@"
-      ;;
-    create)
-      shift
-      subcommand_create "$@"
       ;;
     help|--help|-h)
       show_help

@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "auto-upgrades";
+
   configuration =
     context@{ config, options, ... }:
     {

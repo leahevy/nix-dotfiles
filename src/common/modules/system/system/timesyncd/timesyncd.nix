@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "timesyncd";
+
   configuration =
     context@{ config, options, ... }:
     {

@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "python";
+
   defaults = {
     basePackages = [
       "black"

@@ -10,9 +10,8 @@ args@{
 }:
 
 {
-  meta = {
-    description = "Shell group module";
-  };
+  name = "shell";
+  description = "Shell group module";
 
   submodules = {
     common = {

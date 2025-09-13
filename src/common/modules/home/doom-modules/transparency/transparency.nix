@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "transparency";
+
   configuration =
     context@{ config, options, ... }:
     {

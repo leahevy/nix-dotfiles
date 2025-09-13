@@ -218,6 +218,8 @@ let
   '';
 in
 {
+  name = "impermanence";
+
   configuration =
     context@{ config, options, ... }:
     {

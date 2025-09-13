@@ -13,6 +13,8 @@ let
   ifSet = helpers.ifSet;
 in
 {
+  name = "desktop";
+
   configuration =
     context@{ config, options, ... }:
     {

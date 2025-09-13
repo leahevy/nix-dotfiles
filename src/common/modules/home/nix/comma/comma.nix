@@ -9,6 +9,8 @@ args@{
   ...
 }:
 {
+  name = "comma";
+
   configuration =
     context@{ config, options, ... }:
     {

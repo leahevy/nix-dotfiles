@@ -30,7 +30,8 @@ rec {
       correctFormat = builtins.isAttrs moduleResult && !builtins.isFunction moduleResult;
 
       approvedAttrs = [
-        "meta"
+        "name"
+        "description"
         "submodules"
         "defaults"
         "assertions"
@@ -40,7 +41,19 @@ rec {
 
       actualAttrs = builtins.attrNames moduleResult;
 
+      fileName = builtins.baseNameOf filePath;
+      expectedName = lib.removeSuffix ".nix" fileName;
+      actualName = moduleResult.name or "";
+
       invalidAttrs = builtins.filter (attr: !(builtins.elem attr approvedAttrs)) actualAttrs;
+
+      nameValidationError =
+        if !(moduleResult ? name) then
+          "Module missing required 'name' field. The name field must exactly match the filename (without .nix)."
+        else if actualName != expectedName then
+          "Module name '${actualName}' does not match filename '${expectedName}'. The name field must exactly match the filename (without .nix extension)."
+        else
+          null;
       topLevelErrorMessage = ''
         File ${filePath} uses invalid top-level attributes: ${builtins.concatStringsSep ", " invalidAttrs}
 
@@ -58,10 +71,14 @@ rec {
         Check template file to see valid example file: ${defs.rootPath + "/templates/modules/module.nix"}
       '';
     in
-    if correctFormat then
-      (if invalidAttrs != [ ] then throw topLevelErrorMessage else moduleResult)
+    if !correctFormat then
+      throw formatErrorMessage
+    else if nameValidationError != null then
+      throw "${filePath}: ${nameValidationError}"
+    else if invalidAttrs != [ ] then
+      throw topLevelErrorMessage
     else
-      throw formatErrorMessage;
+      moduleResult;
 
   mergeModuleDefaults =
     lib: helpers: args: moduleType: inputName: groupName: moduleName: moduleSettings:
@@ -222,13 +239,7 @@ rec {
       throw "Module ${moduleSpec.inputName}.${moduleSpec.group}.${moduleSpec.name} assertion failed: ${(builtins.head validationErrors).message}"
     else
       {
-        configuration =
-          if moduleResult ? configuration then
-            moduleResult.configuration
-          else if moduleResult ? meta then
-            (context: { })
-          else
-            moduleResult;
+        configuration = if moduleResult ? configuration then moduleResult.configuration else (context: { });
         submodules = moduleResult.submodules or { };
       };
 
@@ -277,13 +288,7 @@ rec {
       throw "Module ${moduleSpec.inputName}.${moduleSpec.group}.${moduleSpec.name} assertion failed: ${(builtins.head validationErrors).message}"
     else
       {
-        configuration =
-          if moduleResult ? configuration then
-            moduleResult.configuration
-          else if moduleResult ? meta then
-            (context: { })
-          else
-            moduleResult;
+        configuration = if moduleResult ? configuration then moduleResult.configuration else (context: { });
         submodules = moduleResult.submodules or { };
       };
 
