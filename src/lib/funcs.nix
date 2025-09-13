@@ -359,19 +359,19 @@ rec {
         in
         let
           rawSubmodules = moduleResult.submodules or { };
-          normalizeSubmodules =
+          filterAndNormalizeSubmodules =
             submodules:
             lib.mapAttrs (
               inputName: inputGroups:
               lib.mapAttrs (
                 groupName: groupModules:
-                lib.mapAttrs (
-                  moduleName: moduleValue: if moduleValue == true then { } else moduleValue
-                ) groupModules
+                lib.mapAttrs (moduleName: moduleValue: if moduleValue == true then { } else moduleValue) (
+                  lib.filterAttrs (moduleName: moduleValue: moduleValue != false) groupModules
+                )
               ) inputGroups
             ) submodules;
         in
-        normalizeSubmodules rawSubmodules
+        filterAndNormalizeSubmodules rawSubmodules
       ) moduleSpecs;
     in
     lib.foldl lib.recursiveUpdate { } moduleResults;
@@ -389,10 +389,8 @@ rec {
       getPrecedence =
         v:
         if builtins.isAttrs v then
-          3
-        else if v == true then
           2
-        else if v == false then
+        else if v == true then
           1
         else
           0;
@@ -430,6 +428,16 @@ rec {
   collectAllModulesWithSettings =
     args: initialModules: moduleType:
     let
+      filterFalseValues =
+        modules:
+        lib.mapAttrs (
+          inputName: inputGroups:
+          lib.mapAttrs (
+            groupName: groupModules:
+            lib.filterAttrs (moduleName: moduleSettings: moduleSettings != false) groupModules
+          ) inputGroups
+        ) modules;
+
       normalizeModules =
         modules:
         lib.mapAttrs (
@@ -455,7 +463,8 @@ rec {
           ) inputGroups
         ) modules;
 
-      normalizedInitialModules = normalizeModules initialModules;
+      filteredInitialModules = filterFalseValues initialModules;
+      normalizedInitialModules = normalizeModules filteredInitialModules;
       initialModulesWithDefaults = applyDefaultsToModules normalizedInitialModules;
 
       collectRound =
@@ -463,7 +472,8 @@ rec {
         let
           moduleSpecs = processModules currentModules;
           collectedSubmodules = collectSubModules args moduleSpecs moduleType;
-          normalizedSubmodules = normalizeModules collectedSubmodules;
+          filteredSubmodules = filterFalseValues collectedSubmodules;
+          normalizedSubmodules = normalizeModules filteredSubmodules;
           collectedSubmodulesWithDefaults = applyDefaultsToModules normalizedSubmodules;
 
           nextModules = mergeModulesWithPrecedence collectedSubmodulesWithDefaults currentModules;
