@@ -9,19 +9,24 @@ args@{
   ...
 }:
 {
+  defaults = {
+    basePackages = [
+      "black"
+      "isort"
+      "mypy"
+      "requests"
+      "python-dotenv"
+      "python-lsp-server"
+    ];
+    additionalPackages = [ ];
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
       home.packages = with pkgs; [
         (python313.withPackages (
-          p: with p; [
-            black
-            isort
-            mypy
-            requests
-            python-dotenv
-            python-lsp-server
-          ]
+          p: map (pkg: p.${pkg}) (self.settings.basePackages ++ self.settings.additionalPackages)
         ))
       ];
     };
