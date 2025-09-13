@@ -80,21 +80,16 @@ args@{
         config = {
           Label = "nx-emacs-daemon";
           ProgramArguments = [
-            "${emacsPackage}/bin/emacs"
-            "--fg-daemon"
-            "--eval"
-            "(setq server-name \"emacs-server\")"
-            "--eval"
-            "(setq server-port 17777)"
-            "--eval"
-            "(setq server-auth-dir \"${runtimeDir}/emacs-auth/\")"
-            "--eval"
-            "(setq server-use-tcp t)"
+            "/bin/sh"
+            "-c"
+            "mkdir -p ${runtimeDir}/emacs-auth && exec ${emacsPackage}/bin/emacs --fg-daemon --eval '(setq server-name \"emacs-server\")' --eval '(setq server-port 17777)' --eval '(setq server-auth-dir \"${runtimeDir}/emacs-auth/\")' --eval '(setq server-use-tcp t)'"
           ];
           RunAtLoad = true;
           KeepAlive = true;
+          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/nx-emacs-daemon.log";
+          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/nx-emacs-daemon.log";
           EnvironmentVariables = {
-            PATH = "${emacsPackage}/bin:${config.home.homeDirectory}/.nix-profile/bin:/run/wrappers/bin:/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
+            PATH = "${emacsPackage}/bin:${config.home.homeDirectory}/.nix-profile/bin:/usr/local/bin:/usr/bin:/bin";
           };
         };
       };
