@@ -29,8 +29,24 @@ complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update 
 complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval" -a "eval" -d "Evaluate a flake path with config override"
 
 # Command-specific options
-complete -c nx -n "__fish_seen_subcommand_from profile" -n "test (count (commandline -opc)) = 2" -f
-complete -c nx -n "__fish_seen_subcommand_from profile" -n "test (count (commandline -opc)) = 2" -l reset -d "Reset to default profile"
+
+# 'nx profile'
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -f
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -a "user" -d "Navigate to user directory or edit user config"
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -a "edit" -d "Edit active profile config.nix"
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -a "select" -d "Set active profile name"
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -a "reset" -d "Reset to default profile"
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -a "help" -d "Show help message"
+
+# 'nx profile user'
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "__fish_seen_subcommand_from user" -f
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "__fish_seen_subcommand_from user" -a "edit" -d "Edit integrated user config.nix"
+
+# 'nx profile select'
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "__fish_seen_subcommand_from select" -f
+
+# Other profile subcommands
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "__fish_seen_subcommand_from edit reset help" -f
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -f
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l timeout -d "Set timeout in seconds" -r
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l dry-run -d "Test build without actual building"

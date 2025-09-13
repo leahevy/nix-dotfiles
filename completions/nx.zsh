@@ -47,8 +47,25 @@ _nx() {
                 profile)
                     case $CURRENT in
                         2)
-                            _arguments \
-                                '--reset[Reset to default profile]'
+                            local subcommands=(
+                                'user:Navigate to user directory or edit user config'
+                                'edit:Edit active profile config.nix'
+                                'select:Set active profile name'
+                                'reset:Reset to default profile'
+                                'help:Show help message'
+                            )
+                            _describe 'profile subcommands' subcommands
+                            ;;
+                        3)
+                            case "$line[2]" in
+                                user)
+                                    _arguments \
+                                        '1: :(edit)'
+                                    ;;
+                                select)
+                                    _message "profile name"
+                                    ;;
+                            esac
                             ;;
                     esac
                     ;;

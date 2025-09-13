@@ -8,7 +8,7 @@ _complete_nx() {
     elif [[ ${COMP_CWORD} -eq 2 ]]; then
         case "$prev" in
             profile)
-                COMPREPLY=($(compgen -W "--reset" -- "${cur}"))
+                COMPREPLY=($(compgen -W "user edit select reset help" -- "${cur}"))
                 ;;
             build)
                 COMPREPLY=($(compgen -W "--timeout --dry-run --offline" -- "${cur}"))
@@ -31,6 +31,16 @@ _complete_nx() {
         esac
     elif [[ ${COMP_CWORD} -eq 3 ]]; then
         case "${COMP_WORDS[1]}" in
+            profile)
+                case "$prev" in
+                    user)
+                        COMPREPLY=($(compgen -W "edit" -- "${cur}"))
+                        ;;
+                    select)
+                        COMPREPLY=()
+                        ;;
+                esac
+                ;;
             build)
                 if [[ "$prev" == "--timeout" ]]; then
                     COMPREPLY=()
