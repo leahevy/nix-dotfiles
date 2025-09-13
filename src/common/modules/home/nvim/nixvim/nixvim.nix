@@ -13,6 +13,7 @@ args@{
     common = {
       nvim-modules = {
         auto-create-dirs = true;
+        auto-create-nix-files = true;
         highlight-dead-chars = true;
         nvim-tree = true;
       };
