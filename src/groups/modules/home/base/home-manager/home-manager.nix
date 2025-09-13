@@ -81,6 +81,7 @@ args@{
           };
           emacs = {
             emacs = true;
+            doom = true;
           };
         };
         linux = {
@@ -167,6 +168,7 @@ args@{
           };
           emacs = {
             emacs = true;
+            doom = true;
           };
         };
         linux = {
@@ -249,6 +251,7 @@ args@{
           };
           emacs = {
             emacs = true;
+            doom = true;
           };
         };
         groups = {
