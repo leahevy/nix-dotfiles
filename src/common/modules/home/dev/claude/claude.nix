@@ -11,6 +11,8 @@ args@{
 {
   name = "claude";
 
+  unfree = [ "claude-code" ];
+
   configuration =
     context@{ config, options, ... }:
     {

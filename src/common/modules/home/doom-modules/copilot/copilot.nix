@@ -11,6 +11,8 @@ args@{
 {
   name = "copilot";
 
+  unfree = [ "copilot-language-server" ];
+
   configuration =
     context@{ config, options, ... }:
     {

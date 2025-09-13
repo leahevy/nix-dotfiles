@@ -114,6 +114,12 @@ with lib;
       description = "The NixOS state version";
     };
 
+    allowedUnfreePackages = mkOption {
+      type = types.listOf types.str;
+      default = [ ];
+      description = "Unfree packages allowed for the host";
+    };
+
     modules = mkOption {
       type = types.attrsOf (types.attrsOf (types.attrsOf (types.either types.bool types.attrs)));
       default = { };

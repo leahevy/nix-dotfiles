@@ -13,11 +13,7 @@
 
   coreRepoIsoUrl = "https://github.com/leahevy/nix-dotfiles";
 
-  allowedUnfreePackages = [
-    "prl-tools"
-    "claude-code"
-    "copilot-language-server"
-  ];
+  allowedUnfreePackages = [ ];
 
   persist = {
     system = "/persist";

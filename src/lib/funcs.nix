@@ -37,6 +37,7 @@ rec {
         "assertions"
         "custom"
         "configuration"
+        "unfree"
       ];
 
       actualAttrs = builtins.attrNames moduleResult;
@@ -117,20 +118,25 @@ rec {
 
         enhancedModuleContext = injectModuleFuncs moduleContext moduleType;
 
-        moduleDefaults =
-          (import modulePath {
-            lib = args.lib;
-            pkgs = args.pkgs;
-            pkgs-unstable = args.pkgs-unstable;
-            funcs = args.funcs;
-            helpers = helpers;
-            defs = args.defs;
-            self = enhancedModuleContext;
-          }).defaults or { };
+        moduleResult = import modulePath {
+          lib = args.lib;
+          pkgs = args.pkgs;
+          pkgs-unstable = args.pkgs-unstable;
+          funcs = args.funcs;
+          helpers = helpers;
+          defs = args.defs;
+          self = enhancedModuleContext;
+        };
+
+        moduleDefaults = moduleResult.defaults or { };
+        moduleUnfree = moduleResult.unfree or [ ];
 
         userSettings = if moduleSettings == true then { } else moduleSettings;
+
+        settingsWithUnfree =
+          if moduleUnfree != [ ] then userSettings // { unfree = moduleUnfree; } else userSettings;
       in
-      lib.recursiveUpdate moduleDefaults userSettings;
+      lib.recursiveUpdate moduleDefaults settingsWithUnfree;
 
   processModules =
     modules:

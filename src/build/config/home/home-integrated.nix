@@ -91,7 +91,7 @@ in
     extraModules
     ++ extraUserModule
     ++ [
-      (import ../../assertions/home/home-integrated.nix args)
+      (import ../../assertions/home/home-integrated.nix (args // { processedModules = allModules; }))
     ];
 
   specialisation = specialisationConfigs;

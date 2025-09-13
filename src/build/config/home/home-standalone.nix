@@ -51,7 +51,7 @@ in
     extraModules
     ++ extraUserModule
     ++ [
-      (import ../../assertions/home/home-standalone.nix args)
+      (import ../../assertions/home/home-standalone.nix (args // { processedModules = allModules; }))
     ];
 
   specialisation = specialisationConfigs;

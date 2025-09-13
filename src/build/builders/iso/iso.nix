@@ -26,8 +26,7 @@ let
       system = arch;
       pkgs = import inputs.nixpkgs {
         inherit system;
-        config.allowUnfreePredicate =
-          pkg: builtins.elem (inputs.nixpkgs.lib.getName pkg) variables.allowedUnfreePackages;
+        config.allowUnfreePredicate = pkg: true;
       };
     in
     {

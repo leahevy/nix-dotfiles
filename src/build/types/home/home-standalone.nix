@@ -46,6 +46,12 @@ with lib;
       description = "Additional packages for the user";
     };
 
+    allowedUnfreePackages = mkOption {
+      type = types.listOf types.str;
+      default = [ ];
+      description = "Unfree packages allowed for the user";
+    };
+
     modules = mkOption {
       type = types.attrsOf (types.attrsOf (types.attrsOf (types.either types.bool types.attrs)));
       default = { };

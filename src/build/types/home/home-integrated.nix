@@ -40,6 +40,12 @@ with lib;
       description = "Additional packages for the user";
     };
 
+    allowedUnfreePackages = mkOption {
+      type = types.listOf types.str;
+      default = [ ];
+      description = "Unfree packages allowed for the user";
+    };
+
     home-manager = mkOption {
       type = types.bool;
       default = false;

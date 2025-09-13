@@ -131,4 +131,92 @@ rec {
       hash = builtins.hashString "sha256" text;
     in
     "${builtins.substring 0 8 hash}-${builtins.substring 8 4 hash}-${builtins.substring 12 4 hash}-${builtins.substring 16 4 hash}-${builtins.substring 20 12 hash}";
+
+  # Extract unfree package declarations from processed modules
+  # Usage: extractModuleUnfreePackages processedModules
+  extractModuleUnfreePackages =
+    processedModules:
+    let
+      collectUnfreeFromModules =
+        modules:
+        lib.flatten (
+          lib.mapAttrsToList (
+            inputName: inputGroups:
+            lib.mapAttrsToList (
+              groupName: groupModules:
+              lib.mapAttrsToList (moduleName: moduleSettings: moduleSettings.unfree or [ ]) groupModules
+            ) inputGroups
+          ) modules
+        );
+    in
+    lib.unique (collectUnfreeFromModules processedModules);
+
+  # Validate that all unfree packages are explicitly declared
+  # Usage: validateUnfreePackages { packages = [...]; declaredUnfree = [...]; context = "system|home"; profileName = "..."; processedModules = {}; }
+  validateUnfreePackages =
+    {
+      packages,
+      declaredUnfree ? [ ],
+      context,
+      profileName ? "unknown",
+      processedModules ? { },
+    }:
+    let
+      moduleUnfreePackages = extractModuleUnfreePackages processedModules;
+      allDeclaredUnfreePackages = declaredUnfree ++ moduleUnfreePackages;
+
+      unfreePackages = builtins.filter (
+        pkg:
+        let
+          isUnfree = pkg.meta.unfree or false;
+
+          hasUnfreeLicense = builtins.any (
+            license:
+            let
+              licenseName = lib.toLower (license.shortName or license.spdxId or "");
+            in
+            lib.hasInfix "unfree" licenseName
+            || lib.hasInfix "proprietary" licenseName
+            || licenseName == "unknown"
+          ) (lib.toList (pkg.meta.license or [ ]));
+
+        in
+        isUnfree || hasUnfreeLicense
+      ) packages;
+
+      unfreePackageNames = map (pkg: pkg.pname or pkg.name or "unknown") unfreePackages;
+
+      undeclaredUnfreePackages = builtins.filter (
+        packageName:
+        !(builtins.any (
+          declaredName: packageName == declaredName || lib.hasPrefix declaredName packageName
+        ) allDeclaredUnfreePackages)
+      ) unfreePackageNames;
+
+      hasUndeclaredUnfreePackages = undeclaredUnfreePackages != [ ];
+
+      configInstructions =
+        if context == "system" then
+          "host.allowedUnfreePackages = [ ${
+            lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages
+          } ];"
+        else
+          "user.allowedUnfreePackages = [ ${
+            lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages
+          } ];";
+
+    in
+    {
+      assertion = !hasUndeclaredUnfreePackages;
+      message = ''
+        Unfree packages found in ${context} packages but not declared in ${profileName} profile:
+        ${lib.concatStringsSep ", " undeclaredUnfreePackages}
+
+        Please add them to your profile:
+        ${configInstructions}
+
+        Or declare them in modules that use them:
+        unfree = [ ${lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages} ];
+      '';
+    };
 }

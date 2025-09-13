@@ -38,13 +38,11 @@ let
     let
       pkgs = import nixpkgs {
         inherit system;
-        config.allowUnfreePredicate =
-          pkg: builtins.elem (nixpkgs.lib.getName pkg) variables.allowedUnfreePackages;
+        config.allowUnfreePredicate = pkg: true;
       };
       pkgs-unstable = import nixpkgs-unstable {
         inherit system;
-        config.allowUnfreePredicate =
-          pkg: builtins.elem (nixpkgs-unstable.lib.getName pkg) variables.allowedUnfreePackages;
+        config.allowUnfreePredicate = pkg: true;
       };
     in
     {

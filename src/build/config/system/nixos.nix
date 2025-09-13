@@ -93,7 +93,7 @@ in
     extraModules
     ++ virtualModule
     ++ [
-      (import ../../assertions/system/nixos.nix args)
+      (import ../../assertions/system/nixos.nix (args // { processedModules = allModules; }))
     ];
 
   config = lib.mkMerge [
