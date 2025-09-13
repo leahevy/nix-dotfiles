@@ -24,9 +24,11 @@ args@{
       };
 
       home.shellAliases = {
-        emacs = if self.isDarwin
-          then "TERM=xterm-256color emacsclient -t -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"'"
-          else "emacsclient --server-file=\"${runtimeDir}/emacs-auth/emacs-server\" -c -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"' -t";
+        emacs =
+          if self.isDarwin then
+            "TERM=xterm-256color emacsclient -t -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"'"
+          else
+            "emacsclient --server-file=\"${runtimeDir}/emacs-auth/emacs-server\" -c -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"' -t";
         emacs-server-restart =
           if self.isDarwin then
             "launchctl kickstart -k gui/$(id -u)/nx-emacs-daemon"
@@ -37,7 +39,8 @@ args@{
             "launchctl print gui/$(id -u)/nx-emacs-daemon"
           else
             "systemctl --user status nx-emacs-custom";
-      } // lib.optionalAttrs self.isLinux {
+      }
+      // lib.optionalAttrs self.isLinux {
         emacs-gui = "emacsclient --server-file=\"${runtimeDir}/emacs-auth/emacs-server\" -c -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"'";
       };
 
