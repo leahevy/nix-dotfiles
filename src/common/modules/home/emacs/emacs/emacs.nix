@@ -41,17 +41,17 @@ args@{
       systemd.user.services.nx-emacs-custom = lib.mkIf self.isLinux {
         Unit = {
           Description = "Emacs text editor (custom)";
+          After = [ "graphical-session.target" ] ++ lib.optional sshAgentEnabled "ssh-agent.service";
         }
         // lib.optionalAttrs sshAgentEnabled {
-          After = [ "ssh-agent.service" ];
           Requires = [ "ssh-agent.service" ];
         };
 
         Service = {
-          Type = "notify";
+          Type = "forking";
 
           ExecStart = ''
-            ${emacsPackage}/bin/emacs --fg-daemon \
+            ${emacsPackage}/bin/emacs --daemon \
               --eval "(setq server-name \"emacs-server\")" \
               --eval "(setq server-port 17777)" \
               --eval "(setq server-auth-dir \"%t/emacs-auth/\")" \
@@ -71,7 +71,7 @@ args@{
         };
 
         Install = {
-          WantedBy = [ "default.target" ];
+          WantedBy = [ "graphical-session.target" ];
         };
       };
 
