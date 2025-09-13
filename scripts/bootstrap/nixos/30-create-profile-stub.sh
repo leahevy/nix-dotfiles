@@ -168,8 +168,8 @@ EOF
   echo -e "Creating profile directory: ${WHITE}$PROFILE_DIR${RESET}"
   mkdir -p "$PROFILE_DIR"
 
-  echo -e "Generating ${WHITE}config.nix${RESET}..."
-  cat > "$PROFILE_DIR/config.nix" << EOF
+  echo -e "Generating ${WHITE}$HOSTNAME.nix${RESET}..."
+  cat > "$PROFILE_DIR/$HOSTNAME.nix" << EOF
 { lib, ... }:
 
 {
@@ -195,54 +195,54 @@ EOF
 EOF
 
 if [[ -n "$BOOT_MODULES" ]]; then
-    cat >> "$PROFILE_DIR/config.nix" << EOF
+    cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
       bootModules = [
 $BOOT_MODULES
       ];
 EOF
 else
-    cat >> "$PROFILE_DIR/config.nix" << EOF
+    cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
       bootModules = [ ];
 EOF
 fi
 
 if [[ -n "$INITRD_MODULES" ]]; then
-    cat >> "$PROFILE_DIR/config.nix" << EOF
+    cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
       initrdModules = [
 $INITRD_MODULES
       ];
 EOF
 else
-    cat >> "$PROFILE_DIR/config.nix" << EOF
+    cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
       initrdModules = [ ];
 EOF
 fi
 
 if [[ -n "$NIX_MODULES" ]]; then
-    cat >> "$PROFILE_DIR/config.nix" << EOF
+    cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
       nixModules = [
 $NIX_MODULES
       ];
 EOF
 else
-    cat >> "$PROFILE_DIR/config.nix" << EOF
+    cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
       nixModules = [ ];
 EOF
 fi
 
 if [[ -n "$EXTRA_MODULE_PACKAGES" ]]; then
-    cat >> "$PROFILE_DIR/config.nix" << EOF
+    cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
       extraModulePackages = [
 $EXTRA_MODULE_PACKAGES
       ];
 EOF
 else
-    cat >> "$PROFILE_DIR/config.nix" << EOF
+    cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
       extraModulePackages = [ ];
 EOF
 fi
 
-    cat >> "$PROFILE_DIR/config.nix" << EOF
+    cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
     };
 
     modules = {
@@ -300,7 +300,7 @@ EOF
 }
 EOF
 
-  chmod 644 "$PROFILE_DIR/config.nix"
+  chmod 644 "$PROFILE_DIR/$HOSTNAME.nix"
   chmod 644 "$PROFILE_DIR/build.nix"
   
   chown -R nixos:users "$PROFILE_DIR"
@@ -309,7 +309,7 @@ EOF
   echo -e "${GREEN}Profile stub generated successfully!${RESET}"
   echo -e "Location: ${WHITE}$PROFILE_DIR/${RESET}"
   echo -e "${GREEN}Files created:${RESET}"
-  echo -e "   - ${WHITE}config.nix${RESET} (main configuration)"
+  echo -e "   - ${WHITE}$HOSTNAME.nix${RESET} (main configuration)"
   echo -e "   - ${WHITE}build.nix${RESET} (hardware-specific settings)"
 
   if [[ -n "$UNFREE_PACKAGES" ]]; then
@@ -330,6 +330,6 @@ fi
 
 echo
 echo -e "${MAGENTA}Next steps:${RESET}"
-echo -e "${MAGENTA}   1. Edit ${WHITE}$PROFILE_DIR/config.nix${MAGENTA} to set ${WHITE}mainUser${MAGENTA}, ${WHITE}additionalUsers${MAGENTA}, and ${WHITE}ethernetDeviceName${RESET}"
+echo -e "${MAGENTA}   1. Edit ${WHITE}$PROFILE_DIR/$HOSTNAME.nix${MAGENTA} to set ${WHITE}mainUser${MAGENTA}, ${WHITE}additionalUsers${MAGENTA}, and ${WHITE}ethernetDeviceName${RESET}"
 echo -e "${MAGENTA}   2. Configure modules and settings as needed${RESET}"
 echo -e "${MAGENTA}   3. Run bootstrap scripts: ${WHITE}40-nixos-create-sops-key.sh${MAGENTA} then ${WHITE}50-nixos-install.sh${RESET} and if needed ${WHITE}50-migrate-to-persistence.sh${RESET}"

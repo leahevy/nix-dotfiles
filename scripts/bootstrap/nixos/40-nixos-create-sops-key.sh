@@ -33,8 +33,8 @@ if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME" ]]; then
   exit 1
 fi
 
-if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME/config.nix" ]]; then
-  echo -e "${RED}Host ${WHITE}$HOSTNAME${RED} has no ${WHITE}config.nix${RED} configuration in ${WHITE}$CONFIG_DIR/profiles/nixos${RED}!${RESET}" >&2
+if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix" ]]; then
+  echo -e "${RED}Host ${WHITE}$HOSTNAME${RED} has no ${WHITE}$HOSTNAME.nix${RED} configuration in ${WHITE}$CONFIG_DIR/profiles/nixos${RED}!${RESET}" >&2
   exit 1
 fi
 
@@ -43,7 +43,7 @@ FULL_PROFILE="$(construct_profile_name "$HOSTNAME")"
 USERNAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
 if [[ -z "$USERNAME" || "$USERNAME" == "null" || "$USERNAME" == "\"null\"" ]]; then
   echo -e "${RED}Error: Could not determine main user from host configuration for ${WHITE}$HOSTNAME${RESET}" >&2
-  echo -e "${RED}Make sure ${WHITE}mainUser${RED} is set in ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/config.nix${RESET}" >&2
+  echo -e "${RED}Make sure ${WHITE}mainUser${RED} is set in ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix${RESET}" >&2
   exit 1
 fi
 USERNAME="${USERNAME//\"/}"

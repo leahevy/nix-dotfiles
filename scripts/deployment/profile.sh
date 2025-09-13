@@ -15,15 +15,15 @@ Description:
 SUBCOMMANDS:
     (no args)               Navigate to active profile directory
     user                    Navigate to integrated user directory (NixOS only)
-    edit                    Edit active profile config.nix
-    user edit               Edit integrated user config.nix (NixOS only)
+    edit                    Edit active profile configuration file
+    user edit               Edit integrated user configuration file (NixOS only)
     select <PROFILE>        Set active profile name
     reset                   Reset to default profile
     help                    Show this help message
 
 EXAMPLES:
     nx profile              # Open shell in active profile directory
-    nx profile edit         # Edit main profile config.nix
+    nx profile edit         # Edit main profile configuration file
     nx profile select myhost # Set active profile to 'myhost'
     nx profile reset        # Reset to default profile
 EOF
@@ -66,13 +66,20 @@ resolve_user_profile_dir() {
 resolve_profile_config_file() {
     local profile_dir
     profile_dir="$(resolve_active_profile_dir)"
-    echo "$profile_dir/config.nix"
+    local base_profile
+    base_profile="$(resolve_active_profile_base)"
+    echo "$profile_dir/$base_profile.nix"
 }
 
 resolve_user_config_file() {
     local user_dir
     user_dir="$(resolve_user_profile_dir)"
-    echo "$user_dir/config.nix"
+    local full_profile
+    local username
+    full_profile="$(retrieve_active_profile 2>/dev/null | tail -1)"
+    username="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+    username="${username//\"/}"
+    echo "$user_dir/$username.nix"
 }
 
 open_shell_in_dir() {

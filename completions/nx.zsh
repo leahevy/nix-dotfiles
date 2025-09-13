@@ -49,7 +49,7 @@ _nx() {
                         2)
                             local subcommands=(
                                 'user:Navigate to user directory or edit user config'
-                                'edit:Edit active profile config.nix'
+                                'edit:Edit active profile configuration file'
                                 'select:Set active profile name'
                                 'reset:Reset to default profile'
                                 'help:Show help message'

@@ -140,7 +140,7 @@ in
   processHostProfile =
     { profileName, arch }:
     let
-      hostConfigPath = config + "/profiles/nixos/${profileName}/config.nix";
+      hostConfigPath = config + "/profiles/nixos/${profileName}/${profileName}.nix";
 
       system = arch;
       inherit (setupPackages { inherit system; }) pkgs pkgs-unstable;
@@ -183,7 +183,7 @@ in
       processIntegratedUser =
         userProfileName:
         let
-          userConfigPath = config + "/profiles/home-integrated/${userProfileName}/config.nix";
+          userConfigPath = config + "/profiles/home-integrated/${userProfileName}/${userProfileName}.nix";
 
           userEval = evalConfigModule {
             optionsPath = build + "/types/home/home-integrated.nix";
@@ -302,7 +302,7 @@ in
   processStandaloneUserProfile =
     { profileName, arch }:
     let
-      userConfigPath = config + "/profiles/home-standalone/${profileName}/config.nix";
+      userConfigPath = config + "/profiles/home-standalone/${profileName}/${profileName}.nix";
 
       system = arch;
       inherit (setupPackages { inherit system; }) pkgs pkgs-unstable;

@@ -33,14 +33,14 @@ complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update 
 # 'nx profile'
 complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -f
 complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -a "user" -d "Navigate to user directory or edit user config"
-complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -a "edit" -d "Edit active profile config.nix"
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -a "edit" -d "Edit active profile configuration file"
 complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -a "select" -d "Set active profile name"
 complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -a "reset" -d "Reset to default profile"
 complete -c nx -n "__fish_seen_subcommand_from profile" -n "not __fish_seen_subcommand_from user edit select reset help" -a "help" -d "Show help message"
 
 # 'nx profile user'
 complete -c nx -n "__fish_seen_subcommand_from profile" -n "__fish_seen_subcommand_from user" -f
-complete -c nx -n "__fish_seen_subcommand_from profile" -n "__fish_seen_subcommand_from user" -a "edit" -d "Edit integrated user config.nix"
+complete -c nx -n "__fish_seen_subcommand_from profile" -n "__fish_seen_subcommand_from user" -a "edit" -d "Edit integrated user configuration file"
 
 # 'nx profile select'
 complete -c nx -n "__fish_seen_subcommand_from profile" -n "__fish_seen_subcommand_from select" -f
