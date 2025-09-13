@@ -24,8 +24,8 @@ args@{
       };
 
       home.shellAliases = {
-        emacs-gui = "emacsclient --server-file=\"${runtimeDir}/emacs-auth/emacs-server\" -c -a 'false'";
-        emacs = "emacsclient --server-file=\"${runtimeDir}/emacs-auth/emacs-server\" -c -a 'false' -t";
+        emacs-gui = "emacsclient --server-file=\"${runtimeDir}/emacs-auth/emacs-server\" -c -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"'";
+        emacs = "emacsclient --server-file=\"${runtimeDir}/emacs-auth/emacs-server\" -c -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"' -t";
         emacs-server-restart =
           if self.isDarwin then
             "launchctl kickstart -k gui/$UID/nx-emacs-daemon"
