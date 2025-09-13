@@ -53,7 +53,8 @@ let
             config = { };
           }
         ]
-        ++ extraUserModule;
+        ++ extraUserModule
+        ++ (if helpers.isDarwinArch arch then [ inputs.mac-app-util.homeManagerModules.default ] else [ ]);
       };
     };
 
