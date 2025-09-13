@@ -268,40 +268,30 @@ fi
         };
       };
     };
+
+    configuration = args@{
+      lib,
+      pkgs,
+      pkgs-unstable,
+      funcs,
+      helpers,
+      defs,
+      self,
+      ...
+    }: context@{ config, options, ... }: {
+EOF
+
+  if [[ -n "$HARDWARE_SETTINGS" ]]; then
+    echo -e "$HARDWARE_SETTINGS" | sed 's/^/      /' >> "$PROFILE_DIR/$HOSTNAME.nix"
+  fi
+
+  cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
+    };
   };
 }
 EOF
 
-  echo -e "Generating ${WHITE}build.nix${RESET}..."
-  cat > "$PROFILE_DIR/build.nix" << EOF
-{
-  lib,
-  pkgs,
-  pkgs-unstable,
-  inputs,
-  host,
-  users,
-  funcs,
-  helpers,
-  defs,
-  variables,
-  ...
-}:
-{ config, options, ... }:
-
-{
-EOF
-
-  if [[ -n "$HARDWARE_SETTINGS" ]]; then
-    echo -e "$HARDWARE_SETTINGS" >> "$PROFILE_DIR/build.nix"
-  fi
-
-  cat >> "$PROFILE_DIR/build.nix" << EOF
-}
-EOF
-
   chmod 644 "$PROFILE_DIR/$HOSTNAME.nix"
-  chmod 644 "$PROFILE_DIR/build.nix"
   
   chown -R nixos:users "$PROFILE_DIR"
 
@@ -309,8 +299,7 @@ EOF
   echo -e "${GREEN}Profile stub generated successfully!${RESET}"
   echo -e "Location: ${WHITE}$PROFILE_DIR/${RESET}"
   echo -e "${GREEN}Files created:${RESET}"
-  echo -e "   - ${WHITE}$HOSTNAME.nix${RESET} (main configuration)"
-  echo -e "   - ${WHITE}build.nix${RESET} (hardware-specific settings)"
+  echo -e "   - ${WHITE}$HOSTNAME.nix${RESET} (main configuration with hardware settings)"
 
   if [[ -n "$UNFREE_PACKAGES" ]]; then
     echo

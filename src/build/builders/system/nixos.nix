@@ -35,7 +35,6 @@ let
         lib
         specialArgs
         buildArgs
-        extraHostModule
         diskoModule
         hardwareModule
         ;
@@ -66,7 +65,6 @@ let
               }
             ]
         )
-        ++ (map (path: import path buildArgs) extraHostModule)
         ++ hardwareModule
         ++ diskoModule
         ++ [

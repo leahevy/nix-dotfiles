@@ -51,13 +51,6 @@ let
       inherit pkgs pkgs-unstable;
     };
 
-  getExtraModulePath =
-    { profilePath, profileType }:
-    let
-      buildPath = config + "/profiles/${profileType}/${profilePath}/build.nix";
-    in
-    if builtins.pathExists buildPath then [ buildPath ] else [ ];
-
   getHardwareModule =
     host:
     if host.nixHardwareModule != null then
@@ -106,7 +99,6 @@ in
     evalConfigModule
     setupPackages
     buildSpecialArgs
-    getExtraModulePath
     getHardwareModule
     getDiskoModule
     ;
@@ -286,10 +278,6 @@ in
           users = hostConfig.users;
           configInputs = config.configInputs or { };
         };
-        extraHostModule = getExtraModulePath {
-          profilePath = profileName;
-          profileType = "nixos";
-        };
         diskoModule = getDiskoModule { inherit profileName; };
         hardwareModule = getHardwareModule hostConfig.host;
       };
@@ -348,12 +336,6 @@ in
         inherit profileName;
       };
 
-      extraUserModulePath =
-        if builtins.pathExists (config + "/profiles/home-standalone/${profileName}/build.nix") then
-          config + "/profiles/home-standalone/${profileName}/build.nix"
-        else
-          null;
-
       buildContext = {
         inherit
           system
@@ -389,12 +371,6 @@ in
         };
         extraUserModule =
           let
-            buildModules =
-              if extraUserModulePath != null then
-                [ (import extraUserModulePath buildContext.buildArgs) ]
-              else
-                [ ];
-
             virtualModule =
               if userEval.config.user.configuration != (args: context: { }) then
                 let
@@ -425,7 +401,7 @@ in
               else
                 [ ];
           in
-          buildModules ++ virtualModule;
+          virtualModule;
       };
     in
     {

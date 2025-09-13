@@ -207,7 +207,7 @@ check_config_directory() {
             echo "" >&2
             printf "  ${WHITE}- ${RED}%s${RESET}\n" "${errors[@]}" >&2
             echo "" >&2
-            echo "${RED}Expected live disk setup:${RESET}" >&2
+            echo -e "${RED}Expected live disk setup:${RESET}" >&2
             echo -e "  ${WHITE}git clone <core-repo> /nxcore${RESET}" >&2
             echo -e "  ${WHITE}git clone <config-repo> /nxconfig${RESET}" >&2
             echo "" >&2

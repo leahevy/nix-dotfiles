@@ -16,7 +16,6 @@ let
     evalConfigModule
     setupPackages
     buildSpecialArgs
-    getExtraModulePath
     getHardwareModule
     getDiskoModule
     ;
