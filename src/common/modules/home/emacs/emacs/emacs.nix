@@ -24,18 +24,21 @@ args@{
       };
 
       home.shellAliases = {
-        emacs-gui = "emacsclient --server-file=\"${runtimeDir}/emacs-auth/emacs-server\" -c -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"'";
-        emacs = "emacsclient --server-file=\"${runtimeDir}/emacs-auth/emacs-server\" -c -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"' -t";
+        emacs = if self.isDarwin
+          then "TERM=xterm-256color emacsclient -t -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"'"
+          else "emacsclient --server-file=\"${runtimeDir}/emacs-auth/emacs-server\" -c -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"' -t";
         emacs-server-restart =
           if self.isDarwin then
-            "launchctl kickstart -k gui/$UID/nx-emacs-daemon"
+            "launchctl kickstart -k gui/$(id -u)/nx-emacs-daemon"
           else
             "systemctl --user restart nx-emacs-custom";
         emacs-server-status =
           if self.isDarwin then
-            "launchctl list | grep nx-emacs-daemon"
+            "launchctl print gui/$(id -u)/nx-emacs-daemon"
           else
             "systemctl --user status nx-emacs-custom";
+      } // lib.optionalAttrs self.isLinux {
+        emacs-gui = "emacsclient --server-file=\"${runtimeDir}/emacs-auth/emacs-server\" -c -a 'echo \"Emacs server is not ready yet... check with emacs-server-status\"'";
       };
 
       systemd.user.services.nx-emacs-custom = lib.mkIf self.isLinux {
@@ -82,10 +85,13 @@ args@{
           ProgramArguments = [
             "/bin/sh"
             "-c"
-            "mkdir -p ${runtimeDir}/emacs-auth && exec ${emacsPackage}/bin/emacs --fg-daemon --eval '(setq server-name \"emacs-server\")' --eval '(setq server-port 17777)' --eval '(setq server-auth-dir \"${runtimeDir}/emacs-auth/\")' --eval '(setq server-use-tcp t)'"
+            "exec ${emacsPackage}/bin/emacs --fg-daemon"
           ];
           RunAtLoad = true;
-          KeepAlive = true;
+          ProcessType = "Interactive";
+          KeepAlive = {
+            SuccessfulExit = true;
+          };
           StandardOutPath = "${config.home.homeDirectory}/Library/Logs/nx-emacs-daemon.log";
           StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/nx-emacs-daemon.log";
           EnvironmentVariables = {
