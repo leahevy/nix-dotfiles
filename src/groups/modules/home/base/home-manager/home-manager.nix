@@ -85,6 +85,9 @@ args@{
           chat = {
             beeper = true;
           };
+          todo = {
+            todoist = true;
+          };
         };
         linux = {
           utils = {
@@ -174,6 +177,9 @@ args@{
           };
           chat = {
             beeper = true;
+          };
+          todo = {
+            todoist = true;
           };
         };
         linux = {
