@@ -19,13 +19,16 @@ rec {
 
   # Check if input is local development input for live editing
   # Usage: isLocalDevelopmentInput $INPUTPATH $INPUT
-  isLocalDevelopmentInput = inputPath: input: defs.localDevelopmentInputs ? ${input};
+  isLocalDevelopmentInput =
+    inputPath: input: defs.localDevelopmentInputs ? ${input} || input == "profile";
 
   # Get local filesystem source path for development input
   # Usage: getLocalSourcePath $INPUT
   getLocalSourcePath =
     input:
-    if defs.localDevelopmentInputs ? ${input} then
+    if input == "profile" then
+      toString additionalInputs.profile
+    else if defs.localDevelopmentInputs ? ${input} then
       defs.localDevelopmentInputs.${input}
     else
       throw "Input '${input}' is not a local development input and has no source path";

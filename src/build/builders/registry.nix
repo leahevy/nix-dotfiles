@@ -12,6 +12,7 @@ let
     "groups"
     "build"
     "config"
+    "profile"
   ];
 
   configInputs = inputs.config.configInputs or { };

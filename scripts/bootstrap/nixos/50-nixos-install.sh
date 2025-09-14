@@ -38,8 +38,10 @@ if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix" ]]; then
   exit 1
 fi
 
+PROFILE_PATH="$(retrieve_active_profile_path)"
+
 FULL_PROFILE="$(construct_profile_name "$HOSTNAME")"
-USERNAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
+USERNAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
 if [[ -z "$USERNAME" || "$USERNAME" == "null" || "$USERNAME" == "\"null\"" ]]; then
   echo -e "${RED}Error: Could not determine main user from host configuration for ${WHITE}$HOSTNAME${RESET}" >&2
   echo -e "${RED}Make sure ${WHITE}mainUser${RED} is set in ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix${RESET}" >&2
@@ -49,7 +51,7 @@ USERNAME="${USERNAME//\"/}"
 
 echo -e "Using full profile name: ${WHITE}$FULL_PROFILE${RESET}"
 
-HOME="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
+HOME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
 if [[ -z "$HOME" || "$HOME" == "null" ]]; then
   echo -e "${RED}Error: Failed to extract valid home directory for ${WHITE}$USERNAME${RESET}" >&2
   exit 1
@@ -85,8 +87,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     exit 1
   fi
 
-  USER_UID="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.uid")"
-  GROUP_NAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.group")"
+  USER_UID="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.uid")"
+  GROUP_NAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.group")"
   
   if [[ -z "$USER_UID" || "$USER_UID" == "null" || -z "$GROUP_NAME" || "$GROUP_NAME" == "null" ]]; then
     echo -e "${RED}Error: Failed to extract valid user information for ${WHITE}$USERNAME${RESET}" >&2
@@ -96,7 +98,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   USER_UID="${USER_UID//\"/}"
   GROUP_NAME="${GROUP_NAME//\"/}"
   
-  USER_GID="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.groups.$GROUP_NAME.gid")"
+  USER_GID="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.groups.$GROUP_NAME.gid")"
   if [[ -z "$USER_GID" || "$USER_GID" == "null" ]]; then
     echo -e "${RED}Error: Failed to extract valid group GID for group ${WHITE}$GROUP_NAME${RESET}" >&2
     exit 1
@@ -121,8 +123,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     cp -a /mnt/etc/sops/age/keys.txt /mnt/persist/etc/sops/age
 
     echo
-    echo -e "Running: ${WHITE}nixos-install --flake .#$FULL_PROFILE --no-root-password --override-input config path:$CONFIG_DIR${RESET}"
-    nixos-install --flake ".#$FULL_PROFILE" --no-root-password --override-input config "path:$CONFIG_DIR"
+    echo -e "Running: ${WHITE}nixos-install --flake .#$FULL_PROFILE --no-root-password --override-input config path:$CONFIG_DIR --override-input profile path:$PROFILE_PATH${RESET}"
+    nixos-install --flake ".#$FULL_PROFILE" --no-root-password --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH"
 
     if [ $? -ne 0 ]; then
       echo -e "${RED}Error: nixos-install failed! See above for error details.${RESET}" >&2
@@ -176,7 +178,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
   echo
   echo -e "${WHITE}Checking if impermanence is enabled for this host...${RESET}"
-  IMPERMANENCE_ENABLED="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
+  IMPERMANENCE_ENABLED="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
   
   echo
   echo -e "${MAGENTA}Next steps:${RESET}"

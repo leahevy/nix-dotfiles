@@ -4,6 +4,8 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
 deployment_script_setup "impermanence"
 
+PROFILE_PATH="$(retrieve_active_profile_path)"
+
 check_nixos() {
   if [[ ! -f /etc/NIXOS ]]; then
     echo -e "${RED}Error: This command only works on NixOS systems${RESET}" >&2
@@ -26,7 +28,7 @@ get_main_username() {
   
   if [[ -d "$CONFIG_DIR" ]]; then
     local username
-    username="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+    username="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
     if [[ -n "$username" && "$username" != "null" && "$username" != "\"null\"" ]]; then
       echo "${username//\"/}"
       return 0
@@ -116,7 +118,7 @@ subcommand_check() {
   local user_home="/home/$username"
   if [[ -d "$CONFIG_DIR" ]]; then
     local full_profile="$(construct_profile_name "$hostname")"
-    local home_path="$(nix eval --json --override-input config "path:$CONFIG_DIR" \
+    local home_path="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.users.users.$username.home" 2>/dev/null || echo "null")"
     if [[ -n "$home_path" && "$home_path" != "null" && "$home_path" != "\"null\"" ]]; then
       user_home="${home_path//\"/}"
@@ -131,19 +133,19 @@ subcommand_check() {
   if [[ -d "$CONFIG_DIR" ]]; then
     local full_profile="$(construct_profile_name "$hostname")"
     
-    system_dirs="$(nix eval --json --override-input config "path:$CONFIG_DIR" \
+    system_dirs="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".directories" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
       
-    system_files="$(nix eval --json --override-input config "path:$CONFIG_DIR" \
+    system_files="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".files" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
       
-    user_dirs="$(nix eval --json --override-input config "path:$CONFIG_DIR" \
+    user_dirs="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".directories" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
       
-    user_files="$(nix eval --json --override-input config "path:$CONFIG_DIR" \
+    user_files="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".files" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
   fi

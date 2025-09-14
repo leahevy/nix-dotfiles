@@ -38,9 +38,11 @@ if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix" ]]; then
   exit 1
 fi
 
+PROFILE_PATH="$(retrieve_active_profile_path)"
+
 echo -e "${GREEN}Evaluating configuration to find main user...${RESET}"
 FULL_PROFILE="$(construct_profile_name "$HOSTNAME")"
-USERNAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
+USERNAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
 if [[ -z "$USERNAME" || "$USERNAME" == "null" || "$USERNAME" == "\"null\"" ]]; then
   echo -e "${RED}Error: Could not determine main user from host configuration for ${WHITE}$HOSTNAME${RESET}" >&2
   echo -e "${RED}Make sure ${WHITE}mainUser${RED} is set in ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix${RESET}" >&2
@@ -60,7 +62,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   fi
   
   FULL_PROFILE_NAME="$(construct_profile_name "$HOSTNAME")"
-  HOME="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.home")"
+  HOME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.home")"
   if [[ -z "$HOME" || "$HOME" == "null" ]]; then
     echo -e "${RED}Error: Failed to extract valid home directory for ${WHITE}$USERNAME${RESET}" >&2
     exit 1
@@ -101,8 +103,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
       echo -e "${GREEN}User SOPS key installed successfully at ${WHITE}$USER_SOPS_DIR/keys.txt${RESET}"
 
       echo -e "${GREEN}Fixing permissions of home folder now...${RESET}"
-      USER_UID="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.uid")"
-      GROUP_NAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.group")"
+      USER_UID="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.uid")"
+      GROUP_NAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.group")"
 
       if [[ -z "$USER_UID" || "$USER_UID" == "null" || -z "$GROUP_NAME" || "$GROUP_NAME" == "null" ]]; then
         echo -e "${RED}Error: Failed to extract valid user information for ${WHITE}$USERNAME${RESET}" >&2
@@ -111,7 +113,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         USER_UID="${USER_UID//\"/}"
         GROUP_NAME="${GROUP_NAME//\"/}"
         
-        USER_GID="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.groups.$GROUP_NAME.gid")"
+        USER_GID="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.groups.$GROUP_NAME.gid")"
         if [[ -z "$USER_GID" || "$USER_GID" == "null" ]]; then
           echo -e "${RED}Error: Failed to extract valid group GID for group ${WHITE}$GROUP_NAME${RESET}" >&2
           echo -e "${YELLOW}You might have to fix the permissions of /mnt/$HOME yourself before installing!${RESET}" >&2

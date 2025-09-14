@@ -4,6 +4,8 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
 deployment_script_setup "modules"
 
+PROFILE_PATH="$(retrieve_active_profile_path)"
+
 show_help() {
   cat << 'EOF'
 Usage:
@@ -91,7 +93,7 @@ subcommand_list() {
   echo -e "${YELLOW}Fetching module registry...${RESET}"
   echo
   local registry_json
-  registry_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#modules" 2>/dev/null)"
+  registry_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#modules" 2>/dev/null)"
   
   if [[ $? -ne 0 || -z "$registry_json" || "$registry_json" == "null" ]]; then
     echo -e "${RED}Error: Failed to fetch module registry${RESET}" >&2
@@ -105,21 +107,21 @@ subcommand_list() {
     
     if [[ "${force_standalone:-false}" == "true" ]]; then
       local full_profile="$(construct_profile_name "$base_profile")"
-      local user_exists="$(nix eval --override-input config "path:$CONFIG_DIR" ".#users" --apply "users: builtins.hasAttr \"$full_profile\" users" 2>/dev/null || echo "false")"
+      local user_exists="$(nix eval --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users" --apply "users: builtins.hasAttr \"$full_profile\" users" 2>/dev/null || echo "false")"
       if [[ "$user_exists" != "true" ]]; then
         echo -e "${RED}Error: User profile not found: ${WHITE}$base_profile${RESET}" >&2
         exit 1
       fi
     elif [[ -e /etc/NIXOS ]] || [[ "${force_nixos:-false}" == "true" ]]; then
       local full_profile="$(construct_profile_name "$base_profile")"
-      local host_exists="$(nix eval --override-input config "path:$CONFIG_DIR" ".#hosts" --apply "hosts: builtins.hasAttr \"$full_profile\" hosts" 2>/dev/null || echo "false")"
+      local host_exists="$(nix eval --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts" --apply "hosts: builtins.hasAttr \"$full_profile\" hosts" 2>/dev/null || echo "false")"
       if [[ "$host_exists" != "true" ]]; then
         echo -e "${RED}Error: Host profile not found: ${WHITE}$base_profile${RESET}" >&2
         exit 1
       fi
     else
       local full_profile="$(construct_profile_name "$base_profile")"
-      local user_exists="$(nix eval --override-input config "path:$CONFIG_DIR" ".#users" --apply "users: builtins.hasAttr \"$full_profile\" users" 2>/dev/null || echo "false")"
+      local user_exists="$(nix eval --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users" --apply "users: builtins.hasAttr \"$full_profile\" users" 2>/dev/null || echo "false")"
       if [[ "$user_exists" != "true" ]]; then
         echo -e "${RED}Error: User profile not found: ${WHITE}$base_profile${RESET}" >&2
         exit 1
@@ -141,13 +143,13 @@ subcommand_list() {
   fi
   
   if [[ "${force_standalone:-false}" == "true" ]]; then
-    active_modules="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" 2>/dev/null || echo '{}')"
+    active_modules="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>/dev/null || echo '{}')"
     user_modules="$active_modules"
   elif [[ -e /etc/NIXOS ]] || [[ "${force_nixos:-false}" == "true" ]]; then
-    host_modules="$(timeout 30s nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.modules" 2>/dev/null || echo '{}')"
-    user_modules="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.modules" 2>/dev/null || echo '{}')"
+    host_modules="$(timeout 30s nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.modules" 2>/dev/null || echo '{}')"
+    user_modules="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.modules" 2>/dev/null || echo '{}')"
   else
-    active_modules="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" 2>/dev/null || echo '{}')"
+    active_modules="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>/dev/null || echo '{}')"
     user_modules="$active_modules"
   fi
   
@@ -275,7 +277,7 @@ subcommand_info() {
   echo -e "${YELLOW}Fetching module information...${RESET}"
   echo
   local module_info
-  module_info="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#modules.$input_name.$namespace_name.$group_name.$module_name" 2>/dev/null || echo "null")"
+  module_info="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#modules.$input_name.$namespace_name.$group_name.$module_name" 2>/dev/null || echo "null")"
   
   if [[ "$module_info" == "null" ]]; then
     echo -e "${RED}Error: Module not found: ${WHITE}$module_id${RESET}" >&2
@@ -321,7 +323,7 @@ subcommand_edit() {
   local group_name="${rest2%%.*}"
   local module_name="${rest2#*.}"
   
-  local core_inputs=("common" "linux" "darwin" "groups" "build" "config")
+  local core_inputs=("common" "linux" "darwin" "groups" "build" "config" "profile")
   local input_allowed=false
   for allowed_input in "${core_inputs[@]}"; do
     if [[ "$input_name" == "$allowed_input" ]]; then
@@ -338,6 +340,8 @@ subcommand_edit() {
   local base_path
   if [[ "$input_name" == "config" ]]; then
     base_path="$CONFIG_DIR"
+  elif [[ "$input_name" == "profile" ]]; then
+    base_path="$PROFILE_PATH"
   else
     base_path="$PWD/src/$input_name"
   fi
@@ -519,40 +523,40 @@ subcommand_config() {
   local full_profile="${base_profile}--${arch}"
   
   if [[ "${force_standalone:-false}" == "true" ]]; then
-    if ! nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" >/dev/null 2>&1; then
-      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" 2>&1)"
+    if ! nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" >/dev/null 2>&1; then
+      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>&1)"
       echo -e "${RED}Error: Failed to evaluate standalone user modules configuration${RESET}" >&2
       echo -e "${WHITE}Details: $error_output${RESET}" >&2
       return 1
     fi
-    local config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" 2>/dev/null)"
+    local config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>/dev/null)"
     format_config_yaml "$config_json" "Standalone User Modules"
   elif [[ -e /etc/NIXOS ]] || [[ "${force_nixos:-false}" == "true" ]]; then
-    if ! nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.modules" >/dev/null 2>&1; then
-      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.modules" 2>&1)"
+    if ! nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.modules" >/dev/null 2>&1; then
+      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.modules" 2>&1)"
       echo -e "${RED}Error: Failed to evaluate host system modules configuration${RESET}" >&2
       echo -e "${WHITE}Details: $error_output${RESET}" >&2
       return 1
     fi
-    local host_config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.modules" 2>/dev/null)"
+    local host_config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.modules" 2>/dev/null)"
     format_config_yaml "$host_config_json" "Host System Modules"
     echo
-    if ! nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.modules" >/dev/null 2>&1; then
-      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.modules" 2>&1)"
+    if ! nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.modules" >/dev/null 2>&1; then
+      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.modules" 2>&1)"
       echo -e "${RED}Error: Failed to evaluate main user modules configuration${RESET}" >&2
       echo -e "${WHITE}Details: $error_output${RESET}" >&2
       return 1
     fi
-    local user_config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.modules" 2>/dev/null)"
+    local user_config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.modules" 2>/dev/null)"
     format_config_yaml "$user_config_json" "Main User Modules"
   else
-    if ! nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" >/dev/null 2>&1; then
-      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" 2>&1)"
+    if ! nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" >/dev/null 2>&1; then
+      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>&1)"
       echo -e "${RED}Error: Failed to evaluate standalone user modules configuration${RESET}" >&2
       echo -e "${WHITE}Details: $error_output${RESET}" >&2
       return 1
     fi
-    local config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#users.$full_profile.modules" 2>/dev/null)"
+    local config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>/dev/null)"
     format_config_yaml "$config_json" "Standalone User Modules"
   fi
 }

@@ -40,7 +40,8 @@ deployment_script_setup() {
 }
 
 parse_common_deployment_args() {
-    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR")
+    PROFILE_PATH="$(retrieve_active_profile_path)"
+    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
     ALLOW_DIRTY_GIT=false
     
     while [[ $# -gt 0 ]]; do
@@ -68,11 +69,12 @@ parse_common_deployment_args() {
         esac
     done
     
-    export EXTRA_ARGS ALLOW_DIRTY_GIT
+    export EXTRA_ARGS ALLOW_DIRTY_GIT PROFILE_PATH
 }
 
 parse_build_deployment_args() {
-    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR")
+    PROFILE_PATH="$(retrieve_active_profile_path)"
+    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
     TIMEOUT=600
     DRY_RUN=""
     
@@ -101,7 +103,7 @@ parse_build_deployment_args() {
         esac
     done
     
-    export EXTRA_ARGS TIMEOUT DRY_RUN
+    export EXTRA_ARGS TIMEOUT DRY_RUN PROFILE_PATH
 }
 
 ensure_nixos_only() {
@@ -379,6 +381,28 @@ retrieve_active_profile() {
     echo "$target_profile"
 }
 
+retrieve_active_profile_path() {
+    local base_profile
+    if [[ -e .nx-profile.conf ]]; then
+        base_profile="$(cat .nx-profile.conf)"
+    else
+        if [[ -e /etc/nixos ]]; then
+            base_profile="$HOSTNAME"
+        else
+            base_profile="$USER"
+        fi
+    fi
+    
+    local profile_path
+    if [[ -e /etc/NIXOS ]]; then
+        profile_path="$CONFIG_DIR/profiles/nixos/$base_profile"
+    else
+        profile_path="$CONFIG_DIR/profiles/home-standalone/$base_profile"
+    fi
+    echo -e "${GREEN}Using profile path: ${RED}$profile_path${RESET}\n" >&2
+    echo "$profile_path"
+}
+
 copy_config_to_target() {
     local USERNAME="$1"
     local TARGET_HOME="$2"
@@ -409,21 +433,23 @@ configure_target_git_remotes() {
         exit 1
     fi
     
+    local PROFILE_PATH="$(retrieve_active_profile_path)"
+    
     local TARGET_CORE="/mnt$TARGET_HOME/.config/nx/nxcore"
     local TARGET_CONFIG="/mnt$TARGET_HOME/.config/nx/nxconfig"
     
     local CORE_INSTALL_URL
     local CONFIG_INSTALL_URL
     
-    CORE_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
+    CORE_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CORE_INSTALL_URL" == "null" || "$CORE_INSTALL_URL" == "\"null\"" ]]; then
-        CORE_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
+        CORE_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
     fi
     CORE_INSTALL_URL="${CORE_INSTALL_URL//\"/}"
     
-    CONFIG_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
+    CONFIG_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CONFIG_INSTALL_URL" == "null" || "$CONFIG_INSTALL_URL" == "\"null\"" ]]; then
-        CONFIG_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#variables.configRepoIsoUrl" 2>/dev/null)"
+        CONFIG_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.configRepoIsoUrl" 2>/dev/null)"
     fi
     CONFIG_INSTALL_URL="${CONFIG_INSTALL_URL//\"/}"
     

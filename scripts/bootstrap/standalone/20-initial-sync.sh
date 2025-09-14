@@ -39,6 +39,7 @@ if [[ -x "$HOME/.nix-profile/bin/home-manager" ]]; then
 fi
 
 FULL_PROFILE="$(construct_profile_name "$USER")"
+PROFILE_PATH="$(retrieve_active_profile_path)"
 echo -e "${GREEN}Building Home Manager configuration for ${WHITE}$FULL_PROFILE${GREEN} with config override${RESET}" >&2
 
 CLEANUP_RESULT=1
@@ -55,7 +56,7 @@ trap cleanup EXIT ERR
 
 nix build --extra-experimental-features flakes --extra-experimental-features nix-command \
   ".#homeConfigurations.$FULL_PROFILE.activationPackage" \
-  --override-input config "path:$CONFIG_DIR" >&2
+  --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" >&2
 
 echo -e "${GREEN}Activating Home Manager configuration${RESET}" >&2
 if ./result/activate; then

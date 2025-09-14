@@ -38,6 +38,11 @@
       inputs.nixpkgs-unstable.follows = "nixpkgs-unstable";
     };
 
+    profile = {
+      url = "path:./src/profile";
+      flake = false;
+    };
+
     nixpkgs = {
       url = "nixpkgs/nixos-25.05";
     };
@@ -121,6 +126,7 @@
         groups = inputs.groups;
         lib = inputs.lib;
         config = inputs.config;
+        profile = inputs.profile;
       }
       // configInputs;
 

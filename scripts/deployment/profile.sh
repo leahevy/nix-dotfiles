@@ -4,6 +4,8 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
 simple_deployment_script_setup "profile"
 
+PROFILE_PATH="$(retrieve_active_profile_path)"
+
 show_help() {
   cat << 'EOF'
 Usage:
@@ -52,7 +54,7 @@ resolve_user_profile_dir() {
     local full_profile
     local username
     full_profile="$(retrieve_active_profile 2>/dev/null | tail -1)"
-    username="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+    username="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
     username="${username//\"/}"
     
     if [[ "$username" == "null" || -z "$username" ]]; then
@@ -77,7 +79,7 @@ resolve_user_config_file() {
     local full_profile
     local username
     full_profile="$(retrieve_active_profile 2>/dev/null | tail -1)"
-    username="$(nix eval --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+    username="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
     username="${username//\"/}"
     echo "$user_dir/$username.nix"
 }

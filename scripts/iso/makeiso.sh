@@ -122,7 +122,8 @@ ISO_NAME="nxcore-${SYSTEM}-$(date +"%d-%m-%y_%H-%M").iso"
 
 if [[ -n "$CONFIG_DIR" ]]; then
     echo -e "Using config directory: ${WHITE}$CONFIG_DIR${RESET}"
-    EXTRA_ARGS+=("--override-input" "config" "path:$CONFIG_DIR")
+    PROFILE_PATH="$(retrieve_active_profile_path)"
+    EXTRA_ARGS+=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
     
     if [[ -d "$CONFIG_DIR/.git/git-crypt" ]]; then
         echo -e "${GREEN}Detected git-crypt encryption in config repository${RESET}"

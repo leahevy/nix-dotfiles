@@ -728,6 +728,18 @@
         "type": "github"
       }
     },
+    "profile": {
+      "flake": false,
+      "locked": {
+        "path": "./src/profile",
+        "type": "path"
+      },
+      "original": {
+        "path": "./src/profile",
+        "type": "path"
+      },
+      "parent": []
+    },
     "root": {
       "inputs": {
         "build": "build",
@@ -747,6 +759,7 @@
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",
+        "profile": "profile",
         "sops-nix": "sops-nix",
         "stylix": "stylix"
       }

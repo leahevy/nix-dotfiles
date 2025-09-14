@@ -7,5 +7,6 @@ deployment_script_setup "news"
 ensure_standalone_only "news"
 
 PROFILE="$(retrieve_active_profile)"
+PROFILE_PATH="$(retrieve_active_profile_path)"
 
-home-manager news --flake .#$PROFILE --override-input config "path:$CONFIG_DIR"
+home-manager news --flake .#$PROFILE --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH"
