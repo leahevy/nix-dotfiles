@@ -84,6 +84,7 @@ args@{
           };
           chat = {
             beeper = true;
+            signal = true;
           };
           todo = {
             todoist = true;
@@ -177,6 +178,7 @@ args@{
           };
           chat = {
             beeper = true;
+            signal = true;
           };
           todo = {
             todoist = true;
