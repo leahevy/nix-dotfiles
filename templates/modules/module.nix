@@ -43,6 +43,16 @@ args@{
   configuration =
     context@{ config, options, ... }:
     {
+      # For system modules
+      environment.persistence."${self.persist}" = {
+        directories = [ ];
+        files = [ ];
+      };
 
+      # For home-manager modules
+      home.persistence."${self.persist}" = {
+        directories = [ ];
+        files = [ ];
+      };
     };
 }
