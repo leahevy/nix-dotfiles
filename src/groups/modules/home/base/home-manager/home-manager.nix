@@ -82,6 +82,9 @@ args@{
             emacs = true;
             doom = true;
           };
+          chat = {
+            beeper = true;
+          };
         };
         linux = {
           utils = {
@@ -168,6 +171,9 @@ args@{
           emacs = {
             emacs = true;
             doom = true;
+          };
+          chat = {
+            beeper = true;
           };
         };
         linux = {
