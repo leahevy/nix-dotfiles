@@ -23,6 +23,9 @@ args@{
   # Can be overwritten from the profile.
   defaults = { };
 
+  # List of strings with unfree package names to allow in the build.
+  unfree = [ ];
+
   # Custom attributes which can have any value and may be used when the module
   # file is imported via: (self.importFileCustom args FILENAME)
   custom = { };
