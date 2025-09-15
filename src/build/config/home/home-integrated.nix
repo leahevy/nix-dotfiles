@@ -17,6 +17,8 @@ let
       core = {
         programs = true;
         utils = true;
+        tokens = true;
+        sops = true;
       };
       system = {
         dummy-files = true;
@@ -96,22 +98,6 @@ in
 
   specialisation = specialisationConfigs;
 
-  sops = {
-    defaultSopsFile = helpers.secretsPathFromInput "config" "user-secrets.yaml";
-    age.keyFile =
-      if (host.impermanence or false) then
-        "${variables.persist.home}/${user.username}/.config/sops/age/keys.txt"
-      else
-        "${config.xdg.configHome}/sops/age/keys.txt";
-
-    secrets = {
-      github_token = {
-        sopsFile = helpers.secretsPathFromInput "config" "global-secrets.yaml";
-        path = "${config.xdg.configHome}/nix/github-token";
-      };
-    };
-  };
-
   home = {
     username = user.username;
 
@@ -183,8 +169,5 @@ in
       experimental-features = variables.experimental-features;
     };
 
-    extraOptions = ''
-      !include ${config.xdg.configHome}/nix/github-token
-    '';
   };
 }

@@ -22,6 +22,8 @@ let
         network = true;
         users = true;
         nix-ld = true;
+        tokens = true;
+        sops = true;
       };
       desktop = {
         desktop = true;
@@ -100,21 +102,6 @@ in
     {
       specialisation = specialisationConfigs;
 
-      sops = {
-        defaultSopsFile = helpers.secretsPath "host-secrets.yaml";
-        age.keyFile = "${variables.persist.system}/etc/sops/age/keys.txt";
-
-        secrets = {
-          github_token = {
-            sopsFile = helpers.secretsPath "global-secrets.yaml";
-            path = "/etc/nix/github-token";
-            mode = "0400";
-            owner = "root";
-            group = "root";
-          };
-        };
-      };
-
       environment = {
         systemPackages = host.additionalPackages or [ ];
       };
@@ -130,9 +117,6 @@ in
           trusted-users = [ host.mainUser.username ];
           http-connections = variables.httpConnections;
         };
-        extraOptions = ''
-          !include /etc/nix/github-token
-        '';
       };
     }
 

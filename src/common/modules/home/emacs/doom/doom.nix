@@ -400,7 +400,6 @@ args@{
         ".config/doom/config.el".source = self.file "doom/config.el";
         ".config/doom/packages.el".source = self.file "doom/packages.el";
         ".config/doom/custom.el".source = self.file "doom/custom.el";
-        ".config/doom/init/00-default.el".source = self.file "doom/init/00-default.el";
         ".config/doom/config/00-default.el".source = self.file "doom/config/00-default.el";
         ".config/doom/packages/00-default.el".source = self.file "doom/packages/00-default.el";
         ".config/doom/custom/00-default.el".source = self.file "doom/custom/00-default.el";

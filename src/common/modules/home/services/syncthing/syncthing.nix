@@ -43,27 +43,25 @@ args@{
     {
       sops.secrets."${self.host.hostname}-syncthing-key" = {
         format = "binary";
-        sopsFile = self.user.secrets "syncthing.key";
+        sopsFile = self.profile.secretsPath "syncthing.key";
       };
 
       sops.secrets."${self.host.hostname}-syncthing-cert" = {
         format = "binary";
-        sopsFile = self.user.secrets "syncthing.cert";
+        sopsFile = self.profile.secretsPath "syncthing.cert";
       };
 
       sops.secrets."${self.host.hostname}-syncthing-password" = {
         format = "binary";
-        sopsFile = self.user.secrets "syncthing.password";
+        sopsFile = self.profile.secretsPath "syncthing.password";
       };
 
-      systemd.user.services.syncthing =
-        lib.mkIf (self.user.isModuleEnabledByName "linux.storage.luks-data-drive")
-          {
-            Unit = {
-              After = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
-              Requires = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
-            };
-          };
+      systemd.user.services.syncthing = lib.mkIf (self.linux.isModuleEnabled "storage.luks-data-drive") {
+        Unit = {
+          After = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
+          Requires = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
+        };
+      };
 
       services.syncthing = {
         enable = true;

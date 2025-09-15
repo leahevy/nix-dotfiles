@@ -96,36 +96,6 @@ rec {
     in
     map checkPath requiredPaths;
 
-  # Get absolute path to secrets file in specified input
-  # Usage: secretsPathFromInput $INPUT $SUBPATH
-  secretsPathFromInput = input: subpath: resolveInputFromInput input + "/secrets/" + subpath;
-
-  # Get absolute path to secrets file in config input
-  # Usage: secretsPath $SUBPATH
-  secretsPath = subpath: resolveInputFromInput "config" + "/secrets/" + subpath;
-
-  # Get absolute path to files directory in specified input
-  # Usage: filesPathFromInput $INPUT $SUBPATH
-  filesPathFromInput = input: subpath: resolveInputFromInput input + "/files/" + subpath;
-
-  # Get absolute path to files directory in config input
-  # Usage: secretsPath $SUBPATH
-  filesPath = subpath: resolveInputFromInput "config" + "/files/" + subpath;
-
-  # Apply NixOS host profile hooks
-  # Usage: applyNixOSHooks $ARGS
-  applyNixOSHooks = args: import (additionalInputs.build + "/hooks/system/nixos.nix") args;
-
-  # Apply user profile hooks for integrated Home Manager
-  # Usage: applyIntegratedUserHooks $ARGS
-  applyIntegratedUserHooks =
-    args: import (additionalInputs.build + "/hooks/home/home-integrated.nix") args;
-
-  # Apply user profile hooks for standalone Home Manager
-  # Usage: applyStandaloneUserHooks $ARGS
-  applyStandaloneUserHooks =
-    args: import (additionalInputs.build + "/hooks/home/home-standalone.nix") args;
-
   # Generate a UUID from a given text input
   # Usage: generateUUID $TEXT
   generateUUID =
@@ -135,91 +105,25 @@ rec {
     in
     "${builtins.substring 0 8 hash}-${builtins.substring 8 4 hash}-${builtins.substring 12 4 hash}-${builtins.substring 16 4 hash}-${builtins.substring 20 12 hash}";
 
-  # Extract unfree package declarations from processed modules
-  # Usage: extractModuleUnfreePackages processedModules
-  extractModuleUnfreePackages =
-    processedModules:
-    let
-      collectUnfreeFromModules =
-        modules:
-        lib.flatten (
-          lib.mapAttrsToList (
-            inputName: inputGroups:
-            lib.mapAttrsToList (
-              groupName: groupModules:
-              lib.mapAttrsToList (moduleName: moduleSettings: moduleSettings.unfree or [ ]) groupModules
-            ) inputGroups
-          ) modules
-        );
-    in
-    lib.unique (collectUnfreeFromModules processedModules);
+  # Get absolute path to file in any input
+  # Usage: getInputFilePath $INPUT $SUBPATH
+  getInputFilePath = input: subPath: input + "/" + subPath;
 
-  # Validate that all unfree packages are explicitly declared
-  # Usage: validateUnfreePackages { packages = [...]; declaredUnfree = [...]; context = "system|home"; profileName = "..."; processedModules = {}; }
-  validateUnfreePackages =
-    {
-      packages,
-      declaredUnfree ? [ ],
-      context,
-      profileName ? "unknown",
-      processedModules ? { },
-    }:
-    let
-      moduleUnfreePackages = extractModuleUnfreePackages processedModules;
-      allDeclaredUnfreePackages = declaredUnfree ++ moduleUnfreePackages;
+  # Get relative path string to file in input
+  # Usage: getInputFilePathRel $INPUTNAME $SUBPATH
+  getInputFilePathRel =
+    inputName: subPath:
+    if isLocalDevelopmentInput null inputName then
+      (getLocalSourcePath inputName) + "/" + subPath
+    else
+      throw "Cannot get relative path for non-local input '${inputName}'";
 
-      unfreePackages = builtins.filter (
-        pkg:
-        let
-          isUnfree = pkg.meta.unfree or false;
-
-          hasUnfreeLicense = builtins.any (
-            license:
-            let
-              licenseName = lib.toLower (license.shortName or license.spdxId or "");
-            in
-            lib.hasInfix "unfree" licenseName
-            || lib.hasInfix "proprietary" licenseName
-            || licenseName == "unknown"
-          ) (lib.toList (pkg.meta.license or [ ]));
-
-        in
-        isUnfree || hasUnfreeLicense
-      ) packages;
-
-      unfreePackageNames = map (pkg: pkg.pname or pkg.name or "unknown") unfreePackages;
-
-      undeclaredUnfreePackages = builtins.filter (
-        packageName:
-        !(builtins.any (
-          declaredName: packageName == declaredName || lib.hasPrefix declaredName packageName
-        ) allDeclaredUnfreePackages)
-      ) unfreePackageNames;
-
-      hasUndeclaredUnfreePackages = undeclaredUnfreePackages != [ ];
-
-      configInstructions =
-        if context == "system" then
-          "host.allowedUnfreePackages = [ ${
-            lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages
-          } ];"
-        else
-          "user.allowedUnfreePackages = [ ${
-            lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages
-          } ];";
-
-    in
-    {
-      assertion = !hasUndeclaredUnfreePackages;
-      message = ''
-        Unfree packages found in ${context} packages but not declared in ${profileName} profile:
-        ${lib.concatStringsSep ", " undeclaredUnfreePackages}
-
-        Please add them to your profile:
-        ${configInstructions}
-
-        Or declare them in modules that use them:
-        unfree = [ ${lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages} ];
-      '';
-    };
+  # Create symlink to file in any input
+  # Usage: symlinkInputFile $CONFIG $INPUTNAME $SUBPATH
+  symlinkInputFile =
+    config: inputName: subPath:
+    if isLocalDevelopmentInput null inputName then
+      symlink config ((getLocalSourcePath inputName) + "/" + subPath)
+    else
+      throw "Cannot create symlink for non-local input '${inputName}'";
 }

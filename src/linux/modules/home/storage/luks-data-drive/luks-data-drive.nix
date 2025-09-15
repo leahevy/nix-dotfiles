@@ -13,7 +13,7 @@ args@{
 
   assertions = [
     {
-      assertion = self.user.isHostModuleEnabledByName "linux.storage.luks-data-drive";
+      assertion = self.host.isModuleEnabled "storage.luks-data-drive";
       message = "linux/storage/luks-data-drive home-manager module requires system module to be enabled: linux/storage/luks-data-drive";
     }
   ];
@@ -33,7 +33,7 @@ args@{
           RemainAfterExit = true;
           ExecStart =
             let
-              mountPoint = (self.user.getHostConfigForModuleByName "linux.storage.luks-data-drive").mountpoint;
+              mountPoint = (self.host.getModuleConfig "storage.luks-data-drive").mountpoint;
               dataPath = "${mountPoint}/${self.host.hostname}${self.user.home}";
               waitScript = pkgs.writeShellScript "wait-for-luks-data" ''
                 echo "Waiting for LUKS data structure at ${dataPath}..."

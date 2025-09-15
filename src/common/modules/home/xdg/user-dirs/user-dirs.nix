@@ -27,18 +27,18 @@ in
     context@{ config, options, ... }:
     {
       config = lib.mkIf self.isLinux (
-        if !(self.user.isHostModuleEnabledByName "linux.storage.luks-data-drive") then
+        if !(self.linux.isModuleEnabled "storage.luks-data-drive") then
           {
             home.file =
               (lib.mapAttrs' (
                 xdgName: dirName:
                 lib.nameValuePair dirName {
-                  source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.data/${dirName}";
+                  source = helpers.symlinkToHomeDirPath config ".data/${dirName}";
                 }
               ) userDirs)
               // {
-                "data".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.data/data";
-                "develop".source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.data/develop";
+                "data".source = helpers.symlinkToHomeDirPath config ".data/data";
+                "develop".source = helpers.symlinkToHomeDirPath config ".data/develop";
               };
 
             xdg.userDirs = {
@@ -55,21 +55,20 @@ in
           }
         else
           let
-            mountPoint = (self.user.getHostConfigForModuleByName "linux.storage.luks-data-drive").mountpoint;
+            mountPoint = (self.linux.host.getModuleConfig "storage.luks-data-drive").mountpoint;
           in
           {
             home.file =
               (lib.mapAttrs' (
                 xdgName: dirName:
                 lib.nameValuePair dirName {
-                  source = config.lib.file.mkOutOfStoreSymlink "${mountPoint}/${self.host.hostname}/${self.user.home}/${dirName}";
+                  source = helpers.symlink config "${mountPoint}/${self.host.hostname}/${self.user.home}/${dirName}";
                 }
               ) userDirs)
               // {
-                "data".source =
-                  config.lib.file.mkOutOfStoreSymlink "${mountPoint}/${self.host.hostname}/${self.user.home}/data";
+                "data".source = helpers.symlink config "${mountPoint}/${self.host.hostname}/${self.user.home}/data";
                 "develop".source =
-                  config.lib.file.mkOutOfStoreSymlink "${mountPoint}/${self.host.hostname}/${self.user.home}/develop";
+                  helpers.symlink config "${mountPoint}/${self.host.hostname}/${self.user.home}/develop";
               };
 
             xdg.userDirs = {

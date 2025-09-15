@@ -150,7 +150,7 @@ in
         };
       };
 
-      host-data = helpers.applyNixOSHooks {
+      host-data = funcs.applyNixOSHooks {
         inherit
           lib
           helpers
@@ -198,7 +198,7 @@ in
             architecture = arch;
           };
 
-          userConfig = helpers.applyIntegratedUserHooks {
+          userConfig = funcs.applyIntegratedUserHooks {
             inherit
               lib
               helpers
@@ -315,7 +315,7 @@ in
         isMainUser = true;
       };
 
-      userConfig = helpers.applyStandaloneUserHooks {
+      userConfig = funcs.applyStandaloneUserHooks {
         inherit
           lib
           helpers

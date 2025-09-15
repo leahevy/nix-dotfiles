@@ -41,7 +41,7 @@ args@{
       message = "UUID for crypted device must be set!";
     }
     {
-      assertion = self.host.isMainUserModuleEnabledByName "linux.storage.luks-data-drive";
+      assertion = self.user.isModuleEnabled "storage.luks-data-drive";
       message = "linux/storage/luks-data-drive system module requires home-manager module to be enabled: linux/storage/luks-data-drive";
     }
   ];
@@ -51,7 +51,7 @@ args@{
     {
       sops.secrets."${self.settings.keyfileSecretName}" = {
         format = "binary";
-        sopsFile = helpers.secretsPath "${self.settings.keyfileSecretName}";
+        sopsFile = self.config.secretsPath "${self.settings.keyfileSecretName}";
         mode = "0400";
         owner = "root";
         group = "root";

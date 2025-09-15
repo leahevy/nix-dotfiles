@@ -89,31 +89,7 @@ rec {
           helpers.getLocalSourcePath input + "/" + self.moduleBasePath + "/" + subpath
         )
       else
-        config.lib.file.mkOutOfStoreSymlink (inputPath + "/" + self.moduleBasePath + "/" + subpath);
-
-    # Get absolute path to file in module's own input directory
-    # Usage: file $SELF $SUBPATH
-    file =
-      self: subpath:
-      helpers.resolveInputFromInput self.moduleInputName + "/" + self.moduleBasePath + "/" + subpath;
-
-    # Get absolute path to secrets file in config input only
-    # Usage: secretsFile $SELF $SUBPATH
-    secretsFile = self: subpath: additionalInputs.config + "/" + self.moduleBasePath + "/" + subpath;
-
-    # Create symlink to file in module's own input
-    # Usage: symlinkFile $SELF $CONFIG $SUBPATH
-    symlinkFile =
-      self: config: subpath:
-      let
-        inputPath = helpers.resolveInputFromInput self.moduleInputName;
-      in
-      if helpers.isLocalDevelopmentInput inputPath self.moduleInputName then
-        helpers.symlinkToHomeDirPath config (
-          helpers.getLocalSourcePath self.moduleInputName + "/" + self.moduleBasePath + "/" + subpath
-        )
-      else
-        config.lib.file.mkOutOfStoreSymlink (inputPath + "/" + self.moduleBasePath + "/" + subpath);
+        helpers.symlink config (inputPath + "/" + self.moduleBasePath + "/" + subpath);
 
     # Import nix file data from same module (returns data without applying context)
     # Usage: self.importFileData args "file.nix"
@@ -278,348 +254,342 @@ rec {
   };
 
   userFuncs = {
-    # Get Home Manager library functions
-    # Usage: self.user.lib $SELF $CONFIG
-    lib = self: config: if self.user.isStandalone then lib.hm else config.lib;
-
-    # Get absolute path to user profile secrets file
-    # Usage: self.user.secrets $SELF $SUBPATH
-    secrets =
-      self: subpath:
-      let
-        user = self.user;
-        profileType = helpers.profileTypeForUser user;
-        configInput = additionalInputs.config;
-        fullPath =
-          configInput + "/profiles" + ("/" + profileType + "/" + user.profileName + "/secrets/" + subpath);
-      in
-      if builtins.pathExists fullPath then
-        fullPath
-      else
-        throw "Secret file not found: config/profiles/${profileType}/${user.profileName}/secrets/${subpath}";
-
-    # Get absolute path to user profile files
-    # Usage: self.user.files $SELF $SUBPATH
-    files =
-      self: subpath:
-      let
-        user = self.user;
-        profileType = helpers.profileTypeForUser user;
-        configInput = additionalInputs.config;
-        fullPath =
-          configInput + "/profiles" + ("/" + profileType + "/" + user.profileName + "/files/" + subpath);
-      in
-      if builtins.pathExists fullPath then
-        fullPath
-      else
-        throw "File not found: config/profiles/${profileType}/${user.profileName}/files/${subpath}";
-
-    # Get relative path string to user profile secrets file
-    # Usage: self.user.secretsRel $SELF $SUBPATH
-    secretsRel =
-      self: subpath:
-      let
-        user = self.user;
-        profileType = helpers.profileTypeForUser user;
-        configInput = additionalInputs.config;
-        fullPath =
-          configInput + "/profiles" + ("/" + profileType + "/" + user.profileName + "/secrets/" + subpath);
-      in
-      if builtins.pathExists fullPath then
-        "config/profiles/${profileType}/${user.profileName}/secrets/${subpath}"
-      else
-        throw "Secret file not found: config/profiles/${profileType}/${user.profileName}/secrets/${subpath}";
-
-    # Get relative path string to user profile files
-    # Usage: self.user.filesRel $SELF $SUBPATH
-    filesRel =
-      self: subpath:
-      let
-        user = self.user;
-        profileType = helpers.profileTypeForUser user;
-        configInput = additionalInputs.config;
-        fullPath =
-          configInput + "/profiles" + ("/" + profileType + "/" + user.profileName + "/files/" + subpath);
-      in
-      if builtins.pathExists fullPath then
-        "config/profiles/${profileType}/${user.profileName}/files/${subpath}"
-      else
-        throw "File not found: config/profiles/${profileType}/${user.profileName}/files/${subpath}";
-
-    # Create symlink to user profile secrets file
-    # Usage: self.user.symlinkSecrets $SELF $CONFIG $SUBPATH
-    symlinkSecrets =
-      self: config: subpath:
-      let
-        user = self.user;
-        profileType = helpers.profileTypeForUser user;
-        configSourcePath = helpers.getLocalSourcePath "config";
-        relativePath =
-          configSourcePath + "/profiles/" + profileType + "/" + user.profileName + "/secrets/" + subpath;
-      in
-      if
-        builtins.pathExists (
-          additionalInputs.config
-          + "/profiles/"
-          + profileType
-          + "/"
-          + user.profileName
-          + "/secrets/"
-          + subpath
-        )
-      then
-        helpers.symlinkToHomeDirPath config relativePath
-      else
-        throw "Secret file not found: config/profiles/${profileType}/${user.profileName}/secrets/${subpath}";
-
-    # Create symlink to user profile files
-    # Usage: self.user.symlinkFiles $SELF $CONFIG $SUBPATH
-    symlinkFiles =
-      self: config: subpath:
-      let
-        user = self.user;
-        profileType = helpers.profileTypeForUser user;
-        configSourcePath = helpers.getLocalSourcePath "config";
-        relativePath =
-          configSourcePath + "/profiles/" + profileType + "/" + user.profileName + "/files/" + subpath;
-      in
-      if
-        builtins.pathExists (
-          additionalInputs.config + "/profiles/" + profileType + "/" + user.profileName + "/files/" + subpath
-        )
-      then
-        helpers.symlinkToHomeDirPath config relativePath
-      else
-        throw "File not found: config/profiles/${profileType}/${user.profileName}/files/${subpath}";
-
-    # Check if a user module is enabled by dotted path
-    # Usage: self.user.isModuleEnabledByName "common.vim.nixvim"
-    isModuleEnabledByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules = self.user.modules;
-      in
-      lib.hasAttrByPath pathParts modules;
-
-    # Get config for user module by dotted path, returns {} if not found
-    # Usage: self.user.getConfigForModuleByName "common.vim.nixvim"
-    getConfigForModuleByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules = self.user.modules;
-      in
-      lib.attrByPath pathParts { } modules;
-
-    # Require config for user module by dotted path, fails if not found
-    # Usage: self.user.requireConfigForModuleByName "common.vim.nixvim"
-    requireConfigForModuleByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules = self.user.modules;
-      in
-      if lib.hasAttrByPath pathParts modules then
-        lib.attrByPath pathParts { } modules
-      else
-        throw "Required home module '${path}' is not enabled in user modules";
-
-    # Check if a host module is enabled by dotted path
-    # Usage: self.user.isHostModuleEnabledByName "common.vim.nixvim"
-    isHostModuleEnabledByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules = if !self.user.isStandalone then self.host.modules else { };
-      in
-      lib.hasAttrByPath pathParts modules;
-
-    # Get config for host module by dotted path, returns {} if not found
-    # Usage: self.user.getHostConfigForModuleByName "common.vim.nixvim"
-    getHostConfigForModuleByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules = if !self.user.isStandalone then self.host.modules else { };
-      in
-      lib.attrByPath pathParts { } modules;
-
-    # Require config for host module by dotted path, fails if not found
-    # Usage: self.user.requireHostConfigForModuleByName "common.vim.nixvim"
-    requireHostConfigForModuleByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules =
-          if !self.user.isStandalone then
-            self.host.modules
-          else
-            throw "This module requires a specific host module and cannot work on standalone!";
-      in
-      if lib.hasAttrByPath pathParts modules then
-        lib.attrByPath pathParts { } modules
-      else
-        throw "Required host module '${path}' is not enabled in host modules";
   };
 
   hostFuncs = {
-    # Get absolute path to host profile secrets file
-    # Usage: self.host.secrets $SELF $SUBPATH
-    secrets =
-      self: subpath:
-      let
-        host = self.host;
-        configInput = additionalInputs.config;
-        fullPath = configInput + "/profiles" + ("/nixos/" + host.profileName + "/secrets/" + subpath);
-      in
-      if builtins.pathExists fullPath then
-        fullPath
-      else
-        throw "Secret file not found: config/profiles/nixos/${host.profileName}/secrets/${subpath}";
-
-    # Get absolute path to host profile files
-    # Usage: self.host.files $SELF $SUBPATH
-    files =
-      self: subpath:
-      let
-        host = self.host;
-        configInput = additionalInputs.config;
-        fullPath = configInput + "/profiles" + ("/nixos/" + host.profileName + "/files/" + subpath);
-      in
-      if builtins.pathExists fullPath then
-        fullPath
-      else
-        throw "File not found: config/profiles/nixos/${host.profileName}/files/${subpath}";
-
-    # Get relative path string to host profile secrets file
-    # Usage: self.host.secretsRel $SELF $SUBPATH
-    secretsRel =
-      self: subpath:
-      let
-        host = self.host;
-        configInput = additionalInputs.config;
-        fullPath = configInput + "/profiles" + ("/nixos/" + host.profileName + "/secrets/" + subpath);
-      in
-      if builtins.pathExists fullPath then
-        "config/profiles/nixos/${host.profileName}/secrets/${subpath}"
-      else
-        throw "Secret file not found: config/profiles/nixos/${host.profileName}/secrets/${subpath}";
-
-    # Get relative path string to host profile files
-    # Usage: self.host.filesRel $SELF $SUBPATH
-    filesRel =
-      self: subpath:
-      let
-        host = self.host;
-        configInput = additionalInputs.config;
-        fullPath = configInput + "/profiles" + ("/nixos/" + host.profileName + "/files/" + subpath);
-      in
-      if builtins.pathExists fullPath then
-        "config/profiles/nixos/${host.profileName}/files/${subpath}"
-      else
-        throw "File not found: config/profiles/nixos/${host.profileName}/files/${subpath}";
-
-    # Create symlink to host profile secrets file
-    # Usage: self.host.symlinkSecrets $SELF $CONFIG $SUBPATH
-    symlinkSecrets =
-      self: config: subpath:
-      let
-        host = self.host;
-        configSourcePath = helpers.getLocalSourcePath "config";
-        relativePath = configSourcePath + "/profiles/nixos/" + host.profileName + "/secrets/" + subpath;
-      in
-      if
-        builtins.pathExists (
-          additionalInputs.config + "/profiles/nixos/" + host.profileName + "/secrets/" + subpath
-        )
-      then
-        helpers.symlinkToHomeDirPath config relativePath
-      else
-        throw "Secret file not found: config/profiles/nixos/${host.profileName}/secrets/${subpath}";
-
-    # Create symlink to host profile files
-    # Usage: self.host.symlinkFiles $SELF $CONFIG $SUBPATH
-    symlinkFiles =
-      self: config: subpath:
-      let
-        host = self.host;
-        configSourcePath = helpers.getLocalSourcePath "config";
-        relativePath = configSourcePath + "/profiles/nixos/" + host.profileName + "/files/" + subpath;
-      in
-      if
-        builtins.pathExists (
-          additionalInputs.config + "/profiles/nixos/" + host.profileName + "/files/" + subpath
-        )
-      then
-        helpers.symlinkToHomeDirPath config relativePath
-      else
-        throw "File not found: config/profiles/nixos/${host.profileName}/files/${subpath}";
-
-    # Check if a host module is enabled by dotted path
-    # Usage: self.host.isModuleEnabledByName "common.vim.nixvim"
-    isModuleEnabledByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules = self.host.modules;
-      in
-      lib.hasAttrByPath pathParts modules;
-
-    # Get config for host module by dotted path, returns {} if not found
-    # Usage: self.host.getConfigForModuleByName "common.vim.nixvim"
-    getConfigForModuleByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules = self.host.modules;
-      in
-      lib.attrByPath pathParts { } modules;
-
-    # Require config for host module by dotted path, fails if not found
-    # Usage: self.host.requireConfigForModuleByName "common.vim.nixvim"
-    requireConfigForModuleByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules = self.host.modules;
-      in
-      if lib.hasAttrByPath pathParts modules then
-        lib.attrByPath pathParts { } modules
-      else
-        throw "Required host module '${path}' is not enabled in host modules";
-
-    # Check if a mainUser module is enabled by dotted path
-    # Usage: self.host.isMainUserModuleEnabledByName "common.vim.nixvim"
-    isMainUserModuleEnabledByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules = self.host.mainUser.modules;
-      in
-      lib.hasAttrByPath pathParts modules;
-
-    # Get config for mainUser module by dotted path, returns {} if not found
-    # Usage: self.host.getMainUserConfigForModuleByName "common.vim.nixvim"
-    getMainUserConfigForModuleByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules = self.host.mainUser.modules;
-      in
-      lib.attrByPath pathParts { } modules;
-
-    # Require config for host module by dotted path, fails if not found
-    # Usage: self.host.requireMainUserConfigForModuleByName "common.vim.nixvim"
-    requireMainUserConfigForModuleByName =
-      self: path:
-      let
-        pathParts = lib.splitString "." path;
-        modules = self.host.mainUser.modules;
-      in
-      if lib.hasAttrByPath pathParts modules then
-        lib.attrByPath pathParts { } modules
-      else
-        throw "Required home module '${path}' is not enabled in mainUser modules";
   };
+
+  # Create context-aware function wrapper with error handling
+  # Usage: createContextFunctions $INPUTNAME $NAMESPACE $MODULECONTEXT $MODULEBASEPATH
+  createContextFunctions =
+    inputName: namespace: moduleContext: moduleBasePath:
+    let
+      currentNamespace = if moduleContext ? user then "home" else "system";
+      isStandalone = moduleContext.user.isStandalone or false;
+
+      fileFunctions = generateFileFunctions inputName moduleBasePath;
+      moduleFunctions = generateModuleFunctions inputName namespace moduleContext;
+      sameModuleFunctions = generateSameModuleFunctions inputName namespace moduleContext moduleBasePath;
+
+    in
+    fileFunctions // moduleFunctions // sameModuleFunctions;
+
+  # Build complete hierarchical function system
+  # Usage: buildHierarchicalFunctions $MODULECONTEXT $MODULEBASEPATH
+  buildHierarchicalFunctions =
+    moduleContext: moduleBasePath:
+    let
+      currentNamespace = if moduleContext ? user then "home" else "system";
+      currentInputName = moduleContext.moduleInputName;
+      isStandalone = moduleContext.user.isStandalone or false;
+
+      contextDefaults =
+        createContextFunctions currentInputName currentNamespace moduleContext
+          moduleBasePath;
+
+      hostFunctions = createContextFunctions currentInputName "host" moduleContext moduleBasePath;
+      userFunctions = createContextFunctions currentInputName "user" moduleContext moduleBasePath;
+
+      inputSpecificFunctions = lib.mapAttrs (
+        inputName: _: createContextFunctions inputName currentNamespace moduleContext moduleBasePath
+      ) additionalInputs;
+
+      inputNamespaceFunctions = lib.mapAttrs (
+        inputName: _:
+        let
+          inputSpecificFuncs = inputSpecificFunctions.${inputName} or { };
+          namespaceFuncs = {
+            host = createContextFunctions inputName "host" moduleContext moduleBasePath;
+            user = createContextFunctions inputName "user" moduleContext moduleBasePath;
+          };
+        in
+        inputSpecificFuncs // namespaceFuncs
+      ) additionalInputs;
+
+    in
+    contextDefaults
+    // {
+      # Get Home Manager library functions - always takes config parameter
+      # Usage: self.lib $CONFIG
+      lib = config: if isStandalone then lib.hm else config.lib;
+
+      host = (moduleContext.host or { }) // hostFunctions;
+      user = (moduleContext.user or { }) // userFunctions;
+    }
+    // inputNamespaceFunctions;
+
+  # Generate complete hierarchical input function system
+  # Usage: hierarchicalInputFuncs $MODULECONTEXT $MODULEBASEPATH
+  hierarchicalInputFuncs =
+    moduleContext: moduleBasePath: buildHierarchicalFunctions moduleContext moduleBasePath;
+
+  # Validate module context access patterns
+  # Usage: validateContext $MODULECONTEXT $TARGETNAMESPACE
+  validateContext =
+    moduleContext: targetNamespace:
+    let
+      currentNamespace = if moduleContext ? user then "home" else "system";
+      isStandalone = moduleContext.user.isStandalone or false;
+    in
+    {
+      canAccessNamespace = true;
+      shouldReturnSafeDefaults = isStandalone;
+
+      resolveActualNamespace =
+        if isStandalone then
+          "standalone"
+        else if targetNamespace == "host" && currentNamespace == "system" then
+          "system"
+        else if targetNamespace == "user" && currentNamespace == "home" then
+          "home"
+        else if targetNamespace == "host" then
+          "system"
+        else if targetNamespace == "user" then
+          "home"
+        else
+          currentNamespace;
+    };
+
+  # Generate file access functions for specific input and module path
+  # Usage: generateFileFunctions $INPUTNAME $MODULEBASEPATH
+  generateFileFunctions = inputName: moduleBasePath: {
+    file =
+      subPath:
+      let
+        relativePath =
+          if moduleBasePath != null then "${moduleBasePath}/files/${subPath}" else "files/${subPath}";
+        fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
+      in
+      if builtins.pathExists fullPath then
+        fullPath
+      else
+        throw "File not found: ${inputName}/${relativePath}";
+
+    # Get absolute path to secret file in input (module-relative when moduleBasePath provided)
+    secret =
+      subPath:
+      let
+        relativePath =
+          if moduleBasePath != null then "${moduleBasePath}/secrets/${subPath}" else "secrets/${subPath}";
+        fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
+      in
+      if builtins.pathExists fullPath then
+        fullPath
+      else
+        throw "Secret file not found: ${inputName}/${relativePath}";
+
+    # Get absolute path to file in input root files/ directory
+    filesPath =
+      subPath:
+      let
+        fullPath = helpers.getInputFilePath additionalInputs.${inputName} ("files/" + subPath);
+      in
+      if builtins.pathExists fullPath then
+        fullPath
+      else
+        throw "Root file not found: ${inputName}/files/${subPath}";
+
+    # Get absolute path to secret in input root secrets/ directory
+    secretsPath =
+      subPath:
+      let
+        fullPath = helpers.getInputFilePath additionalInputs.${inputName} ("secrets/" + subPath);
+      in
+      if builtins.pathExists fullPath then
+        fullPath
+      else
+        throw "Root secret not found: ${inputName}/secrets/${subPath}";
+
+    # Get relative path to file in input
+    fileRel =
+      subPath:
+      let
+        fullPath = helpers.getInputFilePath additionalInputs.${inputName} ("files/" + subPath);
+      in
+      if builtins.pathExists fullPath then
+        helpers.getInputFilePathRel inputName ("files/" + subPath)
+      else
+        throw "File not found: ${inputName}/files/${subPath}";
+
+    # Get relative path to secret file in input
+    secretRel =
+      subPath:
+      let
+        fullPath = helpers.getInputFilePath additionalInputs.${inputName} ("secrets/" + subPath);
+      in
+      if builtins.pathExists fullPath then
+        helpers.getInputFilePathRel inputName ("secrets/" + subPath)
+      else
+        throw "Secret file not found: ${inputName}/secrets/${subPath}";
+
+    # Create symlink to file in input (module-relative when moduleBasePath provided)
+    symlinkFile =
+      config: subPath:
+      let
+        relativePath =
+          if moduleBasePath != null then "${moduleBasePath}/files/${subPath}" else "files/${subPath}";
+        fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
+      in
+      if builtins.pathExists fullPath then
+        if helpers.isLocalDevelopmentInput null inputName then
+          helpers.symlinkToHomeDirPath config (helpers.getLocalSourcePath inputName + "/" + relativePath)
+        else
+          helpers.symlink config (additionalInputs.${inputName} + "/" + relativePath)
+      else
+        throw "File not found: ${inputName}/${relativePath}";
+
+    # Create symlink to secret file in input (module-relative when moduleBasePath provided)
+    symlinkSecret =
+      config: subPath:
+      let
+        relativePath =
+          if moduleBasePath != null then "${moduleBasePath}/secrets/${subPath}" else "secrets/${subPath}";
+        fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
+      in
+      if builtins.pathExists fullPath then
+        if helpers.isLocalDevelopmentInput null inputName then
+          helpers.symlinkToHomeDirPath config (helpers.getLocalSourcePath inputName + "/" + relativePath)
+        else
+          helpers.symlink config (additionalInputs.${inputName} + "/" + relativePath)
+      else
+        throw "Secret file not found: ${inputName}/${relativePath}";
+  };
+
+  # Generate module query functions for specific input and namespace
+  # Usage: generateModuleFunctions $INPUTNAME $REQUESTEDNAMESPACE $MODULECONTEXT
+  generateModuleFunctions =
+    inputName: requestedNamespace: moduleContext:
+    let
+      validation = validateContext moduleContext requestedNamespace;
+      actualNamespace = validation.resolveActualNamespace;
+
+      getModulesForNamespace =
+        ns:
+        if ns == "standalone" then
+          { }
+        else if ns == "home" then
+          if moduleContext ? user then
+            moduleContext.user.modules or { }
+          else if moduleContext ? host && moduleContext.host ? mainUser then
+            moduleContext.host.mainUser.modules or { }
+          else
+            { }
+        else if ns == "system" then
+          if moduleContext ? host then moduleContext.host.modules or { } else { }
+        else
+          throw "Invalid namespace: ${ns}";
+
+      modules = getModulesForNamespace actualNamespace;
+
+      resolveModulePath =
+        modulePath:
+        let
+          pathParts = lib.splitString "." modulePath;
+          fullPath = [ inputName ] ++ pathParts;
+        in
+        {
+          inherit fullPath pathParts;
+        };
+
+    in
+    {
+      # Check if module is enabled
+      isModuleEnabled =
+        modulePath:
+        if validation.shouldReturnSafeDefaults then
+          false
+        else
+          let
+            resolved = resolveModulePath modulePath;
+          in
+          lib.hasAttrByPath resolved.fullPath modules;
+
+      # Get module config
+      getModuleConfig =
+        modulePath:
+        if validation.shouldReturnSafeDefaults then
+          { }
+        else
+          let
+            resolved = resolveModulePath modulePath;
+          in
+          lib.attrByPath resolved.fullPath { } modules;
+
+      # Require module config
+      requireModuleConfig =
+        modulePath:
+        if validation.shouldReturnSafeDefaults then
+          throw "Required module '${inputName}.${modulePath}' is not available in standalone mode"
+        else
+          let
+            resolved = resolveModulePath modulePath;
+            config = lib.attrByPath resolved.fullPath { } modules;
+          in
+          if config != { } then
+            config
+          else
+            throw "Required module '${inputName}.${modulePath}' is not enabled in ${actualNamespace} namespace";
+    };
+
+  # Generate same module query functions for specific input, namespace and module path
+  # Usage: generateSameModuleFunctions $INPUTNAME $REQUESTEDNAMESPACE $MODULECONTEXT $MODULEBASEPATH
+  generateSameModuleFunctions =
+    inputName: requestedNamespace: moduleContext: moduleBasePath:
+    let
+      validation = validateContext moduleContext requestedNamespace;
+      actualNamespace = validation.resolveActualNamespace;
+
+      getModuleNameFromPath =
+        basePath:
+        let
+          parts = lib.splitString "/" basePath;
+          moduleParts = lib.drop 2 parts;
+        in
+        lib.concatStringsSep "." moduleParts;
+
+      moduleName = getModuleNameFromPath moduleBasePath;
+
+      getModulesForNamespace =
+        ns:
+        if ns == "standalone" then
+          { }
+        else if ns == "home" then
+          if moduleContext ? user then
+            moduleContext.user.modules or { }
+          else if moduleContext ? host && moduleContext.host ? mainUser then
+            moduleContext.host.mainUser.modules or { }
+          else
+            { }
+        else if ns == "system" then
+          if moduleContext ? host then moduleContext.host.modules or { } else { }
+        else
+          throw "Invalid namespace: ${ns}";
+
+      modules = getModulesForNamespace actualNamespace;
+      pathParts = lib.splitString "." moduleName;
+      fullPath = [ inputName ] ++ pathParts;
+
+    in
+    {
+      # Check if same module is enabled in target namespace
+      isSameModuleEnabled =
+        if validation.shouldReturnSafeDefaults then false else lib.hasAttrByPath fullPath modules;
+
+      # Get same module config from target namespace
+      getSameModuleConfig =
+        if validation.shouldReturnSafeDefaults then { } else lib.attrByPath fullPath { } modules;
+
+      # Require same module config from target namespace
+      requireSameModuleConfig =
+        if validation.shouldReturnSafeDefaults then
+          throw "Required same module '${inputName}.${moduleName}' is not available in standalone mode"
+        else
+          let
+            config = lib.attrByPath fullPath { } modules;
+          in
+          if config != { } then
+            config
+          else
+            throw "Required same module '${inputName}.${moduleName}' is not enabled in ${actualNamespace} namespace";
+    };
 }

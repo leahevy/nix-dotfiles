@@ -188,6 +188,8 @@ rec {
             host = moduleContext.host // (lib.mapAttrs (name: func: func moduleContext) moduleFuncs.hostFuncs);
           };
 
+      hierarchicalFuncs = moduleFuncs.hierarchicalInputFuncs moduleContext moduleContext.moduleBasePath;
+
       persistShortcut =
         if moduleType == "home" then
           {
@@ -198,7 +200,7 @@ rec {
             persist = moduleContext.variables.persist.system;
           };
     in
-    moduleContext // appliedCommonFuncs // contextFuncs // persistShortcut;
+    moduleContext // appliedCommonFuncs // contextFuncs // hierarchicalFuncs // persistShortcut;
 
   importHomeModule =
     args: moduleSpec:
@@ -519,4 +521,96 @@ rec {
           nextModules;
     in
     collectRound { } initialModulesWithDefaults 0;
+
+  extractModuleUnfreePackages =
+    processedModules:
+    let
+      collectUnfreeFromModules =
+        modules:
+        lib.flatten (
+          lib.mapAttrsToList (
+            inputName: inputGroups:
+            lib.mapAttrsToList (
+              groupName: groupModules:
+              lib.mapAttrsToList (moduleName: moduleSettings: moduleSettings.unfree or [ ]) groupModules
+            ) inputGroups
+          ) modules
+        );
+    in
+    lib.unique (collectUnfreeFromModules processedModules);
+
+  validateUnfreePackages =
+    {
+      packages,
+      declaredUnfree ? [ ],
+      context,
+      profileName ? "unknown",
+      processedModules ? { },
+    }:
+    let
+      moduleUnfreePackages = extractModuleUnfreePackages processedModules;
+      allDeclaredUnfreePackages = declaredUnfree ++ moduleUnfreePackages;
+
+      unfreePackages = builtins.filter (
+        pkg:
+        let
+          isUnfree = pkg.meta.unfree or false;
+
+          hasUnfreeLicense = builtins.any (
+            license:
+            let
+              licenseName = lib.toLower (license.shortName or license.spdxId or "");
+            in
+            lib.hasInfix "unfree" licenseName
+            || lib.hasInfix "proprietary" licenseName
+            || licenseName == "unknown"
+          ) (lib.toList (pkg.meta.license or [ ]));
+
+        in
+        isUnfree || hasUnfreeLicense
+      ) packages;
+
+      unfreePackageNames = map (pkg: pkg.pname or pkg.name or "unknown") unfreePackages;
+
+      undeclaredUnfreePackages = builtins.filter (
+        packageName:
+        !(builtins.any (
+          declaredName: packageName == declaredName || lib.hasPrefix declaredName packageName
+        ) allDeclaredUnfreePackages)
+      ) unfreePackageNames;
+
+      hasUndeclaredUnfreePackages = undeclaredUnfreePackages != [ ];
+
+      configInstructions =
+        if context == "system" then
+          "host.allowedUnfreePackages = [ ${
+            lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages
+          } ];"
+        else
+          "user.allowedUnfreePackages = [ ${
+            lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages
+          } ];";
+
+    in
+    {
+      assertion = !hasUndeclaredUnfreePackages;
+      message = ''
+        Unfree packages found in ${context} packages but not declared in ${profileName} profile:
+        ${lib.concatStringsSep ", " undeclaredUnfreePackages}
+
+        Please add them to your profile:
+        ${configInstructions}
+
+        Or declare them in modules that use them:
+        unfree = [ ${lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages} ];
+      '';
+    };
+
+  applyNixOSHooks = args: import (additionalInputs.build + "/hooks/system/nixos.nix") args;
+
+  applyIntegratedUserHooks =
+    args: import (additionalInputs.build + "/hooks/home/home-integrated.nix") args;
+
+  applyStandaloneUserHooks =
+    args: import (additionalInputs.build + "/hooks/home/home-standalone.nix") args;
 }

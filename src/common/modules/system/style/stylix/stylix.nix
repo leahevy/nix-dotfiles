@@ -46,7 +46,7 @@ args@{
 
         image =
           if (self.settings.wallpaper.config or null) != null then
-            helpers.filesPathFromInput "config" self.settings.wallpaper.config
+            self.config.filesPath self.settings.wallpaper.config
           else if
             (self.settings.wallpaper.url or null) != null && (self.settings.wallpaper.url.url or null) != null
           then

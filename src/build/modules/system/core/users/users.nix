@@ -22,7 +22,7 @@ in
       sops = {
         secrets = {
           userPasswordHash = {
-            sopsFile = helpers.secretsPath "user-secrets.yaml";
+            sopsFile = self.config.secretsPath "user-secrets.yaml";
             neededForUsers = true;
           };
         };
