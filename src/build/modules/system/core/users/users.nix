@@ -12,6 +12,10 @@ let
   host = self.host;
   users = self.users;
   ifSet = helpers.ifSet;
+  mainUserGroups = [
+    "networkmanager"
+    "wheel"
+  ];
 in
 {
   name = "users";
@@ -65,7 +69,10 @@ in
           hashedPasswordFile = if user.isMainUser then config.sops.secrets.userPasswordHash.path else null;
           home = user.home;
           group = ifSet user.system.group user.username;
-          extraGroups = (ifSet user.system.extraGroups [ ]) ++ (ifSet host.userDefaults.groups [ ]);
+          extraGroups =
+            (ifSet user.system.extraGroups [ ])
+            ++ (ifSet host.userDefaults.groups [ ])
+            ++ (if user.isMainUser then mainUserGroups else [ ]);
           openssh = {
             authorizedKeys = {
               keys =
