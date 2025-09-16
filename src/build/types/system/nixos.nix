@@ -152,12 +152,18 @@ with lib;
           networking = mkOption {
             type = types.submodule {
               options = {
-                wifi = {
-                  enabled = mkOption {
-                    type = types.nullOr types.bool;
-                    default = null;
-                    description = "Whether WiFi is enabled";
+                wifi = mkOption {
+                  type = types.submodule {
+                    options = {
+                      enabled = mkOption {
+                        type = types.nullOr types.bool;
+                        default = null;
+                        description = "Whether WiFi is enabled";
+                      };
+                    };
                   };
+                  default = { };
+                  description = "WiFi settings";
                 };
                 useNetworkManager = mkOption {
                   type = types.bool;
@@ -185,61 +191,127 @@ with lib;
                   description = "System timezone";
                 };
 
-                locale = {
-                  main = mkOption {
-                    type = types.str;
-                    default = "en_GB.UTF-8";
-                    description = "Main system locale";
-                  };
-                  extra = mkOption {
-                    type = types.str;
-                    default = "de_DE.UTF-8";
-                    description = "Additional system locale";
-                  };
-                };
-
-                keymap = {
-                  x11 = {
-                    layout = mkOption {
-                      type = types.str;
-                      default = "us";
-                      description = "X11 keyboard layout";
-                    };
-                    variant = mkOption {
-                      type = types.str;
-                      default = "";
-                      description = "X11 keyboard variant";
+                locale = mkOption {
+                  type = types.submodule {
+                    options = {
+                      main = mkOption {
+                        type = types.str;
+                        default = "en_GB.UTF-8";
+                        description = "Main system locale";
+                      };
+                      extra = mkOption {
+                        type = types.str;
+                        default = "de_DE.UTF-8";
+                        description = "Additional system locale";
+                      };
                     };
                   };
-                  console = mkOption {
-                    type = types.str;
-                    default = "us";
-                    description = "Console keyboard layout";
+                  default = { };
+                  description = "System locale settings";
+                };
+
+                keymap = mkOption {
+                  type = types.submodule {
+                    options = {
+                      x11 = mkOption {
+                        type = types.submodule {
+                          options = {
+                            layout = mkOption {
+                              type = types.str;
+                              default = "us";
+                              description = "X11 keyboard layout";
+                            };
+                            variant = mkOption {
+                              type = types.str;
+                              default = "";
+                              description = "X11 keyboard variant";
+                            };
+                          };
+                        };
+                        default = { };
+                        description = "X11 keyboard settings";
+                      };
+                      console = mkOption {
+                        type = types.str;
+                        default = "us";
+                        description = "Console keyboard layout";
+                      };
+                    };
                   };
+                  default = { };
+                  description = "Keyboard layout settings";
                 };
 
-                sound.pulse.enabled = mkOption {
-                  type = types.bool;
-                  default = false;
-                  description = "Whether PulseAudio is enabled";
+                sound = mkOption {
+                  type = types.submodule {
+                    options = {
+                      pulse = mkOption {
+                        type = types.submodule {
+                          options = {
+                            enabled = mkOption {
+                              type = types.bool;
+                              default = false;
+                              description = "Whether PulseAudio is enabled";
+                            };
+                          };
+                        };
+                        default = { };
+                        description = "PulseAudio settings";
+                      };
+                    };
+                  };
+                  default = { };
+                  description = "Sound settings";
                 };
 
-                printing.enabled = mkOption {
-                  type = types.bool;
-                  default = false;
-                  description = "Whether printing support is enabled";
+                printing = mkOption {
+                  type = types.submodule {
+                    options = {
+                      enabled = mkOption {
+                        type = types.bool;
+                        default = false;
+                        description = "Whether printing support is enabled";
+                      };
+                    };
+                  };
+                  default = { };
+                  description = "Printing settings";
                 };
 
-                touchpad.enabled = mkOption {
-                  type = types.bool;
-                  default = false;
-                  description = "Whether touchpad support is enabled";
+                touchpad = mkOption {
+                  type = types.submodule {
+                    options = {
+                      enabled = mkOption {
+                        type = types.bool;
+                        default = false;
+                        description = "Whether touchpad support is enabled";
+                      };
+                    };
+                  };
+                  default = { };
+                  description = "Touchpad settings";
                 };
 
-                desktop.gnome.enabled = mkOption {
-                  type = types.bool;
-                  default = false;
-                  description = "Whether GNOME desktop is enabled";
+                desktop = mkOption {
+                  type = types.submodule {
+                    options = {
+                      gnome = mkOption {
+                        type = types.submodule {
+                          options = {
+                            enabled = mkOption {
+                              type = types.bool;
+                              default = false;
+                              description = "Whether GNOME desktop is enabled";
+                            };
+                          };
+                        };
+                        default = { };
+                        description = "GNOME desktop settings";
+                      };
+                    };
+                  };
+                  default = { };
+                  description = "Desktop environment settings";
                 };
               };
             };

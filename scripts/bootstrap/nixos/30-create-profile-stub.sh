@@ -176,19 +176,28 @@ EOF
   config.host = {
     hostname = "$HOSTNAME";
 
-    mainUser = null;
-    additionalUsers = [ ];
-    extraGroupsToCreate = [ ];
-
     ethernetDeviceName = null;
+
     wifiDeviceName = null;
 
+    additionalPackages = [ ];
+
     nixHardwareModule = null;
+
+    mainUser = null;
+
+    additionalUsers = [ ];
+
+    extraGroupsToCreate = [ ];
 
     userDefaults = {
       groups = [ ];
       modules = { };
     };
+
+    stateVersion = null;
+
+    allowedUnfreePackages = [ ];
 
     kernel = {
       variant = "lts";
@@ -259,15 +268,56 @@ fi
 
     specialisations = { };
 
+    defaultSpecialisation = "Base";
+
     settings = {
+      networking = {
+        wifi = {
+          enabled = false;
+        };
+        useNetworkManager = true;
+      };
+
       system = {
         tmpSize = "2G";
-
+        timezone = "Europe/Berlin";
+        locale = {
+          main = "en_GB.UTF-8";
+          extra = "de_DE.UTF-8";
+        };
+        keymap = {
+          x11 = {
+            layout = "us";
+            variant = "";
+          };
+          console = "us";
+        };
+        sound = {
+          pulse = {
+            enabled = true;
+          };
+        };
+        printing = {
+          enabled = false;
+        };
+        touchpad = {
+          enabled = false;
+        };
         desktop = {
-          gnome.enabled = true;
+          gnome = {
+            enabled = true;
+          };
         };
       };
+
+      sshd = {
+        authorizedKeys = [ ];
+      };
     };
+
+    impermanence = false;
+
+    extraSettings = { };
 
     configuration = args@{
       lib,
