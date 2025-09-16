@@ -307,11 +307,48 @@ rec {
       ) additionalInputs;
 
     in
+    let
+      # Create custom nixpkgs imports with module-scoped unfree predicate
+      createPkgsImport =
+        nixpkgsInput: additionalArgs:
+        let
+          moduleUnfree = moduleContext.unfree or [ ];
+          allowUnfreePredicate =
+            pkg:
+            let
+              pkgName = pkg.pname or pkg.name or "unknown";
+            in
+            builtins.elem pkgName moduleUnfree;
+
+          architecture =
+            if moduleContext ? user && moduleContext.user ? architecture then
+              moduleContext.user.architecture
+            else if moduleContext ? host && moduleContext.host ? architecture then
+              moduleContext.host.architecture
+            else
+              throw "No architecture found in self context for pkgs import";
+        in
+        import nixpkgsInput (
+          {
+            system = architecture;
+            config = { inherit allowUnfreePredicate; };
+          }
+          // additionalArgs
+        );
+    in
     contextDefaults
     // {
       # Get Home Manager library functions - always takes config parameter
       # Usage: self.lib $CONFIG
       lib = config: if isStandalone then lib.hm else config.lib;
+
+      # Create custom nixpkgs import with module-scoped unfree predicate
+      # Usage: self.pkgs { overlays = [...]; }
+      pkgs = createPkgsImport moduleContext.inputs.nixpkgs;
+
+      # Create custom nixpkgs-unstable import with module-scoped unfree predicate
+      # Usage: self.pkgs-unstable { overlays = [...]; }
+      pkgs-unstable = createPkgsImport moduleContext.inputs.nixpkgs-unstable;
 
       host = (moduleContext.host or { }) // hostFunctions;
       user = (moduleContext.user or { }) // userFunctions;

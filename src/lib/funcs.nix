@@ -213,6 +213,16 @@ rec {
       };
       moduleDir = "modules/home/${moduleSpec.group}/${moduleSpec.name}";
 
+      basicModuleResult = import modulePath {
+        lib = args.lib;
+        pkgs = args.pkgs;
+        pkgs-unstable = args.pkgs-unstable;
+        funcs = args.funcs;
+        helpers = helpers;
+        defs = args.defs;
+        self = { };
+      };
+
       moduleContext = {
         inputs = args.inputs;
         host = args.host;
@@ -223,6 +233,7 @@ rec {
         moduleInput = moduleSpec.input;
         moduleInputName = moduleSpec.inputName;
         settings = moduleSpec.settings or { };
+        unfree = basicModuleResult.unfree or [ ];
       };
 
       enhancedModuleContext = injectModuleFuncs moduleContext "home";
@@ -262,6 +273,16 @@ rec {
       };
       moduleDir = "modules/system/${moduleSpec.group}/${moduleSpec.name}";
 
+      basicModuleResult = import modulePath {
+        lib = args.lib;
+        pkgs = args.pkgs;
+        pkgs-unstable = args.pkgs-unstable;
+        funcs = args.funcs;
+        helpers = helpers;
+        defs = args.defs;
+        self = { };
+      };
+
       moduleContext = {
         inputs = args.inputs;
         host = args.host;
@@ -272,6 +293,7 @@ rec {
         moduleInput = moduleSpec.input;
         moduleInputName = moduleSpec.inputName;
         settings = moduleSpec.settings or { };
+        unfree = basicModuleResult.unfree or [ ];
       };
 
       enhancedModuleContext = injectModuleFuncs moduleContext "system";
