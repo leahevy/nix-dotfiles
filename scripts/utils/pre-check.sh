@@ -479,3 +479,62 @@ configure_target_git_remotes() {
     
     echo -e "${GREEN}Git remotes configured for target system.${RESET}"
 }
+
+setup_log_directory() {
+    local log_dir="$1"
+    local real_user="${SUDO_USER:-$USER}"
+    local real_uid="${SUDO_UID:-$(id -u)}"
+    local real_gid="${SUDO_GID:-$(id -g)}"
+    
+    mkdir -p "$log_dir"
+    
+    if [[ "$UID" == 0 && -n "${SUDO_USER:-}" ]]; then
+        chown "$real_uid:$real_gid" "$log_dir"
+        local parent_dir="$(dirname "$log_dir")"
+        while [[ "$parent_dir" != "/" && "$parent_dir" != "." ]]; do
+            if [[ "$(stat -c %u "$parent_dir")" == "0" ]]; then
+                chown "$real_uid:$real_gid" "$parent_dir"
+            fi
+            parent_dir="$(dirname "$parent_dir")"
+        done
+    fi
+}
+
+rotate_logs() {
+    local log_dir="$1"
+    local max_logs="${2:-10}"
+    
+    if [[ ! -d "$log_dir" ]]; then
+        return 0
+    fi
+    
+    local logs=($(find "$log_dir" -name "*.log" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | cut -d' ' -f2-))
+    local log_count=${#logs[@]}
+    
+    if [[ $log_count -gt $max_logs ]]; then
+        local to_remove=$((log_count - max_logs))
+        for ((i=0; i<to_remove; i++)); do
+            rm -f "${logs[i]}" 2>/dev/null || true
+        done
+    fi
+}
+
+create_log_filename() {
+    local log_dir="$1"
+    local prefix="$2"
+    local timestamp="$(date '+%Y%m%d_%H%M%S')"
+    echo "$log_dir/${prefix}_${timestamp}.log"
+}
+
+create_log_file() {
+    local log_file="$1"
+    local real_user="${SUDO_USER:-$USER}"
+    local real_uid="${SUDO_UID:-$(id -u)}"
+    local real_gid="${SUDO_GID:-$(id -g)}"
+    
+    touch "$log_file"
+    
+    if [[ "$UID" == 0 && -n "${SUDO_USER:-}" ]]; then
+        chown "$real_uid:$real_gid" "$log_file"
+    fi
+}

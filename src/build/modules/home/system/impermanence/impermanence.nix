@@ -21,6 +21,7 @@ args@{
             ".config/nix"
             ".config/sops"
             ".cache/nix"
+            ".local/logs/nx"
           ];
 
           files = [

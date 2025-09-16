@@ -58,6 +58,29 @@ SUBCOMMANDS:
 EOF
 }
 
+setup_impermanence_logging() {
+  local check_type="$1"
+  local real_user="${SUDO_USER:-$USER}"
+  local real_home
+  
+  if [[ -n "${SUDO_USER:-}" ]]; then
+    real_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+  else
+    real_home="$HOME"
+  fi
+  
+  local base_log_dir="$real_home/.local/logs/nx/impermanence"
+  local log_dir="$base_log_dir/$check_type"
+  
+  setup_log_directory "$log_dir"
+  rotate_logs "$log_dir" 10
+  
+  local log_file="$(create_log_filename "$log_dir" "check")"
+  create_log_file "$log_file"
+  
+  echo "$log_file"
+}
+
 subcommand_check() {
   local show_home_only=false
   local show_system_only=false
@@ -94,21 +117,42 @@ subcommand_check() {
     exit 1
   fi
   
-  local sudo=""
-  echo "Checking for ephemeral files/directories..."
+  local check_type="all"
   if [[ "$show_home_only" == "true" ]]; then
-    echo "(filtering: /home paths only)"
+    check_type="home"
   elif [[ "$show_system_only" == "true" ]]; then
-    echo "(filtering: system paths only, excluding /home and /persist)"
+    check_type="system"
+  fi
+  
+  local log_file="$(setup_impermanence_logging "$check_type")"
+  local real_user="${SUDO_USER:-$USER}"
+  
+  log_and_display() {
+    echo "$@" | tee -a "$log_file"
+  }
+  
+  local sudo=""
+  log_and_display "=== $(date) ==="
+  log_and_display "Check: $check_type"
+  if [[ ${#filters[@]} -gt 0 ]]; then
+    log_and_display "Filters: ${filters[*]}"
+  fi
+  log_and_display ""
+  
+  log_and_display "Checking for ephemeral files/directories..."
+  if [[ "$show_home_only" == "true" ]]; then
+    log_and_display "(filtering: /home paths only)"
+  elif [[ "$show_system_only" == "true" ]]; then
+    log_and_display "(filtering: system paths only, excluding /home and /persist)"
     sudo="sudo"
   else
     sudo="sudo"
   fi
 
   if [[ ${#filters[@]} -gt 0 ]]; then
-    echo "(keyword filters: ${filters[*]})"
+    log_and_display "(keyword filters: ${filters[*]})"
   fi
-  echo
+  log_and_display ""
   
   local hostname="$(hostname)"
   local username="$(get_main_username)"
@@ -186,7 +230,7 @@ subcommand_check() {
   done < <($sudo find "$search_path" -xdev -type f -o -type d 2>/dev/null | grep -v "^$search_path$" | sort)
   
   if [[ ${#ephemeral_items[@]} -gt 0 ]]; then
-    echo "⚠️  Ephemeral files/directories (will be lost on reboot):"
+    log_and_display "⚠️  Ephemeral files/directories (will be lost on reboot):"
     
     local dirs=()
     local files=()
@@ -206,35 +250,40 @@ subcommand_check() {
     
     local dir_printed=0
     for dir in "${dirs[@]}"; do
-      echo "  Dir  -> $dir"
+      log_and_display "  Dir  -> $dir"
       dir_printed=1
     done
 
     if (( dir_printed )); then
-      echo
+      log_and_display ""
     fi
 
     for file in "${files[@]}"; do
-      echo "  File -> $file"
+      log_and_display "  File -> $file"
     done
     
-    echo
-    echo "Add missing files and folders to /persist:"
-    echo
-    echo " For home modules:"
-    echo '  home.persistence."${self.persist}" = { directories = [...], files = [...] };'
-    echo
-    echo " For system modules:"
-    echo '  environment.persistence."${self.persist}" = { directories = [...], files = [...] };'
-    echo
-    echo " Note: Files may not work depending on the program."
-    echo "       Specifying directories for bind mounts is generally"
-    echo "       the recommended way."
-    echo
-    echo " After that move the files and folders to /persist and then rebuild the system."
+    log_and_display ""
+    log_and_display "Add missing files and folders to /persist:"
+    log_and_display ""
+    log_and_display " For home modules:"
+    log_and_display '  home.persistence."${self.persist}" = { directories = [...], files = [...] };'
+    log_and_display ""
+    log_and_display " For system modules:"
+    log_and_display '  environment.persistence."${self.persist}" = { directories = [...], files = [...] };'
+    log_and_display ""
+    log_and_display " Note: Files may not work depending on the program."
+    log_and_display "       Specifying directories for bind mounts is generally"
+    log_and_display "       the recommended way."
+    log_and_display ""
+    log_and_display " After that move the files and folders to /persist and then rebuild the system."
   else
-    echo "All files are properly persisted!"
+    log_and_display "All files are properly persisted!"
   fi
+  
+  log_and_display ""
+  log_and_display "=== Check completed at $(date) ==="
+  
+  echo -e "${GRAY}Log saved to: ${WHITE}$log_file${RESET}" >&2
 }
 
 subcommand_logs() {
