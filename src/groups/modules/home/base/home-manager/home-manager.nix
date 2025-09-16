@@ -89,6 +89,9 @@ args@{
           todo = {
             todoist = true;
           };
+          music = {
+            spotify = true;
+          };
         };
         linux = {
           utils = {
@@ -182,6 +185,9 @@ args@{
           };
           todo = {
             todoist = true;
+          };
+          music = {
+            spotify = true;
           };
         };
         linux = {
