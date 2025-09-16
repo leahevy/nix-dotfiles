@@ -21,6 +21,7 @@ in
       networking.hostName = host.hostname;
       networking.wireless.enable = ifSet host.settings.networking.wifi.enabled false;
       networking.useDHCP = !host.settings.networking.useNetworkManager;
+      networking.nftables.enable = true;
 
       networking.networkmanager = (
         if host.settings.networking.useNetworkManager then
