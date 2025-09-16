@@ -51,6 +51,10 @@ USERNAME="${USERNAME//\"/}"
 
 echo -e "Using full profile name: ${WHITE}$FULL_PROFILE${RESET}"
 
+echo
+echo -e "${WHITE}Checking if impermanence is enabled for this host...${RESET}"
+IMPERMANENCE_ENABLED="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
+
 HOME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
 if [[ -z "$HOME" || "$HOME" == "null" ]]; then
   echo -e "${RED}Error: Failed to extract valid home directory for ${WHITE}$USERNAME${RESET}" >&2
@@ -176,10 +180,6 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     configure_target_git_remotes "$HOME" "$USER_UID" "$USER_GID"
   fi
 
-  echo
-  echo -e "${WHITE}Checking if impermanence is enabled for this host...${RESET}"
-  IMPERMANENCE_ENABLED="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
-  
   echo
   echo -e "${MAGENTA}Next steps:${RESET}"
   if [[ "$IMPERMANENCE_ENABLED" == "true" ]]; then
