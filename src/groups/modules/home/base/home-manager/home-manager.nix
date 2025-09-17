@@ -217,9 +217,6 @@ args@{
           utils = {
             archive-tools = true;
           };
-          browser = {
-            qutebrowser = true;
-          };
           dev = {
             devenv = true;
             cmake = true;
