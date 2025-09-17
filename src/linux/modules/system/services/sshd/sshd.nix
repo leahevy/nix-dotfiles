@@ -11,12 +11,31 @@ args@{
 {
   name = "sshd";
 
+  submodules = {
+    linux = {
+      services = {
+        fail2ban = true;
+      };
+    };
+  };
+
+  defaults = {
+    port = 22;
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
       services = {
         openssh = {
           enable = true;
+          ports = [ self.settings.port ];
+          settings = {
+            PasswordAuthentication = false;
+            AllowUsers = [ self.host.mainUser.username ];
+            X11Forwarding = false;
+            PermitRootLogin = "no";
+          };
         };
       };
 

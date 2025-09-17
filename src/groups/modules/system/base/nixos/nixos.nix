@@ -18,7 +18,6 @@ args@{
       {
         common = {
           services = {
-            sshd = true;
             printing = true;
           };
           style = {
@@ -32,6 +31,12 @@ args@{
           };
         };
         linux = {
+          services = {
+            sshd = true;
+          };
+          networking = {
+            firewall = true;
+          };
           boot = {
             plymouth = true;
           };
