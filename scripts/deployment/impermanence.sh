@@ -73,7 +73,7 @@ setup_impermanence_logging() {
   local log_dir="$base_log_dir/$check_type"
   
   setup_log_directory "$log_dir"
-  rotate_logs "$log_dir" 10
+  rotate_logs "$log_dir" 30
   
   local log_file="$(create_log_filename "$log_dir" "check")"
   create_log_file "$log_file"
