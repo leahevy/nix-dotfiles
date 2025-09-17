@@ -21,18 +21,26 @@ args@{
           claude-code
         ];
 
-        file.".config/doom/config/80-claude.el".text = lib.mkIf (self.isModuleEnabled "emacs.doom") ''
-          (use-package claude-code-ide
-            :bind ("C-c '" . claude-code-ide-menu)
-            :config
-            (claude-code-ide-emacs-tools-setup)
-            (setq claude-code-ide-terminal-backend 'eat))
-        '';
+        file.".config/doom/config/80-claude.el".text =
+          if (self.isModuleEnabled "emacs.doom") then
+            ''
+              (use-package claude-code-ide
+                :bind ("C-c '" . claude-code-ide-menu)
+                :config
+                (claude-code-ide-emacs-tools-setup)
+                (setq claude-code-ide-terminal-backend 'eat))
+            ''
+          else
+            "";
 
-        file.".config/doom/packages/80-claude.el".text = lib.mkIf (self.isModuleEnabled "emacs.doom") ''
-          (package! claude-code-ide
-            :recipe (:host github :repo "manzaltu/claude-code-ide.el" :files ("*.el")))
-        '';
+        file.".config/doom/packages/80-claude.el".text =
+          if (self.isModuleEnabled "emacs.doom") then
+            ''
+              (package! claude-code-ide
+                :recipe (:host github :repo "manzaltu/claude-code-ide.el" :files ("*.el")))
+            ''
+          else
+            "";
 
         persistence."${self.persist}" = {
           directories = [
