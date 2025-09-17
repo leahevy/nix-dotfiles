@@ -68,13 +68,7 @@ let
               persist = "${variables.persist.home}/${user.username}";
             };
 
-            enhancedContext =
-              moduleContext
-              // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.commonFuncs)
-              // {
-                user =
-                  moduleContext.user // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.userFuncs);
-              };
+            enhancedContext = funcs.injectModuleFuncs moduleContext "home";
 
             enhancedArgs = args // {
               self = enhancedContext;

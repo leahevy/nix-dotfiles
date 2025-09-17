@@ -73,13 +73,7 @@ let
           persist = variables.persist.system;
         };
 
-        enhancedContext =
-          moduleContext
-          // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.commonFuncs)
-          // {
-            host =
-              moduleContext.host // (lib.mapAttrs (name: func: func moduleContext) funcs.moduleFuncs.hostFuncs);
-          };
+        enhancedContext = funcs.injectModuleFuncs moduleContext "system";
 
         enhancedArgs = args // {
           self = enhancedContext;
