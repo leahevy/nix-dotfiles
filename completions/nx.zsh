@@ -102,18 +102,27 @@ _nx() {
                         2)
                             local subcommands=(
                                 'check:List files/directories in ephemeral root'
+                                'diff:Compare historical impermanence check logs'
                                 'logs:Show impermanence rollback logs'
                                 'help:Show help message'
                             )
                             _describe 'impermanence subcommands' subcommands
                             ;;
                         3)
-                            if [[ "$line[2]" == "check" ]]; then
-                                _arguments \
-                                    '--home[Show only paths under /home]' \
-                                    '--system[Show only system paths]' \
-                                    '*--filter[Filter results by keyword]:keyword:'
-                            fi
+                            case "$line[2]" in
+                                check)
+                                    _arguments \
+                                        '--home[Show only paths under /home]' \
+                                        '--system[Show only system paths]' \
+                                        '*--filter[Filter results by keyword]:keyword:'
+                                    ;;
+                                diff)
+                                    _arguments \
+                                        '--range[Compare with Nth previous log]:range:' \
+                                        '--home[Compare only home check logs]' \
+                                        '--system[Compare only system check logs]'
+                                    ;;
+                            esac
                             ;;
                     esac
                     ;;

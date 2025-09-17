@@ -49,11 +49,21 @@ Description:
 
 SUBCOMMANDS:
     check [OPTIONS]      List files/directories in ephemeral root (not persisted)
-                        OPTIONS:
+
+                         OPTIONS:
                           --home           Show only paths under /home
                           --system         Show only system paths (excludes /home and /persist)
                           --filter <keyword>  Filter results containing keyword (can be used multiple times)
+
+    diff [OPTIONS]       Compare historical impermanence check logs
+
+                         OPTIONS:
+                          --range <N>      Compare with Nth previous log (default: 1)
+                          --home           Compare only home check logs
+                          --system         Compare only system check logs
+
     logs                 Show impermanence rollback logs
+
     help                 Show this help message
 EOF
 }
@@ -286,6 +296,96 @@ subcommand_check() {
   echo -e "${GRAY}Log saved to: ${WHITE}$log_file${RESET}" >&2
 }
 
+subcommand_diff() {
+  local range=1
+  local show_home_only=false
+  local show_system_only=false
+  
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --range)
+        if [[ $# -lt 2 ]]; then
+          echo -e "${RED}Error: --range requires a number argument${RESET}" >&2
+          exit 1
+        fi
+        if ! [[ "$2" =~ ^[0-9]+$ ]] || [[ "$2" -eq 0 ]]; then
+          echo -e "${RED}Error: --range must be a positive integer${RESET}" >&2
+          exit 1
+        fi
+        range="$2"
+        shift 2
+        ;;
+      --home)
+        show_home_only=true
+        shift
+        ;;
+      --system)
+        show_system_only=true
+        shift
+        ;;
+      *)
+        echo -e "${RED}Error: Unknown option: ${WHITE}$1${RESET}" >&2
+        echo -e "Usage: ${WHITE}nx impermanence diff [--range N] [--home] [--system]${RESET}" >&2
+        exit 1
+        ;;
+    esac
+  done
+  
+  if [[ "$show_home_only" == "true" && "$show_system_only" == "true" ]]; then
+    echo -e "${RED}Error: --home and --system cannot be used together${RESET}" >&2
+    exit 1
+  fi
+  
+  local check_type="all"
+  if [[ "$show_home_only" == "true" ]]; then
+    check_type="home"
+  elif [[ "$show_system_only" == "true" ]]; then
+    check_type="system"
+  fi
+  
+  local real_user="${SUDO_USER:-$USER}"
+  local real_home
+  
+  if [[ -n "${SUDO_USER:-}" ]]; then
+    real_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+  else
+    real_home="$HOME"
+  fi
+  
+  local log_dir="$real_home/.local/logs/nx/impermanence/$check_type"
+  
+  if [[ ! -d "$log_dir" ]]; then
+    echo -e "${RED}Error: No logs found for check type '${WHITE}$check_type${RED}'${RESET}" >&2
+    echo -e "Directory not found: ${WHITE}$log_dir${RESET}" >&2
+    exit 1
+  fi
+  
+  local log_files
+  readarray -t log_files < <(ls -1t "$log_dir"/check_*.log 2>/dev/null || true)
+  
+  if [[ ${#log_files[@]} -eq 0 ]]; then
+    echo -e "${RED}Error: No check log files found in ${WHITE}$log_dir${RESET}" >&2
+    exit 1
+  fi
+  
+  local required_files=$((range + 1))
+  if [[ ${#log_files[@]} -lt $required_files ]]; then
+    echo -e "${RED}Error: Not enough log files for range ${WHITE}$range${RED}${RESET}" >&2
+    echo -e "Available log files: ${WHITE}${#log_files[@]}${RESET}, need at least $required_files" >&2
+    exit 1
+  fi
+  
+  local newer_file="${log_files[0]}"
+  local older_file="${log_files[$range]}"
+  
+  echo -e "${GRAY}Comparing impermanence check logs (${WHITE}$check_type${GRAY})${RESET}"
+  echo -e "${GRAY}Newer: ${WHITE}$(basename "$newer_file")${RESET}"
+  echo -e "${GRAY}Older: ${WHITE}$(basename "$older_file")${RESET}"
+  echo ""
+  
+  diff "$older_file" "$newer_file"
+}
+
 subcommand_logs() {
   local log_file="/var/log/nx/impermanence/rollback.log"
   
@@ -306,6 +406,10 @@ main() {
     check)
       shift
       subcommand_check "$@"
+      ;;
+    diff)
+      shift
+      subcommand_diff "$@"
       ;;
     logs)
       subcommand_logs

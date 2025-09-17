@@ -20,7 +20,7 @@ _complete_nx() {
                 COMPREPLY=($(compgen -W "--only-core --only-config" -- "${cur}"))
                 ;;
             impermanence)
-                COMPREPLY=($(compgen -W "check logs help" -- "${cur}"))
+                COMPREPLY=($(compgen -W "check diff logs help" -- "${cur}"))
                 ;;
             spec)
                 COMPREPLY=($(compgen -W "--home list switch reset" -- "${cur}"))
@@ -51,6 +51,9 @@ _complete_nx() {
                     check)
                         COMPREPLY=($(compgen -W "--home --system --filter" -- "${cur}"))
                         ;;
+                    diff)
+                        COMPREPLY=($(compgen -W "--range --home --system" -- "${cur}"))
+                        ;;
                 esac
                 ;;
             spec)
@@ -72,13 +75,27 @@ _complete_nx() {
                 esac
                 ;;
         esac
-    elif [[ ${COMP_CWORD} -eq 4 ]] && [[ "${COMP_WORDS[1]}" == "impermanence" ]] && [[ "${COMP_WORDS[2]}" == "check" ]]; then
-        case "$prev" in
-            --filter)
-                COMPREPLY=()
+    elif [[ ${COMP_CWORD} -eq 4 ]] && [[ "${COMP_WORDS[1]}" == "impermanence" ]]; then
+        case "${COMP_WORDS[2]}" in
+            check)
+                case "$prev" in
+                    --filter)
+                        COMPREPLY=()
+                        ;;
+                    *)
+                        COMPREPLY=($(compgen -W "--home --system --filter" -- "${cur}"))
+                        ;;
+                esac
                 ;;
-            *)
-                COMPREPLY=($(compgen -W "--home --system --filter" -- "${cur}"))
+            diff)
+                case "$prev" in
+                    --range)
+                        COMPREPLY=()
+                        ;;
+                    *)
+                        COMPREPLY=($(compgen -W "--range --home --system" -- "${cur}"))
+                        ;;
+                esac
                 ;;
         esac
     fi

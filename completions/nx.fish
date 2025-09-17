@@ -59,16 +59,23 @@ complete -c nx -n "__fish_seen_subcommand_from log head diff diffc status commit
 complete -c nx -n "__fish_seen_subcommand_from log head diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -l only-config -d "Run only on config repository"
 
 # 'nx impermanence'
-complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "not __fish_seen_subcommand_from check logs help" -f
-complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "not __fish_seen_subcommand_from check logs help" -a "check" -d "List files/directories in ephemeral root"
-complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "not __fish_seen_subcommand_from check logs help" -a "logs" -d "Show impermanence rollback logs"
-complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "not __fish_seen_subcommand_from check logs help" -a "help" -d "Show help message"
+complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "not __fish_seen_subcommand_from check diff logs help" -f
+complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "not __fish_seen_subcommand_from check diff logs help" -a "check" -d "List files/directories in ephemeral root"
+complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "not __fish_seen_subcommand_from check diff logs help" -a "diff" -d "Compare historical impermanence check logs"
+complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "not __fish_seen_subcommand_from check diff logs help" -a "logs" -d "Show impermanence rollback logs"
+complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "not __fish_seen_subcommand_from check diff logs help" -a "help" -d "Show help message"
 
 # 'nx impermanence check'
 complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "__fish_seen_subcommand_from check" -f
 complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "__fish_seen_subcommand_from check" -l home -d "Show only paths under /home"
 complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "__fish_seen_subcommand_from check" -l system -d "Show only system paths"
 complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "__fish_seen_subcommand_from check" -l filter -d "Filter results by keyword" -r
+
+# 'nx impermanence diff'
+complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "__fish_seen_subcommand_from diff" -f
+complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "__fish_seen_subcommand_from diff" -l range -d "Compare with Nth previous log" -r
+complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "__fish_seen_subcommand_from diff" -l home -d "Compare only home check logs"
+complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "__fish_seen_subcommand_from diff" -l system -d "Compare only system check logs"
 
 # 'nx impermanence logs'
 complete -c nx -n "__fish_seen_subcommand_from impermanence" -n "__fish_seen_subcommand_from logs" -f
