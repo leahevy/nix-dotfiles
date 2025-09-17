@@ -29,5 +29,15 @@ args@{
           else
             "${config.xdg.configHome}/sops/age/keys.txt";
       };
+
+      home.sessionVariables = {
+        SOPS_AGE_KEY_FILE =
+          if self.user.isStandalone then
+            "${config.xdg.configHome}/sops/age/keys.txt"
+          else if self.host.impermanence or false then
+            "${self.variables.persist.home}/${self.user.username}/.config/sops/age/keys.txt"
+          else
+            "${config.xdg.configHome}/sops/age/keys.txt";
+      };
     };
 }
