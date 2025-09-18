@@ -82,11 +82,7 @@
         touchpad = {
           enabled = false;
         };
-        desktop = {
-          gnome = {
-            enabled = true;
-          };
-        };
+        desktop = "gnome";
       };
 
       sshd = {

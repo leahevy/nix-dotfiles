@@ -21,10 +21,12 @@ args@{
         tokens = true;
         sops = true;
       };
+      desktop = {
+        desktop = true;
+      };
       system = {
         dummy-files = true;
-      }
-      // (if self.user.impermanence or false then { impermanence = true; } else { });
+      };
     };
   };
 }

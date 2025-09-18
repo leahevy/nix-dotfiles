@@ -73,7 +73,17 @@ with lib;
 
     settings = mkOption {
       type = types.submodule {
-        options = { };
+        options = {
+          desktop = mkOption {
+            type = types.nullOr (
+              types.enum [
+                "gnome"
+              ]
+            );
+            default = null;
+            description = "Active desktop environment (or headless)";
+          };
+        };
       };
       default = { };
       description = "Standalone settings";

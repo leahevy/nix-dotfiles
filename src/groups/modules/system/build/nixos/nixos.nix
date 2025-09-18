@@ -27,7 +27,6 @@ args@{
       };
       desktop = {
         desktop = true;
-        sound = true;
       };
       programs = {
         programs = true;

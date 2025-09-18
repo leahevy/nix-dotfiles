@@ -21,6 +21,9 @@ args@{
         tokens = true;
         sops = true;
       };
+      desktop = {
+        desktop = true;
+      };
       system = {
         dummy-files = true;
       }

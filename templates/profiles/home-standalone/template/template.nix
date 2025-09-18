@@ -27,7 +27,9 @@
 
     specialisations = { };
 
-    settings = { };
+    settings = {
+      desktop = null;
+    };
 
     extraSettings = { };
 

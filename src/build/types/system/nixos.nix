@@ -293,25 +293,13 @@ with lib;
                 };
 
                 desktop = mkOption {
-                  type = types.submodule {
-                    options = {
-                      gnome = mkOption {
-                        type = types.submodule {
-                          options = {
-                            enabled = mkOption {
-                              type = types.bool;
-                              default = false;
-                              description = "Whether GNOME desktop is enabled";
-                            };
-                          };
-                        };
-                        default = { };
-                        description = "GNOME desktop settings";
-                      };
-                    };
-                  };
-                  default = { };
-                  description = "Desktop environment settings";
+                  type = types.nullOr (
+                    types.enum [
+                      "gnome"
+                    ]
+                  );
+                  default = null;
+                  description = "Active desktop environment (or headless)";
                 };
               };
             };
