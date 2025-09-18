@@ -93,7 +93,7 @@ subcommand_list() {
   echo -e "${YELLOW}Fetching module registry...${RESET}"
   echo
   local registry_json
-  registry_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#modules" 2>/dev/null)"
+  registry_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#modules")"
   
   if [[ $? -ne 0 || -z "$registry_json" || "$registry_json" == "null" ]]; then
     echo -e "${RED}Error: Failed to fetch module registry${RESET}" >&2
