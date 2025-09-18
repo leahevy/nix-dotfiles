@@ -395,7 +395,7 @@ rec {
     collectFromModules processedModules;
 
   evaluateModuleAssertions =
-    args: moduleContext: assertion:
+    args: moduleType: moduleContext: assertion:
     let
       fullModuleContext = {
         inputs = args.inputs;
@@ -438,7 +438,7 @@ rec {
     in
     {
       assertion = targetAssertion.assertion;
-      message = "Module ${assertion.moduleSpec.inputName}.${assertion.moduleSpec.group}.${assertion.moduleSpec.name} assertion failed: ${targetAssertion.message}";
+      message = "Module ${assertion.moduleSpec.inputName}.${assertion.moduleSpec.group}.${assertion.moduleSpec.name} (namespace: ${moduleType}) assertion failed: ${targetAssertion.message}";
     };
 
   collectSubModules =

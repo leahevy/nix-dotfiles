@@ -30,7 +30,7 @@ args@{
     let
       homeModuleAssertions = funcs.collectModuleAssertions args processedModules "home";
       systemProcessedModules = { };
-      evaluateModuleAssertions = funcs.evaluateModuleAssertions args {
+      evaluateModuleAssertions = funcs.evaluateModuleAssertions args "home" {
         systemModules = systemProcessedModules;
         homeModules = processedModules;
       };
