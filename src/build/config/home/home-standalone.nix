@@ -12,31 +12,17 @@ args@{
   ...
 }:
 let
-  buildModules = {
-    build = {
-      core = {
-        programs = true;
-        utils = true;
-        tokens = true;
-        sops = true;
-      };
-      system = {
-        dummy-files = true;
-      };
-    };
-  };
-
-  initialModules = lib.recursiveUpdate (user.modules or { }) buildModules;
+  initialModules = user.modules or { };
   allModules = funcs.collectAllModulesWithSettings args initialModules "home";
 
   moduleSpecs = funcs.processModules allModules;
-  moduleResults = funcs.importHomeModules args moduleSpecs;
+  moduleResults = funcs.importHomeModules args moduleSpecs allModules;
 
   extraModules = moduleResults.modules;
 
   specialisationConfigs = builtins.mapAttrs (specName: specModules: {
     configuration = {
-      imports = (funcs.importHomeModules args (funcs.processModules specModules)).modules;
+      imports = (funcs.importHomeModules args (funcs.processModules specModules) allModules).modules;
     };
   }) (user.specialisations or { });
 

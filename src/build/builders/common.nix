@@ -228,6 +228,56 @@ in
         };
       additionalUsers = builtins.filter (user: !user.isMainUser) (builtins.attrValues userAttrSet);
 
+      systemArgs = {
+        inherit
+          lib
+          pkgs
+          pkgs-unstable
+          inputs
+          variables
+          helpers
+          defs
+          funcs
+          ;
+        host = host-data // {
+          inherit profileName;
+          mainUser = mainUser;
+          additionalUsers = additionalUsers;
+        };
+        users = userAttrSet;
+      };
+
+      homeArgs = {
+        inherit
+          lib
+          pkgs
+          pkgs-unstable
+          inputs
+          variables
+          helpers
+          defs
+          funcs
+          ;
+        host = host-data // {
+          inherit profileName;
+          mainUser = mainUser;
+          additionalUsers = additionalUsers;
+        };
+        user = mainUser;
+      };
+
+      systemProcessedModules = funcs.collectAllModulesWithSettings systemArgs (helpers.ifSet
+        host-data.modules
+        { }
+      ) "system";
+      homeProcessedModules = funcs.collectAllModulesWithSettings homeArgs (lib.foldl lib.recursiveUpdate
+        { }
+        [
+          (mainUser.modules or { })
+          (host-data.userDefaults.modules or { })
+        ]
+      ) "home";
+
       hostConfig = {
         inherit profileName;
         host = host-data // {
@@ -274,6 +324,8 @@ in
             ;
           host = hostConfig.host;
           users = hostConfig.users;
+          systemProcessedModules = systemProcessedModules;
+          homeProcessedModules = homeProcessedModules;
           configInputs = config.configInputs or { };
         };
         diskoModule = getDiskoModule { inherit profileName; };

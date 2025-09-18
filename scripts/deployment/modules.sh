@@ -161,7 +161,6 @@ subcommand_list() {
       [[ -z "$module_id" ]] && continue
       
       local input_name="${module_id%%.*}"
-      [[ "$input_name" == "build" ]] && continue
       
       local is_active=false
       

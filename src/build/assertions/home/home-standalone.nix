@@ -25,5 +25,16 @@ args@{
     "fullname"
     "email"
     "home"
-  ];
+  ]
+  ++ (
+    let
+      homeModuleAssertions = funcs.collectModuleAssertions args processedModules "home";
+      systemProcessedModules = { };
+      evaluateModuleAssertions = funcs.evaluateModuleAssertions args {
+        systemModules = systemProcessedModules;
+        homeModules = processedModules;
+      };
+    in
+    map evaluateModuleAssertions homeModuleAssertions
+  );
 }

@@ -35,5 +35,16 @@ args@{
   ++ helpers.assertNotNull "host" host [
     "hostname"
     "mainUser"
-  ];
+  ]
+  ++ (
+    let
+      systemModuleAssertions = funcs.collectModuleAssertions args processedModules "system";
+      homeProcessedModules = args.homeProcessedModules or { };
+      evaluateModuleAssertions = funcs.evaluateModuleAssertions args {
+        systemModules = processedModules;
+        homeModules = homeProcessedModules;
+      };
+    in
+    map evaluateModuleAssertions systemModuleAssertions
+  );
 }

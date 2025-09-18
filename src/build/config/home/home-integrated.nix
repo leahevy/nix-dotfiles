@@ -12,36 +12,20 @@ args@{
   ...
 }:
 let
-  buildModules = {
-    build = {
-      core = {
-        programs = true;
-        utils = true;
-        tokens = true;
-        sops = true;
-      };
-      system = {
-        dummy-files = true;
-      }
-      // (if host.impermanence or false then { impermanence = true; } else { });
-    };
-  };
-
   initialModules = lib.foldl lib.recursiveUpdate { } [
     (user.modules or { })
     (host.userDefaults.modules or { })
-    buildModules
   ];
   allModules = funcs.collectAllModulesWithSettings args initialModules "home";
 
   moduleSpecs = funcs.processModules allModules;
-  moduleResults = funcs.importHomeModules args moduleSpecs;
+  moduleResults = funcs.importHomeModules args moduleSpecs allModules;
 
   extraModules = moduleResults.modules;
 
   specialisationConfigs = builtins.mapAttrs (specName: specModules: {
     configuration = {
-      imports = (funcs.importHomeModules args (funcs.processModules specModules)).modules;
+      imports = (funcs.importHomeModules args (funcs.processModules specModules) allModules).modules;
     };
   }) (user.specialisations or { });
 

@@ -203,7 +203,7 @@ rec {
     moduleContext // appliedCommonFuncs // contextFuncs // hierarchicalFuncs // persistShortcut;
 
   importHomeModule =
-    args: moduleSpec:
+    args: moduleSpec: allProcessedModules:
     let
       modulePath = buildModulePath {
         input = moduleSpec.input;
@@ -225,8 +225,12 @@ rec {
 
       moduleContext = {
         inputs = args.inputs;
-        host = args.host;
-        user = args.user;
+        host = args.host // {
+          processedModules = args.systemProcessedModules or { };
+        };
+        user = args.user // {
+          processedModules = allProcessedModules;
+        };
         variables = args.variables;
         configInputs = args.configInputs or { };
         moduleBasePath = moduleDir;
@@ -251,19 +255,14 @@ rec {
     let
       moduleResult = validateModule (import modulePath consolidatedArgs) modulePath;
 
-      assertions = moduleResult.assertions or [ ];
-      validationErrors = builtins.filter (assertion: !(assertion.assertion or true)) assertions;
     in
-    if validationErrors != [ ] then
-      throw "Module ${moduleSpec.inputName}.${moduleSpec.group}.${moduleSpec.name} assertion failed: ${(builtins.head validationErrors).message}"
-    else
-      {
-        configuration = if moduleResult ? configuration then moduleResult.configuration else (context: { });
-        submodules = moduleResult.submodules or { };
-      };
+    {
+      configuration = if moduleResult ? configuration then moduleResult.configuration else (context: { });
+      submodules = moduleResult.submodules or { };
+    };
 
   importSystemModule =
-    args: moduleSpec:
+    args: moduleSpec: allProcessedModules:
     let
       modulePath = buildModulePath {
         input = moduleSpec.input;
@@ -285,8 +284,15 @@ rec {
 
       moduleContext = {
         inputs = args.inputs;
-        host = args.host;
+        host = args.host // {
+          processedModules = allProcessedModules;
+        };
         users = args.users;
+        user =
+          if args.user or null != null then
+            args.user // { processedModules = args.homeProcessedModules or { }; }
+          else
+            null;
         variables = args.variables;
         configInputs = args.configInputs or { };
         moduleBasePath = moduleDir;
@@ -310,22 +316,16 @@ rec {
     in
     let
       moduleResult = validateModule (import modulePath consolidatedArgs) modulePath;
-
-      assertions = moduleResult.assertions or [ ];
-      validationErrors = builtins.filter (assertion: !(assertion.assertion or true)) assertions;
     in
-    if validationErrors != [ ] then
-      throw "Module ${moduleSpec.inputName}.${moduleSpec.group}.${moduleSpec.name} assertion failed: ${(builtins.head validationErrors).message}"
-    else
-      {
-        configuration = if moduleResult ? configuration then moduleResult.configuration else (context: { });
-        submodules = moduleResult.submodules or { };
-      };
+    {
+      configuration = if moduleResult ? configuration then moduleResult.configuration else (context: { });
+      submodules = moduleResult.submodules or { };
+    };
 
   importHomeModules =
-    args: moduleSpecs:
+    args: moduleSpecs: allProcessedModules:
     let
-      moduleResults = map (spec: importHomeModule args spec) moduleSpecs;
+      moduleResults = map (spec: importHomeModule args spec allProcessedModules) moduleSpecs;
     in
     {
       modules = map (result: result.configuration) moduleResults;
@@ -333,13 +333,112 @@ rec {
     };
 
   importSystemModules =
-    args: moduleSpecs:
+    args: moduleSpecs: allProcessedModules:
     let
-      moduleResults = map (spec: importSystemModule args spec) moduleSpecs;
+      moduleResults = map (spec: importSystemModule args spec allProcessedModules) moduleSpecs;
     in
     {
       modules = map (result: result.configuration) moduleResults;
       submodules = lib.foldl lib.recursiveUpdate { } (map (result: result.submodules) moduleResults);
+    };
+
+  collectModuleAssertions =
+    args: processedModules: moduleType:
+    let
+      collectFromModules =
+        modules:
+        lib.flatten (
+          lib.mapAttrsToList (
+            inputName: inputGroups:
+            lib.mapAttrsToList (
+              groupName: groupModules:
+              lib.mapAttrsToList (
+                moduleName: moduleSettings:
+                let
+                  moduleSpec = {
+                    input = args.inputs.${inputName};
+                    inputName = inputName;
+                    group = groupName;
+                    name = moduleName;
+                    settings = moduleSettings;
+                  };
+                  modulePath = buildModulePath {
+                    input = moduleSpec.input;
+                    group = moduleSpec.group;
+                    name = moduleSpec.name;
+                    moduleType = moduleType;
+                  };
+                  moduleResult = import modulePath {
+                    lib = args.lib;
+                    pkgs = args.pkgs;
+                    pkgs-unstable = args.pkgs-unstable;
+                    funcs = args.funcs;
+                    helpers = helpers;
+                    defs = args.defs;
+                    self = { };
+                  };
+                in
+                map (
+                  assertion:
+                  assertion
+                  // {
+                    moduleSpec = moduleSpec;
+                    modulePath = modulePath;
+                    moduleType = moduleType;
+                  }
+                ) (moduleResult.assertions or [ ])
+              ) groupModules
+            ) inputGroups
+          ) modules
+        );
+    in
+    collectFromModules processedModules;
+
+  evaluateModuleAssertions =
+    args: moduleContext: assertion:
+    let
+      fullModuleContext = {
+        inputs = args.inputs;
+        host = args.host // {
+          processedModules = moduleContext.systemModules;
+        };
+        user =
+          if args ? user then
+            args.user // { processedModules = moduleContext.homeModules; }
+          else if args ? host && args.host ? mainUser then
+            args.host.mainUser // { processedModules = moduleContext.homeModules; }
+          else
+            null;
+        users = args.users or null;
+        variables = args.variables;
+        configInputs = args.configInputs or { };
+        moduleBasePath = "assertions/${assertion.moduleSpec.group}/${assertion.moduleSpec.name}";
+        moduleInput = assertion.moduleSpec.input;
+        moduleInputName = assertion.moduleSpec.inputName;
+        settings = assertion.moduleSpec.settings;
+      };
+
+      enhancedContext = injectModuleFuncs fullModuleContext assertion.moduleType;
+
+      consolidatedArgs = {
+        lib = args.lib;
+        pkgs = args.pkgs;
+        pkgs-unstable = args.pkgs-unstable;
+        funcs = args.funcs;
+        helpers = helpers;
+        defs = args.defs;
+        self = enhancedContext;
+      };
+
+      moduleResult = import assertion.modulePath consolidatedArgs;
+      moduleAssertions = moduleResult.assertions or [ ];
+      targetAssertion = builtins.head (
+        builtins.filter (a: a.message == assertion.message) moduleAssertions
+      );
+    in
+    {
+      assertion = targetAssertion.assertion;
+      message = "Module ${assertion.moduleSpec.inputName}.${assertion.moduleSpec.group}.${assertion.moduleSpec.name} assertion failed: ${targetAssertion.message}";
     };
 
   collectSubModules =
@@ -498,7 +597,38 @@ rec {
           ) inputGroups
         ) modules;
 
-      filteredInitialModules = filterFalseValues initialModules;
+      buildModules =
+        if moduleType == "system" then
+          {
+            groups = {
+              build = {
+                nixos = true;
+              };
+            };
+          }
+        else if moduleType == "home" then
+          if (args ? user && args.user.isStandalone or false) then
+            {
+              groups = {
+                build = {
+                  home-standalone = true;
+                };
+              };
+            }
+          else
+            {
+              groups = {
+                build = {
+                  home-integrated = true;
+                };
+              };
+            }
+        else
+          { };
+
+      modulesWithBuild = lib.recursiveUpdate initialModules buildModules;
+
+      filteredInitialModules = filterFalseValues modulesWithBuild;
       normalizedInitialModules = normalizeModules filteredInitialModules;
       initialModulesWithDefaults = applyDefaultsToModules normalizedInitialModules;
 

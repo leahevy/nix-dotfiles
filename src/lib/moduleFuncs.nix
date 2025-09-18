@@ -506,13 +506,16 @@ rec {
           { }
         else if ns == "home" then
           if moduleContext ? user then
-            moduleContext.user.modules or { }
+            moduleContext.user.processedModules or moduleContext.user.modules or { }
           else if moduleContext ? host && moduleContext.host ? mainUser then
             moduleContext.host.mainUser.modules or { }
           else
             { }
         else if ns == "system" then
-          if moduleContext ? host then moduleContext.host.modules or { } else { }
+          if moduleContext ? host then
+            moduleContext.host.processedModules or moduleContext.host.modules or { }
+          else
+            { }
         else
           throw "Invalid namespace: ${ns}";
 
@@ -592,13 +595,16 @@ rec {
           { }
         else if ns == "home" then
           if moduleContext ? user then
-            moduleContext.user.modules or { }
+            moduleContext.user.processedModules or moduleContext.user.modules or { }
           else if moduleContext ? host && moduleContext.host ? mainUser then
             moduleContext.host.mainUser.modules or { }
           else
             { }
         else if ns == "system" then
-          if moduleContext ? host then moduleContext.host.modules or { } else { }
+          if moduleContext ? host then
+            moduleContext.host.processedModules or moduleContext.host.modules or { }
+          else
+            { }
         else
           throw "Invalid namespace: ${ns}";
 

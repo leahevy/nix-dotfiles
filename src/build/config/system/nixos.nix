@@ -13,34 +13,11 @@ args@{
 }:
 
 let
-  buildModules = {
-    build = {
-      core = {
-        boot = true;
-        sudo = true;
-        i18n = true;
-        network = true;
-        users = true;
-        nix-ld = true;
-        tokens = true;
-        sops = true;
-      };
-      desktop = {
-        desktop = true;
-        sound = true;
-      };
-      programs = {
-        programs = true;
-      };
-      system = { } // (if host.impermanence or false then { impermanence = true; } else { });
-    };
-  };
-
-  initialModules = lib.recursiveUpdate (ifSet host.modules { }) buildModules;
+  initialModules = ifSet host.modules { };
   allModules = funcs.collectAllModulesWithSettings args initialModules "system";
 
   moduleSpecs = funcs.processModules allModules;
-  moduleResults = funcs.importSystemModules args moduleSpecs;
+  moduleResults = funcs.importSystemModules args moduleSpecs allModules;
 
   extraModules = moduleResults.modules;
 
@@ -119,7 +96,7 @@ in
         { }
       else if builtins.hasAttr host.defaultSpecialisation host.specialisations then
         lib.mkMerge (
-          map (spec: (funcs.importSystemModule args spec) { inherit config options; }) (
+          map (spec: (funcs.importSystemModule args spec allModules) { inherit config options; }) (
             funcs.processModules host.specialisations.${host.defaultSpecialisation}
           )
         )
