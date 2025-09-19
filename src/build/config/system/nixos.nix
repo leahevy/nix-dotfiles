@@ -24,7 +24,7 @@ let
   specialisationConfigs =
     builtins.mapAttrs (specName: specModules: {
       configuration = {
-        imports = (funcs.importSystemModules args (funcs.processModules specModules)).modules;
+        imports = (funcs.importSystemModules args (funcs.processModules specModules) allModules).modules;
       };
     }) host.specialisations
     // {
