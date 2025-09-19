@@ -8,17 +8,13 @@ args@{
   self,
   ...
 }:
-let
-  host = self.host;
-  ifSet = helpers.ifSet;
-in
 {
   name = "pipewire";
 
   configuration =
     context@{ config, options, ... }:
     {
-      services.pulseaudio.enable = false;
+      services.pulseaudio.enable = lib.mkForce false;
 
       security.rtkit.enable = true;
 
