@@ -24,6 +24,7 @@ args@{
 
   defaults = {
     withNeovide = false;
+    terminal = "ghostty";
   };
 
   configuration =
@@ -184,7 +185,7 @@ args@{
         executable = true;
         text = ''
           #!/usr/bin/env bash
-          exec $TERMINAL -e nvim "$@"
+          exec ${self.settings.terminal} -e nvim "$@"
         '';
       };
 

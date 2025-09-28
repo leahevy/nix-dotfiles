@@ -78,6 +78,16 @@ args@{
       };
     };
     common = {
+      emacs = {
+        emacs = {
+          terminal = "ghostty";
+        };
+      };
+      nvim = {
+        nixvim = {
+          terminal = "ghostty";
+        };
+      };
       terminal = {
         kitty = true; # Fallback terminal
       };
