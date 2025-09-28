@@ -52,9 +52,9 @@ args@{
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
-          binds = with config.lib.niri.actions; {
+          binds = {
             "Ctrl+Mod+Alt+I" = {
-              action = spawn-sh "niri-scratchpad --app-id BeeperTexts --spawn beeper";
+              action = config.lib.niri.actions.spawn-sh "niri-scratchpad --app-id BeeperTexts --spawn beeper";
               hotkey-overlay.title = "Apps:Chat app";
             };
           };

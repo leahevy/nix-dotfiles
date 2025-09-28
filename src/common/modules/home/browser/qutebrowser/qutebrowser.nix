@@ -66,9 +66,9 @@ args@{
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
-          binds = with config.lib.niri.actions; {
+          binds = {
             "Ctrl+Mod+Alt+N" = {
-              action = spawn-sh "qutebrowser";
+              action = config.lib.niri.actions.spawn-sh "qutebrowser";
               hotkey-overlay.title = "Apps:Browser";
             };
           };
