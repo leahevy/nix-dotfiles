@@ -44,11 +44,15 @@ let
           inputs.sops-nix.homeManagerModules.sops
           inputs.stylix.homeModules.stylix
           inputs.nixvim.homeModules.nixvim
+        ]
+        ++ (lib.optionals (helpers.isLinuxArch arch) [
           inputs.niri-flake.homeModules.niri
           inputs.niri-flake.homeModules.stylix
           {
             niri-flake.cache.enable = false;
           }
+        ])
+        ++ [
           {
             options.home.persistence = lib.mkOption {
               type = lib.types.attrs;
