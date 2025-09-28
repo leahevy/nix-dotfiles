@@ -33,7 +33,6 @@ deployment_script_setup() {
         exit 1
     fi
     
-    source "$SCRIPT_DIR/../utils/pre-check.sh"
     check_config_directory "$script_name" "deployment"
     
     export SCRIPT_DIR
@@ -77,7 +76,8 @@ parse_build_deployment_args() {
     EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
     TIMEOUT=600
     DRY_RUN=""
-    
+    BUILD_DIFF=false
+
     while [[ $# -gt 0 ]]; do
         case "${1:-}" in
             --offline)
@@ -92,6 +92,20 @@ parse_build_deployment_args() {
                 DRY_RUN="--dry-run"
                 shift
                 ;;
+            --diff)
+                BUILD_DIFF=true
+                shift
+                ;;
+            --help|-h)
+                echo "build: Test build configuration without deploying"
+                echo ""
+                echo "Options:"
+                echo "  --timeout <seconds>   Set timeout (default: 600)"
+                echo "  --dry-run            Test build without actual building"
+                echo "  --offline            Build without network access"
+                echo "  --diff               Compare built config with current active system"
+                exit 0
+                ;;
             -*|--*)
                 echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
                 exit 1
@@ -103,7 +117,7 @@ parse_build_deployment_args() {
         esac
     done
     
-    export EXTRA_ARGS TIMEOUT DRY_RUN PROFILE_PATH
+    export EXTRA_ARGS TIMEOUT DRY_RUN PROFILE_PATH BUILD_DIFF
 }
 
 ensure_nixos_only() {

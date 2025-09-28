@@ -28,6 +28,16 @@ args@{
       sound = {
         pipewire = true;
       };
+      graphics = {
+        opengl = true;
+      };
+      services = {
+        dbus = true;
+      };
+      desktop-modules = {
+        keyd = true;
+        gamemode = true;
+      };
     };
   };
 
@@ -38,10 +48,15 @@ args@{
 
       console.keyMap = self.host.settings.system.keymap.console;
 
-      services.xserver.xkb = {
-        layout = self.host.settings.system.keymap.x11.layout;
-        variant = self.host.settings.system.keymap.x11.variant;
-      };
+      environment.systemPackages = with pkgs; [
+        gvfs
+        gcr
+      ];
 
+      security.polkit.enable = true;
+
+      xdg.portal = {
+        enable = true;
+      };
     };
 }

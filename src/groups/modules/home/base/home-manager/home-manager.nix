@@ -40,11 +40,14 @@ args@{
             typescript-lsp = true;
           };
           fonts = {
+            japanese = true;
+            general = true;
             fontconfig = true;
             nerdfonts = true;
           };
           git = {
             git = true;
+            lazygit = true;
             git-credential-manager = true;
           };
           gpg = {
@@ -62,6 +65,7 @@ args@{
             setup = true;
           };
           shell = {
+            fastfetch = true;
             starship = true;
             file-manager = true;
             go-programs = true;
@@ -86,9 +90,6 @@ args@{
             beeper = true;
             signal = true;
           };
-          todo = {
-            todoist = true;
-          };
           music = {
             spotify = true;
           };
@@ -103,6 +104,9 @@ args@{
           };
           services = {
             ssh-agent = true;
+          };
+          todo = {
+            todoist = true;
           };
         };
         groups = {
@@ -137,11 +141,14 @@ args@{
             typescript-lsp = true;
           };
           fonts = {
+            japanese = true;
+            general = true;
             fontconfig = true;
             nerdfonts = true;
           };
           git = {
             git = true;
+            lazygit = true;
             git-credential-manager = true;
           };
           gpg = {
@@ -159,6 +166,7 @@ args@{
             setup = true;
           };
           shell = {
+            fastfetch = true;
             starship = true;
             file-manager = true;
             go-programs = true;
@@ -183,9 +191,6 @@ args@{
             beeper = true;
             signal = true;
           };
-          todo = {
-            todoist = true;
-          };
           music = {
             spotify = true;
           };
@@ -199,6 +204,9 @@ args@{
           };
           services = {
             ssh-agent = true;
+          };
+          todo = {
+            todoist = true;
           };
         };
         groups = {
@@ -227,11 +235,14 @@ args@{
             typescript-lsp = true;
           };
           fonts = {
+            japanese = true;
+            general = true;
             fontconfig = true;
             nerdfonts = true;
           };
           git = {
             git = true;
+            lazygit = true;
             git-credential-manager = true;
           };
           gpg = {
@@ -249,6 +260,7 @@ args@{
             setup = true;
           };
           shell = {
+            fastfetch = true;
             starship = true;
             file-manager = true;
             go-programs = true;

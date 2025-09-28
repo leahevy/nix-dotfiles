@@ -132,6 +132,26 @@ with lib;
             default = { };
             description = "SSH daemon settings";
           };
+          terminal = mkOption {
+            type = types.nullOr (
+              types.enum [
+                "ghostty"
+                "kitty"
+              ]
+            );
+            default = "ghostty";
+            description = "Terminal application";
+          };
+          desktopPreference = mkOption {
+            type = (
+              types.enum [
+                "gnome"
+                "kde"
+              ]
+            );
+            default = "kde";
+            description = "Preference for desktop tools (gnome or KDE)";
+          };
         };
       };
       default = { };

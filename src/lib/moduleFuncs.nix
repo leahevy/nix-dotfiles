@@ -336,8 +336,7 @@ rec {
           // additionalArgs
         );
     in
-    contextDefaults
-    // {
+    rec {
       # Get Home Manager library functions - always takes config parameter
       # Usage: self.lib $CONFIG
       lib = config: if isStandalone then lib.hm else config.lib;
@@ -352,8 +351,58 @@ rec {
 
       host = (moduleContext.host or { }) // hostFunctions;
       user = (moduleContext.user or { }) // userFunctions;
+
+      importFileData =
+        args: subpath:
+        let
+          filePath =
+            helpers.resolveInputFromInput moduleContext.moduleInputName
+            + "/"
+            + moduleContext.moduleBasePath
+            + "/"
+            + subpath;
+          importArgs = args // {
+            self = finalContext;
+          };
+          fileData = import filePath importArgs;
+          validatedData = args.funcs.validateModule fileData filePath;
+        in
+        validatedData;
+
+      importFileCustom =
+        args: subpath:
+        let
+          fileData = importFileData args subpath;
+        in
+        fileData.custom or { };
+
+      finalContext =
+        contextDefaults
+        // (rec {
+          inherit
+            lib
+            pkgs
+            pkgs-unstable
+            host
+            user
+            importFileData
+            importFileCustom
+            ;
+        })
+        // inputNamespaceFunctions
+        // {
+          inherit (moduleContext)
+            settings
+            moduleBasePath
+            moduleInputName
+            moduleInput
+            inputs
+            variables
+            configInputs
+            ;
+        };
     }
-    // inputNamespaceFunctions;
+    .finalContext;
 
   # Generate complete hierarchical input function system
   # Usage: hierarchicalInputFuncs $MODULECONTEXT $MODULEBASEPATH
@@ -505,10 +554,10 @@ rec {
         if ns == "standalone" then
           { }
         else if ns == "home" then
-          if moduleContext ? user then
+          if moduleContext ? user && moduleContext.user != null then
             moduleContext.user.processedModules or moduleContext.user.modules or { }
           else if moduleContext ? host && moduleContext.host ? mainUser then
-            moduleContext.host.mainUser.modules or { }
+            moduleContext.host.mainUser.processedModules or moduleContext.host.mainUser.modules or { }
           else
             { }
         else if ns == "system" then

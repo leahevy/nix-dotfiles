@@ -17,11 +17,15 @@ args@{
     fonts = {
       serif = "dejavu_fonts/DejaVu Serif";
       sansSerif = "dejavu_fonts/DejaVu Sans";
-      monospace = "dejavu_fonts/DejaVu Sans Mono";
-      emoji = "noto-fonts-emoji/Noto Color Emoji";
+      monospace = "nerd-fonts.fira-code/FiraCode Nerd Font";
+      emoji = "noto-fonts-emoji-blob-bin/Blobmoji";
+    };
+    cursor = {
+      style = "rose-pine-cursor/BreezeX-RosePine-Linux";
+      size = 40;
     };
     wallpaper = {
-      # Default will use self.file "wallpaper.png"
+      # Default will use self.file "wallpaper.jpg"
     };
   };
 
@@ -31,12 +35,27 @@ args@{
       options,
       ...
     }:
+    let
+      getPackage =
+        fontPath:
+        let
+          packageName = lib.head (lib.splitString "/" fontPath);
+          packageParts = lib.splitString "." packageName;
+        in
+        if lib.length packageParts > 1 then
+          lib.getAttrFromPath packageParts pkgs
+        else
+          lib.getAttr packageName pkgs;
+    in
     {
-      environment.systemPackages = with pkgs; [
-        (lib.getAttr (lib.head (lib.splitString "/" self.settings.fonts.serif)) pkgs)
-        (lib.getAttr (lib.head (lib.splitString "/" self.settings.fonts.sansSerif)) pkgs)
-        (lib.getAttr (lib.head (lib.splitString "/" self.settings.fonts.monospace)) pkgs)
-        (lib.getAttr (lib.head (lib.splitString "/" self.settings.fonts.emoji)) pkgs)
+      environment.systemPackages = [
+        (getPackage self.settings.fonts.serif)
+        (getPackage self.settings.fonts.sansSerif)
+        (getPackage self.settings.fonts.monospace)
+        (getPackage self.settings.fonts.emoji)
+      ]
+      ++ lib.optionals (self.settings.cursor != null) [
+        (getPackage self.settings.cursor.style)
       ];
 
       stylix = {
@@ -57,25 +76,31 @@ args@{
           else if (self.settings.wallpaper.local or null) != null then
             self.settings.wallpaper.local
           else
-            self.file "wallpaper.png";
+            self.file "wallpaper.jpg";
 
         polarity = self.settings.polarity;
 
+        cursor = lib.mkIf (self.settings.cursor != null) {
+          package = getPackage self.settings.cursor.style;
+          name = lib.last (lib.splitString "/" self.settings.cursor.style);
+          size = self.settings.cursor.size;
+        };
+
         fonts = {
           serif = {
-            package = lib.getAttr (lib.head (lib.splitString "/" self.settings.fonts.serif)) pkgs;
+            package = getPackage self.settings.fonts.serif;
             name = lib.last (lib.splitString "/" self.settings.fonts.serif);
           };
           sansSerif = {
-            package = lib.getAttr (lib.head (lib.splitString "/" self.settings.fonts.sansSerif)) pkgs;
+            package = getPackage self.settings.fonts.sansSerif;
             name = lib.last (lib.splitString "/" self.settings.fonts.sansSerif);
           };
           monospace = {
-            package = lib.getAttr (lib.head (lib.splitString "/" self.settings.fonts.monospace)) pkgs;
+            package = getPackage self.settings.fonts.monospace;
             name = lib.last (lib.splitString "/" self.settings.fonts.monospace);
           };
           emoji = {
-            package = lib.getAttr (lib.head (lib.splitString "/" self.settings.fonts.emoji)) pkgs;
+            package = getPackage self.settings.fonts.emoji;
             name = lib.last (lib.splitString "/" self.settings.fonts.emoji);
           };
         };

@@ -1,0 +1,357 @@
+args@{
+  lib,
+  pkgs,
+  pkgs-unstable,
+  funcs,
+  helpers,
+  defs,
+  self,
+  ...
+}:
+let
+  desktopPreference = self.user.settings.desktopPreference;
+  isKDE = desktopPreference == "kde";
+  isGnome = desktopPreference == "gnome";
+  unknown = throw "Desktop preference ${desktopPreference} is not available!";
+in
+{
+  name = "programs";
+
+  assertions = [
+    {
+      assertion =
+        (self.user.isStandalone or false)
+        || (self.host.isModuleEnabled or (x: false)) "desktop-modules.programs";
+      message = "Home desktop-modules.programs requires system desktop-modules.programs to be enabled (unless standalone)!";
+    }
+  ];
+
+  defaults =
+    let
+      kde = pkgs.kdePackages;
+      gnome = pkgs;
+      define =
+        {
+          name,
+          package ? null,
+          openCommand ? null,
+          openFileCommand ? null,
+          additionalPackages ? [ ],
+          desktopFile ? null,
+        }:
+        let
+          nameParts = lib.splitString "." name;
+          resolvePackage =
+            if isKDE then
+              lib.getAttrFromPath nameParts kde
+            else if isGnome then
+              lib.getAttrFromPath nameParts gnome
+            else
+              unknown;
+          resolveDesktopFile =
+            if desktopFile != null then
+              desktopFile
+            else if isKDE then
+              "org.kde.${lib.last nameParts}.desktop"
+            else if isGnome then
+              "org.gnome.${lib.last nameParts}.desktop"
+            else
+              "${lib.last nameParts}.desktop";
+        in
+        {
+          inherit name;
+          package = if package != null then package else resolvePackage;
+          openCommand = if openCommand != null then openCommand else (lib.last nameParts);
+          openFileCommand =
+            if openFileCommand != null then
+              openFileCommand
+            else
+              (if openCommand != null then openCommand else (lib.last nameParts));
+          additionalPackages = if additionalPackages != null then additionalPackages else [ ];
+          desktopFile = resolveDesktopFile;
+        };
+      defineAll =
+        kdeArgs: gnomeArgs:
+        if isKDE then
+          define kdeArgs
+        else if isGnome then
+          define gnomeArgs
+        else
+          unknown;
+    in
+    {
+      wallet = defineAll {
+        name = "kwallet";
+        additionalPackages = [
+          kde.kwalletmanager
+          pkgs.kwalletcli
+        ];
+      } { name = "gnome-keyring"; };
+      fileBrowser = defineAll { name = "dolphin"; } { name = "nautilus"; };
+      archiver = defineAll { name = "ark"; } { name = "file-roller"; };
+      textEditor = defineAll { name = "kate"; } { name = "gedit"; };
+      advancedTextEditor = defineAll { name = "ghostwriter"; } { name = "gnome-text-editor"; };
+      terminal = defineAll { name = "konsole"; } { name = "gnome-terminal"; };
+      systemSettings = defineAll { name = "systemsettings"; } { name = "gnome-control-center"; };
+      networkSettings = defineAll { name = "plasma-nm"; } { name = "gnome-control-center"; };
+      imageViewer = defineAll { name = "gwenview"; } { name = "eog"; };
+      imageEditor = defineAll { name = "spectacle"; } { name = "gnome-screenshot"; };
+      paintImageEditor = defineAll { name = "kolourpaint"; } { name = "drawing"; };
+      pdfViewer = defineAll { name = "okular"; } { name = "evince"; };
+      videoPlayer = defineAll { name = "dragon"; } { name = "totem"; };
+      musicPlayer = defineAll { name = "elisa"; } { name = "gnome-music"; };
+      emailClient = defineAll { name = "kmail"; } { name = "geary"; };
+      calendar = defineAll { name = "korganizer"; } { name = "gnome-calendar"; };
+      contacts = defineAll { name = "kaddressbook"; } { name = "gnome-contacts"; };
+      taskManager = defineAll { name = "plasma-systemmonitor"; } { name = "gnome-system-monitor"; };
+      diskUsage = defineAll { name = "filelight"; } { name = "baobab"; };
+      calculator = defineAll { name = "kcalc"; } { name = "gnome-calculator"; };
+      clock = defineAll { name = "kclock"; } { name = "gnome-clocks"; };
+      webBrowser = defineAll { name = "falkon"; } { name = "epiphany"; };
+      gamesMine = defineAll { name = "kmines"; } { name = "gnome-mines"; };
+      gamesCards = defineAll { name = "kpat"; } { name = "aisleriot"; };
+      sudoku = defineAll { name = "ksudoku"; } { name = "gnome-sudoku"; };
+      gitGui = defineAll {
+        name = "dolphin-plugins";
+        openCommand = "dolphin";
+        openFileCommand = "dolphin";
+      } { name = "gitg"; };
+      officeSuite = define {
+        name = "libreoffice";
+        package = pkgs.libreoffice;
+        desktopFile = "startcenter.desktop";
+      };
+      drawingProgram = define {
+        name = "gimp";
+        package = pkgs.gimp;
+        desktopFile = "gimp.desktop";
+      };
+      additionalPackages = [ pkgs.xdg-desktop-portal ];
+      additionalKDEPackages = [
+        kde.qttools
+        kde.xdg-desktop-portal-kde
+        kde.kcmutils
+      ];
+      additionalGnomePackages = [
+        gnome.xdg-desktop-portal-gnome
+        gnome.xdg-desktop-portal-gtk
+      ];
+      installGames = false;
+      installSystemSettings = false;
+      installOfficeSuite = false;
+    };
+
+  configuration =
+    context@{ config, options, ... }:
+    let
+      isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+      getDesktopFileContainingPath = program: "${program.package}/share/applications";
+      getDesktopFilePath = program: "${getDesktopFileContainingPath program}/${program.desktopFile}";
+    in
+    {
+      home.packages =
+        let
+          conditionallyAdd =
+            path:
+            let
+              resolved = self.settings.${path};
+              resolvedPackage =
+                if resolved != null && resolved.package != null then [ resolved.package ] else [ ];
+              additionalPackages =
+                if resolved != null && resolved.additionalPackages != null then
+                  resolved.additionalPackages
+                else
+                  [ ];
+            in
+            resolvedPackage ++ additionalPackages;
+        in
+        (conditionallyAdd "wallet")
+        ++ (conditionallyAdd "fileBrowser")
+        ++ (conditionallyAdd "archiver")
+        ++ (conditionallyAdd "textEditor")
+        ++ (conditionallyAdd "advancedTextEditor")
+        ++ (conditionallyAdd "terminal")
+        ++ (if self.settings.installSystemSettings then conditionallyAdd "systemSettings" else [ ])
+        ++ (if self.settings.installSystemSettings then conditionallyAdd "networkSettings" else [ ])
+        ++ (conditionallyAdd "imageViewer")
+        ++ (conditionallyAdd "imageEditor")
+        ++ (conditionallyAdd "paintImageEditor")
+        ++ (conditionallyAdd "pdfViewer")
+        ++ (conditionallyAdd "videoPlayer")
+        ++ (conditionallyAdd "musicPlayer")
+        ++ (conditionallyAdd "emailClient")
+        ++ (conditionallyAdd "calendar")
+        ++ (conditionallyAdd "contacts")
+        ++ (conditionallyAdd "taskManager")
+        ++ (conditionallyAdd "diskUsage")
+        ++ (conditionallyAdd "calculator")
+        ++ (conditionallyAdd "clock")
+        ++ (conditionallyAdd "webBrowser")
+        ++ (conditionallyAdd "gitGui")
+        ++ (conditionallyAdd "drawingProgram")
+        ++ (lib.optionals self.settings.installOfficeSuite (conditionallyAdd "officeSuite"))
+        ++ (
+          if self.settings.installGames then
+            ((conditionallyAdd "gamesMine") ++ (conditionallyAdd "gamesCards") ++ (conditionallyAdd "sudoku"))
+          else
+            [ ]
+        )
+        ++ self.settings.additionalPackages
+        ++ (if isKDE then self.settings.additionalKDEPackages else [ ])
+        ++ (if isGnome then self.settings.additionalGnomePackages else [ ]);
+
+      services.gnome-keyring.enable = lib.mkForce isGnome;
+
+      programs.niri = lib.mkIf isNiriEnabled {
+        settings = {
+          binds = with config.lib.niri.actions; {
+            "Ctrl+Mod+Alt+M" = {
+              action = spawn-sh self.settings.fileBrowser.openCommand;
+              hotkey-overlay.title = "Apps:File manager";
+            };
+          };
+        };
+      };
+
+      xdg.mimeApps = {
+        enable = true;
+        defaultApplications = {
+          "image/jpeg" = (getDesktopFilePath self.settings.imageViewer);
+          "image/jpg" = (getDesktopFilePath self.settings.imageViewer);
+          "image/png" = (getDesktopFilePath self.settings.imageViewer);
+          "image/gif" = (getDesktopFilePath self.settings.imageViewer);
+          "image/webp" = (getDesktopFilePath self.settings.imageViewer);
+          "image/bmp" = (getDesktopFilePath self.settings.imageViewer);
+          "image/tiff" = (getDesktopFilePath self.settings.imageViewer);
+          "image/svg+xml" = (getDesktopFilePath self.settings.imageViewer);
+
+          "application/pdf" = (getDesktopFilePath self.settings.pdfViewer);
+
+          "video/mp4" = (getDesktopFilePath self.settings.videoPlayer);
+          "video/avi" = (getDesktopFilePath self.settings.videoPlayer);
+          "video/mkv" = (getDesktopFilePath self.settings.videoPlayer);
+          "video/webm" = (getDesktopFilePath self.settings.videoPlayer);
+          "video/x-msvideo" = (getDesktopFilePath self.settings.videoPlayer);
+          "video/quicktime" = (getDesktopFilePath self.settings.videoPlayer);
+
+          "audio/mpeg" = (getDesktopFilePath self.settings.musicPlayer);
+          "audio/mp3" = (getDesktopFilePath self.settings.musicPlayer);
+          "audio/ogg" = (getDesktopFilePath self.settings.musicPlayer);
+          "audio/flac" = (getDesktopFilePath self.settings.musicPlayer);
+          "audio/wav" = (getDesktopFilePath self.settings.musicPlayer);
+
+          "application/zip" = (getDesktopFilePath self.settings.archiver);
+          "application/x-rar-compressed" = (getDesktopFilePath self.settings.archiver);
+          "application/x-tar" = (getDesktopFilePath self.settings.archiver);
+          "application/gzip" = (getDesktopFilePath self.settings.archiver);
+          "application/x-7z-compressed" = (getDesktopFilePath self.settings.archiver);
+
+          "text/plain" = (getDesktopFilePath self.settings.textEditor);
+          "text/markdown" = (getDesktopFilePath self.settings.advancedTextEditor);
+          "application/x-shellscript" = (getDesktopFilePath self.settings.textEditor);
+
+          "inode/directory" = (getDesktopFilePath self.settings.fileBrowser);
+        }
+        // (
+          if self.settings.installOfficeSuite then
+            {
+              "application/vnd.oasis.opendocument.text" = (getDesktopFilePath self.settings.officeSuite);
+              "application/vnd.oasis.opendocument.spreadsheet" = (getDesktopFilePath self.settings.officeSuite);
+              "application/vnd.oasis.opendocument.presentation" = (getDesktopFilePath self.settings.officeSuite);
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document" = (
+                getDesktopFilePath self.settings.officeSuite
+              );
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" = (
+                getDesktopFilePath self.settings.officeSuite
+              );
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation" = (
+                getDesktopFilePath self.settings.officeSuite
+              );
+              "application/msword" = (getDesktopFilePath self.settings.officeSuite);
+              "application/vnd.ms-excel" = (getDesktopFilePath self.settings.officeSuite);
+              "application/vnd.ms-powerpoint" = (getDesktopFilePath self.settings.officeSuite);
+            }
+          else
+            { }
+        );
+      };
+
+      xdg.configFile = {
+        "menus/applications.menu".text = ''
+          <!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN"
+           "http://www.freedesktop.org/standards/menu-spec/1.0/menu.dtd">
+          <Menu>
+            <Name>Applications</Name>
+            <Directory>applications.directory</Directory>
+
+            <AppDir>/etc/profiles/per-user/${config.home.username}/share/applications</AppDir>
+            <AppDir>/run/current-system/sw/share/applications</AppDir>
+
+            <Include>
+              <All/>
+            </Include>
+          </Menu>
+        '';
+      }
+      // lib.optionalAttrs isKDE {
+        "kdeglobals".text = ''
+          [General]
+          TerminalApplication=${self.settings.terminal.openCommand}
+          TerminalService=${self.settings.terminal.desktopFile}
+        '';
+      };
+
+      xdg.portal = {
+        enable = true;
+        extraPortals = [
+          pkgs.xdg-desktop-portal-gtk
+          pkgs.xdg-desktop-portal-gnome
+        ]
+        ++ (lib.optionals isKDE [
+          pkgs.kdePackages.xdg-desktop-portal-kde
+        ]);
+        config = {
+          common = {
+            default = if isKDE then [ "kde" ] else [ "gtk" ];
+            "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kde" ] else [ "gnome" ];
+          };
+        };
+      };
+
+      home.persistence."${self.persist}" = {
+        directories = [
+          ".config/dconf"
+        ]
+        ++ (
+          if isGnome then
+            [
+              ".local/share/keyrings"
+            ]
+          else if isKDE then
+            [
+              ".local/share/kwalletd"
+              ".local/share/kactivitymanagerd"
+              ".local/share/RecentDocuments"
+              ".local/share/kscreen"
+            ]
+          else
+            [ ]
+        );
+
+        files = lib.optionals isKDE [
+          ".config/kglobalshortcutsrc"
+          ".config/kwinrc"
+          ".config/plasmarc"
+          ".config/systemsettingsrc"
+          ".config/kcminputrc"
+          ".config/kscreenlockerrc"
+          ".config/dolphinrc"
+          ".config/katerc"
+          ".config/konsolerc"
+          ".config/okularrc"
+          ".config/gwenviewrc"
+          ".config/spectaclerc"
+        ];
+      };
+    };
+}

@@ -34,6 +34,44 @@ with lib;
       description = "Hardware module to be imported from this list: https://raw.githubusercontent.com/NixOS/nixos-hardware/refs/heads/master/flake.nix";
     };
 
+    displays = mkOption {
+      type = types.submodule {
+        options = {
+          main = mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "Main display";
+          };
+          secondary = mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "Secondary display";
+          };
+        };
+      };
+      default = { };
+      description = "Display configuration";
+    };
+
+    location = mkOption {
+      type = types.submodule {
+        options = {
+          latitude = mkOption {
+            type = types.nullOr types.float;
+            default = null;
+            description = "Latitude of user's location";
+          };
+          longitude = mkOption {
+            type = types.nullOr types.float;
+            default = null;
+            description = "Longitude of user's location";
+          };
+        };
+      };
+      default = { };
+      description = "User's location";
+    };
+
     kernel = mkOption {
       type = types.submodule {
         options = {
@@ -226,6 +264,11 @@ with lib;
                               default = "";
                               description = "X11 keyboard variant";
                             };
+                            options = mkOption {
+                              type = types.str;
+                              default = "";
+                              description = "X11 keyboard options";
+                            };
                           };
                         };
                         default = { };
@@ -296,6 +339,7 @@ with lib;
                   type = types.nullOr (
                     types.enum [
                       "gnome"
+                      "niri"
                     ]
                   );
                   default = null;

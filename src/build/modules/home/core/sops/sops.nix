@@ -39,5 +39,13 @@ args@{
           else
             "${config.xdg.configHome}/sops/age/keys.txt";
       };
+
+      systemd.user.services.sops-nix = lib.mkIf self.isLinux {
+        Service = {
+          Environment = lib.mkForce [
+            "GNUPGHOME=/nonexistent"
+          ];
+        };
+      };
     };
 }

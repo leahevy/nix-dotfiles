@@ -58,6 +58,44 @@ with lib;
       description = "Modules to enable for the user, organized by input and group";
     };
 
+    displays = mkOption {
+      type = types.submodule {
+        options = {
+          main = mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "Main display";
+          };
+          secondary = mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "Secondary display";
+          };
+        };
+      };
+      default = { };
+      description = "Display configuration";
+    };
+
+    location = mkOption {
+      type = types.submodule {
+        options = {
+          latitude = mkOption {
+            type = types.nullOr types.float;
+            default = null;
+            description = "Latitude of user's location";
+          };
+          longitude = mkOption {
+            type = types.nullOr types.float;
+            default = null;
+            description = "Longitude of user's location";
+          };
+        };
+      };
+      default = { };
+      description = "User's location";
+    };
+
     specialisations = mkOption {
       type = types.attrsOf (
         types.attrsOf (types.attrsOf (types.attrsOf (types.either types.bool types.attrs)))
@@ -78,10 +116,31 @@ with lib;
             type = types.nullOr (
               types.enum [
                 "gnome"
+                "niri"
               ]
             );
             default = null;
             description = "Active desktop environment (or headless)";
+          };
+          desktopPreference = mkOption {
+            type = (
+              types.enum [
+                "gnome"
+                "kde"
+              ]
+            );
+            default = "kde";
+            description = "Preference for desktop tools (gnome or KDE)";
+          };
+          terminal = mkOption {
+            type = types.nullOr (
+              types.enum [
+                "ghostty"
+                "kitty"
+              ]
+            );
+            default = "ghostty";
+            description = "Terminal application";
           };
         };
       };

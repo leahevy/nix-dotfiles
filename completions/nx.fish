@@ -51,6 +51,7 @@ complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandli
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l timeout -d "Set timeout in seconds" -r
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l dry-run -d "Test build without actual building"
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l offline -d "Build without network access"
+complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l diff -d "Compare built config with current active system"
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -f
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -l offline -d "Run without network access"
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -l show-trace -d "Show detailed trace output"

@@ -15,7 +15,9 @@ args@{
     context@{ config, options, ... }:
     {
       fonts = {
-        fontconfig.enable = true;
+        fontconfig = {
+          enable = true;
+        };
       };
 
       home.persistence."${self.persist}" = {

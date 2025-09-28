@@ -57,7 +57,7 @@ args@{
             style_root = "bold blue";
             format = "[$user]($style) ";
             disabled = false;
-            show_always = true;
+            show_always = false;
           };
 
           hostname = {
@@ -92,16 +92,16 @@ args@{
           git_status = {
             format = "[\($all_status$ahead_behind\)]($style) ";
             style = "bold green";
-            conflicted = "🏳";
+            conflicted = "(c)";
             up_to_date = " ";
             untracked = " ";
             ahead = "⇡\${count}";
             diverged = "⇕⇡\${ahead_count}⇣\${behind_count}";
             behind = "⇣\${count}";
-            stashed = " ";
+            stashed = "(s) ";
             modified = " ";
             staged = "[++\($count\)](bold green)";
-            renamed = "襁 ";
+            renamed = "(r) ";
             deleted = " ";
           };
 

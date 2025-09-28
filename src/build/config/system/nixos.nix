@@ -16,15 +16,25 @@ let
   initialModules = ifSet host.modules { };
   allModules = funcs.collectAllModulesWithSettings args initialModules "system";
 
+  mainUserModules = funcs.collectAllModulesWithSettings (args // { user = host.mainUser; }) (ifSet
+    host.mainUser.modules
+    { }
+  ) "home";
+
   moduleSpecs = funcs.processModules allModules;
-  moduleResults = funcs.importSystemModules args moduleSpecs allModules;
+  systemArgs = args // {
+    user = host.mainUser;
+    homeProcessedModules = mainUserModules;
+  };
+  moduleResults = funcs.importSystemModules systemArgs moduleSpecs allModules;
 
   extraModules = moduleResults.modules;
 
   specialisationConfigs =
     builtins.mapAttrs (specName: specModules: {
       configuration = {
-        imports = (funcs.importSystemModules args (funcs.processModules specModules) allModules).modules;
+        imports =
+          (funcs.importSystemModules systemArgs (funcs.processModules specModules) allModules).modules;
       };
     }) host.specialisations
     // {
@@ -66,7 +76,7 @@ in
     extraModules
     ++ virtualModule
     ++ [
-      (import ../../assertions/system/nixos.nix (args // { processedModules = allModules; }))
+      (import ../../assertions/system/nixos.nix (systemArgs // { processedModules = allModules; }))
     ];
 
   config = lib.mkMerge [
@@ -96,7 +106,7 @@ in
         { }
       else if builtins.hasAttr host.defaultSpecialisation host.specialisations then
         lib.mkMerge (
-          map (spec: (funcs.importSystemModule args spec allModules) { inherit config options; }) (
+          map (spec: (funcs.importSystemModule systemArgs spec allModules) { inherit config options; }) (
             funcs.processModules host.specialisations.${host.defaultSpecialisation}
           )
         )

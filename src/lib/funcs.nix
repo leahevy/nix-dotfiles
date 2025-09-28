@@ -630,7 +630,6 @@ rec {
 
       filteredInitialModules = filterFalseValues modulesWithBuild;
       normalizedInitialModules = normalizeModules filteredInitialModules;
-      initialModulesWithDefaults = applyDefaultsToModules normalizedInitialModules;
 
       collectRound =
         processedModules: currentModules: iteration:
@@ -672,7 +671,11 @@ rec {
         else
           nextModules;
     in
-    collectRound { } initialModulesWithDefaults 0;
+    let
+      finalModules = collectRound { } normalizedInitialModules 0;
+      finalModulesWithDefaults = applyDefaultsToModules finalModules;
+    in
+    finalModulesWithDefaults;
 
   extractModuleUnfreePackages =
     processedModules:

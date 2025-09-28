@@ -14,6 +14,6 @@ if [[ "$EVAL_PATH" == "" ]]; then
   exit 1
 fi
 
-EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
+EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH" "--raw")
 
 nix eval ".#${EVAL_PATH}" "${EXTRA_ARGS[@]}"

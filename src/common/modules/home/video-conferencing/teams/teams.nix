@@ -9,19 +9,19 @@ args@{
   ...
 }:
 {
-  name = "todoist";
-
-  unfree = [ "todoist-electron" ];
+  name = "teams";
 
   configuration =
     context@{ config, options, ... }:
     {
-      home.packages = with pkgs-unstable; [
-        todoist-electron
+      home.packages = with pkgs; [
+        teams-for-linux
       ];
 
       home.persistence."${self.persist}" = {
-        directories = [ ".config/Todoist" ];
+        directories = [
+          ".config/teams-for-linux"
+        ];
       };
     };
 }

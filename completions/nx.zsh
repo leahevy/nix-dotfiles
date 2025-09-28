@@ -75,7 +75,8 @@ _nx() {
                             _arguments \
                                 '--timeout[Set timeout in seconds]:timeout:' \
                                 '--dry-run[Test build without actual building]' \
-                                '--offline[Build without network access]'
+                                '--offline[Build without network access]' \
+                                '--diff[Compare built config with current active system]'
                             ;;
                     esac
                     ;;

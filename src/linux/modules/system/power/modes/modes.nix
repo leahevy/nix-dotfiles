@@ -15,10 +15,10 @@ args@{
     context@{ config, options, ... }:
     {
       systemd.targets = {
-        sleep.enable = false;
-        suspend.enable = false;
+        sleep.enable = true;
+        suspend.enable = true;
         hibernate.enable = true;
-        hybrid-sleep.enable = false;
+        hybrid-sleep.enable = true;
       };
     };
 }

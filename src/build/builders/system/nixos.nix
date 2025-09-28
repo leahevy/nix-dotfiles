@@ -49,6 +49,10 @@ let
           inputs.sops-nix.nixosModules.sops
           inputs.stylix.nixosModules.stylix
           inputs.nixvim.nixosModules.nixvim
+          inputs.niri-flake.nixosModules.niri
+          {
+            niri-flake.cache.enable = false;
+          }
         ]
         ++ (
           if hostConfig.host.impermanence or false then

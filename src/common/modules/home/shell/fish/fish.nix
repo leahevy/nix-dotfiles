@@ -148,5 +148,12 @@ args@{
           ".local/share/z"
         ];
       };
+
+      xdg.desktopEntries = lib.optionalAttrs self.isLinux {
+        "fish" = {
+          name = "fish";
+          noDisplay = true;
+        };
+      };
     };
 }

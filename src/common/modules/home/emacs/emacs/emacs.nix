@@ -105,12 +105,46 @@ args@{
         };
       };
 
+      home.file.".local/bin/emacs-desktop" = lib.mkIf self.isLinux {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          exec $TERMINAL -e emacsclient --server-file="${runtimeDir}/emacs-auth/emacs-server" -c -a false -t "$@"
+        '';
+      };
+
       home.persistence."${self.persist}" = {
         directories = [
           ".config/emacs"
           ".cache/emacs"
           ".local/cache/emacs"
         ];
+      };
+
+      xdg.desktopEntries = lib.optionalAttrs self.isLinux {
+        "emacs" = {
+          name = "Emacs";
+          noDisplay = true;
+        };
+        "emacsclient" = {
+          name = "Emacs (Client)";
+          noDisplay = true;
+        };
+
+        "custom-emacs" = {
+          name = "Emacs";
+          genericName = "Text Editor";
+          comment = "Edit text files";
+          exec = "${config.home.homeDirectory}/.local/bin/emacs-desktop %F";
+          icon = "emacs";
+          terminal = false;
+          categories = [
+            "Development"
+            "TextEditor"
+            "Utility"
+          ];
+          mimeType = [ "text/plain" ];
+        };
       };
     };
 }

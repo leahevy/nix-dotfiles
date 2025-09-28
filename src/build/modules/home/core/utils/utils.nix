@@ -26,6 +26,8 @@ args@{
         gawk
         cron
         colordiff
+        wget
+        killall
       ];
     };
 }

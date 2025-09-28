@@ -30,6 +30,7 @@ args@{
             age
             ssh-to-age
             ssh-to-pgp
+            nvd
           ]
         );
       };

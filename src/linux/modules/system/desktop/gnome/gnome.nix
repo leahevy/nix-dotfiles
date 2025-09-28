@@ -16,6 +16,9 @@ args@{
       desktop = {
         common = true;
       };
+      desktop-modules = {
+        xserver = true;
+      };
     };
   };
 
@@ -31,8 +34,6 @@ args@{
   configuration =
     context@{ config, options, ... }:
     {
-      services.xserver.enable = true;
-
       services.xserver.displayManager.gdm.enable = true;
       services.xserver.desktopManager.gnome.enable = true;
 

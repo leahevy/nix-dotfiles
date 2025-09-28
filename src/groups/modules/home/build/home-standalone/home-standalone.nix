@@ -20,9 +20,11 @@ args@{
         utils = true;
         tokens = true;
         sops = true;
+        path = true;
       };
       desktop = {
         desktop = true;
+        terminal = true;
       };
       system = {
         dummy-files = true;

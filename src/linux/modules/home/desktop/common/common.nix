@@ -11,6 +11,14 @@ args@{
 {
   name = "common";
 
+  submodules = {
+    linux = {
+      desktop-modules = {
+        keyd = true;
+      };
+    };
+  };
+
   defaults = { };
 
   assertions = [
@@ -20,8 +28,5 @@ args@{
     }
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-    };
+  configuration = context@{ config, options, ... }: { };
 }

@@ -35,5 +35,11 @@ args@{
           ++ self.settings.additionalTCPPorts;
         allowedUDPPortRanges = self.settings.additionalUDPPortRanges;
       };
+
+      environment.persistence."${self.persist}" = {
+        directories = [
+          "/var/lib/nftables"
+        ];
+      };
     };
 }

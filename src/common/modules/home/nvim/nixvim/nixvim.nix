@@ -22,6 +22,10 @@ args@{
     };
   };
 
+  defaults = {
+    withNeovide = false;
+  };
+
   configuration =
     context@{ config, options, ... }:
     let
@@ -161,7 +165,7 @@ args@{
       };
 
       programs.neovide = lib.mkIf self.isLinux {
-        enable = true;
+        enable = self.settings.withNeovide;
       };
 
       home = {
@@ -176,6 +180,14 @@ args@{
         };
       };
 
+      home.file.".local/bin/nvim-desktop" = lib.mkIf self.isLinux {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          exec $TERMINAL -e nvim "$@"
+        '';
+      };
+
       home.persistence."${self.persist}" = {
         directories = [
           ".config/nvim"
@@ -184,6 +196,36 @@ args@{
           ".cache/nvim"
           ".cache/vim-undo"
         ];
+      };
+
+      xdg.desktopEntries = lib.optionalAttrs self.isLinux {
+        "nvim" = {
+          name = "Neovim wrapper";
+          noDisplay = true;
+        };
+
+        "gvim" = {
+          name = "GVim";
+          noDisplay = true;
+        };
+        "vim" = {
+          name = "Vim";
+          noDisplay = true;
+        };
+
+        "custom-nvim" = {
+          name = "Neovim";
+          genericName = "Text Editor";
+          comment = "Edit text files";
+          exec = "${config.home.homeDirectory}/.local/bin/nvim-desktop %F";
+          icon = "nvim";
+          terminal = false;
+          categories = [
+            "Utility"
+            "TextEditor"
+          ];
+          mimeType = [ "text/plain" ];
+        };
       };
     };
 }

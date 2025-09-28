@@ -19,6 +19,7 @@ args@{
         [
           git
           htop
+          btop
           vim
           nixfmt-rfc-style
           nixfmt-tree
@@ -31,8 +32,11 @@ args@{
           ssh-to-pgp
           iotop
           gnupg
+          killall
+          nvd
+          keyutils
         ]
-        ++ (if self.isLinux then with pkgs; [ pkgs.pinentry-curses ] else [ ]);
+        ++ (if self.isLinux then with pkgs; [ pinentry-curses ] else [ ]);
 
       programs = {
         zsh.enable = true;

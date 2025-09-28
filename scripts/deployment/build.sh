@@ -9,7 +9,28 @@ PROFILE="$(retrieve_active_profile)"
 parse_build_deployment_args "$@"
 
 if [[ -e /etc/NIXOS ]]; then
-  timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}"
+  NEW_SYSTEM=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" --print-out-paths)
+
+  if [[ "${BUILD_DIFF:-false}" == "true" ]]; then
+    echo -e "${CYAN}Comparing new build with current active system...${RESET}"
+    echo
+    echo -e "${GREEN}=== Closure Diff ===${RESET}"
+    nix store diff-closures /run/current-system "$NEW_SYSTEM"
+    echo
+    echo -e "${GREEN}=== nvd Diff ===${RESET}"
+    nvd --color=always --version-highlight=xmas diff /run/current-system "$NEW_SYSTEM"
+  fi
 else
-  timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}"
+  NEW_HOME=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" --print-out-paths)
+
+  if [[ "${BUILD_DIFF:-false}" == "true" ]]; then
+    echo -e "${CYAN}Comparing new build with current active home configuration...${RESET}"
+    CURRENT_HOME=$(readlink -f ~/.local/state/nix/profiles/home-manager)
+    echo
+    echo -e "${GREEN}=== Closure Diff ===${RESET}"
+    nix store diff-closures "$CURRENT_HOME" "$NEW_HOME"
+    echo
+    echo -e "${GREEN}=== nvd Diff ===${RESET}"
+    nvd --color=always --version-highlight=xmas diff "$CURRENT_HOME" "$NEW_HOME"
+  fi
 fi

@@ -16,6 +16,8 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
+      isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+
       customPkgs = self.pkgs-unstable {
         overlays = [
           (final: prev: {
@@ -56,6 +58,21 @@ args@{
           ".local/share/qutebrowser"
           ".cache/qutebrowser"
         ];
+      };
+
+      home.sessionVariables = {
+        BROWSER = "qutebrowser";
+      };
+
+      programs.niri = lib.mkIf isNiriEnabled {
+        settings = {
+          binds = with config.lib.niri.actions; {
+            "Ctrl+Mod+Alt+N" = {
+              action = spawn-sh "qutebrowser";
+              hotkey-overlay.title = "Apps:Browser";
+            };
+          };
+        };
       };
     };
 }

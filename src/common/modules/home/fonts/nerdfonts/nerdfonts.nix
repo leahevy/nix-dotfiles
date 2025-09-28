@@ -11,6 +11,14 @@ args@{
 {
   name = "nerdfonts";
 
+  submodules = {
+    common = {
+      fonts = {
+        fontconfig = true;
+      };
+    };
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
