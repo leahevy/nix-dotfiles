@@ -17,6 +17,10 @@
 
 My personal NixOS and Home-Manager configuration using a dual-repository setup. See the template for the private repository layout in `src/nxconfig/`.
 
+<div align="center">
+    <img src="assets/desktop-screenshot.jpg" alt="Desktop" width="100%" />
+</div>
+
 ## Features
 
 - Platform-independent configuration with platform-specific modules for NixOS and Home-Manager.
