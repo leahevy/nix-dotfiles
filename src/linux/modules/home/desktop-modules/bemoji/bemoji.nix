@@ -31,6 +31,12 @@ args@{
         BEMOJI_PICKER_CMD = "fuzzel -d";
       };
 
+      home.persistence."${self.persist}" = {
+        directories = [
+          ".local/share/bemoji"
+        ];
+      };
+
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {
