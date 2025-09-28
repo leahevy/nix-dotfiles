@@ -72,6 +72,12 @@ with lib;
       description = "User's location";
     };
 
+    homeserverDomain = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      description = "Domain name of the home server (without protocol)";
+    };
+
     kernel = mkOption {
       type = types.submodule {
         options = {
