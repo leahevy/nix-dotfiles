@@ -52,6 +52,16 @@ let
             niri-flake.cache.enable = false;
           }
         ])
+        ++ (lib.optionals (helpers.isDarwinArch arch) [
+          {
+            options.programs.niri = lib.mkOption {
+              type = lib.types.attrs;
+              default = { };
+            };
+            config.lib.niri.actions.spawn = _: null;
+            config.lib.niri.actions.spawn-sh = _: null;
+          }
+        ])
         ++ [
           {
             options.home.persistence = lib.mkOption {
