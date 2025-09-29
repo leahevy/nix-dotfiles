@@ -36,7 +36,12 @@ args@{
           (add-to-list 'copilot-indentation-alist '(org-mode 2))
           (add-to-list 'copilot-indentation-alist '(text-mode 2))
           (add-to-list 'copilot-indentation-alist '(closure-mode 2))
-          (add-to-list 'copilot-indentation-alist '(emacs-lisp-mode 2)))
+          (add-to-list 'copilot-indentation-alist '(emacs-lisp-mode 2))
+
+          ;; Fix copilot face colors for dark themes
+          (custom-set-faces
+           '(copilot-overlay-face ((t (:foreground "#6272a4" :background nil))))
+           '(copilot-completion-face ((t (:foreground "#6272a4" :background nil))))))
       '';
 
       home.file.".config/doom/packages/80-copilot.el".text = ''
