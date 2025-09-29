@@ -345,7 +345,7 @@ rec {
     rec {
       # Get Home Manager library functions - always takes config parameter
       # Usage: self.lib $CONFIG
-      lib = config: if isStandalone then lib.hm else config.lib;
+      hmLib = config: if isStandalone then lib.hm else config.lib;
 
       # Create custom nixpkgs import with module-scoped unfree predicate
       # Usage: self.pkgs { overlays = [...]; }
@@ -386,7 +386,7 @@ rec {
         contextDefaults
         // (rec {
           inherit
-            lib
+            hmLib
             pkgs
             pkgs-unstable
             host
