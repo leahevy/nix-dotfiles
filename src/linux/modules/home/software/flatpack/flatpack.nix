@@ -52,10 +52,10 @@ args@{
         for package_id in "''${DESIRED_PACKAGES[@]}"; do
           if [[ -n "$package_id" ]]; then
             if ! echo "$INSTALLED" | grep -q "^$package_id$"; then
-              echo "Installing $package_id"
+              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Installing $package_id" || true
               for j in {1..5}; do
                 if ${pkgs.flatpak}/bin/flatpak install --user --noninteractive flathub "$package_id"; then
-                  echo "Successfully installed $package_id"
+                  ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully installed $package_id" || true
                   break
                 else
                   echo "Failed to install $package_id (attempt $j/3)"
@@ -63,10 +63,17 @@ args@{
                     echo "Retrying in 10 seconds..."
                     sleep 10
                   else
-                    echo "Giving up on $package_id after 3 attempts"
+                    ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to install $package_id after 3 attempts" || true
                   fi
                 fi
               done
+            else
+              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Updating $package_id" || true
+              if ${pkgs.flatpak}/bin/flatpak update --user --noninteractive "$package_id"; then
+                ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully updated $package_id" || true
+              else
+                ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to update $package_id" || true
+              fi
             fi
           fi
         done
@@ -81,10 +88,12 @@ args@{
             fi
           done
           if [[ "$found" == "false" ]] && [[ -f "${stateFile}" ]] && grep -q "\"$installed_package\"" "${stateFile}"; then
-            echo "Removing orphaned package $installed_package"
-            ${pkgs.flatpak}/bin/flatpak uninstall --user --noninteractive "$installed_package" || {
-              echo "Failed to remove $installed_package, continuing..."
-            }
+            ${pkgs.libnotify}/bin/notify-send "Flatpack" "Removing orphaned package $installed_package" || true
+            if ${pkgs.flatpak}/bin/flatpak uninstall --user --noninteractive "$installed_package"; then
+              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully removed $installed_package" || true
+            else
+              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to remove $installed_package" || true
+            fi
           fi
         done <<< "$INSTALLED"
 
@@ -111,11 +120,8 @@ args@{
           Description = "Manage user Flatpak applications";
           After = [ "graphical-session.target" ];
         };
-        Install = {
-          WantedBy = [ "default.target" ];
-        };
         Service = {
-          Type = "simple";
+          Type = "oneshot";
           ExecStart = manageFlatpaksScript;
           Environment = [
             "PATH=${
@@ -125,9 +131,31 @@ args@{
                 pkgs.gnugrep
                 pkgs.flatpak
                 pkgs.jq
+                pkgs.libnotify
               ]
             }"
           ];
+        };
+      };
+
+      systemd.user.timers.flatpack-manager = {
+        Unit = {
+          Description = "Regular Flatpak management timer";
+          Requires = [ "flatpack-manager.service" ];
+        };
+        Install = {
+          WantedBy = [ "timers.target" ];
+        };
+        Timer = {
+          OnCalendar = [
+            "*-*-* 06:00:00"
+            "*-*-* 12:00:00"
+            "*-*-* 18:00:00"
+            "*-*-* 00:00:00"
+          ];
+          Persistent = true;
+          RandomizedDelaySec = "15m";
+          OnBootSec = "30s";
         };
       };
 
