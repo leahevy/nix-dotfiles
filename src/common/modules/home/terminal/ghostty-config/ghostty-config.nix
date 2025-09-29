@@ -28,11 +28,11 @@ args@{
         enable = true;
         package = lib.mkDefault null;
         settings = {
-          font-size = self.settings.fontSize;
-          font-thicken = true;
-          background-opacity = self.settings.opacity;
-          background-blur = true;
-          background = "000000";
+          font-size = lib.mkForce self.settings.fontSize;
+          font-thicken = lib.mkForce true;
+          background-opacity = lib.mkForce self.settings.opacity;
+          background-blur = lib.mkForce true;
+          background = lib.mkForce "000000";
 
           custom-shader =
             let
