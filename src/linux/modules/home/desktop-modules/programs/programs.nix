@@ -216,60 +216,69 @@ in
       xdg.mimeApps = {
         enable = true;
         defaultApplications = {
-          "image/jpeg" = (getDesktopFilePath self.settings.imageViewer);
-          "image/jpg" = (getDesktopFilePath self.settings.imageViewer);
-          "image/png" = (getDesktopFilePath self.settings.imageViewer);
-          "image/gif" = (getDesktopFilePath self.settings.imageViewer);
-          "image/webp" = (getDesktopFilePath self.settings.imageViewer);
-          "image/bmp" = (getDesktopFilePath self.settings.imageViewer);
-          "image/tiff" = (getDesktopFilePath self.settings.imageViewer);
-          "image/svg+xml" = (getDesktopFilePath self.settings.imageViewer);
+          "image/jpeg" = self.settings.imageViewer.desktopFile;
+          "image/jpg" = self.settings.imageViewer.desktopFile;
+          "image/png" = self.settings.imageViewer.desktopFile;
+          "image/gif" = self.settings.imageViewer.desktopFile;
+          "image/webp" = self.settings.imageViewer.desktopFile;
+          "image/bmp" = self.settings.imageViewer.desktopFile;
+          "image/tiff" = self.settings.imageViewer.desktopFile;
+          "image/svg+xml" = self.settings.imageViewer.desktopFile;
 
-          "application/pdf" = (getDesktopFilePath self.settings.pdfViewer);
+          "application/pdf" = self.settings.pdfViewer.desktopFile;
 
-          "video/mp4" = (getDesktopFilePath self.settings.videoPlayer);
-          "video/avi" = (getDesktopFilePath self.settings.videoPlayer);
-          "video/mkv" = (getDesktopFilePath self.settings.videoPlayer);
-          "video/webm" = (getDesktopFilePath self.settings.videoPlayer);
-          "video/x-msvideo" = (getDesktopFilePath self.settings.videoPlayer);
-          "video/quicktime" = (getDesktopFilePath self.settings.videoPlayer);
+          "video/mp4" = self.settings.videoPlayer.desktopFile;
+          "video/avi" = self.settings.videoPlayer.desktopFile;
+          "video/mkv" = self.settings.videoPlayer.desktopFile;
+          "video/webm" = self.settings.videoPlayer.desktopFile;
+          "video/x-msvideo" = self.settings.videoPlayer.desktopFile;
+          "video/quicktime" = self.settings.videoPlayer.desktopFile;
 
-          "audio/mpeg" = (getDesktopFilePath self.settings.musicPlayer);
-          "audio/mp3" = (getDesktopFilePath self.settings.musicPlayer);
-          "audio/ogg" = (getDesktopFilePath self.settings.musicPlayer);
-          "audio/flac" = (getDesktopFilePath self.settings.musicPlayer);
-          "audio/wav" = (getDesktopFilePath self.settings.musicPlayer);
+          "audio/mpeg" = self.settings.musicPlayer.desktopFile;
+          "audio/mp3" = self.settings.musicPlayer.desktopFile;
+          "audio/ogg" = self.settings.musicPlayer.desktopFile;
+          "audio/flac" = self.settings.musicPlayer.desktopFile;
+          "audio/wav" = self.settings.musicPlayer.desktopFile;
 
-          "application/zip" = (getDesktopFilePath self.settings.archiver);
-          "application/x-rar-compressed" = (getDesktopFilePath self.settings.archiver);
-          "application/x-tar" = (getDesktopFilePath self.settings.archiver);
-          "application/gzip" = (getDesktopFilePath self.settings.archiver);
-          "application/x-7z-compressed" = (getDesktopFilePath self.settings.archiver);
+          "application/zip" = self.settings.archiver.desktopFile;
+          "application/x-rar-compressed" = self.settings.archiver.desktopFile;
+          "application/x-tar" = self.settings.archiver.desktopFile;
+          "application/gzip" = self.settings.archiver.desktopFile;
+          "application/x-7z-compressed" = self.settings.archiver.desktopFile;
 
-          "text/plain" = (getDesktopFilePath self.settings.textEditor);
-          "text/markdown" = (getDesktopFilePath self.settings.advancedTextEditor);
-          "application/x-shellscript" = (getDesktopFilePath self.settings.textEditor);
+          "text/plain" = self.settings.textEditor.desktopFile;
+          "text/markdown" = self.settings.advancedTextEditor.desktopFile;
+          "application/x-shellscript" = self.settings.textEditor.desktopFile;
 
-          "inode/directory" = (getDesktopFilePath self.settings.fileBrowser);
+          "inode/directory" = self.settings.fileBrowser.desktopFile;
+
+          "text/html" = self.settings.webBrowser.desktopFile;
+          "application/xhtml+xml" = self.settings.webBrowser.desktopFile;
+          "x-scheme-handler/http" = self.settings.webBrowser.desktopFile;
+          "x-scheme-handler/https" = self.settings.webBrowser.desktopFile;
+          "x-scheme-handler/ftp" = self.settings.webBrowser.desktopFile;
+          "x-scheme-handler/chrome" = self.settings.webBrowser.desktopFile;
+          "application/x-extension-htm" = self.settings.webBrowser.desktopFile;
+          "application/x-extension-html" = self.settings.webBrowser.desktopFile;
+          "application/x-extension-shtml" = self.settings.webBrowser.desktopFile;
+          "application/x-extension-xhtml" = self.settings.webBrowser.desktopFile;
+          "application/x-extension-xht" = self.settings.webBrowser.desktopFile;
         }
         // (
           if self.settings.installOfficeSuite then
             {
-              "application/vnd.oasis.opendocument.text" = (getDesktopFilePath self.settings.officeSuite);
-              "application/vnd.oasis.opendocument.spreadsheet" = (getDesktopFilePath self.settings.officeSuite);
-              "application/vnd.oasis.opendocument.presentation" = (getDesktopFilePath self.settings.officeSuite);
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document" = (
-                getDesktopFilePath self.settings.officeSuite
-              );
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" = (
-                getDesktopFilePath self.settings.officeSuite
-              );
-              "application/vnd.openxmlformats-officedocument.presentationml.presentation" = (
-                getDesktopFilePath self.settings.officeSuite
-              );
-              "application/msword" = (getDesktopFilePath self.settings.officeSuite);
-              "application/vnd.ms-excel" = (getDesktopFilePath self.settings.officeSuite);
-              "application/vnd.ms-powerpoint" = (getDesktopFilePath self.settings.officeSuite);
+              "application/vnd.oasis.opendocument.text" = self.settings.officeSuite.desktopFile;
+              "application/vnd.oasis.opendocument.spreadsheet" = self.settings.officeSuite.desktopFile;
+              "application/vnd.oasis.opendocument.presentation" = self.settings.officeSuite.desktopFile;
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document" =
+                self.settings.officeSuite.desktopFile;
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" =
+                self.settings.officeSuite.desktopFile;
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation" =
+                self.settings.officeSuite.desktopFile;
+              "application/msword" = self.settings.officeSuite.desktopFile;
+              "application/vnd.ms-excel" = self.settings.officeSuite.desktopFile;
+              "application/vnd.ms-powerpoint" = self.settings.officeSuite.desktopFile;
             }
           else
             { }

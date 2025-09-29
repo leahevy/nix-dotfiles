@@ -67,6 +67,7 @@ args@{
             package = null;
             openCommand = "qutebrowser";
             openFileCommand = "qutebrowser";
+            desktopFile = "org.qutebrowser.qutebrowser.desktop";
           };
           installOfficeSuite = true;
           installSystemSettings = true;
