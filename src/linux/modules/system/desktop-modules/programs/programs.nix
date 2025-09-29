@@ -28,5 +28,25 @@ in
     context@{ config, options, ... }:
     {
       services.gnome.gnome-keyring.enable = lib.mkForce isGnome;
+
+      xdg.portal = {
+        enable = true;
+        wlr.enable = true;
+        extraPortals =
+          with pkgs;
+          [
+            xdg-desktop-portal-gtk
+            xdg-desktop-portal-gnome
+          ]
+          ++ lib.optionals isKDE [
+            kdePackages.xdg-desktop-portal-kde
+          ];
+        config = {
+          common = {
+            default = if isKDE then [ "kde" ] else [ "gtk" ];
+            "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kwallet" ] else [ "gnome-keyring" ];
+          };
+        };
+      };
     };
 }

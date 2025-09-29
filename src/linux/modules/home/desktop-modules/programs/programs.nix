@@ -310,7 +310,7 @@ in
         '';
       };
 
-      xdg.portal = {
+      xdg.portal = lib.mkIf (self.user.isStandalone or false) {
         enable = true;
         extraPortals = [
           pkgs.xdg-desktop-portal-gtk
