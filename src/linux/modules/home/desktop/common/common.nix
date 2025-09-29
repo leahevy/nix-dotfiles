@@ -28,5 +28,14 @@ args@{
     }
   ];
 
-  configuration = context@{ config, options, ... }: { };
+  configuration =
+    context@{ config, options, ... }:
+    {
+      home = {
+        sessionVariables = {
+          QT_QPA_PLATFORMTHEME = lib.mkForce "gtk3";
+          QT_QPA_PLATFORMTHEME_QT6 = lib.mkForce "gtk3";
+        };
+      };
+    };
 }
