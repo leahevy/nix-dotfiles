@@ -21,6 +21,7 @@ args@{
     versioningKeepNumbers = 10;
     shares = { };
     announceEnabled = false;
+    monitoringEnabled = true;
   };
 
   assertions = [
@@ -56,12 +57,22 @@ args@{
         sopsFile = self.profile.secretsPath "syncthing.password";
       };
 
-      systemd.user.services.syncthing = lib.mkIf (self.linux.isModuleEnabled "storage.luks-data-drive") {
-        Unit = {
-          After = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
-          Requires = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
-        };
-      };
+      systemd.user.services.syncthing = lib.mkMerge [
+        (lib.mkIf (self.linux.isModuleEnabled "storage.luks-data-drive") {
+          Unit = {
+            After = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
+            Requires = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
+          };
+        })
+        (lib.mkIf self.settings.monitoringEnabled {
+          Unit = {
+            Wants = lib.mkAfter [
+              "syncthing-monitor-status.service"
+              "syncthing-monitor-logs.service"
+            ];
+          };
+        })
+      ];
 
       services.syncthing = {
         enable = true;
@@ -103,6 +114,142 @@ args@{
         files = lib.mkIf self.settings.trayEnabled [
           ".config/syncthingtray.ini"
         ];
+      };
+
+      home.file.".local/bin/scripts/syncthing-monitor" = lib.mkIf self.settings.monitoringEnabled {
+        text = ''
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          NOTIFY_SEND="${pkgs.libnotify}/bin/notify-send"
+          JOURNALCTL="${pkgs.systemd}/bin/journalctl"
+          SERVICE_NAME="syncthing.service"
+
+          STATE_FILE="$HOME/.local/state/syncthing-monitor-state"
+          mkdir -p "$(dirname "$STATE_FILE")"
+
+          notify() {
+              local urgency="''${1:-normal}"
+              local summary="''${2:-No summary}"
+              local body="''${3:-No body}"
+
+              $NOTIFY_SEND --urgency="$urgency" "$summary" "$body"
+          }
+
+          check_service_status() {
+              local current_state=""
+              if [[ -f "$STATE_FILE" ]]; then
+                  current_state="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+              fi
+
+              if systemctl --user is-active "$SERVICE_NAME" >/dev/null 2>&1; then
+                  if [[ ! -f "$STATE_FILE" ]] || [[ "$current_state" != "running" ]]; then
+                      echo "running" > "$STATE_FILE"
+                      notify "normal" "Syncthing Started" "Syncthing service is now running. Open with: http://127.0.0.1:${builtins.toString self.settings.guiPort}"
+                  fi
+              else
+                  if [[ -f "$STATE_FILE" ]] && [[ "$current_state" == "running" ]]; then
+                      echo "stopped" > "$STATE_FILE"
+                      notify "critical" "Syncthing Stopped" "Syncthing service has stopped unexpectedly"
+                  fi
+              fi
+          }
+
+          monitor_logs() {
+              local cursor_file="$HOME/.local/state/syncthing-monitor-cursor"
+              local seen_messages_file="$HOME/.local/state/syncthing-monitor-seen"
+              local cursor_arg=""
+
+              if [[ -f "$cursor_file" ]]; then
+                  cursor_arg="--cursor-file=$cursor_file"
+              fi
+
+              $JOURNALCTL --user -u "$SERVICE_NAME" -f --output=json $cursor_arg --cursor-file="$cursor_file" | while read -r line; do
+                  if [[ -n "$line" ]]; then
+                      local message=$(echo "$line" | ${pkgs.jq}/bin/jq -r '.MESSAGE // empty' 2>/dev/null)
+
+                      if [[ -n "$message" ]]; then
+                          local message_hash=$(echo "$message" | ${pkgs.coreutils}/bin/sha256sum | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+                          local should_notify=true
+
+                          if [[ -f "$seen_messages_file" ]] && ${pkgs.gnugrep}/bin/grep -q "^$message_hash$" "$seen_messages_file"; then
+                              should_notify=false
+                          fi
+
+                          if [[ "$should_notify" == "true" ]]; then
+                              echo "$message_hash" >> "$seen_messages_file"
+
+                              case "$message" in
+                                  *"ERROR"*|*"error"*|*"Error"*)
+                                      notify "critical" "Syncthing Error" "$message"
+                                      ;;
+                                  *"WARNING"*|*"warning"*|*"Warning"*)
+                                      notify "normal" "Syncthing Warning" "$message"
+                                      ;;
+                                  *"Connection to"*"failed"*|*"connection failed"*|*"Connection lost"*)
+                                      notify "normal" "Syncthing Connection Issue" "$message"
+                                      ;;
+                                  *"Folder"*"error"*|*"folder"*"error"*|*"sync error"*|*"synchronization error"*)
+                                      notify "critical" "Syncthing Sync Error" "$message"
+                                      ;;
+                                  *"Device"*"disconnected"*|*"device"*"disconnected"*)
+                                      notify "normal" "Syncthing Device Disconnected" "$message"
+                                      ;;
+                              esac
+                          fi
+                      fi
+                  fi
+              done
+          }
+
+          case "''${1:-monitor}" in
+              "status")
+                  check_service_status
+                  ;;
+              "logs")
+                  monitor_logs
+                  ;;
+              "monitor")
+                  while true; do
+                      check_service_status
+                      sleep 10
+                  done
+                  ;;
+              *)
+                  echo "Usage: $0 {status|logs|monitor}"
+                  exit 1
+                  ;;
+          esac
+        '';
+        executable = true;
+      };
+
+      systemd.user.services.syncthing-monitor-status = lib.mkIf self.settings.monitoringEnabled {
+        Unit = {
+          Description = "Syncthing Status Monitor";
+          After = [ "syncthing.service" ];
+          BindsTo = [ "syncthing.service" ];
+        };
+        Service = {
+          Type = "simple";
+          Restart = "on-failure";
+          RestartSec = "10";
+          ExecStart = "${config.home.homeDirectory}/.local/bin/scripts/syncthing-monitor monitor";
+        };
+      };
+
+      systemd.user.services.syncthing-monitor-logs = lib.mkIf self.settings.monitoringEnabled {
+        Unit = {
+          Description = "Syncthing Log Monitor";
+          After = [ "syncthing.service" ];
+          BindsTo = [ "syncthing.service" ];
+        };
+        Service = {
+          Type = "simple";
+          Restart = "on-failure";
+          RestartSec = "10";
+          ExecStart = "${config.home.homeDirectory}/.local/bin/scripts/syncthing-monitor logs";
+        };
       };
     };
 }
