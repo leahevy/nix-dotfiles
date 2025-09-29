@@ -130,30 +130,43 @@ rec {
       in
       if imported ? configuration then imported.configuration context else { };
 
-    # Import file from different module in same input
-    # Usage: self.importFileFromOtherModule { inherit args context; group = "shell"; module = "fish"; subpath = "file.nix"; }
-    importFileFromOtherModule =
-      self:
+    # Import module structure from same input
+    # Usage: self.importFileFromOtherModuleSameInput { inherit args; modulePath = "desktop-modules.web-app"; subpath = "file.nix"; }
+    importFileFromOtherModuleSameInput =
+      self':
       {
         args,
-        context,
-        group,
-        module,
-        subpath,
+        self,
+        modulePath,
+        subpath ? null,
       }:
       let
         moduleType = if self ? user then "home" else "system";
         inputPath = helpers.resolveInputFromInput self.moduleInputName;
-        filePath = inputPath + "/modules/" + moduleType + "/" + group + "/" + module + "/" + subpath;
 
-        moduleDir = "modules/${moduleType}/${group}/${module}";
-        newModuleContext = {
+        modulePathParts = lib.splitString "." modulePath;
+        groupName = lib.head modulePathParts;
+        moduleName = lib.last modulePathParts;
+
+        fileName = if subpath == null then "${moduleName}.nix" else subpath;
+        filePath =
+          inputPath
+          + "/modules/"
+          + moduleType
+          + "/"
+          + (lib.concatStringsSep "/" modulePathParts)
+          + "/"
+          + fileName;
+
+        moduleDir = "modules/${moduleType}/" + (lib.concatStringsSep "/" modulePathParts);
+        baseModuleContext = {
           inputs = self.inputs;
           variables = self.variables;
           configInputs = self.configInputs or { };
           moduleBasePath = moduleDir;
           moduleInput = inputPath;
           moduleInputName = self.moduleInputName;
+          settings = { };
         }
         // (
           if moduleType == "home" then
@@ -168,53 +181,56 @@ rec {
             }
         );
 
-        enhancedContext =
-          newModuleContext
-          // (lib.mapAttrs (name: func: func newModuleContext) commonFuncs)
-          // (
-            if moduleType == "home" then
-              { user = newModuleContext.user // (lib.mapAttrs (name: func: func newModuleContext) userFuncs); }
-            else
-              { host = newModuleContext.host // (lib.mapAttrs (name: func: func newModuleContext) hostFuncs); }
-          )
-          // (
-            if moduleType == "home" then
-              { persist = "${newModuleContext.variables.persist.home}/${newModuleContext.user.username}"; }
-            else
-              { persist = newModuleContext.variables.persist.system; }
-          );
+        enhancedContext = buildHierarchicalFunctions baseModuleContext moduleDir;
+        moduleSettings = self.getModuleConfig modulePath;
+        finalContext = enhancedContext // {
+          settings = moduleSettings;
+        };
 
         importArgs = args // {
-          self = enhancedContext;
+          self = finalContext;
         };
       in
-      (import filePath importArgs) context;
+      import filePath importArgs;
 
-    # Import file from module in another input
-    # Usage: self.importFileFromInput { inherit args context; input = "common"; group = "vim"; module = "nixvim"; subpath = "file.nix"; }
-    importFileFromInput =
-      self:
+    # Import module structure from different input
+    # Usage: self.importFileFromOtherModuleOtherInput { inherit args; inputName = "common"; modulePath = "shell.fish"; subpath = "file.nix"; }
+    importFileFromOtherModuleOtherInput =
+      self':
       {
         args,
-        context,
-        input,
-        group,
-        module,
-        subpath,
+        self,
+        inputName,
+        modulePath,
+        subpath ? null,
       }:
       let
         moduleType = if self ? user then "home" else "system";
-        inputPath = helpers.resolveInputFromInput input;
-        filePath = inputPath + "/modules/" + moduleType + "/" + group + "/" + module + "/" + subpath;
+        inputPath = helpers.resolveInputFromInput inputName;
 
-        moduleDir = "modules/${moduleType}/${group}/${module}";
-        newModuleContext = {
+        modulePathParts = lib.splitString "." modulePath;
+        groupName = lib.head modulePathParts;
+        moduleName = lib.last modulePathParts;
+
+        fileName = if subpath == null then "${moduleName}.nix" else subpath;
+        filePath =
+          inputPath
+          + "/modules/"
+          + moduleType
+          + "/"
+          + (lib.concatStringsSep "/" modulePathParts)
+          + "/"
+          + fileName;
+
+        moduleDir = "modules/${moduleType}/" + (lib.concatStringsSep "/" modulePathParts);
+        baseModuleContext = {
           inputs = self.inputs;
           variables = self.variables;
           configInputs = self.configInputs or { };
           moduleBasePath = moduleDir;
           moduleInput = inputPath;
-          moduleInputName = input;
+          moduleInputName = inputName;
+          settings = { };
         }
         // (
           if moduleType == "home" then
@@ -229,27 +245,17 @@ rec {
             }
         );
 
-        enhancedContext =
-          newModuleContext
-          // (lib.mapAttrs (name: func: func newModuleContext) commonFuncs)
-          // (
-            if moduleType == "home" then
-              { user = newModuleContext.user // (lib.mapAttrs (name: func: func newModuleContext) userFuncs); }
-            else
-              { host = newModuleContext.host // (lib.mapAttrs (name: func: func newModuleContext) hostFuncs); }
-          )
-          // (
-            if moduleType == "home" then
-              { persist = "${newModuleContext.variables.persist.home}/${newModuleContext.user.username}"; }
-            else
-              { persist = newModuleContext.variables.persist.system; }
-          );
+        enhancedContext = buildHierarchicalFunctions baseModuleContext moduleDir;
+        moduleSettings = self.${inputName}.getModuleConfig modulePath;
+        finalContext = enhancedContext // {
+          settings = moduleSettings;
+        };
 
         importArgs = args // {
-          self = enhancedContext;
+          self = finalContext;
         };
       in
-      (import filePath importArgs) context;
+      import filePath importArgs;
 
   };
 

@@ -25,7 +25,7 @@ let
     doCheck = false;
   };
 in
-{
+rec {
   name = "home-assistant";
 
   defaults = {
@@ -62,36 +62,12 @@ in
     }
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      webApp = self.getModuleConfig "desktop-modules.web-app";
-      package = webApp.package;
-      program = webApp.program;
-      args = webApp.args;
-
-      bin = package + "/bin/${program}";
-    in
-    {
-      home.file.".local/bin/${self.settings.webapp}-webapp" = {
-        executable = true;
-        text = ''
-          #!/usr/bin/env bash
-          set -euo pipefail
-
-          exec ${bin} ${args}"${self.settings.protocol}://${self.settings.subdomain}.${self.settings.domain}${self.settings.args}"
-        '';
-      };
-
-      xdg.desktopEntries = {
-        "${self.settings.webapp}" = {
-          name = self.settings.name;
-          comment = "${self.settings.name} Web-App";
-          exec = "${config.home.homeDirectory}/.local/bin/${self.settings.webapp}-webapp %U";
-          icon = self.settings.iconPath;
-          terminal = false;
-          categories = self.settings.categories;
-        };
-      };
+  custom = {
+    webAppModule = self.importFileFromOtherModuleSameInput {
+      inherit args self;
+      modulePath = "desktop-modules.web-app";
     };
+  };
+
+  configuration = custom.webAppModule.custom.buildWebApp self.settings;
 }
