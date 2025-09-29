@@ -13,7 +13,7 @@ args@{
 
   defaults = {
     fontSize = 12;
-    opacity = 0.75;
+    opacity = 0.80;
     shaders = [
       #"cursor_blaze"
       "cursor_smear"
