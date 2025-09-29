@@ -228,13 +228,24 @@ args@{
         Unit = {
           Description = "Syncthing Status Monitor";
           After = [ "syncthing.service" ];
-          BindsTo = [ "syncthing.service" ];
+          Wants = [ "syncthing.service" ];
         };
         Service = {
           Type = "simple";
           Restart = "on-failure";
           RestartSec = "10";
           ExecStart = "${config.home.homeDirectory}/.local/bin/scripts/syncthing-monitor monitor";
+          Environment = [
+            "PATH=${
+              lib.makeBinPath [
+                pkgs.bash
+                pkgs.coreutils
+                pkgs.curl
+                pkgs.libnotify
+                pkgs.systemd
+              ]
+            }"
+          ];
         };
       };
 
@@ -242,13 +253,24 @@ args@{
         Unit = {
           Description = "Syncthing Log Monitor";
           After = [ "syncthing.service" ];
-          BindsTo = [ "syncthing.service" ];
+          Wants = [ "syncthing.service" ];
         };
         Service = {
           Type = "simple";
           Restart = "on-failure";
           RestartSec = "10";
           ExecStart = "${config.home.homeDirectory}/.local/bin/scripts/syncthing-monitor logs";
+          Environment = [
+            "PATH=${
+              lib.makeBinPath [
+                pkgs.bash
+                pkgs.coreutils
+                pkgs.curl
+                pkgs.libnotify
+                pkgs.systemd
+              ]
+            }"
+          ];
         };
       };
     };
