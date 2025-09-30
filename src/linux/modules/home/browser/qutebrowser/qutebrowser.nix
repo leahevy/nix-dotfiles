@@ -38,6 +38,7 @@ args@{
               qbWithWideVine.overrideAttrs (oldAttrs: {
                 propagatedBuildInputs = oldAttrs.propagatedBuildInputs ++ [
                   final.python3Packages.pyqt6
+                  final.python3Packages.adblock
                 ];
                 buildInputs = oldAttrs.buildInputs ++ [
                   prev.curl
