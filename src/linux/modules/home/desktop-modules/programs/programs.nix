@@ -323,6 +323,7 @@ in
           common = {
             default = if isKDE then [ "kde" ] else [ "gtk" ];
             "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kde" ] else [ "gnome" ];
+            "org.freedesktop.impl.portal.ScreenCast" = "gnome";
           };
         };
       };

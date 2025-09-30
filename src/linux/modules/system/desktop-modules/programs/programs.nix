@@ -45,6 +45,7 @@ in
           common = {
             default = if isKDE then [ "kde" ] else [ "gtk" ];
             "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kwallet" ] else [ "gnome-keyring" ];
+            "org.freedesktop.impl.portal.ScreenCast" = "gnome";
           };
         };
       };
