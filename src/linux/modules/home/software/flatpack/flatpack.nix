@@ -29,14 +29,22 @@ args@{
 
         mkdir -p "${dataDir}"
 
+        SUCCEEDED=0
         for i in {1..5}; do
           if ${pkgs.flatpak}/bin/flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo; then
+            echo "Succeeded adding Flathub repository"
+            SUCCEEDED=1
             break
           else
             echo "Failed to add Flathub repository (attempt $i/5), retrying in 5 seconds..."
             sleep 5
           fi
         done
+
+        if [[ "$SUCCEEDED" != "1" ]]; then
+          ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to add FlatHub repository" || true
+          exit 1
+        fi
 
         DESIRED_PACKAGES=()
         if [[ -d "${dataDir}" ]]; then
@@ -58,12 +66,12 @@ args@{
                   ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully installed $package_id" || true
                   break
                 else
-                  echo "Failed to install $package_id (attempt $j/3)"
-                  if [[ $j -lt 3 ]]; then
+                  echo "Failed to install $package_id (attempt $j/5)"
+                  if [[ $j -lt 5 ]]; then
                     echo "Retrying in 10 seconds..."
                     sleep 10
                   else
-                    ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to install $package_id after 3 attempts" || true
+                    ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to install $package_id after 5 attempts" || true
                   fi
                 fi
               done
