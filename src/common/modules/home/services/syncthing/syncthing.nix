@@ -64,14 +64,6 @@ args@{
             Requires = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
           };
         })
-        (lib.mkIf self.settings.monitoringEnabled {
-          Unit = {
-            Wants = lib.mkAfter [
-              "syncthing-monitor-status.service"
-              "syncthing-monitor-logs.service"
-            ];
-          };
-        })
       ];
 
       services.syncthing = {
@@ -271,6 +263,35 @@ args@{
               ]
             }"
           ];
+        };
+      };
+
+      systemd.user.timers.syncthing-monitor-startup = lib.mkIf self.settings.monitoringEnabled {
+        Unit = {
+          Description = "Start Syncthing Monitoring Services";
+          After = [ "graphical-session.target" ];
+        };
+        Timer = {
+          OnActiveSec = "10s";
+          Unit = "syncthing-monitor-startup.service";
+        };
+        Install = {
+          WantedBy = [ "graphical-session.target" ];
+        };
+      };
+
+      systemd.user.services.syncthing-monitor-startup = lib.mkIf self.settings.monitoringEnabled {
+        Unit = {
+          Description = "Start Syncthing Monitoring Services";
+          After = [ "graphical-session.target" ];
+        };
+        Service = {
+          Type = "oneshot";
+          ExecStart = [
+            "${pkgs.systemd}/bin/systemctl --user start syncthing-monitor-status.service"
+            "${pkgs.systemd}/bin/systemctl --user start syncthing-monitor-logs.service"
+          ];
+          RemainAfterExit = true;
         };
       };
     };
