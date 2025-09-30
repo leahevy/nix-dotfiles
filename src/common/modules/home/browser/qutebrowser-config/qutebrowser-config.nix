@@ -52,7 +52,7 @@ args@{
     {
       programs.qutebrowser = {
         enable = true;
-        package = lib.mkDefault null;
+        package = lib.mkDefault (self.dummyPackage "qutebrowser");
 
         loadAutoconfig = false;
 

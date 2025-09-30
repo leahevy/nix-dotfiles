@@ -26,7 +26,7 @@ args@{
     {
       programs.ghostty = {
         enable = true;
-        package = lib.mkDefault null;
+        package = lib.mkDefault (self.dummyPackage "ghostty");
         settings = {
           font-size = lib.mkForce self.settings.fontSize;
           font-thicken = lib.mkForce true;

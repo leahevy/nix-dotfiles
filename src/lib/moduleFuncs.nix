@@ -351,6 +351,22 @@ rec {
       # Usage: self.pkgs { overlays = [...]; }
       pkgs = createPkgsImport moduleContext.inputs.nixpkgs;
 
+      # Create a dummy package usable for creating home-manager config without installing the package
+      # Usage: self.dummyPackage $NAME
+      dummyPackage =
+        name:
+        lib.mkDefault (
+          moduleContext.inputs.nixpkgs.runCommand name
+            {
+              meta.mainProgram = name;
+            }
+            ''
+              mkdir -p $out/bin
+              touch $out/bin/${name}
+              chmod +x $out/bin/${name}
+            ''
+        );
+
       # Create custom nixpkgs-unstable import with module-scoped unfree predicate
       # Usage: self.pkgs-unstable { overlays = [...]; }
       pkgs-unstable = createPkgsImport moduleContext.inputs.nixpkgs-unstable;
@@ -389,6 +405,7 @@ rec {
             hmLib
             pkgs
             pkgs-unstable
+            dummyPackage
             host
             user
             importFileData
