@@ -55,10 +55,10 @@ in
             package = getPinentryPackage;
             program = getPinentryProgram;
           };
-          maxCacheTtl = 86400;
-          maxCacheTtlSsh = 86400;
-          defaultCacheTtl = 43200;
-          defaultCacheTtlSsh = 43200;
+          maxCacheTtl = 3600;
+          maxCacheTtlSsh = 3600;
+          defaultCacheTtl = 1800;
+          defaultCacheTtlSsh = 1800;
         };
       };
 
