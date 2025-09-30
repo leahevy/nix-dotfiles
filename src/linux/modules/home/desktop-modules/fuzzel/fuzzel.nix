@@ -98,5 +98,60 @@ args@{
         name = "uuctl";
         noDisplay = true;
       };
+
+      home.file.".local/bin/rofi" = {
+        text = ''
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          FUZZEL_ARGS=()
+
+          while [[ $# -gt 0 ]]; do
+            case $1 in
+              -dmenu)
+                FUZZEL_ARGS+=("--dmenu")
+                ;;
+              -format)
+                shift
+                if [[ "$1" == "i" ]]; then
+                  FUZZEL_ARGS+=("--index")
+                fi
+                ;;
+              -matching)
+                shift
+                case "$1" in
+                  fuzzy)
+                    FUZZEL_ARGS+=("--match-mode=fuzzy")
+                    ;;
+                  fzf)
+                    FUZZEL_ARGS+=("--match-mode=fzf")
+                    ;;
+                  exact)
+                    FUZZEL_ARGS+=("--match-mode=exact")
+                    ;;
+                esac
+                ;;
+              -p)
+                shift
+                FUZZEL_ARGS+=("--prompt=$1")
+                ;;
+              -mesg)
+                shift
+                ;;
+              -l|-lines)
+                shift
+                FUZZEL_ARGS+=("--lines=$1")
+                ;;
+              *)
+                FUZZEL_ARGS+=("$1")
+                ;;
+            esac
+            shift
+          done
+
+          exec ${fuzzelPackage}/bin/fuzzel "''${FUZZEL_ARGS[@]}"
+        '';
+        executable = true;
+      };
     };
 }
