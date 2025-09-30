@@ -39,6 +39,7 @@ args@{
                 propagatedBuildInputs = oldAttrs.propagatedBuildInputs ++ [
                   final.python3Packages.pyqt6
                   final.python3Packages.adblock
+                  final.python3Packages.pynacl
                 ];
                 buildInputs = oldAttrs.buildInputs ++ [
                   prev.curl

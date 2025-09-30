@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""
+Convert Firefox bookmarks JSON export to qutebrowser bookmark format.
+Usage: qutebrowser-bookmarks-from-firefox JSONFILE
+"""
+
+import json
+import sys
+import argparse
+import re
+from pathlib import Path
+
+def clean_name(name):
+    name = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000027BF\U0001F900-\U0001F9FF]', '', name)
+    name = name.replace(" ", "-").replace("/", "-")
+    name = re.sub(r'[^\w\-\.]', '', name)
+    name = re.sub(r'-+', '-', name)
+    name = name.strip('-')
+    name = name.lower()
+    return name or "unnamed"
+
+def find_toolbar_bookmarks(data):
+    def search_children(children):
+        for item in children:
+            if item.get("root") == "toolbarFolder":
+                return item
+            if "children" in item:
+                result = search_children(item["children"])
+                if result:
+                    return result
+
+    if "children" in data:
+        return search_children(data["children"])
+    return None
+
+def extract_bookmarks(item, path=""):
+    bookmarks = []
+
+    if item.get("typeCode") == 1:
+        title = item.get("title", "Untitled")
+        uri = item.get("uri")
+        if uri:
+            clean_path = path.strip("/")
+            clean_title = clean_name(title)
+            key = f"{clean_path}/{clean_title}" if clean_path else clean_title
+            bookmarks.append((key, uri))
+
+    elif item.get("typeCode") == 2 and "children" in item:
+        folder_title = clean_name(item.get("title", "Untitled"))
+        new_path = f"{path}/{folder_title}" if path else folder_title
+
+        for child in item["children"]:
+            bookmarks.extend(extract_bookmarks(child, new_path))
+
+    return bookmarks
+
+def format_as_nix(bookmarks):
+    lines = []
+    for key, uri in bookmarks:
+        lines.append(f'    "{key}" = "{uri}";')
+    return "\n".join(lines)
+
+def main():
+    parser = argparse.ArgumentParser(description="Convert Firefox bookmarks to qutebrowser format")
+    parser.add_argument("jsonfile", help="Firefox bookmarks JSON export file")
+    parser.add_argument("--output", "-o", help="Output file (default: stdout)")
+
+    args = parser.parse_args()
+
+    try:
+        with open(args.jsonfile, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        print(f"Error: File '{args.jsonfile}' not found", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in '{args.jsonfile}': {e}", file=sys.stderr)
+        sys.exit(1)
+
+    toolbar = find_toolbar_bookmarks(data)
+    if not toolbar:
+        print("Error: Could not find toolbar bookmarks in the file", file=sys.stderr)
+        sys.exit(1)
+
+    bookmarks = []
+    if "children" in toolbar:
+        for child in toolbar["children"]:
+            bookmarks.extend(extract_bookmarks(child))
+
+    if not bookmarks:
+        print("No bookmarks found in toolbar", file=sys.stderr)
+        sys.exit(1)
+
+    seen_keys = set()
+    unique_bookmarks = []
+    for key, uri in bookmarks:
+        if key not in seen_keys:
+            seen_keys.add(key)
+            unique_bookmarks.append((key, uri))
+        else:
+            print(f"Skipping duplicate key: {key}", file=sys.stderr)
+
+    bookmarks = unique_bookmarks
+
+    output = format_as_nix(bookmarks)
+
+    if args.output:
+        with open(args.output, 'w', encoding='utf-8') as f:
+            f.write(output)
+        print(f"Bookmarks written to {args.output}")
+    else:
+        print(output)
+
+if __name__ == "__main__":
+    main()
