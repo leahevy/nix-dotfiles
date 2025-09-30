@@ -27,9 +27,6 @@ args@{
           utils = {
             archive-tools = true;
           };
-          browser = {
-            qutebrowser = true;
-          };
           dev = {
             devenv = true;
             cmake = true;
@@ -95,6 +92,9 @@ args@{
           };
         };
         linux = {
+          browser = {
+            qutebrowser = true;
+          };
           utils = {
             alien = true;
           };
@@ -127,9 +127,6 @@ args@{
           };
           utils = {
             archive-tools = true;
-          };
-          browser = {
-            qutebrowser = true;
           };
           dev = {
             devenv = true;
@@ -196,6 +193,9 @@ args@{
           };
         };
         linux = {
+          browser = {
+            qutebrowser = true;
+          };
           utils = {
             alien = true;
           };
@@ -222,6 +222,9 @@ args@{
     then
       {
         common = {
+          browser = {
+            qutebrowser-config = true;
+          };
           utils = {
             archive-tools = true;
           };

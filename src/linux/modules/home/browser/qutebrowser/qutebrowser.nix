@@ -13,6 +13,14 @@ args@{
 
   unfree = [ "widevine-cdm" ];
 
+  submodules = {
+    common = {
+      browser = {
+        qutebrowser-config = true;
+      };
+    };
+  };
+
   configuration =
     context@{ config, options, ... }:
     let
@@ -48,31 +56,7 @@ args@{
     in
     {
       programs.qutebrowser = {
-        enable = true;
-        package = customPkgs.qutebrowser;
-      };
-
-      home.persistence."${self.persist}" = {
-        directories = [
-          ".config/qutebrowser"
-          ".local/share/qutebrowser"
-          ".cache/qutebrowser"
-        ];
-      };
-
-      home.sessionVariables = {
-        BROWSER = "qutebrowser";
-      };
-
-      programs.niri = lib.mkIf isNiriEnabled {
-        settings = {
-          binds = with config.lib.niri.actions; {
-            "Ctrl+Mod+Alt+N" = {
-              action = spawn-sh "qutebrowser";
-              hotkey-overlay.title = "Apps:Browser";
-            };
-          };
-        };
+        package = lib.mkForce customPkgs.qutebrowser;
       };
     };
 }

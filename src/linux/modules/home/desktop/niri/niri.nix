@@ -13,6 +13,9 @@ args@{
 
   submodules = {
     linux = {
+      browser = {
+        qutebrowser = true;
+      };
       storage = {
         auto-mount = true;
       };
@@ -91,9 +94,6 @@ args@{
       };
       terminal = {
         kitty = true; # Fallback terminal
-      };
-      browser = {
-        qutebrowser = true;
       };
     };
   };
