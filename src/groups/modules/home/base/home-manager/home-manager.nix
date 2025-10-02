@@ -28,6 +28,7 @@ args@{
             archive-tools = true;
           };
           dev = {
+            conda = true;
             devenv = true;
             cmake = true;
             utils = true;
@@ -129,6 +130,7 @@ args@{
             archive-tools = true;
           };
           dev = {
+            conda = true;
             devenv = true;
             cmake = true;
             utils = true;
@@ -229,6 +231,7 @@ args@{
             archive-tools = true;
           };
           dev = {
+            conda = true;
             devenv = true;
             cmake = true;
             utils = true;
