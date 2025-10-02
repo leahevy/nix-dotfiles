@@ -49,7 +49,7 @@ args@{
       normal = {
         "<Escape>" = "clear-keychain ;; search ;; fullscreen --leave";
         "o" = "cmd-set-text -s :open";
-        "<Space>" = "cmd-set-text -s :open";
+        "<Space>" = "cmd-set-text -s :open /search";
         "z" = "cmd-set-text :open /";
         "<Alt+Space>" = "cmd-set-text :fg-group#";
         "<Ctrl+Space>" = "cmd-set-text :bg-group#";
