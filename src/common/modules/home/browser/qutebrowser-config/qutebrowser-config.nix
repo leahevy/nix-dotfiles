@@ -92,7 +92,10 @@ args@{
         loadAutoconfig = false;
 
         settings = {
-          confirm_quit = [ "downloads" ];
+          confirm_quit = [
+            "downloads"
+            "multiple_tabs"
+          ];
           new_instance_open_target = "window";
           fonts = {
             default_size = lib.mkForce ((builtins.toString self.settings.fontSize) + "pt");
@@ -120,6 +123,7 @@ args@{
           window = {
             hide_decoration = isNiriEnabled;
             transparent = true;
+            title_format = "{audio}[{index}] {current_title} ({host}) {private}";
           };
           colors = {
             contextmenu = {
@@ -151,6 +155,7 @@ args@{
             };
           };
           content = {
+            local_content_can_access_remote_urls = true;
             canvas_reading = true;
             cache = {
               maximum_pages = 5;
@@ -207,13 +212,14 @@ args@{
           tabs = {
             show = "multiple";
             last_close = "default-page";
+            mode_on_change = "restore";
           };
           messages = {
             timeout = 1500;
           };
           scrolling = {
             smooth = true;
-            bar = "always";
+            bar = "when-searching";
           };
           completion = {
             use_best_match = true;
