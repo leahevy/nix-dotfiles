@@ -11,10 +11,14 @@ args@{
 {
   name = "conda";
 
+  defaults = {
+    withPkgInstall = false;
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
-      home.packages = lib.mkIf self.isLinux (
+      home.packages = lib.mkIf (self.isLinux && self.settings.withPkgInstall) (
         with pkgs;
         [
           conda

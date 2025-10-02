@@ -29,6 +29,7 @@ args@{
           };
           dev = {
             conda = true;
+            poetry = true;
             devenv = true;
             cmake = true;
             utils = true;
@@ -60,7 +61,6 @@ args@{
           };
           python = {
             python = true;
-            setup = true;
           };
           shell = {
             fastfetch = true;
@@ -131,6 +131,7 @@ args@{
           };
           dev = {
             conda = true;
+            poetry = true;
             devenv = true;
             cmake = true;
             utils = true;
@@ -162,7 +163,6 @@ args@{
           };
           python = {
             python = true;
-            setup = true;
           };
           shell = {
             fastfetch = true;
@@ -232,6 +232,7 @@ args@{
           };
           dev = {
             conda = true;
+            poetry = true;
             devenv = true;
             cmake = true;
             utils = true;
@@ -263,7 +264,6 @@ args@{
           };
           python = {
             python = true;
-            setup = true;
           };
           shell = {
             fastfetch = true;
