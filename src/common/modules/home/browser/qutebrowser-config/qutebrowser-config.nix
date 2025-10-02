@@ -13,7 +13,8 @@ args@{
 
   defaults = {
     privacySearch = true;
-    addAmazonSearch = false;
+    startpageAsPrivacySearch = true;
+    addAmazon = false;
     amazonDomain = "amazon.com";
     googleDomain = "google.com";
     home = null;
@@ -63,7 +64,10 @@ args@{
 
       defaultSearch =
         if self.settings.privacySearch then
-          "https://duckduckgo.com/?q="
+          if self.settings.startpageAsPrivacySearch then
+            "https://www.startpage.com/sp/search?q="
+          else
+            "https://duckduckgo.com/?q="
         else
           "https://${self.settings.googleDomain}/search?q=";
 
@@ -71,7 +75,10 @@ args@{
         if self.settings.home != null then
           self.settings.home
         else if self.settings.privacySearch then
-          "https://duckduckgo.com"
+          if self.settings.startpageAsPrivacySearch then
+            "https://www.startpage.com"
+          else
+            "https://duckduckgo.com"
         else
           "https://${self.settings.googleDomain}";
 
@@ -240,38 +247,38 @@ args@{
         }
         // self.settings.customSettings;
 
-        searchEngines =
-          let
-            amazonSearch = lib.optionalAttrs self.settings.addAmazonSearch {
-              a = "https://${self.settings.amazonDomain}/s?k={}";
-            };
-          in
-          {
-            DEFAULT = defaultSearch + "{}";
-            default = defaultSearch + "{}";
-            d = "https://duckduckgo.com/?q={}";
-            g = "https://${self.settings.googleDomain}/search?q={}";
-          }
-          // self.settings.baseSearchEngines
-          // amazonSearch
-          // self.settings.additionalSearchEngines;
+        searchEngines = {
+          DEFAULT = defaultSearch + "{}";
+          default = defaultSearch + "{}";
+          google = "https://${self.settings.googleDomain}/search?q={}";
+        }
+        // lib.optionalAttrs self.settings.addAmazon {
+          amazon = "https://${self.settings.amazonDomain}/s?k={}";
+        }
+        // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
+          start = "https://www.startpage.com/sp/search?q={}";
+        }
+        // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
+          duck = "https://duckduckgo.com/?q={}";
+        }
+        // self.settings.baseSearchEngines
+        // self.settings.additionalSearchEngines;
 
-        quickmarks =
-          let
-            defaultQuickmarks = {
-              home = homeUrl;
-              google = "https://${self.settings.googleDomain}";
-              duck = "https://duckduckgo.com";
-            };
-
-            amazonQuickmark = lib.optionalAttrs self.settings.addAmazonSearch {
-              amazon = "https://${self.settings.amazonDomain}";
-            };
-          in
-          defaultQuickmarks
-          // amazonQuickmark
-          // self.settings.baseBookmarks
-          // self.settings.customBookmarks;
+        quickmarks = {
+          home = homeUrl;
+          google = "https://${self.settings.googleDomain}";
+        }
+        // lib.optionalAttrs self.settings.addAmazon {
+          amazon = "https://${self.settings.amazonDomain}";
+        }
+        // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
+          start = "https://www.startpage.com";
+        }
+        // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
+          duck = "https://duckduckgo.com";
+        }
+        // self.settings.baseBookmarks
+        // self.settings.customBookmarks;
 
         aliases =
           let
