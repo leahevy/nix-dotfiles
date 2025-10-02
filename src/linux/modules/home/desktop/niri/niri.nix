@@ -496,7 +496,7 @@ args@{
           };
 
           clipboard = {
-            disable-primary = true;
+            disable-primary = false;
           };
 
           layout = {
