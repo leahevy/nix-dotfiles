@@ -82,7 +82,8 @@ args@{
         else
           "https://${self.settings.googleDomain}";
 
-      userAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/{webkit_version} (KHTML, like Gecko) {upstream_browser_key}/{upstream_browser_version} Safari/{webkit_version}";
+      userAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/{webkit_version} (KHTML, like Gecko) {upstream_browser_key}/{upstream_browser_version_short} Safari/{webkit_version}";
+      spoofedUserAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
     in
     {
       programs.qutebrowser = {
@@ -190,7 +191,7 @@ args@{
               accept_language = "${self.settings.locale},${builtins.head (lib.strings.splitString "-" self.settings.locale)};q=0.9";
               do_not_track = true;
               referer = "same-domain";
-              user_agent = lib.mkIf self.settings.spoofUserAgent userAgent;
+              user_agent = if self.settings.spoofUserAgent then spoofedUserAgent else userAgent;
             };
             tls = {
               certificate_errors = "ask";
