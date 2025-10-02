@@ -38,6 +38,7 @@ args@{
     spoofUserAgent = false;
     fontSize = 12;
     webFontSize = 17;
+    askOnQuit = true;
     additionalStartPages = [ ];
     additionalSearchEngines = { };
     addHomeToStartPages = true;
@@ -495,9 +496,13 @@ args@{
         enableDefaultBindings = false;
 
         settings = {
-          confirm_quit = [
-            "always"
-          ];
+          confirm_quit =
+            if self.settings.askOnQuit then
+              [
+                "always"
+              ]
+            else
+              [ "downloads" ];
           new_instance_open_target = "tab";
           new_instance_open_target_window = "last-focused";
           fonts = {

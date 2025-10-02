@@ -9,7 +9,7 @@ args@{
   ...
 }:
 {
-  name = "web-app";
+  name = "web-app-chromium";
 
   defaults = {
     package = pkgs.chromium;
