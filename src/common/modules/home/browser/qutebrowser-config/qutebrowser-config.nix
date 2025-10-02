@@ -80,7 +80,7 @@ args@{
     {
       programs.qutebrowser = {
         enable = true;
-        package = lib.mkDefault (self.dummyPackage "qutebrowser");
+        package = lib.mkDefault pkgs-unstable.qutebrowser;
 
         loadAutoconfig = false;
 

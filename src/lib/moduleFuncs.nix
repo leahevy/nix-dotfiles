@@ -355,17 +355,15 @@ rec {
       # Usage: self.dummyPackage $NAME
       dummyPackage =
         name:
-        lib.mkDefault (
-          moduleContext.inputs.nixpkgs.runCommand name
-            {
-              meta.mainProgram = name;
-            }
-            ''
-              mkdir -p $out/bin
-              touch $out/bin/${name}
-              chmod +x $out/bin/${name}
-            ''
-        );
+        (pkgs { }).runCommand name
+          {
+            meta.mainProgram = name;
+          }
+          ''
+            mkdir -p $out/bin
+            touch $out/bin/${name}
+            chmod +x $out/bin/${name}
+          '';
 
       # Create custom nixpkgs-unstable import with module-scoped unfree predicate
       # Usage: self.pkgs-unstable { overlays = [...]; }
