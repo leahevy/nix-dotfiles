@@ -41,13 +41,17 @@ args@{
     additionalStartPages = [ ];
     additionalSearchEngines = { };
     addHomeToStartPages = true;
+    alwaysCreateKeepassxcKeybindings = false;
     additionalKeyMappings = { };
     additionalKeyBindings = { };
     keyBindings = {
       normal = {
         "<Escape>" = "clear-keychain ;; search ;; fullscreen --leave";
         "o" = "cmd-set-text -s :open";
-        "<Space>" = "cmd-set-text -s :open /search";
+        "<Space>" = "cmd-set-text -s :open";
+        "z" = "cmd-set-text :open /";
+        "<Alt+Space>" = "cmd-set-text :fg-group#";
+        "<Ctrl+Space>" = "cmd-set-text :bg-group#";
         "go" = "cmd-set-text :open {url:pretty}";
         "O" = "cmd-set-text -s :open -t";
         "gO" = "cmd-set-text :open -t -r {url:pretty}";
@@ -64,7 +68,9 @@ args@{
         "<Ctrl+n>" = "open -w";
         "<Ctrl+Shift+n>" = "open -p";
         "d" = "tab-close";
+        "<Ctrl+q>" = "tab-close";
         "<Ctrl+w>" = "tab-close";
+        "<Ctrl+Shift+q>" = "close";
         "<Ctrl+Shift+w>" = "close";
         "D" = "tab-close -o";
         "co" = "tab-only";
@@ -171,16 +177,13 @@ args@{
         "<Ctrl+Shift+Tab>" = "tab-prev";
         "<Ctrl+^>" = "tab-focus last";
         "<Ctrl+v>" = "mode-enter passthrough";
-        "<Ctrl+q>" = "quit";
-        "ZQ" = "quit";
-        "ZZ" = "quit --save";
         "<Ctrl+f>" = "scroll-page 0 1";
         "<Ctrl+b>" = "scroll-page 0 -1";
         "<Ctrl+d>" = "scroll-page 0 0.5";
         "<Ctrl+u>" = "scroll-page 0 -0.5";
-        "<Alt+1>" = "tab-focus 1";
         "g0" = "tab-focus 1";
         "g^" = "tab-focus 1";
+        "<Alt+1>" = "tab-focus 1";
         "<Alt+2>" = "tab-focus 2";
         "<Alt+3>" = "tab-focus 3";
         "<Alt+4>" = "tab-focus 4";
@@ -189,6 +192,15 @@ args@{
         "<Alt+7>" = "tab-focus 7";
         "<Alt+8>" = "tab-focus 8";
         "<Alt+9>" = "tab-focus -1";
+        "<Ctrl+1>" = "tab-focus 1";
+        "<Ctrl+2>" = "tab-focus 2";
+        "<Ctrl+3>" = "tab-focus 3";
+        "<Ctrl+4>" = "tab-focus 4";
+        "<Ctrl+5>" = "tab-focus 5";
+        "<Ctrl+6>" = "tab-focus 6";
+        "<Ctrl+7>" = "tab-focus 7";
+        "<Ctrl+8>" = "tab-focus 8";
+        "<Ctrl+9>" = "tab-focus -1";
         "g$" = "tab-focus -1";
         "<Ctrl+h>" = "home";
         "<Ctrl+s>" = "stop";
@@ -201,8 +213,6 @@ args@{
         "<Ctrl+p>" = "tab-pin";
         "<Alt+m>" = "tab-mute";
         "gD" = "tab-give";
-        "q" = "macro-record";
-        "@" = "macro-run";
         "tsh" = "config-cycle -p -t -u *://{url:host}/* content.javascript.enabled ;; reload";
         "tSh" = "config-cycle -p -u *://{url:host}/* content.javascript.enabled ;; reload";
         "tsH" = "config-cycle -p -t -u *://*.{url:host}/* content.javascript.enabled ;; reload";
@@ -231,7 +241,8 @@ args@{
           "config-cycle -p -u *://*.{url:host}/* content.cookies.accept all no-3rdparty never ;; reload";
         "tcu" = "config-cycle -p -t -u {url} content.cookies.accept all no-3rdparty never ;; reload";
         "tCu" = "config-cycle -p -u {url} content.cookies.accept all no-3rdparty never ;; reload";
-        "<Alt+Tab>" = "tab-focus last";
+        "<Alt+Tab>" = "tab-next";
+        "<Alt+Shift+Tab>" = "tab-prev";
         "<Ctrl+Left>" = "back";
         "<Ctrl+Right>" = "forward";
         "gT" = "tab-prev";
@@ -363,6 +374,11 @@ args@{
     };
     extendedKeyBindings = {
       normal = {
+        "<Ctrl+q>" = "quit";
+        "ZQ" = "quit";
+        "ZZ" = "quit --save";
+        "q" = "macro-record";
+        "@" = "macro-run";
         "<F5>" = "reload";
         "<Ctrl+F5>" = "reload -f";
         "m" = "quickmark-save";
@@ -427,7 +443,13 @@ args@{
       spoofedUserAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 
       keepassxcKeyBindings =
-        if (self.user.gpg != null && self.user.gpg != "" && self.isModuleEnabled "passwords.keepassxc") then
+        if
+          (
+            self.user.gpg != null
+            && self.user.gpg != ""
+            && (self.isModuleEnabled "passwords.keepassxc" || self.settings.alwaysCreateKeepassxcKeybindings)
+          )
+        then
           {
             normal = {
               "pw" = "spawn --userscript qute-keepassxc --key ${self.user.gpg}";
@@ -474,8 +496,7 @@ args@{
 
         settings = {
           confirm_quit = [
-            "downloads"
-            "multiple-tabs"
+            "always"
           ];
           new_instance_open_target = "tab";
           new_instance_open_target_window = "last-focused";
@@ -760,8 +781,8 @@ args@{
                 ) flattenedBookmarks;
               in
               lib.optionalAttrs (builtins.length (builtins.attrNames matchingBookmarks) > 0) {
-                "#${folderPath}" = generateOpenCommand "tab" matchingBookmarks;
-                "\$${folderPath}" = generateOpenCommand "background" matchingBookmarks;
+                "fg-group#${folderPath}" = generateOpenCommand "tab" matchingBookmarks;
+                "bg-group#${folderPath}" = generateOpenCommand "background" matchingBookmarks;
               };
 
             allFolderAliases = lib.foldl' (
