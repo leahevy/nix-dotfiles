@@ -426,7 +426,20 @@ args@{
       userAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/{webkit_version} (KHTML, like Gecko) {upstream_browser_key}/{upstream_browser_version_short} Safari/{webkit_version}";
       spoofedUserAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 
-      mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings;
+      keepassxcKeyBindings =
+        if (self.user.gpg != null && self.user.gpg != "" && self.isModuleEnabled "passwords.keepassxc") then
+          {
+            normal = {
+              "pw" = "spawn --userscript qute-keepassxc --key ${self.user.gpg}";
+            };
+            insert = {
+              "<Alt-Shift-u>" = "spawn --userscript qute-keepassxc --key ${self.user.gpg}";
+            };
+          }
+        else
+          { };
+
+      mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings) keepassxcKeyBindings;
 
       flattenBookmarks =
         let
