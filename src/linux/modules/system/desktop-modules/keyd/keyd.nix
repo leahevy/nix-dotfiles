@@ -38,6 +38,10 @@ args@{
               x = "C-x";
             };
 
+            alt = {
+              esc = "`";
+            };
+
             shift = {
               esc = "~";
             };
