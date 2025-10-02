@@ -663,8 +663,8 @@ args@{
             };
 
             "Mod+Shift+Left" = {
-              action = consume-or-expel-window-left;
-              hotkey-overlay.title = "Windows:Move window left";
+              action = move-column-to-monitor-left;
+              hotkey-overlay.title = "Windows:Column to monitor left";
             };
 
             "Mod+Shift+Down" = {
@@ -678,8 +678,8 @@ args@{
             };
 
             "Mod+Shift+Right" = {
-              action = consume-or-expel-window-right;
-              hotkey-overlay.title = "Windows:Move window right";
+              action = move-column-to-monitor-right;
+              hotkey-overlay.title = "Windows:Column to monitor right";
             };
 
             "Mod+Ctrl+H" = {
