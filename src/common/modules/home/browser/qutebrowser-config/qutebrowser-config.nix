@@ -664,7 +664,8 @@ args@{
         searchEngines =
           let
             convertSearchEngines =
-              searchEngines: lib.mapAttrs' (name: url: lib.nameValuePair "/${name}" url) searchEngines;
+              searchEngines:
+              lib.mapAttrs' (name: url: lib.nameValuePair "/${name}" url) searchEngines // searchEngines;
           in
           convertSearchEngines (
             {
