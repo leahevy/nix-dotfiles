@@ -15,6 +15,7 @@ args@{
     dataPath = "/var/lib/docker";
     storageDriver = "btrfs";
     addMainUserToGroup = true;
+    additionalSettings = { };
   };
 
   configuration =
@@ -29,7 +30,8 @@ args@{
 
         daemon.settings = {
           data-root = self.settings.dataPath;
-        };
+        }
+        // self.settings.additionalSettings;
       };
 
       users.users = lib.mkIf self.settings.addMainUserToGroup {
