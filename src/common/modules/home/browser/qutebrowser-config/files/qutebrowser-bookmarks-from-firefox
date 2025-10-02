@@ -33,31 +33,60 @@ def find_toolbar_bookmarks(data):
         return search_children(data["children"])
     return None
 
-def extract_bookmarks(item, path=""):
-    bookmarks = []
+def extract_bookmarks(item):
+    result = {}
 
     if item.get("typeCode") == 1:
         title = item.get("title", "Untitled")
         uri = item.get("uri")
         if uri:
-            clean_path = path.strip("/")
             clean_title = clean_name(title)
-            key = f"{clean_path}/{clean_title}" if clean_path else clean_title
-            bookmarks.append((key, uri))
+            return clean_title, uri
 
     elif item.get("typeCode") == 2 and "children" in item:
         folder_title = clean_name(item.get("title", "Untitled"))
-        new_path = f"{path}/{folder_title}" if path else folder_title
+        folder_contents = {}
 
         for child in item["children"]:
-            bookmarks.extend(extract_bookmarks(child, new_path))
+            child_result = extract_bookmarks(child)
+            if child_result:
+                if isinstance(child_result, tuple):
+                    name, url = child_result
+                    folder_contents[name] = url
+                elif isinstance(child_result, dict):
+                    folder_contents.update(child_result)
 
-    return bookmarks
+        if folder_contents:
+            return {folder_title: folder_contents}
 
-def format_as_nix(bookmarks):
+    return None
+
+def build_nested_structure(items):
+    result = {}
+
+    for item in items:
+        item_result = extract_bookmarks(item)
+        if item_result:
+            if isinstance(item_result, tuple):
+                name, url = item_result
+                result[name] = url
+            elif isinstance(item_result, dict):
+                result.update(item_result)
+
+    return result
+
+def format_as_nix(bookmarks, indent=0):
     lines = []
-    for key, uri in bookmarks:
-        lines.append(f'    "{key}" = "{uri}";')
+    prefix = "  " * indent
+
+    for key, value in bookmarks.items():
+        if isinstance(value, str):
+            lines.append(f'{prefix}"{key}" = "{value}";')
+        elif isinstance(value, dict):
+            lines.append(f'{prefix}"{key}" = {{')
+            lines.append(format_as_nix(value, indent + 1))
+            lines.append(f'{prefix}}};')
+
     return "\n".join(lines)
 
 def main():
@@ -82,25 +111,13 @@ def main():
         print("Error: Could not find toolbar bookmarks in the file", file=sys.stderr)
         sys.exit(1)
 
-    bookmarks = []
+    bookmarks = {}
     if "children" in toolbar:
-        for child in toolbar["children"]:
-            bookmarks.extend(extract_bookmarks(child))
+        bookmarks = build_nested_structure(toolbar["children"])
 
     if not bookmarks:
         print("No bookmarks found in toolbar", file=sys.stderr)
         sys.exit(1)
-
-    seen_keys = set()
-    unique_bookmarks = []
-    for key, uri in bookmarks:
-        if key not in seen_keys:
-            seen_keys.add(key)
-            unique_bookmarks.append((key, uri))
-        else:
-            print(f"Skipping duplicate key: {key}", file=sys.stderr)
-
-    bookmarks = unique_bookmarks
 
     output = format_as_nix(bookmarks)
 

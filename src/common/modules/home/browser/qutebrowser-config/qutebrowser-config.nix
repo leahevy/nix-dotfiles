@@ -18,7 +18,7 @@ args@{
     amazonDomain = "amazon.com";
     googleDomain = "google.com";
     home = null;
-    customBookmarks = { };
+    bookmarks = { };
     customSettings = { };
     baseBookmarks = {
       nixpkgs = "https://github.com/NixOS/nixpkgs";
@@ -47,7 +47,7 @@ args@{
       normal = {
         "<Escape>" = "clear-keychain ;; search ;; fullscreen --leave";
         "o" = "cmd-set-text -s :open";
-        "<Space>" = "cmd-set-text -s :open";
+        "<Space>" = "cmd-set-text -s :open /search";
         "go" = "cmd-set-text :open {url:pretty}";
         "O" = "cmd-set-text -s :open -t";
         "gO" = "cmd-set-text :open -t -r {url:pretty}";
@@ -396,7 +396,6 @@ args@{
       "nvim"
     ];
     fileManager = [ "dolphin" ];
-    bookmarkGroups = { };
   };
 
   configuration =
@@ -428,6 +427,29 @@ args@{
       spoofedUserAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 
       mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings;
+
+      flattenBookmarks =
+        let
+          flattenBookmarksRecursive =
+            prefix: bookmarks:
+            lib.concatMapAttrs (
+              name: value:
+              let
+                safeName = builtins.replaceStrings [ "/" ] [ "-" ] name;
+                fullName = if prefix == "" then safeName else "${prefix}/${safeName}";
+              in
+              if builtins.isString value then
+                { "${fullName}" = value; }
+              else if builtins.isAttrs value then
+                if builtins.length (builtins.attrNames value) > 0 then
+                  flattenBookmarksRecursive fullName value
+                else
+                  { }
+              else
+                throw "Bookmark value must be either a string (URL) or attribute set (folder)"
+            ) bookmarks;
+        in
+        flattenBookmarksRecursive "";
     in
     {
       programs.qutebrowser = {
@@ -442,7 +464,8 @@ args@{
             "downloads"
             "multiple-tabs"
           ];
-          new_instance_open_target = "window";
+          new_instance_open_target = "tab";
+          new_instance_open_target_window = "last-focused";
           fonts = {
             default_size = lib.mkForce ((builtins.toString self.settings.fontSize) + "pt");
             web = {
@@ -599,78 +622,140 @@ args@{
         }
         // self.settings.customSettings;
 
-        searchEngines = {
-          DEFAULT = defaultSearch + "{}";
-          default = defaultSearch + "{}";
-          google = "https://${self.settings.googleDomain}/search?q={}";
-        }
-        // lib.optionalAttrs self.settings.addAmazon {
-          amazon = "https://${self.settings.amazonDomain}/s?k={}";
-        }
-        // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
-          start = "https://www.startpage.com/sp/search?q={}";
-        }
-        // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
-          duck = "https://duckduckgo.com/?q={}";
-        }
-        // self.settings.baseSearchEngines
-        // self.settings.additionalSearchEngines;
+        searchEngines =
+          let
+            convertSearchEngines =
+              searchEngines: lib.mapAttrs' (name: url: lib.nameValuePair "/${name}" url) searchEngines;
+          in
+          convertSearchEngines (
+            {
+              search = defaultSearch + "{}";
+              google = "https://${self.settings.googleDomain}/search?q={}";
+            }
+            // lib.optionalAttrs self.settings.addAmazon {
+              amazon = "https://${self.settings.amazonDomain}/s?k={}";
+            }
+            // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
+              start = "https://www.startpage.com/sp/search?q={}";
+            }
+            // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
+              duck = "https://duckduckgo.com/?q={}";
+            }
+            // self.settings.baseSearchEngines
+            // self.settings.additionalSearchEngines
+          )
+          // {
+            DEFAULT = defaultSearch + "{}";
+          };
 
-        quickmarks = {
-          home = homeUrl;
-          google = "https://${self.settings.googleDomain}";
-        }
-        // lib.optionalAttrs self.settings.addAmazon {
-          amazon = "https://${self.settings.amazonDomain}";
-        }
-        // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
-          start = "https://www.startpage.com";
-        }
-        // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
-          duck = "https://duckduckgo.com";
-        }
-        // self.settings.baseBookmarks
-        // self.settings.customBookmarks;
+        quickmarks =
+          let
+            convertQuickmarks =
+              quickmarks: lib.mapAttrs' (name: url: lib.nameValuePair "@${name}" url) quickmarks;
+          in
+          convertQuickmarks (
+            {
+              home = homeUrl;
+              google = "https://${self.settings.googleDomain}";
+            }
+            // lib.optionalAttrs self.settings.addAmazon {
+              amazon = "https://${self.settings.amazonDomain}";
+            }
+            // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
+              start = "https://www.startpage.com";
+            }
+            // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
+              duck = "https://duckduckgo.com";
+            }
+            // self.settings.baseBookmarks
+            // (flattenBookmarks self.settings.bookmarks)
+          )
+          // {
+            home = homeUrl;
+          };
 
         aliases =
           let
+            flattenedBookmarks = flattenBookmarks self.settings.bookmarks;
+
+            extractFolderPaths =
+              let
+                allKeys = builtins.attrNames flattenedBookmarks;
+                getAllPrefixes =
+                  keys:
+                  let
+                    extractFromKey =
+                      key:
+                      let
+                        parts = lib.splitString "/" key;
+                        generatePrefixes =
+                          partsList: acc:
+                          if (builtins.length partsList) <= 1 then
+                            acc
+                          else
+                            let
+                              prefix = builtins.concatStringsSep "/" (lib.take ((builtins.length partsList) - 1) partsList);
+                            in
+                            [ prefix ] ++ (generatePrefixes (lib.init partsList) acc);
+                      in
+                      if (builtins.length parts) > 1 then generatePrefixes parts [ ] else [ ];
+                    allPrefixes = lib.concatMap extractFromKey keys;
+                  in
+                  lib.unique allPrefixes;
+              in
+              getAllPrefixes allKeys;
+
+            folderPaths = extractFolderPaths;
+
             getMatchingBookmarks =
-              pattern: lib.filterAttrs (name: url: lib.hasPrefix pattern name) self.settings.customBookmarks;
+              pattern: lib.filterAttrs (name: url: lib.hasPrefix pattern name) flattenedBookmarks;
 
             generateOpenCommand =
               mode: urls:
               let
                 urlList = lib.attrValues urls;
+                generateCommandString =
+                  if mode == "tab" then
+                    let
+                      firstUrl = lib.head urlList;
+                      restUrls = lib.tail urlList;
+                      firstCommand = "open -t ${firstUrl}";
+                      restCommands = map (url: "open -b ${url}") restUrls;
+                    in
+                    builtins.concatStringsSep " ;; " ([ firstCommand ] ++ restCommands)
+                  else if mode == "background" then
+                    let
+                      commands = map (url: "open -b ${url}") urlList;
+                    in
+                    builtins.concatStringsSep " ;; " commands
+                  else
+                    throw "Invalid bookmark mode, only ['tab', 'background']";
               in
               if mode == "window" then
                 if self.isDarwin then
-                  "spawn --detach open -n -a qutebrowser --args ${builtins.concatStringsSep " " urlList}"
+                  "spawn --detach sh -c \\\"open -n -a qutebrowser --args ':${generateCommandString}'\\\""
                 else
-                  "spawn --detach qutebrowser ${builtins.concatStringsSep " " urlList}"
+                  "spawn --detach sh -c \\\"qutebrowser ':${generateCommandString}'\\\""
               else
-                let
-                  openFlag =
-                    if mode == "background" then
-                      "-b"
-                    else if mode == "tab" then
-                      "-t"
-                    else
-                      throw "Invalid bookmark mode, only ['tab', 'background', 'window']";
-                  commands = map (url: "open ${openFlag} ${url}") urlList;
-                in
-                builtins.concatStringsSep " ;; " commands;
+                generateCommandString;
 
-            bookmarkGroupAliases = lib.mapAttrs' (
-              groupName: mode:
+            generateFolderAliases =
+              folderPath:
               let
-                matchingBookmarks = getMatchingBookmarks groupName;
-                command = generateOpenCommand mode matchingBookmarks;
-                aliasName = "group-${builtins.replaceStrings [ "/" ] [ "-" ] groupName}";
+                matchingBookmarks = lib.filterAttrs (
+                  name: url: lib.hasPrefix "${folderPath}/" name || name == folderPath
+                ) flattenedBookmarks;
               in
-              lib.nameValuePair aliasName command
-            ) self.settings.bookmarkGroups;
+              lib.optionalAttrs (builtins.length (builtins.attrNames matchingBookmarks) > 0) {
+                "#${folderPath}" = generateOpenCommand "tab" matchingBookmarks;
+                "\$${folderPath}" = generateOpenCommand "background" matchingBookmarks;
+              };
+
+            allFolderAliases = lib.foldl' (
+              acc: folderPath: acc // (generateFolderAliases folderPath)
+            ) { } folderPaths;
           in
-          bookmarkGroupAliases // self.settings.additionalAliases;
+          allFolderAliases // self.settings.additionalAliases;
 
         keyMappings =
           { }
@@ -744,7 +829,7 @@ args@{
               action = spawn-sh ''
                 query=$(echo "" | fuzzel --dmenu --prompt="Web Search: " --placeholder="Enter search query"  --width=60 --lines=0)
                 if [ -n "$query" ]; then
-                  qutebrowser "${defaultSearch}$query"
+                  qutebrowser --target window "${defaultSearch}$query"
                 fi
               '';
               hotkey-overlay.title = "Apps:Web Search";
