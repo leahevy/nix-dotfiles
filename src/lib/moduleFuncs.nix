@@ -398,6 +398,9 @@ rec {
 
       finalContext =
         contextDefaults
+        // (lib.mapAttrs (
+          _name: func: if builtins.isFunction func then func finalContext else func
+        ) commonFuncs)
         // (rec {
           inherit
             hmLib
