@@ -25,6 +25,14 @@ rec {
     domain = if self.user.isStandalone then self.user.homeserverDomain else self.host.homeserverDomain;
   };
 
+  submodules = {
+    linux = {
+      desktop-modules = {
+        web-app = true;
+      };
+    };
+  };
+
   assertions = [
     {
       assertion = self.settings.subdomain != null && self.settings.subdomain != "";
@@ -34,34 +42,13 @@ rec {
       assertion = self.settings.domain != null && self.settings.domain != "";
       message = "Domain required to be set!";
     }
-    {
-      assertion =
-        (self.linux.isModuleEnabled "desktop-modules.web-app-chromium")
-        || (self.linux.isModuleEnabled "desktop-modules.web-app-qutebrowser");
-      message = "Either web-app-chromium or web-app-qutebrowser module must be enabled";
-    }
-    {
-      assertion =
-        !(
-          (self.linux.isModuleEnabled "desktop-modules.web-app-chromium")
-          && (self.linux.isModuleEnabled "desktop-modules.web-app-qutebrowser")
-        );
-      message = "Only one web-app backend (chromium or qutebrowser) can be enabled at a time";
-    }
   ];
 
   custom = {
-    webAppModule =
-      if self.linux.isModuleEnabled "desktop-modules.web-app-qutebrowser" then
-        self.importFileFromOtherModuleSameInput {
-          inherit args self;
-          modulePath = "desktop-modules.web-app-qutebrowser";
-        }
-      else
-        self.importFileFromOtherModuleSameInput {
-          inherit args self;
-          modulePath = "desktop-modules.web-app-chromium";
-        };
+    webAppModule = self.importFileFromOtherModuleSameInput {
+      inherit args self;
+      modulePath = "desktop-modules.web-app";
+    };
   };
 
   configuration = custom.webAppModule.custom.buildWebApp self.settings;
