@@ -76,9 +76,6 @@
             enabled = true;
           };
         };
-        printing = {
-          enabled = false;
-        };
         touchpad = {
           enabled = false;
         };

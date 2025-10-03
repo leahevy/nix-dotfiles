@@ -17,9 +17,6 @@ args@{
     if self ? isLinux && self.isLinux then
       {
         common = {
-          services = {
-            printing = true;
-          };
           style = {
             stylix = true;
           };
@@ -33,6 +30,8 @@ args@{
         linux = {
           services = {
             sshd = true;
+            printing = true;
+            scanning = true;
           };
           networking = {
             firewall = true;

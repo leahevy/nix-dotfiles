@@ -313,20 +313,6 @@ with lib;
                   description = "Sound settings";
                 };
 
-                printing = mkOption {
-                  type = types.submodule {
-                    options = {
-                      enabled = mkOption {
-                        type = types.bool;
-                        default = false;
-                        description = "Whether printing support is enabled";
-                      };
-                    };
-                  };
-                  default = { };
-                  description = "Printing settings";
-                };
-
                 touchpad = mkOption {
                   type = types.submodule {
                     options = {
