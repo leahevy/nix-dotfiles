@@ -213,7 +213,7 @@ subcommand_check() {
   while IFS= read -r item; do
     local item_path="${item#/}"
     
-    if ! echo "$system_dirs $system_files $user_dirs $user_files" | grep -q "$item_path" && ! mount | grep -q " on /$item_path type "; then
+    if ! echo "$system_dirs $system_files $user_dirs $user_files" | grep -Fq "$item_path" && ! mount | grep -Fq " on /$item_path type "; then
       local full_path="/$item_path"
       
       if [[ "$show_system_only" == "true" ]]; then
@@ -225,7 +225,7 @@ subcommand_check() {
       if [[ ${#filters[@]} -gt 0 ]]; then
         local match_found=false
         for filter in "${filters[@]}"; do
-          if echo "$full_path" | grep -q "$filter"; then
+          if echo "$full_path" | grep -Fq "$filter"; then
             match_found=true
             break
           fi
