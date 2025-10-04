@@ -156,10 +156,7 @@ args@{
         };
         Timer = {
           OnCalendar = [
-            "*-*-* 06:00:00"
-            "*-*-* 12:00:00"
             "*-*-* 18:00:00"
-            "*-*-* 00:00:00"
           ];
           Persistent = true;
           RandomizedDelaySec = "15m";
