@@ -42,11 +42,6 @@ args@{
         ];
       };
 
-      hardware.graphics = {
-        enable = true;
-        enable32Bit = true;
-      };
-
       security.wrappers.gamescope = {
         source = "${pkgs.gamescope}/bin/gamescope";
         capabilities = "cap_sys_nice+ep";
