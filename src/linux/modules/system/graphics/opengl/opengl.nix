@@ -15,6 +15,13 @@ args@{
     withIntel = false;
   };
 
+  assertions = [
+    {
+      assertion = self.user.isModuleEnabled "graphics.opengl";
+      message = "Requires linux.graphics.opengl home module to be enabled for integrated user!";
+    }
+  ];
+
   configuration =
     context@{ config, options, ... }:
     {

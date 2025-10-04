@@ -17,6 +17,13 @@ args@{
     "nvidia-persistenced"
   ];
 
+  assertions = [
+    {
+      assertion = self.user.isModuleEnabled "graphics.nvidia-setup";
+      message = "Requires linux.graphics.nvidia-setup home module to be enabled for integrated user!";
+    }
+  ];
+
   configuration =
     context@{ config, options, ... }:
     {
