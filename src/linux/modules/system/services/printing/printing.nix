@@ -132,7 +132,7 @@ args@{
             after = [ "network-online.target" ];
             wants = [ "network-online.target" ];
             timerConfig = {
-              OnBootSec = "10s";
+              OnBootSec = "30s";
               Unit = "ensure-printers.service";
             };
           };
