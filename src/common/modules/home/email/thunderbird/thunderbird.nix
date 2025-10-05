@@ -40,12 +40,20 @@ args@{
 
           window-rules = [
             {
-              matches = [ { app-id = "thunderbird"; } ];
+              matches = [
+                {
+                  app-id = "thunderbird";
+                  title = ".*- Mozilla Thunderbird$";
+                }
+              ];
               min-width = 1500;
               min-height = 800;
               open-on-workspace = "scratch";
               open-floating = true;
               open-focused = false;
+            }
+            {
+              matches = [ { app-id = "thunderbird"; } ];
               block-out-from = "screencast";
             }
           ];
