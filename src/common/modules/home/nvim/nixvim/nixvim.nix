@@ -17,6 +17,7 @@ args@{
         auto-create-dirs = true;
         auto-create-nix-files = true;
         highlight-dead-chars = true;
+        jk-escape = true;
         nvim-tree = true;
         transparency = true;
       };
@@ -83,7 +84,7 @@ args@{
 
           clipboard = "unnamedplus";
 
-          timeoutlen = 300;
+          timeoutlen = 200;
 
           swapfile = true;
           directory = "/tmp/vim-swap-${self.user.username}";
