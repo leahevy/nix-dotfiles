@@ -123,6 +123,11 @@ args@{
               "network-online.target"
             ];
             wantedBy = lib.mkForce [ ];
+            serviceConfig = {
+              SuccessExitStatus = "0 1";
+              Type = "oneshot";
+              RemainAfterExit = true;
+            };
           };
 
       systemd.timers.ensure-printers-delayed =
@@ -132,7 +137,7 @@ args@{
             after = [ "network-online.target" ];
             wants = [ "network-online.target" ];
             timerConfig = {
-              OnBootSec = "30s";
+              OnBootSec = "45s";
               Unit = "ensure-printers.service";
             };
           };
@@ -142,6 +147,19 @@ args@{
           extraGroups = [ "lp" ];
         };
       };
+
+      environment.systemPackages =
+        lib.mkIf (self.settings.configureDefaultPrinter || self.settings.additionalEnsurePrinters != [ ])
+          [
+            (pkgs.writeShellScriptBin "printers-detect" ''
+              echo "Restarting ensure-printers service..."
+              systemctl restart ensure-printers.service
+              sleep 1
+              echo
+              echo "Service status:"
+              systemctl status ensure-printers.service --no-pager -l
+            '')
+          ];
 
       environment.persistence.${self.persist} = {
         directories = [
