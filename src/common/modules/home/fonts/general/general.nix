@@ -11,6 +11,10 @@ args@{
 {
   name = "general";
 
+  defaults = {
+    withUnfreeFonts = false;
+  };
+
   submodules = {
     common = {
       fonts = {
@@ -37,9 +41,12 @@ args@{
           noto-fonts-emoji
           unifont
         ])
-        ++ (with pkgs-unstable; [
-          corefonts
-          symbola
-        ]);
+        ++ lib.optionals self.settings.withUnfreeFonts (
+          with pkgs-unstable;
+          [
+            corefonts
+            symbola
+          ]
+        );
     };
 }
