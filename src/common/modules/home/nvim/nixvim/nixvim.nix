@@ -18,7 +18,8 @@ args@{
         auto-create-nix-files = true;
         highlight-dead-chars = true;
         jk-escape = true;
-        lualine = true;
+        vim-airline = true;
+        lualine = false;
         nix-startify-logo = true;
         nvim-tree = true;
         transparency = true;

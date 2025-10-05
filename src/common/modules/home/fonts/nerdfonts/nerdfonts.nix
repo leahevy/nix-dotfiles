@@ -23,9 +23,8 @@ args@{
     context@{ config, options, ... }:
     {
       home.packages = with pkgs; [
-        powerline-fonts
-        powerline
-        powerline-symbols
+        nerd-fonts.dejavu-sans-mono
+        nerd-fonts.ubuntu
       ];
     };
 }

@@ -24,28 +24,6 @@ args@{
         settings = {
           options = {
             theme = self.settings.theme;
-            component_separators =
-              if self.settings.powerlineSymbols then
-                {
-                  left = "";
-                  right = "";
-                }
-              else
-                {
-                  left = "|";
-                  right = "|";
-                };
-            section_separators =
-              if self.settings.powerlineSymbols then
-                {
-                  left = "";
-                  right = "";
-                }
-              else
-                {
-                  left = "";
-                  right = "";
-                };
             globalstatus = true;
           };
           sections = {
