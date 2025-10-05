@@ -18,6 +18,7 @@ args@{
         auto-create-nix-files = true;
         highlight-dead-chars = true;
         jk-escape = true;
+        lualine = true;
         nix-startify-logo = true;
         nvim-tree = true;
         transparency = true;
@@ -132,10 +133,6 @@ args@{
 
           rainbow-delimiters = {
             enable = false;
-          };
-
-          airline = {
-            enable = true;
           };
 
           web-devicons = {

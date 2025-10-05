@@ -399,7 +399,7 @@ args@{
               background-color: ${background};
               border-radius: 0px;
               min-height: 0;
-              font-size: 19px;
+              font-size: 22px;
             }
 
             window#waybar {
@@ -493,11 +493,11 @@ args@{
             }
 
             #tray menu {
-              font-size: 13px;
+              font-size: 14px;
             }
 
             #tray menu * {
-              font-size: 13px;
+              font-size: 14px;
             }
 
             #window, #window.app-id {

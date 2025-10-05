@@ -15,10 +15,22 @@ args@{
     themeName = "atelier-seaside";
     polarity = "dark";
     fonts = {
-      serif = "dejavu_fonts/DejaVu Serif";
-      sansSerif = "dejavu_fonts/DejaVu Sans";
-      monospace = "nerd-fonts.fira-code/FiraCode Nerd Font";
-      emoji = "noto-fonts-emoji-blob-bin/Blobmoji";
+      serif = {
+        path = "dejavu_fonts/DejaVu Serif";
+        useUnstable = false;
+      };
+      sansSerif = {
+        path = "dejavu_fonts/DejaVu Sans";
+        useUnstable = false;
+      };
+      monospace = {
+        path = "nerd-fonts.ubuntu-mono/Ubuntu Mono Nerd Font";
+        useUnstable = false;
+      };
+      emoji = {
+        path = "noto-fonts-emoji-blob-bin/Blobmoji";
+        useUnstable = false;
+      };
     };
     cursor = {
       style = "rose-pine-cursor/BreezeX-RosePine-Linux";
@@ -37,15 +49,18 @@ args@{
     }:
     let
       getPackage =
-        fontPath:
+        fontConfig:
         let
+          fontPath = if builtins.isString fontConfig then fontConfig else fontConfig.path;
+          useUnstable = if builtins.isString fontConfig then false else (fontConfig.useUnstable or false);
           packageName = lib.head (lib.splitString "/" fontPath);
           packageParts = lib.splitString "." packageName;
+          pkgSet = if useUnstable then pkgs-unstable else pkgs;
         in
         if lib.length packageParts > 1 then
-          lib.getAttrFromPath packageParts pkgs
+          lib.getAttrFromPath packageParts pkgSet
         else
-          lib.getAttr packageName pkgs;
+          lib.getAttr packageName pkgSet;
     in
     {
       environment.systemPackages = [
@@ -89,19 +104,47 @@ args@{
         fonts = {
           serif = {
             package = getPackage self.settings.fonts.serif;
-            name = lib.last (lib.splitString "/" self.settings.fonts.serif);
+            name = lib.last (
+              lib.splitString "/" (
+                if builtins.isString self.settings.fonts.serif then
+                  self.settings.fonts.serif
+                else
+                  self.settings.fonts.serif.path
+              )
+            );
           };
           sansSerif = {
             package = getPackage self.settings.fonts.sansSerif;
-            name = lib.last (lib.splitString "/" self.settings.fonts.sansSerif);
+            name = lib.last (
+              lib.splitString "/" (
+                if builtins.isString self.settings.fonts.sansSerif then
+                  self.settings.fonts.sansSerif
+                else
+                  self.settings.fonts.sansSerif.path
+              )
+            );
           };
           monospace = {
             package = getPackage self.settings.fonts.monospace;
-            name = lib.last (lib.splitString "/" self.settings.fonts.monospace);
+            name = lib.last (
+              lib.splitString "/" (
+                if builtins.isString self.settings.fonts.monospace then
+                  self.settings.fonts.monospace
+                else
+                  self.settings.fonts.monospace.path
+              )
+            );
           };
           emoji = {
             package = getPackage self.settings.fonts.emoji;
-            name = lib.last (lib.splitString "/" self.settings.fonts.emoji);
+            name = lib.last (
+              lib.splitString "/" (
+                if builtins.isString self.settings.fonts.emoji then
+                  self.settings.fonts.emoji
+                else
+                  self.settings.fonts.emoji.path
+              )
+            );
           };
         };
 

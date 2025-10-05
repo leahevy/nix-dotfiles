@@ -12,7 +12,7 @@ args@{
   name = "ghostty-config";
 
   defaults = {
-    fontSize = 12;
+    fontSize = 14;
     opacity = 0.80;
     shaders = [
       #"cursor_blaze"
@@ -30,6 +30,7 @@ args@{
         settings = {
           font-size = lib.mkForce self.settings.fontSize;
           font-thicken = lib.mkForce true;
+          font-family = [ "DejaVu Sans Mono for Powerline" ];
           background-opacity = lib.mkForce self.settings.opacity;
           background-blur = lib.mkForce true;
           background = lib.mkForce "000000";
