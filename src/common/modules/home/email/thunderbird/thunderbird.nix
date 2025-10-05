@@ -43,7 +43,7 @@ args@{
               matches = [
                 {
                   app-id = "thunderbird";
-                  title = ".*- Mozilla Thunderbird$";
+                  title = "^(?!.*(Reminder|Calendar|Event|Task|Address Book|Preferences|Options|Settings)).*";
                 }
               ];
               min-width = 1500;
