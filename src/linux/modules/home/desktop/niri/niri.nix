@@ -73,6 +73,13 @@ args@{
             openFileCommand = "qutebrowser";
             desktopFile = "org.qutebrowser.qutebrowser.desktop";
           };
+          videoPlayer = {
+            name = "vlc";
+            package = null;
+            openCommand = "vlc";
+            openFileCommand = "vlc";
+            desktopFile = "vlc.desktop";
+          };
           installOfficeSuite = true;
           installSystemSettings = true;
         };
@@ -83,6 +90,9 @@ args@{
       };
     };
     common = {
+      media = {
+        vlc = true;
+      };
       emacs = {
         emacs = {
           terminal = "ghostty";
