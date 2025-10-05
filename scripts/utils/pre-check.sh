@@ -324,9 +324,31 @@ parse_git_args() {
     export ONLY_CORE ONLY_CONFIG EXTRA_ARGS
 }
 
+get_latest_commit_timestamp() {
+    local repo_dir="$1"
+    if [[ -d "$repo_dir/.git" ]]; then
+        cd "$repo_dir" && git log -1 --pretty=format:"%ct" 2>/dev/null || echo "0"
+    else
+        echo "0"
+    fi
+}
+
 export_nixos_label() {
-    commit_msg=$(cd "$CONFIG_DIR" && git log -1 --pretty=format:"%s" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9-]//g' | awk '{if(length($0)>25) print substr($0,1,24)"-"; else print $0}' | sed 's/--$/-/')
-    export NIXOS_LABEL="$(cd "$CONFIG_DIR" && git log -1 --pretty=format:"$(git branch --show-current).%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
+    local use_dir="$CONFIG_DIR"
+
+    if [[ -n "${CONFIG_DIR:-}" && -n "${NXCORE_DIR:-}" && -d "$CONFIG_DIR/.git" && -d "$NXCORE_DIR/.git" ]]; then
+        local config_timestamp=$(get_latest_commit_timestamp "$CONFIG_DIR")
+        local core_timestamp=$(get_latest_commit_timestamp "$NXCORE_DIR")
+
+        if [[ "$core_timestamp" -gt "$config_timestamp" ]]; then
+            use_dir="$NXCORE_DIR"
+        fi
+    elif [[ -n "${NXCORE_DIR:-}" && -d "$NXCORE_DIR/.git" ]]; then
+        use_dir="$NXCORE_DIR"
+    fi
+
+    commit_msg=$(cd "$use_dir" && git log -1 --pretty=format:"%s" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9-]//g' | awk '{if(length($0)>25) print substr($0,1,24)"-"; else print $0}' | sed 's/--$/-/')
+    export NIXOS_LABEL="$(cd "$use_dir" && git log -1 --pretty=format:"$(git branch --show-current).%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
 }
 
 detect_system_architecture() {
