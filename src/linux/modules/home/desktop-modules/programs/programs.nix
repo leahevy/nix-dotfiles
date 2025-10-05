@@ -331,6 +331,7 @@ in
       home.persistence."${self.persist}" = {
         directories = [
           ".config/dconf"
+          ".local/share/applications"
         ]
         ++ (
           if isGnome then
