@@ -63,7 +63,7 @@ args@{
             {
               matches = [ { app-id = "BeeperTexts"; } ];
               min-width = 1500;
-              min-height = 900;
+              min-height = 800;
               open-on-workspace = "scratch";
               open-floating = true;
               open-focused = false;
