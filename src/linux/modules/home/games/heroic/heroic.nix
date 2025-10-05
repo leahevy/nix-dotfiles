@@ -13,6 +13,9 @@ args@{
 
   submodules = {
     linux = {
+      games = {
+        utils = true;
+      };
       graphics = {
         opengl = true;
       };
