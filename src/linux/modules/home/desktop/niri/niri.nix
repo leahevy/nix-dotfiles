@@ -57,6 +57,7 @@ args@{
           niriKeybindings = true;
         };
         wlsunset = true;
+        bongocat = true;
         programs = {
           terminal = {
             name = self.user.settings.terminal;
@@ -411,21 +412,39 @@ args@{
             After = [ "niri.service" ];
           };
         };
+      }
+      //
+        lib.optionalAttrs
+          (
+            let
+              bongocatConfig = self.getModuleConfig "desktop-modules.bongocat";
+            in
+            bongocatConfig.event != null || bongocatConfig.keyboardName != null
+          )
+          {
+            "nx-bongocat" = {
+              Unit = {
+                PartOf = [ "niri.service" ];
+                After = [ "niri.service" ];
+                Wants = [ ];
+                Requisite = [ ];
+              };
+            };
 
-        wlsunset = {
-          Unit = {
-            PartOf = [ "niri.service" ];
-            After = [ "niri.service" ];
-          };
-        };
+            wlsunset = {
+              Unit = {
+                PartOf = [ "niri.service" ];
+                After = [ "niri.service" ];
+              };
+            };
 
-        clipman = {
-          Unit = {
-            PartOf = [ "niri.service" ];
-            After = [ "niri.service" ];
+            clipman = {
+              Unit = {
+                PartOf = [ "niri.service" ];
+                After = [ "niri.service" ];
+              };
+            };
           };
-        };
-      };
 
       programs.niri = {
         package = pkgs-unstable.niri;
