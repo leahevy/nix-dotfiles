@@ -23,7 +23,9 @@ args@{
       else
         null;
     package = pkgs-unstable.wayland-bongocat;
-    fallbackEventID = "event24";
+    xOffset = -280;
+    yOffset = 30;
+    catSize = 75;
   };
 
   configuration =
@@ -49,15 +51,15 @@ args@{
             exit 0
           fi
         done
-        echo "/dev/input/${self.settings.fallbackEventID}"
+        exit 1
       '';
 
       configContent = ''
-        cat_x_offset=0
-        cat_y_offset=20
+        cat_x_offset=${builtins.toString self.settings.xOffset}
+        cat_y_offset=${builtins.toString self.settings.yOffset}
         cat_align=center
 
-        cat_height=110
+        cat_height=${builtins.toString self.settings.catSize}
 
         overlay_height=90
         overlay_opacity=0
@@ -66,7 +68,7 @@ args@{
 
         idle_frame=0
         fps=30
-        keypress_duration=200
+        keypress_duration=120
 
         idle_sleep_timeout=10
 
