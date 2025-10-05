@@ -12,7 +12,7 @@ args@{
   name = "which-key";
 
   defaults = {
-    delay = 600;
+    delay = 400;
     showHelp = true;
     showKeys = true;
   };
