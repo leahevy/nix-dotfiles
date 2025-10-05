@@ -80,6 +80,13 @@ args@{
             openFileCommand = "vlc";
             desktopFile = "vlc.desktop";
           };
+          emailClient = {
+            name = "thunderbird";
+            package = null;
+            openCommand = "thunderbird";
+            openFileCommand = "thunderbird";
+            desktopFile = "thunderbird.desktop";
+          };
           installOfficeSuite = true;
           installSystemSettings = true;
         };
@@ -90,6 +97,9 @@ args@{
       };
     };
     common = {
+      email = {
+        thunderbird = true;
+      };
       media = {
         vlc = true;
       };
