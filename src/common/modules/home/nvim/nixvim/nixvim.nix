@@ -20,6 +20,7 @@ args@{
         jk-escape = true;
         nvim-tree = true;
         transparency = true;
+        which-key = true;
       };
     };
   };
