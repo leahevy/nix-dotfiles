@@ -45,6 +45,7 @@ args@{
     alwaysCreateKeepassxcKeybindings = false;
     additionalKeyMappings = { };
     additionalKeyBindings = { };
+    smoothScrollingEnabled = false;
     keyBindings = {
       normal = {
         "<Escape>" = "clear-keychain ;; search ;; fullscreen --leave";
@@ -626,7 +627,7 @@ args@{
             timeout = 1500;
           };
           scrolling = {
-            smooth = true;
+            smooth = self.settings.smoothScrollingEnabled;
             bar = "when-searching";
           };
           completion = {
