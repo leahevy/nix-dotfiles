@@ -167,7 +167,7 @@ args@{
               options.desc = "Go to implementation";
             }
             {
-              key = "gt";
+              key = "gy";
               lspBufAction = "type_definition";
               options.desc = "Go to type definition";
             }
