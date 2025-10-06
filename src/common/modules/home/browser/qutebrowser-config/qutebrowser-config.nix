@@ -328,7 +328,7 @@ args@{
         "<Ctrl+e>" = "edit-text";
         "<Shift+Ins>" = "insert-text -- {primary}";
         "<Escape>" = "mode-leave";
-        "<Shift+Escape>" = "fake-key <Escape>";
+        "<Ctrl+Escape>" = "fake-key <Escape>";
       };
       passthrough = {
         "<Shift+Escape>" = "mode-leave";
