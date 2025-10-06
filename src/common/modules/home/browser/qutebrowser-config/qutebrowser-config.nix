@@ -871,7 +871,7 @@ args@{
               action = spawn-sh ''
                 query=$(echo "" | fuzzel --dmenu --prompt="Web Search: " --placeholder="Enter search query"  --width=60 --lines=0)
                 if [ -n "$query" ]; then
-                  qutebrowser --target window "${defaultSearch}$query"
+                  qutebrowser --desktop-file-name "org.qutebrowser.websearch" --target window "${defaultSearch}$query"
                 fi
               '';
               hotkey-overlay.title = "Apps:Web Search";

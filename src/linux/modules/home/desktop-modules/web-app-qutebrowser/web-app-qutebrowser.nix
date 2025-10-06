@@ -161,6 +161,7 @@ args@{
 
             exec ${pkgs-unstable.qutebrowser}/bin/qutebrowser \
               --target window \
+              --desktop-file-name "org.qutebrowser.${appName}" \
               --basedir "${config.home.homeDirectory}/${dataDir}" \
               --config-py "${config.home.homeDirectory}/${configPath}" \
               "${webAppUrl}"
