@@ -114,7 +114,7 @@ args@{
               footer.__raw = ''
                 {
                   "",
-                  "Config built: " .. os.date("%Y-%m-%d %H:%M", vim.fn.getftime(vim.fn.stdpath("config") .. "/timestamp"))
+                  "Configuration activated on " .. os.date("%Y-%m-%d %H:%M", vim.fn.getftime(vim.fn.stdpath("config") .. "/timestamp"))
                 }
               '';
             };
