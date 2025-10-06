@@ -154,7 +154,70 @@ args@{
         vim.api.nvim_set_hl(0, "DashboardFiles", { fg = "#abb2bf" })
         vim.api.nvim_set_hl(0, "DashboardShortCutIcon", { fg = "#c678dd" })
 
+        local function clean_project_cache()
+          local cache_path = vim.fn.stdpath('cache') .. '/dashboard/cache'
+
+          if vim.fn.filereadable(cache_path) ~= 1 then
+            return
+          end
+
+          local read_ok, data = pcall(function()
+            return table.concat(vim.fn.readfile(cache_path), '\n')
+          end)
+
+          if read_ok and data and data ~= ''' then
+            local load_ok, loaded_func = pcall(loadstring, data)
+            if load_ok and loaded_func then
+              local exec_ok, result = pcall(loaded_func)
+              if exec_ok and type(result) == 'table' then
+                local valid_projects = {}
+                local seen = {}
+
+                for _, proj in ipairs(result) do
+                  if proj and type(proj) == "string" then
+                    local has_bad_tilde = proj:match("~") and not proj:match("^~/")
+                    local home_dir = vim.fn.expand("~")
+                    local has_bad_home = proj:find(home_dir, 2, true) ~= nil
+                    local is_basic_invalid = proj == "." or proj == ".." or proj == ""
+
+                    if not has_bad_tilde and not has_bad_home and not is_basic_invalid and vim.fn.isdirectory(proj) == 1 then
+                      local abs_proj = vim.fn.fnamemodify(proj, ':p')
+                      if abs_proj and abs_proj ~= "/" and abs_proj ~= vim.fn.expand("~") and not seen[abs_proj] then
+                        table.insert(valid_projects, abs_proj)
+                        seen[abs_proj] = true
+                      end
+                    end
+                  end
+                end
+
+                local write_ok = pcall(function()
+                  local code = 'return ' .. vim.inspect(valid_projects)
+                  local handle = io.open(cache_path, 'w')
+                  if handle then
+                    handle:write(code)
+                    handle:close()
+                  end
+                end)
+              end
+            end
+          end
+        end
+
         local function add_project_to_cache(project_path)
+          if not project_path or project_path == "." or project_path == ".." or project_path == "" then
+            return
+          end
+
+          local expanded_path = vim.fn.expand(project_path)
+          local abs_path = vim.fn.fnamemodify(expanded_path, ':p')
+          if not abs_path or abs_path == "/" or abs_path == vim.fn.expand("~") then
+            return
+          end
+
+          if vim.fn.isdirectory(abs_path) ~= 1 then
+            return
+          end
+
           local cache_path = vim.fn.stdpath('cache') .. '/dashboard/cache'
 
           local ok = pcall(vim.fn.mkdir, vim.fn.stdpath('cache') .. '/dashboard', 'p')
@@ -174,19 +237,31 @@ args@{
               if load_ok and loaded_func then
                 local exec_ok, result = pcall(loaded_func)
                 if exec_ok and type(result) == 'table' then
-                  projects = result
+                  local valid_projects = {}
+                  for _, proj in ipairs(result) do
+                    if proj and type(proj) == "string" then
+                      local expanded = vim.fn.expand(proj)
+                      local abs_proj = vim.fn.fnamemodify(expanded, ':p')
+
+                      if abs_proj and abs_proj ~= "/" and abs_proj ~= vim.fn.expand("~")
+                         and vim.fn.isdirectory(abs_proj) == 1 then
+                        table.insert(valid_projects, abs_proj)
+                      end
+                    end
+                  end
+                  projects = valid_projects
                 end
               end
             end
           end
 
           for _, existing in ipairs(projects) do
-            if existing == project_path then
+            if existing == abs_path then
               return
             end
           end
 
-          table.insert(projects, 1, project_path)
+          table.insert(projects, 1, abs_path)
 
           if #projects > 8 then
             projects = vim.list_slice(projects, 1, 8)
@@ -239,12 +314,15 @@ args@{
           else
             ''"${builtins.concatStringsSep ''", "'' (map (p: builtins.toString p) projects)}"''
         }}
+
         for _, project_path in ipairs(ensure_projects) do
           local expanded_path = vim.fn.expand(project_path)
           if vim.fn.isdirectory(expanded_path) == 1 then
             add_project_to_cache(expanded_path)
           end
         end
+
+        clean_project_cache()
       '';
     };
 }

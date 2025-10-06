@@ -29,6 +29,7 @@ args@{
         transparency = true;
         which-key = true;
         lsp = true;
+        project = true;
       };
     };
   };
