@@ -32,7 +32,6 @@ args@{
             theme = "hyper";
             disable_move = true;
             change_to_vcs_root = true;
-            shortcut_type = "number";
             config = {
               header = [
                 "                                "
