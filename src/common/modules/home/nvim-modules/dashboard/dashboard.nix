@@ -120,9 +120,21 @@ args@{
 
         keymaps = [
           {
+            mode = "n";
             key = "<leader>d";
             action = ":Dashboard<CR>";
-            options.silent = true;
+            options = {
+              silent = true;
+              desc = "Open dashboard";
+            };
+          }
+        ];
+
+        plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
+          {
+            __unkeyed-1 = "<leader>d";
+            desc = "Open dashboard";
+            icon = "󰕮";
           }
         ];
       };

@@ -28,6 +28,11 @@ args@{
           notify = false;
           preset = "modern";
 
+          icons = {
+            mappings = true;
+            colors = true;
+          };
+
           replace = {
             desc = [
               [

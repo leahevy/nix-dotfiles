@@ -21,6 +21,9 @@ args@{
         vim-airline = true;
         lualine = false;
         startify = false;
+        telescope = true;
+        gitgutter = true;
+        toggleterm = true;
         dashboard = true;
         nvim-tree = true;
         transparency = true;
@@ -121,10 +124,6 @@ args@{
         ];
 
         plugins = {
-          gitgutter = {
-            enable = true;
-          };
-
           rainbow-delimiters = {
             enable = false;
           };
@@ -133,16 +132,6 @@ args@{
             enable = true;
           };
 
-          telescope = {
-            enable = true;
-            keymaps = {
-              "<leader>ff" = "find_files";
-              "<leader>fg" = "live_grep";
-              "<leader>fb" = "buffers";
-              "<leader>fh" = "help_tags";
-              "<leader>fr" = "oldfiles";
-            };
-          };
         };
 
         globals = {
