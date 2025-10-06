@@ -28,6 +28,7 @@ args@{
         nvim-tree = true;
         transparency = true;
         which-key = true;
+        lsp = true;
       };
     };
   };
