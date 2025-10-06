@@ -87,6 +87,13 @@ args@{
             openFileCommand = "thunderbird";
             desktopFile = "thunderbird.desktop";
           };
+          calendar = {
+            name = "thunderbird";
+            package = null;
+            openCommand = "thunderbird";
+            openFileCommand = "thunderbird";
+            desktopFile = "thunderbird.desktop";
+          };
           installOfficeSuite = true;
           installSystemSettings = true;
         };
