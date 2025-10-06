@@ -72,10 +72,16 @@ args@{
                   key = "g";
                 }
                 {
-                  desc = " Configuration";
+                  desc = " Core";
                   group = "DiagnosticInfo";
-                  action = "lua vim.cmd('edit ' .. vim.env.NXCORE_DIR .. '/src/common/modules/home/nvim/nixvim/nixvim.nix')";
+                  action = "lua vim.cmd('cd ' .. vim.env.NXCORE_DIR) vim.cmd('Telescope find_files')";
                   key = "c";
+                }
+                {
+                  desc = " Config";
+                  group = "DiagnosticWarn";
+                  action = "lua vim.cmd('cd ' .. vim.env.NXCONFIG_DIR) vim.cmd('Telescope find_files')";
+                  key = "C";
                 }
                 {
                   desc = " Quit";
