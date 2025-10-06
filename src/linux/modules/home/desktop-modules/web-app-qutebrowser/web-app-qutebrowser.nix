@@ -64,6 +64,7 @@ args@{
                   '<Ctrl+d>': 'scroll-page 0 0.5',
                   '<Ctrl+u>': 'scroll-page 0 -0.5',
                   'i': 'mode-enter insert',
+                  'a': 'mode-enter insert ;; fake-key <space>',
                   'v': 'mode-enter caret',
                   '/': 'cmd-set-text /',
                   'n': 'search-next',
@@ -110,7 +111,7 @@ args@{
               },
               'insert': {
                   '<Escape>': 'mode-leave',
-                  '<Shift+Escape>': 'fake-key <Escape>',
+                  '<Ctrl+Escape>': 'fake-key <Escape>',
                   '<Ctrl+e>': 'edit-text',
                   '<Shift+Ins>': 'insert-text -- {primary}',
               },
