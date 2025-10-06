@@ -48,6 +48,29 @@ args@{
             };
           }
         ];
+
+        plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
+          {
+            __unkeyed-1 = "<leader>h";
+            group = "git hunks";
+            icon = "⇡";
+          }
+          {
+            __unkeyed-1 = "<leader>hp";
+            desc = "Preview hunk";
+            icon = "󰐕";
+          }
+          {
+            __unkeyed-1 = "<leader>hs";
+            desc = "Stage hunk";
+            icon = "󰐕";
+          }
+          {
+            __unkeyed-1 = "<leader>hu";
+            desc = "Undo hunk";
+            icon = "󰐕";
+          }
+        ];
       };
     };
 }

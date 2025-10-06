@@ -223,7 +223,7 @@ args@{
           {
             __unkeyed-1 = "<leader>c";
             group = "code";
-            icon = "";
+            icon = "󰅩";
           }
           {
             __unkeyed-1 = "<leader>cd";
