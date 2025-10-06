@@ -30,6 +30,7 @@ args@{
         which-key = true;
         lsp = true;
         project = true;
+        vimwiki = true;
       };
     };
   };
