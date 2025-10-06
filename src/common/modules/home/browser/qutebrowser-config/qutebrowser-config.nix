@@ -880,6 +880,7 @@ args@{
             {
               matches = [ { app-id = "org.qutebrowser.qutebrowser"; } ];
               open-on-workspace = "2";
+              open-focused = false;
             }
           ];
         };
