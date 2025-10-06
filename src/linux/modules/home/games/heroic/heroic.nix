@@ -24,6 +24,9 @@ args@{
 
   defaults = {
     withWayland = false;
+    games = {
+      stardewValley = false;
+    };
   };
 
   configuration =
@@ -50,6 +53,10 @@ args@{
           ".local/share/comet"
           ".local/state/Heroic/logs"
           ".config/unity3d"
+          ".local/share/GOG.com"
+        ]
+        ++ lib.optionals self.settings.games.stardewValley [
+          ".config/StardewValley"
         ];
       };
     };
