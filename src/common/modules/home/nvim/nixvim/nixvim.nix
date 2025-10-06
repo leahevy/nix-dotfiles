@@ -20,7 +20,8 @@ args@{
         jk-escape = true;
         vim-airline = true;
         lualine = false;
-        nix-startify-logo = true;
+        startify = false;
+        dashboard = true;
         nvim-tree = true;
         transparency = true;
         which-key = true;
@@ -120,14 +121,6 @@ args@{
         ];
 
         plugins = {
-          startify = {
-            enable = true;
-            settings = {
-              custom_header = [ "" ];
-              change_to_vcs_root = true;
-            };
-          };
-
           gitgutter = {
             enable = true;
           };
@@ -138,6 +131,17 @@ args@{
 
           web-devicons = {
             enable = true;
+          };
+
+          telescope = {
+            enable = true;
+            keymaps = {
+              "<leader>ff" = "find_files";
+              "<leader>fg" = "live_grep";
+              "<leader>fb" = "buffers";
+              "<leader>fh" = "help_tags";
+              "<leader>fr" = "oldfiles";
+            };
           };
         };
 
