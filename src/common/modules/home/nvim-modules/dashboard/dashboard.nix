@@ -106,6 +106,14 @@ args@{
           };
 
         };
+
+        keymaps = [
+          {
+            key = "<leader>d";
+            action = ":Dashboard<CR>";
+            options.silent = true;
+          }
+        ];
       };
 
       home.file.".config/nvim-init/60-dashboard-rainbow.lua".text = ''
