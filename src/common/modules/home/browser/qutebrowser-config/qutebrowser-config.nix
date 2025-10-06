@@ -875,6 +875,13 @@ args@{
               hotkey-overlay.title = "Apps:Web Search";
             };
           };
+
+          window-rules = [
+            {
+              matches = [ { app-id = "org.qutebrowser.qutebrowser"; } ];
+              open-on-workspace = "2";
+            }
+          ];
         };
       };
     };
