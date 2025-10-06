@@ -111,7 +111,12 @@ args@{
               mru = {
                 limit = 10;
               };
-              footer = [ "" ];
+              footer.__raw = ''
+                {
+                  "",
+                  "Config built: " .. os.date("%Y-%m-%d %H:%M", vim.fn.getftime(vim.fn.stdpath("config") .. "/timestamp"))
+                }
+              '';
             };
           };
 

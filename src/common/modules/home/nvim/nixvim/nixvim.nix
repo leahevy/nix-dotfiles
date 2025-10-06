@@ -189,6 +189,11 @@ args@{
         '';
       };
 
+      home.activation.nvim-timestamp = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
+        run mkdir -p ${self.user.home}/.config/nvim || true
+        run touch ${self.user.home}/.config/nvim/timestamp || true
+      '';
+
       home.persistence."${self.persist}" = {
         directories = [
           ".config/nvim"
