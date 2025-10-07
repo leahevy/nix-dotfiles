@@ -172,7 +172,7 @@ args@{
         "wIw" = "devtools window";
         "wIf" = "devtools-focus";
         "gd" = "download";
-        "ad" = "download-cancel";
+        "qd" = "download-cancel";
         "cd" = "download-clear";
         "gf" = "view-source";
         "gt" = "tab-next";
