@@ -9,7 +9,7 @@ args@{
   ...
 }:
 {
-  name = "<MODULE>";
+  name = "{{_file_name_}}";
 
   # All following fields are optional and can be removed if not required for a
   # specific module.
