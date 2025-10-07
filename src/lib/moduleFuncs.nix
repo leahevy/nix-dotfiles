@@ -576,7 +576,10 @@ rec {
       getModulesForNamespace =
         ns:
         if ns == "standalone" then
-          { }
+          if moduleContext ? user && moduleContext.user != null then
+            moduleContext.user.processedModules or moduleContext.user.modules or { }
+          else
+            { }
         else if ns == "home" then
           if moduleContext ? user && moduleContext.user != null then
             moduleContext.user.processedModules or moduleContext.user.modules or { }
@@ -609,39 +612,30 @@ rec {
       # Check if module is enabled
       isModuleEnabled =
         modulePath:
-        if validation.shouldReturnSafeDefaults then
-          false
-        else
-          let
-            resolved = resolveModulePath modulePath;
-          in
-          lib.hasAttrByPath resolved.fullPath modules;
+        let
+          resolved = resolveModulePath modulePath;
+        in
+        lib.hasAttrByPath resolved.fullPath modules;
 
       # Get module config
       getModuleConfig =
         modulePath:
-        if validation.shouldReturnSafeDefaults then
-          { }
-        else
-          let
-            resolved = resolveModulePath modulePath;
-          in
-          lib.attrByPath resolved.fullPath { } modules;
+        let
+          resolved = resolveModulePath modulePath;
+        in
+        lib.attrByPath resolved.fullPath { } modules;
 
       # Require module config
       requireModuleConfig =
         modulePath:
-        if validation.shouldReturnSafeDefaults then
-          throw "Required module '${inputName}.${modulePath}' is not available in standalone mode"
+        let
+          resolved = resolveModulePath modulePath;
+          config = lib.attrByPath resolved.fullPath { } modules;
+        in
+        if config != { } then
+          config
         else
-          let
-            resolved = resolveModulePath modulePath;
-            config = lib.attrByPath resolved.fullPath { } modules;
-          in
-          if config != { } then
-            config
-          else
-            throw "Required module '${inputName}.${modulePath}' is not enabled in ${actualNamespace} namespace";
+          throw "Required module '${inputName}.${modulePath}' is not enabled in ${actualNamespace} namespace";
     };
 
   # Generate same module query functions for specific input, namespace and module path
@@ -665,7 +659,10 @@ rec {
       getModulesForNamespace =
         ns:
         if ns == "standalone" then
-          { }
+          if moduleContext ? user then
+            moduleContext.user.processedModules or moduleContext.user.modules or { }
+          else
+            { }
         else if ns == "home" then
           if moduleContext ? user then
             moduleContext.user.processedModules or moduleContext.user.modules or { }
@@ -688,24 +685,19 @@ rec {
     in
     {
       # Check if same module is enabled in target namespace
-      isSameModuleEnabled =
-        if validation.shouldReturnSafeDefaults then false else lib.hasAttrByPath fullPath modules;
+      isSameModuleEnabled = lib.hasAttrByPath fullPath modules;
 
       # Get same module config from target namespace
-      getSameModuleConfig =
-        if validation.shouldReturnSafeDefaults then { } else lib.attrByPath fullPath { } modules;
+      getSameModuleConfig = lib.attrByPath fullPath { } modules;
 
       # Require same module config from target namespace
       requireSameModuleConfig =
-        if validation.shouldReturnSafeDefaults then
-          throw "Required same module '${inputName}.${moduleName}' is not available in standalone mode"
+        let
+          config = lib.attrByPath fullPath { } modules;
+        in
+        if config != { } then
+          config
         else
-          let
-            config = lib.attrByPath fullPath { } modules;
-          in
-          if config != { } then
-            config
-          else
-            throw "Required same module '${inputName}.${moduleName}' is not enabled in ${actualNamespace} namespace";
+          throw "Required same module '${inputName}.${moduleName}' is not enabled in ${actualNamespace} namespace";
     };
 }
