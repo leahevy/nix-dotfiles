@@ -17,6 +17,14 @@ args@{
 
   configuration =
     context@{ config, options, ... }:
+    let
+      normalizedWikiPath =
+        let
+          path = self.settings.wikiPath;
+          homePrefix = "$HOME";
+        in
+        if lib.hasPrefix homePrefix path then "~" + lib.removePrefix homePrefix path else path;
+    in
     {
       programs.nixvim = {
         plugins.vimwiki = {
@@ -24,7 +32,7 @@ args@{
           settings = {
             list = [
               {
-                path = self.settings.wikiPath;
+                path = normalizedWikiPath;
                 syntax = "markdown";
                 ext = ".md";
               }
