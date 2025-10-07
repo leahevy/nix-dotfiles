@@ -36,56 +36,98 @@ args@{
 
       templateDir = ".local/share/nvim/templates";
 
+      normalizeHomePath =
+        path:
+        let
+          homePrefix = "$HOME";
+        in
+        if lib.hasPrefix homePrefix path then "~" + lib.removePrefix homePrefix path else path;
+
       templateFiles = lib.listToAttrs (
+        lib.flatten (
+          map (
+            template:
+            let
+              sanitizedName = lib.replaceStrings [ "-" "_" ] [ "" "" ] template.name;
+              hasCursor = lib.hasInfix "{{_cursor_}}" template.template;
+              processedTemplate =
+                if hasCursor then
+                  template.template
+                else
+                  let
+                    lines = lib.splitString "\n" template.template;
+                    firstLine = lib.head lines;
+                    restLines = lib.tail lines;
+                    modifiedFirstLine = firstLine + "{{_cursor_}}";
+                  in
+                  lib.concatStringsSep "\n" ([ modifiedFirstLine ] ++ restLines);
+              rawTemplate = lib.replaceStrings [ "{{_cursor_}}" ] [ "" ] template.template;
+            in
+            [
+              {
+                name = "${templateDir}/${template.extension}/${sanitizedName}.tpl";
+                value = {
+                  text = ";; ${template.extension}\n${processedTemplate}";
+                };
+              }
+              {
+                name = "${templateDir}/${template.extension}/${sanitizedName}-raw.tpl";
+                value = {
+                  text = rawTemplate;
+                };
+              }
+            ]
+          ) allTemplates
+        )
+      );
+
+      templateKeybindings = lib.flatten (
         map (
           template:
           let
             sanitizedName = lib.replaceStrings [ "-" "_" ] [ "" "" ] template.name;
-            hasCursor = lib.hasInfix "{{_cursor_}}" template.template;
-            processedTemplate =
-              if hasCursor then
-                template.template
-              else
-                let
-                  lines = lib.splitString "\n" template.template;
-                  firstLine = lib.head lines;
-                  restLines = lib.tail lines;
-                  modifiedFirstLine = firstLine + "{{_cursor_}}";
-                in
-                lib.concatStringsSep "\n" ([ modifiedFirstLine ] ++ restLines);
           in
-          {
-            name = "${templateDir}/${template.extension}/${sanitizedName}.tpl";
-            value = {
-              text = ";; ${template.extension}\n${processedTemplate}";
-            };
-          }
+          [
+            {
+              key = "<leader>q${template.shortcut}";
+              action = "<cmd>set ft=${template.extension}<cr><cmd>Template ${sanitizedName}<cr>";
+              mode = [ "n" ];
+              options = {
+                silent = true;
+                desc = template.name;
+              };
+            }
+            {
+              key = "<leader>q<leader>${template.shortcut}";
+              action = "<cmd>r ${config.home.homeDirectory}/${templateDir}/${template.extension}/${sanitizedName}-raw.tpl<cr>";
+              mode = [ "n" ];
+              options = {
+                silent = true;
+                desc = "${template.name} (raw)";
+              };
+            }
+          ]
         ) allTemplates
       );
 
-      templateKeybindings = map (
-        template:
-        let
-          sanitizedName = lib.replaceStrings [ "-" "_" ] [ "" "" ] template.name;
-        in
-        {
-          key = "<leader>q${template.shortcut}";
-          action = "<cmd>set ft=${template.extension}<cr><cmd>Template ${sanitizedName}<cr>";
-          mode = [ "n" ];
-          options = {
-            silent = true;
+      templateWhichKeySpecs = lib.flatten (
+        map (template: [
+          {
+            __unkeyed-1 = "<leader>q${template.shortcut}";
             desc = template.name;
-          };
-        }
-      ) allTemplates;
+            icon = if template ? icon then template.icon else "󰷈";
+          }
+          {
+            __unkeyed-1 = "<leader>q<leader>${template.shortcut}";
+            desc = "${template.name} (raw)";
+            icon = if template ? icon then template.icon else "󰷈";
+          }
+        ]) allTemplates
+      );
 
-      templateWhichKeySpecs = map (template: {
-        __unkeyed-1 = "<leader>q${template.shortcut}";
-        desc = template.name;
-        icon = if template ? icon then template.icon else "󰷈";
-      }) allTemplates;
-
-      autoInsertTemplates = lib.filter (template: template ? autoInsert) self.settings.baseTemplates;
+      autoInsertTemplates = lib.filter (template: template ? autoInsert) (
+        self.settings.templates ++ self.settings.baseTemplates
+      );
 
     in
     {
@@ -101,32 +143,60 @@ args@{
             template:
             let
               sanitizedName = lib.replaceStrings [ "-" "_" ] [ "" "" ] template.name;
+              hasPathFilter = template.autoInsert ? pathFilter;
+              normalizedPathFilter =
+                if hasPathFilter then
+                  normalizeHomePath (lib.removeSuffix "/**" template.autoInsert.pathFilter)
+                else
+                  "";
             in
             ''
               vim.api.nvim_create_autocmd("BufNewFile", {
                 pattern = "${template.autoInsert.pattern}",
                 callback = function(args)
                   local current_file = vim.api.nvim_buf_get_name(args.buf)
-                  local base_path = vim.fn.expand("${lib.removeSuffix "/**" template.autoInsert.pathFilter}")
 
-                  if current_file:find("^" .. vim.pesc(base_path) .. "/") and
-                     vim.api.nvim_buf_line_count(args.buf) == 1 and
-                     vim.api.nvim_buf_get_lines(args.buf, 0, 1, false)[1] == "" then
-                    vim.schedule(function()
-                      vim.api.nvim_set_option_value('filetype', '${template.extension}', { buf = args.buf })
-                      local current_buf = vim.api.nvim_get_current_buf()
-                      vim.api.nvim_set_current_buf(args.buf)
-                      local ok, err = xpcall(function()
-                        vim.cmd("Template ${sanitizedName}")
-                      end, function(e)
-                        return debug.traceback(tostring(e), 2)
-                      end)
+                  ${
+                    if hasPathFilter then
+                      ''
+                        local base_path = vim.fn.expand("${normalizedPathFilter}")
+                        if current_file:find("^" .. vim.pesc(base_path) .. "/") then
+                          vim.schedule(function()
+                            vim.api.nvim_set_option_value('filetype', '${template.extension}', { buf = args.buf })
+                            local current_buf = vim.api.nvim_get_current_buf()
+                            vim.api.nvim_set_current_buf(args.buf)
 
-                      if current_buf ~= args.buf then
-                        vim.api.nvim_set_current_buf(current_buf)
-                      end
-                    end)
-                  end
+                            local ok, err = xpcall(function()
+                              vim.cmd("Template ${sanitizedName}")
+                            end, function(e)
+                              return debug.traceback(tostring(e), 2)
+                            end)
+
+                            if current_buf ~= args.buf then
+                              vim.api.nvim_set_current_buf(current_buf)
+                            end
+                          end)
+                        end
+                      ''
+                    else
+                      ''
+                        vim.schedule(function()
+                          vim.api.nvim_set_option_value('filetype', '${template.extension}', { buf = args.buf })
+                          local current_buf = vim.api.nvim_get_current_buf()
+                          vim.api.nvim_set_current_buf(args.buf)
+
+                          local ok, err = xpcall(function()
+                            vim.cmd("Template ${sanitizedName}")
+                          end, function(e)
+                            return debug.traceback(tostring(e), 2)
+                          end)
+
+                          if current_buf ~= args.buf then
+                            vim.api.nvim_set_current_buf(current_buf)
+                          end
+                        end)
+                      ''
+                  }
                 end,
               })
             ''
@@ -158,6 +228,11 @@ args@{
                 __unkeyed-1 = "<leader>q";
                 group = "Templates";
                 icon = "󰷈";
+              }
+              {
+                __unkeyed-1 = "<leader>q<leader>";
+                group = "Raw Templates";
+                icon = "󰈔";
               }
             ]
             ++ templateWhichKeySpecs
