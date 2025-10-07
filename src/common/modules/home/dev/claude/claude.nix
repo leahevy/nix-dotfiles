@@ -51,5 +51,45 @@ args@{
           ];
         };
       };
+
+      programs.nixvim = lib.mkIf (self.isModuleEnabled "nvim.nixvim") {
+        extraPlugins = [
+          (pkgs.vimUtils.buildVimPlugin {
+            pname = "claude-code-nvim";
+            version = "c9a31e5";
+            src = pkgs.fetchFromGitHub {
+              owner = "greggh";
+              repo = "claude-code.nvim";
+              rev = "c9a31e51069977edaad9560473b5d031fcc5d38b";
+              hash = "sha256-ZEIPutxhgyaAhq+fJw1lTO781IdjTXbjKy5yKgqSLjM=";
+            };
+            dependencies = with pkgs.vimPlugins; [ plenary-nvim ];
+          })
+        ];
+
+        plugins.which-key.settings.spec = lib.mkIf (self.common.isModuleEnabled "nvim-modules.which-key") [
+          {
+            __unkeyed-1 = "<leader>cc";
+            desc = "Toggle Claude Code";
+            icon = "🤖";
+          }
+        ];
+      };
+
+      home.file.".config/nvim-init/90-claude-code.lua" = lib.mkIf (self.isModuleEnabled "nvim.nixvim") {
+        text = ''
+          require('claude-code').setup({
+            window = {
+              position = "botright",
+              split_ratio = 0.4,
+            },
+          })
+
+          vim.keymap.set('n', '<leader>cc', '<cmd>ClaudeCode<CR>', {
+            desc = 'Toggle Claude Code',
+            silent = true
+          })
+        '';
+      };
     };
 }
