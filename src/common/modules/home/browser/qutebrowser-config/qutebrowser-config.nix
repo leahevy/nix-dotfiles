@@ -126,6 +126,7 @@ args@{
         "N" = "search-prev";
         "i" = "mode-enter insert";
         "a" = "mode-enter insert ;; fake-key <space>";
+        "<Shift+a>" = "mode-enter insert ;; fake-key <end> ;; fake-key <space>";
         "v" = "mode-enter caret";
         "V" = "mode-enter caret ;; selection-toggle --line";
         "`" = "mode-enter set_mark";

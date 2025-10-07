@@ -65,6 +65,7 @@ args@{
                   '<Ctrl+u>': 'scroll-page 0 -0.5',
                   'i': 'mode-enter insert',
                   'a': 'mode-enter insert ;; fake-key <space>',
+                  '<Shift+a>': 'mode-enter insert ;; fake-key <end> ;; fake-key <space>',
                   'v': 'mode-enter caret',
                   '/': 'cmd-set-text /',
                   'n': 'search-next',
