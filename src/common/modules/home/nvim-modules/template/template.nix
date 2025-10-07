@@ -71,7 +71,7 @@ args@{
                 };
               }
               {
-                name = "${templateDir}/${template.extension}/${sanitizedName}-raw.tpl";
+                name = "${templateDir}/${template.extension}/${sanitizedName}-raw.md";
                 value = {
                   text = rawTemplate;
                 };
@@ -99,7 +99,7 @@ args@{
             }
             {
               key = "<leader>q<leader>${template.shortcut}";
-              action = "<cmd>r ${config.home.homeDirectory}/${templateDir}/${template.extension}/${sanitizedName}-raw.tpl<cr>";
+              action = "<cmd>r ${config.home.homeDirectory}/${templateDir}/${template.extension}/${sanitizedName}-raw.md<cr>";
               mode = [ "n" ];
               options = {
                 silent = true;
