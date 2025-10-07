@@ -33,6 +33,7 @@ args@{
         vimwiki = true;
         tmuxline = false;
         vim-tmux-navigator = true;
+        copilot = true;
       };
     };
   };
