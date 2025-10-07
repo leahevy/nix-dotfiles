@@ -31,6 +31,8 @@ args@{
         lsp = true;
         project = true;
         vimwiki = true;
+        tmuxline = false;
+        vim-tmux-navigator = true;
       };
     };
   };
