@@ -49,7 +49,8 @@ args@{
                 ];
                 postInstall = oldAttrs.postInstall or "" + ''
                   wrapProgram $out/bin/qutebrowser \
-                    --prefix LD_LIBRARY_PATH : "${prev.curl.out}/lib"
+                    --prefix LD_LIBRARY_PATH : "${prev.curl.out}/lib" \
+                    --prefix XDG_DATA_DIRS : "${prev.gtk3}/share/gsettings-schemas/${prev.gtk3.name}:${prev.gsettings-desktop-schemas}/share"
                 '';
               });
           })
