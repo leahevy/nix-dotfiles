@@ -173,6 +173,7 @@ args@{
                 local valid_projects = {}
                 local seen = {}
 
+                local all_valid = {}
                 for _, proj in ipairs(result) do
                   if proj and type(proj) == "string" then
                     local has_bad_tilde = proj:match("~") and not proj:match("^~/")
@@ -182,11 +183,54 @@ args@{
 
                     if not has_bad_tilde and not has_bad_home and not is_basic_invalid and vim.fn.isdirectory(proj) == 1 then
                       local abs_proj = vim.fn.fnamemodify(proj, ':p')
-                      if abs_proj and abs_proj ~= "/" and abs_proj ~= vim.fn.expand("~") and not seen[abs_proj] then
-                        table.insert(valid_projects, abs_proj)
-                        seen[abs_proj] = true
+                      if abs_proj and abs_proj ~= "/" and abs_proj ~= vim.fn.expand("~") then
+                        table.insert(all_valid, {original = proj, expanded = abs_proj})
                       end
                     end
+                  end
+                end
+
+                local function get_path_tail(path, n)
+                  local segments = {}
+                  for segment in path:gmatch("[^/]+") do
+                    table.insert(segments, segment)
+                  end
+                  local start_idx = math.max(1, #segments - n + 1)
+                  local tail_segments = {}
+                  for i = start_idx, #segments do
+                    table.insert(tail_segments, segments[i])
+                  end
+                  return table.concat(tail_segments, "/")
+                end
+
+                for _, proj in ipairs(all_valid) do
+                  local should_keep = true
+
+                  for _, other in ipairs(all_valid) do
+                    if proj.expanded ~= other.expanded then
+                      local proj_path = proj.expanded:gsub("/$", "") .. "/"
+                      local other_path = other.expanded:gsub("/$", "") .. "/"
+
+                      if vim.startswith(proj_path, other_path) then
+                        should_keep = false
+                        break
+                      end
+
+                      local proj_tail = get_path_tail(proj.expanded, 3)
+                      local other_tail = get_path_tail(other.expanded, 3)
+
+                      if proj_tail ~= "" and proj_tail == other_tail then
+                        if #proj.expanded > #other.expanded then
+                          should_keep = false
+                          break
+                        end
+                      end
+                    end
+                  end
+
+                  if should_keep and not seen[proj.expanded] then
+                    table.insert(valid_projects, proj.expanded)
+                    seen[proj.expanded] = true
                   end
                 end
 
@@ -255,13 +299,57 @@ args@{
             end
           end
 
-          for _, existing in ipairs(projects) do
+          local function get_path_tail(path, n)
+            local segments = {}
+            for segment in path:gmatch("[^/]+") do
+              table.insert(segments, segment)
+            end
+            local start_idx = math.max(1, #segments - n + 1)
+            local tail_segments = {}
+            for i = start_idx, #segments do
+              table.insert(tail_segments, segments[i])
+            end
+            return table.concat(tail_segments, "/")
+          end
+
+          local should_add = true
+          local to_remove = {}
+
+          for i, existing in ipairs(projects) do
             if existing == abs_path then
               return
             end
+
+            local abs_path_with_slash = abs_path:gsub("/$", "") .. "/"
+            local existing_with_slash = existing:gsub("/$", "") .. "/"
+
+            if vim.startswith(abs_path_with_slash, existing_with_slash) then
+              should_add = false
+              break
+            elseif vim.startswith(existing_with_slash, abs_path_with_slash) then
+              table.insert(to_remove, i)
+            else
+              local new_tail = get_path_tail(abs_path, 3)
+              local existing_tail = get_path_tail(existing, 3)
+
+              if new_tail ~= "" and new_tail == existing_tail then
+                if #abs_path > #existing then
+                  should_add = false
+                  break
+                else
+                  table.insert(to_remove, i)
+                end
+              end
+            end
           end
 
-          table.insert(projects, 1, abs_path)
+          for i = #to_remove, 1, -1 do
+            table.remove(projects, to_remove[i])
+          end
+
+          if should_add then
+            table.insert(projects, 1, abs_path)
+          end
 
           if #projects > 8 then
             projects = vim.list_slice(projects, 1, 8)
