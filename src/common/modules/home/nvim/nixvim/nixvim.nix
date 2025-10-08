@@ -23,6 +23,7 @@ args@{
         startify = false;
         telescope = true;
         gitgutter = true;
+        fugitive = true;
         toggleterm = true;
         dashboard = true;
         nvim-tree = true;
