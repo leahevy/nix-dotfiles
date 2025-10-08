@@ -18,7 +18,7 @@ args@{
         enable = true;
 
         settings = {
-          font = lib.mkForce "monospace 12";
+          font = lib.mkForce "monospace 13";
           background-color = lib.mkForce "#0a0a0fee";
           text-color = lib.mkForce "#ffffff";
           border-color = lib.mkForce "#ffffff26";
