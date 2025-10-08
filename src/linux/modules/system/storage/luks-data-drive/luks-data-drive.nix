@@ -118,6 +118,8 @@ args@{
         wantedBy = [ "local-fs.target" ];
         after = [ "nx-mount-${self.settings.mappedName}.service" ];
         wants = [ "nx-mount-${self.settings.mappedName}.service" ];
+        before = [ "user@${toString config.users.users.${self.host.mainUser.username}.uid}.service" ];
+        requiredBy = [ "user@${toString config.users.users.${self.host.mainUser.username}.uid}.service" ];
 
         script =
           let
