@@ -104,6 +104,9 @@ args@{
       };
     };
     common = {
+      tmux = {
+        tmux = true;
+      };
       email = {
         thunderbird = true;
       };
@@ -162,7 +165,7 @@ args@{
       secondaryDisplay = self.host.displays.secondary or self.user.displays.secondary or null;
       programsConfig = self.getModuleConfig "desktop-modules.programs";
       requiredApps = [
-        "${self.user.settings.terminal} --class=org.nx.start-terminal"
+        "${self.user.settings.terminal} --class=org.nx.start-terminal -e tx"
         "${self.user.settings.terminal} --class=org.nx.scratchpad"
       ];
       delayedRequiredApps = [ ];
@@ -596,6 +599,11 @@ args@{
             "Mod+Return" = {
               action = spawn-sh self.user.settings.terminal;
               hotkey-overlay.title = "Apps:Terminal";
+            };
+
+            "Mod+Shift+Return" = {
+              action = spawn-sh "${self.user.settings.terminal} -e tx";
+              hotkey-overlay.title = "Apps:Tmux Session";
             };
 
             "Mod+Space" = {

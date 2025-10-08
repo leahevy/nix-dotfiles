@@ -212,7 +212,7 @@ args@{
           genericName = "Tmux terminal multiplexer";
           comment = "Opens the main tmux session";
           exec = "${config.home.homeDirectory}/.local/bin/tx";
-          icon = "utilities-terminal";
+          icon = "com.mitchellh.ghostty";
           terminal = true;
           categories = [
             "Utility"

@@ -17,12 +17,15 @@ args@{
       programs.nixvim = {
         plugins.gitgutter = {
           enable = true;
+          settings = {
+            map_keys = false;
+          };
         };
 
         keymaps = [
           {
             mode = "n";
-            key = "<leader>hp";
+            key = "<leader>gp";
             action = ":GitGutterPreviewHunk<CR>";
             options = {
               silent = true;
@@ -31,7 +34,7 @@ args@{
           }
           {
             mode = "n";
-            key = "<leader>hs";
+            key = "<leader>gs";
             action = ":GitGutterStageHunk<CR>";
             options = {
               silent = true;
@@ -40,7 +43,7 @@ args@{
           }
           {
             mode = "n";
-            key = "<leader>hu";
+            key = "<leader>gu";
             action = ":GitGutterUndoHunk<CR>";
             options = {
               silent = true;
@@ -51,22 +54,22 @@ args@{
 
         plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
           {
-            __unkeyed-1 = "<leader>h";
-            group = "git hunks";
+            __unkeyed-1 = "<leader>g";
+            group = "git";
             icon = "⇡";
           }
           {
-            __unkeyed-1 = "<leader>hp";
+            __unkeyed-1 = "<leader>gp";
             desc = "Preview hunk";
             icon = "󰐕";
           }
           {
-            __unkeyed-1 = "<leader>hs";
+            __unkeyed-1 = "<leader>gs";
             desc = "Stage hunk";
             icon = "󰐕";
           }
           {
-            __unkeyed-1 = "<leader>hu";
+            __unkeyed-1 = "<leader>gu";
             desc = "Undo hunk";
             icon = "󰐕";
           }

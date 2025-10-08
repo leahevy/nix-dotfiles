@@ -140,6 +140,28 @@ args@{
             enable = true;
           };
 
+          which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
+            {
+              __unkeyed-1 = "<leader>n";
+              desc = "New Tab";
+              icon = "";
+            }
+            {
+              __unkeyed-1 = "<leader>h";
+              desc = "Split Horizontal";
+              icon = "—";
+            }
+            {
+              __unkeyed-1 = "<leader>v";
+              desc = "Split Vertical";
+              icon = "|";
+            }
+            {
+              __unkeyed-1 = "<leader>q";
+              desc = "Close Tab";
+              icon = "";
+            }
+          ];
         };
 
         globals = {
@@ -160,6 +182,42 @@ args@{
             key = "<leader>t";
             action = ":NvimTreeToggle<CR>";
             options.silent = true;
+          }
+          {
+            mode = "n";
+            key = "<leader>n";
+            action = "<cmd>tabnew | Dashboard<cr>";
+            options = {
+              desc = "New tab";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>q";
+            action = "<cmd>if tabpagenr('$') == 1 | quit | else | tabclose | endif<cr>";
+            options = {
+              desc = "Close tab";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>v";
+            action = "<cmd>vsplit<CR>";
+            options = {
+              desc = "Split vertical";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>h";
+            action = "<cmd>split<CR>";
+            options = {
+              desc = "Split horizontal";
+              silent = true;
+            };
           }
         ];
 
