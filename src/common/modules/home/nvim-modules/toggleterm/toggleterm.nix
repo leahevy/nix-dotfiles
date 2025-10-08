@@ -43,7 +43,7 @@ args@{
           }
           {
             mode = "t";
-            key = "<leader>e";
+            key = "<leader><leader>e";
             action = "<cmd>ToggleTerm<CR>";
             options = {
               silent = true;
