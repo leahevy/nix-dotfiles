@@ -399,7 +399,7 @@ args@{
               background-color: ${background};
               border-radius: 0px;
               min-height: 0;
-              font-size: 22px;
+              font-size: 18px;
             }
 
             window#waybar {

@@ -12,7 +12,7 @@ args@{
   name = "ghostty-config";
 
   defaults = {
-    fontSize = 14;
+    fontSize = 12;
     opacity = 0.90;
     shaders = [
       #"cursor_blaze"

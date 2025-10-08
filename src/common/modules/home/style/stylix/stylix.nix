@@ -24,7 +24,7 @@ args@{
         useUnstable = false;
       };
       monospace = {
-        path = "nerd-fonts.ubuntu-mono/Ubuntu Mono Nerd Font";
+        path = "nerd-fonts.fira-code/FiraCode Nerd Font";
         useUnstable = false;
       };
       emoji = {
