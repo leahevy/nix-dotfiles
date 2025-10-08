@@ -1151,13 +1151,13 @@ args@{
             {
               matches = [ { app-id = "com.mitchellh.ghostty"; } ];
               default-column-width = {
-                proportion = 0.35;
+                proportion = 0.33;
               };
             }
             {
               matches = [ { app-id = "org.nx.start-terminal"; } ];
               default-column-width = {
-                proportion = 0.35;
+                proportion = 0.47;
               };
               open-on-workspace = "1";
               open-focused = true;
@@ -1165,7 +1165,7 @@ args@{
             {
               matches = [ { app-id = "org.nx.scratchpad"; } ];
               default-column-width = {
-                proportion = 0.35;
+                proportion = 0.40;
               };
               default-window-height = {
                 fixed = 500;
