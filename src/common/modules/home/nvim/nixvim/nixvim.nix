@@ -34,6 +34,7 @@ args@{
         tmuxline = false;
         vim-tmux-navigator = true;
         copilot = true;
+        searchbox = true;
       };
     };
   };
