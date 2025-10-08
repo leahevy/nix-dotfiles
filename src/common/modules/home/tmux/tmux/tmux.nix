@@ -21,16 +21,35 @@ args@{
     statusFg = "#9cffd3";
     borderColor = "#444444";
     activeBorderColor = "#dfff00";
-    showHostname = true;
-    dateFormat = "%Y-%m-%d";
-    timeFormat = "%H:%M";
+    defaultShell = "fish";
+    tmuxinatorConfigs = { };
+    tmuxinatorBaseConfigs = {
+      main = { };
+    };
   };
 
   configuration =
     context@{ config, options, ... }:
     let
       colors = self.settings;
-      hostnameSection = lib.optionalString colors.showHostname " #h ";
+      yamlFormat = pkgs.formats.yaml { };
+
+      allConfigs = self.settings.tmuxinatorBaseConfigs // self.settings.tmuxinatorConfigs;
+
+      tmuxinatorFiles = lib.mapAttrs' (name: config: {
+        name = ".config/tmuxinator/${name}.yml";
+        value.source = yamlFormat.generate "${name}.yml" (
+          {
+            name = name;
+            root = config.root or "~/";
+            windows = config.windows or [ { shell = ""; } ];
+          }
+          // (builtins.removeAttrs config [
+            "root"
+            "windows"
+          ])
+        );
+      }) allConfigs;
     in
     {
       home.packages = with pkgs; [
@@ -38,115 +57,168 @@ args@{
         tmuxinator
       ];
 
-      home.file.".tmux.conf".text = ''
-        run-shell 'for conf in ~/.config/tmux/*.conf; do [ -f "$conf" ] && tmux source-file "$conf"; done'
-      '';
+      home.file = tmuxinatorFiles // {
+        ".local/bin/tx" = {
+          text = ''
+            #!/usr/bin/env bash
+            if [ $# -eq 0 ]; then
+              exec ${pkgs.tmuxinator}/bin/tmuxinator start main
+            else
+              exec ${pkgs.tmuxinator}/bin/tmuxinator start "$@"
+            fi
+          '';
+          executable = true;
+        };
 
-      home.file.".config/tmux/10-base.conf".text = ''
-        set -g default-terminal "$TERM"
-        set -ga terminal-overrides ",*256col*:Tc"
-        set -g mouse on
-        set -g base-index 1
-        setw -g pane-base-index 1
-        set -g renumber-windows on
-        set -g history-limit 50000
-        set -g display-time 4000
-        set -g status-interval 5
-        set -g focus-events on
-        setw -g aggressive-resize on
+        ".local/bin/tmux" = {
+          text = ''
+            #!/usr/bin/env bash
+            if [ $# -eq 0 ]; then
+              exec ${pkgs.tmuxinator}/bin/tmuxinator start main
+            else
+              exec ${pkgs.tmux}/bin/tmux "$@"
+            fi
+          '';
+          executable = true;
+        };
 
-        set-option -g allow-rename off
+        ".local/bin/tmuxinator" = {
+          text = ''
+            #!/usr/bin/env bash
+            if [ $# -eq 0 ]; then
+              exec ${pkgs.tmuxinator}/bin/tmuxinator start main
+            else
+              exec ${pkgs.tmuxinator}/bin/tmuxinator "$@"
+            fi
+          '';
+          executable = true;
+        };
 
-        set -g visual-activity off
-        set -g visual-bell off
-        set -g visual-silence off
-        setw -g monitor-activity off
-        set -g bell-action none
-      '';
+        ".tmux.conf".text = ''
+          run-shell 'for conf in ~/.config/tmux/*.conf; do [ -f "$conf" ] && tmux source-file "$conf"; done'
+        '';
 
-      home.file.".config/tmux/20-keybindings.conf".text = ''
-        unbind C-b
-        set-option -g prefix C-a
-        bind-key C-a send-prefix
+        ".config/tmux/10-base.conf".text = ''
+          set -g default-terminal "$TERM"
+          set -ga terminal-overrides ",*256col*:Tc"
+          set -g mouse on
+          set -g base-index 1
+          setw -g pane-base-index 1
+          set -g renumber-windows on
+          set -g history-limit 50000
+          set -g display-time 4000
+          set -g status-interval 5
+          set -g focus-events on
+          setw -g aggressive-resize on
 
-        bind -r H resize-pane -L 10
-        bind -r J resize-pane -D 10
-        bind -r K resize-pane -U 10
-        bind -r L resize-pane -R 10
+          set-option -g allow-rename off
 
-        setw -g mode-keys vi
-        bind -T copy-mode-vi v send-keys -X begin-selection
-        bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel '${
-          if self.settings.waylandClipboard then
-            "wl-copy --trim-newline"
-          else
-            "xclip -in -selection clipboard"
-        }'
-        bind -T copy-mode-vi r send-keys -X rectangle-toggle
+          set -g visual-activity off
+          set -g visual-bell off
+          set -g visual-silence off
+          setw -g monitor-activity off
+          set -g bell-action none
+        '';
 
-        bind C-p previous-window
-        bind C-n next-window
+        ".config/tmux/20-keybindings.conf".text = ''
+          unbind C-b
+          set-option -g prefix C-a
+          bind-key C-a send-prefix
 
-        bind v split-window -h -c "#{pane_current_path}"
-        bind h split-window -v -c "#{pane_current_path}"
+          bind -r H resize-pane -L 10
+          bind -r J resize-pane -D 10
+          bind -r K resize-pane -U 10
+          bind -r L resize-pane -R 10
 
-        unbind %
-        unbind '"'
+          setw -g mode-keys vi
+          bind -T copy-mode-vi v send-keys -X begin-selection
+          bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel '${
+            if self.settings.waylandClipboard then
+              "wl-copy --trim-newline"
+            else
+              "xclip -in -selection clipboard"
+          }'
+          bind -T copy-mode-vi r send-keys -X rectangle-toggle
 
-        bind a copy-mode
-        unbind [
+          bind C-p previous-window
+          bind C-n next-window
 
-        bind r source-file ~/.tmux.conf \; display "Config reloaded!"
-      '';
+          bind v split-window -h -c "#{pane_current_path}"
+          bind h split-window -v -c "#{pane_current_path}"
 
-      home.file.".config/tmux/25-vim-tmux-navigator.conf".text = ''
-        is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
-          | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?|fzf)(diff)?'"
+          unbind %
+          unbind '"'
 
-        bind-key -n 'C-h' if-shell "$is_vim" 'send-keys C-h'  'select-pane -L'
-        bind-key -n 'C-j' if-shell "$is_vim" 'send-keys C-j'  'select-pane -D'
-        bind-key -n 'C-k' if-shell "$is_vim" 'send-keys C-k'  'select-pane -U'
-        bind-key -n 'C-l' if-shell "$is_vim" 'send-keys C-l'  'select-pane -R'
+          bind a copy-mode
+          unbind [
 
-        tmux_version='$(tmux -V | sed -En "s/^tmux ([0-9]+(.[0-9]+)?).*/\1/p")'
-        if-shell -b '[ "$(echo "$tmux_version < 3.0" | bc)" = 1 ]' \
-          "bind-key -n 'C-\\' if-shell \"$is_vim\" 'send-keys C-\\'  'select-pane -l'"
-        if-shell -b '[ "$(echo "$tmux_version >= 3.0" | bc)" = 1 ]' \
-          "bind-key -n 'C-\\' if-shell \"$is_vim\" 'send-keys C-\\\\'  'select-pane -l'"
+          bind r source-file ~/.tmux.conf \; display "Config reloaded!"
+        '';
 
-        bind-key -T copy-mode-vi 'C-h' select-pane -L
-        bind-key -T copy-mode-vi 'C-j' select-pane -D
-        bind-key -T copy-mode-vi 'C-k' select-pane -U
-        bind-key -T copy-mode-vi 'C-l' select-pane -R
-        bind-key -T copy-mode-vi 'C-\' select-pane -l
-      '';
+        ".config/tmux/25-vim-tmux-navigator.conf".text = ''
+          is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
+            | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?|fzf)(diff)?'"
 
-      home.file.".config/tmux/30-statusbar.conf".text = ''
-        set -g status-justify "centre"
-        set -g status "on"
-        set -g status-left-style "none"
-        set -g message-command-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
-        set -g status-right-style "none"
-        set -g pane-active-border-style "fg=${colors.activeBorderColor}"
-        set -g status-style "none,bg=${colors.statusBg}"
-        set -g message-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
-        set -g pane-border-style "fg=${colors.borderColor}"
-        set -g status-right-length "100"
-        set -g status-left-length "100"
-        setw -g window-status-activity-style "none"
-        setw -g window-status-separator ""
-        setw -g window-status-style "none,fg=${colors.statusFg},bg=${colors.statusBg}"
-        set -g status-left "#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg},bg=${colors.statusBg},nobold,nounderscore,noitalics]"
-        set -g status-right "#[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.secondaryBg}] %Y-%m-%d  %H:%M #[fg=${colors.primaryBg},bg=${colors.secondaryBg},nobold,nounderscore,noitalics]#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #h "
-        setw -g window-status-format "#[fg=${colors.statusFg},bg=${colors.statusBg}] #I #[fg=${colors.statusFg},bg=${colors.statusBg}] #W "
-        setw -g window-status-current-format "#[fg=${colors.statusBg},bg=${colors.borderColor},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #I #[fg=${colors.secondaryFg},bg=${colors.borderColor}] #W #[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]"
-      '';
+          bind-key -n 'C-h' if-shell "$is_vim" 'send-keys C-h'  'select-pane -L'
+          bind-key -n 'C-j' if-shell "$is_vim" 'send-keys C-j'  'select-pane -D'
+          bind-key -n 'C-k' if-shell "$is_vim" 'send-keys C-k'  'select-pane -U'
+          bind-key -n 'C-l' if-shell "$is_vim" 'send-keys C-l'  'select-pane -R'
+
+          tmux_version='$(tmux -V | sed -En "s/^tmux ([0-9]+(.[0-9]+)?).*/\1/p")'
+          if-shell -b '[ "$(echo "$tmux_version < 3.0" | bc)" = 1 ]' \
+            "bind-key -n 'C-\\' if-shell \"$is_vim\" 'send-keys C-\\'  'select-pane -l'"
+          if-shell -b '[ "$(echo "$tmux_version >= 3.0" | bc)" = 1 ]' \
+            "bind-key -n 'C-\\' if-shell \"$is_vim\" 'send-keys C-\\\\'  'select-pane -l'"
+
+          bind-key -T copy-mode-vi 'C-h' select-pane -L
+          bind-key -T copy-mode-vi 'C-j' select-pane -D
+          bind-key -T copy-mode-vi 'C-k' select-pane -U
+          bind-key -T copy-mode-vi 'C-l' select-pane -R
+          bind-key -T copy-mode-vi 'C-\' select-pane -l
+        '';
+
+        ".config/tmux/30-statusbar.conf".text = ''
+          set -g status-justify "centre"
+          set -g status "on"
+          set -g status-left-style "none"
+          set -g message-command-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
+          set -g status-right-style "none"
+          set -g pane-active-border-style "fg=${colors.activeBorderColor}"
+          set -g status-style "none,bg=${colors.statusBg}"
+          set -g message-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
+          set -g pane-border-style "fg=${colors.borderColor}"
+          set -g status-right-length "100"
+          set -g status-left-length "100"
+          setw -g window-status-activity-style "none"
+          setw -g window-status-separator ""
+          setw -g window-status-style "none,fg=${colors.statusFg},bg=${colors.statusBg}"
+          set -g status-left "#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg},bg=${colors.statusBg},nobold,nounderscore,noitalics]"
+          set -g status-right "#[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.secondaryBg}] %Y-%m-%d  %H:%M #[fg=${colors.primaryBg},bg=${colors.secondaryBg},nobold,nounderscore,noitalics]#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #h "
+          setw -g window-status-format "#[fg=${colors.statusFg},bg=${colors.statusBg}] #I #[fg=${colors.statusFg},bg=${colors.statusBg}] #W "
+          setw -g window-status-current-format "#[fg=${colors.statusBg},bg=${colors.borderColor},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #I #[fg=${colors.secondaryFg},bg=${colors.borderColor}] #W #[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]"
+        '';
+      };
 
       home.persistence."${self.persist}" = {
         directories = [
           ".tmux"
           ".config/tmux"
         ];
+      };
+
+      xdg.desktopEntries = lib.optionalAttrs self.isLinux {
+        "Tmux" = {
+          name = "Tmux";
+          genericName = "Tmux terminal multiplexer";
+          comment = "Opens the main tmux session";
+          exec = "${config.home.homeDirectory}/.local/bin/tx";
+          icon = "utilities-terminal";
+          terminal = true;
+          categories = [
+            "Utility"
+            "TerminalEmulator"
+          ];
+        };
       };
     };
 }
