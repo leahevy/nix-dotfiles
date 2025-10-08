@@ -35,6 +35,7 @@ args@{
         vim-tmux-navigator = true;
         copilot = true;
         searchbox = true;
+        grug-far = true;
       };
     };
   };
@@ -143,6 +144,7 @@ args@{
 
         globals = {
           mapleader = " ";
+          maplocalleader = "\\";
         };
 
         keymaps = [
