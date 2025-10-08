@@ -29,6 +29,8 @@ in
     {
       services.gnome.gnome-keyring.enable = lib.mkForce isGnome;
 
+      programs.dconf.enable = true;
+
       xdg.portal = {
         enable = true;
         extraPortals =
