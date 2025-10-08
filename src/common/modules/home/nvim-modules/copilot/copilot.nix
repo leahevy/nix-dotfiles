@@ -23,7 +23,23 @@ args@{
           copilot-vim
         ];
 
+        globals = {
+          copilot_no_tab_map = true;
+          copilot_assume_mapped = true;
+        };
+
         keymaps = [
+          {
+            mode = "i";
+            key = "<C-]>";
+            action = "copilot#Accept('\\<CR>')";
+            options = {
+              desc = "Accept Copilot suggestion";
+              silent = true;
+              expr = true;
+              replace_keycodes = false;
+            };
+          }
           {
             mode = "n";
             key = "<leader>cq";
@@ -35,7 +51,12 @@ args@{
           }
         ];
 
-        plugins.which-key.settings.spec = lib.mkIf (self.common.isModuleEnabled "nvim-modules.which-key") [
+        plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
+          {
+            __unkeyed-1 = "<C-]>";
+            desc = "Accept Copilot suggestion";
+            icon = "✈️";
+          }
           {
             __unkeyed-1 = "<leader>cq";
             desc = "Toggle Copilot";
