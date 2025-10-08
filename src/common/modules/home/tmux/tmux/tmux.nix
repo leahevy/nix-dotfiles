@@ -12,6 +12,7 @@ args@{
   name = "tmux";
 
   defaults = {
+    waylandClipboard = false;
     primaryBg = "#dfff00";
     primaryFg = "#00005f";
     secondaryBg = "#444444";
@@ -42,7 +43,7 @@ args@{
       '';
 
       home.file.".config/tmux/10-base.conf".text = ''
-        set -g default-terminal "screen-256color"
+        set -g default-terminal "$TERM"
         set -ga terminal-overrides ",*256col*:Tc"
         set -g mouse on
         set -g base-index 1
@@ -53,9 +54,21 @@ args@{
         set -g status-interval 5
         set -g focus-events on
         setw -g aggressive-resize on
+
+        set-option -g allow-rename off
+
+        set -g visual-activity off
+        set -g visual-bell off
+        set -g visual-silence off
+        setw -g monitor-activity off
+        set -g bell-action none
       '';
 
       home.file.".config/tmux/20-keybindings.conf".text = ''
+        unbind C-b
+        set-option -g prefix C-a
+        bind-key C-a send-prefix
+
         bind -r H resize-pane -L 10
         bind -r J resize-pane -D 10
         bind -r K resize-pane -U 10
@@ -63,7 +76,12 @@ args@{
 
         setw -g mode-keys vi
         bind -T copy-mode-vi v send-keys -X begin-selection
-        bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel 'xclip -in -selection clipboard'
+        bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel '${
+          if self.settings.waylandClipboard then
+            "wl-copy --trim-newline"
+          else
+            "xclip -in -selection clipboard"
+        }'
         bind -T copy-mode-vi r send-keys -X rectangle-toggle
 
         bind C-p previous-window
@@ -74,6 +92,9 @@ args@{
 
         unbind %
         unbind '"'
+
+        bind a copy-mode
+        unbind [
 
         bind r source-file ~/.tmux.conf \; display "Config reloaded!"
       '';
