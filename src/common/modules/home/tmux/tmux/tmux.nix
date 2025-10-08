@@ -52,10 +52,20 @@ args@{
       }) allConfigs;
     in
     {
-      home.packages = with pkgs; [
-        tmux
-        tmuxinator
-      ];
+      home.packages =
+        with pkgs;
+        [
+          tmux
+          tmuxinator
+        ]
+        ++ lib.optionals self.isDarwin [
+          (helpers.createTerminalDarwinApp pkgs {
+            name = "Tmux";
+            terminalApp = "Ghostty.app";
+            execArgs = "${config.home.homeDirectory}/.local/bin/tx";
+            icon = null;
+          })
+        ];
 
       home.file = tmuxinatorFiles // {
         ".local/bin/tx" = {

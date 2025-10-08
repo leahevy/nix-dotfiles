@@ -126,4 +126,67 @@ rec {
       symlink config ((getLocalSourcePath inputName) + "/" + subPath)
     else
       throw "Cannot create symlink for non-local input '${inputName}'";
+
+  # Create MacOS .app application bundle
+  # Usage: createTerminalDarwinApp pkgs { name, terminalApp, execArgs, icon ? null }
+  createTerminalDarwinApp =
+    pkgs:
+    {
+      name,
+      terminalApp,
+      execArgs,
+      icon ? null,
+    }:
+    let
+      minimizedAppName = lib.strings.toLower (lib.strings.replaceStrings [ " " "/" ] [ "-" "-" ] name);
+      infoPlist = ''
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key><string>${name}</string>
+            <key>CFBundleIdentifier</key><string>org.nx.${minimizedAppName}</string>
+            <key>CFBundleExecutable</key><string>launcher</string>
+            <key>CFBundleIconFile</key><string>app.icns</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleVersion</key><string>0.1</string>
+          </dict>
+        </plist>
+      '';
+
+      launcher = ''
+        #!/usr/bin/env bash
+        source ~/.nix-profile/etc/profile.d/hm-session-vars.sh 2>/dev/null || true
+        /usr/bin/open -na "${terminalApp}" --args -e ${execArgs}
+      '';
+    in
+    pkgs.runCommand "${minimizedAppName}-darwin-app"
+      {
+        buildInputs = [ ];
+        passthru.appName = "${name}.app";
+      }
+      ''
+        mkdir -p "$out/Applications/${name}.app/Contents/"{MacOS,Resources}
+
+        echo '${infoPlist}' > "$out/Applications/${name}.app/Contents/Info.plist"
+
+        echo '${launcher}' > "$out/Applications/${name}.app/Contents/MacOS/launcher"
+        chmod +x "$out/Applications/${name}.app/Contents/MacOS/launcher"
+
+        ${
+          if (icon != null) then
+            ''
+              cp "${icon}" "$out/Applications/${name}.app/Contents/Resources/app.icns"
+            ''
+          else
+            ''
+              if [ -f "${pkgs.alacritty}/Applications/Alacritty.app/Contents/Resources/alacritty.icns" ]; then
+                cp "${pkgs.alacritty}/Applications/Alacritty.app/Contents/Resources/alacritty.icns" \
+                   "$out/Applications/${name}.app/Contents/Resources/app.icns"
+              else
+                touch "$out/Applications/${name}.app/Contents/Resources/app.icns"
+              fi
+            ''
+        }
+      '';
 }
