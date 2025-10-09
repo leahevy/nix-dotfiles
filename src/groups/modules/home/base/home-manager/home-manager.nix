@@ -67,6 +67,7 @@ args@{
             starship = true;
             file-manager = true;
             go-programs = true;
+            timg = true;
           };
           spell = {
             ispell = true;
@@ -169,6 +170,7 @@ args@{
             starship = true;
             file-manager = true;
             go-programs = true;
+            timg = true;
           };
           spell = {
             ispell = true;
