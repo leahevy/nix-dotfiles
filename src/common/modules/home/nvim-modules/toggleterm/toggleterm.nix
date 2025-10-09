@@ -59,6 +59,15 @@ args@{
               desc = "Exit terminal mode";
             };
           }
+          {
+            mode = "t";
+            key = "<C-x>";
+            action = "<Esc>";
+            options = {
+              silent = true;
+              desc = "Send ESC to terminal";
+            };
+          }
         ];
       };
     };
