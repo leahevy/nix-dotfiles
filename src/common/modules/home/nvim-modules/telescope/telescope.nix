@@ -42,10 +42,10 @@ args@{
           {
             mode = "n";
             key = "<leader><leader>";
-            action = "<cmd>Telescope git_files<CR>";
+            action = "<cmd>lua local git_root = _G.find_git_root(); if git_root then require('telescope.builtin').git_files() else require('telescope.builtin').find_files() end<CR>";
             options = {
               silent = true;
-              desc = "Find git files";
+              desc = "Find files";
             };
           }
           {
