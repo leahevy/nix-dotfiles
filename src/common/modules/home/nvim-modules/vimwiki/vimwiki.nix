@@ -102,6 +102,55 @@ args@{
             icon = "󰃭";
           }
         ];
+
+        autoCmd = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
+          {
+            event = [
+              "BufEnter"
+              "FileType"
+            ];
+            pattern = [
+              "*.md"
+              "vimwiki"
+            ];
+            callback.__raw = ''
+              function()
+                if vim.bo.filetype == "vimwiki" then
+                  require("which-key").add({
+                    { "<leader>wr", desc = "Rename wiki file", buffer = 0 },
+                    { "<leader>wd", desc = "Delete wiki file", buffer = 0 },
+                    { "<leader>wn", desc = "Go to wiki file", buffer = 0 },
+                    { "<leader>wh", desc = "Convert to HTML", buffer = 0 },
+                    { "<leader>whh", desc = "Convert to HTML and browse", buffer = 0 },
+                    { "<leader>wc", desc = "Colorize wiki", buffer = 0 },
+                    { "<CR>", desc = "Follow wiki link", buffer = 0 },
+                    { "<Tab>", desc = "Next wiki link", buffer = 0 },
+                    { "+", desc = "Normalize wiki link", buffer = 0 },
+                    { "-", desc = "Remove header level", buffer = 0 },
+                    { "=", desc = "Add header level", buffer = 0 },
+                    { "O", desc = "List open above", buffer = 0 },
+                    { "[[", desc = "Previous header", buffer = 0 },
+                    { "]]", desc = "Next header", buffer = 0 },
+                    { "[=", desc = "Previous sibling header", buffer = 0 },
+                    { "]=", desc = "Next sibling header", buffer = 0 },
+                    { "[u", desc = "Parent header", buffer = 0 },
+                  })
+                end
+              end
+            '';
+          }
+          {
+            event = [ "BufLeave" ];
+            pattern = [ "*.md" ];
+            callback.__raw = ''
+              function()
+                if vim.bo.filetype == "vimwiki" then
+                  pcall(require("which-key").clear, { buffer = 0 })
+                end
+              end
+            '';
+          }
+        ];
       };
 
       home.file.".local/bin/vimwiki-migrate-index" = {
