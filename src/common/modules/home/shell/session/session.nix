@@ -60,6 +60,7 @@ args@{
           v = "vim -p";
 
           g = "git";
+          gm = "g commit -m";
           gct = "g commit";
           gcn = "gct -m";
           gl = "g log";
