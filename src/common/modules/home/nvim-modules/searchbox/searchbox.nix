@@ -20,7 +20,7 @@ args@{
           nui-nvim
         ];
 
-        plugins.which-key.settings.spec = lib.mkIf (self.common.isModuleEnabled "nvim-modules.which-key") [
+        plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
           {
             __unkeyed-1 = "<leader>s";
             group = "Search";
