@@ -60,6 +60,25 @@ args@{
           }
         ];
 
+        autoCmd = lib.mkIf (self.isModuleEnabled "nvim-modules.vimwiki") [
+          {
+            event = [ "BufEnter" ];
+            pattern = [ "*.md" ];
+            callback.__raw = ''
+              function()
+                if vim.bo.filetype == "vimwiki" then
+                  vim.defer_fn(function()
+                    vim.keymap.set('i', '<Tab>',
+                      "empty(copilot#GetDisplayedSuggestion()) ? '\\<Tab>' : copilot#Accept()",
+                      { buffer = 0, desc = "Accept Copilot suggestion", silent = true, expr = true, replace_keycodes = false }
+                    )
+                  end, 10)
+                end
+              end
+            '';
+          }
+        ];
+
         plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
           {
             __unkeyed-1 = "<Tab>";
