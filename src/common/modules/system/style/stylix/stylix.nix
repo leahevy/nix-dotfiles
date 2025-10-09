@@ -14,6 +14,7 @@ args@{
   defaults = {
     themeName = "atelier-seaside";
     polarity = "dark";
+    pureBlackBackground = true;
     fonts = {
       serif = {
         path = "dejavu_fonts/DejaVu Serif";
@@ -48,6 +49,12 @@ args@{
       ...
     }:
     let
+      customSchemePackage = pkgs.runCommand "custom-${self.settings.themeName}-schemes" { } ''
+        mkdir -p $out/share/themes
+        cp ${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml temp.yaml
+        ${pkgs.yq-go}/bin/yq eval '.palette.base00 = "#000000" | .palette.base01 = "#000000"' temp.yaml > $out/share/themes/${self.settings.themeName}.yaml
+      '';
+
       getPackage =
         fontConfig:
         let
@@ -76,7 +83,11 @@ args@{
       stylix = {
         enable = true;
 
-        base16Scheme = "${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml";
+        base16Scheme =
+          if self.settings.pureBlackBackground then
+            "${customSchemePackage}/share/themes/${self.settings.themeName}.yaml"
+          else
+            "${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml";
 
         image =
           if (self.settings.wallpaper.config or null) != null then
