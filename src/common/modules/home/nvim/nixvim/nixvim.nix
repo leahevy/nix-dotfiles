@@ -180,11 +180,6 @@ args@{
             action = ";";
           }
           {
-            key = "<leader>t";
-            action = ":NvimTreeToggle<CR>";
-            options.silent = true;
-          }
-          {
             mode = "n";
             key = "<leader>n";
             action = "<cmd>tabnew | Dashboard<cr>";

@@ -25,5 +25,28 @@ args@{
       programs.nixvim.extraPlugins = with pkgs.vimPlugins; [
         nvim-tree-lua
       ];
+
+      programs.nixvim.keymaps = [
+        {
+          mode = "n";
+          key = "<leader>t";
+          action = ":NvimTreeToggle<CR>";
+          options = {
+            silent = true;
+            desc = "Toggle file tree";
+          };
+        }
+      ];
+
+      programs.nixvim.plugins.which-key.settings.spec =
+        lib.mkIf (self.isModuleEnabled "nvim-modules.which-key")
+          [
+            {
+              __unkeyed-1 = "<leader>t";
+              desc = "Toggle file tree";
+              mode = "v";
+            }
+          ];
+
     };
 }
