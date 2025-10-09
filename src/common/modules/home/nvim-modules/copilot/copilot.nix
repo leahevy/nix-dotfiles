@@ -31,13 +31,22 @@ args@{
         keymaps = [
           {
             mode = "i";
-            key = "<C-]>";
-            action = "copilot#Accept('\\<CR>')";
+            key = "<Tab>";
+            action = "empty(copilot#GetDisplayedSuggestion()) ? '\\<Tab>' : copilot#Accept()";
             options = {
               desc = "Accept Copilot suggestion";
               silent = true;
               expr = true;
               replace_keycodes = false;
+            };
+          }
+          {
+            mode = "i";
+            key = "<M-Tab>";
+            action = "<cmd>lua vim.api.nvim_feedkeys('\t', 'n', false)<CR>";
+            options = {
+              desc = "Insert tab (fallback)";
+              silent = true;
             };
           }
           {
@@ -53,9 +62,14 @@ args@{
 
         plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
           {
-            __unkeyed-1 = "<C-]>";
-            desc = "Accept Copilot suggestion";
+            __unkeyed-1 = "<Tab>";
+            desc = "Accept Copilot suggestion or tab";
             icon = "✈️";
+          }
+          {
+            __unkeyed-1 = "<M-Tab>";
+            desc = "Insert tab (fallback)";
+            icon = "->";
           }
           {
             __unkeyed-1 = "<leader>cq";
