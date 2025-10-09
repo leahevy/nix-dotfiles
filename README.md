@@ -76,6 +76,7 @@ installed system during the live ISO installation process.
 - `nx build`: Test build configuration without deploying.
 - `nx gc`: Run the garbage collection.
 - `nx update`: Updates the flake in git (without switching).
+- `nx brew`: Sync Homebrew packages (Darwin only).
 
 ### NixOS Only:
 

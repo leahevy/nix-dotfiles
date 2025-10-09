@@ -136,6 +136,14 @@ ensure_standalone_only() {
     fi
 }
 
+ensure_darwin_only() {
+    local command_name="$1"
+    if [[ "$(uname -s)" != "Darwin" ]]; then
+        echo -e "${RED}Command '${WHITE}$command_name${RED}' only available on Darwin (macOS)${RESET}" >&2
+        exit 1
+    fi
+}
+
 parse_minimal_deployment_args() {
     EXTRA_ARGS=()
     ALLOW_DIRTY_GIT=false

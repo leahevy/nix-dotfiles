@@ -17,3 +17,23 @@ if [[ -e /etc/NIXOS ]]; then
 else
   nh home switch ".#homeConfigurations.$PROFILE.activationPackage" -b nix-rebuild.backup -- --impure "${EXTRA_ARGS[@]:-}"
 fi
+
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  BREWFILE="$HOME/.config/homebrew/Brewfile"
+  BREWFILE_ACTIVE="$HOME/.config/homebrew/Brewfile.active"
+
+  if [[ -f "$BREWFILE" ]]; then
+    if [[ ! -f "$BREWFILE_ACTIVE" ]]; then
+      echo
+      echo -e "${YELLOW}Brewfile created, you should run: ${GREEN}nx brew${YELLOW} to sync Homebrew packages${RESET}"
+    elif [[ -f "$BREWFILE_ACTIVE" ]]; then
+      CHECKSUM_NEW=$(shasum -a 256 "$BREWFILE" | cut -d' ' -f1)
+      CHECKSUM_ACTIVE=$(shasum -a 256 "$BREWFILE_ACTIVE" | cut -d' ' -f1)
+
+      if [[ "$CHECKSUM_NEW" != "$CHECKSUM_ACTIVE" ]]; then
+        echo
+        echo -e "${YELLOW}Brewfile was updated, you should run: ${GREEN}nx brew${RESET}"
+      fi
+    fi
+  fi
+fi

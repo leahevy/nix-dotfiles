@@ -27,6 +27,10 @@ Commands:
     update          # Updates the flake in git (without switching).
 
 
+  Darwin Only:
+    brew            # Sync Homebrew packages.
+
+
   NixOS Only:
     dry             # Tests the configuration without deploying it.
     test            # Activates the system state without adding it to the

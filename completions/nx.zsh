@@ -15,6 +15,7 @@ _nx() {
                 'build:Test build configuration without deploying'
                 'gc:Run the garbage collection'
                 'update:Update the flake in git (without switching)'
+                'brew:Sync Homebrew packages (Darwin only)'
                 'dry:Test configuration without deploying (NixOS only)'
                 'test:Activate without adding to bootloader (NixOS only)'
                 'boot:Add to bootloader without switching (NixOS only)'
