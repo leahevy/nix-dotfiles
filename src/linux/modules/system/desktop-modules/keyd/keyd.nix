@@ -51,6 +51,8 @@ args@{
             [diacritics]
             s = macro(C-S-u 00df enter)
             u = oneshot(umlauts)
+            i = oneshot(umlauts_direct)
+            shift = layer(diacritics_shift)
 
             [umlauts]
             a = macro(C-S-u 00e4 enter)
@@ -62,6 +64,20 @@ args@{
             a = macro(C-S-u 00c4 enter)
             o = macro(C-S-u 00d6 enter)
             u = macro(C-S-u 00dc enter)
+
+            [umlauts_direct]
+            a = ä
+            o = ö
+            u = ü
+            shift = layer(umlauts_direct_upper)
+
+            [umlauts_direct_upper]
+            a = Ä
+            o = Ö
+            u = Ü
+
+            [diacritics_shift]
+            s = ß
           '';
         };
       };
