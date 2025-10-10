@@ -84,7 +84,12 @@ args@{
 
           window-rules = [
             {
-              matches = [ { app-id = "org.keepassxc.KeePassXC"; } ];
+              matches = [
+                {
+                  app-id = "org.keepassxc.KeePassXC";
+                  title = ".*\\.kdbx.* - KeePassXC";
+                }
+              ];
               open-on-workspace = "scratch";
               open-floating = true;
               open-focused = false;
