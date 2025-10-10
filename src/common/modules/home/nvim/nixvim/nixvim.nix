@@ -163,6 +163,16 @@ args@{
               desc = "Close Tab";
               icon = "";
             }
+            {
+              __unkeyed-1 = "<leader>[";
+              desc = "Previous Buffer";
+              icon = "◀";
+            }
+            {
+              __unkeyed-1 = "<leader>]";
+              desc = "Next Buffer";
+              icon = "▶";
+            }
           ];
         };
 
@@ -213,6 +223,24 @@ args@{
             action = "<cmd>split<CR>";
             options = {
               desc = "Split horizontal";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>[";
+            action = "<cmd>bprevious<CR>";
+            options = {
+              desc = "Previous buffer";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>]";
+            action = "<cmd>bnext<CR>";
+            options = {
+              desc = "Next buffer";
               silent = true;
             };
           }
