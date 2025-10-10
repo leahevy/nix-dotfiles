@@ -163,7 +163,7 @@ args@{
               ++ (if self.settings.addDataDisk then [ "disk#2" ] else [ ])
               ++ [
                 "temperature"
-                "custom/separator"
+                "custom/gap"
                 "systemd-failed-units"
               ];
             };
@@ -222,7 +222,7 @@ args@{
             };
 
             systemd-failed-units = {
-              hide-on-ok = false;
+              hide-on-ok = true;
               format = "✗ {nr_failed}";
               format-ok = "✓ OK";
               system = true;
