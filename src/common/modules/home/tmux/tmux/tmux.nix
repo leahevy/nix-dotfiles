@@ -52,11 +52,25 @@ args@{
       }) allConfigs;
     in
     {
+      home.sessionVariables = lib.mkMerge [
+        (lib.mkIf self.isDarwin {
+          TMUX_URL_SELECT_OPEN_CMD = "open";
+          TMUX_URL_SELECT_CLIP_CMD = "pbcopy";
+        })
+        (lib.mkIf (self.isLinux && self.settings.waylandClipboard) {
+          TMUX_URL_SELECT_CLIP_CMD = "wl-copy --trim-newline";
+        })
+        (lib.mkIf (self.isLinux && !self.settings.waylandClipboard) {
+          TMUX_URL_SELECT_CLIP_CMD = "xclip -i";
+        })
+      ];
+
       home.packages =
         with pkgs;
         [
           tmux
           tmuxinator
+          perl
         ]
         ++ lib.optionals self.isDarwin [
           (helpers.createTerminalDarwinApp pkgs {
@@ -68,6 +82,11 @@ args@{
         ];
 
       home.file = tmuxinatorFiles // {
+        ".local/bin/scripts/tmux-url-select" = {
+          source = self.file "tmux-url-select/tmux-url-select.pl";
+          executable = true;
+        };
+
         ".local/bin/tx" = {
           text = ''
             #!/usr/bin/env bash
@@ -161,6 +180,8 @@ args@{
 
           bind a copy-mode
           unbind [
+
+          bind u run-shell -b "${config.home.homeDirectory}/.local/bin/scripts/tmux-url-select"
 
           bind r source-file ~/.tmux.conf \; display "Config reloaded!"
         '';
