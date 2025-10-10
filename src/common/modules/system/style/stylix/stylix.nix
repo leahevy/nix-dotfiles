@@ -15,6 +15,7 @@ args@{
     themeName = "atelier-seaside";
     polarity = "dark";
     pureBlackBackground = true;
+    pureWhiteForeground = true;
     fonts = {
       serif = {
         path = "dejavu_fonts/DejaVu Serif";
@@ -52,7 +53,7 @@ args@{
       customSchemePackage = pkgs.runCommand "custom-${self.settings.themeName}-schemes" { } ''
         mkdir -p $out/share/themes
         cp ${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml temp.yaml
-        ${pkgs.yq-go}/bin/yq eval '.palette.base00 = "#000000" | .palette.base01 = "#000000"' temp.yaml > $out/share/themes/${self.settings.themeName}.yaml
+        ${pkgs.yq-go}/bin/yq eval '. ${lib.optionalString self.settings.pureBlackBackground "| .palette.base00 = \"#000000\" | .palette.base01 = \"#000000\""}${lib.optionalString self.settings.pureWhiteForeground "| .palette.base05 = \"#ffffff\" | .palette.base06 = \"#e0e0e0\" | .palette.base07 = \"#ffffff\""}' temp.yaml > $out/share/themes/${self.settings.themeName}.yaml
       '';
 
       getPackage =
@@ -84,7 +85,7 @@ args@{
         enable = true;
 
         base16Scheme =
-          if self.settings.pureBlackBackground then
+          if self.settings.pureBlackBackground || self.settings.pureWhiteForeground then
             "${customSchemePackage}/share/themes/${self.settings.themeName}.yaml"
           else
             "${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml";
