@@ -37,6 +37,7 @@ args@{
         copilot = true;
         searchbox = true;
         grug-far = true;
+        calendar = true;
       };
     };
   };
