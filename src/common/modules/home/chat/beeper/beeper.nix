@@ -61,7 +61,12 @@ args@{
 
           window-rules = [
             {
-              matches = [ { app-id = "BeeperTexts"; } ];
+              matches = [
+                {
+                  app-id = "BeeperTexts";
+                  title = "Beeper";
+                }
+              ];
               min-width = 1500;
               min-height = 800;
               open-on-workspace = "scratch";
