@@ -53,7 +53,7 @@ args@{
       customSchemePackage = pkgs.runCommand "custom-${self.settings.themeName}-schemes" { } ''
         mkdir -p $out/share/themes
         cp ${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml temp.yaml
-        ${pkgs.yq-go}/bin/yq eval '. ${lib.optionalString self.settings.pureBlackBackground "| .palette.base00 = \"#000000\" | .palette.base01 = \"#000000\""}${lib.optionalString self.settings.pureWhiteForeground "| .palette.base05 = \"#ffffff\" | .palette.base06 = \"#e0e0e0\" | .palette.base07 = \"#ffffff\""}' temp.yaml > $out/share/themes/${self.settings.themeName}.yaml
+        ${pkgs.yq-go}/bin/yq eval '. ${lib.optionalString self.settings.pureBlackBackground "| .palette.base00 = \"#000000\" | .palette.base01 = \"#000000\""}${lib.optionalString self.settings.pureWhiteForeground "| .palette.base05 = \"#eeeeee\" | .palette.base06 = \"#cdcdcd\" | .palette.base07 = \"#ffffff\""}' temp.yaml > $out/share/themes/${self.settings.themeName}.yaml
       '';
 
       getPackage =
