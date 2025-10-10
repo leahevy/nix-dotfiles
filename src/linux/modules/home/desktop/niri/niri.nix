@@ -1174,6 +1174,12 @@ args@{
               open-floating = true;
               open-focused = false;
             }
+            {
+              matches = [ { app-id = "org.pulseaudio.pavucontrol"; } ];
+              default-column-width = {
+                proportion = 0.5;
+              };
+            }
           ];
         };
       };
