@@ -255,6 +255,19 @@ args@{
         ];
       };
 
+      home.file.".config/nvim-init/95-colour-override.lua".text = ''
+        local function fix_colours()
+          vim.api.nvim_set_hl(0, "WinSeparator", { bg = "#000000", fg = "#000000" })
+          vim.api.nvim_set_hl(0, "VertSplit", { bg = "#000000", fg = "#000000" })
+        end
+
+        vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+          callback = function()
+            vim.defer_fn(fix_colours, 100)
+          end,
+        })
+      '';
+
       programs.neovide = lib.mkIf self.isLinux {
         enable = self.settings.withNeovide;
       };
