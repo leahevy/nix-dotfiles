@@ -30,6 +30,9 @@ args@{
           utils = {
             archive-tools = true;
           };
+          browser = {
+            firefox = true;
+          };
           dev = {
             conda = true;
             poetry = true;
@@ -40,6 +43,7 @@ args@{
             claude = true;
             nodejs = true;
             typescript-lsp = true;
+            vscodium = true;
           };
           fonts = {
             japanese = true;
@@ -91,6 +95,7 @@ args@{
           chat = {
             beeper = true;
             signal = true;
+            fluffychat = true;
           };
           music = {
             spotify = true;
@@ -136,6 +141,9 @@ args@{
           utils = {
             archive-tools = true;
           };
+          browser = {
+            firefox = true;
+          };
           dev = {
             conda = true;
             poetry = true;
@@ -146,6 +154,7 @@ args@{
             claude = true;
             nodejs = true;
             typescript-lsp = true;
+            vscodium = true;
           };
           fonts = {
             japanese = true;
@@ -197,6 +206,7 @@ args@{
           chat = {
             beeper = true;
             signal = true;
+            fluffychat = true;
           };
           music = {
             spotify = true;
@@ -236,6 +246,7 @@ args@{
             latex = true;
           };
           browser = {
+            firefox = true;
             qutebrowser-config = true;
           };
           utils = {
@@ -251,6 +262,7 @@ args@{
             claude = true;
             nodejs = true;
             typescript-lsp = true;
+            vscodium = true;
           };
           fonts = {
             japanese = true;
@@ -297,6 +309,9 @@ args@{
           emacs = {
             emacs = true;
             doom = true;
+          };
+          chat = {
+            fluffychat = true;
           };
         };
         groups = {

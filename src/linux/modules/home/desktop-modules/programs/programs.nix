@@ -136,6 +136,10 @@ in
         gnome.xdg-desktop-portal-gnome
         gnome.xdg-desktop-portal-gtk
       ];
+      additionalPrograms = [
+        pkgs.easytag
+        pkgs.popsicle
+      ];
       installGames = false;
       installSystemSettings = false;
       installOfficeSuite = false;
@@ -197,6 +201,7 @@ in
             [ ]
         )
         ++ self.settings.additionalPackages
+        ++ self.settings.additionalPrograms
         ++ (if isKDE then self.settings.additionalKDEPackages else [ ])
         ++ (if isGnome then self.settings.additionalGnomePackages else [ ]);
 
@@ -345,6 +350,9 @@ in
         directories = [
           ".config/dconf"
           ".local/share/applications"
+          ".cache/easytag/" # easytag
+          ".config/easytag/" # easytag
+
         ]
         ++ (
           if isGnome then
