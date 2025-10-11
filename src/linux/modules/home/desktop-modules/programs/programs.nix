@@ -376,7 +376,6 @@ in
           ".config/gwenviewrc"
           ".config/spectaclerc"
           ".local/share/user-places.xbel"
-          ".local/share/user-places.xbel.bak"
           ".local/share/user-places.xbel.tbcache"
         ];
       };
