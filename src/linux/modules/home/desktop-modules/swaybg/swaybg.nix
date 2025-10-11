@@ -17,6 +17,7 @@ args@{
     backgroundColor = "#000000";
     timerIntervalSeconds = 600;
     deactivateTimer = false;
+    additionalWallpaperDirectories = [ ];
   };
 
   configuration =
@@ -55,6 +56,11 @@ args@{
       stylixExtension = lib.last (lib.splitString "." stylixWallpaperPath);
 
       wallpapersDir = "${config.home.homeDirectory}/.config/swaybg/wallpapers";
+
+      expandedAdditionalDirs = map (
+        dir:
+        if lib.hasPrefix "~" dir then "${config.home.homeDirectory}${lib.removePrefix "~" dir}" else dir
+      ) self.settings.additionalWallpaperDirectories;
     in
     {
       home.packages = [ pkgs.swaybg ];
@@ -86,6 +92,14 @@ args@{
           STATE_FILE="${config.home.homeDirectory}/.local/state/swaybg-wallpaper"
 
           WALLPAPERS=($(${pkgs.findutils}/bin/find "$WALLPAPERS_DIR" \( -type f -o -type l \) \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" \) 2>/dev/null))
+
+          ${lib.concatMapStringsSep "\n" (dir: ''
+            if [ -d "${dir}" ]; then
+              while IFS= read -r -d "" wallpaper; do
+                WALLPAPERS+=("$wallpaper")
+              done < <(${pkgs.findutils}/bin/find "${dir}" \( -type f -o -type l \) \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" \) -print0 2>/dev/null)
+            fi
+          '') expandedAdditionalDirs}
 
           if [ ''${#WALLPAPERS[@]} -eq 0 ]; then
             echo "No wallpapers found, exiting gracefully"
