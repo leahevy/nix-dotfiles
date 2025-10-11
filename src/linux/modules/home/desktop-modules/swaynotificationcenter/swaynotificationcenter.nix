@@ -83,7 +83,7 @@ args@{
         text = ''
           .control-center {
            background: rgba(0, 0, 0, 0.95);
-           border-radius: 14px;
+           border-radius: 0;
            border: 1px solid rgba(255, 255, 255, 0.15);
           }
 
@@ -91,7 +91,7 @@ args@{
           .widget-mpris > carouselindicatordots,
           .widget-mpris > box > button {
            background: rgba(0, 0, 0, 0.95);
-           border-radius: 14px;
+           border-radius: 0;
            padding: 7px;
            border: 1px solid rgba(255, 255, 255, 0.15);
            color: #ffffff;
@@ -104,7 +104,7 @@ args@{
 
           .notification-group {
            background: transparent;
-           border-radius: 14px;
+           border-radius: 0;
            border: none;
            padding: 8px;
            margin: 4px 0;
@@ -112,7 +112,7 @@ args@{
 
           .notification {
            background: rgba(0, 0, 0, 0.95);
-           border-radius: 14px;
+           border-radius: 0;
            border: 1px solid rgba(255, 255, 255, 0.15);
            padding: 12px;
            margin: 4px 0;
@@ -150,7 +150,7 @@ args@{
 
           .notification-window {
            background: rgba(0, 0, 0, 0.95);
-           border-radius: 14px;
+           border-radius: 0;
            border: 1px solid rgba(255, 255, 255, 0.15);
            margin: 8px;
           }
