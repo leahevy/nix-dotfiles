@@ -55,5 +55,22 @@ args@{
           ];
         };
       };
+
+      programs.niri.settings = lib.mkIf (self.isModuleEnabled "desktop.niri") {
+        binds = with config.lib.niri.actions; {
+          "Mod+N" = {
+            action = spawn "makoctl" "dismiss";
+            hotkey-overlay.title = "Notifications:Dismiss notification";
+          };
+          "Mod+Shift+N" = {
+            action = spawn "makoctl" "restore";
+            hotkey-overlay.title = "Notifications:Restore notification";
+          };
+          "Mod+M" = {
+            action = spawn "makoctl" "dismiss" "--all";
+            hotkey-overlay.title = "Notifications:Dismiss all notifications";
+          };
+        };
+      };
     };
 }

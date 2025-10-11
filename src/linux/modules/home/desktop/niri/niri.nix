@@ -41,7 +41,8 @@ args@{
             else
               null;
         };
-        mako = true;
+        swaynotificationcenter = true;
+        mako = false;
         swayidle = {
           turnOffMonitorsCommand = "${pkgs.niri}/bin/niri msg action power-off-monitors";
           turnOnMonitorsCommand = "${pkgs.niri}/bin/niri msg action power-on-monitors";
@@ -478,7 +479,16 @@ args@{
           };
         };
 
-        mako = {
+        nx-swaynotificationcenter =
+          lib.mkIf (self.isModuleEnabled "desktop-modules.swaynotificationcenter")
+            {
+              Unit = {
+                PartOf = [ "niri.service" ];
+                After = [ "niri.service" ];
+              };
+            };
+
+        mako = lib.mkIf (self.isModuleEnabled "desktop-modules.mako") {
           Unit = {
             PartOf = [ "niri.service" ];
             After = [ "niri.service" ];
@@ -1057,20 +1067,6 @@ args@{
             "Ctrl+Mod+Alt+R" = {
               action = spawn-sh "restart-niri";
               hotkey-overlay.title = "System:Restart niri";
-            };
-
-            "Mod+N" = {
-              action = spawn "makoctl" "dismiss";
-              hotkey-overlay.title = "Notifications:Dismiss notification";
-            };
-            "Mod+Shift+N" = {
-              action = spawn "makoctl" "restore";
-              hotkey-overlay.title = "Notifications:Restore notification";
-            };
-
-            "Mod+M" = {
-              action = spawn "makoctl" "dismiss" "--all";
-              hotkey-overlay.title = "Notifications:Dismiss all notifications";
             };
 
             "XF86AudioRaiseVolume" = {
