@@ -36,9 +36,7 @@ args@{
 
       home.persistence."${self.persist}" = {
         directories = [
-          ".mozilla/firefox"
-          ".mozilla/extensions"
-          ".mozilla/native-messaging-hosts"
+          ".mozilla"
           ".cache/mozilla/firefox"
         ];
       };

@@ -33,6 +33,7 @@ args@{
 
           Browser = {
             Enabled = true;
+            UpdateBinaryPath = false;
           };
 
           GUI = {
