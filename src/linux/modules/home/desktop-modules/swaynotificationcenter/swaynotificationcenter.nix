@@ -18,6 +18,29 @@ args@{
         swaynotificationcenter
       ];
 
+      home.file.".local/bin/scripts/toggle-dnd" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+
+          set -euo pipefail
+
+          current_state=$(swaync-client -D)
+
+          if [ "$current_state" = "true" ]; then
+            swaync-client -d > /dev/null 2>&1
+            notify-send "Do Not Disturb" "Notifications enabled"
+          else
+            notify-send "Do Not Disturb" "Notifications disabled"
+            sleep 5
+            current_state=$(swaync-client -D)
+            if [ "$current_state" = "false" ]; then
+              swaync-client -d > /dev/null 2>&1
+            fi
+          fi
+        '';
+      };
+
       home.file.".config/swaync/config.json" = {
         text = ''
           {
@@ -209,6 +232,10 @@ args@{
           "Mod+Shift+N" = {
             action = spawn "swaync-client" "-C";
             hotkey-overlay.title = "Notifications:Clear all notifications";
+          };
+          "Mod+Shift+M" = {
+            action = spawn-sh "${config.home.homeDirectory}/.local/bin/scripts/toggle-dnd";
+            hotkey-overlay.title = "Notifications:Toggle do not disturb";
           };
         };
       };
