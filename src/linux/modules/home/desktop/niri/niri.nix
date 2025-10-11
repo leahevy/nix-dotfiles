@@ -139,6 +139,10 @@ args@{
     inactiveColor = "#222233";
     modKey = "Super";
     modKeyNested = "Alt";
+    appIdMapping = {
+      "org.nx.scratchpad" = "com.mitchellh.ghostty";
+      "org.nx.start-terminal" = "com.mitchellh.ghostty";
+    };
   };
 
   assertions = [
@@ -393,6 +397,65 @@ args@{
         '';
       };
 
+      home.file.".local/bin/niri-window-switcher" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+
+          set -euo pipefail
+
+          get_icon_name() {
+            local app_id="$1"
+            local desktop_dir="/etc/profiles/per-user/${self.user.username}/share/applications"
+            local desktop_file="$desktop_dir/$app_id.desktop"
+
+            case "$app_id" in
+              ${lib.concatStringsSep "\n              " (
+                lib.mapAttrsToList (k: v: "\"${k}\") echo \"${v}\" ;;") self.settings.appIdMapping
+              )}
+              *)
+                if [[ -f "$desktop_file" ]]; then
+                  local icon
+                  icon=$(grep -m1 "^Icon=" "$desktop_file" 2>/dev/null | cut -d'=' -f2)
+                  if [[ -n "$icon" ]]; then
+                    echo "$icon"
+                    return
+                  fi
+                fi
+
+                local found_file
+                found_file=$(find "$desktop_dir" -maxdepth 1 -iname "$app_id.desktop" 2>/dev/null | head -1)
+                if [[ -n "$found_file" ]]; then
+                  local icon
+                  icon=$(grep -m1 "^Icon=" "$found_file" 2>/dev/null | cut -d'=' -f2)
+                  if [[ -n "$icon" ]]; then
+                    echo "$icon"
+                    return
+                  fi
+                fi
+
+                echo "$app_id"
+                ;;
+            esac
+          }
+
+          window_ids=()
+          window_titles=()
+
+          while IFS=$'\t' read -r window_id app_id title; do
+            window_ids+=("$window_id")
+            icon_name=$(get_icon_name "$app_id")
+            window_titles+=("$title\0icon\x1f$icon_name")
+          done < <(niri msg --json windows | jq -r '.[] | [.id, .app_id, .title] | @tsv')
+
+          result=$(printf "%b\n" "''${window_titles[@]}" | fuzzel --counter --dmenu --index)
+
+          if [[ -n "$result" ]] && [[ "$result" != -1 ]]; then
+            niri msg action focus-window --id "''${window_ids[$result]}"
+          fi
+        '';
+      };
+
       systemd.user.services = {
         waybar = {
           Unit = {
@@ -609,6 +672,11 @@ args@{
             "Mod+Space" = {
               action = spawn-sh "fuzzel";
               hotkey-overlay.title = "Apps:App launcher";
+            };
+
+            "Mod+Shift+Space" = {
+              action = spawn-sh "niri-window-switcher";
+              hotkey-overlay.title = "Apps:Window switcher";
             };
 
             "Mod+Q" = {
