@@ -15,6 +15,8 @@ args@{
     output = "*";
     mode = "fit";
     backgroundColor = "#000000";
+    timerIntervalSeconds = 600;
+    deactivateTimer = false;
   };
 
   configuration =
@@ -48,9 +50,76 @@ args@{
           stylixConfig.wallpaper.local
         else
           getStylixFile "wallpaper.jpg";
+
+      stylixWallpaperPath = toString getStylixWallpaper;
+      stylixExtension = lib.last (lib.splitString "." stylixWallpaperPath);
+
+      wallpapersDir = "${config.home.homeDirectory}/.config/swaybg/wallpapers";
     in
     {
       home.packages = [ pkgs.swaybg ];
+
+      home.file.".config/swaybg/wallpapers/stylix.${stylixExtension}" = {
+        source = getStylixWallpaper;
+      };
+
+      home.file.".local/bin/swaybg-next-wallpaper" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          ${lib.optionalString (!self.settings.deactivateTimer) ''
+            systemctl --user restart nx-swaybg-rotate.timer
+            systemctl --user start nx-swaybg-rotate.service
+          ''}
+
+          ${lib.optionalString (self.settings.deactivateTimer) ''
+            systemctl --user restart nx-swaybg.service
+          ''}
+        '';
+      };
+
+      home.file.".local/bin/scripts/swaybg-start" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          WALLPAPERS_DIR="${wallpapersDir}"
+          STATE_FILE="${config.home.homeDirectory}/.local/state/swaybg-wallpaper"
+
+          WALLPAPERS=($(${pkgs.findutils}/bin/find "$WALLPAPERS_DIR" \( -type f -o -type l \) \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" \) 2>/dev/null))
+
+          if [ ''${#WALLPAPERS[@]} -eq 0 ]; then
+            echo "No wallpapers found, exiting gracefully"
+            exit 0
+          fi
+
+          CURRENT_WALLPAPER=""
+          if [ -f "$STATE_FILE" ]; then
+            CURRENT_WALLPAPER=$(cat "$STATE_FILE")
+          fi
+
+          if [ ''${#WALLPAPERS[@]} -eq 1 ]; then
+            WALLPAPER="''${WALLPAPERS[0]}"
+          else
+            for i in {1..10}; do
+              WALLPAPER=$(printf '%s\n' "''${WALLPAPERS[@]}" | ${pkgs.coreutils}/bin/shuf -n 1)
+              if [ "$WALLPAPER" != "$CURRENT_WALLPAPER" ]; then
+                break
+              fi
+            done
+          fi
+
+          echo "Using wallpaper: $WALLPAPER"
+          echo "Output: ${self.settings.output}"
+          echo "Mode: ${self.settings.mode}"
+          echo "Background color: ${self.settings.backgroundColor}"
+          echo "Full command: ${pkgs.swaybg}/bin/swaybg -o ${self.settings.output} -i \"$WALLPAPER\" -m ${self.settings.mode} -c \"${self.settings.backgroundColor}\""
+
+          mkdir -p "$(dirname "$STATE_FILE")"
+          echo "$WALLPAPER" > "$STATE_FILE"
+
+          exec ${pkgs.swaybg}/bin/swaybg -o "${self.settings.output}" -i "$WALLPAPER" -m "${self.settings.mode}" -c "${lib.removePrefix "#" self.settings.backgroundColor}"
+        '';
+      };
 
       systemd.user.services.nx-swaybg = {
         Unit = {
@@ -60,15 +129,56 @@ args@{
         };
 
         Service = {
-          ExecStart = "${pkgs.swaybg}/bin/swaybg -o ${self.settings.output} -i ${getStylixWallpaper} -m ${self.settings.mode} -c ${self.settings.backgroundColor}";
-          Restart = "on-failure";
-          RestartSec = "1";
+          ExecStart = "${config.home.homeDirectory}/.local/bin/scripts/swaybg-start";
+          Restart = "no";
           Type = "simple";
         };
 
         Install = {
           WantedBy = [ "graphical-session.target" ];
         };
+      };
+
+      systemd.user.timers.nx-swaybg-rotate = lib.mkIf (!self.settings.deactivateTimer) {
+        Unit = {
+          Description = "Timer to rotate wallpapers";
+        };
+
+        Timer = {
+          OnActiveSec = "${toString self.settings.timerIntervalSeconds}s";
+          OnUnitActiveSec = "${toString self.settings.timerIntervalSeconds}s";
+          Persistent = true;
+        };
+
+        Install = {
+          WantedBy = [ "timers.target" ];
+        };
+      };
+
+      systemd.user.services.nx-swaybg-rotate = lib.mkIf (!self.settings.deactivateTimer) {
+        Unit = {
+          Description = "Rotate wallpaper by restarting swaybg";
+        };
+
+        Service = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.systemd}/bin/systemctl --user restart nx-swaybg.service";
+        };
+      };
+
+      programs.niri.settings = lib.mkIf (self.isModuleEnabled "desktop.niri") {
+        binds = with config.lib.niri.actions; {
+          "Mod+Shift+backslash" = {
+            action = spawn "swaybg-next-wallpaper";
+            hotkey-overlay.title = "UI:Next wallpaper";
+          };
+        };
+      };
+
+      home.persistence."${self.persist}" = {
+        directories = [
+          ".config/swaybg/wallpapers"
+        ];
       };
     };
 }
