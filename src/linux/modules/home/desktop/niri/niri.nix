@@ -131,6 +131,7 @@ args@{
   };
 
   defaults = {
+    addRestartShortcut = false;
     screenshotBasePictureDir = "screenshots";
     mainDisplayScale = 1.0;
     secondaryDisplayScale = 1.0;
@@ -343,7 +344,7 @@ args@{
         executable = true;
       };
 
-      home.file.".local/bin/restart-niri" = {
+      home.file.".local/bin/restart-niri" = lib.mkIf self.settings.addRestartShortcut {
         executable = true;
         text = ''
           #!/usr/bin/env bash
@@ -1065,7 +1066,7 @@ args@{
               hotkey-overlay.title = "System:Power menu";
             };
 
-            "Ctrl+Mod+Alt+R" = {
+            "Ctrl+Mod+Alt+R" = lib.mkIf self.settings.addRestartShortcut {
               action = spawn-sh "restart-niri";
               hotkey-overlay.title = "System:Restart niri";
             };
