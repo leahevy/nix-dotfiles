@@ -512,6 +512,11 @@ args@{
           new_instance_open_target_window = "last-focused";
           fonts = {
             default_size = lib.mkForce ((builtins.toString self.settings.fontSize) + "pt");
+            hints = lib.mkForce (
+              "normal "
+              + (builtins.toString (builtins.floor (self.settings.fontSize * 0.8)))
+              + "pt default_family"
+            );
             web = {
               size = {
                 default = lib.mkForce self.settings.webFontSize;
