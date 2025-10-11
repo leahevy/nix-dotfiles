@@ -27,7 +27,7 @@ args@{
         toggleterm = true;
         dashboard = true;
         nvim-tree = true;
-        transparency = true;
+        transparency = false;
         which-key = true;
         lsp = true;
         project = true;
