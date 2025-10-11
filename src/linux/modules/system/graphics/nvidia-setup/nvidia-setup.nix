@@ -17,6 +17,10 @@ args@{
     "nvidia-persistenced"
   ];
 
+  defaults = {
+    withPowerManagement = true;
+  };
+
   assertions = [
     {
       assertion = self.user.isModuleEnabled "graphics.nvidia-setup";
@@ -28,11 +32,11 @@ args@{
     context@{ config, options, ... }:
     {
       hardware.nvidia = {
-        powerManagement = {
+        powerManagement = lib.mkIf self.settings.withPowerManagement {
           enable = true;
           finegrained = false;
         };
-        nvidiaPersistenced = true;
+        nvidiaPersistenced = self.settings.withPowerManagement;
       };
 
       hardware.graphics = {

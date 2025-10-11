@@ -11,14 +11,21 @@ args@{
 {
   name = "modes";
 
+  defaults = {
+    sleep = true;
+    suspend = true;
+    hibernate = true;
+    hybridSleep = true;
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
       systemd.targets = {
-        sleep.enable = true;
-        suspend.enable = true;
-        hibernate.enable = true;
-        hybrid-sleep.enable = true;
+        sleep.enable = self.settings.sleep;
+        suspend.enable = self.settings.suspend;
+        hibernate.enable = self.settings.hibernate;
+        hybrid-sleep.enable = self.settings.hybridSleep;
       };
     };
 }
