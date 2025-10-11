@@ -622,6 +622,7 @@ args@{
           };
 
           layout = {
+            background-color = "#000000";
             gaps = 18;
             preset-column-widths = [
               { proportion = 0.25; }
