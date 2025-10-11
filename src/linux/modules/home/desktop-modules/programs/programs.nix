@@ -210,6 +210,19 @@ in
               hotkey-overlay.title = "Apps:File manager";
             };
           };
+
+          window-rules = [
+            {
+              matches = [
+                {
+                  app-id = "org.kde.kwalletmanager";
+                }
+              ];
+              default-column-width = {
+                proportion = 0.5;
+              };
+            }
+          ];
         };
       };
 
