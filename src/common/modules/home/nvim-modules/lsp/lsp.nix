@@ -18,9 +18,20 @@ args@{
     enableBash = true;
     enableFish = true;
     enableNix = true;
+    enableRust = true;
+    enableC = true;
+    enableCpp = true;
+    enableLaTeX = true;
     enableGlobalFormatting = true;
     enableInlayHints = true;
   };
+
+  assertions = [
+    {
+      assertion = !self.settings.enableLaTeX || self.isModuleEnabled "text.latex";
+      message = "LSP LaTeX support requires the text.latex module to be enabled";
+    }
+  ];
 
   configuration =
     context@{ config, options, ... }:
@@ -49,6 +60,7 @@ args@{
                 };
               };
             };
+
             pylsp = lib.mkIf self.settings.enablePython {
               enable = true;
               package = pkgs.python3.withPackages (
@@ -125,6 +137,116 @@ args@{
               settings = {
                 formatting = {
                   command = [ "treefmt" ];
+                };
+              };
+            };
+
+            rust_analyzer = lib.mkIf self.settings.enableRust {
+              enable = true;
+              package = pkgs.rust-analyzer;
+              settings = {
+                cargo = {
+                  allFeatures = true;
+                  loadOutDirsFromCheck = true;
+                  buildScripts = {
+                    enable = true;
+                  };
+                };
+                checkOnSave = true;
+                procMacro = {
+                  enable = true;
+                };
+                inlayHints = {
+                  bindingModeHints = {
+                    enable = true;
+                  };
+                  chainingHints = {
+                    enable = true;
+                  };
+                  closingBraceHints = {
+                    enable = true;
+                    minLines = 25;
+                  };
+                  closureReturnTypeHints = {
+                    enable = "never";
+                  };
+                  lifetimeElisionHints = {
+                    enable = "never";
+                    useParameterNames = false;
+                  };
+                  maxLength = 25;
+                  parameterHints = {
+                    enable = true;
+                  };
+                  reborrowHints = {
+                    enable = "never";
+                  };
+                  renderColons = true;
+                  typeHints = {
+                    enable = true;
+                    hideClosureInitialization = false;
+                    hideNamedConstructor = false;
+                  };
+                };
+              };
+            };
+
+            clangd = lib.mkIf (self.settings.enableC || self.settings.enableCpp) {
+              enable = true;
+              package = pkgs.clang-tools;
+              settings = {
+                cmd = [
+                  "clangd"
+                  "--background-index"
+                  "--clang-tidy"
+                  "--header-insertion=iwyu"
+                  "--completion-style=detailed"
+                  "--function-arg-placeholders"
+                  "--fallback-style=llvm"
+                ];
+                filetypes = [
+                  "c"
+                  "cpp"
+                ];
+                root_markers = [
+                  "compile_commands.json"
+                  "compile_flags.txt"
+                  ".clangd"
+                  ".git"
+                ];
+              };
+            };
+
+            texlab = lib.mkIf self.settings.enableLaTeX {
+              enable = true;
+              package = pkgs.texlab;
+              settings = {
+                texlab = {
+                  build = {
+                    executable = "latexmk";
+                    args = [
+                      "-pdf"
+                      "-interaction=nonstopmode"
+                      "-synctex=1"
+                      "%f"
+                    ];
+                    onSave = false;
+                  };
+                  auxDirectory = ".";
+                  forwardSearch = {
+                    executable = null;
+                    args = [ ];
+                  };
+                  chktex = {
+                    onOpenAndSave = false;
+                    onEdit = false;
+                  };
+                  diagnosticsDelay = 300;
+                  latexFormatter = "latexindent";
+                  latexindent = {
+                    local = null;
+                    modifyLineBreaks = false;
+                  };
                 };
               };
             };

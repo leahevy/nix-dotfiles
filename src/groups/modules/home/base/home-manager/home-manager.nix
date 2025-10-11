@@ -21,6 +21,9 @@ args@{
     then
       {
         common = {
+          text = {
+            latex = true;
+          };
           xdg = {
             user-dirs = true;
           };
@@ -124,6 +127,9 @@ args@{
     then
       {
         common = {
+          text = {
+            latex = true;
+          };
           xdg = {
             user-dirs = true;
           };
@@ -226,6 +232,9 @@ args@{
     then
       {
         common = {
+          text = {
+            latex = true;
+          };
           browser = {
             qutebrowser-config = true;
           };
