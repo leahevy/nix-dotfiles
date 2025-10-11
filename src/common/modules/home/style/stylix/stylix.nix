@@ -14,8 +14,12 @@ args@{
   defaults = {
     themeName = "atelier-seaside";
     polarity = "dark";
-    pureBlackBackground = true;
-    pureWhiteForeground = true;
+    overrideBlackBackground = true;
+    overrideWhiteForeground = true;
+    blackOverrideColour = "#000000";
+    whiteOverrideColourNormal = "#aaddaa";
+    whiteOverrideColourBright = "#eeeeee";
+    whiteOverrideColourLight = "#cdcdcd";
     fonts = {
       serif = {
         path = "dejavu_fonts/DejaVu Serif";
@@ -50,7 +54,7 @@ args@{
       customSchemePackage = pkgs.runCommand "custom-${self.settings.themeName}-schemes" { } ''
         mkdir -p $out/share/themes
         cp ${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml temp.yaml
-        ${pkgs.yq-go}/bin/yq eval '. ${lib.optionalString self.settings.pureBlackBackground "| .palette.base00 = \"#000000\" | .palette.base01 = \"#000000\""}${lib.optionalString self.settings.pureWhiteForeground "| .palette.base05 = \"#eeeeee\" | .palette.base06 = \"#cdcdcd\" | .palette.base07 = \"#ffffff\""}' temp.yaml > $out/share/themes/${self.settings.themeName}.yaml
+        ${pkgs.yq-go}/bin/yq eval '. ${lib.optionalString self.settings.overrideBlackBackground "| .palette.base00 = \"${self.settings.blackOverrideColour}\" | .palette.base01 = \"${self.settings.blackOverrideColour}\""}${lib.optionalString self.settings.overrideWhiteForeground "| .palette.base05 = \"${self.settings.whiteOverrideColourNormal}\" | .palette.base06 = \"${self.settings.whiteOverrideColourLight}\" | .palette.base07 = \"${self.settings.whiteOverrideColourBright}\""}' temp.yaml > $out/share/themes/${self.settings.themeName}.yaml
       '';
 
       getPackage =
@@ -83,7 +87,7 @@ args@{
           if self.user.isStandalone then true else throw "Stylix module on NixOS is configured system-wide";
 
         base16Scheme =
-          if self.settings.pureBlackBackground || self.settings.pureWhiteForeground then
+          if self.settings.overrideBlackBackground || self.settings.overrideWhiteForeground then
             "${customSchemePackage}/share/themes/${self.settings.themeName}.yaml"
           else
             "${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml";
