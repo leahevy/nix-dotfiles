@@ -25,9 +25,11 @@ args@{
               width = 120;
               height = 30;
             };
-            start_in_insert = true;
-            persist_size = true;
+            start_in_insert = false;
+            persist_size = false;
+            persist_mode = false;
             close_on_exit = true;
+            auto_scroll = true;
           };
         };
 
