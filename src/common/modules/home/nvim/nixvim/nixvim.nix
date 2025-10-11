@@ -38,6 +38,8 @@ args@{
         searchbox = true;
         grug-far = true;
         calendar = true;
+        render-markdown = true;
+        treesitter = true;
       };
     };
   };
