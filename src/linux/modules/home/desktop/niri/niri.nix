@@ -1046,14 +1046,14 @@ args@{
               hotkey-overlay.title = "Windows:Center column";
             };
 
-            "Mod+Backspace" = {
+            "Mod+Shift+Backspace" = {
               action = toggle-window-floating;
-              hotkey-overlay.title = "Windows:Toggle floating";
+              hotkey-overlay.title = "Windows:Toggle floating for window";
             };
 
-            "Mod+Shift+Backspace" = {
+            "Mod+Backspace" = {
               action = switch-focus-between-floating-and-tiling;
-              hotkey-overlay.title = "Windows:Switch float/tile";
+              hotkey-overlay.title = "Windows:Switch float/tile view";
             };
 
             "Mod+Ctrl+Q" = {
