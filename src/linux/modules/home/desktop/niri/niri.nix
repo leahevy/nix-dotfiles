@@ -1107,7 +1107,7 @@ args@{
             };
 
             "Ctrl+Mod+Alt+Return" = {
-              action = spawn-sh "niri-scratchpad --app-id org.nx.scratchpad --spawn scratchpad-terminal";
+              action = spawn-sh "niri-scratchpad --app-id org.nx.scratchpad --all-windows --spawn scratchpad-terminal";
               hotkey-overlay.title = "Apps:Scratchpad term";
             };
           };

@@ -31,7 +31,7 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Ctrl+Mod+Alt+Y" = {
-              action = spawn-sh "niri-scratchpad --app-id Todoist --spawn todoist-electron";
+              action = spawn-sh "niri-scratchpad --app-id Todoist --all-windows --spawn todoist-electron";
               hotkey-overlay.title = "Apps:Todo app";
             };
           };

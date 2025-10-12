@@ -31,7 +31,7 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Ctrl+Mod+Alt+P" = {
-              action = spawn-sh "niri-scratchpad --app-id fluffychat --spawn fluffychat";
+              action = spawn-sh "niri-scratchpad --app-id fluffychat --all-windows --spawn fluffychat";
               hotkey-overlay.title = "Apps:Matrix chat";
             };
           };
