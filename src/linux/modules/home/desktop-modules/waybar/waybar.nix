@@ -16,6 +16,7 @@ args@{
     output = null;
     addDataDisk = false;
     terminal = "ghostty";
+    useConfiguredGUIPrograms = false;
   };
 
   submodules = {
@@ -346,9 +347,9 @@ args@{
               format-linked = "󰤨 {ifname} (No IP)";
               format-disconnected = "󰤭 Disconnected";
               tooltip-format-wifi = "SSID: {essid}\nStrength: {signalStrength}%";
-              on-click-right = "${self.settings.terminal} -e sh -c 'echo && echo -e \"\\033[1;32mip addr\\033[0m\" && echo && ip addr && echo && echo && echo && echo \"Press any key to exit...\" && read -n 1'";
+              on-click = "${self.settings.terminal} -e sh -c 'echo && echo -e \"\\033[1;32mip addr\\033[0m\" && echo && ip addr && echo && echo && echo && echo \"Press any key to exit...\" && read -n 1'";
             }
-            // (
+            // lib.optionalAttrs self.settings.useConfiguredGUIPrograms (
               if programsConfig ? installSystemSettings then
                 {
                   on-click = "kcmshell6 kcm_networkmanagement";
