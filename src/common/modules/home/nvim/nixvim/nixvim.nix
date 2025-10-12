@@ -40,6 +40,7 @@ args@{
         calendar = true;
         render-markdown = true;
         treesitter = true;
+        rest = true;
       };
     };
   };
