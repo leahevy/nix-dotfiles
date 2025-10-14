@@ -55,6 +55,10 @@ args@{
     withNeovide = false;
     terminal = "ghostty";
     manpageViewer = true;
+    overrideThemeName = "cyberdream"; # Or null
+    overrideThemeSettings = { };
+    pureBlackBackground = true;
+    overrideCursorHighlightColour = "#0b0b0b"; # Or null
   };
 
   configuration =
@@ -79,14 +83,26 @@ args@{
         enable = true;
         package = pkgs-unstable.neovim-unwrapped;
 
+        colorschemes = lib.mkIf (self.settings.overrideThemeName != null) {
+          "${if self.settings.overrideThemeName != null then self.settings.overrideThemeName else "base16"}" =
+            {
+              enable = true;
+              settings = self.settings.overrideThemeSettings;
+            };
+        };
+
         opts = {
           number = true;
           relativenumber = true;
           cursorline = true;
+          cursorcolumn = true;
 
           termguicolors = true;
           mouse = "a";
-          wrap = false;
+          wrap = true;
+          linebreak = true;
+          breakindent = true;
+          showbreak = "↪ ";
           scrolloff = 8;
           sidescrolloff = 8;
 
@@ -213,6 +229,66 @@ args@{
             action = ";";
           }
           {
+            mode = [
+              "n"
+              "v"
+            ];
+            key = "j";
+            action = "gj";
+            options = {
+              desc = "Move down through wrapped lines";
+              silent = true;
+            };
+          }
+          {
+            mode = [
+              "n"
+              "v"
+            ];
+            key = "k";
+            action = "gk";
+            options = {
+              desc = "Move up through wrapped lines";
+              silent = true;
+            };
+          }
+          {
+            mode = [
+              "n"
+              "v"
+            ];
+            key = "0";
+            action = "g0";
+            options = {
+              desc = "Move to beginning of wrapped line";
+              silent = true;
+            };
+          }
+          {
+            mode = [
+              "n"
+              "v"
+            ];
+            key = "$";
+            action = "g$";
+            options = {
+              desc = "Move to end of wrapped line";
+              silent = true;
+            };
+          }
+          {
+            mode = [
+              "n"
+              "v"
+            ];
+            key = "^";
+            action = "g^";
+            options = {
+              desc = "Move to first non-blank character of wrapped line";
+              silent = true;
+            };
+          }
+          {
             mode = "n";
             key = "<leader>n";
             action = "<cmd>tabnew | Dashboard<cr>";
@@ -297,18 +373,82 @@ args@{
 
       };
 
-      home.file.".config/nvim-init/95-colour-override.lua".text = ''
-        local function fix_colours()
-          vim.api.nvim_set_hl(0, "WinSeparator", { bg = "#000000", fg = "#000000" })
-          vim.api.nvim_set_hl(0, "VertSplit", { bg = "#000000", fg = "#000000" })
-        end
+      home.file.".config/nvim-init/00-colorscheme.lua" =
+        lib.mkIf (self.settings.overrideThemeName != null)
+          {
+            text = ''
+              vim.cmd("colorscheme ${self.settings.overrideThemeName}")
+            '';
+          };
 
-        vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+      home.file.".config/nvim-init/10-blinking-cursor.lua".text = ''
+        vim.opt.guicursor = ""
+
+        vim.api.nvim_create_autocmd({"InsertEnter"}, {
           callback = function()
-            vim.defer_fn(fix_colours, 100)
-          end,
+            io.write("\27[5 q")
+          end
+        })
+
+        vim.api.nvim_create_autocmd({"InsertLeave"}, {
+          callback = function()
+            io.write("\27[1 q")
+          end
         })
       '';
+
+      home.file.".config/nvim-init/11-insert-leave.lua".text = ''
+        vim.api.nvim_create_autocmd({"InsertLeave"}, {
+          callback = function()
+            local col = vim.fn.col('.')
+            if col > 1 and col < vim.fn.col('$') - 1 then
+              vim.fn.cursor(vim.fn.line('.'), col + 1)
+            end
+          end
+        })
+      '';
+
+      home.file.".config/nvim-init/95-pure-black-background.lua".text =
+        lib.mkIf self.settings.pureBlackBackground ''
+          local function fix_black_background()
+            vim.api.nvim_set_hl(0, "Normal", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "NormalNC", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "SignColumn", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "LineNr", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "#000000" })
+
+            vim.api.nvim_set_hl(0, "WinSeparator", { bg = "#000000", fg = "#000000" })
+            vim.api.nvim_set_hl(0, "VertSplit", { bg = "#000000", fg = "#000000" })
+
+            vim.api.nvim_set_hl(0, "StatusLine", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "StatusLineNC", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "TabLine", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "TabLineFill", { bg = "#000000" })
+          end
+
+          vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+            callback = function()
+              vim.defer_fn(fix_black_background, 100)
+            end,
+          })
+        '';
+
+      home.file.".config/nvim-init/96-cursor-highlight-override.lua".text =
+        lib.mkIf (self.settings.overrideCursorHighlightColour != null)
+          ''
+            local function fix_cursor_highlight()
+              vim.api.nvim_set_hl(0, "CursorLine", { bg = "${self.settings.overrideCursorHighlightColour}" })
+              vim.api.nvim_set_hl(0, "CursorColumn", { bg = "${self.settings.overrideCursorHighlightColour}" })
+            end
+
+            vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+              callback = function()
+                vim.defer_fn(fix_cursor_highlight, 100)
+              end,
+            })
+          '';
 
       programs.neovide = lib.mkIf self.isLinux {
         enable = self.settings.withNeovide;
