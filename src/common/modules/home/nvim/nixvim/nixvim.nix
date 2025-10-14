@@ -42,6 +42,11 @@ args@{
         treesitter = true;
         rest = true;
         auto-session = true;
+        colorizer = true;
+        rainbow-delimiters = true;
+        web-devicons = true;
+        autoclose = true;
+        neoscroll = true;
       };
     };
   };
@@ -138,13 +143,6 @@ args@{
         ];
 
         plugins = {
-          rainbow-delimiters = {
-            enable = false;
-          };
-
-          web-devicons = {
-            enable = true;
-          };
 
           which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
             {
@@ -297,11 +295,6 @@ args@{
           }
         ];
 
-        extraPlugins = with pkgs.vimPlugins; [
-          vim-css-color
-          vim-closer
-          vim-smoothie
-        ];
       };
 
       home.file.".config/nvim-init/95-colour-override.lua".text = ''
