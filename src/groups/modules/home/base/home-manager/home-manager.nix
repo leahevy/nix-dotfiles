@@ -314,6 +314,36 @@ args@{
             fluffychat = true;
           };
         };
+        darwin = {
+          software = {
+            homebrew = true;
+          };
+          browser = {
+            firefox = true;
+            qutebrowser = true;
+          };
+          chat = {
+            beeper = true;
+          };
+          desktop = {
+            yabai = true;
+          };
+          dev = {
+            conda = true;
+          };
+          music = {
+            spotify = true;
+          };
+          organising = {
+            logseq = true;
+          };
+          passwords = {
+            keepassxc = true;
+          };
+          terminal = {
+            ghostty = true;
+          };
+        };
         groups = {
           shell = {
             shell = true;

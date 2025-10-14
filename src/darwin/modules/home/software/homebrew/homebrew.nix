@@ -16,6 +16,7 @@ args@{
     tabs = [ ];
     brews = [ ];
     casks = [ ];
+    notes = [ ];
   };
 
   assertions = [
@@ -51,13 +52,15 @@ args@{
 
             RED='\033[1;31m'
             GREEN='\033[1;32m'
-            YELLOW='\033[1;33m'
+            WHITE='\033[1;37m'
+            BLUE='\033[1;34m'
+            MAGENTA='\033[1;35m'
             RESET='\033[0m'
 
             BREWFILE="$HOME/.config/homebrew/Brewfile"
 
             if [[ $EUID -eq 0 ]]; then
-              echo -e "''${YELLOW}Do not run this script as root!''${RESET}" >&2
+              echo -e "''${WHITE}Do not run this script as root!''${RESET}" >&2
               exit 1
             fi
 
@@ -79,25 +82,54 @@ args@{
             trap cleanup EXIT INT TERM
 
             echo
-            echo -e "''${YELLOW}Updating Homebrew...''${RESET}"
+            echo -e "''${WHITE}Updating Homebrew...''${RESET}"
             GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew update --quiet
             echo
 
-            echo -e "''${YELLOW}Installing packages from Brewfile...''${RESET}"
-            brew bundle --file="$BREWFILE" --quiet
+            echo -e "''${WHITE}Installing packages from Brewfile...''${RESET}"
+            GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew bundle --file="$BREWFILE" --quiet
             echo
 
-            echo -e "''${YELLOW}Removing packages not in Brewfile...''${RESET}"
-            brew bundle cleanup --file="$BREWFILE" --force --quiet
+            echo -e "''${WHITE}Removing packages not in Brewfile...''${RESET}"
+            GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew bundle cleanup --file="$BREWFILE" --force --quiet
             echo
 
-            echo -e "''${YELLOW}Cleaning up old versions...''${RESET}"
-            brew cleanup --prune=all --quiet
+            echo -e "''${WHITE}Cleaning up old versions...''${RESET}"
+            GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew cleanup --prune=all --quiet
             echo
 
             cp "$BREWFILE" "$BREWFILE.active"
 
             echo -e "''${GREEN}Brew environment synced.''${RESET}"
+            ${if self.settings.notes != [ ] then "echo" else ""}
+            ${lib.concatMapStrings (note: ''
+              echo -e "  ''${MAGENTA}Note: ''${WHITE}${note}''${RESET}"
+            '') self.settings.notes}
+            if [[ -d "${self.user.home}/.config/homebrew" ]]; then
+              for file in "${self.user.home}/.config/homebrew"/*.note; do
+                if [[ -f "$file" ]]; then
+                  echo
+                  filename=$(basename "$file" .note)
+                  content=$(cat "$file")
+                  line_count=$(echo "$content" | wc -l)
+                  if [[ $line_count -eq 1 ]]; then
+                    echo -e "  ''${MAGENTA}$filename: ''${WHITE}$content''${RESET}"
+                  else
+                    echo -e "  ''${MAGENTA}$filename:''${RESET}"
+                    echo
+                    echo "$content" | while IFS= read -r line; do
+                      if [[ "$line" =~ ^#[[:space:]] ]]; then
+                        echo -e "    ''${RED}$line''${RESET}"
+                      elif [[ "$line" =~ ^##+ ]]; then
+                        echo -e "    ''${BLUE}$line''${RESET}"
+                      else
+                        echo -e "    ''${WHITE}$line''${RESET}"
+                      fi
+                    done
+                  fi
+                fi
+              done
+            fi
           '';
           executable = true;
         };

@@ -16,8 +16,18 @@ args@{
       software = {
         homebrew = true;
       };
+      desktop = {
+        keyboard-cowboy = true;
+      };
     };
   };
+
+  assertions = [
+    {
+      assertion = !self.isModuleEnabled "desktop.yabai";
+      message = "Yabai and amethyst are mutually exclusive!";
+    }
+  ];
 
   configuration =
     context@{ config, options, ... }:

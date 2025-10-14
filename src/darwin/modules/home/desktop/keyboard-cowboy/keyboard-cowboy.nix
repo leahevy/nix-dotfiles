@@ -19,6 +19,13 @@ args@{
     };
   };
 
+  assertions = [
+    {
+      assertion = !self.isModuleEnabled "desktop.yabai";
+      message = "Keyboard-Cowboy and yabai are mutually exclusive!";
+    }
+  ];
+
   configuration =
     context@{ config, options, ... }:
     {
