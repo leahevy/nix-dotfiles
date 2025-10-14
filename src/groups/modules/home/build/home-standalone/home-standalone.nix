@@ -30,5 +30,12 @@ args@{
         dummy-files = true;
       };
     };
+  }
+  // lib.optionalAttrs self.isDarwin {
+    darwin = {
+      software = {
+        homebrew = true;
+      };
+    };
   };
 }
