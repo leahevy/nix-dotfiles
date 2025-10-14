@@ -18,7 +18,7 @@ args@{
   configuration =
     context@{ config, options, ... }:
     {
-      home.file.".config/nvim-init/90-transparency.lua".text = ''
+      home.file.".config/nvim-init/99-transparency.lua".text = ''
         local function set_transparent_bg()
           vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
           vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
