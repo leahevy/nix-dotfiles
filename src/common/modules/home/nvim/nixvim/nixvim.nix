@@ -41,6 +41,7 @@ args@{
         render-markdown = true;
         treesitter = true;
         rest = true;
+        auto-session = true;
       };
     };
   };
@@ -176,6 +177,26 @@ args@{
               desc = "Next Buffer";
               icon = "▶";
             }
+            {
+              __unkeyed-1 = "<leader>Q";
+              group = "Quit";
+              icon = "󰗼";
+            }
+            {
+              __unkeyed-1 = "<leader>QQ";
+              desc = "Save all and quit";
+              icon = "󰗼";
+            }
+            {
+              __unkeyed-1 = "<leader>QX";
+              desc = "Quit without saving";
+              icon = "󱎘";
+            }
+            {
+              __unkeyed-1 = "<leader>W";
+              desc = "Save all";
+              icon = "💾";
+            }
           ];
         };
 
@@ -244,6 +265,33 @@ args@{
             action = "<cmd>bnext<CR>";
             options = {
               desc = "Next buffer";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>QQ";
+            action = "<cmd>wqa<CR>";
+            options = {
+              desc = "Save all and quit";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>QX";
+            action = "<cmd>qa!<CR>";
+            options = {
+              desc = "Quit without saving";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>W";
+            action = "<cmd>wa<CR>";
+            options = {
+              desc = "Save all";
               silent = true;
             };
           }
