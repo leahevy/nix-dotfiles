@@ -11,25 +11,27 @@ args@{
 {
   name = "gc";
 
+  defaults = {
+    useNH = true;
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
-      programs.nh = {
+      programs.nh = lib.mkIf self.settings.useNH {
         enable = true;
         clean.enable = true;
         clean.extraArgs = "--keep-since 4d --keep 3";
       };
 
-      # Old config not using nh
-      #
-      #   nix = {
-      #     gc = {
-      #       automatic = true;
-      #       dates = "19:00";
-      #       options = "--delete-older-than 30d";
-      #       persistent = true;
-      #       randomizedDelaySec = "15min";
-      #     };
-      #   };
+      nix = lib.mkIf (!self.settings.useNH) {
+        gc = {
+          automatic = true;
+          dates = "19:00";
+          options = "--delete-older-than 30d";
+          persistent = true;
+          randomizedDelaySec = "15min";
+        };
+      };
     };
 }
