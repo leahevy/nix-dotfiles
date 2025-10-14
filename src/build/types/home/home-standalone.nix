@@ -123,6 +123,8 @@ with lib;
               types.enum [
                 "gnome"
                 "niri"
+                "amethyst"
+                "yabai"
               ]
             );
             default = null;

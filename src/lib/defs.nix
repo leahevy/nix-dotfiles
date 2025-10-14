@@ -14,4 +14,14 @@ rec {
     groups = "${nxConfigPath}/${coreDirName}/src/groups";
     config = "${nxConfigPath}/${configDirName}";
   };
+
+  allowedLinuxDesktops = [
+    "gnome"
+    "niri"
+  ];
+
+  allowedDarwinDesktops = [
+    "amethyst"
+    "yabai"
+  ];
 }
