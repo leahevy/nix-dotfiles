@@ -210,7 +210,9 @@ args@{
 
           shift + alt - q : restart-yabai
           shift + alt - w : restart-skhd
-          alt - tab : open -a "Mission Control"
+          alt + ctrl - tab : open -a "Mission Control"
+
+          ctrl + alt - b : pmset sleepnow
 
           ${lib.concatStringsSep "\n" (
             lib.mapAttrsToList (key: command: "${key} : ${command}") self.settings.additionalKeyBindings
