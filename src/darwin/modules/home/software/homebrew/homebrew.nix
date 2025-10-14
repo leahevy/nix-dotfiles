@@ -13,7 +13,7 @@ args@{
 
   defaults = {
     headers = [ "cask_args appdir: '~/Applications', require_sha: true" ];
-    tabs = [ ];
+    taps = [ ];
     brews = [ ];
     casks = [ ];
     notes = [ ];
@@ -147,12 +147,12 @@ args@{
           run echo "${header}" >> "$BREWFILE_TMP" || true
         '') self.settings.headers}
 
-        ${lib.concatMapStrings (tab: ''
-          run echo "tap '${tab}'" >> "$BREWFILE_TMP" || true
-        '') self.settings.tabs}
+        ${lib.concatMapStrings (tap: ''
+          run echo "tap '${tap}'" >> "$BREWFILE_TMP" || true
+        '') self.settings.taps}
 
         if [[ -d "${self.user.home}/.config/homebrew" ]]; then
-          for file in "${self.user.home}/.config/homebrew"/*.tab; do
+          for file in "${self.user.home}/.config/homebrew"/*.tap; do
             if [[ -f "$file" ]]; then
               run cat "$file" >> "$BREWFILE_TMP" || true
             fi

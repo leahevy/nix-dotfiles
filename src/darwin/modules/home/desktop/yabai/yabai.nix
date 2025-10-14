@@ -35,7 +35,7 @@ args@{
   configuration =
     context@{ config, options, ... }:
     {
-      home.file.".config/homebrew/yabai.tab".text = ''
+      home.file.".config/homebrew/yabai.tap".text = ''
         tap 'koekeishiya/formulae'
         tap 'FelixKratz/formulae'
       '';
