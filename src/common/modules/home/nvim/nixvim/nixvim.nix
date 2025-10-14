@@ -384,6 +384,12 @@ args@{
       home.file.".config/nvim-init/10-blinking-cursor.lua".text = ''
         vim.opt.guicursor = ""
 
+        vim.api.nvim_create_autocmd({"VimEnter"}, {
+          callback = function()
+            io.write("\27[1 q")
+          end
+        })
+
         vim.api.nvim_create_autocmd({"InsertEnter"}, {
           callback = function()
             io.write("\27[5 q")
