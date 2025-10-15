@@ -249,8 +249,12 @@ args@{
         "<Alt+Shift+Tab>" = "back";
         "<Ctrl+Left>" = "tab-prev";
         "<Ctrl+Right>" = "tab-next";
+        "<Ctrl+Shift+Left>" = "tab-move -";
+        "<Ctrl+Shift+Right>" = "tab-move +";
         "<Alt+Left>" = "tab-prev";
         "<Alt+Right>" = "tab-next";
+        "<Alt+Shift+Left>" = "tab-move -";
+        "<Alt+Shift+Right>" = "tab-move +";
         "gT" = "tab-prev";
         "gs" = "cmd-set-text -s :tab-select";
         "gv" = ":bind";
