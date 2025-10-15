@@ -119,8 +119,8 @@ args@{
 
           options=(
             width=15.0
-            active_color=0xff22ff22
-            inactive_color=0xbb000000
+            active_color=0xff88cc66
+            inactive_color=0x00000000
             hidpi=on
           )
 
