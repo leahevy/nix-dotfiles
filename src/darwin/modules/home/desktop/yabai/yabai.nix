@@ -196,7 +196,7 @@ args@{
 
           alt - f : yabai -m window --toggle zoom-fullscreen
           shift + alt - f : yabai -m window --toggle native-fullscreen
-          alt - s : yabai -m window --toggle split
+          alt - a : yabai -m window --toggle split
           alt - g : yabai -m space --balance
           alt - r : yabai -m space --rotate 270
           shift + alt - r : yabai -m space --rotate 90
