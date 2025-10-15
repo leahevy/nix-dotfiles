@@ -154,6 +154,8 @@ args@{
           set-option -g prefix C-a
           bind-key C-a send-prefix
 
+          bind-key 0 select-window -t :10
+
           bind -r H resize-pane -L 10
           bind -r J resize-pane -D 10
           bind -r K resize-pane -U 10
