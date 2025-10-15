@@ -19,7 +19,7 @@ args@{
       path = "";
     };
 
-    schedule = "*-*-* 16:43:10";
+    schedule = "*-*-* 15:43:10";
     waitForNetwork = true;
     pingTarget = null;
     maxNetworkRetries = 30;
