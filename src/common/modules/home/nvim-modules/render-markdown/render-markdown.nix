@@ -77,5 +77,23 @@ args@{
           };
         };
       };
+
+      programs.nixvim.autoCmd = [
+        {
+          event = [ "FileType" ];
+          pattern = [
+            "markdown"
+            "vimwiki"
+          ];
+          callback = {
+            __raw = ''
+              function()
+                vim.opt_local.tabstop = 4
+                vim.opt_local.shiftwidth = 4
+              end
+            '';
+          };
+        }
+      ];
     };
 }
