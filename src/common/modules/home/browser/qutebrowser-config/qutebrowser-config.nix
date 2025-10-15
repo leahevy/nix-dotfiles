@@ -569,6 +569,26 @@ args@{
                 fg = lib.mkForce "#ee9988";
               };
             };
+            tabs = {
+              even = {
+                bg = lib.mkForce "#000000";
+                fg = lib.mkForce "#77dd77";
+              };
+              odd = {
+                bg = lib.mkForce "#000000";
+                fg = lib.mkForce "#77dd77";
+              };
+              selected = {
+                even = {
+                  bg = lib.mkForce "#000000";
+                  fg = lib.mkForce "#ee9988";
+                };
+                odd = {
+                  bg = lib.mkForce "#000000";
+                  fg = lib.mkForce "#ee9988";
+                };
+              };
+            };
             webpage = {
               darkmode = {
                 enabled = self.settings.darkMode;
