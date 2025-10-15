@@ -15,6 +15,8 @@ args@{
     waylandClipboard = false;
     primaryBg = "#dfff00";
     primaryFg = "#00005f";
+    prefixFg = "#ffffff";
+    prefixBg = "#cc0055";
     secondaryBg = "#444444";
     secondaryFg = "#ffffff";
     statusBg = "#202020";
@@ -233,8 +235,8 @@ args@{
           setw -g window-status-activity-style "none"
           setw -g window-status-separator ""
           setw -g window-status-style "none,fg=${colors.statusFg},bg=${colors.statusBg}"
-          set -g status-left "#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg},bg=${colors.statusBg},nobold,nounderscore,noitalics]"
-          set -g status-right "#[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.secondaryBg}] %Y-%m-%d  %H:%M #[fg=${colors.primaryBg},bg=${colors.secondaryBg},nobold,nounderscore,noitalics]#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #h "
+          set -g status-left "#{?client_prefix,#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #S #[fg=${colors.prefixBg}]#[bg=${colors.statusBg}],#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg},bg=${colors.statusBg}]}"
+          set -g status-right "#[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.secondaryBg}] %Y-%m-%d  %H:%M #{?client_prefix,#[fg=${colors.prefixBg}]#[bg=${colors.secondaryBg}]#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #h ,#[fg=${colors.primaryBg},bg=${colors.secondaryBg},nobold,nounderscore,noitalics]#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #h }"
           setw -g window-status-format "#[fg=${colors.statusFg},bg=${colors.statusBg}] #I #[fg=${colors.statusFg},bg=${colors.statusBg}] #W "
           setw -g window-status-current-format "#[fg=${colors.statusBg},bg=${colors.borderColor},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #I #[fg=${colors.secondaryFg},bg=${colors.borderColor}] #W #[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]"
         '';
