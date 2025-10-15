@@ -186,6 +186,14 @@ args@{
           bind u run-shell -b "${config.home.homeDirectory}/.local/bin/scripts/tmux-url-select"
 
           bind r source-file ~/.tmux.conf \; display "Config reloaded!"
+
+          unbind \;
+          unbind :
+          bind \; command-prompt
+          bind : last-pane
+
+          bind-key -n C-S-Left swap-window -t -1 \; select-window -t -1
+          bind-key -n C-S-Right swap-window -t +1 \; select-window -t +1
         '';
 
         ".config/tmux/25-vim-tmux-navigator.conf".text = ''
