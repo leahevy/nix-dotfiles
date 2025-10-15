@@ -237,8 +237,8 @@ args@{
             };
 
             clock = {
-              format = "󰃭 {:%I:%M %p}";
-              format-alt = "󰃭 {:%I:%M %p, %d/%m/%EY}";
+              format-alt = "󰃭 {:%I:%M %p}";
+              format = "󰃭 {:%I:%M %p, %d/%m/%EY}";
               tooltip-format = "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>";
               calendar = {
                 mode = "year";
