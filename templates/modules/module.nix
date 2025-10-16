@@ -30,6 +30,15 @@ args@{
   # file is imported via: (self.importFileCustom args FILENAME)
   custom = { };
 
+  # Optional warning message to display during build evaluation
+  # warning = "This module is work in progress.";
+
+  # Optional error message to throw and prevent build
+  # error = "This module is currently broken!";
+
+  # Optional boolean to mark module as broken (prevents build)
+  # broken = true;
+
   # Assertions to check in a build for this module.
   # Should be used to validate self.settings before the build config is evaluated.
   assertions = [

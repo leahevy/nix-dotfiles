@@ -11,6 +11,8 @@ args@{
 {
   name = "steam";
 
+  broken = true;
+
   defaults = {
     package = "com.valvesoftware.Steam";
     appName = "steam";

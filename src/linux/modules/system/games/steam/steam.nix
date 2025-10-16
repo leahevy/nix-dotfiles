@@ -11,6 +11,8 @@ args@{
 {
   name = "steam";
 
+  broken = true;
+
   assertions = [
     {
       assertion = self.user.isModuleEnabled "games.steam";

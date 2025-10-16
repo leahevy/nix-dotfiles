@@ -38,6 +38,9 @@ rec {
         "custom"
         "configuration"
         "unfree"
+        "warning"
+        "error"
+        "broken"
       ];
 
       actualAttrs = builtins.attrNames moduleResult;
@@ -79,7 +82,37 @@ rec {
     else if invalidAttrs != [ ] then
       throw topLevelErrorMessage
     else
-      moduleResult;
+      let
+        moduleWarning = moduleResult.warning or null;
+        moduleError = moduleResult.error or null;
+        moduleBroken = moduleResult.broken or false;
+
+        getCleanPath =
+          _:
+          let
+            pathStr = toString filePath;
+            parts = lib.splitString "/" pathStr;
+            moduleIndex = lib.findFirst (i: builtins.elemAt parts i == "modules") null (
+              lib.range 0 (builtins.length parts - 1)
+            );
+          in
+          if moduleIndex != null && moduleIndex + 3 < builtins.length parts then
+            let
+              group = builtins.elemAt parts (moduleIndex + 2);
+              module = builtins.elemAt parts (moduleIndex + 3);
+            in
+            "${group}.${module}"
+          else
+            lib.removeSuffix ".nix" (builtins.baseNameOf pathStr);
+      in
+      if moduleError != null then
+        throw "${getCleanPath null}: ${moduleError}"
+      else if moduleBroken then
+        throw "${getCleanPath null}: This module is currently broken!"
+      else if moduleWarning != null then
+        builtins.trace "${getCleanPath null}: ${moduleWarning}" moduleResult
+      else
+        moduleResult;
 
   mergeModuleDefaults =
     lib: helpers: args: moduleType: inputName: groupName: moduleName: moduleSettings:

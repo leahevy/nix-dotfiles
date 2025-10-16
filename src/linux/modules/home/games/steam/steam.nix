@@ -11,6 +11,8 @@ args@{
 {
   name = "steam";
 
+  broken = true;
+
   defaults = {
     withWayland = false;
   };
