@@ -312,6 +312,30 @@ args@{
         executable = true;
       };
 
+      home.file.".local/bin/borg-backup-trigger-manually" = {
+        text = ''
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          if [[ $EUID -eq 0 ]]; then
+            echo "Must be run as user!"
+            exit 1
+          fi
+
+          if systemctl is-active --quiet borgbackup-job-system.service; then
+            echo "Error: Backup is already running!"
+            exit 1
+          fi
+
+          echo "Starting backup manually..."
+          sudo systemctl start borgbackup-job-system.service
+          echo "Success: Backup triggered manually"
+
+          ${pkgs.libnotify}/bin/notify-send --urgency="normal" "Backup Triggered" "Manual backup triggered - will start in 2 minutes"
+        '';
+        executable = true;
+      };
+
       systemd.user.services.borg-backup-monitor = lib.mkIf self.settings.monitoringEnabled {
         Unit = {
           Description = "Borg Backup Log Monitor";
