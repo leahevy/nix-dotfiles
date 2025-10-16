@@ -24,9 +24,6 @@ args@{
           text = {
             latex = true;
           };
-          xdg = {
-            user-dirs = true;
-          };
           utils = {
             archive-tools = true;
           };
@@ -79,9 +76,6 @@ args@{
           spell = {
             ispell = true;
           };
-          sshd = {
-            ssh-agent = true;
-          };
           tmux = {
             tmux = true;
           };
@@ -93,15 +87,14 @@ args@{
             doom = true;
           };
           chat = {
-            beeper = true;
-            signal = true;
             fluffychat = true;
-          };
-          music = {
-            spotify = true;
           };
         };
         linux = {
+          chat = {
+            beeper = true;
+            signal = true;
+          };
           browser = {
             qutebrowser = true;
           };
@@ -117,6 +110,12 @@ args@{
           };
           todo = {
             todoist = true;
+          };
+          xdg = {
+            user-dirs = true;
+          };
+          music = {
+            spotify = true;
           };
         };
         groups = {
@@ -134,9 +133,6 @@ args@{
         common = {
           text = {
             latex = true;
-          };
-          xdg = {
-            user-dirs = true;
           };
           utils = {
             archive-tools = true;
@@ -204,15 +200,14 @@ args@{
             doom = true;
           };
           chat = {
-            beeper = true;
-            signal = true;
             fluffychat = true;
-          };
-          music = {
-            spotify = true;
           };
         };
         linux = {
+          chat = {
+            beeper = true;
+            signal = true;
+          };
           browser = {
             qutebrowser = true;
           };
@@ -221,12 +216,19 @@ args@{
           };
           gnome = {
             keyring = true;
+            gtk = true;
           };
           services = {
             ssh-agent = true;
           };
           todo = {
             todoist = true;
+          };
+          xdg = {
+            user-dirs = true;
+          };
+          music = {
+            spotify = true;
           };
         };
         groups = {
@@ -245,12 +247,11 @@ args@{
           text = {
             latex = true;
           };
-          browser = {
-            firefox = true;
-            qutebrowser-config = true;
-          };
           utils = {
             archive-tools = true;
+          };
+          browser = {
+            firefox = true;
           };
           dev = {
             conda = true;
@@ -293,6 +294,7 @@ args@{
             starship = true;
             file-manager = true;
             go-programs = true;
+            timg = true;
           };
           spell = {
             ispell = true;

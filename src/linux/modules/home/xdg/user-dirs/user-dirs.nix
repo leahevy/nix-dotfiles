@@ -25,7 +25,7 @@ args@{
   configuration =
     context@{ config, options, ... }:
     {
-      config = lib.mkIf self.isLinux (
+      config =
         if !(self.linux.isModuleEnabled "storage.luks-data-drive") then
           {
             home.file =
@@ -74,7 +74,6 @@ args@{
               enable = true;
             }
             // lib.mapAttrs (xdgName: dirName: "${config.home.homeDirectory}/${dirName}") self.settings;
-          }
-      );
+          };
     };
 }

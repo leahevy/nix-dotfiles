@@ -185,7 +185,7 @@ args@{
 
       screenshotPath =
         let
-          xdgConfig = self.common.getModuleConfig "xdg.user-dirs";
+          xdgConfig = self.getModuleConfig "xdg.user-dirs";
           picturesDir =
             if xdgConfig != { } && xdgConfig ? pictures then
               "${self.user.home}/${xdgConfig.pictures}"
