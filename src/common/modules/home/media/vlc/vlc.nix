@@ -11,6 +11,10 @@ args@{
 {
   name = "vlc";
 
+  group = "media";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

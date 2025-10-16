@@ -11,6 +11,10 @@ args@{
 {
   name = "lualine";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     theme = "auto";
     powerlineSymbols = true;

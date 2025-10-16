@@ -11,6 +11,10 @@ args@{
 {
   name = "rust-programs";
 
+  group = "shell";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

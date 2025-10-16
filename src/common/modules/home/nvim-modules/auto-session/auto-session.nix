@@ -11,6 +11,10 @@ args@{
 {
   name = "auto-session";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     autoSave = true;
     autoRestore = true;

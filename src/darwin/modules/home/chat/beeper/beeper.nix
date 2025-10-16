@@ -11,6 +11,10 @@ args@{
 {
   name = "beeper";
 
+  group = "chat";
+  input = "darwin";
+  namespace = "home";
+
   submodules = {
     darwin = {
       software = {

@@ -10,6 +10,9 @@ args@{
 }:
 {
   name = "kde-standalone";
+  group = "style";
+  input = "linux";
+  namespace = "home";
 
   configuration =
     context@{ config, options, ... }:

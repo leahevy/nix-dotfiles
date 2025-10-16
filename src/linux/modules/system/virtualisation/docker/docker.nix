@@ -11,6 +11,10 @@ args@{
 {
   name = "docker";
 
+  group = "virtualisation";
+  input = "linux";
+  namespace = "system";
+
   defaults = {
     dataPath = "/var/lib/docker";
     storageDriver = "btrfs";

@@ -11,6 +11,10 @@ args@{
 {
   name = "amethyst";
 
+  group = "desktop";
+  input = "darwin";
+  namespace = "home";
+
   submodules = {
     darwin = {
       software = {

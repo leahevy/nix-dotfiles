@@ -11,6 +11,10 @@ args@{
 {
   name = "vim-airline";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     powerlineSymbols = true;
   };

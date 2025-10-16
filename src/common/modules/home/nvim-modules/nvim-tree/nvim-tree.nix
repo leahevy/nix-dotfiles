@@ -12,6 +12,10 @@ args@{
   name = "nvim-tree";
   description = "File explorer for Neovim (with netrw coexistence)";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

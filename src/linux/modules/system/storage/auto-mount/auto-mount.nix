@@ -10,6 +10,10 @@ args@{
 {
   name = "auto-mount";
 
+  group = "storage";
+  input = "linux";
+  namespace = "system";
+
   defaults = {
     hideInternalDevices = [
       "sda"

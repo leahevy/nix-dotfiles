@@ -10,6 +10,9 @@ args@{
 }:
 {
   name = "sops";
+  group = "core";
+  input = "build";
+  namespace = "home";
 
   configuration =
     context@{ config, options, ... }:

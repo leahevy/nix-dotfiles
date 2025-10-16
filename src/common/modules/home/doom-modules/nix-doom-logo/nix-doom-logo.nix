@@ -11,6 +11,10 @@ args@{
 {
   name = "nix-doom-logo";
 
+  group = "doom-modules";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

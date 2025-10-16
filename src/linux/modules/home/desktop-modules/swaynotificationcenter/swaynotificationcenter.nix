@@ -11,6 +11,10 @@ args@{
 {
   name = "swaynotificationcenter";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

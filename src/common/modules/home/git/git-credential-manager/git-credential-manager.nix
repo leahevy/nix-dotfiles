@@ -11,6 +11,10 @@ args@{
 {
   name = "git-credential-manager";
 
+  group = "git";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

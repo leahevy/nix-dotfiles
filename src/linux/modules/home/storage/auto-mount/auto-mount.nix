@@ -10,6 +10,10 @@ args@{
 {
   name = "auto-mount";
 
+  group = "storage";
+  input = "linux";
+  namespace = "home";
+
   assertions = [
     {
       assertion = (self.host.isModuleEnabled or (x: false)) "storage.auto-mount";

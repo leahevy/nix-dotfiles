@@ -219,6 +219,9 @@ let
 in
 {
   name = "impermanence";
+  group = "system";
+  input = "build";
+  namespace = "system";
 
   configuration =
     context@{ config, options, ... }:

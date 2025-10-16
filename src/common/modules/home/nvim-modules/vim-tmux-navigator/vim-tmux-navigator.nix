@@ -11,6 +11,10 @@ args@{
 {
   name = "vim-tmux-navigator";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

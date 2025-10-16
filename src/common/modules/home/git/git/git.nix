@@ -11,6 +11,10 @@ args@{
 {
   name = "git";
 
+  group = "git";
+  input = "common";
+  namespace = "home";
+
   submodules = {
     common = {
       shell = {

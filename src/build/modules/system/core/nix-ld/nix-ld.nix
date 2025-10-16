@@ -10,6 +10,9 @@ args@{
 }:
 {
   name = "nix-ld";
+  group = "core";
+  input = "build";
+  namespace = "system";
 
   configuration =
     context@{ config, options, ... }:

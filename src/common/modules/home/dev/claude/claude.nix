@@ -11,6 +11,10 @@ args@{
 {
   name = "claude";
 
+  group = "dev";
+  input = "common";
+  namespace = "home";
+
   unfree = [ "claude-code" ];
 
   configuration =

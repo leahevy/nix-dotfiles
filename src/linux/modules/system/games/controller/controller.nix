@@ -11,6 +11,10 @@ args@{
 {
   name = "controller";
 
+  group = "games";
+  input = "linux";
+  namespace = "system";
+
   defaults = {
     enableXone = true;
   };

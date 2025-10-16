@@ -11,6 +11,10 @@ args@{
 {
   name = "firefox";
 
+  group = "browser";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

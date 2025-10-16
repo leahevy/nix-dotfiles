@@ -28,6 +28,10 @@ in
 rec {
   name = "home-assistant";
 
+  group = "web-apps";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     name = "Home-Assistant";
     webapp = "home-assistant";

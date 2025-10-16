@@ -11,6 +11,10 @@ args@{
 {
   name = "keyboard-cowboy";
 
+  group = "desktop";
+  input = "darwin";
+  namespace = "home";
+
   submodules = {
     darwin = {
       software = {

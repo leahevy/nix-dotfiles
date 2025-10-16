@@ -24,14 +24,45 @@ in
 rec {
   inherit moduleFuncs;
 
+  # Extract path components from module
+  extractPathComponents =
+    filePath: inputName:
+    let
+      pathStr = toString filePath;
+      inputPath = toString (helpers.resolveInputFromInput inputName);
+
+      relativePath = lib.removePrefix inputPath pathStr;
+      cleanRelativePath = lib.removePrefix "/" relativePath;
+      parts = lib.splitString "/" cleanRelativePath;
+
+      moduleIndex = lib.findFirst (i: builtins.elemAt parts i == "modules") null (
+        lib.range 0 (builtins.length parts - 1)
+      );
+    in
+    if moduleIndex == null || moduleIndex + 3 >= builtins.length parts then
+      null
+    else
+      let
+        namespace = builtins.elemAt parts (moduleIndex + 1);
+        group = builtins.elemAt parts (moduleIndex + 2);
+        module = builtins.elemAt parts (moduleIndex + 3);
+
+        expectedFilename = "${module}.nix";
+        actualFilename = builtins.baseNameOf pathStr;
+      in
+      if actualFilename == expectedFilename then { inherit namespace group module; } else null;
+
   validateModule =
-    moduleResult: filePath:
+    moduleResult: filePath: moduleContext:
     let
       correctFormat = builtins.isAttrs moduleResult && !builtins.isFunction moduleResult;
 
       approvedAttrs = [
         "name"
         "description"
+        "group"
+        "input"
+        "namespace"
         "submodules"
         "defaults"
         "assertions"
@@ -58,6 +89,44 @@ rec {
           "Module name '${actualName}' does not match filename '${expectedName}'. The name field must exactly match the filename (without .nix extension)."
         else
           null;
+
+      pathComponents = extractPathComponents filePath (moduleContext.inputName or "unknown");
+      pathValidationErrors =
+        if pathComponents == null then
+          [
+            "Could not extract path components from module path. Ensure module is in correct location: modules/NAMESPACE/GROUP/MODULE/MODULE.nix"
+          ]
+        else
+          let
+            inputError =
+              if !(moduleResult ? input) then
+                "Module missing required 'input' field"
+              else if moduleResult.input != moduleContext.inputName then
+                "Module input '${moduleResult.input}' does not match expected '${moduleContext.inputName}'"
+              else
+                null;
+
+            namespaceError =
+              if !(moduleResult ? namespace) then
+                "Module missing required 'namespace' field"
+              else if moduleResult.namespace != pathComponents.namespace then
+                "Module namespace '${moduleResult.namespace}' does not match path '${pathComponents.namespace}'"
+              else
+                null;
+
+            groupError =
+              if !(moduleResult ? group) then
+                "Module missing required 'group' field"
+              else if moduleResult.group != pathComponents.group then
+                "Module group '${moduleResult.group}' does not match path '${pathComponents.group}'"
+              else
+                null;
+          in
+          builtins.filter (x: x != null) [
+            inputError
+            namespaceError
+            groupError
+          ];
       topLevelErrorMessage = ''
         File ${filePath} uses invalid top-level attributes: ${builtins.concatStringsSep ", " invalidAttrs}
 
@@ -74,11 +143,18 @@ rec {
 
         Check template file to see valid example file: ${defs.rootPath + "/templates/modules/module.nix"}
       '';
+
+      pathErrorMessage = ''
+        File ${filePath} has path validation errors:
+        ${builtins.concatStringsSep "\n" pathValidationErrors}
+      '';
     in
     if !correctFormat then
       throw formatErrorMessage
     else if nameValidationError != null then
       throw "${filePath}: ${nameValidationError}"
+    else if pathValidationErrors != [ ] then
+      throw pathErrorMessage
     else if invalidAttrs != [ ] then
       throw topLevelErrorMessage
     else
@@ -286,7 +362,9 @@ rec {
       };
     in
     let
-      moduleResult = validateModule (import modulePath consolidatedArgs) modulePath;
+      moduleResult = validateModule (import modulePath consolidatedArgs) modulePath {
+        inputName = moduleSpec.inputName;
+      };
 
     in
     {
@@ -348,7 +426,9 @@ rec {
       };
     in
     let
-      moduleResult = validateModule (import modulePath consolidatedArgs) modulePath;
+      moduleResult = validateModule (import modulePath consolidatedArgs) modulePath {
+        inputName = moduleSpec.inputName;
+      };
     in
     {
       configuration = if moduleResult ? configuration then moduleResult.configuration else (context: { });

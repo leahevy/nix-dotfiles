@@ -11,6 +11,10 @@ args@{
 {
   name = "qutebrowser";
 
+  group = "browser";
+  input = "darwin";
+  namespace = "home";
+
   submodules = {
     darwin = {
       software = {

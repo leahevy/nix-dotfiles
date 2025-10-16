@@ -11,6 +11,10 @@ args@{
 {
   name = "lazygit";
 
+  group = "git";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

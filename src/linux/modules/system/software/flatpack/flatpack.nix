@@ -11,6 +11,10 @@ args@{
 {
   name = "flatpack";
 
+  group = "software";
+  input = "linux";
+  namespace = "system";
+
   assertions = [
     {
       assertion = self.host.isModuleEnabled "software.flatpack";

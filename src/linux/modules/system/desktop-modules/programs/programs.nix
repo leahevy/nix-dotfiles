@@ -9,13 +9,16 @@ args@{
   ...
 }:
 let
-  homeModuleConfig = self.user.getModuleConfig "desktop-modules.programs";
   desktopPreference = self.user.settings.desktopPreference;
   isKDE = desktopPreference == "kde";
   isGnome = desktopPreference == "gnome";
 in
 {
   name = "programs";
+
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "system";
 
   assertions = [
     {

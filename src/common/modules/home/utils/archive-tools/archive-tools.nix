@@ -11,6 +11,10 @@ args@{
 {
   name = "archive-tools";
 
+  group = "utils";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

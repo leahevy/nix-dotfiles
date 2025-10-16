@@ -11,6 +11,10 @@ args@{
 {
   name = "nvidia-setup";
 
+  group = "graphics";
+  input = "linux";
+  namespace = "system";
+
   unfree = [
     "nvidia-x11"
     "nvidia-settings"

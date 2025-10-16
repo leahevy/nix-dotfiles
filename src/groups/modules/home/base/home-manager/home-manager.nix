@@ -8,10 +8,13 @@ args@{
   self,
   ...
 }:
-
 {
   name = "home-manager";
   description = "Home Manager base group";
+
+  group = "base";
+  input = "groups";
+  namespace = "home";
 
   submodules =
     # NixOS Integrated

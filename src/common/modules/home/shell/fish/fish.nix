@@ -11,6 +11,10 @@ args@{
 {
   name = "fish";
 
+  group = "shell";
+  input = "common";
+  namespace = "home";
+
   submodules = {
     common = {
       shell = {

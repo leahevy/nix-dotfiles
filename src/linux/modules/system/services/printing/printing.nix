@@ -11,6 +11,10 @@ args@{
 {
   name = "printing";
 
+  group = "services";
+  input = "linux";
+  namespace = "system";
+
   defaults = {
     configureDefaultPrinter = false;
     additionalEnsurePrinters = [ ];

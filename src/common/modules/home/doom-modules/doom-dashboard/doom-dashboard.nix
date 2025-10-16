@@ -11,6 +11,10 @@ args@{
 {
   name = "doom-dashboard";
 
+  group = "doom-modules";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

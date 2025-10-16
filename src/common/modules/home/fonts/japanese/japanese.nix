@@ -11,6 +11,10 @@ args@{
 {
   name = "japanese";
 
+  group = "fonts";
+  input = "common";
+  namespace = "home";
+
   submodules = {
     common = {
       fonts = {

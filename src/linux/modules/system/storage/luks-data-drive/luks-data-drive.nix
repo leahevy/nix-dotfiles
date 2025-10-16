@@ -11,6 +11,10 @@ args@{
 {
   name = "luks-data-drive";
 
+  group = "storage";
+  input = "linux";
+  namespace = "system";
+
   defaults = {
     fsType = "btrfs";
     fsOptions = [

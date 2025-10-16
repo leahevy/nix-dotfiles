@@ -11,6 +11,10 @@ args@{
 {
   name = "swaylock";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     useFancy = false;
     useEffects = false;

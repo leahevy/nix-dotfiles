@@ -11,6 +11,10 @@ args@{
 {
   name = "web-app-qutebrowser";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     persistenceDirs = [
       ".local/state/web-apps"

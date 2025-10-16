@@ -11,6 +11,10 @@ args@{
 {
   name = "nix-index";
 
+  group = "nix";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

@@ -11,6 +11,10 @@ args@{
 {
   name = "nwg-wrapper";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     usedTerminal = "xterm";
     usedShell = "bash";

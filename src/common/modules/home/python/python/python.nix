@@ -11,6 +11,10 @@ args@{
 {
   name = "python";
 
+  group = "python";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     basePackages = [
       "black"

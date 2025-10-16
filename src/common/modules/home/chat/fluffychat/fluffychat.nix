@@ -11,6 +11,10 @@ args@{
 {
   name = "fluffychat";
 
+  group = "chat";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     let

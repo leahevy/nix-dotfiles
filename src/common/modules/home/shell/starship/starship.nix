@@ -11,6 +11,10 @@ args@{
 {
   name = "starship";
 
+  group = "shell";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

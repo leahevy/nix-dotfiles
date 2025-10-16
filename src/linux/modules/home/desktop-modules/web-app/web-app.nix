@@ -11,6 +11,10 @@ args@{
 {
   name = "web-app";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   assertions = [
     {
       assertion =

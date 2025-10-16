@@ -11,6 +11,10 @@ args@{
 {
   name = "xserver";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "system";
+
   configuration =
     context@{ config, options, ... }:
     {

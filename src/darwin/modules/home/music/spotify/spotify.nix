@@ -11,6 +11,10 @@ args@{
 {
   name = "spotify";
 
+  group = "music";
+  input = "darwin";
+  namespace = "home";
+
   submodules = {
     darwin = {
       software = {

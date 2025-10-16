@@ -11,11 +11,15 @@ args@{
 {
   name = "cleanup-desktop";
 
+  group = "xdg";
+  input = "linux";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {
       xdg.desktopEntries = {
-        "nvidia-settings" = {
+        "nvidia-settings" = lib.mkIf (self.isModuleEnabled "graphics.nvidia-setup") {
           name = "NVIDIA X Server Settings";
           noDisplay = true;
         };

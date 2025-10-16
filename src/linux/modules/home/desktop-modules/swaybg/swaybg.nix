@@ -11,6 +11,10 @@ args@{
 {
   name = "swaybg";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     output = "*";
     mode = "fit";

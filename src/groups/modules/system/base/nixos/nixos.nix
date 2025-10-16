@@ -13,6 +13,10 @@ args@{
   name = "nixos";
   description = "NixOS base group module";
 
+  group = "base";
+  input = "groups";
+  namespace = "system";
+
   submodules =
     if self ? isLinux && self.isLinux then
       {
@@ -20,14 +24,14 @@ args@{
           style = {
             stylix = true;
           };
+        };
+        linux = {
           system = {
             gc = true;
             auto-upgrades = true;
             timesyncd = true;
             tmp = true;
           };
-        };
-        linux = {
           services = {
             sshd = true;
             printing = true;

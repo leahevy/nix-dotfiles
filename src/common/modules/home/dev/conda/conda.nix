@@ -11,6 +11,10 @@ args@{
 {
   name = "conda";
 
+  group = "dev";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     withPkgInstall = false;
   };

@@ -11,6 +11,10 @@ args@{
 {
   name = "qutebrowser";
 
+  group = "browser";
+  input = "linux";
+  namespace = "home";
+
   unfree = [ "widevine-cdm" ];
 
   submodules = {

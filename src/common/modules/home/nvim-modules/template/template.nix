@@ -11,6 +11,10 @@ args@{
 {
   name = "template";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     templates = [ ];
 
@@ -22,7 +26,11 @@ args@{
         icon = "󱃗";
         autoInsert = {
           pattern = "*.nix";
-          pathFilter = "~/.config/nx";
+          pathFilter = [
+            "~/.config/nx/nxcore/src"
+            "~/.config/nx/nxconfig/modules"
+            "~/.config/nx/nxconfig/profiles"
+          ];
         };
         template = builtins.readFile "${defs.rootPath}/templates/modules/module.nix";
       }
@@ -139,28 +147,107 @@ args@{
             email = "${self.user.email}",
           })
 
+          local function get_current_file_path()
+            local current = vim.fn.expand('%:.:r')
+            local absolute = vim.fn.resolve(vim.fn.fnamemodify(current, ":p:r"))
+            local home_dir = vim.fn.expand("~")
+            return absolute:gsub("^" .. vim.pesc(home_dir), "~")
+          end
+
+          local function extract_path_components()
+            local path = get_current_file_path()
+            local parts = vim.split(path, '/')
+
+            local modules_index = nil
+            for i, part in ipairs(parts) do
+              if part == "modules" then
+                modules_index = i
+                break
+              end
+            end
+
+            if not modules_index then
+              error("Module file not in correct location - missing 'modules' in path")
+            end
+
+            local input_name = "unknown"
+
+            for i = 1, modules_index - 1 do
+              if parts[i] == "nxcore" and i + 1 < modules_index and parts[i + 1] == "src" and i + 2 < modules_index then
+                input_name = parts[i + 2]
+                break
+              elseif parts[i] == "nxconfig" then
+                if i + 1 < modules_index and parts[i + 1] == "profiles" then
+                  input_name = "profile"
+                elseif i + 1 == modules_index then
+                  input_name = "config"
+                end
+                break
+              end
+            end
+
+            if modules_index + 3 > #parts then
+              error("Invalid module path structure - expected modules/NAMESPACE/GROUP/MODULE/")
+            end
+
+            local namespace = parts[modules_index + 1]
+            local group = parts[modules_index + 2]
+
+            return {
+              input = input_name,
+              namespace = namespace,
+              group = group,
+            }
+          end
+
+          function extract_input()
+            local ok, result = pcall(extract_path_components)
+            return ok and result.input or "INVALID_PATH"
+          end
+
+          function extract_namespace()
+            local ok, result = pcall(extract_path_components)
+            return ok and result.namespace or "INVALID_PATH"
+          end
+
+          function extract_group()
+            local ok, result = pcall(extract_path_components)
+            return ok and result.group or "INVALID_PATH"
+          end
+
           ${lib.concatMapStringsSep "\n" (
             template:
             let
               sanitizedName = lib.replaceStrings [ "-" "_" ] [ "" "" ] template.name;
               hasPathFilter = template.autoInsert ? pathFilter;
-              normalizedPathFilter =
+              normalizedPathFilters =
                 if hasPathFilter then
-                  normalizeHomePath (lib.removeSuffix "/**" template.autoInsert.pathFilter)
+                  map (path: normalizeHomePath (lib.removeSuffix "/**" path)) template.autoInsert.pathFilter
                 else
-                  "";
+                  [ ];
             in
             ''
               vim.api.nvim_create_autocmd("BufNewFile", {
                 pattern = "${template.autoInsert.pattern}",
                 callback = function(args)
                   local current_file = vim.api.nvim_buf_get_name(args.buf)
+                  local absolute_file = vim.fn.resolve(vim.fn.fnamemodify(current_file, ":p"))
+                  local home_dir = vim.fn.expand("~")
+                  local tilde_file = absolute_file:gsub("^" .. vim.pesc(home_dir), "~")
 
                   ${
                     if hasPathFilter then
                       ''
-                        local base_path = vim.fn.expand("${normalizedPathFilter}")
-                        if current_file:find("^" .. vim.pesc(base_path) .. "/") then
+                        local matches_path = false
+                        ${lib.concatMapStringsSep "\n                        " (path: ''
+                          local base_path = vim.fn.expand("${path}")
+                          if current_file:find("^" .. vim.pesc(base_path) .. "/") or
+                             absolute_file:find("^" .. vim.pesc(base_path) .. "/") or
+                             tilde_file:find("^" .. vim.pesc("${path}") .. "/") then
+                            matches_path = true
+                          end
+                        '') normalizedPathFilters}
+                        if matches_path then
                           vim.schedule(function()
                             vim.api.nvim_set_option_value('filetype', '${template.extension}', { buf = args.buf })
                             local current_buf = vim.api.nvim_get_current_buf()

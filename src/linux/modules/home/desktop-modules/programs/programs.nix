@@ -17,6 +17,10 @@ in
 {
   name = "programs";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   assertions = [
     {
       assertion =

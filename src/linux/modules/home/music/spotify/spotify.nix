@@ -11,6 +11,10 @@ args@{
 {
   name = "spotify";
 
+  group = "music";
+  input = "linux";
+  namespace = "home";
+
   unfree = [ "spotify" ];
 
   configuration =

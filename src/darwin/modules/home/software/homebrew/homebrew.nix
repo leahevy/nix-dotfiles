@@ -11,6 +11,10 @@ args@{
 {
   name = "homebrew";
 
+  group = "software";
+  input = "darwin";
+  namespace = "home";
+
   defaults = {
     headers = [ "cask_args appdir: '~/Applications', require_sha: true" ];
     taps = [ ];

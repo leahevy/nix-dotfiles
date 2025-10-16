@@ -10,6 +10,9 @@ args@{
 }:
 {
   name = "impermanence";
+  group = "system";
+  input = "build";
+  namespace = "home";
 
   configuration =
     context@{ config, options, ... }:

@@ -11,6 +11,10 @@ args@{
 {
   name = "ssh-agent";
 
+  group = "services";
+  input = "linux";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

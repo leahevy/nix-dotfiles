@@ -11,6 +11,10 @@ args@{
 {
   name = "ghostty";
 
+  group = "terminal";
+  input = "darwin";
+  namespace = "home";
+
   submodules = {
     darwin = {
       software = {

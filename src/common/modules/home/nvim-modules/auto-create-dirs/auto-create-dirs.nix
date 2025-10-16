@@ -12,6 +12,10 @@ args@{
   name = "auto-create-dirs";
   description = "Automatically creates parent directories when saving files in Neovim";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

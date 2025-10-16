@@ -19,6 +19,9 @@ let
 in
 {
   name = "users";
+  group = "core";
+  input = "build";
+  namespace = "system";
 
   configuration =
     context@{ config, options, ... }:

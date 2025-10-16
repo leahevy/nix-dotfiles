@@ -11,6 +11,10 @@ args@{
 {
   name = "niri";
 
+  group = "desktop";
+  input = "linux";
+  namespace = "home";
+
   submodules = {
     linux = {
       browser = {

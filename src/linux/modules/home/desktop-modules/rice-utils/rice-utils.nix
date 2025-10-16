@@ -11,6 +11,10 @@ args@{
 {
   name = "rice-utils";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   submodules = {
     common = {
       fonts = {

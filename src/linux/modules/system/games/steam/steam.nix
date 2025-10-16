@@ -11,6 +11,10 @@ args@{
 {
   name = "steam";
 
+  group = "games";
+  input = "linux";
+  namespace = "system";
+
   broken = true;
 
   assertions = [

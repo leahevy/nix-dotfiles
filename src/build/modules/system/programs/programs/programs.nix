@@ -10,6 +10,9 @@ args@{
 }:
 {
   name = "programs";
+  group = "programs";
+  input = "build";
+  namespace = "system";
 
   configuration =
     context@{ config, options, ... }:

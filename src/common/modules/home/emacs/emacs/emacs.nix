@@ -11,6 +11,10 @@ args@{
 {
   name = "emacs";
 
+  group = "emacs";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     terminal = "ghostty";
   };

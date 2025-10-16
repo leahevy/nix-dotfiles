@@ -10,8 +10,11 @@ args@{
 }:
 {
   name = "nixos";
-
   description = "Build modules for NixOS system configuration";
+
+  group = "build";
+  input = "groups";
+  namespace = "system";
 
   submodules = {
     build = {

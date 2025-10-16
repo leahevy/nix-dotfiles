@@ -11,6 +11,10 @@ args@{
 {
   name = "pipewire";
 
+  group = "sound";
+  input = "linux";
+  namespace = "system";
+
   configuration =
     context@{ config, options, ... }:
     {

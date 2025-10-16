@@ -11,6 +11,10 @@ args@{
 {
   name = "teams";
 
+  group = "video-conferencing";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

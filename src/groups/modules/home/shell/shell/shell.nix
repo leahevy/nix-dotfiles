@@ -8,10 +8,13 @@ args@{
   self,
   ...
 }:
-
 {
   name = "shell";
   description = "Shell group module";
+
+  group = "shell";
+  input = "groups";
+  namespace = "home";
 
   submodules = {
     common = {

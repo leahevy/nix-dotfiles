@@ -11,6 +11,10 @@ args@{
 {
   name = "todoist";
 
+  group = "todo";
+  input = "linux";
+  namespace = "home";
+
   unfree = [ "todoist-electron" ];
 
   configuration =

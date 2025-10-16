@@ -11,6 +11,10 @@ args@{
 {
   name = "heroic";
 
+  group = "games";
+  input = "linux";
+  namespace = "home";
+
   submodules = {
     linux = {
       games = {

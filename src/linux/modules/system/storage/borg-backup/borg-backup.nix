@@ -11,6 +11,10 @@ args@{
 {
   name = "borg-backup";
 
+  group = "storage";
+  input = "linux";
+  namespace = "system";
+
   defaults = {
     repository = {
       server = "";

@@ -11,6 +11,10 @@ args@{
 {
   name = "nodejs";
 
+  group = "dev";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     basePackages = [
       "npm"

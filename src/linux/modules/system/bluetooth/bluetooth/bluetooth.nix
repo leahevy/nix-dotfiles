@@ -11,6 +11,10 @@ args@{
 {
   name = "bluetooth";
 
+  group = "bluetooth";
+  input = "linux";
+  namespace = "system";
+
   defaults = {
     withBlueman = false;
   };

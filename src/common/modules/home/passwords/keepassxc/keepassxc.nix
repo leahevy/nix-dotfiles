@@ -11,6 +11,10 @@ args@{
 {
   name = "keepassxc";
 
+  group = "passwords";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     let

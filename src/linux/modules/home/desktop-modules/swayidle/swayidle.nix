@@ -11,6 +11,10 @@ args@{
 {
   name = "swayidle";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     package = pkgs.swaylock;
     commandline = "swaylock --daemonize";

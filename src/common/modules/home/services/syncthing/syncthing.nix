@@ -11,6 +11,10 @@ args@{
 {
   name = "syncthing";
 
+  group = "services";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     syncName = "";
     syncID = "";

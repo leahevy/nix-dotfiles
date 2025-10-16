@@ -11,6 +11,10 @@ args@{
 {
   name = "nerdfonts";
 
+  group = "fonts";
+  input = "common";
+  namespace = "home";
+
   submodules = {
     common = {
       fonts = {

@@ -10,6 +10,10 @@ args@{
 {
   name = "keyring-unlock";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     passwordSopsFile = "wallet.pass";
   };

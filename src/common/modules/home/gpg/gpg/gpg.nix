@@ -44,6 +44,10 @@ in
 {
   name = "gpg";
 
+  group = "gpg";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

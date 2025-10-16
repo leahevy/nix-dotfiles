@@ -11,6 +11,10 @@ args@{
 {
   name = "kitty";
 
+  group = "terminal";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     setEnv = false;
   };

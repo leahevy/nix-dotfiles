@@ -11,6 +11,10 @@ args@{
 {
   name = "fastfetch";
 
+  group = "shell";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     logo = "NixOS_small";
     structure = "os:kernel:uptime:packages:shell:wm:terminal:memory:swap";

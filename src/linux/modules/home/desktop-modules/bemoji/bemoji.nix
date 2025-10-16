@@ -11,6 +11,10 @@ args@{
 {
   name = "bemoji";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   submodules = {
     linux = {
       desktop-modules = {

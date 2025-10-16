@@ -11,6 +11,10 @@ args@{
 {
   name = "ghostty-config";
 
+  group = "terminal";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     fontSize = 12;
     opacity = 0.90;

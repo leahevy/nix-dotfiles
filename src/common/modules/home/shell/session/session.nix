@@ -11,6 +11,10 @@ args@{
 {
   name = "session";
 
+  group = "shell";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

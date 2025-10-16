@@ -11,6 +11,10 @@ args@{
 {
   name = "qutebrowser-config";
 
+  group = "browser";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     privacySearch = true;
     startpageAsPrivacySearch = true;

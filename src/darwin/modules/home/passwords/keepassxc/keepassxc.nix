@@ -11,6 +11,10 @@ args@{
 {
   name = "keepassxc";
 
+  group = "passwords";
+  input = "darwin";
+  namespace = "home";
+
   submodules = {
     darwin = {
       software = {

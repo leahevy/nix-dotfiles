@@ -11,6 +11,10 @@ args@{
 {
   name = "dbus";
 
+  group = "services";
+  input = "linux";
+  namespace = "system";
+
   configuration =
     context@{ config, options, ... }:
     {

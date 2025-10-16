@@ -11,6 +11,10 @@ args@{
 {
   name = "borg-backup";
 
+  group = "storage";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     monitoringEnabled = true;
     terminal = "ghostty";

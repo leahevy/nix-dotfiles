@@ -11,6 +11,10 @@ args@{
 {
   name = "logseq";
 
+  group = "organising";
+  input = "darwin";
+  namespace = "home";
+
   submodules = {
     darwin = {
       software = {

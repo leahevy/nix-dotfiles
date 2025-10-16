@@ -10,8 +10,11 @@ args@{
 }:
 {
   name = "home-integrated";
-
   description = "Build modules for NixOS integrated home-manager configuration";
+
+  group = "build";
+  input = "groups";
+  namespace = "home";
 
   submodules = {
     build = {

@@ -11,6 +11,10 @@ args@{
 {
   name = "conda";
 
+  group = "dev";
+  input = "darwin";
+  namespace = "home";
+
   submodules = {
     darwin = {
       software = {

@@ -11,6 +11,10 @@ args@{
 {
   name = "keyd";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "system";
+
   assertions = [
     {
       assertion = self.user.isModuleEnabled "desktop-modules.keyd";

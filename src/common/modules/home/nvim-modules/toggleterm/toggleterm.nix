@@ -11,6 +11,10 @@ args@{
 {
   name = "toggleterm";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

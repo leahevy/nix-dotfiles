@@ -11,6 +11,10 @@ args@{
 {
   name = "copilot";
 
+  group = "doom-modules";
+  input = "common";
+  namespace = "home";
+
   unfree = [ "copilot-language-server" ];
 
   configuration =

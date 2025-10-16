@@ -11,6 +11,10 @@ args@{
 {
   name = "niri";
 
+  group = "desktop";
+  input = "linux";
+  namespace = "system";
+
   submodules = {
     linux = {
       desktop = {

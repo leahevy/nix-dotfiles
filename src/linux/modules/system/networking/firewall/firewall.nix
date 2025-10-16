@@ -11,6 +11,10 @@ args@{
 {
   name = "firewall";
 
+  group = "networking";
+  input = "linux";
+  namespace = "system";
+
   defaults = {
     openWebServer = true;
     additionalTCPPorts = [ ];

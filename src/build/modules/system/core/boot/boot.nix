@@ -13,6 +13,9 @@ let
 in
 {
   name = "boot";
+  group = "core";
+  input = "build";
+  namespace = "system";
 
   configuration =
     context@{ config, options, ... }:

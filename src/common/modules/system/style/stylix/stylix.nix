@@ -11,6 +11,10 @@ args@{
 {
   name = "stylix";
 
+  group = "style";
+  input = "common";
+  namespace = "system";
+
   defaults = {
     themeName = "atelier-seaside";
     polarity = "dark";

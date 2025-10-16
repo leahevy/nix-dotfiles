@@ -11,6 +11,10 @@ args@{
 {
   name = "web-app-chromium";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     package = pkgs.chromium;
     program = "chromium";

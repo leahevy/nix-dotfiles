@@ -11,6 +11,10 @@ args@{
 {
   name = "typescript-lsp";
 
+  group = "dev";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

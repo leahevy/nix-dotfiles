@@ -11,6 +11,10 @@ args@{
 {
   name = "poetry";
 
+  group = "dev";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

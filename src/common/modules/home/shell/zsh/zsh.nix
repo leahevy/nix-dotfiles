@@ -11,6 +11,10 @@ args@{
 {
   name = "zsh";
 
+  group = "shell";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

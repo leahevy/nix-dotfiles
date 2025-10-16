@@ -11,6 +11,10 @@ args@{
 {
   name = "fontconfig";
 
+  group = "fonts";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

@@ -103,7 +103,9 @@ rec {
         };
 
         fileData = import filePath importArgs;
-        validatedData = args.funcs.validateModule fileData filePath;
+        validatedData = args.funcs.validateModule fileData filePath {
+          inputName = self.moduleInputName;
+        };
       in
       validatedData;
 
@@ -385,7 +387,9 @@ rec {
             self = finalContext;
           };
           fileData = import filePath importArgs;
-          validatedData = args.funcs.validateModule fileData filePath;
+          validatedData = args.funcs.validateModule fileData filePath {
+            inputName = moduleContext.moduleInputName;
+          };
         in
         validatedData;
 

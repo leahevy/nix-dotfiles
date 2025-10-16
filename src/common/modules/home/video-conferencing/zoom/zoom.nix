@@ -11,6 +11,10 @@ args@{
 {
   name = "zoom";
 
+  group = "video-conferencing";
+  input = "common";
+  namespace = "home";
+
   unfree = [
     "zoom"
   ];

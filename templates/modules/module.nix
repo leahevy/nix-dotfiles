@@ -10,10 +10,11 @@ args@{
 }:
 {
   name = "{{_file_name_}}";
+  #description = "";
 
-  # All following fields are optional and can be removed if not required for a
-  # specific module.
-  description = "";
+  group = "{{_lua:extract_group()_}}";
+  input = "{{_lua:extract_input()_}}";
+  namespace = "{{_lua:extract_namespace()_}}";
 
   # Submodules to import, same syntax as in profiles:
   #   INPUT = { GROUP = { MODULE = true or CONFIG_ATTRIBUTESET, ...}; };

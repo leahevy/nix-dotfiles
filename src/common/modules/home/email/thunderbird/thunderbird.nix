@@ -11,6 +11,10 @@ args@{
 {
   name = "thunderbird";
 
+  group = "email";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     let

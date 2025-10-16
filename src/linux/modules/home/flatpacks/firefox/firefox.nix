@@ -11,6 +11,10 @@ args@{
 {
   name = "firefox";
 
+  group = "flatpacks";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     package = "org.mozilla.firefox";
   };

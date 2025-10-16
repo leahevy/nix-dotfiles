@@ -11,6 +11,10 @@ args@{
 {
   name = "steam";
 
+  group = "flatpacks";
+  input = "linux";
+  namespace = "home";
+
   broken = true;
 
   defaults = {

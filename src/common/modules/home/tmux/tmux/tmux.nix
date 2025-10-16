@@ -11,6 +11,10 @@ args@{
 {
   name = "tmux";
 
+  group = "tmux";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     waylandClipboard = false;
     primaryBg = "#dfff00";

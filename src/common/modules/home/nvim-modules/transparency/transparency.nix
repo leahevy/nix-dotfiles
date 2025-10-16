@@ -11,6 +11,10 @@ args@{
 {
   name = "transparency";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     activeTabColor = "#50fa7b";
   };

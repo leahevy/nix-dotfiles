@@ -11,6 +11,10 @@ args@{
 {
   name = "user-dirs";
 
+  group = "xdg";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     download = "downloads";
     documents = "documents";

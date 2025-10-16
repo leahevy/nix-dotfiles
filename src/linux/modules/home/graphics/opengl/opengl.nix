@@ -11,6 +11,10 @@ args@{
 {
   name = "opengl";
 
+  group = "graphics";
+  input = "linux";
+  namespace = "home";
+
   assertions = [
     {
       assertion =

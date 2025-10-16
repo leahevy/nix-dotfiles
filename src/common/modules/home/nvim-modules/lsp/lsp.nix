@@ -11,6 +11,10 @@ args@{
 {
   name = "lsp";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     enablePython = true;
     enableJavaScript = true;

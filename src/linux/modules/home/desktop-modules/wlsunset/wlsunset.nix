@@ -11,6 +11,10 @@ args@{
 {
   name = "wlsunset";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   defaults = rec {
     location = if self.user.isStandalone then self.user.location else self.host.location;
   };

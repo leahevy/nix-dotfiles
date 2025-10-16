@@ -37,6 +37,10 @@ in
 {
   name = "which-key";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     delay = 400;
     showHelp = true;

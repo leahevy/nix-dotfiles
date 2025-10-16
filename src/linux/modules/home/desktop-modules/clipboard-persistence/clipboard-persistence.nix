@@ -10,6 +10,10 @@ args@{
 {
   name = "clipboard-persistence";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   assertions = [
     {
       assertion = self.isModuleEnabled "desktop-modules.fuzzel";

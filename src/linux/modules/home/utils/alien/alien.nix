@@ -11,6 +11,10 @@ args@{
 {
   name = "alien";
 
+  group = "utils";
+  input = "linux";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

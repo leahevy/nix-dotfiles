@@ -10,6 +10,9 @@ args@{
 }:
 {
   name = "desktop";
+  group = "desktop";
+  input = "build";
+  namespace = "system";
 
   submodules = {
     linux = {

@@ -11,6 +11,10 @@ args@{
 {
   name = "doom";
 
+  group = "emacs";
+  input = "common";
+  namespace = "home";
+
   submodules = {
     common = {
       doom-modules = {
@@ -24,6 +28,9 @@ args@{
         transparency = true;
         vim = true;
         nix-doom-logo = true;
+      };
+      emacs = {
+        emacs = true;
       };
     };
   };
@@ -290,14 +297,6 @@ args@{
         ];
       }
     ];
-  };
-
-  submodules = {
-    common = {
-      emacs = {
-        emacs = true;
-      };
-    };
   };
 
   configuration =

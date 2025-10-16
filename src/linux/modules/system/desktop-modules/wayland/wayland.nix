@@ -11,6 +11,10 @@ args@{
 {
   name = "wayland";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "system";
+
   configuration =
     context@{ config, options, ... }:
     {

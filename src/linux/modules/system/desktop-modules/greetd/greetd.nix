@@ -11,6 +11,10 @@ args@{
 {
   name = "greetd";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "system";
+
   assertions = [
     {
       assertion = self.settings.cmdline != null && self.settings.cmdline != "";

@@ -11,6 +11,10 @@ args@{
 {
   name = "gtk";
 
+  group = "gnome";
+  input = "linux";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

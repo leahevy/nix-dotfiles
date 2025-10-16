@@ -11,6 +11,10 @@ args@{
 {
   name = "scanning";
 
+  group = "services";
+  input = "linux";
+  namespace = "system";
+
   defaults = {
     addMainUserToGroup = true;
     disableEsclBackend = false;

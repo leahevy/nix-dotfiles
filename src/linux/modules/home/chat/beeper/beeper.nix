@@ -11,6 +11,10 @@ args@{
 {
   name = "beeper";
 
+  group = "chat";
+  input = "linux";
+  namespace = "home";
+
   unfree = [ "beeper" ];
 
   defaults = {

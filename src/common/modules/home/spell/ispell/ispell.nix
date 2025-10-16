@@ -11,6 +11,10 @@ args@{
 {
   name = "ispell";
 
+  group = "spell";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

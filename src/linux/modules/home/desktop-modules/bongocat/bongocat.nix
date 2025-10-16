@@ -11,6 +11,10 @@ args@{
 {
   name = "bongocat";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     event = null;
     keyboardName = null;

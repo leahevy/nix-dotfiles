@@ -11,6 +11,10 @@ args@{
 {
   name = "project";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     autoDetectProjects = true;
     maxProjects = 50;

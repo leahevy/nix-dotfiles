@@ -11,6 +11,10 @@ args@{
 {
   name = "gnome-standalone";
 
+  group = "style";
+  input = "linux";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

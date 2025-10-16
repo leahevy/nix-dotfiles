@@ -10,8 +10,11 @@ args@{
 }:
 {
   name = "home-standalone";
-
   description = "Build modules for standalone home-manager configuration";
+
+  group = "build";
+  input = "groups";
+  namespace = "home";
 
   submodules = {
     build = {

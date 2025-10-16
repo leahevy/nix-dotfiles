@@ -11,6 +11,10 @@ args@{
 {
   name = "fuzzel";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     let

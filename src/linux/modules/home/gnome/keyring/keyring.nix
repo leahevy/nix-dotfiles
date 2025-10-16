@@ -11,6 +11,10 @@ args@{
 {
   name = "keyring";
 
+  group = "gnome";
+  input = "linux";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

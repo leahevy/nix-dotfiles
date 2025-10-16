@@ -12,6 +12,10 @@ args@{
   name = "highlight-dead-chars";
   description = "Highlights whitespace and non-text characters in Neovim";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

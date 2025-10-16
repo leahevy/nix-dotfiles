@@ -11,6 +11,10 @@ args@{
 {
   name = "dashboard";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     ensureBaseProjects = [
       "$NXCORE_DIR"

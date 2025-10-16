@@ -11,6 +11,10 @@ args@{
 {
   name = "vimwiki";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     wikiPath = "~/.local/share/nvim/wiki/";
   };

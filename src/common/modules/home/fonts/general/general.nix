@@ -11,6 +11,10 @@ args@{
 {
   name = "general";
 
+  group = "fonts";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     withUnfreeFonts = false;
   };

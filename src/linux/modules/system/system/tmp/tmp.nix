@@ -11,6 +11,10 @@ args@{
 {
   name = "tmp";
 
+  group = "system";
+  input = "linux";
+  namespace = "system";
+
   configuration =
     context@{ config, options, ... }:
     {

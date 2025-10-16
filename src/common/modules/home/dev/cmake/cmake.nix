@@ -11,6 +11,10 @@ args@{
 {
   name = "cmake";
 
+  group = "dev";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

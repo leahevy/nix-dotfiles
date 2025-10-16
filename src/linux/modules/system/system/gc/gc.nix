@@ -11,6 +11,10 @@ args@{
 {
   name = "gc";
 
+  group = "system";
+  input = "linux";
+  namespace = "system";
+
   defaults = {
     useNH = true;
   };

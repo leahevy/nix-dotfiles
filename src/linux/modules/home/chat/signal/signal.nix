@@ -11,6 +11,10 @@ args@{
 {
   name = "signal";
 
+  group = "chat";
+  input = "linux";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

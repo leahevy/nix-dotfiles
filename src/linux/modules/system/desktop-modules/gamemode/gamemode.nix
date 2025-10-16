@@ -11,6 +11,10 @@ args@{
 {
   name = "gamemode";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "system";
+
   configuration =
     context@{ config, options, ... }:
     {

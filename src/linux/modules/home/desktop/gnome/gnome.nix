@@ -11,6 +11,10 @@ args@{
 {
   name = "gnome";
 
+  group = "desktop";
+  input = "linux";
+  namespace = "home";
+
   submodules = {
     linux = {
       desktop = {

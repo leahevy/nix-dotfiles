@@ -11,6 +11,10 @@ args@{
 {
   name = "modes";
 
+  group = "power";
+  input = "linux";
+  namespace = "system";
+
   defaults = {
     sleep = true;
     suspend = true;

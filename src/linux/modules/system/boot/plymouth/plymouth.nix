@@ -11,6 +11,10 @@ args@{
 {
   name = "plymouth";
 
+  group = "boot";
+  input = "linux";
+  namespace = "system";
+
   configuration =
     context@{ config, options, ... }:
     {

@@ -14,6 +14,9 @@ let
 in
 {
   name = "network";
+  group = "core";
+  input = "build";
+  namespace = "system";
 
   configuration =
     context@{ config, options, ... }:

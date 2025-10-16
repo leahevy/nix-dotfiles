@@ -11,6 +11,10 @@ args@{
 {
   name = "firefox";
 
+  group = "browser";
+  input = "darwin";
+  namespace = "home";
+
   submodules = {
     darwin = {
       software = {

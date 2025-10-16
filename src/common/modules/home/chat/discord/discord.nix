@@ -11,6 +11,10 @@ args@{
 {
   name = "discord";
 
+  group = "chat";
+  input = "common";
+  namespace = "home";
+
   unfree = [
     "discord"
   ];

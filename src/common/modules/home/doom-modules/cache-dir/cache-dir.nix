@@ -11,6 +11,10 @@ args@{
 {
   name = "cache-dir";
 
+  group = "doom-modules";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

@@ -11,6 +11,10 @@ args@{
 {
   name = "luks-data-drive";
 
+  group = "storage";
+  input = "linux";
+  namespace = "home";
+
   assertions = [
     {
       assertion = self.host.isModuleEnabled "storage.luks-data-drive";

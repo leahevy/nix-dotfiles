@@ -11,6 +11,10 @@ args@{
 {
   name = "startify";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

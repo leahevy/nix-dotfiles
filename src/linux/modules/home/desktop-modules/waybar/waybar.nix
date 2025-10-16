@@ -11,6 +11,10 @@ args@{
 {
   name = "waybar";
 
+  group = "desktop-modules";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     niri = false;
     output = null;

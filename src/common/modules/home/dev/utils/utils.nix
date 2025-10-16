@@ -11,6 +11,10 @@ args@{
 {
   name = "utils";
 
+  group = "dev";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

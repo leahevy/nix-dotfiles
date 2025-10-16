@@ -11,6 +11,10 @@ args@{
 rec {
   name = "immich";
 
+  group = "web-apps";
+  input = "linux";
+  namespace = "home";
+
   defaults = {
     name = "Immich";
     webapp = "immich";

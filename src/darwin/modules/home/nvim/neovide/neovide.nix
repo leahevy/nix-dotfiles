@@ -11,6 +11,10 @@ args@{
 {
   name = "neovide";
 
+  group = "nvim";
+  input = "darwin";
+  namespace = "home";
+
   submodules = {
     darwin = {
       software = {

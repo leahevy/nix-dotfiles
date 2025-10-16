@@ -11,6 +11,10 @@ args@{
 {
   name = "web-devicons";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   configuration =
     context@{ config, options, ... }:
     {

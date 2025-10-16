@@ -10,6 +10,9 @@ args@{
 }:
 {
   name = "sudo";
+  group = "core";
+  input = "build";
+  namespace = "system";
 
   configuration =
     context@{ config, options, ... }:

@@ -11,6 +11,10 @@ args@{
 {
   name = "nixvim";
 
+  group = "nvim";
+  input = "common";
+  namespace = "home";
+
   submodules = {
     common = {
       nvim-modules = {

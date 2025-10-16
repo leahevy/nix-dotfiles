@@ -11,6 +11,10 @@ args@{
 {
   name = "treesitter";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     enableHighlighting = true;
     enableIndentation = true;

@@ -11,6 +11,10 @@ args@{
 {
   name = "render-markdown";
 
+  group = "nvim-modules";
+  input = "common";
+  namespace = "home";
+
   defaults = {
     enabled = true;
     debounce = 100;

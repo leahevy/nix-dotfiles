@@ -11,6 +11,10 @@ args@{
 {
   name = "sshd";
 
+  group = "services";
+  input = "linux";
+  namespace = "system";
+
   submodules = {
     linux = {
       services = {

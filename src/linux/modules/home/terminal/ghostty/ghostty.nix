@@ -11,6 +11,10 @@ args@{
 {
   name = "ghostty";
 
+  group = "terminal";
+  input = "linux";
+  namespace = "home";
+
   submodules = {
     common = {
       terminal = {

@@ -11,6 +11,10 @@ args@{
 {
   name = "common";
 
+  group = "desktop";
+  input = "linux";
+  namespace = "system";
+
   defaults = { };
 
   assertions = [
