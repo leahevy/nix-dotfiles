@@ -59,7 +59,12 @@ args@{
     withNeovide = false;
     terminal = "ghostty";
     manpageViewer = true;
-    overrideThemeName = "cyberdream"; # Or null
+    overrideThemeName = "ayu"; # Or null
+    overrideThemeSettings = {
+      onedark = {
+        style = "deep";
+      };
+    };
     overrideThemeSettings = { };
     pureBlackBackground = true;
     overrideCursorHighlightColour = "#0b0b0b"; # Or null
@@ -87,13 +92,18 @@ args@{
         enable = true;
         package = pkgs-unstable.neovim-unwrapped;
 
-        colorschemes = lib.mkIf (self.settings.overrideThemeName != null) {
-          "${if self.settings.overrideThemeName != null then self.settings.overrideThemeName else "base16"}" =
+        colorschemes = lib.mkIf (self.settings.overrideThemeName != null) (
+          let
+            settings = self.settings.overrideThemeSettings.${self.settings.overrideThemeName} or { };
+          in
+          {
+            "${if self.settings.overrideThemeName != null then self.settings.overrideThemeName else "base16"}" =
             {
               enable = true;
-              settings = self.settings.overrideThemeSettings;
-            };
-        };
+            }
+            // lib.optionalAttrs (settings != { }) settings;
+          }
+        );
 
         opts = {
           number = true;
