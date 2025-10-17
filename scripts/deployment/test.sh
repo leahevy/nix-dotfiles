@@ -6,6 +6,7 @@ deployment_script_setup "test"
 
 parse_common_deployment_args "$@"
 ensure_nixos_only "test"
+check_deployment_conflicts "test"
 
 PROFILE="$(retrieve_active_profile)"
 

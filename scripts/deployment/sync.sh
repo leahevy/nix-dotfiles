@@ -6,6 +6,7 @@ deployment_script_setup "sync"
 
 parse_common_deployment_args "$@"
 check_git_worktrees_clean
+check_deployment_conflicts "sync"
 
 PROFILE="$(retrieve_active_profile)"
 

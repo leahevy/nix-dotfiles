@@ -5,6 +5,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
 simple_deployment_script_setup "brew"
 
 ensure_darwin_only "brew"
+check_deployment_conflicts "brew"
 
 BREWFILE="$HOME/.config/homebrew/Brewfile"
 

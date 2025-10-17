@@ -575,10 +575,107 @@ create_log_file() {
     local real_user="${SUDO_USER:-$USER}"
     local real_uid="${SUDO_UID:-$(id -u)}"
     local real_gid="${SUDO_GID:-$(id -g)}"
-    
+
     touch "$log_file"
-    
+
     if [[ "$UID" == 0 && -n "${SUDO_USER:-}" ]]; then
         chown "$real_uid:$real_gid" "$log_file"
+    fi
+}
+
+setup_deployment_lock() {
+    local command_name="$1"
+    local lock_dir="/tmp/.nx-deployment-lock"
+
+    if [[ -d "$lock_dir" ]]; then
+        echo
+        echo -e "${RED}Error: Another deployment command is already running${RESET}" >&2
+        echo
+        echo -e "${YELLOW}If you're sure no deployment is running, remove it with:${RESET}" >&2
+        echo -e "${WHITE}  rmdir '$lock_dir'${RESET}" >&2
+        exit 1
+    fi
+
+    if ! mkdir "$lock_dir" 2>/dev/null; then
+        echo -e "${RED}Error: Failed to create deployment lock directory${RESET}" >&2
+        exit 1
+    fi
+
+    echo "$$:$command_name:$(date +%s)" > "$lock_dir/info"
+
+    trap 'cleanup_deployment_lock' EXIT INT TERM
+}
+
+cleanup_deployment_lock() {
+    local lock_dir="/tmp/.nx-deployment-lock"
+    if [[ -d "$lock_dir" ]]; then
+        rm -rf "$lock_dir" 2>/dev/null || true
+    fi
+}
+
+check_nix_daemon_activity() {
+    local build_processes
+    build_processes=$(ps ax -o command | grep "^nix-daemon" | grep -v "nix-daemon --daemon" | wc -l) || build_processes=0
+
+    if [[ "$build_processes" -gt 0 ]]; then
+        echo
+        echo -e "${RED}Warning: Nix daemon appears to be building ($build_processes active processes)${RESET}" >&2
+        echo -e "${YELLOW}Running concurrent builds may cause issues.${RESET}" >&2
+        echo
+        echo -en "${WHITE}Do you want to continue anyway? ${RESET}[y/N]: " >&2
+        read -r response
+        case "$response" in
+            [yY]|[yY][eE][sS])
+                echo
+                echo -e "${YELLOW}Continuing with active nix builds...${RESET}" >&2
+                return 0
+                ;;
+            *)
+                echo
+                echo -e "${RED}Aborted due to active nix builds${RESET}" >&2
+                exit 1
+                ;;
+        esac
+    fi
+
+    return 0
+}
+
+check_brew_activity() {
+    local brew_processes
+    brew_processes=$(ps ax -o command | grep -E "^brew " | wc -l) || brew_processes=0
+
+    if [[ "$brew_processes" -gt 0 ]]; then
+        echo
+        echo -e "${RED}Warning: Homebrew appears to be running ($brew_processes active processes)${RESET}" >&2
+        echo -e "${YELLOW}Running concurrent brew operations may cause issues.${RESET}" >&2
+        echo
+        echo -en "${WHITE}Do you want to continue anyway? ${RESET}[y/N]: " >&2
+        read -r response
+        case "$response" in
+            [yY]|[yY][eE][sS])
+                echo
+                echo -e "${YELLOW}Continuing with active brew processes...${RESET}" >&2
+                return 0
+                ;;
+            *)
+                echo
+                echo -e "${RED}Aborted due to active brew processes${RESET}" >&2
+                exit 1
+                ;;
+        esac
+    fi
+
+    return 0
+}
+
+check_deployment_conflicts() {
+    local command_name="$1"
+    setup_deployment_lock "$command_name"
+
+    check_nix_daemon_activity
+
+    if [[ "$command_name" == "brew" ]]; then
+        check_brew_activity
     fi
 }

@@ -8,6 +8,7 @@ parse_minimal_deployment_args "$@"
 ensure_nixos_only "rollback"
 
 check_git_worktrees_clean
+check_deployment_conflicts "rollback"
 
 PROFILE="$(retrieve_active_profile)"
 
