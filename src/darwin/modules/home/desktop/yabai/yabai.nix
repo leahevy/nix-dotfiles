@@ -238,8 +238,11 @@ args@{
             "alt - return" = "open -na Ghostty";
             "shift + alt - return" = "open -na Tmux";
 
-            "alt - p" = "screencapture -i ~/Pictures/screenshots/$(date +%Y_%m_%d_%H%M%S).png";
-            "shift + alt - p" = "screencapture -iw ~/Pictures/screenshots/$(date +%Y_%m_%d_%H%M%S).png";
+            "alt - p" =
+              "mkdir -p ~/Pictures/screenshots && screencapture -i ~/Pictures/screenshots/$(date +%Y_%m_%d_%H%M%S).png";
+            "shift + alt - p" =
+              "mkdir -p ~/Pictures/screenshots && screencapture -iw ~/Pictures/screenshots/$(date +%Y_%m_%d_%H%M%S).png";
+            "ctrl + alt - p" = "mkdir -p ~/Pictures/screenshots && open ~/Pictures/screenshots";
 
             "shift + alt - q" = "restart-yabai";
             "shift + alt - w" = "restart-skhd";
