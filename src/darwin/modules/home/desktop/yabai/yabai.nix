@@ -35,6 +35,81 @@ args@{
     additionalRules = [ ];
     additionalKeyBindings = { };
     additionalConfig = { };
+    additionalApplicationMapping = { };
+    additionalTerminalAppsMapping = { };
+    defaultAppIcon = "app";
+    baseTerminalAppsMapping = {
+      chart = [
+        "btop"
+        "htop"
+      ];
+      dev = [
+        "nvim"
+        "emacs"
+      ];
+      file = [ "ranger" ];
+      git = [ "lazygit" ];
+      note = [ "bat" ];
+    };
+    baseApplicationMapping = {
+      term = [
+        "Terminal"
+        "iTerm2"
+        "Ghostty"
+        "Kitty"
+      ];
+      file = [ "Finder" ];
+      weather = [ "Weather" ];
+      clock = [ "Clock" ];
+      mail = [ "Mail" ];
+      calendar = [ "Calendar" ];
+      calc = [
+        "Calculator"
+        "Numi"
+      ];
+      map = [
+        "Maps"
+        "Find My"
+      ];
+      microphone = [ "Voice Memos" ];
+      chat = [ "Messages" ];
+      videochat = [ "FaceTime" ];
+      note = [
+        "Notes"
+        "TextEdit"
+      ];
+      list = [ "Reminders" ];
+      camera = [ "Photo Booth" ];
+      web = [
+        "Safari"
+        "Google Chrome"
+        "Chromium"
+        "Firefox"
+        "Qutebrowser"
+      ];
+      cog = [
+        "System Settings"
+        "System Information"
+      ];
+      music = [ "Music" ];
+      podcast = [ "Podcasts" ];
+      play = [ "TV" ];
+      book = [ "Books" ];
+      dev = [
+        "Xcode"
+        "Code"
+      ];
+      bookinfo = [
+        "Font Book"
+        "Dictionary"
+      ];
+      chart = [ "Activity Monitor" ];
+      disk = [ "Disk Utility" ];
+      preview = [
+        "Screenshot"
+        "Preview"
+      ];
+    };
     baseConfig = {
       "layout" = "bsp";
       "window_placement" = "first_child";
@@ -56,7 +131,7 @@ args@{
 
       "window_opacity" = "off";
       "window_shadow" = "off";
-      "external_bar" = "all:52:0";
+      "external_bar" = "all:50:0";
     };
     baseRules = [
       ''app="^System Settings$" manage=off''
@@ -81,13 +156,9 @@ args@{
         else
           null;
 
-      iconFontSize = "21.0";
-      labelFontSize = "17.0";
-      appIconFontSize = "21.0";
-      chevronFontSize = "25.0";
-
-      borderColor = "0xff88cc66";
-      appBackgroundColor = "0xff4d6b4d";
+      iconFontSize = "24.0";
+      labelFontSize = "20.0";
+      appIconFontSize = "24.0";
 
       iconFont =
         if stylixConfig != null then
@@ -131,19 +202,109 @@ args@{
         else
           "SF Mono:Regular:${appIconFontSize}";
 
-      chevronFont =
-        if stylixConfig != null then
-          let
-            monoPath =
-              if builtins.isString stylixConfig.fonts.monospace then
-                stylixConfig.fonts.monospace
-              else
-                stylixConfig.fonts.monospace.path;
-            monoName = lib.last (lib.splitString "/" monoPath);
-          in
-          "${monoName}:Bold:${chevronFontSize}"
-        else
-          "SF Mono:Bold:${chevronFontSize}";
+      colors = {
+        background = "0xe01d2021";
+        transparentBackground = "0x00000000";
+        blackBackground = "0xff000000";
+        border = "0xff88cc66";
+        foreground = "0xe0fbf1c7";
+        accent = "0xe0d65d0e";
+        accentBright = "0xe0fe8019";
+        black = "0xe0282828";
+        red = "0xe0cc241d";
+        green = "0xe098971a";
+        yellow = "0xe0d79921";
+        blue = "0xe0458588";
+        magenta = "0xe0b16286";
+        cyan = "0xe0689d6a";
+        white = "0xe0a89984";
+        blackBright = "0xe0928374";
+        redBright = "0xe0fb4934";
+        greenBright = "0xe0b8bb26";
+        yellowBright = "0xe0fabd2f";
+        blueBright = "0xe083a598";
+        magentaBright = "0xe0d3869b";
+        cyanBright = "0xe08ec07c";
+        whiteBright = "0xe0ebdbb2";
+      };
+
+      icons = {
+        cmd = "󰘳";
+        cog = "󰒓";
+        chart = "󱕍";
+        lock = "󰌾";
+
+        spaces = [
+          "󰎤"
+          "󰎧"
+          "󰎪"
+          "󰎭"
+          "󰎱"
+          "󰎳"
+          "󰎶"
+          "󰎹"
+          "󰎼"
+          "󰿬"
+        ];
+
+        app = "󰣆";
+        term = "󰆍";
+        package = "󰏓";
+        dev = "󰅨";
+        file = "󰉋";
+        git = "󰊢";
+        list = "󱃔";
+        screensaver = "󱄄";
+        weather = "󰖕";
+        mail = "󰇮";
+        calc = "󰪚";
+        map = "󰆋";
+        microphone = "󰍬";
+        chat = "󰍩";
+        videochat = "󰍫";
+        note = "󱞎";
+        camera = "󰄀";
+        web = "󰇧";
+        homeautomation = "󱉑";
+        music = "󰎄";
+        podcast = "󰦔";
+        play = "󱉺";
+        book = "󰂿";
+        bookinfo = "󱁯";
+        preview = "󰋲";
+        passkey = "󰷡";
+        download = "󱑢";
+        cast = "󱒃";
+        table = "󰓫";
+        present = "󰈩";
+        cloud = "󰅧";
+        pen = "󰏬";
+        remotedesktop = "󰢹";
+        clock = "󰥔";
+        calendar = "󰃭";
+        wifi = "󰖩";
+        wifiOff = "󰖪";
+        vpn = "󰦝";
+        volume = "󰖀";
+        battery = "󰁹";
+        swap = "󰁯";
+        ram = "󰓅";
+        disk = "󰋊";
+        cpu = "󰘚";
+      };
+
+      spaceColors = [
+        colors.yellow
+        colors.cyan
+        colors.magenta
+        colors.white
+        colors.blue
+        colors.red
+        colors.green
+        colors.yellow
+        colors.cyan
+        colors.magenta
+      ];
     in
     {
       home.packages = with pkgs; [
@@ -201,6 +362,9 @@ args@{
             ${lib.concatMapStrings (rule: ''
               yabai -m rule --add ${rule}
             '') allRules}
+
+            yabai -m signal --add event=window_created action="sketchybar -m --trigger window_change &> /dev/null"
+            yabai -m signal --add event=window_destroyed action="sketchybar -m --trigger window_change &> /dev/null"
 
             brew services start borders || true
             brew services start sketchybar || true
@@ -303,8 +467,8 @@ args@{
 
           options=(
             width=15.0
-            active_color=0xff88cc66
-            inactive_color=0x00000000
+            active_color=${colors.border}
+            inactive_color=${colors.transparentBackground}
             hidpi=on
           )
 
@@ -532,83 +696,121 @@ args@{
         text = ''
           #!/bin/bash
 
-          PLUGIN_DIR="$(brew --prefix)/share/sketchybar/examples/plugins"
+          PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
+          EXAMPLE_PLUGIN_DIR="$(brew --prefix)/share/sketchybar/examples/plugins"
 
-          sketchybar --bar position=top height=40 blur_radius=30 color=0x40000000
+          sketchybar --bar position=top height=48 blur_radius=0 color=${colors.transparentBackground}
 
-          sketchybar --default icon.font="${iconFont}" \
-                              icon.color=0xffffffff \
-                              icon.padding_left=4 \
-                              icon.padding_right=4 \
-                              label.font="${labelFont}" \
-                              label.color=0xffffffff \
-                              label.padding_left=4 \
-                              label.padding_right=4 \
-                              padding_left=5 \
-                              padding_right=5
+          sketchybar --default padding_left=12                                   \
+                               padding_right=12                                  \
+                                                                                \
+                               background.border_color=${colors.border}         \
+                               background.border_width=4                        \
+                               background.height=48                             \
+                               background.corner_radius=16                      \
+                                                                                \
+                               icon.color=${colors.border}                      \
+                               icon.highlight_color=${colors.background}        \
+                               icon.padding_left=8                              \
+                               icon.padding_right=4                             \
+                               icon.font="${iconFont}"                          \
+                                                                                \
+                               label.color=${colors.border}                     \
+                               label.highlight_color=${colors.background}       \
+                               label.padding_left=4                             \
+                               label.padding_right=8                            \
+                               label.font="${labelFont}"
 
-          for i in {1..10}
-          do
-            sketchybar --add space space.$i left \
-                       --set space.$i space=$i \
-                                      icon=$i \
-                                      icon.font="${iconFont}" \
-                                      icon.padding_left=15 \
-                                      icon.padding_right=8 \
-                                      padding_left=0 \
-                                      padding_right=0 \
-                                      background.color=${appBackgroundColor} \
-                                      background.corner_radius=5 \
-                                      background.height=28 \
-                                      background.drawing=off \
-                                      script="$PLUGIN_DIR/space.sh"${lib.optionalString self.settings.withSIPDisabled ''
-                                        \
-                                                                             click_script="yabai -m space --focus $i"''}
-          done
+          sketchybar --add event window_change
 
-          sketchybar --add item chevron left \
-                     --set chevron icon="→" \
-                                   icon.font="${chevronFont}" \
-                                   label.drawing=off \
-                                   icon.color=${borderColor}
+          ${lib.concatMapStringsSep "\n" (
+            i:
+            let
+              idx = i - 1;
+              spaceIcon = lib.elemAt icons.spaces idx;
+              spaceColor = lib.elemAt spaceColors idx;
+              padLeft = if i == 1 then "12" else "4";
+              padRight = if i == 10 then "12" else "4";
+            in
+            ''
+              sketchybar --add space space.${toString i} left \
+                         --set space.${toString i} script="$PLUGIN_DIR/app_space.sh" \
+                                       associated_space=${toString i} \
+                                       padding_left=${padLeft} \
+                                       padding_right=${padRight} \
+                                       background.color=${spaceColor} \
+                                       background.border_width=0 \
+                                       background.corner_radius=8 \
+                                       background.height=30 \
+                                       icon=${spaceIcon} \
+                                       icon.color=${spaceColor} \
+                                       label="_" \
+                                       label.color=${spaceColor} \
+                         --subscribe space.${toString i} front_app_switched window_change
+            ''
+          ) (lib.range 1 10)}
 
-          sketchybar --add item front_app left \
-                     --set front_app icon.color=${borderColor} \
+          sketchybar --add bracket spaces '/space\..*/' \
+                     --set spaces background.color=${colors.blackBackground}
+
+          sketchybar --add item front_app center \
+                     --set front_app icon.color=${colors.border} \
                                      icon.font="${appIconFont}" \
-                                     icon.padding_left=8 \
-                                     icon.padding_right=4 \
+                                     icon.padding_left=12 \
+                                     icon.padding_right=3 \
                                      label.font="${labelFont}" \
-                                     label.color=0xffffffff \
-                                     label.padding_left=4 \
-                                     label.padding_right=12 \
-                                     background.color=${appBackgroundColor} \
-                                     background.corner_radius=6 \
-                                     background.height=24 \
+                                     label.color=${colors.border} \
+                                     label.padding_left=6 \
+                                     label.padding_right=16 \
+                                     background.color=${colors.blackBackground} \
+                                     background.corner_radius=8 \
+                                     background.height=30 \
                                      script="$PLUGIN_DIR/front_app.sh" \
-                     --subscribe front_app front_app_switched
+                     --subscribe front_app front_app_switched window_change
 
           sketchybar --add item clock right \
-                     --set clock icon= \
-                                icon.color=0xff9dd274 \
+                     --set clock icon=${icons.clock} \
+                                icon.color=${colors.border} \
                                 icon.font="${iconFont}" \
                                 label.font="${labelFont}" \
+                                background.color=${colors.blackBackground} \
+                                background.border_color=${colors.border} \
+                                background.border_width=4 \
+                                background.corner_radius=16 \
+                                background.height=48 \
+                                padding_left=12 \
+                                padding_right=12 \
                                 update_freq=10 \
-                                script="$CONFIG_DIR/plugins/clock_custom.sh"
+                                script="$PLUGIN_DIR/clock_custom.sh"
 
           sketchybar --add item volume right \
-                     --set volume icon= \
-                                 icon.color=0xff9dd274 \
+                     --set volume icon=${icons.volume} \
+                                 icon.color=${colors.border} \
                                  icon.font="${iconFont}" \
                                  label.font="${labelFont}" \
-                                 script="$PLUGIN_DIR/volume.sh" \
+                                 background.color=${colors.blackBackground} \
+                                 background.border_color=${colors.border} \
+                                 background.border_width=4 \
+                                 background.corner_radius=12 \
+                                 background.height=40 \
+                                 padding_left=8 \
+                                 padding_right=8 \
+                                 script="$EXAMPLE_PLUGIN_DIR/volume.sh" \
                      --subscribe volume volume_change
 
           sketchybar --add item battery right \
-                     --set battery icon.color=0xff9dd274 \
+                     --set battery icon.color=${colors.border} \
                                   icon.font="${iconFont}" \
                                   label.font="${labelFont}" \
+                                  background.color=${colors.blackBackground} \
+                                  background.border_color=${colors.border} \
+                                  background.border_width=4 \
+                                  background.corner_radius=12 \
+                                  background.height=40 \
+                                  padding_left=8 \
+                                  padding_right=8 \
                                   update_freq=120 \
-                                  script="$PLUGIN_DIR/battery.sh" \
+                                  script="$EXAMPLE_PLUGIN_DIR/battery.sh" \
                      --subscribe battery system_woke power_source_change
 
           sketchybar --update
@@ -623,6 +825,162 @@ args@{
           sketchybar --set "$NAME" label="$(date "+%d/%m/%y %H:%M")"
         '';
       };
+
+      home.file.".config/sketchybar/plugins/front_app.sh" = {
+        executable = true;
+        text = ''
+          #!/bin/bash
+
+          if [[ $SENDER == "front_app_switched" ]]; then
+            FOCUSED_WINDOW=$(yabai -m query --windows --window 2>/dev/null)
+
+            if [[ "$FOCUSED_WINDOW" == "null" ]] || [[ -z "$FOCUSED_WINDOW" ]]; then
+              sketchybar --set front_app drawing=off
+            else
+              IS_STICKY=$(echo "$FOCUSED_WINDOW" | jq -r '.["is-sticky"] // false')
+
+              if [[ "$IS_STICKY" == "true" ]]; then
+                sketchybar --set front_app drawing=off
+              else
+                sketchybar --set front_app drawing=on
+
+                APP_NAME="$INFO"
+                WINDOW_TITLE=$(echo "$FOCUSED_WINDOW" | jq -r '.title // ""')
+
+                ICON=$($HOME/.config/sketchybar/plugins/app_icon.sh "$APP_NAME" "$WINDOW_TITLE")
+
+                sketchybar --set front_app icon="$ICON" label="$APP_NAME"
+              fi
+            fi
+          elif [[ $SENDER == "window_change" ]]; then
+            FOCUSED_WINDOW=$(yabai -m query --windows --window 2>/dev/null)
+
+            if [[ "$FOCUSED_WINDOW" == "null" ]] || [[ -z "$FOCUSED_WINDOW" ]]; then
+              sketchybar --set front_app drawing=off
+            else
+              IS_STICKY=$(echo "$FOCUSED_WINDOW" | jq -r '.["is-sticky"] // false')
+
+              if [[ "$IS_STICKY" == "true" ]]; then
+                sketchybar --set front_app drawing=off
+              else
+                sketchybar --set front_app drawing=on
+              fi
+            fi
+          fi
+        '';
+      };
+
+      home.file.".config/sketchybar/plugins/app_space.sh" = {
+        executable = true;
+        text = ''
+          #!/bin/bash
+
+          sketchybar --set $NAME background.drawing=$SELECTED \
+              icon.highlight=$SELECTED \
+              label.highlight=$SELECTED
+
+          if [[ $SENDER == "front_app_switched" || $SENDER == "window_change" ]]; then
+           for i in {1..10}; do
+             sid=$i
+             LABEL=""
+
+             QUERY=$(yabai -m query --windows --space $sid)
+             FILTERED_QUERY=$(echo $QUERY | jq '[.[] | select(.["is-sticky"] == false)]')
+             APPS=$(echo $FILTERED_QUERY | jq '.[].app')
+             TITLES=$(echo $FILTERED_QUERY | jq '.[].title')
+
+             if grep -q "\"" <<< $APPS; then
+               APPS_ARR=()
+               while read -r line; do APPS_ARR+=("$line"); done <<< "$APPS"
+               TITLES_ARR=()
+               while read -r line; do TITLES_ARR+=("$line"); done <<< "$TITLES"
+
+               LENGTH=''${#APPS_ARR[@]}
+               for j in "''${!APPS_ARR[@]}"; do
+                 APP=$(echo ''${APPS_ARR[j]} | sed 's/"//g')
+                 TITLE=$(echo ''${TITLES_ARR[j]} | sed 's/"//g')
+
+                 ICON=$($HOME/.config/sketchybar/plugins/app_icon.sh "$APP" "$TITLE")
+                 LABEL+="$ICON"
+                 if [[ $j < $(($LENGTH-1)) ]]; then
+                   LABEL+=" "
+                 fi
+               done
+             else
+               LABEL=""
+             fi
+
+             sketchybar --set space.$sid label="$LABEL"
+           done
+          fi
+        '';
+      };
+
+      home.file.".config/sketchybar/plugins/app_icon.sh" =
+        let
+          mergeAppMappings =
+            base: additional:
+            let
+              allKeys = lib.unique ((lib.attrNames base) ++ (lib.attrNames additional));
+            in
+            lib.genAttrs allKeys (key: (base.${key} or [ ]) ++ (additional.${key} or [ ]));
+
+          allApplicationMapping = mergeAppMappings self.settings.baseApplicationMapping self.settings.additionalApplicationMapping;
+          allTerminalAppsMapping = mergeAppMappings self.settings.baseTerminalAppsMapping self.settings.additionalTerminalAppsMapping;
+
+          buildCaseStatements = lib.concatStringsSep "\n" (
+            lib.mapAttrsToList (
+              iconName: apps:
+              if iconName != "term" then
+                let
+                  appPattern = lib.concatStringsSep " | " (map (app: ''"${app}"'') apps);
+                in
+                ''
+                  ${appPattern})
+                      RESULT=${icons.${iconName}}
+                      ;;''
+              else
+                ""
+            ) allApplicationMapping
+          );
+
+          buildTerminalChecks = lib.concatStringsSep "\n" (
+            lib.mapAttrsToList (
+              iconName: patterns:
+              let
+                patternCheck = lib.concatStringsSep "\\|" patterns;
+              in
+              ''
+                elif grep -q "${patternCheck}" <<< $2; then
+                  RESULT=${icons.${iconName}}''
+            ) allTerminalAppsMapping
+          );
+
+          terminalApps = allApplicationMapping.term or [ ];
+          terminalPattern = lib.concatStringsSep " | " (map (app: ''"${app}"'') terminalApps);
+        in
+        {
+          executable = true;
+          text = ''
+            #!/bin/bash
+
+            case "$1" in
+            ${terminalPattern})
+              RESULT=${icons.term}
+              if false; then
+                :
+              ${buildTerminalChecks}
+              fi
+              ;;
+            ${buildCaseStatements}
+            *)
+              RESULT=${icons.${self.settings.defaultAppIcon}}
+              ;;
+            esac
+
+            echo $RESULT
+          '';
+        };
 
       home.file.".config/homebrew/yabai.note".text = ''
         # Required macOS Settings:
