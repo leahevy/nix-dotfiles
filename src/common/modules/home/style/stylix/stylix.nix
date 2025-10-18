@@ -75,7 +75,7 @@ args@{
         else
           lib.getAttr packageName pkgSet;
     in
-    {
+    lib.mkIf self.user.isStandalone {
       home.packages = [
         (getPackage self.settings.fonts.serif)
         (getPackage self.settings.fonts.sansSerif)
@@ -87,8 +87,7 @@ args@{
       ];
 
       stylix = {
-        enable =
-          if self.user.isStandalone then true else throw "Stylix module on NixOS is configured system-wide";
+        enable = true;
 
         base16Scheme =
           if self.settings.overrideBlackBackground || self.settings.overrideWhiteForeground then

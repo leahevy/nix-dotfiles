@@ -24,7 +24,6 @@ in
 rec {
   inherit moduleFuncs;
 
-  # Extract path components from module
   extractPathComponents =
     filePath: inputName:
     let
@@ -881,4 +880,88 @@ rec {
 
   applyStandaloneUserHooks =
     args: import (additionalInputs.build + "/hooks/home/home-standalone.nix") args;
+
+  findCorrespondingModules =
+    sourceModules: targetNamespace: args:
+    let
+      getAvailableModules =
+        modules:
+        lib.flatten (
+          lib.mapAttrsToList (
+            inputName: inputGroups:
+            lib.mapAttrsToList (
+              groupName: groupModules:
+              lib.mapAttrsToList (
+                moduleName: _:
+                let
+                  moduleType = if targetNamespace == "home" then "home" else "system";
+                  modulePath = buildModulePath {
+                    input = helpers.resolveInputFromInput inputName;
+                    group = groupName;
+                    name = moduleName;
+                    moduleType = moduleType;
+                  };
+                in
+                if builtins.pathExists modulePath then
+                  {
+                    inherit inputName groupName moduleName;
+                  }
+                else
+                  null
+              ) groupModules
+            ) inputGroups
+          ) modules
+        );
+
+      availableTargetModules = builtins.filter (x: x != null) (getAvailableModules sourceModules);
+
+      correspondingModules = builtins.filter (
+        targetModule:
+        let
+          sourceModulePath = buildModulePath {
+            input = helpers.resolveInputFromInput targetModule.inputName;
+            group = targetModule.groupName;
+            name = targetModule.moduleName;
+            moduleType = if targetNamespace == "home" then "system" else "home";
+          };
+        in
+        builtins.pathExists sourceModulePath
+      ) availableTargetModules;
+    in
+    correspondingModules;
+
+  addCrossNamespaceModules =
+    modules: otherNamespaceModules: moduleType: args:
+    let
+      shouldApplyForcing = if moduleType == "home" then !(args.user.isStandalone or false) else true;
+
+      targetNamespace = if moduleType == "home" then "home" else "system";
+    in
+    if !shouldApplyForcing then
+      modules
+    else
+      let
+        correspondingModules = findCorrespondingModules otherNamespaceModules targetNamespace args;
+
+        forcedModuleSpecs = lib.foldl lib.recursiveUpdate { } (
+          map (
+            moduleInfo:
+            let
+              inputName = moduleInfo.inputName;
+              groupName = moduleInfo.groupName;
+              moduleName = moduleInfo.moduleName;
+            in
+            {
+              ${inputName} = {
+                ${groupName} = {
+                  ${moduleName} = { };
+                };
+              };
+            }
+          ) correspondingModules
+        );
+
+        mergedModules = mergeModulesWithPrecedence modules forcedModuleSpecs;
+      in
+      mergedModules;
 }

@@ -266,11 +266,11 @@ in
         user = mainUser;
       };
 
-      systemProcessedModules = funcs.collectAllModulesWithSettings systemArgs (helpers.ifSet
+      preliminarySystemModules = funcs.collectAllModulesWithSettings systemArgs (helpers.ifSet
         host-data.modules
         { }
       ) "system";
-      homeProcessedModules = funcs.collectAllModulesWithSettings homeArgs (lib.foldl lib.recursiveUpdate
+      preliminaryHomeModules = funcs.collectAllModulesWithSettings homeArgs (lib.foldl lib.recursiveUpdate
         { }
         [
           (mainUser.modules or { })
@@ -278,11 +278,21 @@ in
         ]
       ) "home";
 
+      systemProcessedModules =
+        funcs.addCrossNamespaceModules preliminarySystemModules preliminaryHomeModules "system"
+          systemArgs;
+      homeProcessedModules =
+        funcs.addCrossNamespaceModules preliminaryHomeModules preliminarySystemModules "home"
+          homeArgs;
+
       hostConfig = {
         inherit profileName;
         host = host-data // {
           inherit profileName;
-          mainUser = mainUser;
+          modules = systemProcessedModules;
+          mainUser = mainUser // {
+            modules = homeProcessedModules;
+          };
           additionalUsers = additionalUsers;
         };
         name = host-data.hostname;
