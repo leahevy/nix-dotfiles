@@ -6,6 +6,7 @@ deployment_script_setup "dry"
 
 parse_common_deployment_args "$@"
 ensure_nixos_only "dry"
+check_deployment_conflicts "dry"
 
 PROFILE="$(retrieve_active_profile)"
 

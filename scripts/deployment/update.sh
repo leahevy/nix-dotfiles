@@ -3,6 +3,7 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
 deployment_script_setup "update"
+check_deployment_conflicts "update"
 
 echo -e "Updating flake of main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
 nix flake update "$@" || true

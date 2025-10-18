@@ -619,20 +619,20 @@ check_nix_daemon_activity() {
 
     if [[ "$build_processes" -gt 0 ]]; then
         echo
-        echo -e "${RED}Warning: Nix daemon appears to be building ($build_processes active processes)${RESET}" >&2
-        echo -e "${YELLOW}Running concurrent builds may cause issues.${RESET}" >&2
+        echo -e "${RED}Warning: Nix daemon appears to be active ($build_processes active processes)${RESET}" >&2
+        echo -e "${YELLOW}Running concurrent actions may cause issues.${RESET}" >&2
         echo
         echo -en "${WHITE}Do you want to continue anyway? ${RESET}[y/N]: " >&2
         read -r response
         case "$response" in
             [yY]|[yY][eE][sS])
                 echo
-                echo -e "${YELLOW}Continuing with active nix builds...${RESET}" >&2
+                echo -e "${YELLOW}Continuing with nix daemon activity...${RESET}" >&2
                 return 0
                 ;;
             *)
                 echo
-                echo -e "${RED}Aborted due to active nix builds${RESET}" >&2
+                echo -e "${RED}Aborted due to nix daemon activity${RESET}" >&2
                 exit 1
                 ;;
         esac

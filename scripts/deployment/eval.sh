@@ -3,6 +3,7 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
 deployment_script_setup "eval"
+check_deployment_conflicts "eval"
 
 PROFILE="$(retrieve_active_profile)"
 PROFILE_PATH="$(retrieve_active_profile_path)"
