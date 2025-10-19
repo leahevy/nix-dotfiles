@@ -614,14 +614,12 @@ cleanup_deployment_lock() {
 }
 
 check_nix_daemon_activity() {
-    local build_processes nix_eval_processes total_processes
+    local build_processes
     build_processes=$(ps ax -o command | grep "^nix-daemon" | grep -v "nix-daemon --daemon" | wc -l) || build_processes=0
-    nix_eval_processes=$(ps ax -o command | grep -E "^nix eval" | grep -v grep | wc -l) || nix_eval_processes=0
-    total_processes=$((build_processes + nix_eval_processes))
 
-    if [[ "$total_processes" -gt 0 ]]; then
+    if [[ "$build_processes" -gt 0 ]]; then
         echo
-        echo -e "${RED}Warning: Nix daemon appears to be active ($total_processes active processes)${RESET}" >&2
+        echo -e "${RED}Warning: Nix daemon appears to be active ($build_processes active processes)${RESET}" >&2
         echo -e "${YELLOW}Running concurrent actions may cause issues.${RESET}" >&2
         echo
         echo -en "${WHITE}Do you want to continue anyway? ${RESET}[y/N]: " >&2
@@ -635,6 +633,34 @@ check_nix_daemon_activity() {
             *)
                 echo
                 echo -e "${RED}Aborted due to nix daemon activity${RESET}" >&2
+                exit 1
+                ;;
+        esac
+    fi
+
+    return 0
+}
+
+check_nix_eval_activity() {
+    local nix_eval_processes
+    nix_eval_processes=$(ps ax -o command | grep -E "^nix eval" | grep -v grep | wc -l) || nix_eval_processes=0
+
+    if [[ "$nix_eval_processes" -gt 0 ]]; then
+        echo
+        echo -e "${RED}Warning: Nix eval appears to be active ($nix_eval_processes active processes)${RESET}" >&2
+        echo -e "${YELLOW}Running concurrent actions may cause issues.${RESET}" >&2
+        echo
+        echo -en "${WHITE}Do you want to continue anyway? ${RESET}[y/N]: " >&2
+        read -r response
+        case "$response" in
+            [yY]|[yY][eE][sS])
+                echo
+                echo -e "${YELLOW}Continuing with nix eval...${RESET}" >&2
+                return 0
+                ;;
+            *)
+                echo
+                echo -e "${RED}Aborted due to nix eval activity${RESET}" >&2
                 exit 1
                 ;;
         esac
@@ -676,6 +702,7 @@ check_deployment_conflicts() {
     setup_deployment_lock "$command_name"
 
     check_nix_daemon_activity
+    check_nix_eval_activity
 
     if [[ "$command_name" == "brew" ]]; then
         check_brew_activity
