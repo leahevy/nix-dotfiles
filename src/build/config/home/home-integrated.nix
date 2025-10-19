@@ -9,14 +9,11 @@ args@{
   helpers,
   defs,
   variables,
+  homeProcessedModules,
   ...
 }:
 let
-  initialModules = lib.foldl lib.recursiveUpdate { } [
-    (user.modules or { })
-    (host.userDefaults.modules or { })
-  ];
-  allModules = funcs.collectAllModulesWithSettings args initialModules "home";
+  allModules = homeProcessedModules;
 
   moduleSpecs = funcs.processModules allModules;
   moduleResults = funcs.importHomeModules args moduleSpecs allModules;

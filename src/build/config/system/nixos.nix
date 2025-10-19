@@ -9,17 +9,14 @@ args@{
   helpers,
   defs,
   variables,
+  systemProcessedModules,
+  homeProcessedModules,
   ...
 }:
 
 let
-  initialModules = ifSet host.modules { };
-  allModules = funcs.collectAllModulesWithSettings args initialModules "system";
-
-  mainUserModules = funcs.collectAllModulesWithSettings (args // { user = host.mainUser; }) (ifSet
-    host.mainUser.modules
-    { }
-  ) "home";
+  allModules = systemProcessedModules;
+  mainUserModules = homeProcessedModules;
 
   moduleSpecs = funcs.processModules allModules;
   systemArgs = args // {
