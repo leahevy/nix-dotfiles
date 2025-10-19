@@ -40,6 +40,10 @@ args@{
         allowedUDPPortRanges = self.settings.additionalUDPPortRanges;
       };
 
+      environment.systemPackages = with pkgs; [
+        nixos-firewall-tool
+      ];
+
       environment.persistence."${self.persist}" = {
         directories = [
           "/var/lib/nftables"
