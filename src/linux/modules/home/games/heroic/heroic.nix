@@ -33,6 +33,7 @@ args@{
       torchlightII = false;
     };
     additionalGameStateDirs = [ ];
+    withUmu = true;
   };
 
   configuration =
@@ -66,6 +67,11 @@ args@{
         ]
         ++ lib.optionals self.settings.games.torchlightII [
           ".local/share/Runic Games/Torchlight 2"
+        ]
+        ++ lib.optionals self.settings.withUmu [
+          ".local/share/umu"
+          ".cache/umu"
+          ".cache/umu-protonfixes"
         ]
         ++ self.settings.additionalGameStateDirs;
       };
