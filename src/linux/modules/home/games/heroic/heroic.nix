@@ -30,7 +30,9 @@ args@{
     withWayland = false;
     games = {
       stardewValley = false;
+      torchlightII = false;
     };
+    additionalGameStateDirs = [ ];
   };
 
   configuration =
@@ -61,7 +63,11 @@ args@{
         ]
         ++ lib.optionals self.settings.games.stardewValley [
           ".config/StardewValley"
-        ];
+        ]
+        ++ lib.optionals self.settings.games.torchlightII [
+          ".local/share/Runic Games/Torchlight 2"
+        ]
+        ++ self.settings.additionalGameStateDirs;
       };
     };
 }
