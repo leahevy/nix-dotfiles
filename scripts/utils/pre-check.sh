@@ -614,12 +614,14 @@ cleanup_deployment_lock() {
 }
 
 check_nix_daemon_activity() {
-    local build_processes
+    local build_processes nix_eval_processes total_processes
     build_processes=$(ps ax -o command | grep "^nix-daemon" | grep -v "nix-daemon --daemon" | wc -l) || build_processes=0
+    nix_eval_processes=$(ps ax -o command | grep -E "^nix eval" | grep -v grep | wc -l) || nix_eval_processes=0
+    total_processes=$((build_processes + nix_eval_processes))
 
-    if [[ "$build_processes" -gt 0 ]]; then
+    if [[ "$total_processes" -gt 0 ]]; then
         echo
-        echo -e "${RED}Warning: Nix daemon appears to be active ($build_processes active processes)${RESET}" >&2
+        echo -e "${RED}Warning: Nix daemon appears to be active ($total_processes active processes)${RESET}" >&2
         echo -e "${YELLOW}Running concurrent actions may cause issues.${RESET}" >&2
         echo
         echo -en "${WHITE}Do you want to continue anyway? ${RESET}[y/N]: " >&2
