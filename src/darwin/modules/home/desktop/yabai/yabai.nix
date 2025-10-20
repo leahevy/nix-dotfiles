@@ -37,6 +37,12 @@ args@{
     additionalConfig = { };
     additionalApplicationMapping = { };
     additionalTerminalAppsMapping = { };
+    bordersSize = 15;
+    barHeight = 61;
+    iconFontSize = "23.0";
+    labelFontSize = "18.0";
+    appIconFontSize = "22.0";
+    separatorFontSize = "24.0";
     defaultAppIcon = "app";
     baseTerminalAppsMapping = {
       chart = [
@@ -127,11 +133,10 @@ args@{
       "bottom_padding" = "15";
       "left_padding" = "15";
       "right_padding" = "15";
-      "window_gap" = "25";
+      "window_gap" = "5";
 
       "window_opacity" = "off";
       "window_shadow" = "off";
-      "external_bar" = "all:50:0";
     };
     baseRules = [
       ''app="^System Settings$" manage=off''
@@ -156,9 +161,10 @@ args@{
         else
           null;
 
-      iconFontSize = "24.0";
-      labelFontSize = "20.0";
-      appIconFontSize = "24.0";
+      iconFontSize = self.settings.iconFontSize;
+      labelFontSize = self.settings.labelFontSize;
+      appIconFontSize = self.settings.appIconFontSize;
+      separatorFontSize = self.settings.separatorFontSize;
 
       iconFont =
         if stylixConfig != null then
@@ -201,6 +207,20 @@ args@{
           "${monoName}:Regular:${appIconFontSize}"
         else
           "SF Mono:Regular:${appIconFontSize}";
+
+      separatorFont =
+        if stylixConfig != null then
+          let
+            monoPath =
+              if builtins.isString stylixConfig.fonts.monospace then
+                stylixConfig.fonts.monospace
+              else
+                stylixConfig.fonts.monospace.path;
+            monoName = lib.last (lib.splitString "/" monoPath);
+          in
+          "${monoName}:Bold:${separatorFontSize}"
+        else
+          "SF Mono:Bold:${separatorFontSize}";
 
       colors = {
         background = "0xe01d2021";
@@ -325,7 +345,27 @@ args@{
 
       home.file.".config/yabai/yabairc" =
         let
-          allConfig = self.settings.baseConfig // self.settings.additionalConfig;
+          allConfig =
+            self.settings.baseConfig
+            // self.settings.additionalConfig
+            // {
+              "external_bar" = "all:${builtins.toString self.settings.barHeight}:0";
+              "top_padding" = builtins.toString (
+                (lib.toInt self.settings.baseConfig.top_padding) + self.settings.bordersSize
+              );
+              "bottom_padding" = builtins.toString (
+                (lib.toInt self.settings.baseConfig.bottom_padding) + self.settings.bordersSize
+              );
+              "left_padding" = builtins.toString (
+                (lib.toInt self.settings.baseConfig.left_padding) + self.settings.bordersSize
+              );
+              "right_padding" = builtins.toString (
+                (lib.toInt self.settings.baseConfig.right_padding) + self.settings.bordersSize
+              );
+              "window_gap" = builtins.toString (
+                (lib.toInt self.settings.baseConfig.window_gap) + (self.settings.bordersSize * 2)
+              );
+            };
           allRules = self.settings.baseRules ++ self.settings.additionalRules;
         in
         {
@@ -466,7 +506,7 @@ args@{
           #!/bin/bash
 
           options=(
-            width=15.0
+            width=${builtins.toString self.settings.bordersSize}
             active_color=${colors.border}
             inactive_color=${colors.transparentBackground}
             hidpi=on
@@ -699,24 +739,26 @@ args@{
           PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
           EXAMPLE_PLUGIN_DIR="$(brew --prefix)/share/sketchybar/examples/plugins"
 
-          sketchybar --bar position=top height=48 blur_radius=0 color=${colors.transparentBackground}
+          sketchybar --bar position=top height=${builtins.toString self.settings.barHeight} blur_radius=0 color=${colors.blackBackground} \
+                               border_color=${colors.blackBackground} \
+                               border_width=4
 
           sketchybar --default padding_left=12                                   \
                                padding_right=12                                  \
                                                                                 \
-                               background.border_color=${colors.border}         \
-                               background.border_width=4                        \
+                               background.border_width=0                        \
                                background.height=48                             \
-                               background.corner_radius=16                      \
+                               background.corner_radius=0                       \
+                               background.color=${colors.transparentBackground} \
                                                                                 \
                                icon.color=${colors.border}                      \
-                               icon.highlight_color=${colors.background}        \
+                               icon.highlight_color=${colors.border}            \
                                icon.padding_left=8                              \
                                icon.padding_right=4                             \
                                icon.font="${iconFont}"                          \
                                                                                 \
                                label.color=${colors.border}                     \
-                               label.highlight_color=${colors.background}       \
+                               label.highlight_color=${colors.border}           \
                                label.padding_left=4                             \
                                label.padding_right=8                            \
                                label.font="${labelFont}"
@@ -731,6 +773,9 @@ args@{
               spaceColor = lib.elemAt spaceColors idx;
               padLeft = if i == 1 then "12" else "4";
               padRight = if i == 10 then "12" else "4";
+              clickScript = lib.optionalString self.settings.withSIPDisabled ''
+                \
+                                                      click_script="yabai -m space --focus ${toString i}"'';
             in
             ''
               sketchybar --add space space.${toString i} left \
@@ -738,22 +783,25 @@ args@{
                                        associated_space=${toString i} \
                                        padding_left=${padLeft} \
                                        padding_right=${padRight} \
-                                       background.color=${spaceColor} \
-                                       background.border_width=0 \
-                                       background.corner_radius=8 \
-                                       background.height=30 \
                                        icon=${spaceIcon} \
                                        icon.color=${spaceColor} \
                                        label="_" \
-                                       label.color=${spaceColor} \
+                                       label.color=${spaceColor}${clickScript} \
                          --subscribe space.${toString i} front_app_switched window_change
             ''
           ) (lib.range 1 10)}
 
-          sketchybar --add bracket spaces '/space\..*/' \
-                     --set spaces background.color=${colors.blackBackground}
+          sketchybar --add item arrow left \
+                     --set arrow label="⇒" \
+                                 icon.drawing=off \
+                                 label.color=${colors.border} \
+                                 label.font="${separatorFont}" \
+                                 label.y_offset=2 \
+                                 padding_left=4 \
+                                 padding_right=4 \
+                                 background.color=${colors.transparentBackground}
 
-          sketchybar --add item front_app center \
+          sketchybar --add item front_app left \
                      --set front_app icon.color=${colors.border} \
                                      icon.font="${appIconFont}" \
                                      icon.padding_left=12 \
@@ -762,9 +810,7 @@ args@{
                                      label.color=${colors.border} \
                                      label.padding_left=6 \
                                      label.padding_right=16 \
-                                     background.color=${colors.blackBackground} \
-                                     background.corner_radius=8 \
-                                     background.height=30 \
+                                     background.color=${colors.transparentBackground} \
                                      script="$PLUGIN_DIR/front_app.sh" \
                      --subscribe front_app front_app_switched window_change
 
@@ -773,11 +819,7 @@ args@{
                                 icon.color=${colors.border} \
                                 icon.font="${iconFont}" \
                                 label.font="${labelFont}" \
-                                background.color=${colors.blackBackground} \
-                                background.border_color=${colors.border} \
-                                background.border_width=4 \
-                                background.corner_radius=16 \
-                                background.height=48 \
+                                background.color=${colors.transparentBackground} \
                                 padding_left=12 \
                                 padding_right=12 \
                                 update_freq=10 \
@@ -788,11 +830,7 @@ args@{
                                  icon.color=${colors.border} \
                                  icon.font="${iconFont}" \
                                  label.font="${labelFont}" \
-                                 background.color=${colors.blackBackground} \
-                                 background.border_color=${colors.border} \
-                                 background.border_width=4 \
-                                 background.corner_radius=12 \
-                                 background.height=40 \
+                                 background.color=${colors.transparentBackground} \
                                  padding_left=8 \
                                  padding_right=8 \
                                  script="$EXAMPLE_PLUGIN_DIR/volume.sh" \
@@ -802,11 +840,7 @@ args@{
                      --set battery icon.color=${colors.border} \
                                   icon.font="${iconFont}" \
                                   label.font="${labelFont}" \
-                                  background.color=${colors.blackBackground} \
-                                  background.border_color=${colors.border} \
-                                  background.border_width=4 \
-                                  background.corner_radius=12 \
-                                  background.height=40 \
+                                  background.color=${colors.transparentBackground} \
                                   padding_left=8 \
                                   padding_right=8 \
                                   update_freq=120 \
@@ -870,51 +904,73 @@ args@{
         '';
       };
 
-      home.file.".config/sketchybar/plugins/app_space.sh" = {
-        executable = true;
-        text = ''
-          #!/bin/bash
+      home.file.".config/sketchybar/plugins/app_space.sh" =
+        let
+          spaceHighlightColors = lib.listToAttrs (
+            lib.imap0 (idx: color: {
+              name = toString (idx + 1);
+              value = "0x44" + lib.removePrefix "0xe0" (lib.removePrefix "0xff" color);
+            }) spaceColors
+          );
+        in
+        {
+          executable = true;
+          text = ''
+            #!/bin/bash
 
-          sketchybar --set $NAME background.drawing=$SELECTED \
-              icon.highlight=$SELECTED \
-              label.highlight=$SELECTED
+            SPACE_NUM=''${NAME#space.}
 
-          if [[ $SENDER == "front_app_switched" || $SENDER == "window_change" ]]; then
-           for i in {1..10}; do
-             sid=$i
-             LABEL=""
+            declare -A SPACE_COLORS=(
+              ${lib.concatStringsSep "\n            " (
+                lib.mapAttrsToList (num: color: "[${num}]=\"${color}\"") spaceHighlightColors
+              )}
+            )
 
-             QUERY=$(yabai -m query --windows --space $sid)
-             FILTERED_QUERY=$(echo $QUERY | jq '[.[] | select(.["is-sticky"] == false)]')
-             APPS=$(echo $FILTERED_QUERY | jq '.[].app')
-             TITLES=$(echo $FILTERED_QUERY | jq '.[].title')
+            if [[ $SELECTED == "true" ]]; then
+              HIGHLIGHT_COLOR="''${SPACE_COLORS[$SPACE_NUM]}"
+              sketchybar --set $NAME background.drawing=on \
+                                    background.color="$HIGHLIGHT_COLOR" \
+                                    background.corner_radius=0
+            else
+              sketchybar --set $NAME background.drawing=off
+            fi
 
-             if grep -q "\"" <<< $APPS; then
-               APPS_ARR=()
-               while read -r line; do APPS_ARR+=("$line"); done <<< "$APPS"
-               TITLES_ARR=()
-               while read -r line; do TITLES_ARR+=("$line"); done <<< "$TITLES"
-
-               LENGTH=''${#APPS_ARR[@]}
-               for j in "''${!APPS_ARR[@]}"; do
-                 APP=$(echo ''${APPS_ARR[j]} | sed 's/"//g')
-                 TITLE=$(echo ''${TITLES_ARR[j]} | sed 's/"//g')
-
-                 ICON=$($HOME/.config/sketchybar/plugins/app_icon.sh "$APP" "$TITLE")
-                 LABEL+="$ICON"
-                 if [[ $j < $(($LENGTH-1)) ]]; then
-                   LABEL+=" "
-                 fi
-               done
-             else
+            if [[ $SENDER == "front_app_switched" || $SENDER == "window_change" ]]; then
+             for i in {1..10}; do
+               sid=$i
                LABEL=""
-             fi
 
-             sketchybar --set space.$sid label="$LABEL"
-           done
-          fi
-        '';
-      };
+               QUERY=$(yabai -m query --windows --space $sid)
+               FILTERED_QUERY=$(echo $QUERY | jq '[.[] | select(.["is-sticky"] == false)]')
+               APPS=$(echo $FILTERED_QUERY | jq '.[].app')
+               TITLES=$(echo $FILTERED_QUERY | jq '.[].title')
+
+               if grep -q "\"" <<< $APPS; then
+                 APPS_ARR=()
+                 while read -r line; do APPS_ARR+=("$line"); done <<< "$APPS"
+                 TITLES_ARR=()
+                 while read -r line; do TITLES_ARR+=("$line"); done <<< "$TITLES"
+
+                 LENGTH=''${#APPS_ARR[@]}
+                 for j in "''${!APPS_ARR[@]}"; do
+                   APP=$(echo ''${APPS_ARR[j]} | sed 's/"//g')
+                   TITLE=$(echo ''${TITLES_ARR[j]} | sed 's/"//g')
+
+                   ICON=$($HOME/.config/sketchybar/plugins/app_icon.sh "$APP" "$TITLE")
+                   LABEL+="$ICON"
+                   if [[ $j < $(($LENGTH-1)) ]]; then
+                     LABEL+="  "
+                   fi
+                 done
+               else
+                 LABEL=""
+               fi
+
+               sketchybar --set space.$sid label="$LABEL"
+             done
+            fi
+          '';
+        };
 
       home.file.".config/sketchybar/plugins/app_icon.sh" =
         let
