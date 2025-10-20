@@ -36,20 +36,13 @@ args@{
     withUmu = true;
     portsPerGame = {
       torchlightII = {
-        tcp = [
-          4549
-          27036
-          27037
-        ]
-        ++ lib.map (n: 27015 + n) (lib.range 0 15);
+        tcp = [ 4549 ];
         udp = [
           4171
           4175
           4179
           4549
-          4380
-        ]
-        ++ lib.map (n: 27000 + n) (lib.range 0 31);
+        ];
       };
     };
     persistentOpenPortsForGames = {
@@ -57,6 +50,19 @@ args@{
     };
     additionalTCPPortsToOpen = [ ];
     additionalUDPPortsToOpen = [ ];
+    additionalFirewallScripts = {
+      steam = {
+        tcp = [
+          27036
+          27037
+        ]
+        ++ lib.map (n: 27015 + n) (lib.range 0 15);
+        udp = [
+          4380
+        ]
+        ++ lib.map (n: 27000 + n) (lib.range 0 31);
+      };
+    };
   };
 
   configuration =
@@ -64,93 +70,107 @@ args@{
     let
       withWayland = self.settings.withWayland;
 
-      generateGameFirewallScript =
+      enabledGamePorts = lib.filterAttrs (
         gameName: gameConfig:
         let
-          tcpPorts = gameConfig.tcp or [ ];
-          udpPorts = gameConfig.udp or [ ];
-          hasAnyPorts = (tcpPorts != [ ]) || (udpPorts != [ ]);
           isGameEnabled = self.settings.games.${gameName} or false;
           isPersistent = self.settings.persistentOpenPortsForGames.${gameName} or false;
-          shouldCreateScript = isGameEnabled && hasAnyPorts && !isPersistent;
+          hasAnyPorts = (gameConfig.tcp or [ ] != [ ]) || (gameConfig.udp or [ ] != [ ]);
         in
-        lib.optionalAttrs shouldCreateScript {
-          "${gameName}-open-firewall" = pkgs.writeShellScriptBin "${gameName}-open-firewall" ''
-            #!/usr/bin/env bash
-            set -euo pipefail
+        isGameEnabled && !isPersistent && hasAnyPorts
+      ) self.settings.portsPerGame;
 
-            OPENED_TCP_PORTS=()
-            OPENED_UDP_PORTS=()
-            CLEANUP_DONE=false
+      additionalScriptPorts = lib.filterAttrs (
+        scriptName: scriptConfig: (scriptConfig.tcp or [ ] != [ ]) || (scriptConfig.udp or [ ] != [ ])
+      ) self.settings.additionalFirewallScripts;
 
-            sudo -v
-            (while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null) &
-            SUDO_PID=$!
+      allFirewallTargets = enabledGamePorts // additionalScriptPorts;
+      availableTargets = lib.attrNames allFirewallTargets;
 
-            cleanup() {
-              if [ "$CLEANUP_DONE" = "true" ]; then
-                return
-              fi
-              CLEANUP_DONE=true
+      heroicFirewallScript =
+        lib.optional (self.isModuleEnabled "networking.firewall" && allFirewallTargets != { })
+          (
+            pkgs.stdenv.mkDerivation {
+              name = "heroic-open-firewall";
+              buildCommand = ''
+                mkdir -p $out/bin $out/share/bash-completion/completions $out/share/zsh/site-functions $out/share/fish/vendor_completions.d
 
-              if [[ -n "''${SUDO_PID:-}" ]]; then
-                kill "$SUDO_PID" 2>/dev/null || true
-              fi
+                cat > $out/bin/heroic-open-firewall << 'SCRIPT_EOF'
+                #!/usr/bin/env bash
+                set -euo pipefail
 
-              echo ""
-              echo "Resetting firewall to system configuration..."
-              sudo nixos-firewall-tool reset
-              echo "Firewall reset complete."
+                if [ $# -eq 0 ]; then
+                  echo "Usage: heroic-open-firewall TARGET [TARGET ...]"
+                  echo "Available targets: ${lib.concatStringsSep " " availableTargets}"
+                  exit 1
+                fi
+
+                for target in "$@"; do
+                  case "$target" in
+                    ${lib.concatMapStringsSep "\n                " (target: "${target}) ;;") availableTargets}
+                    *)
+                      echo "Error: Unknown target '$target'"
+                      echo "Available targets: ${lib.concatStringsSep " " availableTargets}"
+                      exit 1
+                      ;;
+                  esac
+                done
+
+                ALL_PORTS=()
+
+                ${lib.concatMapStringsSep "\n            " (
+                  target:
+                  let
+                    config = allFirewallTargets.${target};
+                    tcpPortSpecs = map (port: "${toString port}/tcp") (config.tcp or [ ]);
+                    udpPortSpecs = map (port: "${toString port}/udp") (config.udp or [ ]);
+                    allPortSpecs = tcpPortSpecs ++ udpPortSpecs;
+                  in
+                  ''
+                    if [[ " $* " == *" ${target} "* ]]; then
+                      echo "Adding ports for ${target}..."
+                      ALL_PORTS+=(${lib.concatStringsSep " " allPortSpecs})
+                    fi''
+                ) availableTargets}
+
+                if [ ''${#ALL_PORTS[@]} -eq 0 ]; then
+                  echo "No ports to open for selected targets"
+                  exit 1
+                fi
+
+                echo "Opening firewall ports for: $*"
+                echo "Total ports: ''${ALL_PORTS[*]}"
+
+                exec firewall-open-script "''${ALL_PORTS[@]}"
+                SCRIPT_EOF
+
+                chmod +x $out/bin/heroic-open-firewall
+
+                cat > $out/share/bash-completion/completions/heroic-open-firewall << 'BASH_EOF'
+                _heroic_open_firewall() {
+                  local cur targets
+                  cur="''${COMP_WORDS[COMP_CWORD]}"
+                  targets="${lib.concatStringsSep " " availableTargets}"
+                  COMPREPLY=($(compgen -W "$targets" -- "$cur"))
+                  return 0
+                }
+                complete -F _heroic_open_firewall -o nospace heroic-open-firewall
+                BASH_EOF
+
+                cat > $out/share/zsh/site-functions/_heroic-open-firewall << 'ZSH_EOF'
+                #compdef heroic-open-firewall
+                _heroic_open_firewall() {
+                  _arguments -S '*:targets:(${lib.concatStringsSep " " availableTargets})'
+                }
+                _heroic_open_firewall "$@"
+                ZSH_EOF
+
+                cat > $out/share/fish/vendor_completions.d/heroic-open-firewall.fish << 'FISH_EOF'
+                complete -c heroic-open-firewall -f -a "${lib.concatStringsSep " " availableTargets}"
+                FISH_EOF
+              '';
             }
-
-            interrupt_handler() {
-              echo ""
-              echo "Interrupted. Cleaning up..."
-              cleanup
-              exit 0
-            }
-
-            trap cleanup EXIT
-            trap interrupt_handler INT TERM
-
-            echo "Opening firewall ports for ${gameName}..."
-
-            ${lib.concatMapStringsSep "\n" (port: ''
-              if sudo nixos-firewall-tool open tcp ${toString port}; then
-                OPENED_TCP_PORTS+=(${toString port})
-                echo "Opened TCP port ${toString port}"
-              else
-                echo "Failed to open TCP port ${toString port}"
-                exit 1
-              fi
-            '') tcpPorts}
-
-            ${lib.concatMapStringsSep "\n" (port: ''
-              if sudo nixos-firewall-tool open udp ${toString port}; then
-                OPENED_UDP_PORTS+=(${toString port})
-                echo "Opened UDP port ${toString port}"
-              else
-                echo "Failed to open UDP port ${toString port}"
-                exit 1
-              fi
-            '') udpPorts}
-
-            echo "All ports opened for ${gameName}. Press any key to close ports and exit..."
-            if read -n 1 -s 2>/dev/null; then
-              echo ""
-              echo "Key pressed. Closing ports..."
-            fi
-          '';
-        };
-
-      gameFirewallScripts = lib.mapAttrs generateGameFirewallScript self.settings.portsPerGame;
-      allGameScripts = lib.flatten (
-        lib.attrValues (
-          lib.mapAttrs (name: scriptSet: lib.attrValues scriptSet) (
-            lib.filterAttrs (name: value: value != { }) gameFirewallScripts
-          )
-        )
-      );
+          );
     in
     {
       home.packages =
@@ -166,7 +186,7 @@ args@{
           winetricks
           (if withWayland then wineWowPackages.waylandFull else wineWowPackages.stable)
         ]
-        ++ allGameScripts;
+        ++ heroicFirewallScript;
 
       home.persistence."${self.persist}" = {
         directories = [
