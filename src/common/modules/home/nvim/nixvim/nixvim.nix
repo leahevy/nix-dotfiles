@@ -117,8 +117,8 @@ args@{
           linebreak = true;
           breakindent = true;
           showbreak = "↪ ";
-          scrolloff = 8;
-          sidescrolloff = 8;
+          scrolloff = 0;
+          sidescrolloff = 0;
 
           expandtab = true;
           shiftwidth = 2;
