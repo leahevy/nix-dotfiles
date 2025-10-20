@@ -117,6 +117,7 @@ args@{
 
       logScript = level: message: ''
         ${pkgs.util-linux}/bin/logger -p user.${level} -t nx-borg-backup "${message}"
+        echo "${message}" ${if level == "err" then ">&2" else ""}
       '';
 
       backupPaths = [

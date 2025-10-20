@@ -31,6 +31,7 @@ args@{
     context@{ config, options, ... }:
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+      isHeadless = (self.host.settings.system.desktop or null) == null;
       systemBorgConfig = self.host.getModuleConfig "storage.borg-backup";
       repoUrl = "ssh://${systemBorgConfig.repository.user}@${systemBorgConfig.repository.server}:${toString systemBorgConfig.repository.port}${systemBorgConfig.repository.path}";
       hostname = self.host.hostname;
@@ -77,64 +78,66 @@ args@{
       '';
     in
     {
-      home.file.".local/bin/scripts/borg-backup-monitor" = lib.mkIf self.settings.monitoringEnabled {
-        text = ''
-          #!/usr/bin/env bash
-          set -euo pipefail
+      home.file.".local/bin/scripts/borg-backup-monitor" =
+        lib.mkIf (self.settings.monitoringEnabled && !isHeadless)
+          {
+            text = ''
+              #!/usr/bin/env bash
+              set -euo pipefail
 
-          NOTIFY_SEND="${pkgs.libnotify}/bin/notify-send"
-          JOURNALCTL="${pkgs.systemd}/bin/journalctl"
-          SERVICE_TAG="nx-borg-backup"
+              NOTIFY_SEND="${pkgs.libnotify}/bin/notify-send"
+              JOURNALCTL="${pkgs.systemd}/bin/journalctl"
+              SERVICE_TAG="nx-borg-backup"
 
-          CURSOR_FILE="${self.user.home}/.local/state/borg-backup-monitor-cursor"
+              CURSOR_FILE="${self.user.home}/.local/state/borg-backup-monitor-cursor"
 
-          mkdir -p "$(dirname "$CURSOR_FILE")"
+              mkdir -p "$(dirname "$CURSOR_FILE")"
 
-          notify() {
-              local urgency="''${1:-normal}"
-              local summary="''${2:-No summary}"
-              local body="''${3:-No body}"
+              notify() {
+                  local urgency="''${1:-normal}"
+                  local summary="''${2:-No summary}"
+                  local body="''${3:-No body}"
 
-              $NOTIFY_SEND --urgency="$urgency" "$summary" "$body"
-          }
+                  $NOTIFY_SEND --urgency="$urgency" "$summary" "$body"
+              }
 
-          monitor_logs() {
-              $JOURNALCTL -t "$SERVICE_TAG" -f --output=json --cursor-file="$CURSOR_FILE" | while read -r line; do
-                  if [[ -n "$line" ]]; then
-                      local message=$(echo "$line" | ${pkgs.jq}/bin/jq -r '.MESSAGE // empty' 2>/dev/null)
+              monitor_logs() {
+                  $JOURNALCTL -t "$SERVICE_TAG" -f --output=json --cursor-file="$CURSOR_FILE" | while read -r line; do
+                      if [[ -n "$line" ]]; then
+                          local message=$(echo "$line" | ${pkgs.jq}/bin/jq -r '.MESSAGE // empty' 2>/dev/null)
 
-                      if [[ -n "$message" ]]; then
-                          case "$message" in
-                              *"STARTED:"*)
-                                  notify "normal" "Backup Started" "System backup is starting..."
-                                  ;;
-                              *"SUCCESS:"*)
-                                  notify "normal" "Backup Complete" "System backup completed successfully"
-                                  ;;
-                              *"FAILURE:"*)
-                                  notify "critical" "Backup Failed" "System backup failed - check logs for details"
-                                  ;;
-                              *)
-                                  notify "normal" "Backup Update" "$message"
-                                  ;;
-                          esac
+                          if [[ -n "$message" ]]; then
+                              case "$message" in
+                                  *"STARTED:"*)
+                                      notify "normal" "Backup Started" "System backup is starting..."
+                                      ;;
+                                  *"SUCCESS:"*)
+                                      notify "normal" "Backup Complete" "System backup completed successfully"
+                                      ;;
+                                  *"FAILURE:"*)
+                                      notify "critical" "Backup Failed" "''${message#*FAILURE: }"
+                                      ;;
+                                  *)
+                                      notify "normal" "Backup Update" "$message"
+                                      ;;
+                              esac
+                          fi
                       fi
-                  fi
-              done
-          }
+                  done
+              }
 
-          case "''${1:-monitor}" in
-              "monitor")
-                  monitor_logs
-                  ;;
-              *)
-                  echo "Usage: $0 {monitor}"
-                  exit 1
-                  ;;
-          esac
-        '';
-        executable = true;
-      };
+              case "''${1:-monitor}" in
+                  "monitor")
+                      monitor_logs
+                      ;;
+                  *)
+                      echo "Usage: $0 {monitor}"
+                      exit 1
+                      ;;
+              esac
+            '';
+            executable = true;
+          };
 
       home.file.".local/bin/borg-backup-status" = {
         text = ''
@@ -314,76 +317,87 @@ args@{
 
       home.file.".local/bin/borg-backup-trigger-manually" = {
         text = ''
-          #!/usr/bin/env bash
-          set -euo pipefail
+                    #!/usr/bin/env bash
+                    set -euo pipefail
 
-          if [[ $EUID -eq 0 ]]; then
-            echo "Must be run as user!"
-            exit 1
-          fi
+                    if [[ $EUID -eq 0 ]]; then
+                      echo "Must be run as user!"
+                      exit 1
+                    fi
 
-          if systemctl is-active --quiet borgbackup-job-system.service; then
-            echo "Error: Backup is already running!"
-            exit 1
-          fi
+                    if systemctl is-active --quiet borgbackup-job-system.service; then
+                      echo "Error: Backup is already running!"
+                      exit 1
+                    fi
 
-          echo "Starting backup manually..."
-          sudo systemctl start borgbackup-job-system.service
-          echo "Success: Backup triggered manually"
+                    echo "Starting backup manually..."
+                    sudo systemctl start borgbackup-job-system.service
+                    echo "Success: Backup triggered manually"
 
-          ${pkgs.libnotify}/bin/notify-send --urgency="normal" "Backup Triggered" "Manual backup triggered - will start in 2 minutes"
+          ${
+            if isHeadless then
+              ""
+            else
+              ''${pkgs.libnotify}/bin/notify-send --urgency="normal" "Backup Triggered" "Manual backup triggered - will start in 2 minutes"''
+          }
         '';
         executable = true;
       };
 
-      systemd.user.services.borg-backup-monitor = lib.mkIf self.settings.monitoringEnabled {
-        Unit = {
-          Description = "Borg Backup Log Monitor";
-        };
-        Service = {
-          Type = "simple";
-          Restart = "on-failure";
-          RestartSec = "10";
-          ExecStart = "${self.user.home}/.local/bin/scripts/borg-backup-monitor monitor";
-          Environment = [
-            "PATH=${
-              lib.makeBinPath [
-                pkgs.bash
-                pkgs.coreutils
-                pkgs.libnotify
-                pkgs.systemd
-                pkgs.jq
-              ]
-            }"
-          ];
-        };
-      };
+      systemd.user.services.borg-backup-monitor =
+        lib.mkIf (self.settings.monitoringEnabled && !isHeadless)
+          {
+            Unit = {
+              Description = "Borg Backup Log Monitor";
+            };
+            Service = {
+              Type = "simple";
+              Restart = "on-failure";
+              RestartSec = "10";
+              ExecStart = "${self.user.home}/.local/bin/scripts/borg-backup-monitor monitor";
+              Environment = [
+                "PATH=${
+                  lib.makeBinPath [
+                    pkgs.bash
+                    pkgs.coreutils
+                    pkgs.libnotify
+                    pkgs.systemd
+                    pkgs.jq
+                  ]
+                }"
+              ];
+            };
+          };
 
-      systemd.user.timers.borg-backup-monitor-startup = lib.mkIf self.settings.monitoringEnabled {
-        Unit = {
-          Description = "Start Borg Backup Monitor";
-          After = [ "graphical-session.target" ];
-        };
-        Timer = {
-          OnActiveSec = "10s";
-          Unit = "borg-backup-monitor-startup.service";
-        };
-        Install = {
-          WantedBy = [ "graphical-session.target" ];
-        };
-      };
+      systemd.user.timers.borg-backup-monitor-startup =
+        lib.mkIf (self.settings.monitoringEnabled && !isHeadless)
+          {
+            Unit = {
+              Description = "Start Borg Backup Monitor";
+              After = [ "graphical-session.target" ];
+            };
+            Timer = {
+              OnActiveSec = "10s";
+              Unit = "borg-backup-monitor-startup.service";
+            };
+            Install = {
+              WantedBy = [ "graphical-session.target" ];
+            };
+          };
 
-      systemd.user.services.borg-backup-monitor-startup = lib.mkIf self.settings.monitoringEnabled {
-        Unit = {
-          Description = "Start Borg Backup Monitor";
-          After = [ "graphical-session.target" ];
-        };
-        Service = {
-          Type = "oneshot";
-          ExecStart = "${pkgs.systemd}/bin/systemctl --user start borg-backup-monitor.service";
-          RemainAfterExit = true;
-        };
-      };
+      systemd.user.services.borg-backup-monitor-startup =
+        lib.mkIf (self.settings.monitoringEnabled && !isHeadless)
+          {
+            Unit = {
+              Description = "Start Borg Backup Monitor";
+              After = [ "graphical-session.target" ];
+            };
+            Service = {
+              Type = "oneshot";
+              ExecStart = "${pkgs.systemd}/bin/systemctl --user start borg-backup-monitor.service";
+              RemainAfterExit = true;
+            };
+          };
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
