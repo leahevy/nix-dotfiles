@@ -87,7 +87,10 @@ args@{
       ]
       ++ lib.optionals (self.settings.cursor != null) [
         (getPackage self.settings.cursor.style)
-      ];
+      ]
+      ++ (with pkgs; [
+        yq-go
+      ]);
 
       stylix = {
         enable = true;
