@@ -626,8 +626,6 @@ check_nix_daemon_activity() {
         read -r response
         case "$response" in
             [yY]|[yY][eE][sS])
-                echo
-                echo -e "${YELLOW}Continuing with nix daemon activity...${RESET}" >&2
                 return 0
                 ;;
             *)
@@ -641,26 +639,24 @@ check_nix_daemon_activity() {
     return 0
 }
 
-check_nix_eval_activity() {
-    local nix_eval_processes
-    nix_eval_processes=$(ps ax -o command | grep -E "^nix eval" | grep -v grep | wc -l) || nix_eval_processes=0
+check_nix_tool_activity() {
+    local nix_tool_processes
+    nix_tool_processes=$(ps ax -o command | grep -E "^nix " | grep -v grep | wc -l) || nix_tool_processes=0
 
-    if [[ "$nix_eval_processes" -gt 0 ]]; then
+    if [[ "$nix_tool_processes" -gt 0 ]]; then
         echo
-        echo -e "${RED}Warning: Nix eval appears to be active ($nix_eval_processes active processes)${RESET}" >&2
+        echo -e "${RED}Warning: Nix tools appears to be active ($nix_tool_processes active processes)${RESET}" >&2
         echo -e "${YELLOW}Running concurrent actions may cause issues.${RESET}" >&2
         echo
         echo -en "${WHITE}Do you want to continue anyway? ${RESET}[y/N]: " >&2
         read -r response
         case "$response" in
             [yY]|[yY][eE][sS])
-                echo
-                echo -e "${YELLOW}Continuing with nix eval...${RESET}" >&2
                 return 0
                 ;;
             *)
                 echo
-                echo -e "${RED}Aborted due to nix eval activity${RESET}" >&2
+                echo -e "${RED}Aborted due to nix tool activity${RESET}" >&2
                 exit 1
                 ;;
         esac
@@ -682,8 +678,6 @@ check_brew_activity() {
         read -r response
         case "$response" in
             [yY]|[yY][eE][sS])
-                echo
-                echo -e "${YELLOW}Continuing with active brew processes...${RESET}" >&2
                 return 0
                 ;;
             *)
@@ -702,7 +696,7 @@ check_deployment_conflicts() {
     setup_deployment_lock "$command_name"
 
     check_nix_daemon_activity
-    check_nix_eval_activity
+    check_nix_tool_activity
 
     if [[ "$command_name" == "brew" ]]; then
         check_brew_activity
