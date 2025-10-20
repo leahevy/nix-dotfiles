@@ -24,7 +24,7 @@ args@{
       lower = "23:00";
       upper = "07:00";
     };
-    preNotificationTime = "15min";
+    preNotificationTimeMinutes = 15;
     maxNetworkRetries = 30;
     waitForNetwork = true;
     dryRun = true;
@@ -338,7 +338,12 @@ args@{
           Type = "oneshot";
           User = "root";
         };
-        script = logScript "info" "NOTICE: Auto-upgrade starting in ${self.settings.preNotificationTime} - avoid repository changes";
+
+        unitConfig = {
+          OnSuccess = "nx-auto-upgrade-delayed.service";
+        };
+
+        script = logScript "info" "NOTICE: Auto-upgrade starting in ${builtins.toString self.settings.preNotificationTimeMinutes}M - avoid repository changes";
       };
 
       systemd.services.nx-auto-upgrade = {
@@ -430,12 +435,16 @@ args@{
         wantedBy = [ "timers.target" ];
       };
 
-      systemd.timers.nx-auto-upgrade = {
-        description = "NX Auto-Upgrade Timer";
-        timerConfig = {
-          OnUnitActiveSec = self.settings.preNotificationTime;
+      systemd.services.nx-auto-upgrade-delayed = {
+        description = "NX Auto-Upgrade (Delayed)";
+        serviceConfig = {
+          Type = "oneshot";
+          User = "root";
+          ExecStartPre = "${pkgs.coreutils}/bin/sleep ${
+            builtins.toString (self.settings.preNotificationTimeMinutes * 60)
+          }";
+          ExecStart = "${pkgs.systemd}/bin/systemctl start nx-auto-upgrade.service";
         };
-        wantedBy = [ "timers.target" ];
       };
 
       systemd.services.nx-auto-upgrade-reboot-checker = lib.mkIf self.settings.allowReboot {
@@ -465,8 +474,6 @@ args@{
         };
         wantedBy = [ "timers.target" ];
       };
-
-      systemd.services.nx-auto-upgrade-notify.unitConfig.OnSuccess = "nx-auto-upgrade.timer";
 
       system.autoUpgrade.enable = lib.mkForce false;
     };

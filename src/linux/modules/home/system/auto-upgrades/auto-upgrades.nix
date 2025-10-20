@@ -113,9 +113,11 @@ args@{
           echo -e "''${GREEN}=== TIMER STATUS ===''${NC}"
           systemctl status nx-auto-upgrade-notify.timer --no-pager --lines=3 2>/dev/null || echo "Auto-upgrade notify timer not found"
           echo
-          systemctl status nx-auto-upgrade.timer --no-pager --lines=3 2>/dev/null || echo "Auto-upgrade timer not found"
-          echo
           systemctl status nx-auto-upgrade-reboot-checker.timer --no-pager --lines=3 2>/dev/null || echo "Auto-upgrade reboot checker timer not found"
+          echo
+
+          echo -e "''${GREEN}=== DELAY SERVICE STATUS ===''${NC}"
+          systemctl status nx-auto-upgrade-delayed.service --no-pager --lines=3 2>/dev/null || true
           echo
 
           echo -e "''${GREEN}=== LAST UPGRADE STATUS ===''${NC}"
