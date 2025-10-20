@@ -143,6 +143,7 @@ in
       additionalPrograms = [
         pkgs.easytag
         pkgs.popsicle
+        pkgs.cheese
       ];
       installGames = false;
       installSystemSettings = false;
