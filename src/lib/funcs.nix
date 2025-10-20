@@ -950,14 +950,64 @@ rec {
               inputName = moduleInfo.inputName;
               groupName = moduleInfo.groupName;
               moduleName = moduleInfo.moduleName;
+              moduleAlreadyExists =
+                modules ? ${inputName}
+                && modules.${inputName} ? ${groupName}
+                && modules.${inputName}.${groupName} ? ${moduleName};
             in
-            {
-              ${inputName} = {
-                ${groupName} = {
-                  ${moduleName} = { };
+            if moduleAlreadyExists then
+              { }
+            else
+              let
+                moduleDefaults =
+                  let
+                    modulePath = buildModulePath {
+                      input = helpers.resolveInputFromInput inputName;
+                      group = groupName;
+                      name = moduleName;
+                      moduleType = targetNamespace;
+                    };
+                    moduleDir = "modules/${targetNamespace}/${groupName}/${moduleName}";
+                    moduleContext = {
+                      inputs = args.inputs;
+                      variables = args.variables;
+                      configInputs = args.configInputs or { };
+                      moduleBasePath = moduleDir;
+                      moduleInput = helpers.resolveInputFromInput inputName;
+                      moduleInputName = inputName;
+                    }
+                    // (
+                      if targetNamespace == "home" then
+                        {
+                          user = args.user;
+                          users = args.users;
+                        }
+                      else
+                        {
+                          host = args.host;
+                          users = args.users;
+                        }
+                    );
+                    enhancedModuleContext = moduleFuncs.injectModuleFunctions moduleContext targetNamespace;
+                    moduleResult = import modulePath {
+                      lib = args.lib;
+                      pkgs = args.pkgs;
+                      pkgs-unstable = args.pkgs-unstable;
+                      funcs = args.funcs;
+                      helpers = helpers;
+                      defs = args.defs;
+                      self = enhancedModuleContext;
+                    };
+                  in
+                  moduleResult.defaults or { };
+              in
+              {
+                ${inputName} = {
+                  ${groupName} = {
+                    ${moduleName} = moduleDefaults;
+                  };
                 };
-              };
-            }
+              }
           ) correspondingModules
         );
 
