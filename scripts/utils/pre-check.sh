@@ -603,7 +603,9 @@ setup_deployment_lock() {
 
     echo "$$:$command_name:$(date +%s)" > "$lock_dir/info"
 
-    trap 'cleanup_deployment_lock' EXIT INT TERM
+    trap 'cleanup_deployment_lock; exit 130' INT
+    trap 'cleanup_deployment_lock; exit 143' TERM
+    trap 'cleanup_deployment_lock' EXIT
 }
 
 cleanup_deployment_lock() {
@@ -615,7 +617,7 @@ cleanup_deployment_lock() {
 
 check_nix_daemon_activity() {
     local build_processes
-    build_processes=$(ps ax -o command | grep "^nix-daemon" | grep -v "nix-daemon --daemon" | wc -l) || build_processes=0
+    build_processes=$(ps ax -o stat,command | tail -n +2 | grep "nix-daemon" | grep -v -- "--daemon" | grep -v grep | awk '$1 ~ /^(R|Rs|Rl|Ssl|S\+)$/' | wc -l) || build_processes=0
 
     if [[ "$build_processes" -gt 0 ]]; then
         echo
@@ -641,7 +643,7 @@ check_nix_daemon_activity() {
 
 check_nix_tool_activity() {
     local nix_tool_processes
-    nix_tool_processes=$(ps ax -o command | grep -E "^nix " | grep -v grep | wc -l) || nix_tool_processes=0
+    nix_tool_processes=$(ps ax -o stat,command | tail -n +2 | grep -E "nix (build|eval|flake|gc)" | grep -v grep | awk '$1 ~ /^(R|Rs|Rl|S\+)$/' | wc -l) || nix_tool_processes=0
 
     if [[ "$nix_tool_processes" -gt 0 ]]; then
         echo
@@ -665,9 +667,35 @@ check_nix_tool_activity() {
     return 0
 }
 
+check_nh_activity() {
+    local nh_processes
+    nh_processes=$(ps ax -o stat,command | tail -n +2 | grep " nh " | grep -v grep | awk '$1 ~ /^(R|Rs|Rl|S\+)$/' | wc -l) || nh_processes=0
+
+    if [[ "$nh_processes" -gt 0 ]]; then
+        echo
+        echo -e "${RED}Warning: nh tool appears to be active ($nh_processes active processes)${RESET}" >&2
+        echo -e "${YELLOW}Running concurrent actions may cause issues.${RESET}" >&2
+        echo
+        echo -en "${WHITE}Do you want to continue anyway? ${RESET}[y/N]: " >&2
+        read -r response
+        case "$response" in
+            [yY]|[yY][eE][sS])
+                return 0
+                ;;
+            *)
+                echo
+                echo -e "${RED}Aborted due to nh tool activity${RESET}" >&2
+                exit 1
+                ;;
+        esac
+    fi
+
+    return 0
+}
+
 check_brew_activity() {
     local brew_processes
-    brew_processes=$(ps ax -o command | grep -E "^brew " | wc -l) || brew_processes=0
+    brew_processes=$(ps ax -o stat,command | tail -n +2 | grep "/opt/homebrew/Library/Homebrew/brew.sh" | grep -v grep | awk '$1 ~ /^(R|Rs|Rl|S\+)$/' | wc -l) || brew_processes=0
 
     if [[ "$brew_processes" -gt 0 ]]; then
         echo
@@ -697,6 +725,7 @@ check_deployment_conflicts() {
 
     check_nix_daemon_activity
     check_nix_tool_activity
+    check_nh_activity
 
     if [[ "$command_name" == "brew" ]]; then
         check_brew_activity
