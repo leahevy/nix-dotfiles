@@ -141,7 +141,7 @@ args@{
                 echo "Opening firewall ports for: $*"
                 echo "Total ports: ''${ALL_PORTS[*]}"
 
-                exec firewall-open-script "''${ALL_PORTS[@]}"
+                exec firewall-open-script --with-cleanup "''${ALL_PORTS[@]}"
                 SCRIPT_EOF
 
                 chmod +x $out/bin/heroic-open-firewall
