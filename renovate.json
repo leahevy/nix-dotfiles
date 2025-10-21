@@ -6,20 +6,34 @@
   "nix": {
     "enabled": true
   },
-  "schedule": ["before 4pm on saturday"],
+  "schedule": [
+    "before 4pm on saturday"
+  ],
   "platformAutomerge": true,
   "packageRules": [
     {
-      "matchDatasources": ["git-refs"],
-      "matchDepNames": ["nixpkgs"],
-      "matchPackageNames": ["https://github.com/NixOS/nixpkgs"],
-      "schedule": ["before 4pm on saturday"],
+      "matchDatasources": [
+        "git-refs"
+      ],
+      "matchDepNames": [
+        "nixpkgs"
+      ],
+      "matchPackageNames": [
+        "https://github.com/NixOS/nixpkgs"
+      ],
+      "schedule": [
+        "before 4pm on saturday"
+      ],
       "automerge": false
     },
     {
-      "matchDatasources": ["git-refs"],
-      "excludeDepNames": ["nixpkgs"],
-      "enabled": false
+      "matchDatasources": [
+        "git-refs"
+      ],
+      "enabled": false,
+      "matchDepNames": [
+        "!nixpkgs"
+      ]
     }
   ],
   "lockFileMaintenance": {
