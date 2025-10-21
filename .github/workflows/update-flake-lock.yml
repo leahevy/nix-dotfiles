@@ -1,7 +1,7 @@
 name: Update Flake.lock
 on:
   schedule:
-    - cron: '0 13 * * 0'
+    - cron: '0 13 * * *'
   workflow_dispatch:
 
 jobs:
@@ -58,8 +58,18 @@ jobs:
           branch: update-flake-inputs
           delete-branch: true
 
+      # - name: Check if merge day
+      #   id: check-day
+      #   run: |
+      #     set -euo pipefail
+      #     if [ "$(date +%u)" = "6" ]; then
+      #       echo "its_mergeday=true" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "its_mergeday=false" >> $GITHUB_OUTPUT
+      #     fi
+
       # - name: Enable auto-merge
-      #   if: steps.changes.outputs.changed == 'true'
+      #   if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true'
       #   run: |
       #     set -euo pipefail
       #     gh pr merge --auto --squash ${{ steps.cpr.outputs.pull-request-number }}

@@ -1,0 +1,46 @@
+name: Notify on Pull Request
+
+on:
+  pull_request:
+    types: [opened, edited, closed, reopened]
+    branches:
+      - main
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify PR Status via Pushover
+        env:
+          PUSHHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          PUSHHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+        run: |
+          set -euo pipefail
+          STATUS="New PR"
+          CIRCLE_COLOR="🔵"
+
+          if [ "${{ github.event.action }}" == "edited" ]; then
+            STATUS="Changed PR"
+            CIRCLE_COLOR="🟡"
+          elif [ "${{ github.event.action }}" == "closed" ]; then
+            if [ "${{ github.event.pull_request.merged }}" == "true" ]; then
+              STATUS="Merged PR"
+              CIRCLE_COLOR="🟢"
+            else
+              STATUS="Closed PR"
+              CIRCLE_COLOR="🔴"
+            fi
+          elif [ "${{ github.event.action }}" == "reopened" ]; then
+            STATUS="Reopened PR"
+            CIRCLE_COLOR="🔵"
+          fi
+
+          curl -fsS -m 20 --retry 10 -o /dev/null \
+            --form-string "token=${PUSHHOVER_TOKEN}" \
+            --form-string "user=${PUSHHOVER_USER}" \
+            --form-string "message=<b>Repository:</b> ${{ github.repository }}<br><b>Branch:</b> ${{ github.ref_name }}<br><b>Pull Request Title:</b> ${{ github.event.pull_request.title }}<br><br><a href='${{ github.event.pull_request.html_url }}'>View Pull Request</a>" \
+            --form-string "title=${CIRCLE_COLOR} $STATUS for ${{ github.repository }}: ${{ github.event.pull_request.title }}" \
+            --form-string "priority=0" \
+            --form-string "html=1" \
+            --form-string "url=${{ github.event.pull_request.html_url }}" \
+            https://api.pushover.net/1/messages.json
