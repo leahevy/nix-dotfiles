@@ -197,7 +197,8 @@ args@{
         "<Alt+6>" = "tab-focus 6";
         "<Alt+7>" = "tab-focus 7";
         "<Alt+8>" = "tab-focus 8";
-        "<Alt+9>" = "tab-focus -1";
+        "<Alt+9>" = "tab-focus 9";
+        "<Alt+0>" = "tab-focus -1";
         "<Ctrl+1>" = "tab-focus 1";
         "<Ctrl+2>" = "tab-focus 2";
         "<Ctrl+3>" = "tab-focus 3";
@@ -206,7 +207,8 @@ args@{
         "<Ctrl+6>" = "tab-focus 6";
         "<Ctrl+7>" = "tab-focus 7";
         "<Ctrl+8>" = "tab-focus 8";
-        "<Ctrl+9>" = "tab-focus -1";
+        "<Ctrl+9>" = "tab-focus 9";
+        "<Ctrl+0>" = "tab-focus -1";
         "g$" = "tab-focus -1";
         "<Ctrl+h>" = "home";
         "<Ctrl+s>" = "stop";
