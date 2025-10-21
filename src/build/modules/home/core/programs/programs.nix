@@ -16,11 +16,27 @@ args@{
 
   configuration =
     context@{ config, options, ... }:
+    let
+      customPkgs =
+        if self.isDarwin then
+          self.pkgs {
+            overlays = [
+              (final: prev: {
+                pre-commit = prev.pre-commit.overridePythonAttrs (oldAttrs: {
+                  disabledTests = (oldAttrs.disabledTests or [ ]) ++ [
+                    "test_output_isatty"
+                  ];
+                });
+              })
+            ];
+          }
+        else
+          pkgs;
+    in
     {
       home = {
-        packages = (
-          with pkgs;
-          [
+        packages =
+          (with pkgs; [
             git
             htop
             vim
@@ -28,14 +44,15 @@ args@{
             nixfmt-tree
             nix-prefetch-github
             git-crypt
-            pre-commit
             sops
             age
             ssh-to-age
             ssh-to-pgp
             nvd
-          ]
-        );
+          ])
+          ++ [
+            customPkgs.pre-commit
+          ];
       };
     };
 }
