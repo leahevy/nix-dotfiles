@@ -18,7 +18,7 @@ rec {
   defaults = {
     name = "Immich";
     webapp = "immich";
-    iconPath = "${pkgs.immich}/build/www/favicon.png";
+    iconPath = "${pkgs.gnome-icon-theme}/share/icons/gnome/48x48/devices/camera-photo.png";
     categories = [
       "Photography"
       "Graphics"
