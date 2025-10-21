@@ -1,0 +1,67 @@
+name: Update Flake.lock
+on:
+  schedule:
+    - cron: '0 13 * * 0'
+  workflow_dispatch:
+
+jobs:
+  update-flake-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Update flake inputs
+        run: |
+          set -euo pipefail
+          inputs=("nixpkgs")
+          updated_inputs=""
+          for input in "${inputs[@]}"; do
+            echo "Updating input: $input"
+            nix flake update "$input"
+            if [ -z "$updated_inputs" ]; then
+              updated_inputs="$input"
+            else
+              updated_inputs="$updated_inputs, $input"
+            fi
+          done
+          echo "UPDATED_INPUTS=$updated_inputs" >> $GITHUB_ENV
+
+      - name: Check for changes
+        id: changes
+        run: |
+          set -euo pipefail
+          if git diff --quiet flake.lock; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.changed == 'true'
+        id: cpr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update flake inputs: ${{ env.UPDATED_INPUTS }}"
+          title: "Update flake inputs: ${{ env.UPDATED_INPUTS }}"
+          body: |
+            Automated update of flake inputs.
+
+            Updated inputs:
+            - ${{ env.UPDATED_INPUTS }}
+
+            Generated automatically by GitHub Actions
+          branch: update-flake-inputs
+          delete-branch: true
+
+      # - name: Enable auto-merge
+      #   if: steps.changes.outputs.changed == 'true'
+      #   run: |
+      #     set -euo pipefail
+      #     gh pr merge --auto --squash ${{ steps.cpr.outputs.pull-request-number }}
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
