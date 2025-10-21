@@ -17,8 +17,6 @@ args@{
 
   defaults = {
     schedule = "18:45:10";
-    randomizedDelaySec = "15min";
-    persistent = true;
     allowReboot = true;
     rebootWindow = {
       lower = "23:00";
@@ -429,8 +427,9 @@ args@{
         description = "NX Auto-Upgrade Pre-Notification Timer";
         timerConfig = {
           OnCalendar = self.settings.schedule;
-          RandomizedDelaySec = self.settings.randomizedDelaySec;
-          Persistent = self.settings.persistent;
+          OnBootSec = "5min";
+          RandomizedDelaySec = "5min";
+          Persistent = true;
         };
         wantedBy = [ "timers.target" ];
       };
