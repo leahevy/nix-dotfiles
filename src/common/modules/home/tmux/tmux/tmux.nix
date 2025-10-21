@@ -167,6 +167,11 @@ args@{
           bind -r K resize-pane -U 10
           bind -r L resize-pane -R 10
 
+          bind -r Left resize-pane -L 10
+          bind -r Down resize-pane -D 10
+          bind -r Up resize-pane -U 10
+          bind -r Right resize-pane -R 10
+
           setw -g mode-keys vi
           bind -T copy-mode-vi v send-keys -X begin-selection
           bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel '${
