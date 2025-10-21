@@ -24,7 +24,8 @@
       "schedule": [
         "before 4pm on saturday"
       ],
-      "automerge": false
+      "automerge": false,
+      "matchCurrentValue": "nixos-25.05"
     },
     {
       "matchDatasources": [
@@ -34,6 +35,13 @@
       "matchDepNames": [
         "!nixpkgs"
       ]
+    },
+    {
+      "matchDepNames": [
+        "nixpkgs"
+      ],
+      "matchCurrentValue": "nixpkgs-unstable",
+      "enabled": false
     }
   ],
   "lockFileMaintenance": {
