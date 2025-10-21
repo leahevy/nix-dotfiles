@@ -427,7 +427,6 @@ args@{
         description = "NX Auto-Upgrade Pre-Notification Timer";
         timerConfig = {
           OnCalendar = self.settings.schedule;
-          OnBootSec = "5min";
           RandomizedDelaySec = "5min";
           Persistent = true;
         };
