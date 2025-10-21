@@ -281,6 +281,8 @@
         defs
         ;
 
+      inherit (inputs) nixpkgs nixpkgs-unstable;
+
       modules = registryBuilder.modules;
       isoConfigurations = isoBuilder.buildIsoConfigurations;
       nixosConfigurations = nixosBuilder.buildNixOSConfigurations;

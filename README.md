@@ -89,6 +89,7 @@ installed system during the live ISO installation process.
 ### Evaluation:
 
 - `nx eval <path>`: Evaluate a flake path with config override.
+- `nx package <pkg>`: Get store path for package(s). Use `--unstable` for nixpkgs-unstable.
 
 ### Home-Manager only:
 

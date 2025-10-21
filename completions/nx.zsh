@@ -40,6 +40,7 @@ _nx() {
                 'spec:Manage specializations'
                 'modules:Manage and inspect NX modules'
                 'eval:Evaluate a flake path with config override'
+                'package:Get store path for package(s)'
             )
             _describe 'commands' commands
             ;;
@@ -177,6 +178,11 @@ _nx() {
                             esac
                             ;;
                     esac
+                    ;;
+                package)
+                    _arguments \
+                        '--unstable[Use nixpkgs-unstable instead of nixpkgs]' \
+                        '*:package name:_message "package name"'
                     ;;
             esac
             ;;

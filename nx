@@ -43,6 +43,7 @@ Commands:
 
   Evaluation:
     eval <path>     # Evaluate a flake path with config override.
+    package <pkg>   # Get store path for package(s). Use --unstable for nixpkgs-unstable.
 
 
   Home-Manager only:

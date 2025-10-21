@@ -1,7 +1,7 @@
 _complete_nx() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local commands="profile sync build gc update brew dry test boot rollback news config core format exec log head diff diffc status commit pull push add addp stash impermanence spec modules eval"
+    local commands="profile sync build gc update brew dry test boot rollback news config core format exec log head diff diffc status commit pull push add addp stash impermanence spec modules eval package"
     
     if [[ ${COMP_CWORD} -eq 1 ]]; then
         COMPREPLY=($(compgen -W "${commands} --help --version" -- "${cur}"))
@@ -27,6 +27,9 @@ _complete_nx() {
                 ;;
             modules)
                 COMPREPLY=($(compgen -W "list config info edit help" -- "${cur}"))
+                ;;
+            package)
+                COMPREPLY=($(compgen -W "--unstable" -- "${cur}"))
                 ;;
         esac
     elif [[ ${COMP_CWORD} -eq 3 ]]; then
