@@ -115,10 +115,29 @@ args@{
           ${pkgs.btrfs-progs}/bin/btrfs subvolume snapshot -r ${volume} ${snapshotDir}/${snapshotName}
         '';
 
-      logScript = level: message: ''
-        ${pkgs.util-linux}/bin/logger -p user.${level} -t nx-borg-backup "${message}"
-        echo "${message}" ${if level == "err" then ">&2" else ""}
-      '';
+      logScript =
+        level: message:
+        let
+          userNotifyEnabled = (self.user.isModuleEnabled "notifications.user-notify");
+          userNotifyMessage =
+            if userNotifyEnabled then
+              if lib.hasPrefix "STARTED:" message then
+                "Borg Backup (starting): ${lib.removePrefix "STARTED: " message}"
+              else if lib.hasPrefix "SUCCESS:" message then
+                "Borg Backup (completed): ${lib.removePrefix "SUCCESS: " message}"
+              else if lib.hasPrefix "FAILURE:" message then
+                "Borg Backup (failed): ${lib.removePrefix "FAILURE: " message}"
+              else if lib.hasPrefix "INFO:" message then
+                "Borg Backup (info): ${lib.removePrefix "INFO: " message}"
+              else
+                "Borg Backup: ${message}"
+            else
+              "";
+        in
+        ''
+          ${lib.optionalString userNotifyEnabled ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
+          echo "${message}" ${if level == "err" then ">&2" else ""}
+        '';
 
       backupPaths = [
         "/persist/.snapshots/persist"
@@ -206,7 +225,7 @@ args@{
             snapshotName = "data";
             snapshotDir = "${self.settings.dataPath}/.snapshots";
           })}
-          ${logScript "info" "INFO: All snapshots created successfully"}
+          ${logScript "info" "INFO: Snapshots created - starting backup..."}
         '';
 
         paths = backupPaths;

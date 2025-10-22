@@ -94,6 +94,9 @@ args@{
           };
         };
         linux = {
+          notifications = {
+            user-notify = true;
+          };
           chat = {
             beeper = true;
             signal = true;

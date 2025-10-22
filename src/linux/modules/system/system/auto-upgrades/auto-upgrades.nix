@@ -43,10 +43,31 @@ args@{
 
       gitEnv = "GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_SSH_COMMAND='ssh -i /run/nx-auto-upgrade-ssh-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'";
 
-      logScript = level: message: ''
-        ${pkgs.util-linux}/bin/logger -p user.${level} -t nx-auto-upgrade "${message}"
-        echo "${message}" ${if level == "err" then ">&2" else ""}
-      '';
+      logScript =
+        level: message:
+        let
+          userNotifyEnabled = (self.user.isModuleEnabled "notifications.user-notify");
+          userNotifyMessage =
+            if userNotifyEnabled then
+              if lib.hasPrefix "STARTED:" message then
+                "Auto-Upgrade (starting): ${lib.removePrefix "STARTED: " message}"
+              else if lib.hasPrefix "SUCCESS:" message then
+                "Auto-Upgrade (completed): ${lib.removePrefix "SUCCESS: " message}"
+              else if lib.hasPrefix "FAILURE:" message then
+                "Auto-Upgrade (failed): ${lib.removePrefix "FAILURE: " message}"
+              else if lib.hasPrefix "INFO:" message then
+                "Auto-Upgrade (info): ${lib.removePrefix "INFO: " message}"
+              else if lib.hasPrefix "NOTICE:" message then
+                "Auto-Upgrade (notice): ${lib.removePrefix "NOTICE: " message}"
+              else
+                "Auto-Upgrade: ${message}"
+            else
+              "";
+        in
+        ''
+          ${lib.optionalString userNotifyEnabled ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
+          echo "${message}" ${if level == "err" then ">&2" else ""}
+        '';
 
       checkNetworkScript = lib.optionalString self.settings.waitForNetwork ''
         ${pkgs.coreutils}/bin/echo "Checking network connectivity..."

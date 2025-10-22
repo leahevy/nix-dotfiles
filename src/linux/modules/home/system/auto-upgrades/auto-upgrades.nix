@@ -16,7 +16,6 @@ args@{
   namespace = "home";
 
   defaults = {
-    monitoringEnabled = true;
     terminal = "ghostty";
   };
 
@@ -32,70 +31,8 @@ args@{
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
       isHeadless = (self.host.settings.system.desktop or null) == null;
-
     in
     {
-      home.file.".local/bin/scripts/auto-upgrade-monitor" =
-        lib.mkIf (self.settings.monitoringEnabled && !isHeadless)
-          {
-            text = ''
-              #!/usr/bin/env bash
-              set -euo pipefail
-
-              NOTIFY_SEND="${pkgs.libnotify}/bin/notify-send"
-              JOURNALCTL="${pkgs.systemd}/bin/journalctl"
-              SERVICE_TAG="nx-auto-upgrade"
-
-              CURSOR_FILE="${self.user.home}/.local/state/auto-upgrade-monitor-cursor"
-
-              mkdir -p "$(dirname "$CURSOR_FILE")"
-
-              notify() {
-                  local urgency="''${1:-normal}"
-                  local summary="''${2:-No summary}"
-                  local body="''${3:-No body}"
-
-                  $NOTIFY_SEND --urgency="$urgency" "$summary" "$body"
-              }
-
-              monitor_logs() {
-                  $JOURNALCTL -t "$SERVICE_TAG" -f --output=json --cursor-file="$CURSOR_FILE" | while read -r line; do
-                      if [[ -n "$line" ]]; then
-                          local message=$(echo "$line" | ${pkgs.jq}/bin/jq -r '.MESSAGE // empty' 2>/dev/null)
-
-                          if [[ -n "$message" ]]; then
-                              case "$message" in
-                                  *"STARTED:"*)
-                                      notify "normal" "Auto-Upgrade Started" "System auto-upgrade is beginning..."
-                                      ;;
-                                  *"SUCCESS:"*)
-                                      notify "normal" "Auto-Upgrade Complete" "System auto-upgrade completed successfully"
-                                      ;;
-                                  *"FAILURE:"*)
-                                      notify "critical" "Auto-Upgrade Failed" "''${message#*FAILURE: }"
-                                      ;;
-                                  *)
-                                      notify "normal" "Auto-Upgrade Update" "$message"
-                                      ;;
-                              esac
-                          fi
-                      fi
-                  done
-              }
-
-              case "''${1:-monitor}" in
-                  "monitor")
-                      monitor_logs
-                      ;;
-                  *)
-                      echo "Usage: $0 {monitor}"
-                      exit 1
-                      ;;
-              esac
-            '';
-            executable = true;
-          };
-
       home.file.".local/bin/auto-upgrade-status" = {
         text = ''
           #!/usr/bin/env bash
@@ -129,7 +66,7 @@ args@{
           echo
 
           echo -e "''${GREEN}=== RECENT AUTO-UPGRADE LOGS (last 15 lines) ===''${NC}"
-          journalctl -t nx-auto-upgrade --no-pager --lines=15 --reverse 2>/dev/null || echo "No auto-upgrade logs found"
+          nx-user-notify-logs recent 2>/dev/null | grep -i "auto-upgrade" || echo "No auto-upgrade logs found"
           echo
 
           if ! systemctl is-active --quiet nx-auto-upgrade.service && systemctl is-failed --quiet nx-auto-upgrade.service; then
@@ -147,21 +84,22 @@ args@{
 
       home.file.".local/bin/auto-upgrade-trigger-manually" = {
         text = ''
-                    #!/usr/bin/env bash
-                    set -euo pipefail
+          #!/usr/bin/env bash
+          set -euo pipefail
 
-                    if [[ $EUID -eq 0 ]]; then
-                      echo "Must be run as user!"
-                      exit 1
-                    fi
+          if [[ $EUID -eq 0 ]]; then
+            echo "Must be run as user!"
+            exit 1
+          fi
 
-                    if systemctl is-active --quiet nx-auto-upgrade.service; then
-                      echo "Error: Auto-upgrade is already running!"
-                      exit 1
-                    fi
+          if systemctl is-active --quiet nx-auto-upgrade.service; then
+            echo "Error: Auto-upgrade is already running!"
+            exit 1
+          fi
 
-                    echo "Starting auto-upgrade manually..."
-                    sudo systemctl start nx-auto-upgrade.service >/dev/null 2>&1 &
+          sudo -v
+          sudo systemctl start nx-auto-upgrade.service >/dev/null 2>&1 &
+          echo "Auto-upgrade triggered manually"
 
           ${
             if isHeadless then
@@ -200,61 +138,6 @@ args@{
         '';
         executable = true;
       };
-
-      systemd.user.services.auto-upgrade-monitor =
-        lib.mkIf (self.settings.monitoringEnabled && !isHeadless)
-          {
-            Unit = {
-              Description = "Auto-Upgrade Log Monitor";
-            };
-            Service = {
-              Type = "simple";
-              Restart = "on-failure";
-              RestartSec = "10";
-              ExecStart = "${self.user.home}/.local/bin/scripts/auto-upgrade-monitor monitor";
-              Environment = [
-                "PATH=${
-                  lib.makeBinPath [
-                    pkgs.bash
-                    pkgs.coreutils
-                    pkgs.libnotify
-                    pkgs.systemd
-                    pkgs.jq
-                  ]
-                }"
-              ];
-            };
-          };
-
-      systemd.user.timers.auto-upgrade-monitor-startup =
-        lib.mkIf (self.settings.monitoringEnabled && !isHeadless)
-          {
-            Unit = {
-              Description = "Start Auto-Upgrade Monitor";
-              After = [ "graphical-session.target" ];
-            };
-            Timer = {
-              OnActiveSec = "10s";
-              Unit = "auto-upgrade-monitor-startup.service";
-            };
-            Install = {
-              WantedBy = [ "graphical-session.target" ];
-            };
-          };
-
-      systemd.user.services.auto-upgrade-monitor-startup =
-        lib.mkIf (self.settings.monitoringEnabled && !isHeadless)
-          {
-            Unit = {
-              Description = "Start Auto-Upgrade Monitor";
-              After = [ "graphical-session.target" ];
-            };
-            Service = {
-              Type = "oneshot";
-              ExecStart = "${pkgs.systemd}/bin/systemctl --user start auto-upgrade-monitor.service";
-              RemainAfterExit = true;
-            };
-          };
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
