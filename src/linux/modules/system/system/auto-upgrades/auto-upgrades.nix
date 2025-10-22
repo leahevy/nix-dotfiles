@@ -451,48 +451,50 @@ args@{
                 }).custom.pushoverSendScript
               ];
 
-        script = ''
-          set -euo pipefail
+        script =
+          "exec ${pkgs.systemd}/bin/systemd-inhibit --who=\"nx-auto-upgrade\" --what=\"idle:sleep:shutdown\" --why=\"System upgrade in progress\" "
+          + pkgs.writeShellScript "nx-auto-upgrade-main" ''
+            set -euo pipefail
 
-          ${pkgs.coreutils}/bin/install -m 400 -o ${
-            toString config.users.users.${self.host.mainUser.username}.uid
-          } -g ${
-            toString config.users.groups.${config.users.users.${self.host.mainUser.username}.group}.gid
-          } "$CREDENTIALS_DIRECTORY/github-ssh-key" /run/nx-auto-upgrade-ssh-key
+            ${pkgs.coreutils}/bin/install -m 400 -o ${
+              toString config.users.users.${self.host.mainUser.username}.uid
+            } -g ${
+              toString config.users.groups.${config.users.users.${self.host.mainUser.username}.group}.gid
+            } "$CREDENTIALS_DIRECTORY/github-ssh-key" /run/nx-auto-upgrade-ssh-key
 
-          ${pkgs.coreutils}/bin/sleep 15
+            ${pkgs.coreutils}/bin/sleep 15
 
-          lock_dir="/tmp/.nx-deployment-lock"
-          if [[ -d "$lock_dir" ]]; then
-            ${logScript "err" "FAILURE: Another deployment is already running"}
-            exit 1
-          fi
+            lock_dir="/tmp/.nx-deployment-lock"
+            if [[ -d "$lock_dir" ]]; then
+              ${logScript "err" "FAILURE: Another deployment is already running"}
+              exit 1
+            fi
 
-          if ! ${pkgs.coreutils}/bin/mkdir "$lock_dir" 2>/dev/null; then
-            ${logScript "err" "FAILURE: Failed to create deployment lock"}
-            exit 1
-          fi
+            if ! ${pkgs.coreutils}/bin/mkdir "$lock_dir" 2>/dev/null; then
+              ${logScript "err" "FAILURE: Failed to create deployment lock"}
+              exit 1
+            fi
 
-          cleanup_lock() {
-            ${pkgs.coreutils}/bin/rm -rf "$lock_dir" 2>/dev/null || true
-          }
-          trap cleanup_lock EXIT TERM
+            cleanup_lock() {
+              ${pkgs.coreutils}/bin/rm -rf "$lock_dir" 2>/dev/null || true
+            }
+            trap cleanup_lock EXIT TERM
 
-          ${pkgs.coreutils}/bin/sleep 45
+            ${pkgs.coreutils}/bin/sleep 45
 
-          ${logScript "info" "STARTED: Auto-upgrade beginning"}
-          ${pkgs.coreutils}/bin/sleep 5
+            ${logScript "info" "STARTED: Auto-upgrade beginning"}
+            ${pkgs.coreutils}/bin/sleep 5
 
-          ${checkNetworkScript}
-          ${checkRepositoriesExistScript}
-          ${checkGitWorktreesScript}
-          ${checkForChangesScript}
-          ${pullRepositoriesScript}
-          ${upgradeScript}
-          ${rebootScript}
+            ${checkNetworkScript}
+            ${checkRepositoriesExistScript}
+            ${checkGitWorktreesScript}
+            ${checkForChangesScript}
+            ${pullRepositoriesScript}
+            ${upgradeScript}
+            ${rebootScript}
 
-          ${logScript "info" "SUCCESS: Auto-upgrade completed successfully"}
-        '';
+            ${logScript "info" "SUCCESS: Auto-upgrade completed successfully"}
+          '';
 
         after = [ "network-online.target" ];
         wants = [ "network-online.target" ];
