@@ -26,6 +26,7 @@ args@{
     maxNetworkRetries = 30;
     waitForNetwork = true;
     dryRun = true;
+    pushoverNotifications = true;
   };
 
   configuration =
@@ -47,6 +48,9 @@ args@{
         level: message:
         let
           userNotifyEnabled = (self.user.isModuleEnabled "notifications.user-notify");
+          pushoverEnabled =
+            (self.isModuleEnabled "notifications.pushover") && self.settings.pushoverNotifications;
+
           userNotifyMessage =
             if userNotifyEnabled then
               if lib.hasPrefix "STARTED:" message then
@@ -63,9 +67,48 @@ args@{
                 "Auto-Upgrade: ${message}"
             else
               "";
+
+          shouldSendPushover =
+            pushoverEnabled
+            && (
+              lib.hasPrefix "STARTED:" message
+              || lib.hasPrefix "SUCCESS:" message
+              || lib.hasPrefix "FAILURE:" message
+            );
+
+          pushoverPriority =
+            if lib.hasPrefix "STARTED:" message then
+              "-2"
+            else if lib.hasPrefix "SUCCESS:" message then
+              "0"
+            else if lib.hasPrefix "FAILURE:" message then
+              "1"
+            else
+              "0";
+
+          pushoverTitle =
+            if lib.hasPrefix "STARTED:" message then
+              "Auto-Upgrade Started"
+            else if lib.hasPrefix "SUCCESS:" message then
+              "Auto-Upgrade Completed"
+            else if lib.hasPrefix "FAILURE:" message then
+              "Auto-Upgrade Failed"
+            else
+              "Auto-Upgrade";
+
+          pushoverMessage =
+            if lib.hasPrefix "STARTED:" message then
+              lib.removePrefix "STARTED: " message
+            else if lib.hasPrefix "SUCCESS:" message then
+              lib.removePrefix "SUCCESS: " message
+            else if lib.hasPrefix "FAILURE:" message then
+              lib.removePrefix "FAILURE: " message
+            else
+              message;
         in
         ''
           ${lib.optionalString userNotifyEnabled ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
+          ${lib.optionalString shouldSendPushover ''pushover-send --title "${pushoverTitle}" --message "${pushoverMessage}" --priority ${pushoverPriority} || true''}
           echo "${message}" ${if level == "err" then ">&2" else ""}
         '';
 
@@ -387,16 +430,26 @@ args@{
           }
           // config.networking.proxy.envVars;
 
-        path = with pkgs; [
-          coreutils
-          git
-          openssh
-          config.nix.package.out
-          nh
-          sudo
-          util-linux
-          iputils
-        ];
+        path =
+          with pkgs;
+          [
+            coreutils
+            git
+            openssh
+            config.nix.package.out
+            nh
+            sudo
+            util-linux
+            iputils
+          ]
+          ++
+            lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
+              [
+                (self.importFileFromOtherModuleSameInput {
+                  inherit args self;
+                  modulePath = "notifications.pushover";
+                }).custom.pushoverSendScript
+              ];
 
         script = ''
           set -euo pipefail
@@ -428,6 +481,7 @@ args@{
           ${pkgs.coreutils}/bin/sleep 45
 
           ${logScript "info" "STARTED: Auto-upgrade beginning"}
+          ${pkgs.coreutils}/bin/sleep 5
 
           ${checkNetworkScript}
           ${checkRepositoriesExistScript}
@@ -495,5 +549,6 @@ args@{
       };
 
       system.autoUpgrade.enable = lib.mkForce false;
+
     };
 }
