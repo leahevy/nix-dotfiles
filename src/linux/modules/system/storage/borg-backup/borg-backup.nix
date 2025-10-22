@@ -246,6 +246,7 @@ args@{
             config.sops.secrets."${self.host.hostname}-borg-ssh-key".path
           } -o UserKnownHostsFile=${config.sops.secrets."${self.host.hostname}-borg-known-hosts".path}";
         };
+        inhibitsSleep = true;
         startAt = self.settings.schedule;
         persistentTimer = true;
         user = "root";
