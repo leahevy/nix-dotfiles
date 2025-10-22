@@ -38,7 +38,7 @@ args@{
     additionalApplicationMapping = { };
     additionalTerminalAppsMapping = { };
     bordersSize = 15;
-    barHeight = 61;
+    barHeight = 77;
     iconFontSize = "23.0";
     labelFontSize = "18.0";
     appIconFontSize = "22.0";
@@ -325,6 +325,10 @@ args@{
         colors.cyan
         colors.magenta
       ];
+
+      backgroundHeight = builtins.toString (builtins.div (self.settings.barHeight * 8) 10);
+      paddingSpace = self.settings.barHeight - (builtins.div (self.settings.barHeight * 8) 10);
+      textYOffset = builtins.toString (builtins.div paddingSpace 4);
     in
     {
       home.packages = with pkgs; [
@@ -747,7 +751,7 @@ args@{
                                padding_right=12                                  \
                                                                                 \
                                background.border_width=0                        \
-                               background.height=48                             \
+                               background.height=${backgroundHeight}            \
                                background.corner_radius=0                       \
                                background.color=${colors.transparentBackground} \
                                                                                 \
@@ -756,12 +760,14 @@ args@{
                                icon.padding_left=8                              \
                                icon.padding_right=4                             \
                                icon.font="${iconFont}"                          \
+                               icon.y_offset=${textYOffset}                     \
                                                                                 \
                                label.color=${colors.border}                     \
                                label.highlight_color=${colors.border}           \
                                label.padding_left=4                             \
                                label.padding_right=8                            \
-                               label.font="${labelFont}"
+                               label.font="${labelFont}"                        \
+                               label.y_offset=${textYOffset}
 
           sketchybar --add event window_change
 
