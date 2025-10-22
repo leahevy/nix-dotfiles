@@ -297,7 +297,6 @@ args@{
             canFail = true;
           })}
           ${logScript "info" "INFO: All snapshots deleted successfully"}
-          ${logScript "info" "SUCCESS: System backup completed successfully"}
         '';
 
       };
@@ -311,12 +310,36 @@ args@{
         script = logScript "err" "FAILURE: System backup failed - check journalctl -u borgbackup-job-system";
       };
 
+      systemd.services.borg-backup-log-success = {
+        description = "Log Borg Backup Success";
+        serviceConfig = {
+          Type = "oneshot";
+          User = "root";
+        };
+        script = ''
+          if [ "$MONITOR_EXIT_CODE" = "exited" ]; then
+            ${logScript "info" "SUCCESS: System backup completed successfully"}
+          fi
+        '';
+      };
+
       systemd.services.borgbackup-job-system = {
-        unitConfig.OnFailure = "borg-backup-log-failure.service";
-        serviceConfig.ReadWritePaths = [
-          "/persist/.snapshots"
-        ]
-        ++ lib.optional self.settings.withData "${self.settings.dataPath}/.snapshots";
+        unitConfig = {
+          OnFailure = "borg-backup-log-failure.service";
+          OnSuccess = "borg-backup-log-success.service";
+        };
+        serviceConfig = {
+          ReadWritePaths = [
+            "/persist/.snapshots"
+          ]
+          ++ lib.optional self.settings.withData "${self.settings.dataPath}/.snapshots";
+
+          ExecStopPost = "${pkgs.writeShellScript "borg-backup-stop-handler" ''
+            if [ "$EXIT_CODE" = "killed" ]; then
+              ${logScript "err" "FAILURE: System backup was stopped/interrupted"}
+            fi
+          ''}";
+        };
       };
 
       environment.persistence."${self.persist}" = {
