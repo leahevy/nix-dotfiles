@@ -34,6 +34,7 @@ args@{
         transparency = false;
         which-key = true;
         lsp = true;
+        cmp = true;
         project = true;
         vimwiki = true;
         tmuxline = false;
