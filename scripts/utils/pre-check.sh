@@ -621,10 +621,7 @@ check_nix_daemon_activity() {
 
     if [[ "$build_processes" -gt 0 ]]; then
         echo
-        echo -e "${RED}Warning: Nix daemon appears to be active ($build_processes active processes)${RESET}" >&2
-        echo -e "${YELLOW}Running concurrent actions may cause issues.${RESET}" >&2
-        echo
-        echo -en "${WHITE}Do you want to continue anyway? ${RESET}[y/N]: " >&2
+        echo -en "${GREEN}Nix-daemon is active, continue anyway? ${RESET}[y/N]: " >&2
         read -r response
         case "$response" in
             [yY]|[yY][eE][sS])
