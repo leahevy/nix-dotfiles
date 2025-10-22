@@ -143,7 +143,28 @@ rec {
         subpath ? null,
       }:
       let
-        moduleType = if self ? user then "home" else "system";
+        currentNamespace =
+          if self.moduleBasePath != null then
+            let
+              pathParts = lib.splitString "/" self.moduleBasePath;
+              namespaceIndex = lib.findFirst (i: (lib.elemAt pathParts i) == "modules") null (
+                lib.range 0 ((lib.length pathParts) - 1)
+              );
+            in
+            if namespaceIndex != null && (namespaceIndex + 1) < lib.length pathParts then
+              let
+                detected = lib.elemAt pathParts (namespaceIndex + 1);
+              in
+              if detected == "home" || detected == "system" then
+                detected
+              else
+                throw "Invalid module namespace '${detected}' in path: ${self.moduleBasePath}. Expected 'home' or 'system'"
+            else
+              throw "Cannot determine module namespace from path: ${self.moduleBasePath}. Expected '.../modules/{home|system}/...'"
+          else
+            throw "Module basePath is null - cannot determine namespace for importFileFromOtherModuleSameInput";
+
+        moduleType = currentNamespace;
         inputPath = helpers.resolveInputFromInput self.moduleInputName;
 
         modulePathParts = lib.splitString "." modulePath;
@@ -207,7 +228,28 @@ rec {
         subpath ? null,
       }:
       let
-        moduleType = if self ? user then "home" else "system";
+        currentNamespace =
+          if self.moduleBasePath != null then
+            let
+              pathParts = lib.splitString "/" self.moduleBasePath;
+              namespaceIndex = lib.findFirst (i: (lib.elemAt pathParts i) == "modules") null (
+                lib.range 0 ((lib.length pathParts) - 1)
+              );
+            in
+            if namespaceIndex != null && (namespaceIndex + 1) < lib.length pathParts then
+              let
+                detected = lib.elemAt pathParts (namespaceIndex + 1);
+              in
+              if detected == "home" || detected == "system" then
+                detected
+              else
+                throw "Invalid module namespace '${detected}' in path: ${self.moduleBasePath}. Expected 'home' or 'system'"
+            else
+              throw "Cannot determine module namespace from path: ${self.moduleBasePath}. Expected '.../modules/{home|system}/...'"
+          else
+            throw "Module basePath is null - cannot determine namespace for importFileFromOtherModuleOtherInput";
+
+        moduleType = currentNamespace;
         inputPath = helpers.resolveInputFromInput inputName;
 
         modulePathParts = lib.splitString "." modulePath;
