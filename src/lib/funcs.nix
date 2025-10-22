@@ -524,7 +524,7 @@ rec {
         users = args.users or null;
         variables = args.variables;
         configInputs = args.configInputs or { };
-        moduleBasePath = "assertions/${assertion.moduleSpec.group}/${assertion.moduleSpec.name}";
+        moduleBasePath = "modules/${assertion.moduleType}/${assertion.moduleSpec.group}/${assertion.moduleSpec.name}";
         moduleInput = assertion.moduleSpec.input;
         moduleInputName = assertion.moduleSpec.inputName;
         settings = assertion.moduleSpec.settings;

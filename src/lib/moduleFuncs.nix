@@ -314,7 +314,7 @@ rec {
   createContextFunctions =
     inputName: namespace: moduleContext: moduleBasePath:
     let
-      currentNamespace = if moduleContext ? user then "home" else "system";
+      currentNamespace = namespace;
       isStandalone = moduleContext.user.isStandalone or false;
 
       fileFunctions = generateFileFunctions inputName moduleBasePath;
@@ -329,7 +329,27 @@ rec {
   buildHierarchicalFunctions =
     moduleContext: moduleBasePath:
     let
-      currentNamespace = if moduleContext ? user then "home" else "system";
+      currentNamespace =
+        if moduleBasePath != null then
+          let
+            pathParts = lib.splitString "/" moduleBasePath;
+            namespaceIndex = lib.findFirst (i: (lib.elemAt pathParts i) == "modules") null (
+              lib.range 0 ((lib.length pathParts) - 1)
+            );
+          in
+          if namespaceIndex != null && (namespaceIndex + 1) < lib.length pathParts then
+            let
+              detected = lib.elemAt pathParts (namespaceIndex + 1);
+            in
+            if detected == "home" || detected == "system" then
+              detected
+            else
+              throw "Invalid module namespace '${detected}' in path: ${moduleBasePath}. Expected 'home' or 'system'"
+          else
+            throw "Cannot determine module namespace from path: ${moduleBasePath}. Expected '.../modules/{home|system}/...'"
+        else
+          throw "Module basePath is null - cannot determine namespace";
+
       currentInputName = moduleContext.moduleInputName;
       isStandalone = moduleContext.user.isStandalone or false;
 
@@ -502,6 +522,10 @@ rec {
           "system"
         else if targetNamespace == "user" then
           "home"
+        else if targetNamespace == "system" then
+          "system"
+        else if targetNamespace == "home" then
+          "home"
         else
           currentNamespace;
     };
@@ -660,23 +684,38 @@ rec {
         modulePath:
         let
           resolved = resolveModulePath modulePath;
+          completeModules =
+            if actualNamespace == "system" && moduleContext ? host && moduleContext.host ? processedModules then
+              moduleContext.host.processedModules
+            else
+              getModulesForNamespace actualNamespace;
         in
-        lib.hasAttrByPath resolved.fullPath modules;
+        lib.hasAttrByPath resolved.fullPath completeModules;
 
       # Get module config
       getModuleConfig =
         modulePath:
         let
           resolved = resolveModulePath modulePath;
+          completeModules =
+            if actualNamespace == "system" && moduleContext ? host && moduleContext.host ? processedModules then
+              moduleContext.host.processedModules
+            else
+              getModulesForNamespace actualNamespace;
         in
-        lib.attrByPath resolved.fullPath { } modules;
+        lib.attrByPath resolved.fullPath { } completeModules;
 
       # Require module config
       requireModuleConfig =
         modulePath:
         let
           resolved = resolveModulePath modulePath;
-          config = lib.attrByPath resolved.fullPath { } modules;
+          completeModules =
+            if actualNamespace == "system" && moduleContext ? host && moduleContext.host ? processedModules then
+              moduleContext.host.processedModules
+            else
+              getModulesForNamespace actualNamespace;
+          config = lib.attrByPath resolved.fullPath { } completeModules;
         in
         if config != { } then
           config
