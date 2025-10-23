@@ -329,6 +329,12 @@ args@{
       backgroundHeight = builtins.toString (builtins.div (self.settings.barHeight * 8) 10);
       paddingSpace = self.settings.barHeight - (builtins.div (self.settings.barHeight * 8) 10);
       textYOffset = builtins.toString (builtins.div paddingSpace 4);
+      labelFontSizeNum = lib.toInt (lib.removeSuffix ".0" self.settings.labelFontSize);
+      separatorFontSizeNum = lib.toInt (lib.removeSuffix ".0" self.settings.separatorFontSize);
+      fontSizeDiff = separatorFontSizeNum - labelFontSizeNum;
+      separatorYOffset = builtins.toString (
+        (builtins.div paddingSpace 4) + (builtins.div fontSizeDiff 3)
+      );
     in
     {
       home.packages = with pkgs; [
@@ -802,7 +808,7 @@ args@{
                                  icon.drawing=off \
                                  label.color=${colors.border} \
                                  label.font="${separatorFont}" \
-                                 label.y_offset=2 \
+                                 label.y_offset=${separatorYOffset} \
                                  padding_left=4 \
                                  padding_right=4 \
                                  background.color=${colors.transparentBackground}
