@@ -25,7 +25,7 @@ args@{
     preNotificationTimeMinutes = 15;
     maxNetworkRetries = 30;
     waitForNetwork = true;
-    dryRun = true;
+    dryRun = false;
     pushoverNotifications = true;
   };
 
@@ -59,6 +59,8 @@ args@{
                 "Auto-Upgrade (completed): ${lib.removePrefix "SUCCESS: " message}"
               else if lib.hasPrefix "FAILURE:" message then
                 "Auto-Upgrade (failed): ${lib.removePrefix "FAILURE: " message}"
+              else if lib.hasPrefix "WARNING:" message then
+                "Auto-Upgrade (warning): ${lib.removePrefix "WARNING: " message}"
               else if lib.hasPrefix "INFO:" message then
                 "Auto-Upgrade (info): ${lib.removePrefix "INFO: " message}"
               else if lib.hasPrefix "NOTICE:" message then
@@ -81,6 +83,8 @@ args@{
               "info"
             else if lib.hasPrefix "FAILURE:" message then
               "failed"
+            else if lib.hasPrefix "WARNING:" message then
+              "warn"
             else
               null;
 
@@ -99,6 +103,8 @@ args@{
               lib.removePrefix "INFO: " message
             else if lib.hasPrefix "FAILURE:" message then
               lib.removePrefix "FAILURE: " message
+            else if lib.hasPrefix "WARNING:" message then
+              lib.removePrefix "WARNING: " message
             else
               message;
         in
@@ -119,7 +125,7 @@ args@{
           until ${pkgs.iputils}/bin/ping -c1 -q "$host" >/dev/null 2>&1; do
             host_retries=$((host_retries + 1))
             if [ $host_retries -ge $max_retries ]; then
-              ${logScript "err" "FAILURE: Network connectivity to $host failed after $max_retries attempts"}
+              ${logScript "err" "FAILURE: Network connectivity to $host failed after $max_retries attempts!"}
               exit 1
             fi
             ${pkgs.coreutils}/bin/echo "Host $host not reachable, waiting 30s... (attempt $host_retries/$max_retries)"
@@ -134,12 +140,12 @@ args@{
           local repo_name="$2"
 
           if [[ ! -d "$repo_path" ]]; then
-            ${logScript "err" "FAILURE: Repository $repo_name not found at $repo_path"}
+            ${logScript "err" "FAILURE: Repository $repo_name not found at $repo_path!"}
             exit 1
           fi
 
           if [[ ! -d "$repo_path/.git" ]]; then
-            ${logScript "err" "FAILURE: Directory $repo_path is not a git repository"}
+            ${logScript "err" "FAILURE: Directory $repo_path is not a git repository!"}
             exit 1
           fi
         }
@@ -155,7 +161,7 @@ args@{
 
           cd "$repo_path"
           if [[ "$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git status --porcelain)" != "" ]]; then
-            ${logScript "err" "FAILURE: Repository $repo_name has uncommitted changes"}
+            ${logScript "err" "WARNING: Repository $repo_name has uncommitted changes!"}
             exit 1
           fi
         }
@@ -175,7 +181,7 @@ args@{
           local remote_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse origin/main)
 
           if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git merge-base --is-ancestor "$local_commit" origin/main >/dev/null 2>&1; then
-            ${logScript "err" "FAILURE: Repository $repo_name local commit is ahead of remote - development in progress"}
+            ${logScript "err" "WARNING: Repository $repo_name local commit is ahead of remote!"}
             exit 1
           fi
 
@@ -222,7 +228,7 @@ args@{
             else
               ''
                 if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git pull origin main; then
-                  ${logScript "err" "FAILURE: Failed to pull $repo_name repository"}
+                  ${logScript "err" "FAILURE: Failed to pull $repo_name repository!"}
                   exit 1
                 fi
                 ${pkgs.coreutils}/bin/chown -R ${self.host.mainUser.username}:${self.host.mainUser.username} "$repo_path"
@@ -257,7 +263,7 @@ args@{
                 --override-input config "path:${nxconfigDir}" \
                 --override-input profile "path:$PROFILE_PATH" \
                 --print-build-logs; then
-                ${logScript "err" "FAILURE: System rebuild failed"}
+                ${logScript "err" "FAILURE: System rebuild failed!"}
                 exit 1
               fi
               ${logScript "info" "SUCCESS: System rebuild completed successfully"}
@@ -396,7 +402,7 @@ args@{
           Type = "oneshot";
           User = "root";
         };
-        script = logScript "err" "FAILURE: Auto-upgrade failed - check journalctl -u nx-auto-upgrade";
+        script = logScript "err" "FAILURE: Auto-upgrade failed - check journalctl -u nx-auto-upgrade !";
       };
 
       systemd.services.nx-auto-upgrade-notify = {
@@ -429,7 +435,7 @@ args@{
           ExecStartPost = "${pkgs.coreutils}/bin/rm -f /run/nx-auto-upgrade-ssh-key";
           ExecStopPost = "${pkgs.writeShellScript "nx-auto-upgrade-stop-handler" ''
             if [ "$EXIT_CODE" = "killed" ]; then
-              ${logScript "err" "FAILURE: Auto-upgrade was stopped/interrupted"}
+              ${logScript "err" "FAILURE: Auto-upgrade was stopped/interrupted!"}
             fi
             ${pkgs.coreutils}/bin/rm -f /run/nx-auto-upgrade-ssh-key
           ''}";
@@ -479,12 +485,12 @@ args@{
 
             lock_dir="/tmp/.nx-deployment-lock"
             if [[ -d "$lock_dir" ]]; then
-              ${logScript "err" "FAILURE: Another deployment is already running"}
+              ${logScript "err" "FAILURE: Another deployment is already running!"}
               exit 1
             fi
 
             if ! ${pkgs.coreutils}/bin/mkdir "$lock_dir" 2>/dev/null; then
-              ${logScript "err" "FAILURE: Failed to create deployment lock"}
+              ${logScript "err" "FAILURE: Failed to create deployment lock!"}
               exit 1
             fi
 
