@@ -82,9 +82,13 @@ jobs:
             echo "${!repo_var:-}"
           }
 
+          REBOOT_PATTERNS="linux-[0-9]|linux_[0-9]|linuxKernel|kernelPackages|systemd[^-]|systemd:|systemd\s|^systemd$|glibc|microcode|linux-firmware"
+
           IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
 
           commit_lists=""
+          requires_reboot="false"
+          reboot_packages=""
 
           for input in "${inputs[@]}"; do
             input=$(echo "$input" | xargs)
@@ -101,15 +105,24 @@ jobs:
               if [ "$old_commit" != "$new_commit" ] && [ -n "$old_commit" ]; then
                 echo "Fetching commits for $input from $repo..."
 
-                if commits=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                  "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit" | \
-                  jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null); then
+                if commits_json=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                  "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit"); then
+
+                  commits=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+
+                  if echo "$commits_json" | jq -r '.commits[]?.commit.message' | grep -iE "$REBOOT_PATTERNS" > /dev/null 2>&1; then
+                    requires_reboot="true"
+                    found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message' | grep -iEo "$REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                    if [ -n "$found_packages" ]; then
+                      reboot_packages="$reboot_packages$found_packages, "
+                    fi
+                  fi
 
                   if [ -n "$commits" ]; then
                     commit_count=$(echo "$commits" | wc -l)
-                    if [ "$commit_count" -gt 20 ]; then
-                      commits=$(echo "$commits" | head -20)
-                      commits="$commits"$'\n'"- ... and $(($commit_count - 20)) more commits"
+                    if [ "$commit_count" -gt 100 ]; then
+                      commits=$(echo "$commits" | head -100)
+                      commits="$commits"$'\n'"- ... and $(($commit_count - 100)) more commits"
                     fi
 
                     commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"$commits"
@@ -120,6 +133,11 @@ jobs:
               fi
             fi
           done
+
+          reboot_packages=$(echo "$reboot_packages" | sed 's/, $//')
+
+          echo "REQUIRES_REBOOT=$requires_reboot" >> $GITHUB_ENV
+          echo "REBOOT_PACKAGES=$reboot_packages" >> $GITHUB_ENV
 
           {
             echo "COMMIT_LISTS<<EOF"
@@ -138,6 +156,10 @@ jobs:
           body: |
             ## Automated update of flake inputs.
 
+            ${{ env.REQUIRES_REBOOT == 'true' && '> [!WARNING]' || '' }}
+            ${{ env.REQUIRES_REBOOT == 'true' && '> ⚠️ **System Reboot Required** ⚠️' || '' }}
+            ${{ env.REQUIRES_REBOOT == 'true' && format('> This update requires a reboot! ({0})', env.REBOOT_PACKAGES) || '' }}
+
             ### Updated inputs:
             - ${{ env.UPDATED_INPUTS }}
             ${{ env.COMMIT_LISTS }}
@@ -147,8 +169,23 @@ jobs:
           delete-branch: true
           sign-commits: true
 
+      - name: Check if merge day
+        id: check-day
+        run: |
+          set -euo pipefail
+          # MERGE_DAYS="6"
+          # current_day=$(date +%u)
+          # if echo "$MERGE_DAYS" | grep -q "\b$current_day\b"; then
+          #   echo "its_mergeday=true" >> $GITHUB_OUTPUT
+          # else
+          #   echo "its_mergeday=false" >> $GITHUB_OUTPUT
+          # fi
+          #
+          # Disabled:
+          echo "its_mergeday=false" >> $GITHUB_OUTPUT
+
       - name: Notify PR Created via Pushover
-        if: steps.changes.outputs.changed == 'true' && steps.cpr.outputs.pull-request-operation == 'created'
+        if: steps.changes.outputs.changed == 'true' && steps.cpr.outputs.pull-request-operation == 'created' && (steps.check-day.outputs.its_mergeday != 'true' || env.REQUIRES_REBOOT == 'true')
         env:
           PUSHHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
           PUSHHOVER_USER: ${{ secrets.PUSHOVER_USER }}
@@ -164,20 +201,16 @@ jobs:
             --form-string "url=${{ steps.cpr.outputs.pull-request-url }}" \
             https://api.pushover.net/1/messages.json
 
-      # - name: Check if merge day
-      #   id: check-day
-      #   run: |
-      #     set -euo pipefail
-      #     if [ "$(date +%u)" = "6" ]; then
-      #       echo "its_mergeday=true" >> $GITHUB_OUTPUT
-      #     else
-      #       echo "its_mergeday=false" >> $GITHUB_OUTPUT
-      #     fi
+      - name: Enable auto-merge
+        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && env.REQUIRES_REBOOT != 'true'
+        run: |
+          set -euo pipefail
+          echo "Enabling auto-merge for PR #${{ steps.cpr.outputs.pull-request-number }}"
+          gh pr merge --auto --squash ${{ steps.cpr.outputs.pull-request-number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Enable auto-merge
-      #   if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true'
-      #   run: |
-      #     set -euo pipefail
-      #     gh pr merge --auto --squash ${{ steps.cpr.outputs.pull-request-number }}
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Skip auto-merge due to reboot-requiring packages
+        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && env.REQUIRES_REBOOT == 'true'
+        run: |
+          echo "⚠️ Auto-merge skipped: Update requires reboot! (${{ env.REBOOT_PACKAGES }})"
