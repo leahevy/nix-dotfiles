@@ -30,6 +30,11 @@ args@{
             skip_empty_sections = 1;
           };
         };
+
+        globals = {
+          "airline#extensions#tabline#enabled" = 1;
+          "airline#extensions#tabline#show_close_button" = 0;
+        };
       };
     };
 }
