@@ -7,6 +7,9 @@ on:
 jobs:
   update-flake-lock:
     runs-on: ubuntu-latest
+    env:
+      UPDATE_INPUTS: "nixpkgs"
+      REPO_nixpkgs: "NixOS/nixpkgs"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -14,12 +17,36 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
 
+      - name: Extract commit hashes before update
+        run: |
+          set -euo pipefail
+
+          get_lockfile_node() {
+            nix flake metadata --json . | jq -r ".locks.nodes.root.inputs.$1"
+          }
+
+          IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
+
+          declare -A old_commits
+          for input in "${inputs[@]}"; do
+            input=$(echo "$input" | xargs)
+            node=$(get_lockfile_node "$input")
+            if [ "$node" != "null" ]; then
+              old_commit=$(nix flake metadata --json . | jq -r ".locks.nodes.$node.locked.rev")
+              echo "OLD_COMMIT_$input=$old_commit" >> $GITHUB_ENV
+              echo "Input $input: current commit $old_commit"
+            fi
+          done
+
       - name: Update flake inputs
         run: |
           set -euo pipefail
-          inputs=("nixpkgs")
+
+          IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
           updated_inputs=""
+
           for input in "${inputs[@]}"; do
+            input=$(echo "$input" | xargs)
             echo "Updating input: $input"
             nix flake update "$input"
             if [ -z "$updated_inputs" ]; then
@@ -40,6 +67,66 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Generate commit lists
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+
+          get_lockfile_node() {
+            nix flake metadata --json . | jq -r ".locks.nodes.root.inputs.$1"
+          }
+
+          get_repo() {
+            local input=$1
+            local repo_var="REPO_$input"
+            echo "${!repo_var:-}"
+          }
+
+          IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
+
+          commit_lists=""
+
+          for input in "${inputs[@]}"; do
+            input=$(echo "$input" | xargs)
+            node=$(get_lockfile_node "$input")
+            repo=$(get_repo "$input")
+
+            if [ "$node" != "null" ] && [ -n "$repo" ]; then
+              new_commit=$(nix flake metadata --json . | jq -r ".locks.nodes.$node.locked.rev")
+              old_commit_var="OLD_COMMIT_$input"
+              old_commit="${!old_commit_var:-}"
+
+              echo "Input $input: old commit $old_commit, new commit $new_commit"
+
+              if [ "$old_commit" != "$new_commit" ] && [ -n "$old_commit" ]; then
+                echo "Fetching commits for $input from $repo..."
+
+                if commits=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                  "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit" | \
+                  jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null); then
+
+                  if [ -n "$commits" ]; then
+                    commit_count=$(echo "$commits" | wc -l)
+                    if [ "$commit_count" -gt 20 ]; then
+                      commits=$(echo "$commits" | head -20)
+                      commits="$commits"$'\n'"- ... and $(($commit_count - 20)) more commits"
+                    fi
+
+                    commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"$commits"
+                  fi
+                else
+                  echo "Failed to fetch commits for $input, skipping commit list"
+                fi
+              fi
+            fi
+          done
+
+          {
+            echo "COMMIT_LISTS<<EOF"
+            echo "$commit_lists"
+            echo "EOF"
+          } >> $GITHUB_ENV
+
       - name: Create Pull Request
         if: steps.changes.outputs.changed == 'true'
         id: cpr
@@ -53,6 +140,7 @@ jobs:
 
             Updated inputs:
             - ${{ env.UPDATED_INPUTS }}
+            ${{ env.COMMIT_LISTS }}
 
             Generated automatically by GitHub Actions
           branch: update-flake-inputs
