@@ -132,7 +132,7 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           commit-message: "Update flake inputs: ${{ env.UPDATED_INPUTS }}"
           title: "Update flake inputs: ${{ env.UPDATED_INPUTS }}"
           body: |
