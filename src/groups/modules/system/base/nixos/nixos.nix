@@ -26,6 +26,9 @@ args@{
           };
         };
         linux = {
+          storage = {
+            smartd = true;
+          };
           system = {
             gc = true;
             auto-upgrades = true;
