@@ -68,33 +68,17 @@ args@{
             else
               "";
 
-          shouldSendPushover =
-            pushoverEnabled
-            && (
-              lib.hasPrefix "STARTED:" message
-              || lib.hasPrefix "SUCCESS:" message
-              || lib.hasPrefix "FAILURE:" message
-            );
-
-          pushoverPriority =
+          pushoverType =
             if lib.hasPrefix "STARTED:" message then
-              "-2"
+              "started"
             else if lib.hasPrefix "SUCCESS:" message then
-              "0"
+              "success"
             else if lib.hasPrefix "FAILURE:" message then
-              "1"
+              "failed"
             else
-              "0";
+              null;
 
-          pushoverTitle =
-            if lib.hasPrefix "STARTED:" message then
-              "Auto-Upgrade Started"
-            else if lib.hasPrefix "SUCCESS:" message then
-              "Auto-Upgrade Completed"
-            else if lib.hasPrefix "FAILURE:" message then
-              "Auto-Upgrade Failed"
-            else
-              "Auto-Upgrade";
+          shouldSendPushover = pushoverEnabled && pushoverType != null;
 
           pushoverMessage =
             if lib.hasPrefix "STARTED:" message then
@@ -108,7 +92,7 @@ args@{
         in
         ''
           ${lib.optionalString userNotifyEnabled ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
-          ${lib.optionalString shouldSendPushover ''pushover-send --title "${pushoverTitle}" --message "${pushoverMessage}" --priority ${pushoverPriority} || true''}
+          ${lib.optionalString shouldSendPushover ''pushover-send --title "Auto-Upgrade" --message "${pushoverMessage}" --type ${pushoverType} || true''}
           echo "${message}" ${if level == "err" then ">&2" else ""}
         '';
 

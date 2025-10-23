@@ -27,6 +27,8 @@ rec {
       TITLE=""
       MESSAGE=""
       PRIORITY="${toString defaults.defaultPriority}"
+      PRIORITY_SET=false
+      TYPE=""
       URL=""
       EXTRA_ARGS=()
 
@@ -42,6 +44,11 @@ rec {
                   ;;
               --priority)
                   PRIORITY="$2"
+                  PRIORITY_SET=true
+                  shift 2
+                  ;;
+              --type)
+                  TYPE="$2"
                   shift 2
                   ;;
               --url)
@@ -55,7 +62,8 @@ rec {
                   ;;
               *)
                   echo "Unknown option: $1" >&2
-                  echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--url <url>] [-- <extra-pushover-args>]" >&2
+                  echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [-- <extra-pushover-args>]" >&2
+                  echo "Types: started, stopped, failed, warn, success, info, debug, emerg" >&2
                   exit 1
                   ;;
           esac
@@ -63,8 +71,43 @@ rec {
 
       if [[ -z "$TITLE" || -z "$MESSAGE" ]]; then
           echo "Error: --title and --message are required" >&2
-          echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--url <url>] [-- <extra-pushover-args>]" >&2
+          echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [-- <extra-pushover-args>]" >&2
+          echo "Types: started, stopped, failed, warn, success, info, debug, emerg" >&2
           exit 1
+      fi
+
+      if [[ -n "$TYPE" && "$PRIORITY_SET" == "false" ]]; then
+          case "$TYPE" in
+              started) PRIORITY="-1" ;;
+              stopped) PRIORITY="0" ;;
+              failed) PRIORITY="1" ;;
+              warn) PRIORITY="1" ;;
+              success) PRIORITY="0" ;;
+              info) PRIORITY="0" ;;
+              debug) PRIORITY="-2" ;;
+              emerg) PRIORITY="2" ;;
+              *)
+                  echo "Error: Invalid type '$TYPE'" >&2
+                  echo "Valid types: started, stopped, failed, warn, success, info, debug, emerg" >&2
+                  exit 1
+                  ;;
+          esac
+      fi
+
+      FORMATTED_TITLE="$TITLE"
+      if [[ -n "$TYPE" ]]; then
+          case "$TYPE" in
+              started) EMOTICON="🚀" ;;
+              stopped) EMOTICON="🟥" ;;
+              failed) EMOTICON="❌" ;;
+              warn) EMOTICON="⚠️" ;;
+              success) EMOTICON="✅" ;;
+              info) EMOTICON="💡" ;;
+              debug) EMOTICON="🐞" ;;
+              emerg) EMOTICON="❗" ;;
+          esac
+
+          FORMATTED_TITLE="$EMOTICON $TITLE ($TYPE)"
       fi
 
       if [[ $EUID -eq 0 ]]; then
@@ -91,7 +134,7 @@ rec {
       cat > "$TEMP_CONFIG" <<EOF
       form = "token=$(cat "$TOKEN_FILE")"
       form = "user=$(cat "$USER_FILE")"
-      form = "title=$TITLE [${self.host.hostname}]"
+      form = "title=$FORMATTED_TITLE [${self.host.hostname}]"
       form = "message=$MESSAGE"
       form = "priority=$PRIORITY"
       EOF

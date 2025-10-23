@@ -139,33 +139,17 @@ args@{
             else
               "";
 
-          shouldSendPushover =
-            pushoverEnabled
-            && (
-              lib.hasPrefix "STARTED:" message
-              || lib.hasPrefix "SUCCESS:" message
-              || lib.hasPrefix "FAILURE:" message
-            );
-
-          pushoverPriority =
+          pushoverType =
             if lib.hasPrefix "STARTED:" message then
-              "-2"
+              "started"
             else if lib.hasPrefix "SUCCESS:" message then
-              "0"
+              "success"
             else if lib.hasPrefix "FAILURE:" message then
-              "1"
+              "failed"
             else
-              "0";
+              null;
 
-          pushoverTitle =
-            if lib.hasPrefix "STARTED:" message then
-              "Backup Started"
-            else if lib.hasPrefix "SUCCESS:" message then
-              "Backup Completed"
-            else if lib.hasPrefix "FAILURE:" message then
-              "Backup Failed"
-            else
-              "Backup";
+          shouldSendPushover = pushoverEnabled && pushoverType != null;
 
           pushoverMessage =
             if lib.hasPrefix "STARTED:" message then
@@ -184,7 +168,7 @@ args@{
               inherit args self;
               modulePath = "notifications.pushover";
             }).custom.pushoverSendScript
-          }/bin/pushover-send --title "${pushoverTitle}" --message "${pushoverMessage}" --priority ${pushoverPriority} || true''}
+          }/bin/pushover-send --title "Borg-Backup" --message "${pushoverMessage}" --type ${pushoverType} || true''}
           echo "${message}" ${if level == "err" then ">&2" else ""}
         '';
 
