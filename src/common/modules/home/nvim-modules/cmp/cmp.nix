@@ -34,15 +34,27 @@ args@{
           autoEnableSources = true;
 
           settings = {
-            mapping = {
-              "<C-b>" = "cmp.mapping.scroll_docs(-4)";
-              "<C-f>" = "cmp.mapping.scroll_docs(4)";
-              "<C-Space>" = "cmp.mapping.complete()";
-              "<C-e>" = "cmp.mapping.abort()";
-              "<CR>" = "cmp.mapping.confirm({ select = true })";
-              "<PageUp>" = "cmp.mapping.select_prev_item({ count = 10 })";
-              "<PageDown>" = "cmp.mapping.select_next_item({ count = 10 })";
+            completion = {
+              autocomplete = false;
             };
+
+            mapping = lib.mkMerge [
+              {
+                "<C-b>" = "cmp.mapping.scroll_docs(-4)";
+                "<C-f>" = "cmp.mapping.scroll_docs(4)";
+                "<C-Space>" = "cmp.mapping.complete()";
+                "<C-e>" = "cmp.mapping.abort()";
+                "<CR>" = "cmp.mapping.confirm({ select = true })";
+                "<PageUp>" = "cmp.mapping.select_prev_item({ count = 10 })";
+                "<PageDown>" = "cmp.mapping.select_next_item({ count = 10 })";
+              }
+              (lib.mkIf (!self.isModuleEnabled "nvim-modules.copilot") {
+                "<C-n>" =
+                  "cmp.mapping(function(fallback) if cmp.visible() then cmp.select_next_item() else cmp.complete() end end, { 'i', 's' })";
+                "<C-p>" =
+                  "cmp.mapping(function(fallback) if cmp.visible() then cmp.select_prev_item() else cmp.complete() end end, { 'i', 's' })";
+              })
+            ];
 
             sources = lib.mkMerge [
               [
@@ -156,15 +168,31 @@ args@{
       home.file.".config/nvim-init/40-cmp-cmdline.lua".text = lib.mkIf self.settings.enableCmdline ''
         local cmp = require("cmp")
 
+        local cmdline_mapping = cmp.mapping.preset.cmdline()
+        cmdline_mapping['<C-n>'] = cmp.mapping(function(fallback)
+          if cmp.visible() then
+            cmp.select_next_item()
+          else
+            cmp.complete()
+          end
+        end, { 'c' })
+        cmdline_mapping['<C-p>'] = cmp.mapping(function(fallback)
+          if cmp.visible() then
+            cmp.select_prev_item()
+          else
+            cmp.complete()
+          end
+        end, { 'c' })
+
         cmp.setup.cmdline({ "/", "?" }, {
-          mapping = cmp.mapping.preset.cmdline(),
+          mapping = cmdline_mapping,
           sources = {
             { name = "buffer" }
           }
         })
 
         cmp.setup.cmdline(":", {
-          mapping = cmp.mapping.preset.cmdline(),
+          mapping = cmdline_mapping,
           sources = cmp.config.sources({
             { name = "path" }
           }, {
