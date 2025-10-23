@@ -73,6 +73,12 @@ args@{
               "started"
             else if lib.hasPrefix "SUCCESS:" message then
               "success"
+            else if lib.hasPrefix "SUCCESS-REBOOT-NOW:" message then
+              "warn"
+            else if lib.hasPrefix "SUCCESS-REBOOT-LATER:" message then
+              "success"
+            else if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then
+              "info"
             else if lib.hasPrefix "FAILURE:" message then
               "failed"
             else
@@ -85,6 +91,12 @@ args@{
               lib.removePrefix "STARTED: " message
             else if lib.hasPrefix "SUCCESS:" message then
               lib.removePrefix "SUCCESS: " message
+            else if lib.hasPrefix "SUCCESS-REBOOT-NOW:" message then
+              lib.removePrefix "SUCCESS-REBOOT-NOW: " message
+            else if lib.hasPrefix "SUCCESS-REBOOT-LATER:" message then
+              lib.removePrefix "SUCCESS-REBOOT-LATER: " message
+            else if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then
+              lib.removePrefix "INFO: " message
             else if lib.hasPrefix "FAILURE:" message then
               lib.removePrefix "FAILURE: " message
             else
@@ -294,7 +306,7 @@ args@{
             if self.settings.rebootWindow != null then
               ''
                 if check_reboot_window; then
-                  ${logScript "info" "Reboot needed and within window - ${
+                  ${logScript "info" "SUCCESS-REBOOT-NOW: Reboot needed and within window - ${
                     if self.settings.dryRun then "would reboot" else "rebooting"
                   } in +1 minute"}
                   ${
@@ -304,7 +316,7 @@ args@{
                       ''${config.systemd.package}/bin/shutdown -r +1''
                   }
                 else
-                  ${logScript "info" "Reboot needed but outside window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper}) - ${
+                  ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed but outside window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper}) - ${
                     if self.settings.dryRun then "would create" else "creating"
                   } marker file"}
                   ${
@@ -321,7 +333,7 @@ args@{
               ''
             else
               ''
-                ${logScript "info" "Reboot needed - ${
+                ${logScript "info" "SUCCESS-REBOOT-NOW: Reboot needed - ${
                   if self.settings.dryRun then "would reboot" else "rebooting"
                 } in +1 minute"}
                 ${
@@ -333,7 +345,7 @@ args@{
               ''
           }
         else
-          ${logScript "info" "No reboot required"}
+          ${logScript "info" "SUCCESS: Auto-upgrade completed successfully, no reboot required"}
         fi
       '';
 
@@ -378,6 +390,15 @@ args@{
         group = "root";
       };
 
+      systemd.services.nx-auto-upgrade-log-failure = {
+        description = "Log NX Auto-Upgrade Failure";
+        serviceConfig = {
+          Type = "oneshot";
+          User = "root";
+        };
+        script = logScript "err" "FAILURE: Auto-upgrade failed - check journalctl -u nx-auto-upgrade";
+      };
+
       systemd.services.nx-auto-upgrade-notify = {
         description = "NX Auto-Upgrade Pre-Notification";
         serviceConfig = {
@@ -396,14 +417,22 @@ args@{
         description = "NX Auto-Upgrade";
 
         restartIfChanged = false;
-        unitConfig.X-StopOnRemoval = false;
+        unitConfig = {
+          X-StopOnRemoval = false;
+          OnFailure = "nx-auto-upgrade-log-failure.service";
+        };
 
         serviceConfig = {
           Type = "oneshot";
           User = "root";
           LoadCredential = "github-ssh-key:${config.sops.secrets.github-ssh-key.path}";
           ExecStartPost = "${pkgs.coreutils}/bin/rm -f /run/nx-auto-upgrade-ssh-key";
-          ExecStopPost = "${pkgs.coreutils}/bin/rm -f /run/nx-auto-upgrade-ssh-key";
+          ExecStopPost = "${pkgs.writeShellScript "nx-auto-upgrade-stop-handler" ''
+            if [ "$EXIT_CODE" = "killed" ]; then
+              ${logScript "err" "FAILURE: Auto-upgrade was stopped/interrupted"}
+            fi
+            ${pkgs.coreutils}/bin/rm -f /run/nx-auto-upgrade-ssh-key
+          ''}";
         };
 
         environment =
@@ -476,8 +505,6 @@ args@{
             ${pullRepositoriesScript}
             ${upgradeScript}
             ${rebootScript}
-
-            ${logScript "info" "SUCCESS: Auto-upgrade completed successfully"}
           '';
 
         after = [ "network-online.target" ];
