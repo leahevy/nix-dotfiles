@@ -481,8 +481,6 @@ args@{
               toString config.users.groups.${config.users.users.${self.host.mainUser.username}.group}.gid
             } "$CREDENTIALS_DIRECTORY/github-ssh-key" /run/nx-auto-upgrade-ssh-key
 
-            ${pkgs.coreutils}/bin/sleep 15
-
             lock_dir="/tmp/.nx-deployment-lock"
             if [[ -d "$lock_dir" ]]; then
               ${logScript "err" "FAILURE: Another deployment is already running!"}
@@ -498,8 +496,6 @@ args@{
               ${pkgs.coreutils}/bin/rm -rf "$lock_dir" 2>/dev/null || true
             }
             trap cleanup_lock EXIT TERM
-
-            ${pkgs.coreutils}/bin/sleep 45
 
             ${logScript "info" "STARTED: Auto-upgrade beginning"}
             ${pkgs.coreutils}/bin/sleep 5
