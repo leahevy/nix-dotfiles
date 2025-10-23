@@ -136,15 +136,16 @@ jobs:
           commit-message: "Update flake inputs: ${{ env.UPDATED_INPUTS }}"
           title: "Update flake inputs: ${{ env.UPDATED_INPUTS }}"
           body: |
-            Automated update of flake inputs.
+            ## Automated update of flake inputs.
 
-            Updated inputs:
+            ### Updated inputs:
             - ${{ env.UPDATED_INPUTS }}
             ${{ env.COMMIT_LISTS }}
 
             Generated automatically by GitHub Actions
           branch: update-flake-inputs
           delete-branch: true
+          sign-commits: true
 
       # - name: Check if merge day
       #   id: check-day
