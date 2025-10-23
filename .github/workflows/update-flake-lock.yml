@@ -132,7 +132,7 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Update flake inputs: ${{ env.UPDATED_INPUTS }}"
           title: "Update flake inputs: ${{ env.UPDATED_INPUTS }}"
           body: |
@@ -146,6 +146,23 @@ jobs:
           branch: update-flake-inputs
           delete-branch: true
           sign-commits: true
+
+      - name: Notify PR Created via Pushover
+        if: steps.changes.outputs.changed == 'true' && steps.cpr.outputs.pull-request-operation == 'created'
+        env:
+          PUSHHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          PUSHHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+        run: |
+          set -euo pipefail
+          curl -fsS -m 20 --retry 10 -o /dev/null \
+            --form-string "token=${PUSHHOVER_TOKEN}" \
+            --form-string "user=${PUSHHOVER_USER}" \
+            --form-string "message=<b>Repository:</b> ${{ github.repository }}<br><b>Branch:</b> update-flake-inputs<br><b>Pull Request Title:</b> Update flake inputs: ${{ env.UPDATED_INPUTS }}<br><br><a href='${{ steps.cpr.outputs.pull-request-url }}'>View Pull Request</a>" \
+            --form-string "title=🔵 New PR for ${{ github.repository }}: Update flake inputs: ${{ env.UPDATED_INPUTS }}" \
+            --form-string "priority=0" \
+            --form-string "html=1" \
+            --form-string "url=${{ steps.cpr.outputs.pull-request-url }}" \
+            https://api.pushover.net/1/messages.json
 
       # - name: Check if merge day
       #   id: check-day
