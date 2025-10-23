@@ -168,31 +168,66 @@ args@{
       home.file.".config/nvim-init/40-cmp-cmdline.lua".text = lib.mkIf self.settings.enableCmdline ''
         local cmp = require("cmp")
 
-        local cmdline_mapping = cmp.mapping.preset.cmdline()
-        cmdline_mapping['<C-n>'] = cmp.mapping(function(fallback)
-          if cmp.visible() then
-            cmp.select_next_item()
-          else
-            cmp.complete()
-          end
-        end, { 'c' })
-        cmdline_mapping['<C-p>'] = cmp.mapping(function(fallback)
-          if cmp.visible() then
-            cmp.select_prev_item()
-          else
-            cmp.complete()
-          end
-        end, { 'c' })
+        vim.keymap.set('c', '<C-n>', '<Nop>', { silent = true })
+        vim.keymap.set('c', '<C-p>', '<Nop>', { silent = true })
 
         cmp.setup.cmdline({ "/", "?" }, {
-          mapping = cmdline_mapping,
+          mapping = cmp.mapping.preset.cmdline({
+            ['<C-n>'] = {
+              c = function(fallback)
+                if cmp.visible() then
+                  cmp.select_next_item()
+                else
+                  cmp.complete()
+                end
+              end,
+            },
+            ['<C-p>'] = {
+              c = function(fallback)
+                if cmp.visible() then
+                  cmp.select_prev_item()
+                else
+                  cmp.complete()
+                end
+              end,
+            },
+            ['<PageDown>'] = { c = cmp.mapping.select_next_item({ count = 10 }) },
+            ['<PageUp>'] = { c = cmp.mapping.select_prev_item({ count = 10 }) },
+            ['<C-Space>'] = { c = cmp.mapping.complete() },
+            ['<C-e>'] = { c = cmp.mapping.abort() },
+            ['<CR>'] = { c = cmp.mapping.confirm({ select = false }) },
+          }),
           sources = {
             { name = "buffer" }
           }
         })
 
         cmp.setup.cmdline(":", {
-          mapping = cmdline_mapping,
+          mapping = cmp.mapping.preset.cmdline({
+            ['<C-n>'] = {
+              c = function(fallback)
+                if cmp.visible() then
+                  cmp.select_next_item()
+                else
+                  cmp.complete()
+                end
+              end,
+            },
+            ['<C-p>'] = {
+              c = function(fallback)
+                if cmp.visible() then
+                  cmp.select_prev_item()
+                else
+                  cmp.complete()
+                end
+              end,
+            },
+            ['<PageDown>'] = { c = cmp.mapping.select_next_item({ count = 10 }) },
+            ['<PageUp>'] = { c = cmp.mapping.select_prev_item({ count = 10 }) },
+            ['<C-Space>'] = { c = cmp.mapping.complete() },
+            ['<C-e>'] = { c = cmp.mapping.abort() },
+            ['<CR>'] = { c = cmp.mapping.confirm({ select = false }) },
+          }),
           sources = cmp.config.sources({
             { name = "path" }
           }, {
