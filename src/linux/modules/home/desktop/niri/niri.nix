@@ -143,6 +143,7 @@ args@{
     delayedApplicationsToStart = [ ];
     activeColor = "#88cc66";
     inactiveColor = "#222233";
+    switchBackgroundOnWorkspaceChange = true;
     modKey = "Super";
     modKeyNested = "Alt";
     appIdMapping = {
@@ -459,6 +460,48 @@ args@{
           if [[ -n "$result" ]] && [[ "$result" != -1 ]]; then
             niri msg action focus-window --id "''${window_ids[$result]}"
           fi
+        '';
+      };
+
+      home.file.".local/bin/niri-workspace-action" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          CHANGE_WALLPAPER=false
+          ARGS=()
+          while [[ $# -gt 0 ]]; do
+            key="$1"
+
+            case $key in
+              --change-wallpaper)
+                CHANGE_WALLPAPER=true
+                shift
+                ;;
+              --*)
+                echo "Unknown option: $1"
+                exit 1
+                ;;
+              *)
+                ARGS+=("$1")
+                shift
+                ;;
+            esac
+          done
+
+          ${pkgs.niri}/bin/niri msg action "''${ARGS[@]}"
+
+          ${
+            if self.settings.switchBackgroundOnWorkspaceChange then
+              ''
+                if [[ "$CHANGE_WALLPAPER" == "true" && -x "$HOME/.local/bin/swaybg-next-wallpaper" ]]; then
+                  "$HOME/.local/bin/swaybg-next-wallpaper"
+                fi
+              ''
+            else
+              ""
+          }
         '';
       };
 
@@ -801,22 +844,22 @@ args@{
             };
 
             "Mod+Shift+Left" = {
-              action = move-column-to-monitor-left;
+              action = spawn-sh "niri-workspace-action --change-wallpaper move-column-to-monitor-left";
               hotkey-overlay.title = "Windows:Column to monitor left";
             };
 
             "Mod+Shift+Down" = {
-              action = move-column-to-workspace-down;
+              action = spawn-sh "niri-workspace-action move-column-to-workspace-down";
               hotkey-overlay.title = "Windows:Move column down";
             };
 
             "Mod+Shift+Up" = {
-              action = move-column-to-workspace-up;
+              action = spawn-sh "niri-workspace-action move-column-to-workspace-up";
               hotkey-overlay.title = "Windows:Move column up";
             };
 
             "Mod+Shift+Right" = {
-              action = move-column-to-monitor-right;
+              action = spawn-sh "niri-workspace-action --change-wallpaper move-column-to-monitor-right";
               hotkey-overlay.title = "Windows:Column to monitor right";
             };
 
@@ -866,32 +909,32 @@ args@{
             };
 
             "Mod+Left" = {
-              action = focus-monitor-left;
+              action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-left";
               hotkey-overlay.title = "Monitor:Monitor left";
             };
 
             "Mod+Right" = {
-              action = focus-monitor-right;
+              action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-right";
               hotkey-overlay.title = "Monitor:Monitor right";
             };
 
             "Mod+D" = {
-              action = focus-workspace-down;
+              action = spawn-sh "niri-workspace-action focus-workspace-down";
               hotkey-overlay.title = "Workspace:Workspace down";
             };
 
             "Mod+U" = {
-              action = focus-workspace-up;
+              action = spawn-sh "niri-workspace-action focus-workspace-up";
               hotkey-overlay.title = "Workspace:Workspace up";
             };
 
             "Mod+Down" = {
-              action = focus-workspace-down;
+              action = spawn-sh "niri-workspace-action focus-workspace-down";
               hotkey-overlay.title = "Workspace:Workspace down";
             };
 
             "Mod+Up" = {
-              action = focus-workspace-up;
+              action = spawn-sh "niri-workspace-action focus-workspace-up";
               hotkey-overlay.title = "Workspace:Workspace up";
             };
 
@@ -906,132 +949,132 @@ args@{
             };
 
             "Mod+Shift+WheelScrollDown" = {
-              action = focus-workspace-down;
+              action = spawn-sh "niri-workspace-action focus-workspace-down";
               cooldown-ms = 150;
             };
 
             "Mod+Shift+WheelScrollUp" = {
-              action = focus-workspace-up;
+              action = spawn-sh "niri-workspace-action focus-workspace-up";
               cooldown-ms = 150;
             };
 
             "Mod+1" = {
-              action = focus-workspace "1";
+              action = spawn-sh "niri-workspace-action focus-workspace 1";
               hotkey-overlay.title = "Workspace:Workspace 1";
             };
 
             "Mod+2" = {
-              action = focus-workspace "2";
+              action = spawn-sh "niri-workspace-action focus-workspace 2";
               hotkey-overlay.title = "Workspace:Workspace 2";
             };
 
             "Mod+3" = {
-              action = focus-workspace "3";
+              action = spawn-sh "niri-workspace-action focus-workspace 3";
               hotkey-overlay.title = "Workspace:Workspace 3";
             };
 
             "Mod+4" = {
-              action = focus-workspace "4";
+              action = spawn-sh "niri-workspace-action focus-workspace 4";
               hotkey-overlay.title = "Workspace:Workspace 4";
             };
 
             "Mod+5" = {
-              action = focus-workspace "5";
+              action = spawn-sh "niri-workspace-action focus-workspace 5";
               hotkey-overlay.title = "Workspace:Workspace 5";
             };
 
             "Mod+6" = {
-              action = focus-workspace "6";
+              action = spawn-sh "niri-workspace-action focus-workspace 6";
               hotkey-overlay.title = "Workspace:Workspace 6";
             };
 
             "Mod+7" = {
-              action = focus-workspace "7";
+              action = spawn-sh "niri-workspace-action focus-workspace 7";
               hotkey-overlay.title = "Workspace:Workspace 7";
             };
 
             "Mod+8" = {
-              action = focus-workspace "8";
+              action = spawn-sh "niri-workspace-action focus-workspace 8";
               hotkey-overlay.title = "Workspace:Workspace 8";
             };
 
             "Mod+9" = {
-              action = focus-workspace "9";
+              action = spawn-sh "niri-workspace-action focus-workspace 9";
               hotkey-overlay.title = "Workspace:Workspace 9";
             };
 
             "Mod+0" = {
-              action = focus-workspace "10";
+              action = spawn-sh "niri-workspace-action focus-workspace 10";
               hotkey-overlay.title = "Workspace:Workspace 10";
             };
 
             "Mod+S" = {
-              action = focus-workspace "scratch";
+              action = spawn-sh "niri-workspace-action focus-workspace scratch";
               hotkey-overlay.title = "Workspace:Scratchpad";
             };
 
             "Mod+Shift+D" = {
-              action = move-column-to-workspace-down;
+              action = spawn-sh "niri-workspace-action move-column-to-workspace-down";
               hotkey-overlay.title = "Windows:Move column down";
             };
 
             "Mod+Shift+U" = {
-              action = move-column-to-workspace-up;
+              action = spawn-sh "niri-workspace-action move-column-to-workspace-up";
               hotkey-overlay.title = "Windows:Move column up";
             };
 
             "Mod+Shift+1" = {
-              action = spawn-sh "niri msg action move-column-to-workspace 1";
+              action = spawn-sh "niri-workspace-action move-column-to-workspace 1";
               hotkey-overlay.title = "Windows:Move to workspace 1";
             };
 
             "Mod+Shift+2" = {
-              action = spawn-sh "niri msg action move-column-to-workspace 2";
+              action = spawn-sh "niri-workspace-action move-column-to-workspace 2";
               hotkey-overlay.title = "Windows:Move to workspace 2";
             };
 
             "Mod+Shift+3" = {
-              action = spawn-sh "niri msg action move-column-to-workspace 3";
+              action = spawn-sh "niri-workspace-action move-column-to-workspace 3";
               hotkey-overlay.title = "Windows:Move to workspace 3";
             };
 
             "Mod+Shift+4" = {
-              action = spawn-sh "niri msg action move-column-to-workspace 4";
+              action = spawn-sh "niri-workspace-action move-column-to-workspace 4";
               hotkey-overlay.title = "Windows:Move to workspace 4";
             };
 
             "Mod+Shift+5" = {
-              action = spawn-sh "niri msg action move-column-to-workspace 5";
+              action = spawn-sh "niri-workspace-action move-column-to-workspace 5";
               hotkey-overlay.title = "Windows:Move to workspace 5";
             };
 
             "Mod+Shift+6" = {
-              action = spawn-sh "niri msg action move-column-to-workspace 6";
+              action = spawn-sh "niri-workspace-action move-column-to-workspace 6";
               hotkey-overlay.title = "Windows:Move to workspace 6";
             };
 
             "Mod+Shift+7" = {
-              action = spawn-sh "niri msg action move-column-to-workspace 7";
+              action = spawn-sh "niri-workspace-action move-column-to-workspace 7";
               hotkey-overlay.title = "Windows:Move to workspace 7";
             };
 
             "Mod+Shift+8" = {
-              action = spawn-sh "niri msg action move-column-to-workspace 8";
+              action = spawn-sh "niri-workspace-action move-column-to-workspace 8";
               hotkey-overlay.title = "Windows:Move to workspace 8";
             };
 
             "Mod+Shift+9" = {
-              action = spawn-sh "niri msg action move-column-to-workspace 9";
+              action = spawn-sh "niri-workspace-action move-column-to-workspace 9";
               hotkey-overlay.title = "Windows:Move to workspace 9";
             };
 
             "Mod+Shift+0" = {
-              action = spawn-sh "niri msg action move-column-to-workspace 10";
+              action = spawn-sh "niri-workspace-action move-column-to-workspace 10";
               hotkey-overlay.title = "Windows:Move to workspace 10";
             };
 
             "Mod+Shift+S" = {
-              action = spawn-sh "niri msg action move-column-to-workspace scratch";
+              action = spawn-sh "niri-workspace-action move-column-to-workspace scratch";
               hotkey-overlay.title = "Windows:Move to scratchpad";
             };
 

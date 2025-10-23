@@ -77,14 +77,25 @@ args@{
         executable = true;
         text = ''
           #!/usr/bin/env bash
-          ${lib.optionalString (!self.settings.deactivateTimer) ''
-            systemctl --user restart nx-swaybg-rotate.timer
-            systemctl --user start nx-swaybg-rotate.service
-          ''}
 
-          ${lib.optionalString (self.settings.deactivateTimer) ''
-            systemctl --user restart nx-swaybg.service
-          ''}
+          LAST_CHANGE_FILE="${self.user.home}/.local/state/swaybg-last-change"
+          CURRENT_TIME=$(${pkgs.coreutils}/bin/date +%s)
+          RATE_LIMIT=1
+
+          ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$LAST_CHANGE_FILE")"
+
+          if [[ ! -f "$LAST_CHANGE_FILE" ]] || [[ $((CURRENT_TIME - $(${pkgs.coreutils}/bin/cat "$LAST_CHANGE_FILE" 2>/dev/null || echo 0))) -gt $RATE_LIMIT ]]; then
+            echo "$CURRENT_TIME" > "$LAST_CHANGE_FILE"
+
+            ${lib.optionalString (!self.settings.deactivateTimer) ''
+              systemctl --user restart nx-swaybg-rotate.timer
+              systemctl --user start nx-swaybg-rotate.service
+            ''}
+
+            ${lib.optionalString (self.settings.deactivateTimer) ''
+              systemctl --user restart nx-swaybg.service
+            ''}
+          fi
         '';
       };
 
