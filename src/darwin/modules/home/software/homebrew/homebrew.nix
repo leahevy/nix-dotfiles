@@ -148,7 +148,7 @@ args@{
         run echo -n "" > "$BREWFILE_TMP" || true
 
         ${lib.concatMapStrings (header: ''
-          run echo "${header}" >> "$BREWFILE_TMP" || true
+          run echo "${lib.replaceStrings [ "~" ] [ self.user.home ] header}" >> "$BREWFILE_TMP" || true
         '') self.settings.headers}
 
         ${lib.concatMapStrings (tap: ''
