@@ -621,16 +621,16 @@ check_nix_daemon_activity() {
 
     if [[ "$build_processes" -gt 0 ]]; then
         echo
-        echo -en "${GREEN}Nix-daemon is active, continue anyway? ${RESET}[y/N]: " >&2
+        echo -en "${GREEN}Nix-daemon is active, continue anyway? ${RESET}[Y/n]: " >&2
         read -r response
         case "$response" in
-            [yY]|[yY][eE][sS])
-                return 0
-                ;;
-            *)
+            [nN]|[nN][oO])
                 echo
                 echo -e "${RED}Aborted due to nix daemon activity${RESET}" >&2
                 exit 1
+                ;;
+            *)
+                return 0
                 ;;
         esac
     fi
