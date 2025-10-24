@@ -26,7 +26,7 @@ rec {
 
       TITLE=""
       MESSAGE=""
-      PRIORITY="${toString defaults.defaultPriority}"
+      PRIORITY="${toString self.settings.defaultPriority}"
       PRIORITY_SET=false
       TYPE=""
       URL=""
@@ -152,7 +152,21 @@ rec {
           echo "form = \"$arg\"" >> "$TEMP_CONFIG"
       done
 
-      ${pkgs.curl}/bin/curl -fsS -m 30 --connect-timeout 10 --retry 5 --retry-delay 2 --retry-max-time 60 -o /dev/null --config "$TEMP_CONFIG" ${defaults.pushoverAPIEndpoint}
+      for attempt in {1..5}; do
+          if ${pkgs.curl}/bin/curl -fsS -m 30 --connect-timeout 10 -o /dev/null --config "$TEMP_CONFIG" ${self.settings.pushoverAPIEndpoint}; then
+              exit 0
+          else
+              exit_code=$?
+              if [[ $attempt -lt 5 ]]; then
+                  sleep_time=$((attempt * 2))
+                  echo "Pushover API call failed (attempt $attempt/5), retrying in $sleep_time seconds..." >&2
+                  ${pkgs.coreutils}/bin/sleep $sleep_time
+              else
+                  echo "Pushover API call failed after 5 attempts" >&2
+                  exit $exit_code
+              fi
+          fi
+      done
     '';
   };
 
