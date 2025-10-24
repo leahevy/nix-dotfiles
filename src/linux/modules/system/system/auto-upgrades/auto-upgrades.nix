@@ -88,6 +88,9 @@ args@{
             else
               null;
 
+          pushoverPriorityOverride =
+            if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then -1 else null;
+
           shouldSendPushover = pushoverEnabled && pushoverType != null;
 
           pushoverMessage =
@@ -110,7 +113,12 @@ args@{
         in
         ''
           ${lib.optionalString userNotifyEnabled ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
-          ${lib.optionalString shouldSendPushover ''pushover-send --title "Auto-Upgrade" --message "${pushoverMessage}" --type ${pushoverType} || true''}
+          ${lib.optionalString shouldSendPushover ''pushover-send --title "Auto-Upgrade" --message "${pushoverMessage}" --type ${pushoverType} ${
+            if pushoverPriorityOverride != null then
+              "--priority ${builtins.toString pushoverPriorityOverride}"
+            else
+              ""
+          } || true''}
           echo "${message}" ${if level == "err" then ">&2" else ""}
         '';
 
