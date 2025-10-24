@@ -68,6 +68,12 @@ args@{
             Requires = lib.mkAfter [ "nx-luks-data-drive-ready.service" ];
           };
         })
+        {
+          Unit = {
+            After = lib.mkAfter [ "sops-nix.service" ];
+            Requires = lib.mkAfter [ "sops-nix.service" ];
+          };
+        }
       ];
 
       services.syncthing = {
