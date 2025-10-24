@@ -21,11 +21,5 @@ args@{
       programs.lazygit = {
         enable = true;
       };
-
-      programs.nixvim = {
-        extraPlugins = with pkgs.vimPlugins; [
-          lazygit-nvim
-        ];
-      };
     };
 }
