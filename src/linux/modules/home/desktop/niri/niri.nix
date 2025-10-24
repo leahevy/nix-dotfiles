@@ -818,6 +818,11 @@ args@{
               hotkey-overlay.title = "UI:Toggle waybar visibility";
             };
 
+            "Mod+Shift+Y" = {
+              action = spawn-sh "systemctl --user restart waybar.service";
+              hotkey-overlay.title = "UI:Restart waybar";
+            };
+
             "Mod+Tab" = {
               action = focus-workspace-previous;
               hotkey-overlay.title = "Workspace:Toggle workspaces";
