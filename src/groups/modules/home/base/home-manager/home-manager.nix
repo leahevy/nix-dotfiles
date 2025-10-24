@@ -332,6 +332,7 @@ args@{
           };
           chat = {
             beeper = true;
+            slack = true;
           };
           desktop = {
             yabai = true;
