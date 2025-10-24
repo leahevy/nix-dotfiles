@@ -126,6 +126,7 @@ args@{
           PartOf = [ "graphical-session.target" ];
           OnFailure = [ ];
           Requisite = [ ];
+          StartLimitIntervalSec = "30s";
         };
 
         Service = {
@@ -134,7 +135,6 @@ args@{
           Restart = "on-failure";
           RestartSec = "5s";
           StartLimitBurst = 3;
-          StartLimitIntervalSec = 30;
           SuccessExitStatus = [
             0
             1

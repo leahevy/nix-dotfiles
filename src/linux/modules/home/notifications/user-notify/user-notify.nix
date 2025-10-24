@@ -182,7 +182,6 @@ args@{
           {
             Unit = {
               Description = "NX User Notification Monitor";
-              Documentation = "Monitors nx-user-notify logger tag and shows desktop notifications";
             };
             Service = {
               Type = "simple";
