@@ -85,7 +85,8 @@ setup_impermanence_logging() {
   setup_log_directory "$log_dir"
   rotate_logs "$log_dir" 30
   
-  local log_file="$(create_log_filename "$log_dir" "check")"
+  local log_file
+  log_file="$(create_log_filename "$log_dir" "check")"
   create_log_file "$log_file"
   
   echo "$log_file"
@@ -133,8 +134,9 @@ subcommand_check() {
   elif [[ "$show_system_only" == "true" ]]; then
     check_type="system"
   fi
-  
-  local log_file="$(setup_impermanence_logging "$check_type")"
+
+  local log_file
+  log_file="$(setup_impermanence_logging "$check_type")"
   local real_user="${SUDO_USER:-$USER}"
   
   log_and_display() {
@@ -163,16 +165,45 @@ subcommand_check() {
     log_and_display "(keyword filters: ${filters[*]})"
   fi
   log_and_display ""
-  
-  local hostname="$(hostname)"
-  local username="$(get_main_username)"
+
+  is_item_filtered() {
+    local item_path="$1"
+    local item_rel="${item_path#/}"
+
+    if echo "$system_dirs $system_files $user_dirs $user_files" | grep -Fq "$item_rel" || mount | grep -Fq " on /$item_rel type "; then
+      return 0
+    fi
+
+    local link_target
+    if [[ -L "$item_path" ]]; then
+      link_target="$(readlink "$item_path" 2>/dev/null || echo "")"
+      if [[ "$link_target" =~ ^/nix/store/ ]] || [[ "$link_target" =~ ^/etc/static/ ]]; then
+        return 0
+      fi
+    fi
+
+    case "$item_path" in
+      /etc/aliases|/etc/group|/etc/passwd|/etc/printcap|/etc/shadow|/etc/subgid|/etc/subuid|/etc/sudoers)
+        return 0
+        ;;
+    esac
+
+    return 1
+  }
+  local hostname
+  local username
+  local full_profile
+  local home_path
+
+  hostname="$(hostname)"
+  username="$(get_main_username)"
   local persist_system="/persist"
   local persist_user_full="/persist/home/$username"
   
   local user_home="/home/$username"
   if [[ -d "$CONFIG_DIR" ]]; then
-    local full_profile="$(construct_profile_name "$hostname")"
-    local home_path="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
+    full_profile="$(construct_profile_name "$hostname")"
+    home_path="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.users.users.$username.home" 2>/dev/null || echo "null")"
     if [[ -n "$home_path" && "$home_path" != "null" && "$home_path" != "\"null\"" ]]; then
       user_home="${home_path//\"/}"
@@ -212,33 +243,74 @@ subcommand_check() {
   
   while IFS= read -r item; do
     local item_path="${item#/}"
-    
-    if ! echo "$system_dirs $system_files $user_dirs $user_files" | grep -Fq "$item_path" && ! mount | grep -Fq " on /$item_path type "; then
-      local full_path="/$item_path"
-      
-      if [[ "$show_system_only" == "true" ]]; then
-        if [[ "$full_path" =~ ^$user_home/ || "$full_path" =~ ^/persist/ ]]; then
-          continue
-        fi
+    local full_path="/$item_path"
+
+    if is_item_filtered "$full_path"; then
+      continue
+    fi
+
+    if [[ "$show_system_only" == "true" ]]; then
+      if [[ "$full_path" =~ ^$user_home/ || "$full_path" =~ ^/persist/ ]]; then
+        continue
       fi
-      
-      if [[ ${#filters[@]} -gt 0 ]]; then
-        local match_found=false
-        for filter in "${filters[@]}"; do
-          if echo "$full_path" | grep -Fq "$filter"; then
-            match_found=true
+    fi
+
+    if [[ ${#filters[@]} -gt 0 ]]; then
+      local match_found=false
+      for filter in "${filters[@]}"; do
+        if echo "$full_path" | grep -Fq "$filter"; then
+          match_found=true
+          break
+        fi
+      done
+      if [[ "$match_found" != "true" ]]; then
+        continue
+      fi
+    fi
+
+    ephemeral_items+=("$full_path")
+  done < <($sudo find "$search_path" -xdev -type f -o -type d 2>/dev/null | grep -v "^$search_path$" | sort)
+
+  local filtered_items=()
+  for item in "${ephemeral_items[@]}"; do
+    local should_include=true
+
+    for existing in "${filtered_items[@]}"; do
+      if [[ "$item" =~ ^"$existing"/ ]]; then
+        should_include=false
+        break
+      fi
+    done
+
+    if [[ "$should_include" == "true" ]]; then
+      filtered_items+=("$item")
+    fi
+  done
+
+  local final_items=()
+  for item in "${filtered_items[@]}"; do
+    if [[ -d "$item" ]]; then
+      local has_unfiltered_content=false
+
+      while IFS= read -r content; do
+        if [[ -n "$content" && "$content" != "$item" ]]; then
+          if ! is_item_filtered "$content"; then
+            has_unfiltered_content=true
             break
           fi
-        done
-        if [[ "$match_found" != "true" ]]; then
-          continue
         fi
+      done < <($sudo find "$item" 2>/dev/null || true)
+
+      if [[ "$has_unfiltered_content" == "true" ]]; then
+        final_items+=("$item")
       fi
-      
-      ephemeral_items+=("$full_path")
+    else
+      final_items+=("$item")
     fi
-  done < <($sudo find "$search_path" -xdev -type f -o -type d 2>/dev/null | grep -v "^$search_path$" | sort)
-  
+  done
+
+  ephemeral_items=("${final_items[@]}")
+
   if [[ ${#ephemeral_items[@]} -gt 0 ]]; then
     log_and_display "⚠️  Ephemeral files/directories (will be lost on reboot):"
     
