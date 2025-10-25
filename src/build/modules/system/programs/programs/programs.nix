@@ -21,6 +21,7 @@ args@{
         with pkgs;
         [
           git
+          file
           htop
           btop
           vim
