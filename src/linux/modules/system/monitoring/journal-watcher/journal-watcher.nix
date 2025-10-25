@@ -35,6 +35,10 @@ args@{
     additionalTagsToIgnore = [ ];
 
     baseStringsToIgnore = [
+      "borgbackup-job-system.service"
+      "BorgBackup job system"
+      "nx-auto-upgrade.service"
+      "NX Auto-Upgrade"
       "USB Audio.*cannot get freq"
       "USB Audio.*cannot set freq"
       "\\[Firmware Bug\\]: TSC_DEADLINE disabled due to Errata"
