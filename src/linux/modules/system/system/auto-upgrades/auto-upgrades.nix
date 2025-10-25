@@ -19,8 +19,8 @@ args@{
     schedule = "18:45:10";
     allowReboot = true;
     rebootWindow = {
-      lower = "23:00";
-      upper = "07:00";
+      lower = "01:00";
+      upper = "03:00";
     };
     preNotificationTimeMinutes = 15;
     maxNetworkRetries = 30;
@@ -244,8 +244,24 @@ args@{
           }
         }
 
+        cd "${nxcoreDir}"
+        OLD_REBOOT_MARKER=$(${pkgs.coreutils}/bin/cat .nx-auto-upgrade-reboot-required 2>/dev/null || echo "")
+
         pull_repo "${nxcoreDir}" "nxcore"
         pull_repo "${nxconfigDir}" "nxconfig"
+
+        cd "${nxcoreDir}"
+        FORCE_REBOOT=false
+        if [[ -f ".nx-auto-upgrade-reboot-required" ]]; then
+          NEW_REBOOT_MARKER=$(${pkgs.coreutils}/bin/cat .nx-auto-upgrade-reboot-required 2>/dev/null || echo "")
+          if [[ -n "$NEW_REBOOT_MARKER" && "$OLD_REBOOT_MARKER" != "$NEW_REBOOT_MARKER" ]]; then
+            CURRENT_FLAKE_HASH=$(${pkgs.coreutils}/bin/sha256sum flake.lock | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+            if [[ "$CURRENT_FLAKE_HASH" == "$NEW_REBOOT_MARKER" ]]; then
+              ${logScript "info" "INFO: Remote changes indicate reboot required for current flake.lock state"}
+              FORCE_REBOOT=true
+            fi
+          fi
+        fi
       '';
 
       upgradeScript = ''
@@ -315,7 +331,7 @@ args@{
         ${checkRebootWindow}
 
         ${logScript "info" "Checking if reboot is needed"}
-        if check_reboot_needed; then
+        if [[ "$FORCE_REBOOT" == "true" ]] || check_reboot_needed; then
           ${
             if self.settings.rebootWindow != null then
               ''

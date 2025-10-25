@@ -145,6 +145,11 @@ jobs:
             echo "EOF"
           } >> $GITHUB_ENV
 
+          if [ "$requires_reboot" = "true" ]; then
+            echo "Creating reboot marker file for auto-upgrade detection"
+            sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-reboot-required
+          fi
+
       - name: Create Pull Request
         if: steps.changes.outputs.changed == 'true'
         id: cpr
