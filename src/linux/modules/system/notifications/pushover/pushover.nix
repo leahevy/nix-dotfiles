@@ -30,6 +30,8 @@ rec {
       PRIORITY_SET=false
       TYPE=""
       URL=""
+      HTML_MODE=false
+      DEBUG_MODE=false
       EXTRA_ARGS=()
 
       while [[ $# -gt 0 ]]; do
@@ -55,6 +57,14 @@ rec {
                   URL="$2"
                   shift 2
                   ;;
+              --html)
+                  HTML_MODE=true
+                  shift
+                  ;;
+              --debug)
+                  DEBUG_MODE=true
+                  shift
+                  ;;
               --)
                   shift
                   EXTRA_ARGS=("$@")
@@ -62,7 +72,7 @@ rec {
                   ;;
               *)
                   echo "Unknown option: $1" >&2
-                  echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [-- <extra-pushover-args>]" >&2
+                  echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [--html] [--debug] [-- <extra-pushover-args>]" >&2
                   echo "Types: started, stopped, failed, warn, success, info, debug, emerg" >&2
                   exit 1
                   ;;
@@ -71,7 +81,7 @@ rec {
 
       if [[ -z "$TITLE" || -z "$MESSAGE" ]]; then
           echo "Error: --title and --message are required" >&2
-          echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [-- <extra-pushover-args>]" >&2
+          echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [--html] [--debug] [-- <extra-pushover-args>]" >&2
           echo "Types: started, stopped, failed, warn, success, info, debug, emerg" >&2
           exit 1
       fi
@@ -123,20 +133,49 @@ rec {
           fi
       fi
 
-      TEMP_DIR=$(mktemp -d)
+      TEMP_DIR=$(${pkgs.coreutils}/bin/mktemp -d)
       TEMP_CONFIG="$TEMP_DIR/curl-config"
 
-      trap "rm -rf '$TEMP_DIR'" EXIT
+      trap "${pkgs.coreutils}/bin/rm -rf '$TEMP_DIR'" EXIT
 
-      touch "$TEMP_CONFIG"
-      chmod 600 "$TEMP_CONFIG"
+      ${pkgs.coreutils}/bin/touch "$TEMP_CONFIG"
+      ${pkgs.coreutils}/bin/chmod 600 "$TEMP_CONFIG"
+
+      escape_for_curl() {
+          printf '%s' "$1" | ${pkgs.gnused}/bin/sed 's/\\/\\\\/g; s/"/\\"/g'
+      }
+
+      escape_message_for_curl() {
+          local text="$1"
+          if [[ "$HTML_MODE" == "true" ]]; then
+              text=$(printf '%s' "$text" | ${pkgs.gnused}/bin/sed 's/\\/\\\\/g; s/"/\\"/g')
+          else
+              text=$(printf '%s' "$text" | ${pkgs.gnused}/bin/sed 's/\\/\\\\/g; s/"/\\"/g; s/</⟨/g; s/>/⟩/g')
+          fi
+          local output=""
+          local line
+          while IFS= read -r line || [[ -n "$line" ]]; do
+              if [[ -n "$output" ]]; then
+                  output="$output<br/>$line"
+              else
+                  output="$line"
+              fi
+          done <<< "$text"
+          text="$output"
+          printf '%s' "$text"
+      }
+
+      ESCAPED_TITLE=$(escape_for_curl "$FORMATTED_TITLE [${self.host.hostname}]")
+
+      ESCAPED_MESSAGE=$(escape_message_for_curl "$MESSAGE")
 
       cat > "$TEMP_CONFIG" <<EOF
-      form = "token=$(cat "$TOKEN_FILE")"
-      form = "user=$(cat "$USER_FILE")"
-      form = "title=$FORMATTED_TITLE [${self.host.hostname}]"
-      form = "message=$MESSAGE"
+      form = "token=$(${pkgs.coreutils}/bin/cat "$TOKEN_FILE")"
+      form = "user=$(${pkgs.coreutils}/bin/cat "$USER_FILE")"
+      form = "title=$ESCAPED_TITLE"
+      form = "message=$ESCAPED_MESSAGE"
       form = "priority=$PRIORITY"
+      form = "html=1"
       EOF
 
       if [[ "$PRIORITY" == "2" ]]; then
@@ -145,12 +184,20 @@ rec {
       fi
 
       if [[ -n "$URL" ]]; then
-          echo "form = \"url=$URL\"" >> "$TEMP_CONFIG"
+          ESCAPED_URL=$(escape_for_curl "$URL")
+          echo "form = \"url=$ESCAPED_URL\"" >> "$TEMP_CONFIG"
       fi
 
       for arg in "''${EXTRA_ARGS[@]}"; do
-          echo "form = \"$arg\"" >> "$TEMP_CONFIG"
+          ESCAPED_ARG=$(escape_for_curl "$arg")
+          echo "form = \"$ESCAPED_ARG\"" >> "$TEMP_CONFIG"
       done
+
+      if [[ "$DEBUG_MODE" == "true" ]]; then
+          echo "=== DEBUG: Curl config file content ===" >&2
+          ${pkgs.coreutils}/bin/cat "$TEMP_CONFIG" >&2
+          echo "=== END DEBUG ===" >&2
+      fi
 
       for attempt in {1..5}; do
           if ${pkgs.curl}/bin/curl -fsS -m 30 --connect-timeout 10 -o /dev/null --config "$TEMP_CONFIG" ${self.settings.pushoverAPIEndpoint}; then
