@@ -277,16 +277,18 @@ args@{
         ${
           if self.settings.dryRun then
             ''
-              ${pkgs.coreutils}/bin/echo "Would execute: nh os switch -H '${profileName}' . -- --impure --override-input config 'path:${nxconfigDir}' --override-input profile 'path:$PROFILE_PATH' --print-build-logs"
+              ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild switch --flake '.#${profileName}' --impure --override-input config 'path:${nxconfigDir}' --override-input profile 'path:$PROFILE_PATH' --print-build-logs"
               ${logScript "info" "System rebuild command prepared"}
             ''
           else
             ''
-              if ! ${pkgs.nh}/bin/nh os switch -H "${profileName}" . -- \
+              if ! ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch \
+                --flake ".#${profileName}" \
                 --impure \
                 --override-input config "path:${nxconfigDir}" \
                 --override-input profile "path:$PROFILE_PATH" \
-                --print-build-logs; then
+                --print-build-logs \
+                --show-trace; then
                 ${logScript "err" "FAILURE: System rebuild failed!"}
                 exit 1
               fi
@@ -480,10 +482,12 @@ args@{
             git
             openssh
             config.nix.package.out
-            nh
+            nixos-rebuild
             sudo
             util-linux
             iputils
+            gnutar
+            xz
           ]
           ++
             lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
