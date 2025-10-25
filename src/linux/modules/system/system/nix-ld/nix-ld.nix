@@ -18,6 +18,7 @@ args@{
   defaults = {
     baseLibraries = with args.pkgs; [
       stdenv.cc.cc.lib
+      gcc.cc.lib
       zlib
       glib
       dbus
