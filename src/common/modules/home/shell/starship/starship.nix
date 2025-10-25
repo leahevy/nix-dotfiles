@@ -397,7 +397,7 @@ args@{
             style = "bright-black";
             min_time = 1000;
             show_notifications = true;
-            min_time_to_notify = 100000;
+            min_time_to_notify = 600000;
           };
 
           direnv = {
