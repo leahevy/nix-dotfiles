@@ -190,6 +190,39 @@ subcommand_check() {
 
     return 1
   }
+
+  has_persisted_content_in_directory() {
+    local dir="$1"
+    local dir_rel="${dir#/}"
+
+    local persisted_list="$system_dirs $user_dirs"
+    if [[ -n "$persisted_list" ]]; then
+      for persisted in $persisted_list; do
+        if [[ -n "$persisted" && "$persisted" =~ ^"$dir_rel"/ ]]; then
+          return 0
+        fi
+      done
+    fi
+
+    local persisted_files_list="$system_files $user_files"
+    if [[ -n "$persisted_files_list" ]]; then
+      for persisted in $persisted_files_list; do
+        if [[ -n "$persisted" && "$persisted" =~ ^"$dir_rel"/ ]]; then
+          return 0
+        fi
+      done
+    fi
+
+    while IFS= read -r content; do
+      if [[ -n "$content" && "$content" != "$dir" ]]; then
+        if is_item_filtered "$content"; then
+          return 0
+        fi
+      fi
+    done < <($sudo find "$dir" -maxdepth 1 2>/dev/null || true)
+
+    return 1
+  }
   local hostname
   local username
   local full_profile
@@ -291,18 +324,29 @@ subcommand_check() {
   for item in "${filtered_items[@]}"; do
     if [[ -d "$item" ]]; then
       local has_unfiltered_content=false
+      local unfiltered_subdirs=()
 
       while IFS= read -r content; do
         if [[ -n "$content" && "$content" != "$item" ]]; then
           if ! is_item_filtered "$content"; then
             has_unfiltered_content=true
-            break
+            if [[ -d "$content" ]]; then
+              unfiltered_subdirs+=("$content")
+            else
+              final_items+=("$content")
+            fi
           fi
         fi
-      done < <($sudo find "$item" 2>/dev/null || true)
+      done < <($sudo find "$item" -maxdepth 1 2>/dev/null || true)
 
       if [[ "$has_unfiltered_content" == "true" ]]; then
-        final_items+=("$item")
+        if has_persisted_content_in_directory "$item"; then
+          for subdir in "${unfiltered_subdirs[@]}"; do
+            final_items+=("$subdir")
+          done
+        else
+          final_items+=("$item")
+        fi
       fi
     else
       final_items+=("$item")
