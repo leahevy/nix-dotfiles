@@ -67,6 +67,7 @@ args@{
           gm = "g commit -m";
           gct = "g commit";
           gcn = "gct -m";
+          gh = "g head";
           gl = "g log";
           gg = "g graph";
           gps = "g push";
