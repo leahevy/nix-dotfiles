@@ -61,6 +61,7 @@ args@{
           };
           nix = {
             nix-index = true;
+            nix-search-tv = true;
             comma = true;
           };
           passwords = {
@@ -174,6 +175,7 @@ args@{
           };
           nix = {
             nix-index = true;
+            nix-search-tv = true;
             comma = true;
           };
           passwords = {
@@ -287,6 +289,7 @@ args@{
           };
           nix = {
             nix-index = true;
+            nix-search-tv = true;
             comma = true;
           };
           passwords = {
