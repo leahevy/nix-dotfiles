@@ -90,6 +90,7 @@ args@{
       "GTK can't handle compose tables this large"
       "Ignoring duplicate name"
       "gtk_widget_"
+      "Realtime error: Could not get pidns for pid [0-9]+: Could not fstatat ns/pid: Not a directory"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
