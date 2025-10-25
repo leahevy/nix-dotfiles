@@ -26,6 +26,7 @@ args@{
     shares = { };
     announceEnabled = false;
     monitoringEnabled = true;
+    terminal = "ghostty";
   };
 
   assertions = [
@@ -45,6 +46,9 @@ args@{
 
   configuration =
     context@{ config, options, ... }:
+    let
+      isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+    in
     {
       sops.secrets."${self.host.hostname}-syncthing-key" = {
         format = "binary";
@@ -116,6 +120,55 @@ args@{
         files = lib.mkIf self.settings.trayEnabled [
           ".config/syncthingtray.ini"
         ];
+      };
+
+      home.file.".local/bin/syncthing-status" = {
+        text = ''
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          GREEN='\033[1;32m'
+          BLUE='\033[1;34m'
+          RED='\033[1;31m'
+          YELLOW='\033[1;33m'
+          NC='\033[0m'
+
+          echo -e "''${BLUE}=== SYNCTHING STATUS ===''${NC}"
+          echo
+
+          echo -e "''${GREEN}=== SERVICE STATUS ===''${NC}"
+          systemctl --user status syncthing.service --no-pager --lines=0 2>/dev/null || echo "Syncthing service not found"
+          echo
+
+          echo -e "''${GREEN}=== GUI ACCESS ===''${NC}"
+          if systemctl --user is-active --quiet syncthing.service; then
+            echo -e "''${GREEN}Syncthing is running - GUI available at: http://127.0.0.1:${builtins.toString self.settings.guiPort}''${NC}"
+          else
+            echo -e "''${RED}Syncthing is not running''${NC}"
+          fi
+          echo
+
+          echo -e "''${GREEN}=== RECENT SYNCTHING LOGS (last 5 lines) ===''${NC}"
+          journalctl --user -u syncthing.service --no-pager --lines=5 --reverse 2>/dev/null || echo "No syncthing logs found"
+          echo
+
+          if systemctl --user is-failed --quiet syncthing.service; then
+            echo -e "''${RED}=== SERVICE FAILURE LOGS ===''${NC}"
+            journalctl --user -u syncthing.service --no-pager --lines=15 --reverse 2>/dev/null
+            echo
+          fi
+
+          echo -e "''${GREEN}=== MONITORING SERVICES ===''${NC}"
+          systemctl --user status syncthing-monitor-status.service --no-pager --lines=2 2>/dev/null || echo "Monitor status service not found"
+          echo
+          systemctl --user status syncthing-monitor-logs.service --no-pager --lines=2 2>/dev/null || echo "Monitor logs service not found"
+          echo
+
+          echo
+          echo -e "''${BLUE}Press any key to exit...''${NC}"
+          read -n 1
+        '';
+        executable = true;
       };
 
       home.file.".local/bin/scripts/syncthing-monitor" = lib.mkIf self.settings.monitoringEnabled {
@@ -302,6 +355,17 @@ args@{
             "${pkgs.systemd}/bin/systemctl --user start syncthing-monitor-logs.service"
           ];
           RemainAfterExit = true;
+        };
+      };
+
+      programs.niri = lib.mkIf isNiriEnabled {
+        settings = {
+          binds = with config.lib.niri.actions; {
+            "Ctrl+Mod+Alt+S" = {
+              action = spawn-sh "${self.settings.terminal} -e sh -c 'syncthing-status'";
+              hotkey-overlay.title = "System:Syncthing status";
+            };
+          };
         };
       };
     };
