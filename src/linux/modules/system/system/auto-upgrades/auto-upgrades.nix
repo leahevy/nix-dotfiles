@@ -208,13 +208,15 @@ args@{
 
                   ${pkgs.coreutils}/bin/cat > "$cred_helper" << EOF
         #!/bin/bash
-        echo "username=token"
-        echo "password=\$(cat ${config.sops.secrets.nx-github-access-token.path})"
+        case "\$1" in
+          *Username*) echo "token" ;;
+          *) cat ${config.sops.secrets.nx-github-access-token.path} ;;
+        esac
         EOF
                   ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username} "$cred_helper"
                   ${pkgs.coreutils}/bin/chmod 700 "$cred_helper"
 
-                  if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git -c credential.helper="!$cred_helper" fetch nx-auto-upgrade >/dev/null 2>&1; then
+                  if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} GIT_ASKPASS="$cred_helper" ${pkgs.git}/bin/git fetch nx-auto-upgrade >/dev/null 2>&1; then
                     ${logScript "err" "FAILURE: Failed to fetch $repo_name repository!"}
                     exit 1
                   fi
@@ -274,13 +276,15 @@ args@{
 
                                 ${pkgs.coreutils}/bin/cat > "$cred_helper" << EOF
                 #!/bin/bash
-                echo "username=token"
-                echo "password=\$(cat ${config.sops.secrets.nx-github-access-token.path})"
+                case "\$1" in
+                  *Username*) echo "token" ;;
+                  *) cat ${config.sops.secrets.nx-github-access-token.path} ;;
+                esac
                 EOF
                                 ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username} "$cred_helper"
                                 ${pkgs.coreutils}/bin/chmod 700 "$cred_helper"
 
-                                if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git -c credential.helper="!$cred_helper" pull nx-auto-upgrade main; then
+                                if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} GIT_ASKPASS="$cred_helper" ${pkgs.git}/bin/git pull nx-auto-upgrade main; then
                                   ${logScript "err" "FAILURE: Failed to pull $repo_name repository!"}
                                   exit 1
                                 fi
