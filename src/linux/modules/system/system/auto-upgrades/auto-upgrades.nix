@@ -211,6 +211,7 @@ args@{
         echo "username=token"
         echo "password=$(cat $CREDENTIALS_DIRECTORY/nx-github-access-token)"
         EOF
+                  ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username} "$cred_helper"
                   ${pkgs.coreutils}/bin/chmod 700 "$cred_helper"
 
                   if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git -c credential.helper="!$cred_helper" fetch nx-auto-upgrade >/dev/null 2>&1; then
@@ -276,6 +277,7 @@ args@{
                 echo "username=token"
                 echo "password=$(cat $CREDENTIALS_DIRECTORY/nx-github-access-token)"
                 EOF
+                                ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username} "$cred_helper"
                                 ${pkgs.coreutils}/bin/chmod 700 "$cred_helper"
 
                                 if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git -c credential.helper="!$cred_helper" pull nx-auto-upgrade main; then
