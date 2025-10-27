@@ -186,7 +186,7 @@ args@{
           cd "$repo_path"
           if [[ "$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git status --porcelain)" != "" ]]; then
             ${logScript "err" "WARNING: Repository $repo_name has uncommitted changes!"}
-            exit 1
+            exit 2
           fi
         }
 
@@ -241,7 +241,7 @@ args@{
 
           if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git merge-base --is-ancestor "$local_commit" nx-auto-upgrade/main >/dev/null 2>&1; then
             ${logScript "err" "WARNING: Repository $repo_name local commit is ahead of remote!"}
-            exit 1
+            exit 2
           fi
 
           if [[ "$local_commit" != "$remote_commit" ]]; then
@@ -566,6 +566,10 @@ args@{
         serviceConfig = {
           Type = "oneshot";
           User = "root";
+          SuccessExitStatus = [
+            0
+            2
+          ];
           ExecStopPost = "${pkgs.writeShellScript "nx-auto-upgrade-stop-handler" ''
             if [ "$EXIT_CODE" = "killed" ]; then
               ${logScript "err" "FAILURE: Auto-upgrade was stopped/interrupted!"}
