@@ -467,6 +467,14 @@ args@{
           Type = "oneshot";
           User = "root";
         };
+        path =
+          lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
+            [
+              (self.importFileFromOtherModuleSameInput {
+                inherit args self;
+                modulePath = "notifications.pushover";
+              }).custom.pushoverSendScript
+            ];
         script = logScript "err" "FAILURE: Auto-upgrade failed - check journalctl -u nx-auto-upgrade !";
       };
 
@@ -480,6 +488,15 @@ args@{
         unitConfig = {
           OnSuccess = "nx-auto-upgrade-delayed.service";
         };
+
+        path =
+          lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
+            [
+              (self.importFileFromOtherModuleSameInput {
+                inherit args self;
+                modulePath = "notifications.pushover";
+              }).custom.pushoverSendScript
+            ];
 
         script = logScript "info" "NOTICE: Auto-upgrade starting in ${builtins.toString self.settings.preNotificationTimeMinutes}M - avoid repository changes";
       };
