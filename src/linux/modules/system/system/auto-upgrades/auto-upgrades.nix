@@ -81,6 +81,8 @@ args@{
               "success"
             else if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then
               "info"
+            else if lib.hasPrefix "INFO:" message && lib.hasInfix "borg backup" message then
+              "info"
             else if lib.hasPrefix "FAILURE:" message then
               "failed"
             else if lib.hasPrefix "WARNING:" message then
@@ -89,7 +91,12 @@ args@{
               null;
 
           pushoverPriorityOverride =
-            if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then -1 else null;
+            if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then
+              -1
+            else if lib.hasPrefix "INFO:" message && lib.hasInfix "borg backup" message then
+              -1
+            else
+              null;
 
           shouldSendPushover = pushoverEnabled && pushoverType != null;
 
@@ -121,6 +128,15 @@ args@{
           } || true''}
           echo "${message}" ${if level == "err" then ">&2" else ""}
         '';
+
+      checkBorgRunningScript = ''
+        check_borg_running() {
+          if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
+            ${logScript "info" "INFO: Borg backup is currently running, delaying auto-upgrade"}
+            exit 0
+          fi
+        }
+      '';
 
       checkNetworkScript = lib.optionalString self.settings.waitForNetwork ''
         ${pkgs.coreutils}/bin/echo "Checking network connectivity..."
@@ -378,15 +394,31 @@ args@{
             if self.settings.rebootWindow != null then
               ''
                 if check_reboot_window; then
-                  ${logScript "info" "SUCCESS-REBOOT-NOW: Reboot needed and within window - ${
-                    if self.settings.dryRun then "would reboot" else "rebooting"
-                  } in +1 minute"}
-                  ${
-                    if self.settings.dryRun then
-                      ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1"''
-                    else
-                      ''${config.systemd.package}/bin/shutdown -r +1''
-                  }
+                  if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
+                    ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed and within window but borg backup is running - ${
+                      if self.settings.dryRun then "would create" else "creating"
+                    } marker file"}
+                    ${
+                      if self.settings.dryRun then
+                        ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
+                      else
+                        ''
+                          ${pkgs.coreutils}/bin/echo "$(${pkgs.coreutils}/bin/date)" > /run/nx-auto-upgrade-reboot-needed
+                          ${pkgs.coreutils}/bin/chown root:root /run/nx-auto-upgrade-reboot-needed
+                          ${pkgs.coreutils}/bin/chmod 600 /run/nx-auto-upgrade-reboot-needed
+                        ''
+                    }
+                  else
+                    ${logScript "info" "SUCCESS-REBOOT-NOW: Reboot needed and within window - ${
+                      if self.settings.dryRun then "would reboot" else "rebooting"
+                    } in +1 minute"}
+                    ${
+                      if self.settings.dryRun then
+                        ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1"''
+                      else
+                        ''${config.systemd.package}/bin/shutdown -r +1''
+                    }
+                  fi
                 else
                   ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed but outside window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper}) - ${
                     if self.settings.dryRun then "would create" else "creating"
@@ -405,15 +437,31 @@ args@{
               ''
             else
               ''
-                ${logScript "info" "SUCCESS-REBOOT-NOW: Reboot needed - ${
-                  if self.settings.dryRun then "would reboot" else "rebooting"
-                } in +1 minute"}
-                ${
-                  if self.settings.dryRun then
-                    ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1"''
-                  else
-                    ''${config.systemd.package}/bin/shutdown -r +1''
-                }
+                if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
+                  ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed but borg backup is running - ${
+                    if self.settings.dryRun then "would create" else "creating"
+                  } marker file"}
+                  ${
+                    if self.settings.dryRun then
+                      ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
+                    else
+                      ''
+                        ${pkgs.coreutils}/bin/echo "$(${pkgs.coreutils}/bin/date)" > /run/nx-auto-upgrade-reboot-needed
+                        ${pkgs.coreutils}/bin/chown root:root /run/nx-auto-upgrade-reboot-needed
+                        ${pkgs.coreutils}/bin/chmod 600 /run/nx-auto-upgrade-reboot-needed
+                      ''
+                  }
+                else
+                  ${logScript "info" "SUCCESS-REBOOT-NOW: Reboot needed - ${
+                    if self.settings.dryRun then "would reboot" else "rebooting"
+                  } in +1 minute"}
+                  ${
+                    if self.settings.dryRun then
+                      ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1"''
+                    else
+                      ''${config.systemd.package}/bin/shutdown -r +1''
+                  }
+                fi
               ''
           }
         else
@@ -425,6 +473,11 @@ args@{
         reboot_marker="/run/nx-auto-upgrade-reboot-needed"
 
         if [[ ! -f "$reboot_marker" ]]; then
+          exit 0
+        fi
+
+        if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
+          ${logScript "info" "INFO: Borg backup is currently running, skipping reboot iteration"}
           exit 0
         fi
 
@@ -575,6 +628,9 @@ args@{
 
             ${logScript "info" "STARTED: Auto-upgrade beginning"}
             ${pkgs.coreutils}/bin/sleep 5
+
+            ${checkBorgRunningScript}
+            check_borg_running
 
             ${checkNetworkScript}
             ${checkRepositoriesExistScript}
