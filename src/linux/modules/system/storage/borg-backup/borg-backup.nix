@@ -117,6 +117,15 @@ args@{
           ${pkgs.btrfs-progs}/bin/btrfs subvolume snapshot -r ${volume} ${snapshotDir}/${snapshotName}
         '';
 
+      checkAutoUpgradeRunningScript = ''
+        check_auto_upgrade_running() {
+          if ${pkgs.systemd}/bin/systemctl is-active --quiet nx-auto-upgrade.service; then
+            ${logScript "info" "INFO: Auto-upgrade is currently running, skipping backup"}
+            exit 0
+          fi
+        }
+      '';
+
       logScript =
         level: message:
         let
@@ -242,6 +251,8 @@ args@{
         preHook = ''
           ${pkgs.coreutils}/bin/echo "Waiting 2 minutes for system readiness..."
           ${pkgs.coreutils}/bin/sleep 120
+          ${checkAutoUpgradeRunningScript}
+          check_auto_upgrade_running
           ${networkWaitScript}
           ${logScript "info" "STARTED: System backup starting"}
           ${createSnapshotScript {
