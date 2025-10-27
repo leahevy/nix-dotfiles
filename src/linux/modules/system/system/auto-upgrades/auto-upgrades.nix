@@ -179,79 +179,78 @@ args@{
       '';
 
       setupRemotesScript = ''
-        setup_nx_auto_upgrade_remote() {
-          local repo_path="$1"
-          local repo_name="$2"
-          local iso_url="$3"
-
-          cd "$repo_path"
-
-          if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git remote get-url nx-auto-upgrade >/dev/null 2>&1; then
-            ${logScript "info" "INFO: Adding nx-auto-upgrade remote for $repo_name"}
-            ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git remote add nx-auto-upgrade "$iso_url"
-          fi
-        }
-
-        setup_nx_auto_upgrade_remote "${nxcoreDir}" "nxcore" "${self.variables.coreRepoIsoUrl}"
-        setup_nx_auto_upgrade_remote "${nxconfigDir}" "nxconfig" "${self.variables.configRepoIsoUrl}"
-      '';
-
-      checkForChangesScript = ''
-                check_for_changes() {
+                setup_nx_auto_upgrade_remote() {
                   local repo_path="$1"
                   local repo_name="$2"
+                  local iso_url="$3"
 
                   cd "$repo_path"
 
-                  local cred_helper=$(${pkgs.coreutils}/bin/mktemp)
-                  CLEANUP_PATHS+=("$cred_helper")
+                  if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git remote get-url nx-auto-upgrade >/dev/null 2>&1; then
+                    ${logScript "info" "INFO: Adding nx-auto-upgrade remote for $repo_name"}
 
-                  ${pkgs.coreutils}/bin/cat > "$cred_helper" << EOF
-        #!/bin/bash
-        case "\$1" in
-          *Username*) echo "token" ;;
-          *) cat ${config.sops.secrets.nx-github-access-token.path} ;;
-        esac
+                    local token=$(cat ${config.sops.secrets.nx-github-access-token.path})
+                    local auth_url="https://token:$token@''${iso_url#https://}"
+
+                    ${pkgs.coreutils}/bin/cat >> .git/config << EOF
+
+        [remote "nx-auto-upgrade"]
+        	url = $auth_url
+        	fetch = +refs/heads/*:refs/remotes/nx-auto-upgrade/*
         EOF
-                  ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username} "$cred_helper"
-                  ${pkgs.coreutils}/bin/chmod 700 "$cred_helper"
-
-                  if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} GIT_ASKPASS="$cred_helper" ${pkgs.git}/bin/git fetch nx-auto-upgrade >/dev/null 2>&1; then
-                    ${logScript "err" "FAILURE: Failed to fetch $repo_name repository!"}
-                    exit 1
-                  fi
-
-                  local local_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)
-                  local remote_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse nx-auto-upgrade/main)
-
-                  if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git merge-base --is-ancestor "$local_commit" nx-auto-upgrade/main >/dev/null 2>&1; then
-                    ${logScript "err" "WARNING: Repository $repo_name local commit is ahead of remote!"}
-                    exit 1
-                  fi
-
-                  if [[ "$local_commit" != "$remote_commit" ]]; then
-                    ${logScript "info" "INFO: Repository $repo_name has remote changes"}
-                    return 0
-                  else
-                    return 1
+                    ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username}:${
+                      config.users.users.${self.host.mainUser.username}.group
+                    } .git/config
                   fi
                 }
 
-                nxcore_changed=false
-                nxconfig_changed=false
+                setup_nx_auto_upgrade_remote "${nxcoreDir}" "nxcore" "${self.variables.coreRepoIsoUrl}"
+                setup_nx_auto_upgrade_remote "${nxconfigDir}" "nxconfig" "${self.variables.configRepoIsoUrl}"
+      '';
 
-                if check_for_changes "${nxcoreDir}" "nxcore"; then
-                  nxcore_changed=true
-                fi
+      checkForChangesScript = ''
+        check_for_changes() {
+          local repo_path="$1"
+          local repo_name="$2"
 
-                if check_for_changes "${nxconfigDir}" "nxconfig"; then
-                  nxconfig_changed=true
-                fi
+          cd "$repo_path"
 
-                if [[ "$nxcore_changed" == "false" && "$nxconfig_changed" == "false" ]]; then
-                  ${logScript "info" "INFO: No remote changes detected, skipping upgrade"}
-                  exit 0
-                fi
+          if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git fetch nx-auto-upgrade >/dev/null 2>&1; then
+            ${logScript "err" "FAILURE: Failed to fetch $repo_name repository!"}
+            exit 1
+          fi
+
+          local local_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)
+          local remote_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse nx-auto-upgrade/main)
+
+          if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git merge-base --is-ancestor "$local_commit" nx-auto-upgrade/main >/dev/null 2>&1; then
+            ${logScript "err" "WARNING: Repository $repo_name local commit is ahead of remote!"}
+            exit 1
+          fi
+
+          if [[ "$local_commit" != "$remote_commit" ]]; then
+            ${logScript "info" "INFO: Repository $repo_name has remote changes"}
+            return 0
+          else
+            return 1
+          fi
+        }
+
+        nxcore_changed=false
+        nxconfig_changed=false
+
+        if check_for_changes "${nxcoreDir}" "nxcore"; then
+          nxcore_changed=true
+        fi
+
+        if check_for_changes "${nxconfigDir}" "nxconfig"; then
+          nxconfig_changed=true
+        fi
+
+        if [[ "$nxcore_changed" == "false" && "$nxconfig_changed" == "false" ]]; then
+          ${logScript "info" "INFO: No remote changes detected, skipping upgrade"}
+          exit 0
+        fi
       '';
 
       pullRepositoriesScript = ''
@@ -267,31 +266,20 @@ args@{
           ${
             if self.settings.dryRun then
               ''
-                ${pkgs.coreutils}/bin/echo "Would execute: git pull with token authentication from nx-auto-upgrade remote"
+                ${pkgs.coreutils}/bin/echo "Would execute: git pull from nx-auto-upgrade remote"
               ''
             else
               ''
-                                local cred_helper=$(${pkgs.coreutils}/bin/mktemp)
-                                CLEANUP_PATHS+=("$cred_helper")
+                if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git pull nx-auto-upgrade main; then
+                  ${logScript "err" "FAILURE: Failed to pull $repo_name repository!"}
+                  exit 1
+                fi
 
-                                ${pkgs.coreutils}/bin/cat > "$cred_helper" << EOF
-                #!/bin/bash
-                case "\$1" in
-                  *Username*) echo "token" ;;
-                  *) cat ${config.sops.secrets.nx-github-access-token.path} ;;
-                esac
-                EOF
-                                ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username} "$cred_helper"
-                                ${pkgs.coreutils}/bin/chmod 700 "$cred_helper"
+                ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git update-ref refs/remotes/origin/main refs/remotes/nx-auto-upgrade/main
 
-                                if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} GIT_ASKPASS="$cred_helper" ${pkgs.git}/bin/git pull nx-auto-upgrade main; then
-                                  ${logScript "err" "FAILURE: Failed to pull $repo_name repository!"}
-                                  exit 1
-                                fi
-
-                                ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git update-ref refs/remotes/origin/main refs/remotes/nx-auto-upgrade/main
-
-                                ${pkgs.coreutils}/bin/chown -R ${self.host.mainUser.username}:${self.host.mainUser.username} "$repo_path"
+                ${pkgs.coreutils}/bin/chown -R ${self.host.mainUser.username}:${
+                  config.users.users.${self.host.mainUser.username}.group
+                } "$repo_path"
               ''
           }
         }
@@ -551,7 +539,6 @@ args@{
           + pkgs.writeShellScript "nx-auto-upgrade-main" ''
             set -euo pipefail
 
-            CLEANUP_PATHS=()
             lock_dir="/tmp/.nx-deployment-lock"
 
             if [[ -d "$lock_dir" ]]; then
@@ -564,14 +551,10 @@ args@{
               exit 1
             fi
 
-            CLEANUP_PATHS+=("$lock_dir")
-
-            cleanup_all() {
-              for path in "''${CLEANUP_PATHS[@]}"; do
-                ${pkgs.coreutils}/bin/rm -rf "$path" 2>/dev/null || true
-              done
+            cleanup_lock() {
+              ${pkgs.coreutils}/bin/rm -rf "$lock_dir" 2>/dev/null || true
             }
-            trap cleanup_all EXIT TERM
+            trap cleanup_lock EXIT TERM
 
             ${logScript "info" "STARTED: Auto-upgrade beginning"}
             ${pkgs.coreutils}/bin/sleep 5
