@@ -338,17 +338,29 @@ args@{
             ''
           else
             ''
-              if ! ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch \
-                --flake ".#${profileName}" \
-                --impure \
-                --override-input config "path:${nxconfigDir}" \
-                --override-input profile "path:$PROFILE_PATH" \
-                --print-build-logs \
-                --show-trace; then
-                ${logScript "err" "FAILURE: System rebuild failed!"}
-                exit 1
-              fi
-              ${logScript "info" "SUCCESS: System rebuild completed successfully"}
+                    temp_git_config=$(${pkgs.coreutils}/bin/mktemp)
+                    cleanup_paths+=("$temp_git_config")
+
+                    ${pkgs.coreutils}/bin/cat > "$temp_git_config" << EOF
+              [safe]
+              	directory = ${nxcoreDir}
+              	directory = ${nxconfigDir}
+              EOF
+
+                    export GIT_CONFIG_GLOBAL="$temp_git_config"
+
+                    if ! ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch \
+                      --flake ".#${profileName}" \
+                      --impure \
+                      --no-update-lock-file \
+                      --override-input config "path:${nxconfigDir}" \
+                      --override-input profile "path:$PROFILE_PATH" \
+                      --print-build-logs \
+                      --show-trace; then
+                      ${logScript "err" "FAILURE: System rebuild failed!"}
+                      exit 1
+                    fi
+                    ${logScript "info" "SUCCESS: System rebuild completed successfully"}
             ''
         }
       '';
@@ -614,6 +626,7 @@ args@{
             set -euo pipefail
 
             lock_dir="/tmp/.nx-deployment-lock"
+            cleanup_paths=("$lock_dir")
 
             if [[ -d "$lock_dir" ]]; then
               ${logScript "err" "FAILURE: Another deployment is already running!"}
@@ -625,10 +638,12 @@ args@{
               exit 1
             fi
 
-            cleanup_lock() {
-              ${pkgs.coreutils}/bin/rm -rf "$lock_dir" 2>/dev/null || true
+            cleanup() {
+              for path in "''${cleanup_paths[@]}"; do
+                ${pkgs.coreutils}/bin/rm -rf "$path" 2>/dev/null || true
+              done
             }
-            trap cleanup_lock EXIT TERM
+            trap cleanup EXIT TERM
 
             ${logScript "info" "STARTED: Auto-upgrade beginning"}
             ${pkgs.coreutils}/bin/sleep 5
