@@ -70,6 +70,17 @@ args@{
     overrideThemeSettings = { };
     pureBlackBackground = true;
     overrideCursorHighlightColour = "#0b0b0b"; # Or null
+    foreignTheme = {
+      name = "eldritch";
+      github = {
+        owner = "eldritch-theme";
+        repo = "eldritch.nvim";
+        rev = "3bcdd32bd4fcca0c51616791e2a3a8fbc6039a4e";
+        hash = "sha256-M2n3kWMPTIEAPXMjJd73z2+Pvf60+oUcRyJ8tKdir1Q=";
+      };
+      setupFunction = "eldritch";
+      settings = { };
+    };
   };
 
   configuration =
@@ -94,18 +105,20 @@ args@{
         enable = true;
         package = pkgs-unstable.neovim-unwrapped;
 
-        colorschemes = lib.mkIf (self.settings.overrideThemeName != null) (
-          let
-            settings = self.settings.overrideThemeSettings.${self.settings.overrideThemeName} or { };
-          in
-          {
-            "${if self.settings.overrideThemeName != null then self.settings.overrideThemeName else "base16"}" =
-            {
-              enable = true;
-            }
-            // lib.optionalAttrs (settings != { }) settings;
-          }
-        );
+        colorschemes =
+          lib.mkIf (self.settings.foreignTheme == null && self.settings.overrideThemeName != null)
+            (
+              let
+                settings = self.settings.overrideThemeSettings.${self.settings.overrideThemeName} or { };
+              in
+              {
+                "${if self.settings.overrideThemeName != null then self.settings.overrideThemeName else "base16"}" =
+                {
+                  enable = true;
+                }
+                // lib.optionalAttrs (settings != { }) settings;
+              }
+            );
 
         opts = {
           number = true;
@@ -172,6 +185,18 @@ args@{
               '';
             };
           }
+        ];
+
+        extraPlugins = lib.mkIf (self.settings.foreignTheme != null) [
+          (pkgs.vimUtils.buildVimPlugin {
+            name = "${self.settings.foreignTheme.name}-nvim";
+            src = pkgs.fetchFromGitHub {
+              owner = self.settings.foreignTheme.github.owner;
+              repo = self.settings.foreignTheme.github.repo;
+              rev = self.settings.foreignTheme.github.rev;
+              hash = self.settings.foreignTheme.github.hash;
+            };
+          })
         ];
 
         plugins = {
@@ -390,12 +415,23 @@ args@{
       };
 
       home.file.".config/nvim-init/00-colorscheme.lua" =
-        lib.mkIf (self.settings.overrideThemeName != null)
+        lib.mkIf (self.settings.foreignTheme != null || self.settings.overrideThemeName != null)
           {
             text = ''
-              vim.cmd("colorscheme ${self.settings.overrideThemeName}")
+              vim.cmd("colorscheme ${
+                if self.settings.foreignTheme != null then
+                  self.settings.foreignTheme.name
+                else
+                  self.settings.overrideThemeName
+              }")
             '';
           };
+
+      home.file.".config/nvim-init/01-foreign-theme.lua" = lib.mkIf (self.settings.foreignTheme != null) {
+        text = ''
+          require("${self.settings.foreignTheme.setupFunction}").setup(${builtins.toJSON self.settings.foreignTheme.settings})
+        '';
+      };
 
       home.file.".config/nvim-init/10-blinking-cursor.lua".text = ''
         vim.opt.guicursor = ""
