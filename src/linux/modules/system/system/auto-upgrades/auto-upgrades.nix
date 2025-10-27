@@ -42,7 +42,7 @@ args@{
         builtins.match "https://([^/]+)/.*" self.variables.configRepoIsoUrl
       );
 
-      gitEnv = "GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_SSH_COMMAND='ssh -i /run/nx-auto-upgrade-ssh-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'";
+      gitEnv = "GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null";
 
       logScript =
         level: message:
@@ -178,44 +178,77 @@ args@{
         check_git_clean "${nxconfigDir}" "nxconfig"
       '';
 
-      checkForChangesScript = ''
-        check_for_changes() {
+      setupRemotesScript = ''
+        setup_nx_auto_upgrade_remote() {
           local repo_path="$1"
           local repo_name="$2"
+          local iso_url="$3"
 
           cd "$repo_path"
-          ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git fetch origin >/dev/null 2>&1
-          local local_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)
-          local remote_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse origin/main)
 
-          if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git merge-base --is-ancestor "$local_commit" origin/main >/dev/null 2>&1; then
-            ${logScript "err" "WARNING: Repository $repo_name local commit is ahead of remote!"}
-            exit 1
-          fi
-
-          if [[ "$local_commit" != "$remote_commit" ]]; then
-            ${logScript "info" "INFO: Repository $repo_name has remote changes"}
-            return 0
-          else
-            return 1
+          if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git remote get-url nx-auto-upgrade >/dev/null 2>&1; then
+            ${logScript "info" "INFO: Adding nx-auto-upgrade remote for $repo_name"}
+            ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git remote add nx-auto-upgrade "$iso_url"
           fi
         }
 
-        nxcore_changed=false
-        nxconfig_changed=false
+        setup_nx_auto_upgrade_remote "${nxcoreDir}" "nxcore" "${self.variables.coreRepoIsoUrl}"
+        setup_nx_auto_upgrade_remote "${nxconfigDir}" "nxconfig" "${self.variables.configRepoIsoUrl}"
+      '';
 
-        if check_for_changes "${nxcoreDir}" "nxcore"; then
-          nxcore_changed=true
-        fi
+      checkForChangesScript = ''
+                check_for_changes() {
+                  local repo_path="$1"
+                  local repo_name="$2"
 
-        if check_for_changes "${nxconfigDir}" "nxconfig"; then
-          nxconfig_changed=true
-        fi
+                  cd "$repo_path"
 
-        if [[ "$nxcore_changed" == "false" && "$nxconfig_changed" == "false" ]]; then
-          ${logScript "info" "INFO: No remote changes detected, skipping upgrade"}
-          exit 0
-        fi
+                  local cred_helper=$(${pkgs.coreutils}/bin/mktemp)
+                  CLEANUP_PATHS+=("$cred_helper")
+
+                  ${pkgs.coreutils}/bin/cat > "$cred_helper" << 'EOF'
+        #!/bin/bash
+        echo "username=token"
+        echo "password=$(cat $CREDENTIALS_DIRECTORY/nx-github-access-token)"
+        EOF
+                  ${pkgs.coreutils}/bin/chmod 700 "$cred_helper"
+
+                  if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git -c credential.helper="!$cred_helper" fetch nx-auto-upgrade >/dev/null 2>&1; then
+                    ${logScript "err" "FAILURE: Failed to fetch $repo_name repository!"}
+                    exit 1
+                  fi
+
+                  local local_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)
+                  local remote_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse nx-auto-upgrade/main)
+
+                  if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git merge-base --is-ancestor "$local_commit" nx-auto-upgrade/main >/dev/null 2>&1; then
+                    ${logScript "err" "WARNING: Repository $repo_name local commit is ahead of remote!"}
+                    exit 1
+                  fi
+
+                  if [[ "$local_commit" != "$remote_commit" ]]; then
+                    ${logScript "info" "INFO: Repository $repo_name has remote changes"}
+                    return 0
+                  else
+                    return 1
+                  fi
+                }
+
+                nxcore_changed=false
+                nxconfig_changed=false
+
+                if check_for_changes "${nxcoreDir}" "nxcore"; then
+                  nxcore_changed=true
+                fi
+
+                if check_for_changes "${nxconfigDir}" "nxconfig"; then
+                  nxconfig_changed=true
+                fi
+
+                if [[ "$nxcore_changed" == "false" && "$nxconfig_changed" == "false" ]]; then
+                  ${logScript "info" "INFO: No remote changes detected, skipping upgrade"}
+                  exit 0
+                fi
       '';
 
       pullRepositoriesScript = ''
@@ -231,15 +264,28 @@ args@{
           ${
             if self.settings.dryRun then
               ''
-                ${pkgs.coreutils}/bin/echo "Would execute: sudo -u ${self.host.mainUser.username} ${gitEnv} git pull origin main"
+                ${pkgs.coreutils}/bin/echo "Would execute: git pull with token authentication from nx-auto-upgrade remote"
               ''
             else
               ''
-                if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git pull origin main; then
-                  ${logScript "err" "FAILURE: Failed to pull $repo_name repository!"}
-                  exit 1
-                fi
-                ${pkgs.coreutils}/bin/chown -R ${self.host.mainUser.username}:${self.host.mainUser.username} "$repo_path"
+                                local cred_helper=$(${pkgs.coreutils}/bin/mktemp)
+                                CLEANUP_PATHS+=("$cred_helper")
+
+                                ${pkgs.coreutils}/bin/cat > "$cred_helper" << 'EOF'
+                #!/bin/bash
+                echo "username=token"
+                echo "password=$(cat $CREDENTIALS_DIRECTORY/nx-github-access-token)"
+                EOF
+                                ${pkgs.coreutils}/bin/chmod 700 "$cred_helper"
+
+                                if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git -c credential.helper="!$cred_helper" pull nx-auto-upgrade main; then
+                                  ${logScript "err" "FAILURE: Failed to pull $repo_name repository!"}
+                                  exit 1
+                                fi
+
+                                ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git update-ref refs/remotes/origin/main refs/remotes/nx-auto-upgrade/main
+
+                                ${pkgs.coreutils}/bin/chown -R ${self.host.mainUser.username}:${self.host.mainUser.username} "$repo_path"
               ''
           }
         }
@@ -270,7 +316,7 @@ args@{
         } system rebuild"}
         cd "${nxcoreDir}"
 
-        PROFILE_PATH="${nxconfigDir}/profiles/nixos/${self.host.hostname}"
+        PROFILE_PATH="${nxconfigDir}/profiles/nixos/${self.host.profileName}"
 
         export NIXOS_LABEL="auto-$(${pkgs.coreutils}/bin/date +%d%m.%H%M)"
 
@@ -414,9 +460,8 @@ args@{
 
     in
     {
-      sops.secrets.github-ssh-key = {
-        format = "binary";
-        sopsFile = self.config.secretsPath "github-ssh-key";
+      sops.secrets.nx-github-access-token = {
+        sopsFile = self.config.secretsPath "global-secrets.yaml";
         mode = "0400";
         owner = "root";
         group = "root";
@@ -457,13 +502,11 @@ args@{
         serviceConfig = {
           Type = "oneshot";
           User = "root";
-          LoadCredential = "github-ssh-key:${config.sops.secrets.github-ssh-key.path}";
-          ExecStartPost = "${pkgs.coreutils}/bin/rm -f /run/nx-auto-upgrade-ssh-key";
+          LoadCredential = "nx-github-access-token:${config.sops.secrets.nx-github-access-token.path}";
           ExecStopPost = "${pkgs.writeShellScript "nx-auto-upgrade-stop-handler" ''
             if [ "$EXIT_CODE" = "killed" ]; then
               ${logScript "err" "FAILURE: Auto-upgrade was stopped/interrupted!"}
             fi
-            ${pkgs.coreutils}/bin/rm -f /run/nx-auto-upgrade-ssh-key
           ''}";
         };
 
@@ -503,13 +546,9 @@ args@{
           + pkgs.writeShellScript "nx-auto-upgrade-main" ''
             set -euo pipefail
 
-            ${pkgs.coreutils}/bin/install -m 400 -o ${
-              toString config.users.users.${self.host.mainUser.username}.uid
-            } -g ${
-              toString config.users.groups.${config.users.users.${self.host.mainUser.username}.group}.gid
-            } "$CREDENTIALS_DIRECTORY/github-ssh-key" /run/nx-auto-upgrade-ssh-key
-
+            CLEANUP_PATHS=()
             lock_dir="/tmp/.nx-deployment-lock"
+
             if [[ -d "$lock_dir" ]]; then
               ${logScript "err" "FAILURE: Another deployment is already running!"}
               exit 1
@@ -520,16 +559,21 @@ args@{
               exit 1
             fi
 
-            cleanup_lock() {
-              ${pkgs.coreutils}/bin/rm -rf "$lock_dir" 2>/dev/null || true
+            CLEANUP_PATHS+=("$lock_dir")
+
+            cleanup_all() {
+              for path in "''${CLEANUP_PATHS[@]}"; do
+                ${pkgs.coreutils}/bin/rm -rf "$path" 2>/dev/null || true
+              done
             }
-            trap cleanup_lock EXIT TERM
+            trap cleanup_all EXIT TERM
 
             ${logScript "info" "STARTED: Auto-upgrade beginning"}
             ${pkgs.coreutils}/bin/sleep 5
 
             ${checkNetworkScript}
             ${checkRepositoriesExistScript}
+            ${setupRemotesScript}
             ${checkGitWorktreesScript}
             ${checkForChangesScript}
             ${pullRepositoriesScript}
