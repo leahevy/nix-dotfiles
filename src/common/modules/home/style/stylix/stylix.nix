@@ -86,6 +86,7 @@ args@{
         (getPackage self.settings.cursor.style)
       ]
       ++ (with pkgs; [
+        base16-schemes
         yq-go
       ]);
 
