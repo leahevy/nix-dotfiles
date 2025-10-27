@@ -479,6 +479,7 @@ args@{
       home = {
         sessionVariables = {
           EDITOR = lib.mkForce "nvim";
+          SUDO_EDITOR = lib.mkForce "nvim";
         }
         // lib.optionalAttrs self.settings.manpageViewer {
           MANPAGER = lib.mkForce "nvim +Man!";
