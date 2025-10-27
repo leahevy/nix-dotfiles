@@ -87,6 +87,7 @@ jobs:
           IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
 
           commit_lists=""
+          reboot_commits=""
           requires_reboot="false"
           reboot_packages=""
 
@@ -108,7 +109,10 @@ jobs:
                 if commits_json=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                   "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit"); then
 
-                  commits=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                  all_commits=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+
+                  regular_commits=$(echo "$all_commits" | grep -v '\[Backport release-\|\[release-.* backport\]' || true)
+                  backport_count=$(echo "$all_commits" | grep -c '\[Backport release-\|\[release-.* backport\]' || echo 0)
 
                   if echo "$commits_json" | jq -r '.commits[]?.commit.message' | grep -iE "$REBOOT_PATTERNS" > /dev/null 2>&1; then
                     requires_reboot="true"
@@ -116,16 +120,29 @@ jobs:
                     if [ -n "$found_packages" ]; then
                       reboot_packages="$reboot_packages$found_packages, "
                     fi
+
+                    input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_PATTERNS" '.commits[]? | select(.commit.message | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                    if [ -n "$input_reboot_commits" ]; then
+                      reboot_commits="$reboot_commits"$'\n\n'"#### $input"$'\n'"$input_reboot_commits"
+                    fi
                   fi
 
-                  if [ -n "$commits" ]; then
-                    commit_count=$(echo "$commits" | wc -l)
-                    if [ "$commit_count" -gt 100 ]; then
-                      commits=$(echo "$commits" | head -100)
-                      commits="$commits"$'\n'"- ... and $(($commit_count - 100)) more commits"
+                  if [ -n "$regular_commits" ]; then
+                    commit_count=$(echo "$regular_commits" | wc -l)
+                    commits_to_show="$regular_commits"
+
+                    if [ "$commit_count" -gt 300 ]; then
+                      commits_to_show=$(echo "$regular_commits" | head -300)
+                      commits_to_show="$commits_to_show"$'\n'"- ... and $(($commit_count - 300)) more commits"
                     fi
 
-                    commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"$commits"
+                    commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"$commits_to_show"
+
+                    if [ "$backport_count" -gt 0 ]; then
+                      commit_lists="$commit_lists"$'\n'"- ($backport_count backport commits filtered out)"
+                    fi
+                  elif [ "$backport_count" -gt 0 ]; then
+                    commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($backport_count backport commits filtered out)"
                   fi
                 else
                   echo "Failed to fetch commits for $input, skipping commit list"
@@ -142,6 +159,12 @@ jobs:
           {
             echo "COMMIT_LISTS<<EOF"
             echo "$commit_lists"
+            echo "EOF"
+          } >> $GITHUB_ENV
+
+          {
+            echo "REBOOT_COMMITS<<EOF"
+            echo "$reboot_commits"
             echo "EOF"
           } >> $GITHUB_ENV
 
@@ -167,6 +190,8 @@ jobs:
 
             ### Updated inputs:
             - ${{ env.UPDATED_INPUTS }}
+            ${{ env.REQUIRES_REBOOT == 'true' && '## 🔄 Reboot-triggering commits' || '' }}
+            ${{ env.REQUIRES_REBOOT == 'true' && env.REBOOT_COMMITS || '' }}
             ${{ env.COMMIT_LISTS }}
 
             Generated automatically by GitHub Actions
