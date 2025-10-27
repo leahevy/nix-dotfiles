@@ -102,6 +102,22 @@ args@{
         end, { nargs = '?' })
       '';
 
+      home.file.".config/nvim-init/99-telescope-highlight.lua".text = ''
+        local function fix_telescope_background()
+          vim.api.nvim_set_hl(0, "TelescopeNormal", { bg = "#000000" })
+          vim.api.nvim_set_hl(0, "TelescopePromptNormal", { bg = "#000000" })
+          vim.api.nvim_set_hl(0, "TelescopeResultsNormal", { bg = "#000000" })
+          vim.api.nvim_set_hl(0, "TelescopePreviewNormal", { bg = "#000000" })
+          vim.api.nvim_set_hl(0, "TelescopeSelection", { bg = "#111111" })
+        end
+
+        vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+          callback = function()
+            vim.defer_fn(fix_telescope_background, 100)
+          end,
+        })
+      '';
+
       home.packages = with pkgs; [
         fzf
         ripgrep
