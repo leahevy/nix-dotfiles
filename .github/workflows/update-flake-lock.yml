@@ -190,8 +190,9 @@ jobs:
 
             ${{ env.REQUIRES_REBOOT == 'true' && '### 🔄 Reboot-triggering commits' || '' }}
             ${{ env.REQUIRES_REBOOT == 'true' && env.REBOOT_COMMITS || '' }}
+            ${{ env.REQUIRES_REBOOT == 'true' && '---' || '' }}
 
-            ### Updated inputs:
+            ### 📦 Updated inputs:
             - ${{ env.UPDATED_INPUTS }}
             ${{ env.COMMIT_LISTS }}
 
