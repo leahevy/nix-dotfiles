@@ -206,10 +206,10 @@ args@{
                   local cred_helper=$(${pkgs.coreutils}/bin/mktemp)
                   CLEANUP_PATHS+=("$cred_helper")
 
-                  ${pkgs.coreutils}/bin/cat > "$cred_helper" << 'EOF'
+                  ${pkgs.coreutils}/bin/cat > "$cred_helper" << EOF
         #!/bin/bash
         echo "username=token"
-        echo "password=$(cat $CREDENTIALS_DIRECTORY/nx-github-access-token)"
+        echo "password=\$(cat ${config.sops.secrets.nx-github-access-token.path})"
         EOF
                   ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username} "$cred_helper"
                   ${pkgs.coreutils}/bin/chmod 700 "$cred_helper"
@@ -272,10 +272,10 @@ args@{
                                 local cred_helper=$(${pkgs.coreutils}/bin/mktemp)
                                 CLEANUP_PATHS+=("$cred_helper")
 
-                                ${pkgs.coreutils}/bin/cat > "$cred_helper" << 'EOF'
+                                ${pkgs.coreutils}/bin/cat > "$cred_helper" << EOF
                 #!/bin/bash
                 echo "username=token"
-                echo "password=$(cat $CREDENTIALS_DIRECTORY/nx-github-access-token)"
+                echo "password=\$(cat ${config.sops.secrets.nx-github-access-token.path})"
                 EOF
                                 ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username} "$cred_helper"
                                 ${pkgs.coreutils}/bin/chmod 700 "$cred_helper"
@@ -464,9 +464,9 @@ args@{
     {
       sops.secrets.nx-github-access-token = {
         sopsFile = self.config.secretsPath "global-secrets.yaml";
-        mode = "0400";
+        mode = "0440";
         owner = "root";
-        group = "root";
+        group = config.users.users.${self.host.mainUser.username}.group;
       };
 
       systemd.services.nx-auto-upgrade-log-failure = {
@@ -504,7 +504,6 @@ args@{
         serviceConfig = {
           Type = "oneshot";
           User = "root";
-          LoadCredential = "nx-github-access-token:${config.sops.secrets.nx-github-access-token.path}";
           ExecStopPost = "${pkgs.writeShellScript "nx-auto-upgrade-stop-handler" ''
             if [ "$EXIT_CODE" = "killed" ]; then
               ${logScript "err" "FAILURE: Auto-upgrade was stopped/interrupted!"}
