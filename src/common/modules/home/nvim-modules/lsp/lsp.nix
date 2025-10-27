@@ -26,6 +26,7 @@ args@{
     enableC = true;
     enableCpp = true;
     enableLaTeX = true;
+    enableRuby = true;
     enableGlobalFormatting = true;
     enableInlayHints = true;
   };
@@ -253,6 +254,10 @@ args@{
                   };
                 };
               };
+            };
+
+            solargraph = lib.mkIf self.settings.enableRuby {
+              enable = true;
             };
           };
 
