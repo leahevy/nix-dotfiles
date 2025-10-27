@@ -251,7 +251,7 @@ args@{
                 strings_highlight_pattern = re.compile("|".join(f"({pattern})" for pattern in strings_to_highlight))
             service_extract_pattern = re.compile(r"^([a-zA-Z0-9_-]+\.(service|timer|socket|target|mount|path|slice|scope|device|swap)):(.*)$")
         except re.error as e:
-            print(f"Failed to compile regex patterns: {e}", file=sys.stderr)
+            print(f"Failed to compile regex patterns: {e}", file=sys.stderr, flush=True)
             sys.exit(1)
 
         def setup_directories():
@@ -259,7 +259,7 @@ args@{
                 os.makedirs(STATE_DIR, exist_ok=True)
                 os.makedirs(RATE_LIMIT_STATE_DIR, exist_ok=True)
             except (OSError, PermissionError) as e:
-                print(f"Failed to create directories: {e}", file=sys.stderr)
+                print(f"Failed to create directories: {e}", file=sys.stderr, flush=True)
                 sys.exit(1)
 
         def cleanup_old_rate_limits():
@@ -284,7 +284,7 @@ args@{
                         continue
 
             if cleaned_up:
-                print("Cleaned up old rate limit files.")
+                print("Cleaned up old rate limit files.", flush=True)
 
         def check_rate_limit(service_unit: str) -> bool:
             cleanup_old_rate_limits()
@@ -344,7 +344,7 @@ args@{
                                     if stored_hash == message_hash:
                                         return False
                                 else:
-                                    print(f"Message rate limit expired for message: ({service_unit}) {message}")
+                                    print(f"Message rate limit expired for message: ({service_unit}) {message}", flush=True)
                             except ValueError:
                                 continue
                 except IOError:
@@ -359,12 +359,20 @@ args@{
 
             return True
 
+        def to_string(value, default=""):
+            if isinstance(value, list):
+                return str(value[0]) if value else default
+            elif value is None:
+                return default
+            else:
+                return str(value)
+
         def filter_message(json_data: Dict[str, Any]) -> bool:
-            unit = json_data.get("_SYSTEMD_UNIT", "")
+            unit = to_string(json_data.get("_SYSTEMD_UNIT"))
             service_name = unit.replace(".service", "") if unit else ""
-            tag = json_data.get("SYSLOG_IDENTIFIER", "")
-            message = json_data.get("MESSAGE", "")
-            priority = int(json_data.get("PRIORITY", "6"))
+            tag = to_string(json_data.get("SYSLOG_IDENTIFIER"))
+            message = to_string(json_data.get("MESSAGE"))
+            priority = int(to_string(json_data.get("PRIORITY", "6"), "6"))
 
             if service_name and services_pattern and services_pattern.search(service_name):
                 return False
@@ -385,10 +393,10 @@ args@{
 
         def process_message(json_data: Dict[str, Any]):
             try:
-                priority = json_data.get("PRIORITY", "6")
-                message = json_data.get("MESSAGE", "")
-                unit = json_data.get("_SYSTEMD_UNIT", "unknown")
-                tag = json_data.get("SYSLOG_IDENTIFIER", "system")
+                priority = to_string(json_data.get("PRIORITY", "6"), "6")
+                message = to_string(json_data.get("MESSAGE"))
+                unit = to_string(json_data.get("_SYSTEMD_UNIT", "unknown"), "unknown")
+                tag = to_string(json_data.get("SYSLOG_IDENTIFIER", "system"), "system")
 
                 if unit == f"user@{MAIN_USER_UID}.service" or unit == "unknown":
                     match = service_extract_pattern.match(message)
@@ -400,10 +408,10 @@ args@{
                     return
 
                 if not check_message_rate_limit(unit, message):
-                    print(f"Ignore notification <rate limited> ({tag}/{unit}): {message}")
+                    print(f"Ignore notification <rate limited> ({tag}/{unit}): {message}", flush=True)
                     return
 
-                print(f"Send notification ({tag}/{unit}): {message}")
+                print(f"Send notification ({tag}/{unit}): {message}", flush=True)
 
                 priority_map = {
                     "0": "emerg", "1": "emerg", "2": "emerg",
@@ -432,7 +440,7 @@ args@{
                             f"{title_text_user}: {message_text_user}"
                         ], check=False, timeout=30)
                     except (subprocess.TimeoutExpired, OSError) as e:
-                        print(f"Failed to send user notification: {e}", file=sys.stderr)
+                        print(f"Failed to send user notification: {e}", file=sys.stderr, flush=True)
 
                 if PUSHOVER_ENABLED and check_rate_limit(unit):
                     try:
@@ -448,9 +456,9 @@ args@{
                             "--type", notify_type
                         ], check=False, timeout=30)
                     except (subprocess.TimeoutExpired, OSError) as e:
-                        print(f"Failed to send pushover notification: {e}", file=sys.stderr)
+                        print(f"Failed to send pushover notification: {e}", file=sys.stderr, flush=True)
             except Exception as e:
-                print(f"Error processing message: {e}", file=sys.stderr)
+                print(f"Error processing message: {e}", file=sys.stderr, flush=True)
 
         def main():
             setup_directories()
@@ -462,6 +470,7 @@ args@{
                 f"--cursor-file={CURSOR_FILE}"
             ]
 
+            print("Starting journal watcher - monitoring systemd journal for notifications", flush=True)
             try:
                 with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1) as proc:
                     for line in proc.stdout:
@@ -474,9 +483,9 @@ args@{
                             except json.JSONDecodeError:
                                 continue
             except KeyboardInterrupt:
-                print("Journal watcher stopped.")
+                print("Journal watcher stopped.", flush=True)
             except Exception as e:
-                print(f"Error: {e}", file=sys.stderr)
+                print(f"Error: {e}", file=sys.stderr, flush=True)
                 sys.exit(1)
 
         if __name__ == "__main__":
