@@ -42,6 +42,8 @@ args@{
       "NX Auto-Upgrade"
       "USB Audio.*cannot get freq"
       "USB Audio.*cannot set freq"
+      "usb.*Unable to submit urb.*at snd_usb_queue_pending_output_urbs"
+      "usb.*cannot submit urb.*error.*no device"
       "\\[Firmware Bug\\]: TSC_DEADLINE disabled due to Errata"
       "x86/cpu: .*disabled by BIOS"
       "x86/cpu: .*disabled or unsupported by BIOS"
@@ -94,6 +96,13 @@ args@{
       "Realtime error: Could not get pidns for pid [0-9]+: Could not fstatat ns/pid: Not a directory"
       "unhandled exception.*in Json::Value::find.*requires objectValue or nullValue"
       "kf\\.config\\.core: couldn't lock global file"
+      "spa\\.alsa:.*snd_pcm_start.*Broken pipe"
+      "spa\\.alsa:.*snd_pcm_avail.*Broken pipe"
+      "spa\\.alsa:.*snd_pcm_start.*File descriptor in bad state"
+      "spa\\.alsa:.*snd_pcm_drop.*No such device"
+      "spa\\.alsa:.*close failed.*No such device"
+      "spa\\.alsa:.*playback open failed.*Device or resource busy"
+      "pw\\.node:.*suspended -> error \\(Start error: Device or resource busy\\)"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
