@@ -357,7 +357,6 @@ args@{
                       --override-input profile "path:$PROFILE_PATH" \
                       --print-build-logs \
                       --show-trace; then
-                      ${logScript "err" "FAILURE: System rebuild failed!"}
                       exit 1
                     fi
                     ${logScript "info" "SUCCESS: System rebuild completed successfully"}
@@ -540,7 +539,7 @@ args@{
                 modulePath = "notifications.pushover";
               }).custom.pushoverSendScript
             ];
-        script = logScript "err" "FAILURE: Auto-upgrade failed - check journalctl -u nx-auto-upgrade !";
+        script = logScript "err" "FAILURE: Auto-upgrade failed!";
       };
 
       systemd.services.nx-auto-upgrade-notify = {
