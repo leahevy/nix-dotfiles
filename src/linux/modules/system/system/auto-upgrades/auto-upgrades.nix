@@ -693,8 +693,8 @@ args@{
       systemd.timers.nx-auto-upgrade-reboot-checker = lib.mkIf self.settings.allowReboot {
         description = "NX Auto-Upgrade Delayed Reboot Checker Timer";
         timerConfig = {
-          OnCalendar = "hourly";
-          OnBootSec = "15min";
+          OnCalendar = "*:0/15";
+          OnStartupSec = "15min";
           Persistent = true;
         };
         wantedBy = [ "timers.target" ];
