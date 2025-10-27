@@ -82,7 +82,7 @@ jobs:
             echo "${!repo_var:-}"
           }
 
-          REBOOT_PATTERNS="\blinux[-_][0-9]|\blinuxKernel\b|\blinuxPackages|\bkernelPackages\b|\bsystemd\b|\bglibc\b|\bmicrocode\b|\blinux-firmware\b|\bnix:\b|\bnix[[:space:]]|\bnix$"
+          REBOOT_PATTERNS="\blinux[-_][0-9]|\blinuxKernel\b|\blinuxPackages\b|\bkernelPackages\b|\bsystemd\b|\bglibc\b|\bmicrocode\b|\blinux-firmware\b|\bnix:\b|\bnix[[:space:]]|\bnix$"
 
           IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
 
@@ -114,14 +114,14 @@ jobs:
                   regular_commits=$(echo "$all_commits" | grep -v '\[Backport release-\|\[release-.* backport\]' || true)
                   backport_count=$(echo "$all_commits" | grep -c '\[Backport release-\|\[release-.* backport\]' || echo 0)
 
-                  if echo "$commits_json" | jq -r '.commits[]?.commit.message' | grep -iE "$REBOOT_PATTERNS" > /dev/null 2>&1; then
+                  if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0]' | grep -iE "$REBOOT_PATTERNS" > /dev/null 2>&1; then
                     requires_reboot="true"
-                    found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message' | grep -iEo "$REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                    found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0]' | grep -iEo "$REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
                     if [ -n "$found_packages" ]; then
                       reboot_packages="$reboot_packages$found_packages, "
                     fi
 
-                    input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_PATTERNS" '.commits[]? | select(.commit.message | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                    input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
                     if [ -n "$input_reboot_commits" ]; then
                       reboot_commits="$reboot_commits"$'\n\n'"#### $input"$'\n'"$input_reboot_commits"
                     fi
@@ -186,12 +186,13 @@ jobs:
 
             ${{ env.REQUIRES_REBOOT == 'true' && '> [!WARNING]' || '' }}
             ${{ env.REQUIRES_REBOOT == 'true' && '> ⚠️ **System Reboot Required** ⚠️' || '' }}
-            ${{ env.REQUIRES_REBOOT == 'true' && format('> This update requires a reboot! ({0})', env.REBOOT_PACKAGES) || '' }}
+            ${{ env.REQUIRES_REBOOT == 'true' && '> This update requires a reboot!' || '' }}
+
+            ${{ env.REQUIRES_REBOOT == 'true' && '### 🔄 Reboot-triggering commits' || '' }}
+            ${{ env.REQUIRES_REBOOT == 'true' && env.REBOOT_COMMITS || '' }}
 
             ### Updated inputs:
             - ${{ env.UPDATED_INPUTS }}
-            ${{ env.REQUIRES_REBOOT == 'true' && '## 🔄 Reboot-triggering commits' || '' }}
-            ${{ env.REQUIRES_REBOOT == 'true' && env.REBOOT_COMMITS || '' }}
             ${{ env.COMMIT_LISTS }}
 
             Generated automatically by GitHub Actions
