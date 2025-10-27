@@ -115,7 +115,7 @@ args@{
     ];
     additionalStringsToIgnore = [ ];
 
-    pushoverEnabled = true;
+    pushoverEnabled = false;
 
     pushoverRateLimit = 10;
     pushoverRateLimitUnknown = 30;
@@ -123,14 +123,6 @@ args@{
 
     priorityLevel = "warning";
   };
-
-  assertions = [
-    {
-      assertion =
-        (self.user.isModuleEnabled "notifications.user-notify") || self.settings.pushoverEnabled;
-      message = "At least one notification method must be enabled!";
-    }
-  ];
 
   configuration =
     context@{ config, options, ... }:
