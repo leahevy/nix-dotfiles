@@ -26,6 +26,9 @@ args@{
           };
         };
         linux = {
+          memory = {
+            zram = true;
+          };
           storage = {
             smartd = true;
           };
