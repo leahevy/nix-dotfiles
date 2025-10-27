@@ -115,13 +115,15 @@ args@{
     ];
     additionalStringsToIgnore = [ ];
 
+    baseStringsToHighlight = [ ];
+    desktopStringsToHighlight = [ ];
+    additionalStringsToHighlight = [ ];
+
     pushoverEnabled = false;
 
     pushoverRateLimit = 10;
     pushoverRateLimitUnknown = 30;
     sameMessageRateLimitMinutes = 15;
-
-    priorityLevel = "warning";
   };
 
   configuration =
@@ -150,6 +152,11 @@ args@{
         ++ (lib.optionals isDesktop self.settings.desktopStringsToIgnore)
         ++ (lib.optionals isNvidia self.settings.nvidiaStringsToIgnore);
 
+      allStringsToHighlight =
+        self.settings.baseStringsToHighlight
+        ++ self.settings.additionalStringsToHighlight
+        ++ (lib.optionals isDesktop self.settings.desktopStringsToHighlight);
+
       servicesPattern =
         if allServicesToIgnore != [ ] then
           "(" + (lib.concatStringsSep "|" (map lib.escapeShellArg allServicesToIgnore)) + ")"
@@ -173,242 +180,307 @@ args@{
       cursorFile = "${stateDir}/journal-cursor";
       messageHashesFile = "${stateDir}/message-hashes";
 
-      journalWatcherScript = pkgs.writeShellScriptBin "nx-journal-watcher-monitor" ''
-        set -euo pipefail
+      journalWatcherScript = pkgs.writeScriptBin "nx-journal-watcher-monitor" ''
+        #!/usr/bin/env python3
+        import json
+        import os
+        import re
+        import subprocess
+        import sys
+        import tempfile
+        import time
+        from hashlib import sha256
+        from pathlib import Path
+        from typing import List, Optional, Dict, Any
 
-        SERVICE_NAME="${serviceName}"
-        RATE_LIMIT_STATE_DIR="${rateLimitStateDir}"
-        CURSOR_FILE="${cursorFile}"
-        MESSAGE_HASHES_FILE="${messageHashesFile}"
-        RATE_LIMIT_PER_HOUR=${toString self.settings.pushoverRateLimit}
-        RATE_LIMIT_PER_HOUR_UNKNOWN=${toString self.settings.pushoverRateLimitUnknown}
-        MESSAGE_RATE_LIMIT_MINUTES=${toString self.settings.sameMessageRateLimitMinutes}
+        SERVICE_NAME = "${serviceName}"
+        STATE_DIR = "${stateDir}"
+        RATE_LIMIT_STATE_DIR = "${rateLimitStateDir}"
+        CURSOR_FILE = "${cursorFile}"
+        MESSAGE_HASHES_FILE = "${messageHashesFile}"
+        RATE_LIMIT_PER_HOUR = ${toString self.settings.pushoverRateLimit}
+        RATE_LIMIT_PER_HOUR_UNKNOWN = ${toString self.settings.pushoverRateLimitUnknown}
+        MESSAGE_RATE_LIMIT_MINUTES = ${toString self.settings.sameMessageRateLimitMinutes}
 
-        USER_NOTIFY_ENABLED=${
-          if (self.user.isModuleEnabled "notifications.user-notify") then "true" else "false"
+        USER_NOTIFY_ENABLED = ${
+          if (self.user.isModuleEnabled "notifications.user-notify") then "True" else "False"
         }
-        PUSHOVER_ENABLED=${
+        PUSHOVER_ENABLED = ${
           if self.settings.pushoverEnabled && (self.isModuleEnabled "notifications.pushover") then
-            "true"
+            "True"
           else
-            "false"
+            "False"
         }
 
-        MAIN_USER_UID=${toString config.users.users.${self.host.mainUser.username}.uid}
+        MAIN_USER_UID = ${toString config.users.users.${self.host.mainUser.username}.uid}
 
-        ${pkgs.coreutils}/bin/mkdir -p "${stateDir}"
-        ${pkgs.coreutils}/bin/mkdir -p "$RATE_LIMIT_STATE_DIR"
+        services_to_ignore: List[str] = []
+        ${lib.concatMapStringsSep "\n" (
+          pattern: "services_to_ignore.append(${builtins.toJSON pattern})"
+        ) allServicesToIgnore}
 
-        cleanup_old_rate_limits() {
-          local current_time=$(${pkgs.coreutils}/bin/date +%s)
-          local cleaned_up=0
+        tags_to_ignore: List[str] = []
+        ${lib.concatMapStringsSep "\n" (
+          pattern: "tags_to_ignore.append(${builtins.toJSON pattern})"
+        ) allTagsToIgnore}
 
-          ${pkgs.findutils}/bin/find "$RATE_LIMIT_STATE_DIR" -type f -name "*" -mtime +0 -exec sh -c '
-            for file; do
-              if [[ -f "$file" ]]; then
-                stored_data=$(cat "$file" 2>/dev/null || echo "")
-                if [[ -n "$stored_data" ]]; then
-                  stored_time=$(echo "$stored_data" | cut -d: -f2)
-                  if [[ -n "$stored_time" && $(('"$current_time"' - stored_time)) -gt 7200 ]]; then
-                    cleaned_up=1
-                    rm -f "$file"
-                  fi
-                fi
-              fi
-            done
+        strings_to_ignore: List[str] = []
+        ${lib.concatMapStringsSep "\n" (
+          pattern: "strings_to_ignore.append(${builtins.toJSON pattern})"
+        ) allStringsToIgnore}
 
-            if [[ $cleaned_up -eq 1 ]]; then
-              echo "Cleaned up old rate limit files."
-            fi
-          ' sh {} +
-        }
+        strings_to_highlight: List[str] = []
+        ${lib.concatMapStringsSep "\n" (
+          pattern: "strings_to_highlight.append(${builtins.toJSON pattern})"
+        ) allStringsToHighlight}
 
-        check_rate_limit() {
-          local service_unit="$1"
+        services_pattern = None
+        tags_pattern = None
+        strings_pattern = None
+        strings_highlight_pattern = None
+        service_extract_pattern = None
 
-          cleanup_old_rate_limits
+        try:
+            if services_to_ignore:
+                services_pattern = re.compile("|".join(f"({re.escape(pattern)})" for pattern in services_to_ignore))
+            if tags_to_ignore:
+                tags_pattern = re.compile("|".join(f"({re.escape(pattern)})" for pattern in tags_to_ignore))
+            if strings_to_ignore:
+                strings_pattern = re.compile("|".join(f"({pattern})" for pattern in strings_to_ignore))
+            if strings_to_highlight:
+                strings_highlight_pattern = re.compile("|".join(f"({pattern})" for pattern in strings_to_highlight))
+            service_extract_pattern = re.compile(r"^([a-zA-Z0-9_-]+\.(service|timer|socket|target|mount|path|slice|scope|device|swap)):(.*)$")
+        except re.error as e:
+            print(f"Failed to compile regex patterns: {e}", file=sys.stderr)
+            sys.exit(1)
 
-          local service_file=$(echo -n "$service_unit" | ${pkgs.coreutils}/bin/tr '/' '_' | ${pkgs.coreutils}/bin/tr -cd '[:alnum:]_-')
-          if [[ -z "$service_file" ]]; then
-            service_file="unknown"
-          fi
+        def setup_directories():
+            try:
+                os.makedirs(STATE_DIR, exist_ok=True)
+                os.makedirs(RATE_LIMIT_STATE_DIR, exist_ok=True)
+            except (OSError, PermissionError) as e:
+                print(f"Failed to create directories: {e}", file=sys.stderr)
+                sys.exit(1)
 
-          local rate_limit_file="$RATE_LIMIT_STATE_DIR/$service_file"
-          local current_time=$(${pkgs.coreutils}/bin/date +%s)
-          local current_hour=$((current_time / 3600))
+        def cleanup_old_rate_limits():
+            current_time = int(time.time())
+            cleaned_up = False
 
-          local rate_limit=$RATE_LIMIT_PER_HOUR
-          if [[ "$service_file" == "unknown" ]]; then
-            rate_limit=$RATE_LIMIT_PER_HOUR_UNKNOWN
-          fi
+            rate_limit_path = Path(RATE_LIMIT_STATE_DIR)
+            if not rate_limit_path.exists():
+                return
 
-          if [[ -f "$rate_limit_file" ]]; then
-            local stored_data=$(${pkgs.coreutils}/bin/cat "$rate_limit_file")
-            local stored_count=$(echo "$stored_data" | ${pkgs.coreutils}/bin/cut -d: -f1)
-            local stored_hour=$(echo "$stored_data" | ${pkgs.coreutils}/bin/cut -d: -f2)
-            stored_hour=$((stored_hour / 3600))
+            for file_path in rate_limit_path.iterdir():
+                if file_path.is_file():
+                    try:
+                        stored_data = file_path.read_text().strip()
+                        if ":" in stored_data:
+                            _, stored_time_str = stored_data.split(":", 1)
+                            stored_time = int(stored_time_str)
+                            if current_time - stored_time > (2*60*60):
+                                file_path.unlink()
+                                cleaned_up = True
+                    except (ValueError, IOError):
+                        continue
 
-            if [[ $stored_hour -eq $current_hour ]]; then
-              if [[ $stored_count -ge $rate_limit ]]; then
-                return 1
-              else
-                echo "$((stored_count + 1)):$current_time" > "$rate_limit_file"
-                return 0
-              fi
-            else
-              echo "1:$current_time" > "$rate_limit_file"
-              return 0
-            fi
-          else
-            echo "1:$current_time" > "$rate_limit_file"
-            return 0
-          fi
-        }
+            if cleaned_up:
+                print("Cleaned up old rate limit files.")
 
-        check_message_rate_limit() {
-          local service_unit="$1"
-          local message="$2"
+        def check_rate_limit(service_unit: str) -> bool:
+            cleanup_old_rate_limits()
 
-          local message_key="$service_unit:$message"
-          local message_hash=$(echo -n "$message_key" | ${pkgs.coreutils}/bin/sha256sum | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+            service_file = re.sub(r"[^a-zA-Z0-9_-]", "_", service_unit)
+            if not service_file:
+                service_file = "unknown"
 
-          local current_time=$(${pkgs.coreutils}/bin/date +%s)
-          local rate_limit_seconds=$((MESSAGE_RATE_LIMIT_MINUTES * 60))
+            rate_limit_file = Path(RATE_LIMIT_STATE_DIR) / service_file
+            current_time = int(time.time())
+            current_hour = current_time // 3600
 
-          if [[ -f "$MESSAGE_HASHES_FILE" ]]; then
-            local temp_file=$(${pkgs.coreutils}/bin/mktemp)
+            rate_limit = RATE_LIMIT_PER_HOUR_UNKNOWN if service_file == "unknown" else RATE_LIMIT_PER_HOUR
 
-            while IFS=':' read -r stored_hash stored_time; do
-              if [[ -n "$stored_hash" && -n "$stored_time" ]]; then
-                if [[ $((current_time - stored_time)) -lt $rate_limit_seconds ]]; then
-                  echo "$stored_hash:$stored_time" >> "$temp_file"
-                else
-                  echo "Message rate limit expired for message: ($service_unit) $message"
-                fi
-              fi
-            done < "$MESSAGE_HASHES_FILE"
+            if rate_limit_file.exists():
+                try:
+                    stored_data = rate_limit_file.read_text().strip()
+                    stored_count, stored_time_str = stored_data.split(":", 1)
+                    stored_count = int(stored_count)
+                    stored_hour = int(stored_time_str) // 3600
 
-            ${pkgs.coreutils}/bin/mv "$temp_file" "$MESSAGE_HASHES_FILE"
+                    if stored_hour == current_hour:
+                        if stored_count >= rate_limit:
+                            return False
+                        else:
+                            rate_limit_file.write_text(f"{stored_count + 1}:{current_time}")
+                            return True
+                    else:
+                        rate_limit_file.write_text(f"1:{current_time}")
+                        return True
+                except (ValueError, IOError):
+                    rate_limit_file.write_text(f"1:{current_time}")
+                    return True
+            else:
+                rate_limit_file.write_text(f"1:{current_time}")
+                return True
 
-            if ${pkgs.gnugrep}/bin/grep -q "^$message_hash:" "$MESSAGE_HASHES_FILE" 2>/dev/null; then
-              return 1
-            fi
-          fi
+        def check_message_rate_limit(service_unit: str, message: str) -> bool:
+            message_key = f"{service_unit}:{message}"
+            message_hash = sha256(message_key.encode()).hexdigest()
 
-          echo "$message_hash:$current_time" >> "$MESSAGE_HASHES_FILE"
-          return 0
-        }
+            current_time = int(time.time())
+            rate_limit_seconds = MESSAGE_RATE_LIMIT_MINUTES * 60
 
-        filter_message() {
-          local json_line="$1"
+            message_hashes_path = Path(MESSAGE_HASHES_FILE)
 
-          local unit=$(echo "$json_line" | ${pkgs.jq}/bin/jq -r '._SYSTEMD_UNIT // empty' 2>/dev/null || echo "")
-          local service_name=""
-          if [[ -n "$unit" ]]; then
-            service_name=$(echo "$unit" | ${pkgs.gnused}/bin/sed 's/\.service$//')
-          fi
+            valid_hashes = []
+            if message_hashes_path.exists():
+                try:
+                    for line in message_hashes_path.read_text().splitlines():
+                        if ":" in line:
+                            stored_hash, stored_time_str = line.split(":", 1)
+                            try:
+                                stored_time = int(stored_time_str)
+                                if current_time - stored_time < rate_limit_seconds:
+                                    valid_hashes.append(line)
+                                    if stored_hash == message_hash:
+                                        return False
+                                else:
+                                    print(f"Message rate limit expired for message: ({service_unit}) {message}")
+                            except ValueError:
+                                continue
+                except IOError:
+                    pass
 
-          local tag=$(echo "$json_line" | ${pkgs.jq}/bin/jq -r '.SYSLOG_IDENTIFIER // empty' 2>/dev/null || echo "")
+            valid_hashes.append(f"{message_hash}:{current_time}")
 
-          local message=$(echo "$json_line" | ${pkgs.jq}/bin/jq -r '.MESSAGE // empty' 2>/dev/null || echo "")
+            try:
+                message_hashes_path.write_text("\n".join(valid_hashes) + "\n")
+            except IOError:
+                pass
 
-          if [[ -n "$service_name" ]] && echo "$service_name" | ${pkgs.gnugrep}/bin/grep -qE "${servicesPattern}" 2>/dev/null; then
-            return 1
-          fi
+            return True
 
-          if [[ -n "$tag" ]] && echo "$tag" | ${pkgs.gnugrep}/bin/grep -qE "${tagsPattern}" 2>/dev/null; then
-            return 1
-          fi
+        def filter_message(json_data: Dict[str, Any]) -> bool:
+            unit = json_data.get("_SYSTEMD_UNIT", "")
+            service_name = unit.replace(".service", "") if unit else ""
+            tag = json_data.get("SYSLOG_IDENTIFIER", "")
+            message = json_data.get("MESSAGE", "")
+            priority = int(json_data.get("PRIORITY", "6"))
 
-          if [[ -n "$message" ]] && echo "$message" | ${pkgs.gnugrep}/bin/grep -qE "${stringsPattern}" 2>/dev/null; then
-            return 1
-          fi
+            if service_name and services_pattern and services_pattern.search(service_name):
+                return False
 
-          return 0
-        }
+            if tag and tags_pattern and tags_pattern.search(tag):
+                return False
 
-        process_message() {
-          local json_line="$1"
+            if message and strings_pattern and strings_pattern.search(message):
+                return False
 
-          local priority=$(echo "$json_line" | ${pkgs.jq}/bin/jq -r '.PRIORITY // "6"' 2>/dev/null)
-          local message=$(echo "$json_line" | ${pkgs.jq}/bin/jq -r '.MESSAGE // empty' 2>/dev/null)
-          local unit=$(echo "$json_line" | ${pkgs.jq}/bin/jq -r '._SYSTEMD_UNIT // "unknown"' 2>/dev/null)
-          local tag=$(echo "$json_line" | ${pkgs.jq}/bin/jq -r '.SYSLOG_IDENTIFIER // "system"' 2>/dev/null)
+            if priority <= 4:
+                return True
 
-          if [[ "$unit" == "user@$MAIN_USER_UID.service" ]]; then
-            if echo "$message" | ${pkgs.gnugrep}/bin/grep -qE '^[a-zA-Z0-9_-]+\.(service|timer|socket|target|mount|path|slice|scope|device|swap):'; then
-              local extracted_service=$(echo "$message" | ${pkgs.gnused}/bin/sed -E 's/^([a-zA-Z0-9_-]+\.(service|timer|socket|target|mount|path|slice|scope|device|swap)):.*$/\1/')
-              unit="$extracted_service"
-              message=$(echo "$message" | ${pkgs.gnused}/bin/sed -E 's/^[a-zA-Z0-9_-]+\.(service|timer|socket|target|mount|path|slice|scope|device|swap): *//')
-            fi
-          fi
+            if message and strings_highlight_pattern and strings_highlight_pattern.search(message):
+                return True
 
-          if [[ "$unit" == "unknown" ]]; then
-            if echo "$message" | ${pkgs.gnugrep}/bin/grep -qE '^[a-zA-Z0-9_-]+\.(service|timer|socket|target|mount|path|slice|scope|device|swap):'; then
-              local extracted_service=$(echo "$message" | ${pkgs.gnused}/bin/sed -E 's/^([a-zA-Z0-9_-]+\.(service|timer|socket|target|mount|path|slice|scope|device|swap)):.*$/\1/')
-              unit="$extracted_service"
-              message=$(echo "$message" | ${pkgs.gnused}/bin/sed -E 's/^[a-zA-Z0-9_-]+\.(service|timer|socket|target|mount|path|slice|scope|device|swap): *//')
-            fi
-          fi
+            return False
 
-          if [[ -z "$message" ]]; then
-            return 0
-          fi
+        def process_message(json_data: Dict[str, Any]):
+            try:
+                priority = json_data.get("PRIORITY", "6")
+                message = json_data.get("MESSAGE", "")
+                unit = json_data.get("_SYSTEMD_UNIT", "unknown")
+                tag = json_data.get("SYSLOG_IDENTIFIER", "system")
 
-          if ! check_message_rate_limit "$unit" "$message"; then
-            echo "Ignore notification <rate limited> ($tag/$unit): $message"
-            return 0
-          fi
+                if unit == f"user@{MAIN_USER_UID}.service" or unit == "unknown":
+                    match = service_extract_pattern.match(message)
+                    if match:
+                        unit = match.group(1)
+                        message = match.group(3).strip()
 
-          echo "Send notification ($tag/$unit): $message"
+                if not message:
+                    return
 
-          local notify_type="warn"
-          case "$priority" in
-            0|1|2) notify_type="emerg" ;;
-            3) notify_type="failed" ;;
-            4) notify_type="warn" ;;
-            *) notify_type="info" ;;
-          esac
+                if not check_message_rate_limit(unit, message):
+                    print(f"Ignore notification <rate limited> ({tag}/{unit}): {message}")
+                    return
 
-          local title_text_pushover title_text_user
-          local message_text_pushover message_text_user
+                print(f"Send notification ({tag}/{unit}): {message}")
 
-          if [[ "$unit" == "unknown" ]]; then
-            title_text_pushover="Journal ($tag)"
-            title_text_user="Journal"
-            message_text_pushover="$message"
-            message_text_user="$message <b>($tag)</b>"
-          else
-            title_text_pushover="$unit ($tag)"
-            title_text_user="$unit"
-            message_text_pushover="$message"
-            message_text_user="$message <b>($tag)</b>"
-          fi
+                priority_map = {
+                    "0": "emerg", "1": "emerg", "2": "emerg",
+                    "3": "failed",
+                    "4": "warn"
+                }
+                notify_type = priority_map.get(priority, "info")
 
-          if [[ "$USER_NOTIFY_ENABLED" == "true" ]]; then
-            ${pkgs.util-linux}/bin/logger -p user.warning -t nx-user-notify "$title_text_user: $message_text_user"
-          fi
+                if unit == "unknown":
+                    title_text_pushover = f"Journal ({tag})"
+                    title_text_user = "Journal"
+                    message_text_pushover = message
+                    message_text_user = f"{message} <b>({tag})</b>"
+                else:
+                    title_text_pushover = f"{unit} ({tag})"
+                    title_text_user = unit
+                    message_text_pushover = message
+                    message_text_user = f"{message} <b>({tag})</b>"
 
-          if [[ "$PUSHOVER_ENABLED" == "true" ]] && check_rate_limit "$unit"; then
-            ${
-              (self.importFileFromOtherModuleSameInput {
-                inherit args self;
-                modulePath = "notifications.pushover";
-              }).custom.pushoverSendScript
-            }/bin/pushover-send \
-              --title "$title_text_pushover" \
-              --message "$message_text_pushover" \
-              --type "$notify_type" || true
-          fi
-        }
+                if USER_NOTIFY_ENABLED:
+                    try:
+                        subprocess.run([
+                            "${pkgs.util-linux}/bin/logger",
+                            "-p", "user.warning",
+                            "-t", "nx-user-notify",
+                            f"{title_text_user}: {message_text_user}"
+                        ], check=False, timeout=30)
+                    except (subprocess.TimeoutExpired, OSError) as e:
+                        print(f"Failed to send user notification: {e}", file=sys.stderr)
 
-        ${pkgs.systemd}/bin/journalctl -f -p ${self.settings.priorityLevel} --output=json --cursor-file="$CURSOR_FILE" | while read -r line; do
-          if [[ -n "$line" ]]; then
-            if filter_message "$line"; then
-              process_message "$line"
-            fi
-          fi
-        done
+                if PUSHOVER_ENABLED and check_rate_limit(unit):
+                    try:
+                        subprocess.run([
+                            "${
+                              (self.importFileFromOtherModuleSameInput {
+                                inherit args self;
+                                modulePath = "notifications.pushover";
+                              }).custom.pushoverSendScript
+                            }/bin/pushover-send",
+                            "--title", title_text_pushover,
+                            "--message", message_text_pushover,
+                            "--type", notify_type
+                        ], check=False, timeout=30)
+                    except (subprocess.TimeoutExpired, OSError) as e:
+                        print(f"Failed to send pushover notification: {e}", file=sys.stderr)
+            except Exception as e:
+                print(f"Error processing message: {e}", file=sys.stderr)
+
+        def main():
+            setup_directories()
+
+            cmd = [
+                "${pkgs.systemd}/bin/journalctl",
+                "-f", "-p", "debug",
+                "--output=json",
+                f"--cursor-file={CURSOR_FILE}"
+            ]
+
+            try:
+                with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1) as proc:
+                    for line in proc.stdout:
+                        line = line.strip()
+                        if line:
+                            try:
+                                json_data = json.loads(line)
+                                if filter_message(json_data):
+                                    process_message(json_data)
+                            except json.JSONDecodeError:
+                                continue
+            except KeyboardInterrupt:
+                print("Journal watcher stopped.")
+            except Exception as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
+
+        if __name__ == "__main__":
+            main()
       '';
     in
     {
@@ -447,13 +519,9 @@ args@{
         path =
           with pkgs;
           [
+            python3
             systemd
-            coreutils
-            jq
-            gnugrep
-            gnused
             util-linux
-            findutils
           ]
           ++
             lib.optionals (self.settings.pushoverEnabled && (self.isModuleEnabled "notifications.pushover"))
