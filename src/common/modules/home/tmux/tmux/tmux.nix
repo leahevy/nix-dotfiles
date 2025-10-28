@@ -180,6 +180,9 @@ args@{
           bind-key -n C-S-Left previous-window
           bind-key -n C-S-Right next-window
 
+          bind-key -n M-[ previous-window
+          bind-key -n M-] next-window
+
           bind -r H resize-pane -L 10
           bind -r J resize-pane -D 10
           bind -r K resize-pane -U 10
