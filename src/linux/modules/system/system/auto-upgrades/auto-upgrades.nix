@@ -27,6 +27,7 @@ args@{
     waitForNetwork = true;
     dryRun = false;
     pushoverNotifications = true;
+    verifySignatures = true;
   };
 
   configuration =
@@ -135,6 +136,73 @@ args@{
             ${logScript "info" "INFO: Borg backup is currently running, delaying auto-upgrade"}
             exit 0
           fi
+        }
+      '';
+
+      signatureVerificationScript = lib.optionalString self.settings.verifySignatures ''
+        setup_verification_keyring() {
+          local keyring_dir=$(${pkgs.coreutils}/bin/mktemp -d -t nx-auto-upgrade-keyring-XXXXXX)
+          cleanup_paths+=("$keyring_dir")
+
+          ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username}:${
+            config.users.users.${self.host.mainUser.username}.group
+          } "$keyring_dir"
+          ${pkgs.coreutils}/bin/chmod 700 "$keyring_dir"
+
+          ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} GNUPGHOME="$keyring_dir" ${pkgs.gnupg}/bin/gpg --batch --import ${config.sops.secrets.auto-upgrade-main-signing-key.path} >/dev/null 2>&1
+          ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} GNUPGHOME="$keyring_dir" ${pkgs.gnupg}/bin/gpg --batch --import ${config.sops.secrets.auto-upgrade-github-signing-key.path} >/dev/null 2>&1
+
+          local main_key_id="$(${pkgs.coreutils}/bin/cat ${config.sops.secrets.auto-upgrade-main-key-id.path})"
+          local github_key_id="$(${pkgs.coreutils}/bin/cat ${config.sops.secrets.auto-upgrade-github-key-id.path})"
+
+          ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} GNUPGHOME="$keyring_dir" ${pkgs.gnupg}/bin/gpg --batch --command-fd 0 --edit-key "$main_key_id" <<< $'trust\n5\ny\nquit' >/dev/null 2>&1
+          ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} GNUPGHOME="$keyring_dir" ${pkgs.gnupg}/bin/gpg --batch --command-fd 0 --edit-key "$github_key_id" <<< $'trust\n5\ny\nquit' >/dev/null 2>&1
+
+          export GNUPGHOME="$keyring_dir"
+          ${pkgs.coreutils}/bin/echo "Set up dedicated GPG keyring for signature verification"
+        }
+
+        verify_commit_signature() {
+          local repo_path="$1"
+          local repo_name="$2"
+          local commit="$3"
+
+          cd "$repo_path"
+
+          if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} \
+            GNUPGHOME="$GNUPGHOME" \
+            ${gitEnv} \
+            ${pkgs.git}/bin/git verify-commit "$commit" >/dev/null 2>&1; then
+            ${logScript "err" "FAILURE: Commit $commit in $repo_name has no valid signature!"}
+            return 1
+          fi
+
+          return 0
+        }
+
+        verify_new_commits() {
+          local repo_path="$1"
+          local repo_name="$2"
+          local old_commit="$3"
+          local new_commit="$4"
+
+          cd "$repo_path"
+
+          if [[ "$old_commit" == "$new_commit" ]]; then
+            return 0
+          fi
+
+          local new_commits=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-list "$old_commit".."$new_commit")
+          local commit_count=$(echo "$new_commits" | ${pkgs.coreutils}/bin/wc -l)
+
+          for commit in $new_commits; do
+            if ! verify_commit_signature "$repo_path" "$repo_name" "$commit"; then
+              return 1
+            fi
+          done
+
+          ${pkgs.coreutils}/bin/echo "All new commit signatures verified successfully in $repo_name"
+          return 0
         }
       '';
 
@@ -275,6 +343,9 @@ args@{
           local repo_name="$2"
 
           cd "$repo_path"
+
+          local old_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)
+
           ${logScript "info" "INFO: ${
             if self.settings.dryRun then "Would pull" else "Pulling"
           } latest changes for $repo_name"}
@@ -296,6 +367,14 @@ args@{
                 ${pkgs.coreutils}/bin/chown -R ${self.host.mainUser.username}:${
                   config.users.users.${self.host.mainUser.username}.group
                 } "$repo_path"
+
+                ${lib.optionalString self.settings.verifySignatures ''
+                  local new_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)
+                  if ! verify_new_commits "$repo_path" "$repo_name" "$old_commit" "$new_commit"; then
+                    ${logScript "err" "FAILURE: Signature verification failed for $repo_name!"}
+                    exit 1
+                  fi
+                ''}
               ''
           }
         }
@@ -525,6 +604,34 @@ args@{
         group = config.users.users.${self.host.mainUser.username}.group;
       };
 
+      sops.secrets.auto-upgrade-main-signing-key = lib.mkIf self.settings.verifySignatures {
+        sopsFile = self.config.secretsPath "auto-upgrade-signing-keys.yaml";
+        mode = "0440";
+        owner = "root";
+        group = config.users.users.${self.host.mainUser.username}.group;
+      };
+
+      sops.secrets.auto-upgrade-main-key-id = lib.mkIf self.settings.verifySignatures {
+        sopsFile = self.config.secretsPath "auto-upgrade-signing-keys.yaml";
+        mode = "0440";
+        owner = "root";
+        group = config.users.users.${self.host.mainUser.username}.group;
+      };
+
+      sops.secrets.auto-upgrade-github-signing-key = lib.mkIf self.settings.verifySignatures {
+        sopsFile = self.config.secretsPath "auto-upgrade-signing-keys.yaml";
+        mode = "0440";
+        owner = "root";
+        group = config.users.users.${self.host.mainUser.username}.group;
+      };
+
+      sops.secrets.auto-upgrade-github-key-id = lib.mkIf self.settings.verifySignatures {
+        sopsFile = self.config.secretsPath "auto-upgrade-signing-keys.yaml";
+        mode = "0440";
+        owner = "root";
+        group = config.users.users.${self.host.mainUser.username}.group;
+      };
+
       systemd.services.nx-auto-upgrade-log-failure = {
         description = "Log NX Auto-Upgrade Failure";
         serviceConfig = {
@@ -610,6 +717,9 @@ args@{
             gnutar
             xz
           ]
+          ++ lib.optionals self.settings.verifySignatures [
+            gnupg
+          ]
           ++
             lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
               [
@@ -654,6 +764,15 @@ args@{
             ${checkRepositoriesExistScript}
             ${setupRemotesScript}
             ${checkGitWorktreesScript}
+
+            ${signatureVerificationScript}
+            ${lib.optionalString self.settings.verifySignatures ''
+              setup_verification_keyring
+
+              verify_commit_signature "${nxcoreDir}" "nxcore" "$(cd ${nxcoreDir} && ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)"
+              verify_commit_signature "${nxconfigDir}" "nxconfig" "$(cd ${nxconfigDir} && ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)"
+            ''}
+
             ${checkForChangesScript}
             ${pullRepositoriesScript}
             ${upgradeScript}
