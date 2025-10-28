@@ -377,6 +377,11 @@ args@{
 
           set -euo pipefail
 
+          if [[ -d "/tmp/.nx-deployment-lock" ]]; then
+              notify-send "❌ Power Menu" "Cannot access power options while NX deployment is running!"
+              exit 1
+          fi
+
           action=$(echo -e "Poweroff\nReboot" | fuzzel --dmenu --prompt="Power actions: " --width=25 --lines=2)
 
           if [[ -z "$action" ]]; then
