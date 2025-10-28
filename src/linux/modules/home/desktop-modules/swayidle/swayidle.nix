@@ -19,6 +19,7 @@ args@{
     package = pkgs.swaylock;
     commandline = "swaylock --daemonize";
     auto-lock-on-login = false;
+    baseTimeoutSeconds = 600;
   };
 
   configuration =
@@ -101,11 +102,11 @@ args@{
           systemdTarget = "graphical-session.target";
           timeouts = [
             {
-              timeout = 300;
+              timeout = self.settings.baseTimeoutSeconds;
               command = wrapperCommand;
             }
             {
-              timeout = 600;
+              timeout = self.settings.baseTimeoutSeconds * 2;
               command = lib.concatStringsSep ";" [ self.settings.turnOffMonitorsCommand ];
               resumeCommand = self.settings.turnOnMonitorsCommand;
             }
