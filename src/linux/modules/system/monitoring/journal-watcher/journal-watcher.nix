@@ -66,6 +66,8 @@ args@{
       "Ignoring duplicate name"
       "I/O error, dev sr[0-9]+, sector.*op.*READ.*flags.*phys_seg.*prio class"
       "Buffer I/O error on dev sr[0-9]+, logical block.*async page read"
+      "blk_print_req_error: [0-9]+ callbacks suppressed"
+      "buffer_io_error: [0-9]+ callbacks suppressed"
     ];
     desktopStringsToIgnore = [
       "qt\\.multimedia\\.symbolsresolver: Couldn't.*pipewire"
