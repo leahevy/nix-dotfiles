@@ -64,6 +64,8 @@ args@{
       "resource: resource sanity check: requesting.*which spans more than pnp"
       "caller get_primary_reg_base.*mapping multiple BARs"
       "Ignoring duplicate name"
+      "I/O error, dev sr[0-9]+, sector.*op.*READ.*flags.*phys_seg.*prio class"
+      "Buffer I/O error on dev sr[0-9]+, logical block.*async page read"
     ];
     desktopStringsToIgnore = [
       "qt\\.multimedia\\.symbolsresolver: Couldn't.*pipewire"
