@@ -31,7 +31,7 @@ args@{
         toggleterm = true;
         dashboard = true;
         nvim-tree = true;
-        transparency = false;
+        transparency = true;
         which-key = true;
         lsp = true;
         lazygit = true;
