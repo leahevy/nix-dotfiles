@@ -30,6 +30,9 @@ args@{
       nix-datatypes = "https://nlewo.github.io/nixos-manual-sphinx/development/option-types.xml.html";
       nixos-wiki = "https://nixos.wiki/wiki/Main_Page";
       mynixos = "https://mynixos.com/";
+      nx = "https://github.com/leahevy/nix-dotfiles";
+      nxac = "https://github.com/leahevy/nix-dotfiles/actions/workflows/update-flake-lock.yml";
+      nxpr = "https://github.com/leahevy/nix-dotfiles/pulls";
     };
     baseSearchEngines = {
       pkgs = "https://search.nixos.org/packages?query={}";
