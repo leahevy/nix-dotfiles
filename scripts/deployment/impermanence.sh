@@ -320,34 +320,73 @@ subcommand_check() {
     fi
   done
 
+  is_common_parent_path() {
+    local path="$1"
+    local path_rel="${path#$user_home/}"
+
+    case "$path_rel" in
+      .local|.cache|.config|.local/share|.local/state)
+        return 0
+        ;;
+      *)
+        return 1
+        ;;
+    esac
+  }
+
+  process_directory_recursive() {
+    local dir="$1"
+    local result_array_name="$2"
+    local -n result_ref=$result_array_name
+
+    if is_item_filtered "$dir"; then
+      return
+    fi
+
+    local has_unfiltered_content=false
+    local unfiltered_subdirs=()
+    local unfiltered_files=()
+
+    while IFS= read -r content; do
+      if [[ -n "$content" && "$content" != "$dir" ]]; then
+        if ! is_item_filtered "$content"; then
+          has_unfiltered_content=true
+          if [[ -d "$content" ]]; then
+            unfiltered_subdirs+=("$content")
+          else
+            unfiltered_files+=("$content")
+          fi
+        fi
+      fi
+    done < <($sudo find "$dir" -maxdepth 1 2>/dev/null || true)
+
+    if [[ "$has_unfiltered_content" == "true" ]]; then
+      if is_common_parent_path "$dir"; then
+        for file in "${unfiltered_files[@]}"; do
+          result_ref+=("$file")
+        done
+
+        for subdir in "${unfiltered_subdirs[@]}"; do
+          if is_common_parent_path "$subdir"; then
+            process_directory_recursive "$subdir" "$result_array_name"
+          else
+            result_ref+=("$subdir")
+          fi
+        done
+      elif has_persisted_content_in_directory "$dir"; then
+        for subdir in "${unfiltered_subdirs[@]}"; do
+          result_ref+=("$subdir")
+        done
+      else
+        result_ref+=("$dir")
+      fi
+    fi
+  }
+
   local final_items=()
   for item in "${filtered_items[@]}"; do
     if [[ -d "$item" ]]; then
-      local has_unfiltered_content=false
-      local unfiltered_subdirs=()
-
-      while IFS= read -r content; do
-        if [[ -n "$content" && "$content" != "$item" ]]; then
-          if ! is_item_filtered "$content"; then
-            has_unfiltered_content=true
-            if [[ -d "$content" ]]; then
-              unfiltered_subdirs+=("$content")
-            else
-              final_items+=("$content")
-            fi
-          fi
-        fi
-      done < <($sudo find "$item" -maxdepth 1 2>/dev/null || true)
-
-      if [[ "$has_unfiltered_content" == "true" ]]; then
-        if has_persisted_content_in_directory "$item"; then
-          for subdir in "${unfiltered_subdirs[@]}"; do
-            final_items+=("$subdir")
-          done
-        else
-          final_items+=("$item")
-        fi
-      fi
+      process_directory_recursive "$item" final_items
     else
       final_items+=("$item")
     fi
