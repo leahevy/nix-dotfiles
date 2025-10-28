@@ -107,6 +107,9 @@ args@{
       "pw\\.node:.*suspended -> error \\(Start error: Device or resource busy\\)"
       "A backend call failed: No such method 'CreateMonitor'"
       "Failed to close session implementation: GDBus\\.Error:org\\.freedesktop\\.DBus\\.Error\\.UnknownObject"
+      "libKExiv2: Cannot load metadata from file.*Error.*unknown image type"
+      "qt\\.gui\\.imageio\\.jpeg: Not a JPEG file: starts with"
+      ".*: Error executing command as another user: Not authorized.*gamemode.*"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
