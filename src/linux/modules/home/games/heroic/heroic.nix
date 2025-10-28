@@ -195,6 +195,8 @@ args@{
           ".local/state/Heroic/logs"
           ".config/unity3d"
           ".local/share/GOG.com"
+          ".local/share/lutris"
+          ".cache/lutris"
         ]
         ++ lib.optionals self.settings.games.stardewValley [
           ".config/StardewValley"

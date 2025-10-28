@@ -68,6 +68,8 @@ args@{
     desktopStringsToIgnore = [
       "qt\\.multimedia\\.symbolsresolver: Couldn't.*pipewire"
       "qt\\.dbus\\.integration: QDBusConnection: name .* had owner"
+      "qt\\.dbus\\.integration: QDBusConnection: couldn't handle call to CreateMonitor"
+      "qt\\.dbus\\.integration: Could not find slot.*CreateMonitor"
       "xdp-kde-settings: Namespace .* is not supported"
       "Choosing gtk\\.portal for .* as a last-resort fallback"
       "g_dbus_proxy_get_object_path: assertion .* failed"
@@ -103,6 +105,8 @@ args@{
       "spa\\.alsa:.*close failed.*No such device"
       "spa\\.alsa:.*playback open failed.*Device or resource busy"
       "pw\\.node:.*suspended -> error \\(Start error: Device or resource busy\\)"
+      "A backend call failed: No such method 'CreateMonitor'"
+      "Failed to close session implementation: GDBus\\.Error:org\\.freedesktop\\.DBus\\.Error\\.UnknownObject"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
@@ -249,7 +253,7 @@ args@{
                 strings_pattern = re.compile("|".join(f"({pattern})" for pattern in strings_to_ignore))
             if strings_to_highlight:
                 strings_highlight_pattern = re.compile("|".join(f"({pattern})" for pattern in strings_to_highlight))
-            service_extract_pattern = re.compile(r"^([a-zA-Z0-9_-]+\.(service|timer|socket|target|mount|path|slice|scope|device|swap)):(.*)$")
+            service_extract_pattern = re.compile(r"^([a-zA-Z0-9_-]+\.(service|timer|socket|target|mount|path|slice|scope|device|swap|integration)):(.*)$")
         except re.error as e:
             print(f"Failed to compile regex patterns: {e}", file=sys.stderr, flush=True)
             sys.exit(1)
