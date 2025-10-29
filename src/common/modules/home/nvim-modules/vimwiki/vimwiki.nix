@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     wikiPath = "~/.local/share/nvim/wiki/";
   };
 

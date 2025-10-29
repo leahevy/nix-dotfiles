@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     enablePython = true;
     enableJavaScript = true;
     enableTypeScript = true;

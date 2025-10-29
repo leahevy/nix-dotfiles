@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "home";
 
-  defaults = {
+  settings = {
     event = null;
     keyboardName = null;
     useKeydVirtual = false;

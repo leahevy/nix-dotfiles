@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     schedule = "18:45:10";
     allowReboot = true;
     rebootWindow = {

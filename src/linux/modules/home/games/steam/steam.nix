@@ -17,7 +17,7 @@ args@{
 
   broken = true;
 
-  defaults = {
+  settings = {
     withWayland = false;
   };
 

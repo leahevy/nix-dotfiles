@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     algorithm = "zstd";
     memoryPercent = 50;
   };

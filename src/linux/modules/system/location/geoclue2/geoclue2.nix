@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     enableWifi = false;
     baseWhitelistedAgents = [
       "org.qutebrowser.qutebrowser"

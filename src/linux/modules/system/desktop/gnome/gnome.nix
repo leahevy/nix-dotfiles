@@ -26,7 +26,7 @@ args@{
     };
   };
 
-  defaults = { };
+  settings = { };
 
   assertions = [
     {

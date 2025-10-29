@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     enabled = true;
     debounce = 100;
     maxFileSize = 10.0;

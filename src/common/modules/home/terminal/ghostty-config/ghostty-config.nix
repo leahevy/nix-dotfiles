@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     fontSize = 12;
     opacity = 0.95;
     shaders = [

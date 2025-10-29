@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     openFirewall = true;
     subnetRoutes = [ ];
     withTaildrop = false;

@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     logo = "NixOS_small";
     structure = "os:kernel:uptime:packages:shell:wm:terminal:memory:swap";
     otherArgs = "";

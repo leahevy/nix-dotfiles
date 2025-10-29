@@ -30,7 +30,7 @@ in
     }
   ];
 
-  defaults =
+  settings =
     let
       kde = pkgs.kdePackages;
       gnome = pkgs;

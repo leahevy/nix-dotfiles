@@ -41,7 +41,7 @@ in
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     delay = 400;
     showHelp = true;
     showKeys = true;

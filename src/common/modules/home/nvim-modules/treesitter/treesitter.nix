@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     enableHighlighting = true;
     enableIndentation = true;
     enableFolding = true;

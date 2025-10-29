@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     autoDetectProjects = true;
     maxProjects = 50;
     showHidden = false;

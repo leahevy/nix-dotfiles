@@ -15,7 +15,7 @@ rec {
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     defaultPriority = 0;
     pushoverAPIEndpoint = "https://api.pushover.net/1/messages.json";
   };

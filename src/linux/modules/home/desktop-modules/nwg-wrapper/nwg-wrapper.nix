@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "home";
 
-  defaults = {
+  settings = {
     usedTerminal = "xterm";
     usedShell = "bash";
     darkWallpaper = true;

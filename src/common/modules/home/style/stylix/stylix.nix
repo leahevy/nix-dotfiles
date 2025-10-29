@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     themeName = "atelier-seaside";
     polarity = "dark";
     overrideBlackBackground = true;

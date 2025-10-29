@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     fsType = "btrfs";
     fsOptions = [
       "compress=zstd"

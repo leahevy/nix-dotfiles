@@ -35,7 +35,7 @@ args@{
     };
   };
 
-  defaults = {
+  settings = {
     input = [
       # "bidi"
       # "chinese"

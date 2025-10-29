@@ -22,7 +22,7 @@ args@{
     }
   ];
 
-  defaults = {
+  settings = {
     autologin = false;
   };
 

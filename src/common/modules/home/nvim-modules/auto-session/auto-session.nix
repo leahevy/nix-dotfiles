@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     autoSave = true;
     autoRestore = true;
     autoCreate = true;

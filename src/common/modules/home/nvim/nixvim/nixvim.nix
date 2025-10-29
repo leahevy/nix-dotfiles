@@ -57,7 +57,7 @@ args@{
     };
   };
 
-  defaults = {
+  settings = {
     withNeovide = false;
     terminal = "ghostty";
     manpageViewer = true;

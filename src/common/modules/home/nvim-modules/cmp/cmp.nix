@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     enableEmoji = true;
     enableSpell = true;
     enableGit = true;

@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     addMainUserToGroup = true;
     disableEsclBackend = false;
     disablePixmaBackend = false;

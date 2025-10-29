@@ -17,7 +17,7 @@ args@{
 
   unfree = [ "beeper" ];
 
-  defaults = {
+  settings = {
     waylandQuirks = false;
   };
 

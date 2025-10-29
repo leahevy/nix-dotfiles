@@ -23,7 +23,7 @@ args@{
     };
   };
 
-  defaults = {
+  settings = {
     port = 22;
   };
 

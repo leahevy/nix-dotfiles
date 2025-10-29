@@ -63,7 +63,7 @@ rec {
         "input"
         "namespace"
         "submodules"
-        "defaults"
+        "settings"
         "assertions"
         "custom"
         "configuration"
@@ -236,7 +236,7 @@ rec {
           self = enhancedModuleContext;
         };
 
-        moduleDefaults = moduleResult.defaults or { };
+        moduleDefaults = moduleResult.settings or { };
         moduleUnfree = moduleResult.unfree or [ ];
 
         userSettings = if moduleSettings == true then { } else moduleSettings;
@@ -999,7 +999,7 @@ rec {
                       self = enhancedModuleContext;
                     };
                   in
-                  moduleResult.defaults or { };
+                  moduleResult.settings or { };
               in
               {
                 ${inputName} = {

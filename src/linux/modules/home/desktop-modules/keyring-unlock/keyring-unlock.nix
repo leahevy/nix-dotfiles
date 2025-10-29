@@ -14,7 +14,7 @@ args@{
   input = "linux";
   namespace = "home";
 
-  defaults = {
+  settings = {
     passwordSopsFile = "wallet.pass";
   };
 

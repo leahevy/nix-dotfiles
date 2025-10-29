@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     sleep = true;
     suspend = true;
     hibernate = true;

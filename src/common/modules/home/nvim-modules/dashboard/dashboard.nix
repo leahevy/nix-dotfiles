@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     ensureBaseProjects = [
       "$NXCORE_DIR"
       "$NXCONFIG_DIR"

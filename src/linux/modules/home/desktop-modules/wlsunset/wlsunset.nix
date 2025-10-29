@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "home";
 
-  defaults = rec {
+  settings = rec {
     location = if self.user.isStandalone then self.user.location else self.host.location;
   };
 

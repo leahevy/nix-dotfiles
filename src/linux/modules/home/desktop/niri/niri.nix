@@ -134,7 +134,7 @@ args@{
     };
   };
 
-  defaults = {
+  settings = {
     addRestartShortcut = false;
     screenshotBasePictureDir = "screenshots";
     mainDisplayScale = 1.0;

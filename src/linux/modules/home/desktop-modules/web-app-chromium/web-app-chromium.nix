@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "home";
 
-  defaults = {
+  settings = {
     package = pkgs.chromium;
     program = "chromium";
     args = "--app=";

@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     privacySearch = true;
     startpageAsPrivacySearch = true;
     addAmazon = false;

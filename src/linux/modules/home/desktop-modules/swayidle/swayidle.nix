@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "home";
 
-  defaults = {
+  settings = {
     package = pkgs.swaylock;
     commandline = "swaylock --daemonize";
     auto-lock-on-login = false;

@@ -15,7 +15,7 @@ args@{
   input = "darwin";
   namespace = "home";
 
-  defaults = {
+  settings = {
     headers = [ "cask_args appdir: '~/Applications', require_sha: true" ];
     taps = [ ];
     brews = [ ];

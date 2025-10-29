@@ -14,7 +14,7 @@ args@{
   input = "build";
   namespace = "system";
 
-  defaults = {
+  settings = {
     mailNotifications = true;
   };
 

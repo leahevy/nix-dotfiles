@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     dataPath = "/var/lib/docker";
     storageDriver = "btrfs";
     addMainUserToGroup = true;

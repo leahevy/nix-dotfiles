@@ -21,7 +21,7 @@ args@{
     "nvidia-persistenced"
   ];
 
-  defaults = {
+  settings = {
     withPowerManagement = true;
   };
 

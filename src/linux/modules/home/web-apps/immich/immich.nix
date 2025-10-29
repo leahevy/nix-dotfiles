@@ -15,7 +15,7 @@ rec {
   input = "linux";
   namespace = "home";
 
-  defaults = {
+  settings = {
     name = "Immich";
     webapp = "immich";
     iconPath = "${pkgs.papirus-icon-theme}/share/icons/Papirus/48x48/apps/multimedia-photo-manager.svg";

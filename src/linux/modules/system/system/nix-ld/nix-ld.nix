@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     baseLibraries = with args.pkgs; [
       stdenv.cc.cc.lib
       gcc.cc.lib

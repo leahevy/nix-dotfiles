@@ -32,7 +32,7 @@ rec {
   input = "linux";
   namespace = "home";
 
-  defaults = {
+  settings = {
     name = "Home-Assistant";
     webapp = "home-assistant";
     iconPath = "${home-assistant-frontend}/lib/python3.12/site-packages/hass_frontend/static/icons/favicon-192x192.png";

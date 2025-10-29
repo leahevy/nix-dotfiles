@@ -14,7 +14,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     hideInternalDevices = [
       "sda"
     ];
@@ -34,7 +34,7 @@ args@{
         enable = true;
         settings = {
           "udisks2.conf" = {
-            defaults = {
+            settings = {
               encryption = "luks2";
             };
             udisks2 = {

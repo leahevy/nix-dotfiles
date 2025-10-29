@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "home";
 
-  defaults = {
+  settings = {
     persistenceDirs = [
       ".local/state/web-apps"
     ];

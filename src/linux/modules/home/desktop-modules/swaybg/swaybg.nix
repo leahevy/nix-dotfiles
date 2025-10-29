@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "home";
 
-  defaults = {
+  settings = {
     output = "*";
     mode = "fit";
     backgroundColor = "#000000";

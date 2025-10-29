@@ -26,7 +26,7 @@ args@{
     };
   };
 
-  defaults = {
+  settings = {
     withWayland = false;
     games = {
       stardewValley = false;

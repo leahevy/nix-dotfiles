@@ -15,7 +15,7 @@ args@{
   input = "common";
   namespace = "home";
 
-  defaults = {
+  settings = {
     waylandClipboard = false;
     primaryBg = "#dfff00";
     primaryFg = "#00005f";

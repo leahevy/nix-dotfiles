@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "home";
 
-  defaults = {
+  settings = {
     monitoringEnabled = true;
     terminal = "ghostty";
   };

@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     baseServicesToIgnore = [
       "nx-journal-watcher"
       "smartd"

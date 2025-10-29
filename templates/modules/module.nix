@@ -22,7 +22,7 @@ args@{
 
   # Variables which will be set as default in self.settings inside the module.
   # Can be overwritten from the profile.
-  defaults = { };
+  settings = { };
 
   # List of strings with unfree package names to allow in the build.
   unfree = [ ];

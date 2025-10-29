@@ -30,7 +30,7 @@ args@{
     }
   ];
 
-  defaults = {
+  settings = {
     withSIPDisabled = false;
     additionalRules = [ ];
     additionalKeyBindings = { };

@@ -17,7 +17,7 @@ args@{
 
   broken = true;
 
-  defaults = {
+  settings = {
     package = "com.valvesoftware.Steam";
     appName = "steam";
     withWayland = false;

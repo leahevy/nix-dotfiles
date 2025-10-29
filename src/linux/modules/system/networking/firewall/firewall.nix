@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "system";
 
-  defaults = {
+  settings = {
     openWebServer = true;
     additionalTCPPorts = [ ];
     additionalUDPPortRanges = [ ]; # List of { from = INT; to = INT; }
