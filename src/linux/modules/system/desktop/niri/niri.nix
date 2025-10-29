@@ -53,6 +53,7 @@ args@{
       services.displayManager.sessionPackages = lib.mkForce [ ];
 
       environment.systemPackages = with pkgs; [
+        wev
         wayland-utils
         wl-clipboard
         wlr-randr
