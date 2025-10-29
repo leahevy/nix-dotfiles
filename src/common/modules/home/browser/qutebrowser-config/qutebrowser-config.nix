@@ -634,14 +634,17 @@ args@{
               whitelist = self.settings.whitelistPatterns;
             };
             javascript = {
+              clipboard = "access-paste";
               can_open_tabs_automatically = false;
             };
             geolocation = "ask";
             notifications = {
-              enabled = "ask";
+              enabled = true;
+              presenter = if self.isLinux then "auto" else "messages";
             };
             media = {
               audio_capture = "ask";
+              audio_video_capture = "ask";
               video_capture = "ask";
             };
             cookies = {
@@ -654,7 +657,7 @@ args@{
               user_agent = if self.settings.spoofUserAgent then spoofedUserAgent else userAgent;
             };
             tls = {
-              certificate_errors = "ask";
+              certificate_errors = "ask-block-thirdparty";
             };
             webgl = true;
             dns_prefetch = false;
@@ -809,9 +812,6 @@ args@{
               getAllPrefixes allKeys;
 
             folderPaths = extractFolderPaths;
-
-            getMatchingBookmarks =
-              pattern: lib.filterAttrs (name: url: lib.hasPrefix pattern name) flattenedBookmarks;
 
             generateOpenCommand =
               mode: urls:
