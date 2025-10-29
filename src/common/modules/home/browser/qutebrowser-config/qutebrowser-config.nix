@@ -55,6 +55,9 @@ args@{
     basePerDomainSettings = { };
     additionalPerDomainSettings = { };
     smoothScrollingEnabled = false;
+    linuxRenderingGeneric = "none";
+    linuxRenderingNvidia = "chromium";
+    darwinRendering = "none";
     keyBindings = {
       normal = {
         "<Escape>" = "clear-keychain ;; search ;; fullscreen --leave";
@@ -707,6 +710,16 @@ args@{
             single_file.command = self.settings.fileManager ++ [
               "{}"
             ];
+          };
+          qt = {
+            force_software_rendering =
+              if self.isLinux then
+                if (self.linux.isModuleEnabled "graphics.nvidia-setup") then
+                  self.settings.linuxRenderingNvidia
+                else
+                  self.settings.linuxRenderingGeneric
+              else
+                self.settings.darwinRendering;
           };
         }
         // self.settings.customSettings;
