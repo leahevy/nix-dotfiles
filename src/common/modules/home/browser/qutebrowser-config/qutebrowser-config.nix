@@ -52,6 +52,8 @@ args@{
     alwaysCreateKeepassxcKeybindings = false;
     additionalKeyMappings = { };
     additionalKeyBindings = { };
+    basePerDomainSettings = { };
+    additionalPerDomainSettings = { };
     smoothScrollingEnabled = false;
     keyBindings = {
       normal = {
@@ -488,6 +490,27 @@ args@{
             ) bookmarks;
         in
         flattenBookmarksRecursive "";
+
+      python = {
+        toBool = val: if val then "True" else "False";
+
+        toValue =
+          val:
+          if builtins.isBool val then
+            python.toBool val
+          else if builtins.isString val then
+            "'${val}'"
+          else if builtins.isInt val then
+            toString val
+          else if builtins.isFloat val then
+            toString val
+          else if val == null then
+            "None"
+          else if builtins.isList val then
+            "[${lib.concatMapStringsSep ", " python.toValue val}]"
+          else
+            throw "Unsupported value type for Python conversion: ${builtins.typeOf val}";
+      };
     in
     {
       programs.qutebrowser = {
@@ -884,6 +907,47 @@ args@{
         source = self.file "qutebrowser-bookmarks-from-firefox";
         executable = true;
       };
+
+      home.file.".config/qutebrowser-init/per-domain-settings.py" =
+        lib.mkIf ((self.settings.basePerDomainSettings // self.settings.additionalPerDomainSettings) != { })
+          {
+            text =
+              let
+                mergedPerDomainSettings =
+                  self.settings.basePerDomainSettings // self.settings.additionalPerDomainSettings;
+
+                generatePerDomainConfig =
+                  domain: settings:
+                  let
+                    processSettings =
+                      prefix: attrs:
+                      lib.concatStringsSep "\n" (
+                        lib.mapAttrsToList (
+                          key: value:
+                          let
+                            settingName = if prefix == "" then key else "${prefix}.${key}";
+                          in
+                          if builtins.isAttrs value then
+                            processSettings settingName value
+                          else
+                            "config.set('${settingName}', ${python.toValue value}, '${domain}')"
+                            + "\nconfig.set('${settingName}', ${python.toValue value}, '*.${domain}')"
+                        ) attrs
+                      );
+                  in
+                  if builtins.hasAttr "content" settings then
+                    processSettings "content" settings.content
+                  else
+                    processSettings "" settings;
+
+                perDomainPythonConfig = lib.concatStringsSep "\n\n" (
+                  lib.mapAttrsToList (
+                    domain: settings: generatePerDomainConfig domain settings
+                  ) mergedPerDomainSettings
+                );
+              in
+              perDomainPythonConfig;
+          };
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
