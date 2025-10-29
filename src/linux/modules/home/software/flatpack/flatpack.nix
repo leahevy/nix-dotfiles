@@ -46,7 +46,7 @@ args@{
         done
 
         if [[ "$SUCCEEDED" != "1" ]]; then
-          ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to add FlatHub repository" || true
+          ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to add FlatHub repository" --icon=dialog-error || true
           exit 1
         fi
 
@@ -64,10 +64,10 @@ args@{
         for package_id in "''${DESIRED_PACKAGES[@]}"; do
           if [[ -n "$package_id" ]]; then
             if ! echo "$INSTALLED" | grep -q "^$package_id$"; then
-              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Installing $package_id" || true
+              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Installing $package_id" --icon=list-add || true
               for j in {1..5}; do
                 if ${pkgs.flatpak}/bin/flatpak install --user --noninteractive flathub "$package_id"; then
-                  ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully installed $package_id" || true
+                  ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully installed $package_id" --icon=list-add || true
                   break
                 else
                   echo "Failed to install $package_id (attempt $j/5)"
@@ -75,16 +75,16 @@ args@{
                     echo "Retrying in 10 seconds..."
                     sleep 10
                   else
-                    ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to install $package_id after 5 attempts" || true
+                    ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to install $package_id after 5 attempts" --icon=dialog-error || true
                   fi
                 fi
               done
             else
-              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Updating $package_id" || true
+              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Updating $package_id" --icon=go-down || true
               if ${pkgs.flatpak}/bin/flatpak update --user --noninteractive "$package_id"; then
-                ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully updated $package_id" || true
+                ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully updated $package_id" --icon=go-down || true
               else
-                ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to update $package_id" || true
+                ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to update $package_id" --icon=dialog-error || true
               fi
             fi
           fi
@@ -100,11 +100,11 @@ args@{
             fi
           done
           if [[ "$found" == "false" ]] && [[ -f "${stateFile}" ]] && grep -q "\"$installed_package\"" "${stateFile}"; then
-            ${pkgs.libnotify}/bin/notify-send "Flatpack" "Removing orphaned package $installed_package" || true
+            ${pkgs.libnotify}/bin/notify-send "Flatpack" "Removing orphaned package $installed_package" --icon=list-remove || true
             if ${pkgs.flatpak}/bin/flatpak uninstall --user --noninteractive "$installed_package"; then
-              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully removed $installed_package" || true
+              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully removed $installed_package" --icon=list-remove || true
             else
-              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to remove $installed_package" || true
+              ${pkgs.libnotify}/bin/notify-send "Flatpack" "Failed to remove $installed_package" --icon=dialog-error || true
             fi
           fi
         done <<< "$INSTALLED"

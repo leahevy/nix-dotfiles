@@ -47,7 +47,7 @@ args@{
                   local title="''${2:-System Notification}"
                   local body="''${3:-No message}"
 
-                  $NOTIFY_SEND --urgency="$urgency" "$title" "$body"
+                  $NOTIFY_SEND --urgency="$urgency" --icon=preferences-desktop-notification "$title" "$body"
               }
 
               parse_message() {

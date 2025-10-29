@@ -33,9 +33,9 @@ args@{
 
           if [ "$current_state" = "true" ]; then
             swaync-client -d > /dev/null 2>&1
-            notify-send "Do Not Disturb" "Notifications enabled"
+            notify-send "Do Not Disturb" "Notifications enabled" --icon=audio-volume-medium
           else
-            notify-send "Do Not Disturb" "Notifications disabled"
+            notify-send "Do Not Disturb" "Notifications disabled" --icon=audio-volume-muted
             sleep 5
             current_state=$(swaync-client -D)
             if [ "$current_state" = "false" ]; then

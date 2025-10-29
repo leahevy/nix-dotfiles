@@ -188,7 +188,7 @@ args@{
               local summary="''${2:-No summary}"
               local body="''${3:-No body}"
 
-              $NOTIFY_SEND --urgency="$urgency" "$summary" "$body"
+              $NOTIFY_SEND --urgency="$urgency" --icon=dirsync "$summary" "$body"
           }
 
           check_service_status() {

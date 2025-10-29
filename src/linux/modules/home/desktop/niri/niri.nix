@@ -378,7 +378,7 @@ args@{
           set -euo pipefail
 
           if [[ -d "/tmp/.nx-deployment-lock" ]]; then
-              notify-send "❌ Power Menu" "Cannot access power options while NX deployment is running!"
+              notify-send "Power Menu" "Cannot access power options while NX deployment is running!" --icon=dialog-error
               exit 1
           fi
 

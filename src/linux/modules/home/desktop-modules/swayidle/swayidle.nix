@@ -24,6 +24,31 @@ args@{
 
   configuration =
     context@{ config, options, ... }:
+    let
+      isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+
+      wrapTimeoutCommand =
+        command:
+        pkgs.writeShellScript "swayidle-timeout-wrapper" ''
+          #!/usr/bin/env bash
+          if [[ ! -f "/tmp/.nx-no-swayidle" ]]; then
+            ${command}
+          fi
+        '';
+
+      toggleSwayidleScript = pkgs.writeShellScript "toggle-swayidle" ''
+        #!/usr/bin/env bash
+        DISABLE_FILE="/tmp/.nx-no-swayidle"
+
+        if [[ -f "$DISABLE_FILE" ]]; then
+          rm "$DISABLE_FILE"
+          ${pkgs.libnotify}/bin/notify-send "Swayidle" "Timeout commands enabled" --icon=system-suspend
+        else
+          touch "$DISABLE_FILE"
+          ${pkgs.libnotify}/bin/notify-send "Swayidle" "Timeout commands disabled" --icon=system-lock-screen
+        fi
+      '';
+    in
     {
       home.packages =
         with pkgs;
@@ -96,6 +121,10 @@ args@{
       services.swayidle =
         let
           wrapperCommand = "${self.user.home}/.local/bin/scripts/swaylock-wrapper-daemon ${self.settings.package}/bin/${self.settings.commandline}";
+          wrappedLockCommand = toString (wrapTimeoutCommand wrapperCommand);
+          wrappedMonitorOffCommand = toString (
+            wrapTimeoutCommand (lib.concatStringsSep ";" [ self.settings.turnOffMonitorsCommand ])
+          );
         in
         {
           enable = true;
@@ -103,11 +132,11 @@ args@{
           timeouts = [
             {
               timeout = self.settings.baseTimeoutSeconds;
-              command = wrapperCommand;
+              command = wrappedLockCommand;
             }
             {
               timeout = self.settings.baseTimeoutSeconds * 2;
-              command = lib.concatStringsSep ";" [ self.settings.turnOffMonitorsCommand ];
+              command = wrappedMonitorOffCommand;
               resumeCommand = self.settings.turnOnMonitorsCommand;
             }
           ];
@@ -122,6 +151,17 @@ args@{
             }
           ];
         };
+
+      programs.niri = lib.mkIf isNiriEnabled {
+        settings = {
+          binds = with config.lib.niri.actions; {
+            "Mod+T" = {
+              action = spawn-sh (toString toggleSwayidleScript);
+              hotkey-overlay.title = "UI:Toggle swayidle timeouts";
+            };
+          };
+        };
+      };
 
       systemd.user.services.nx-lock-on-login = lib.mkIf self.settings.auto-lock-on-login {
         Unit = {

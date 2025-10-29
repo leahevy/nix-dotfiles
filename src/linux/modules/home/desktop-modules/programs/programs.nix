@@ -148,6 +148,11 @@ in
       installGames = false;
       installSystemSettings = false;
       installOfficeSuite = false;
+      additionalIconThemes = [ ];
+      activeIconTheme = {
+        name = "Papirus";
+        package = pkgs.papirus-icon-theme;
+      };
     };
 
   configuration =
@@ -207,8 +212,15 @@ in
         )
         ++ self.settings.additionalPackages
         ++ self.settings.additionalPrograms
+        ++ self.settings.additionalIconThemes
+        ++ [ self.settings.activeIconTheme.package ]
         ++ (if isKDE then self.settings.additionalKDEPackages else [ ])
         ++ (if isGnome then self.settings.additionalGnomePackages else [ ]);
+
+      gtk.iconTheme = lib.mkForce {
+        name = self.settings.activeIconTheme.name;
+        package = self.settings.activeIconTheme.package;
+      };
 
       services.gnome-keyring.enable = lib.mkForce isGnome;
 

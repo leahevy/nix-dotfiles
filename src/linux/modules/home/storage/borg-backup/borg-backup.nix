@@ -277,7 +277,7 @@ args@{
             if isHeadless then
               ""
             else
-              ''${pkgs.libnotify}/bin/notify-send --urgency="normal" "Backup Triggered" "Manual backup triggered - will start in 2 minutes"''
+              ''${pkgs.libnotify}/bin/notify-send --urgency="normal" "Backup Triggered" "Manual backup triggered - will start in 2 minutes" --icon=archive''
           }
         '';
         executable = true;

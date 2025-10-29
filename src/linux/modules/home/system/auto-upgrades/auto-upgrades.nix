@@ -105,7 +105,7 @@ args@{
             if isHeadless then
               ""
             else
-              ''${pkgs.libnotify}/bin/notify-send --urgency="normal" "Auto-Upgrade Triggered" "Manual auto-upgrade triggered"''
+              ''${pkgs.libnotify}/bin/notify-send --urgency="normal" "Auto-Upgrade Triggered" "Manual auto-upgrade triggered" --icon=automated-tasks''
           }
         '';
         executable = true;

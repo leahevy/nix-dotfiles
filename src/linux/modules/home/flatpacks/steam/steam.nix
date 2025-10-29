@@ -77,7 +77,7 @@ args@{
         mkdir -p "$HOME/.flatpack-homes/$APP_NAME"
 
         if ! ${pkgs.procps}/bin/pgrep -f "flatpak.*$PACKAGE_ID" > /dev/null; then
-          ${pkgs.libnotify}/bin/notify-send "Flatpack" "Configuring $PACKAGE_ID" || true
+          ${pkgs.libnotify}/bin/notify-send "Flatpack" "Configuring $PACKAGE_ID" --icon=com.valvesoftware.Steam || true
           ${pkgs.flatpak}/bin/flatpak override --user "$PACKAGE_ID" --reset
           ${pkgs.flatpak}/bin/flatpak override --user "$PACKAGE_ID" \
             --env=XDG_CONFIG_HOME="$HOME/.flatpack-homes/$APP_NAME/.config" \
@@ -94,9 +94,9 @@ args@{
             --socket=session-bus \
             --device=dri \
             --device=all
-          ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully configured $PACKAGE_ID" || true
+          ${pkgs.libnotify}/bin/notify-send "Flatpack" "Successfully configured $PACKAGE_ID" --icon=com.valvesoftware.Steam || true
         else
-          ${pkgs.libnotify}/bin/notify-send "Flatpack" "$PACKAGE_ID is running, configuration will apply on next restart" || true
+          ${pkgs.libnotify}/bin/notify-send "Flatpack" "$PACKAGE_ID is running, configuration will apply on next restart" --icon=com.valvesoftware.Steam || true
         fi
       '';
 

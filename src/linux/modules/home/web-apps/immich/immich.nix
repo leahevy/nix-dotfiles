@@ -18,7 +18,7 @@ rec {
   defaults = {
     name = "Immich";
     webapp = "immich";
-    iconPath = "${pkgs.gnome-icon-theme}/share/icons/gnome/48x48/devices/camera-photo.png";
+    iconPath = "${pkgs.papirus-icon-theme}/share/icons/Papirus/48x48/apps/multimedia-photo-manager.svg";
     categories = [
       "Photography"
       "Graphics"
