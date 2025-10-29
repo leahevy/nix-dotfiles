@@ -47,6 +47,7 @@ args@{
                 ];
                 buildInputs = oldAttrs.buildInputs ++ [
                   prev.curl
+                  prev.kdePackages.qtpositioning
                 ];
                 nativeBuildInputs = oldAttrs.nativeBuildInputs ++ [
                   prev.makeWrapper
@@ -54,7 +55,8 @@ args@{
                 postInstall = oldAttrs.postInstall or "" + ''
                   wrapProgram $out/bin/qutebrowser \
                     --prefix LD_LIBRARY_PATH : "${prev.curl.out}/lib" \
-                    --prefix XDG_DATA_DIRS : "${prev.gtk3}/share/gsettings-schemas/${prev.gtk3.name}:${prev.gsettings-desktop-schemas}/share"
+                    --prefix XDG_DATA_DIRS : "${prev.gtk3}/share/gsettings-schemas/${prev.gtk3.name}:${prev.gsettings-desktop-schemas}/share" \
+                    --prefix QT_PLUGIN_PATH : "${prev.kdePackages.qtpositioning}/lib/qt-6/plugins"
                 '';
               });
           })
