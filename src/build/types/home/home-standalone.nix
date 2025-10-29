@@ -90,6 +90,11 @@ with lib;
             default = null;
             description = "Longitude of user's location";
           };
+          altitude = mkOption {
+            type = types.float;
+            default = 0.0;
+            description = "Altitude of user's location in meters";
+          };
         };
       };
       default = { };
