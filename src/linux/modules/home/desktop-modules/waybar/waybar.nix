@@ -229,7 +229,7 @@ args@{
             systemd-failed-units = {
               hide-on-ok = true;
               format = "✗ {nr_failed}";
-              format-ok = "✓ OK";
+              format-ok = "";
               system = true;
               user = true;
               on-click = "${self.settings.terminal} -e sh -c 'echo && echo -e \"\\033[1;32m=== SYSTEM FAILED UNITS ===\\033[0m\" && echo && systemctl --failed --no-pager && echo && echo && echo && echo && echo -e \"\\033[1;32m=== USER FAILED UNITS ===\\033[0m\" && echo && systemctl --user --failed --no-pager && echo && echo && echo && echo \"Press any key to exit...\" && read -n 1'";
