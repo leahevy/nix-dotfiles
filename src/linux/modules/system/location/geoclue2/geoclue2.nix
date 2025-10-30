@@ -63,12 +63,14 @@ args@{
       userAppConfig = generateUserAppConfig allWhitelistedAgents;
       systemAppConfig = generateSystemAppConfig allWhitelistedSystemAgents;
       mergedAppConfig = userAppConfig // systemAppConfig;
+
+      onlyStaticEnabled = !self.settings.enableWifi;
     in
     {
       services.geoclue2 = {
         enable = true;
         enableWifi = self.settings.enableWifi;
-        enableStatic = true;
+        enableStatic = onlyStaticEnabled;
         staticLatitude = self.host.location.latitude;
         staticLongitude = self.host.location.longitude;
         staticAltitude = self.host.location.altitude;
