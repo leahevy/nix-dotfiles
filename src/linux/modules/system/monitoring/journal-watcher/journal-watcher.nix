@@ -114,6 +114,8 @@ args@{
       "libKExiv2: Cannot load metadata from file.*Error.*unknown image type"
       "qt\\.gui\\.imageio\\.jpeg: Not a JPEG file: starts with"
       ".*: Error executing command as another user: Not authorized.*gamemode.*"
+      "virtual.*QDBusError.*The name is not activatable"
+      "Loading IM context type .* failed"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
