@@ -23,6 +23,7 @@ args@{
     additionalWhitelistedAgents = [ ];
     baseWhitelistedSystemAgents = [ ];
     additionalWhitelistedSystemAgents = [ ];
+    staticAccuracy = 4;
   };
 
   configuration =
@@ -71,7 +72,7 @@ args@{
         staticLatitude = self.host.location.latitude;
         staticLongitude = self.host.location.longitude;
         staticAltitude = self.host.location.altitude;
-        staticAccuracy = 1;
+        staticAccuracy = self.settings.staticAccuracy;
         appConfig = mergedAppConfig;
       };
     };
