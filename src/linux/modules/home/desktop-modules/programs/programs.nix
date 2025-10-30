@@ -368,9 +368,17 @@ in
         directories = [
           ".config/dconf"
           ".local/share/applications"
-          ".cache/easytag/" # easytag
-          ".config/easytag/" # easytag
-
+          ".cache/easytag"
+          ".config/easytag"
+          ".config/libaccounts-glib"
+          ".cache/gimp"
+          ".config/GIMP"
+          ".config/htop"
+          ".config/btop"
+          ".cache/ghostwriter"
+          ".local/share/ghostwriter"
+          ".config/libreoffice"
+          ".config/pulse"
         ]
         ++ (
           if isGnome then
@@ -383,12 +391,31 @@ in
               ".local/share/kactivitymanagerd"
               ".local/share/RecentDocuments"
               ".local/share/kscreen"
+              ".cache/kclock"
+              ".cache/elisa"
+              ".cache/KDE"
+              ".cache/systemsettings"
+              ".config/kate"
+              ".config/akonadi"
+              ".local/share/dolphin"
+              ".local/share/baloo"
+              ".local/share/okular"
+              ".local/share/ark"
+              ".local/share/elisa"
+              ".local/share/kate"
+              ".local/share/akonadi"
+              ".local/share/kwrite"
             ]
           else
             [ ]
         );
 
-        files = lib.optionals isKDE [
+        files = [
+          ".local/share/user-places.xbel"
+          ".local/share/user-places.xbel.tbcache"
+          ".local/share/recently-used.xbel"
+        ]
+        ++ lib.optionals isKDE [
           ".config/kglobalshortcutsrc"
           ".config/kwinrc"
           ".config/plasmarc"
@@ -401,8 +428,17 @@ in
           ".config/okularrc"
           ".config/gwenviewrc"
           ".config/spectaclerc"
-          ".local/share/user-places.xbel"
-          ".local/share/user-places.xbel.tbcache"
+          ".config/kwalletrc"
+          ".config/arkrc"
+          ".config/kclockrc"
+          ".config/elisarc"
+          ".config/kate-externaltoolspluginrc"
+          ".config/katevirc"
+          ".config/kolourpaintrc"
+          ".config/akonadi_contactrc"
+          ".config/kaddressbookrc"
+          ".config/kwriterc"
+          ".config/pavucontrol.ini"
         ];
       };
     };

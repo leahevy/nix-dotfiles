@@ -30,5 +30,11 @@ args@{
       home.sessionVariables = lib.mkIf self.settings.setEnv {
         TERMINAL = "kitty";
       };
+
+      home.persistence."${self.persist}" = {
+        directories = [
+          ".cache/kitty"
+        ];
+      };
     };
 }

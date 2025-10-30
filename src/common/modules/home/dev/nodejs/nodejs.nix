@@ -34,5 +34,11 @@ args@{
         ++ (map (pkg: pkgs.nodePackages.${pkg}) (
           self.settings.basePackages ++ self.settings.additionalPackages
         ));
+
+      home.persistence."${self.persist}" = {
+        directories = [
+          ".npm"
+        ];
+      };
     };
 }

@@ -197,6 +197,7 @@ args@{
           ".local/share/GOG.com"
           ".local/share/lutris"
           ".cache/lutris"
+          ".wine"
         ]
         ++ lib.optionals self.settings.games.stardewValley [
           ".config/StardewValley"

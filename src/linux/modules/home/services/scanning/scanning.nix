@@ -9,26 +9,18 @@ args@{
   ...
 }:
 {
-  name = "file-manager";
+  name = "scanning";
 
-  group = "shell";
-  input = "common";
+  group = "services";
+  input = "linux";
   namespace = "home";
 
   configuration =
     context@{ config, options, ... }:
     {
-      home = {
-        packages = with pkgs; [
-          mc
-          ranger
-        ];
-      };
-
       home.persistence."${self.persist}" = {
         directories = [
-          ".config/ranger"
-          ".local/share/ranger"
+          ".sane"
         ];
       };
     };
