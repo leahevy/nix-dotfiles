@@ -402,6 +402,20 @@ args@{
         fi
       '';
 
+      setupGitSafeDirectoriesScript = ''
+        setup_git_safe_directories() {
+          if ! ${pkgs.git}/bin/git config --global --get-all safe.directory | ${pkgs.gnugrep}/bin/grep -q "^${nxcoreDir}$"; then
+            ${pkgs.git}/bin/git config --global --add safe.directory "${nxcoreDir}"
+            ${logScript "info" "INFO: Added ${nxcoreDir} to git safe directories"}
+          fi
+
+          if ! ${pkgs.git}/bin/git config --global --get-all safe.directory | ${pkgs.gnugrep}/bin/grep -q "^${nxconfigDir}$"; then
+            ${pkgs.git}/bin/git config --global --add safe.directory "${nxconfigDir}"
+            ${logScript "info" "INFO: Added ${nxconfigDir} to git safe directories"}
+          fi
+        }
+      '';
+
       upgradeScript = ''
         ${logScript "info" "INFO: ${
           if self.settings.dryRun then "Would start" else "Starting"
@@ -420,28 +434,17 @@ args@{
             ''
           else
             ''
-                    temp_git_config=$(${pkgs.coreutils}/bin/mktemp)
-                    cleanup_paths+=("$temp_git_config")
-
-                    ${pkgs.coreutils}/bin/cat > "$temp_git_config" << EOF
-              [safe]
-              	directory = ${nxcoreDir}
-              	directory = ${nxconfigDir}
-              EOF
-
-                    export GIT_CONFIG_GLOBAL="$temp_git_config"
-
-                    if ! ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch \
-                      --flake ".#${profileName}" \
-                      --impure \
-                      --no-update-lock-file \
-                      --override-input config "path:${nxconfigDir}" \
-                      --override-input profile "path:$PROFILE_PATH" \
-                      --print-build-logs \
-                      --show-trace; then
-                      exit 1
-                    fi
-                    ${logScript "info" "SUCCESS: System rebuild completed successfully"}
+              if ! ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch \
+                --flake ".#${profileName}" \
+                --impure \
+                --no-update-lock-file \
+                --override-input config "path:${nxconfigDir}" \
+                --override-input profile "path:$PROFILE_PATH" \
+                --print-build-logs \
+                --show-trace; then
+                exit 1
+              fi
+              ${logScript "info" "SUCCESS: System rebuild completed successfully"}
             ''
         }
       '';
@@ -711,6 +714,7 @@ args@{
           [
             coreutils
             git
+            gnugrep
             openssh
             config.nix.package.out
             nixos-rebuild
@@ -762,6 +766,9 @@ args@{
 
             ${checkBorgRunningScript}
             check_borg_running
+
+            ${setupGitSafeDirectoriesScript}
+            setup_git_safe_directories
 
             ${checkNetworkScript}
             ${checkRepositoriesExistScript}
@@ -838,5 +845,10 @@ args@{
 
       system.autoUpgrade.enable = lib.mkForce false;
 
+      environment.persistence."${self.persist}" = {
+        files = [
+          "/root/.gitconfig"
+        ];
+      };
     };
 }
