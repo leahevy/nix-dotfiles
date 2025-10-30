@@ -23,7 +23,7 @@ args@{
     additionalWhitelistedAgents = [ ];
     baseWhitelistedSystemAgents = [ ];
     additionalWhitelistedSystemAgents = [ ];
-    staticAccuracy = 4;
+    staticAccuracy = 100;
   };
 
   configuration =
