@@ -409,6 +409,8 @@ args@{
                 unit = to_string(json_data.get("_SYSTEMD_UNIT", "unknown"), "unknown")
                 tag = to_string(json_data.get("SYSLOG_IDENTIFIER", "system"), "system")
 
+                is_user_unit = unit == f"user@{MAIN_USER_UID}.service" or unit.startswith("user@")
+
                 if unit == f"user@{MAIN_USER_UID}.service" or unit == "unknown":
                     match = service_extract_pattern.match(message)
                     if match:
@@ -431,14 +433,38 @@ args@{
                 }
                 notify_type = priority_map.get(priority, "info")
 
+                icon_map_system = {
+                    "emerg": "dialog-error",
+                    "failed": "computer-fail",
+                    "warn": "dialog-warning",
+                    "info": "dialog-information"
+                }
+
+                icon_map_user = {
+                    "emerg": "dialog-error",
+                    "failed": "computer-fail",
+                    "warn": "dialog-warning",
+                    "info": "avatar-default"
+                }
+
+                priority_titles = {
+                    "emerg": "Emergency",
+                    "failed": "Failed",
+                    "warn": "Warning",
+                    "info": "Info"
+                }
+
+                icon = icon_map_user.get(notify_type, "avatar-default") if is_user_unit else icon_map_system.get(notify_type, "dialog-information")
+                priority_title = priority_titles.get(notify_type, "Info")
+
                 if unit == "unknown":
                     title_text_pushover = f"Journal ({tag})"
-                    title_text_user = "Journal"
+                    title_text_user = f"{priority_title}|{icon}"
                     message_text_pushover = message
                     message_text_user = f"{message} <b>({tag})</b>"
                 else:
                     title_text_pushover = f"{unit} ({tag})"
-                    title_text_user = unit
+                    title_text_user = f"{unit}|{icon}"
                     message_text_pushover = message
                     message_text_user = f"{message} <b>({tag})</b>"
 

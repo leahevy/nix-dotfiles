@@ -136,15 +136,15 @@ args@{
           userNotifyMessage =
             if userNotifyEnabled then
               if lib.hasPrefix "STARTED:" message then
-                "Borg Backup (starting): ${lib.removePrefix "STARTED: " message}"
+                "Borg Backup (starting)|folder-sync: ${lib.removePrefix "STARTED: " message}"
               else if lib.hasPrefix "SUCCESS:" message then
-                "Borg Backup (completed): ${lib.removePrefix "SUCCESS: " message}"
+                "Borg Backup (completed)|checkmark: ${lib.removePrefix "SUCCESS: " message}"
               else if lib.hasPrefix "FAILURE:" message then
-                "Borg Backup (failed): ${lib.removePrefix "FAILURE: " message}"
+                "Borg Backup (failed)|dialog-error: ${lib.removePrefix "FAILURE: " message}"
               else if lib.hasPrefix "INFO:" message then
-                "Borg Backup (info): ${lib.removePrefix "INFO: " message}"
+                "Borg Backup (info)|folder-sync: ${lib.removePrefix "INFO: " message}"
               else
-                "Borg Backup: ${message}"
+                "Borg Backup|folder-sync: ${message}"
             else
               "";
 

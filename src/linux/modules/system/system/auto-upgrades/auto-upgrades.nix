@@ -55,19 +55,22 @@ args@{
           userNotifyMessage =
             if userNotifyEnabled then
               if lib.hasPrefix "STARTED:" message then
-                "Auto-Upgrade (starting): ${lib.removePrefix "STARTED: " message}"
+                "Auto-Upgrade (starting)|system-software-install: ${lib.removePrefix "STARTED: " message}"
               else if lib.hasPrefix "SUCCESS:" message then
-                "Auto-Upgrade (completed): ${lib.removePrefix "SUCCESS: " message}"
+                "Auto-Upgrade (completed)|checkmark: ${lib.removePrefix "SUCCESS: " message}"
               else if lib.hasPrefix "FAILURE:" message then
-                "Auto-Upgrade (failed): ${lib.removePrefix "FAILURE: " message}"
+                "Auto-Upgrade (failed)|dialog-error: ${lib.removePrefix "FAILURE: " message}"
               else if lib.hasPrefix "WARNING:" message then
-                "Auto-Upgrade (warning): ${lib.removePrefix "WARNING: " message}"
+                "Auto-Upgrade (warning)|dialog-warning: ${lib.removePrefix "WARNING: " message}"
               else if lib.hasPrefix "INFO:" message then
-                "Auto-Upgrade (info): ${lib.removePrefix "INFO: " message}"
+                if lib.hasSuffix "skipping upgrade" message then
+                  "Auto-Upgrade (info)|stop: ${lib.removePrefix "INFO: " message}"
+                else
+                  "Auto-Upgrade (info)|system-software-install: ${lib.removePrefix "INFO: " message}"
               else if lib.hasPrefix "NOTICE:" message then
-                "Auto-Upgrade (notice): ${lib.removePrefix "NOTICE: " message}"
+                "Auto-Upgrade (notice)|system-software-install: ${lib.removePrefix "NOTICE: " message}"
               else
-                "Auto-Upgrade: ${message}"
+                "Auto-Upgrade|system-software-install: ${message}"
             else
               "";
 

@@ -46,8 +46,9 @@ args@{
                   local urgency="''${1:-normal}"
                   local title="''${2:-System Notification}"
                   local body="''${3:-No message}"
+                  local icon="''${4:-preferences-desktop-notification}"
 
-                  $NOTIFY_SEND --urgency="$urgency" --icon=preferences-desktop-notification "$title" "$body"
+                  $NOTIFY_SEND --urgency="$urgency" --icon="$icon" "$title" "$body"
               }
 
               parse_message() {
@@ -55,8 +56,16 @@ args@{
                   local priority="$2"
 
                   if [[ "$message" =~ ^([^:]+):[[:space:]]*(.*)$ ]]; then
-                      local title="''${BASH_REMATCH[1]}"
+                      local title_icon_part="''${BASH_REMATCH[1]}"
                       local body="''${BASH_REMATCH[2]}"
+
+                      local title="$title_icon_part"
+                      local icon=""
+
+                      if [[ "$title_icon_part" == *"|"* ]]; then
+                          title="''${title_icon_part%|*}"
+                          icon="''${title_icon_part##*|}"
+                      fi
 
                       local urgency="normal"
                       case "$priority" in
@@ -66,7 +75,7 @@ args@{
                           *) urgency="normal" ;;
                       esac
 
-                      notify "$urgency" "$title" "$body"
+                      notify "$urgency" "$title" "$body" "$icon"
                   else
                       local urgency="normal"
                       case "$priority" in
