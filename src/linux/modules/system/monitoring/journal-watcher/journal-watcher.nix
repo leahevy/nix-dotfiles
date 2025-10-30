@@ -116,6 +116,9 @@ args@{
       ".*: Error executing command as another user: Not authorized.*gamemode.*"
       "virtual.*QDBusError.*The name is not activatable"
       "Loading IM context type .* failed"
+      "kf\\.windowsystem:.*may only be used on X11"
+      "QObject::disconnect: wildcard call disconnects from destroyed signal"
+      "Trying to enable pgp signatures, but pgp not enabled in this build"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
