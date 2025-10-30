@@ -38,6 +38,26 @@ args@{
           name = "Qt6 Settings";
           noDisplay = true;
         };
+
+        "org.kde.plasma-systemmonitor" = {
+          name = "System Monitor";
+          noDisplay = true;
+        };
+
+        "systemsettings" = {
+          name = "System Settings";
+          noDisplay = true;
+        };
+
+        "kdesystemsettings" = {
+          name = "KDE System Settings";
+          noDisplay = true;
+        };
+
+        "org.kde.spectacle" = {
+          name = "Spectacle";
+          noDisplay = true;
+        };
       };
     };
 }
