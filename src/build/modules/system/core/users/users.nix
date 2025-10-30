@@ -110,6 +110,8 @@ in
         // {
           root = {
             hashedPassword = null;
+            createHome = true;
+            homeMode = "750";
           };
         };
 
@@ -130,5 +132,9 @@ in
             )
           )
       );
+
+      systemd.tmpfiles.rules = [
+        "Z /root 0750 root root - -"
+      ];
     };
 }
