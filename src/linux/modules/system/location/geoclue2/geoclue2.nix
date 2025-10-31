@@ -17,6 +17,9 @@ args@{
 
   settings = {
     enableWifi = false;
+    enableCellular = false;
+    enableNMEA = false;
+    withDemoAgent = true;
     baseWhitelistedAgents = [
       "org.qutebrowser.qutebrowser"
     ];
@@ -64,12 +67,18 @@ args@{
       systemAppConfig = generateSystemAppConfig allWhitelistedSystemAgents;
       mergedAppConfig = userAppConfig // systemAppConfig;
 
-      onlyStaticEnabled = !self.settings.enableWifi;
+      onlyStaticEnabled =
+        !(self.settings.enableWifi || self.settings.enableCellular || self.settings.enableNMEA);
     in
     {
       services.geoclue2 = {
         enable = true;
         enableWifi = self.settings.enableWifi;
+        enable3G = self.settings.enableCellular;
+        enableCDMA = self.settings.enableCellular;
+        enableModemGPS = self.settings.enableCellular;
+        enableNmea = self.settings.enableNMEA;
+        enableDemoAgent = self.settings.withDemoAgent;
         enableStatic = onlyStaticEnabled;
         staticLatitude = self.host.location.latitude;
         staticLongitude = self.host.location.longitude;
