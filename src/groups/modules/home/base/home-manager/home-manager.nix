@@ -76,6 +76,7 @@ args@{
             file-manager = true;
             go-programs = true;
             timg = true;
+            yazi = true;
           };
           spell = {
             ispell = true;
@@ -190,6 +191,7 @@ args@{
             file-manager = true;
             go-programs = true;
             timg = true;
+            yazi = true;
           };
           spell = {
             ispell = true;
@@ -304,6 +306,7 @@ args@{
             file-manager = true;
             go-programs = true;
             timg = true;
+            yazi = true;
           };
           spell = {
             ispell = true;

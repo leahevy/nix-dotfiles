@@ -226,13 +226,6 @@ in
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
-          binds = with config.lib.niri.actions; {
-            "Ctrl+Mod+Alt+M" = {
-              action = spawn-sh self.settings.fileBrowser.openCommand;
-              hotkey-overlay.title = "Apps:File manager";
-            };
-          };
-
           window-rules = [
             {
               matches = [
