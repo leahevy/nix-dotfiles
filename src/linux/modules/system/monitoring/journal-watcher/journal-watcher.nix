@@ -153,6 +153,7 @@ args@{
     additionalStringsToHighlight = [ ];
 
     pushoverEnabled = false;
+    ignoreUserServicesForPushover = true;
 
     pushoverRateLimit = 10;
     pushoverRateLimitUnknown = 30;
@@ -243,6 +244,9 @@ args@{
             "True"
           else
             "False"
+        }
+        IGNORE_USER_SERVICES_FOR_PUSHOVER = ${
+          if self.settings.ignoreUserServicesForPushover then "True" else "False"
         }
 
         MAIN_USER_UID = ${toString config.users.users.${self.host.mainUser.username}.uid}
@@ -426,6 +430,7 @@ args@{
 
         def process_message(json_data: Dict[str, Any]):
             try:
+                is_inner_user_service = False
                 priority = to_string(json_data.get("PRIORITY", "6"), "6")
                 message = to_string(json_data.get("MESSAGE"))
                 unit = to_string(json_data.get("_SYSTEMD_UNIT", "unknown"), "unknown")
@@ -436,6 +441,7 @@ args@{
                 if unit == f"user@{MAIN_USER_UID}.service" or unit == "unknown":
                     match = service_extract_pattern.match(message)
                     if match:
+                        is_inner_user_service = True
                         unit = match.group(1)
                         message = match.group(3).strip()
 
@@ -501,21 +507,23 @@ args@{
                     except (subprocess.TimeoutExpired, OSError) as e:
                         print(f"Failed to send user notification: {e}", file=sys.stderr, flush=True)
 
-                if PUSHOVER_ENABLED and check_rate_limit(unit):
-                    try:
-                        subprocess.run([
-                            "${
-                              (self.importFileFromOtherModuleSameInput {
-                                inherit args self;
-                                modulePath = "notifications.pushover";
-                              }).custom.pushoverSendScript
-                            }/bin/pushover-send",
-                            "--title", title_text_pushover,
-                            "--message", message_text_pushover,
-                            "--type", notify_type
-                        ], check=False, timeout=30)
-                    except (subprocess.TimeoutExpired, OSError) as e:
-                        print(f"Failed to send pushover notification: {e}", file=sys.stderr, flush=True)
+                if PUSHOVER_ENABLED:
+                    if not is_inner_user_service or not IGNORE_USER_SERVICES_FOR_PUSHOVER:
+                      if check_rate_limit(unit):
+                        try:
+                            subprocess.run([
+                                "${
+                                  (self.importFileFromOtherModuleSameInput {
+                                    inherit args self;
+                                    modulePath = "notifications.pushover";
+                                  }).custom.pushoverSendScript
+                                }/bin/pushover-send",
+                                "--title", title_text_pushover,
+                                "--message", message_text_pushover,
+                                "--type", notify_type
+                            ], check=False, timeout=30)
+                        except (subprocess.TimeoutExpired, OSError) as e:
+                            print(f"Failed to send pushover notification: {e}", file=sys.stderr, flush=True)
             except Exception as e:
                 print(f"Error processing message: {e}", file=sys.stderr, flush=True)
 
