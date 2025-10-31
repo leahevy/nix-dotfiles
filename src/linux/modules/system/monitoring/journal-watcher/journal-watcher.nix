@@ -102,6 +102,8 @@ args@{
       "Realtime error: Could not get pidns for pid [0-9]+: Could not fstatat ns/pid: Not a directory"
       "unhandled exception.*in Json::Value::find.*requires objectValue or nullValue"
       "kf\\.config\\.core: couldn't lock global file"
+      "kf\\.coreaddons:.*"
+      "kf\\.kio\\.widgets:.*"
       "spa\\.alsa:.*snd_pcm_start.*Broken pipe"
       "spa\\.alsa:.*snd_pcm_avail.*Broken pipe"
       "spa\\.alsa:.*snd_pcm_start.*File descriptor in bad state"
