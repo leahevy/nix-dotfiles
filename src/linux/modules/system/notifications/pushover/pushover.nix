@@ -30,6 +30,7 @@ rec {
       PRIORITY_SET=false
       TYPE=""
       URL=""
+      URL_TITLE=""
       HTML_MODE=false
       DEBUG_MODE=false
       EXTRA_ARGS=()
@@ -57,6 +58,10 @@ rec {
                   URL="$2"
                   shift 2
                   ;;
+              --url-title)
+                  URL_TITLE="$2"
+                  shift 2
+                  ;;
               --html)
                   HTML_MODE=true
                   shift
@@ -72,7 +77,7 @@ rec {
                   ;;
               *)
                   echo "Unknown option: $1" >&2
-                  echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [--html] [--debug] [-- <extra-pushover-args>]" >&2
+                  echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [--url-title <url-title>] [--html] [--debug] [-- <extra-pushover-args>]" >&2
                   echo "Types: started, stopped, failed, warn, success, info, debug, emerg" >&2
                   exit 1
                   ;;
@@ -81,8 +86,13 @@ rec {
 
       if [[ -z "$TITLE" || -z "$MESSAGE" ]]; then
           echo "Error: --title and --message are required" >&2
-          echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [--html] [--debug] [-- <extra-pushover-args>]" >&2
+          echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [--url-title <url-title>] [--html] [--debug] [-- <extra-pushover-args>]" >&2
           echo "Types: started, stopped, failed, warn, success, info, debug, emerg" >&2
+          exit 1
+      fi
+
+      if [[ -n "$URL_TITLE" && -z "$URL" ]]; then
+          echo "Error: --url-title can only be used when --url is also specified" >&2
           exit 1
       fi
 
@@ -187,6 +197,11 @@ rec {
       if [[ -n "$URL" ]]; then
           ESCAPED_URL=$(escape_for_curl "$URL")
           echo "form = \"url=$ESCAPED_URL\"" >> "$TEMP_CONFIG"
+
+          if [[ -n "$URL_TITLE" ]]; then
+              ESCAPED_URL_TITLE=$(escape_for_curl "$URL_TITLE")
+              echo "form = \"url_title=$ESCAPED_URL_TITLE\"" >> "$TEMP_CONFIG"
+          fi
       fi
 
       for arg in "''${EXTRA_ARGS[@]}"; do
