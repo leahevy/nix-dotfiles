@@ -16,7 +16,7 @@ args@{
   namespace = "home";
 
   settings = {
-    autoEnable = true;
+    autoEnable = false;
     showCursor = false;
     useLsp = true;
     useTreesitter = true;
