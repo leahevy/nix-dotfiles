@@ -20,8 +20,8 @@ args@{
       mgr = {
         ratio = [
           1
-          4
           2
+          4
         ];
         show_hidden = true;
         show_symlink = true;
