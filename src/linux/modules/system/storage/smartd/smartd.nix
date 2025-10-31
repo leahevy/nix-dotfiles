@@ -65,10 +65,16 @@ args@{
         PUSHOVER_MESSAGE=""
 
         if [ "$FAILURE_TYPE" = "EmailTest" ] || [ "$FAILURE_TYPE" = "EMailTest" ]; then
-          USER_NOTIFY_MESSAGE="SMART Test: smartd notification system is working"
+          USER_NOTIFY_MESSAGE="SMART Test|drive-harddisk: smartd notification system is working"
           PUSHOVER_MESSAGE="smartd notification test successful"
         else
-          USER_NOTIFY_MESSAGE="SMART Alert (''${NOTIFY_TYPE}): ''${DEVICE} - ''${MESSAGE}"
+          case "$NOTIFY_TYPE" in
+            "info") ICON_NAME="drive-harddisk" ;;
+            "warn") ICON_NAME="dialog-warning" ;;
+            "failed") ICON_NAME="computer-fail" ;;
+            *) ICON_NAME="computer-fail" ;;
+          esac
+          USER_NOTIFY_MESSAGE="SMART Alert (''${NOTIFY_TYPE})|$ICON_NAME: ''${DEVICE} - ''${MESSAGE}"
           PUSHOVER_MESSAGE="''${DEVICE}: ''${MESSAGE}"
         fi
 
