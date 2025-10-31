@@ -54,6 +54,7 @@ args@{
               "alpha"
               "netrw"
               "toggleterm"
+              "Codewindow"
             ];
 
             pre_save_cmds = lib.mkIf (self.isModuleEnabled "nvim-modules.nvim-tree") [

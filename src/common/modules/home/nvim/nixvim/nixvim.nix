@@ -53,6 +53,7 @@ args@{
         web-devicons = true;
         autoclose = true;
         neoscroll = true;
+        codewindow = true;
       };
     };
   };
