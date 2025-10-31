@@ -431,7 +431,6 @@ in
           ".config/akonadi_contactrc"
           ".config/kaddressbookrc"
           ".config/kwriterc"
-          ".config/pavucontrol.ini"
         ];
       };
     };
