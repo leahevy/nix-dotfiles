@@ -18,11 +18,96 @@ rec {
   settings = {
     defaultPriority = 0;
     pushoverAPIEndpoint = "https://api.pushover.net/1/messages.json";
+
+    defaultSound = "none";
+    defaultTtl = "";
+
+    priorityDefaults = {
+      "-2" = {
+        sound = "none";
+        ttl = "7200";
+      };
+      "-1" = {
+        sound = "none";
+        ttl = "14400";
+      };
+      "0" = {
+        sound = "vibrate";
+        ttl = "129600";
+      };
+      "1" = {
+        sound = "pushover";
+        ttl = "604800";
+      };
+      "2" = {
+        sound = "tugboat";
+      };
+    };
+
+    typeDefaults = {
+      started = {
+        sound = "vibrate";
+        ttl = "7200";
+      };
+      stopped = {
+        sound = "pushover";
+        ttl = "604800";
+      };
+      failed = {
+        sound = "pushover";
+        ttl = "604800";
+      };
+      warn = {
+        sound = "gamelan";
+        ttl = "604800";
+      };
+      success = {
+        sound = "pianobar";
+        ttl = "129600";
+      };
+      info = {
+        sound = "vibrate";
+        ttl = "43200";
+      };
+      debug = {
+        sound = "none";
+        ttl = "3600";
+      };
+      emerg = {
+        sound = "tugboat";
+      };
+    };
   };
 
   custom = {
+    generateBashArray =
+      name: attrset: field:
+      let
+        entries = lib.mapAttrsToList (
+          key: value:
+          let
+            fieldValue = if value ? ${field} then value.${field} else "";
+          in
+          "[\"${key}\"]=\"${fieldValue}\""
+        ) attrset;
+      in
+      "declare -A ${name}=(${lib.concatStringsSep " " entries})";
+
     pushoverSendScript = pkgs.writeShellScriptBin "pushover-send" ''
       set -euo pipefail
+
+      ${custom.generateBashArray "PRIORITY_SOUND" self.settings.priorityDefaults "sound"}
+      ${custom.generateBashArray "PRIORITY_TTL" self.settings.priorityDefaults "ttl"}
+      ${custom.generateBashArray "TYPE_SOUND" self.settings.typeDefaults "sound"}
+      ${custom.generateBashArray "TYPE_TTL" self.settings.typeDefaults "ttl"}
+
+      DEFAULT_SOUND="${self.settings.defaultSound}"
+      DEFAULT_TTL="${self.settings.defaultTtl}"
+
+      show_usage() {
+          echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [--url-title <url-title>] [--html] [--debug] [--dry-run] [-h|--help] [-- <extra-pushover-args>]" >&2
+          echo "Types: started, stopped, failed, warn, success, info, debug, emerg" >&2
+      }
 
       TITLE=""
       MESSAGE=""
@@ -33,10 +118,15 @@ rec {
       URL_TITLE=""
       HTML_MODE=false
       DEBUG_MODE=false
+      DRY_RUN=false
       EXTRA_ARGS=()
 
       while [[ $# -gt 0 ]]; do
           case $1 in
+              -h|--help)
+                  show_usage
+                  exit 0
+                  ;;
               --title)
                   TITLE="$2"
                   shift 2
@@ -70,6 +160,11 @@ rec {
                   DEBUG_MODE=true
                   shift
                   ;;
+              --dry-run)
+                  DRY_RUN=true
+                  DEBUG_MODE=true
+                  shift
+                  ;;
               --)
                   shift
                   EXTRA_ARGS=("$@")
@@ -77,8 +172,7 @@ rec {
                   ;;
               *)
                   echo "Unknown option: $1" >&2
-                  echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [--url-title <url-title>] [--html] [--debug] [-- <extra-pushover-args>]" >&2
-                  echo "Types: started, stopped, failed, warn, success, info, debug, emerg" >&2
+                  show_usage
                   exit 1
                   ;;
           esac
@@ -86,8 +180,7 @@ rec {
 
       if [[ -z "$TITLE" || -z "$MESSAGE" ]]; then
           echo "Error: --title and --message are required" >&2
-          echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [--url-title <url-title>] [--html] [--debug] [-- <extra-pushover-args>]" >&2
-          echo "Types: started, stopped, failed, warn, success, info, debug, emerg" >&2
+          show_usage
           exit 1
       fi
 
@@ -128,6 +221,17 @@ rec {
           esac
 
           FORMATTED_TITLE="$EMOTICON $TITLE ($TYPE)"
+      fi
+
+      if [[ "$PRIORITY_SET" == "true" ]]; then
+          SOUND="''${PRIORITY_SOUND[$PRIORITY]:-$DEFAULT_SOUND}"
+          TTL="''${PRIORITY_TTL[$PRIORITY]:-$DEFAULT_TTL}"
+      elif [[ -n "$TYPE" ]]; then
+          SOUND="''${TYPE_SOUND[$TYPE]:-$DEFAULT_SOUND}"
+          TTL="''${TYPE_TTL[$TYPE]:-$DEFAULT_TTL}"
+      else
+          SOUND="$DEFAULT_SOUND"
+          TTL="$DEFAULT_TTL"
       fi
 
       if [[ $EUID -eq 0 ]]; then
@@ -187,7 +291,12 @@ rec {
       form = "priority=$PRIORITY"
       form = "html=1"
       form = "timestamp=$(${pkgs.coreutils}/bin/date +%s)"
+      form = "sound=$SOUND"
       EOF
+
+      if [[ -n "$TTL" && "$PRIORITY" != "2" ]]; then
+          echo "form = \"ttl=$TTL\"" >> "$TEMP_CONFIG"
+      fi
 
       if [[ "$PRIORITY" == "2" ]]; then
           echo "form = \"retry=900\"" >> "$TEMP_CONFIG"
@@ -209,10 +318,18 @@ rec {
           echo "form = \"$ESCAPED_ARG\"" >> "$TEMP_CONFIG"
       done
 
+      if [[ "$DRY_RUN" == "true" ]]; then
+          echo "=== DRY RUN MODE ===" >&2
+      fi
+
       if [[ "$DEBUG_MODE" == "true" ]]; then
           echo "=== DEBUG: Curl config file content ===" >&2
           ${pkgs.coreutils}/bin/cat "$TEMP_CONFIG" >&2
           echo "=== END DEBUG ===" >&2
+      fi
+
+      if [[ "$DRY_RUN" == "true" ]]; then
+          exit 0
       fi
 
       for attempt in {1..5}; do
