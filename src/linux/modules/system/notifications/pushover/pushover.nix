@@ -176,6 +176,7 @@ rec {
       form = "message=$ESCAPED_MESSAGE"
       form = "priority=$PRIORITY"
       form = "html=1"
+      form = "timestamp=$(${pkgs.coreutils}/bin/date +%s)"
       EOF
 
       if [[ "$PRIORITY" == "2" ]]; then
