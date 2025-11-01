@@ -16,11 +16,11 @@ args@{
   namespace = "home";
 
   settings = {
-    autoEnable = false;
+    autoEnable = true;
     showCursor = false;
     useLsp = true;
     useTreesitter = true;
-    useGit = true;
+    useGit = false;
     minimapWidth = 6;
     widthMultiplier = 6;
     windowBorder = "single";
