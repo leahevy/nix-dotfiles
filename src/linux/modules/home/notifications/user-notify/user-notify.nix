@@ -70,8 +70,6 @@ args@{
                       local urgency="normal"
                       case "$priority" in
                           0|1|2|3) urgency="critical" ;;
-                          4) urgency="critical" ;;
-                          5|6|7) urgency="normal" ;;
                           *) urgency="normal" ;;
                       esac
 
@@ -79,7 +77,7 @@ args@{
                   else
                       local urgency="normal"
                       case "$priority" in
-                          0|1|2|3|4) urgency="critical" ;;
+                          0|1|2|3) urgency="critical" ;;
                           *) urgency="normal" ;;
                       esac
                       notify "$urgency" "System Message" "$message"
