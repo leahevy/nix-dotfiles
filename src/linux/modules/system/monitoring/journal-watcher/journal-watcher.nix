@@ -157,6 +157,9 @@ args@{
     pushoverEnabled = false;
     ignoreUserServicesForPushover = true;
 
+    baseTagsToNotIgnoreForUserServices = [ "nixos" ];
+    additionalTagsToNotIgnoreForUserServices = [ ];
+
     pushoverRateLimit = 10;
     pushoverRateLimitUnknown = 30;
     sameMessageRateLimitMinutes = 15;
@@ -193,23 +196,9 @@ args@{
         ++ self.settings.additionalStringsToHighlight
         ++ (lib.optionals isDesktop self.settings.desktopStringsToHighlight);
 
-      servicesPattern =
-        if allServicesToIgnore != [ ] then
-          "(" + (lib.concatStringsSep "|" (map lib.escapeShellArg allServicesToIgnore)) + ")"
-        else
-          "^$";
-
-      tagsPattern =
-        if allTagsToIgnore != [ ] then
-          "(" + (lib.concatStringsSep "|" (map lib.escapeShellArg allTagsToIgnore)) + ")"
-        else
-          "^$";
-
-      stringsPattern =
-        if allStringsToIgnore != [ ] then
-          "(" + (lib.concatStringsSep "|" allStringsToIgnore) + ")"
-        else
-          "^$";
+      allTagsToNotIgnoreForUserServices =
+        self.settings.baseTagsToNotIgnoreForUserServices
+        ++ self.settings.additionalTagsToNotIgnoreForUserServices;
 
       stateDir = "/var/lib/nx-journal-watcher";
       rateLimitStateDir = "${stateDir}/rate-limits";
@@ -272,6 +261,11 @@ args@{
         ${lib.concatMapStringsSep "\n" (
           pattern: "strings_to_highlight.append(${builtins.toJSON pattern})"
         ) allStringsToHighlight}
+
+        tags_to_not_ignore_for_user_services: List[str] = []
+        ${lib.concatMapStringsSep "\n" (
+          pattern: "tags_to_not_ignore_for_user_services.append(${builtins.toJSON pattern})"
+        ) allTagsToNotIgnoreForUserServices}
 
         services_pattern = None
         tags_pattern = None
@@ -430,6 +424,9 @@ args@{
 
             return False
 
+        def user_tag_is_not_filtered(tag: str) -> bool:
+            return tag in tags_to_not_ignore_for_user_services
+
         def process_message(json_data: Dict[str, Any]):
             try:
                 is_inner_user_service = False
@@ -438,9 +435,10 @@ args@{
                 unit = to_string(json_data.get("_SYSTEMD_UNIT", "unknown"), "unknown")
                 tag = to_string(json_data.get("SYSLOG_IDENTIFIER", "system"), "system")
 
-                is_user_unit = unit == f"user@{MAIN_USER_UID}.service" or unit.startswith("user@")
+                is_user_unit = unit == f"user@{MAIN_USER_UID}.service"
+                is_unknown_unit = unit == "unknown"
 
-                if unit == f"user@{MAIN_USER_UID}.service" or unit == "unknown":
+                if is_user_unit or is_unknown_unit:
                     match = service_extract_pattern.match(message)
                     if match:
                         is_inner_user_service = True
@@ -488,7 +486,7 @@ args@{
                 priority_title = priority_titles.get(notify_type, "Info")
 
                 if unit == "unknown":
-                    title_text_pushover = f"Journal ({tag})"
+                    title_text_pushover = f"{priority_title} ({tag})"
                     title_text_user = f"{priority_title}|{icon}"
                     message_text_pushover = message
                     message_text_user = f"{message} <b>({tag})</b>"
@@ -510,8 +508,13 @@ args@{
                         print(f"Failed to send user notification: {e}", file=sys.stderr, flush=True)
 
                 if PUSHOVER_ENABLED:
-                    if not is_inner_user_service or not IGNORE_USER_SERVICES_FOR_PUSHOVER:
-                      if check_rate_limit(unit):
+                    should_send_pushover = True
+
+                    if is_user_unit and IGNORE_USER_SERVICES_FOR_PUSHOVER:
+                        if is_inner_user_service or not user_tag_is_not_filtered(tag):
+                            should_send_pushover = False
+
+                    if should_send_pushover and check_rate_limit(unit):
                         try:
                             subprocess.run([
                                 "${
