@@ -68,6 +68,7 @@ args@{
       "Buffer I/O error on dev sr[0-9]+, logical block.*async page read"
       "blk_print_req_error: [0-9]+ callbacks suppressed"
       "buffer_io_error: [0-9]+ callbacks suppressed"
+      "hrtimer: interrupt took [0-9]+ ns"
     ];
     desktopStringsToIgnore = [
       "qt\\.multimedia\\.symbolsresolver: Couldn't.*pipewire"
@@ -99,6 +100,7 @@ args@{
       "GTK can't handle compose tables this large"
       "Ignoring duplicate name"
       "gtk_widget_"
+      "gtk.*: assertion .* failed"
       "Realtime error: Could not get pidns for pid [0-9]+: Could not fstatat ns/pid: Not a directory"
       "unhandled exception.*in Json::Value::find.*requires objectValue or nullValue"
       "kf\\.config\\.core: couldn't lock global file"
