@@ -50,11 +50,11 @@ args@{
             let
               passwordFile = config.sops.secrets.${self.settings.passwordSopsFile}.path;
 
-              hashScript = pkgs.writeText "kwallet-hash.py" ''
+              kwalletUnlockScript = pkgs.writeText "kwallet-unlock.py" ''
                 #!/usr/bin/env python3
                 import sys
                 import hashlib
-                import base64
+                import dbus
 
                 def generate_kwallet_hash(password_file, salt_file):
                     try:
@@ -65,22 +65,49 @@ args@{
                             salt = f.read()
 
                         key = hashlib.pbkdf2_hmac('sha512', password, salt, 50000, 56)
-
-                        return ','.join(f'0x{b:02x}' for b in key)
+                        return key
 
                     except Exception as e:
                         print(f"Error generating hash: {e}", file=sys.stderr)
                         sys.exit(1)
 
+                def unlock_kwallet(password_file, salt_file):
+                    try:
+                        hash_bytes = generate_kwallet_hash(password_file, salt_file)
+
+                        bus = dbus.SessionBus()
+                        proxy = bus.get_object('org.kde.kwalletd6', '/modules/kwalletd6')
+                        hash_array = dbus.ByteArray(hash_bytes)
+
+                        proxy.pamOpen('kdewallet', hash_array, 0, dbus_interface='org.kde.KWallet')
+
+                        handle = proxy.open('kdewallet', 0, 'nx-keyring-unlock-test', dbus_interface='org.kde.KWallet')
+                        is_open = handle > 0
+
+                        if is_open:
+                            print("KWallet unlock successful - wallet is open")
+                            proxy.close(handle, False, 'nx-keyring-unlock-test', dbus_interface='org.kde.KWallet')
+                            return True
+                        else:
+                            print("KWallet unlock failed - wallet is not open", file=sys.stderr)
+                            return False
+
+                    except Exception as e:
+                        print(f"Error unlocking KWallet: {e}", file=sys.stderr)
+                        return False
+
                 if __name__ == "__main__":
                     if len(sys.argv) != 3:
-                        print("Usage: kwallet-hash.py <password_file> <salt_file>", file=sys.stderr)
+                        print("Usage: kwallet-unlock.py <password_file> <salt_file>", file=sys.stderr)
                         sys.exit(1)
 
                     password_file = sys.argv[1]
                     salt_file = sys.argv[2]
-                    hash_result = generate_kwallet_hash(password_file, salt_file)
-                    print(hash_result)
+
+                    if unlock_kwallet(password_file, salt_file):
+                        sys.exit(0)
+                    else:
+                        sys.exit(1)
               '';
 
               unlockScript = pkgs.writeShellScriptBin "unlock-keyring" ''
@@ -95,6 +122,7 @@ args@{
                     pkgs.coreutils
                   ]
                 }:$PATH"
+                export PYTHONPATH="${pkgs.python3Packages.dbus-python}/lib/python${pkgs.python3.pythonVersion}/site-packages:$PYTHONPATH"
                 set -euo pipefail
 
                 timeout=30
@@ -104,8 +132,9 @@ args@{
                 done
 
                 if [ $timeout -eq 0 ]; then
-                  echo "D-Bus session not ready, exiting"
-                  exit 1
+                  echo "D-Bus session not ready, skipping keyring unlock"
+                  ${pkgs.util-linux}/bin/logger -p user.err -t nx-keyring-unlock "D-Bus session not ready - keyring unlock skipped"
+                  exit 0
                 fi
 
                 ${
@@ -118,24 +147,30 @@ args@{
                       done
 
                       if [ $timeout -eq 0 ]; then
-                        echo "KWallet daemon not available, exiting"
-                        exit 1
+                        echo "KWallet daemon not available, skipping keyring unlock"
+                        ${pkgs.util-linux}/bin/logger -p user.err -t nx-keyring-unlock "KWallet daemon not available - keyring unlock skipped"
+                        exit 0
                       fi
 
                       SALT_FILE="$HOME/.local/share/kwalletd/kdewallet.salt"
                       if [ ! -f "$SALT_FILE" ]; then
-                        echo "Salt file not found: $SALT_FILE"
-                        exit 1
+                        echo "Salt file not found: $SALT_FILE, skipping keyring unlock"
+                        ${pkgs.util-linux}/bin/logger -p user.err -t nx-keyring-unlock "KWallet salt file not found - keyring unlock skipped"
+                        exit 0
                       fi
 
-                      PASSWORD_HASH=$(python3 ${hashScript} "${passwordFile}" "$SALT_FILE")
-                      echo "Unlocking KWallet with pamOpen..."
-                      dbus-send --session --type=method_call --dest=org.kde.kwalletd6 /modules/kwalletd6 org.kde.KWallet.pamOpen string:kdewallet array:byte:$PASSWORD_HASH int32:0
+                      echo "Unlocking KWallet..."
+                      python3 ${kwalletUnlockScript} "${passwordFile}" "$SALT_FILE"
 
-                      echo "Opening KWallet for applications..."
-                      HANDLE=$(${pkgs.kdePackages.qttools}/bin/qdbus org.kde.kwalletd6 /modules/kwalletd6 org.kde.KWallet.open kdewallet 0 "nx-keyring-unlock")
-                      echo "KWallet handle: $HANDLE"
-
+                      if [ $? -eq 0 ]; then
+                        echo "Opening KWallet for applications..."
+                        HANDLE=$(${pkgs.kdePackages.qttools}/bin/qdbus org.kde.kwalletd6 /modules/kwalletd6 org.kde.KWallet.open kdewallet 0 "nx-keyring-unlock")
+                        echo "KWallet handle: $HANDLE"
+                      else
+                        echo "KWallet unlock failed, continuing without keyring"
+                        ${pkgs.util-linux}/bin/logger -p user.err -t nx-keyring-unlock "KWallet unlock failed - passwords will need to be entered manually"
+                        exit 0
+                      fi
                     ''
                   else if isGnome then
                     ''
@@ -146,12 +181,21 @@ args@{
                       done
 
                       if [ $timeout -eq 0 ]; then
-                        echo "D-Bus session services not ready, exiting"
-                        exit 1
+                        echo "D-Bus session services not ready, skipping keyring unlock"
+                        ${pkgs.util-linux}/bin/logger -p user.err -t nx-keyring-unlock "D-Bus session services not ready - GNOME keyring unlock skipped"
+                        exit 0
                       fi
 
                       echo "Unlocking GNOME Keyring..."
                       cat "${passwordFile}" | tr -d '\n\r' | ${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --replace --unlock
+
+                      if [ $? -eq 0 ]; then
+                        echo "GNOME Keyring unlock successful"
+                      else
+                        echo "GNOME Keyring unlock failed, continuing without keyring"
+                        ${pkgs.util-linux}/bin/logger -p user.err -t nx-keyring-unlock "GNOME Keyring unlock failed - passwords will need to be entered manually"
+                      fi
+                      exit 0
                     ''
                   else
                     ''
