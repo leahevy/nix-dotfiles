@@ -47,6 +47,9 @@ let
                 cp -r $configSrc/. $out/nxconfig/
                 chmod -R u+w $out/nxcore $out/nxconfig
 
+                rm -f $out/nxcore/src/nxconfig/nxcore $out/nxcore/src/nxconfig/templates
+                rm -f $out/nxconfig/nxcore $out/nxconfig/templates
+
                 if [ -f "$configSrc/.git-crypt-key" ]; then
                   mkdir -p $out/keys
                   cp "$configSrc/.git-crypt-key" $out/keys/git-crypt-key
