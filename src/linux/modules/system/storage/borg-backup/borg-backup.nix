@@ -155,6 +155,8 @@ args@{
               "success"
             else if lib.hasPrefix "FAILURE:" message then
               "failed"
+            else if lib.hasPrefix "INFO:" message && lib.hasInfix "Auto-upgrade" message then
+              "info"
             else
               null;
 
@@ -167,6 +169,8 @@ args@{
               lib.removePrefix "SUCCESS: " message
             else if lib.hasPrefix "FAILURE:" message then
               lib.removePrefix "FAILURE: " message
+            else if lib.hasPrefix "INFO:" message && lib.hasInfix "Auto-upgrade" message then
+              lib.removePrefix "INFO: " message
             else
               message;
         in
