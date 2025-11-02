@@ -69,6 +69,7 @@ args@{
       "blk_print_req_error: [0-9]+ callbacks suppressed"
       "buffer_io_error: [0-9]+ callbacks suppressed"
       "hrtimer: interrupt took [0-9]+ ns"
+      "Failed to activate with specified passphrase. (Passphrase incorrect?)"
     ];
     desktopStringsToIgnore = [
       "qt\\.multimedia\\.symbolsresolver: Couldn't.*pipewire"
