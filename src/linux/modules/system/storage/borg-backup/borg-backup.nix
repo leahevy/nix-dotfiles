@@ -345,6 +345,7 @@ args@{
         serviceConfig = {
           ReadWritePaths = [
             "/persist/.snapshots"
+            "/tmp"
           ]
           ++ lib.optional self.settings.withData "${self.settings.dataPath}/.snapshots";
 
