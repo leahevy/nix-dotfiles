@@ -270,6 +270,7 @@ args@{
                     fi
 
                     echo "Starting backup manually..."
+                    sudo touch /tmp/nx-force-backup
                     sudo systemctl start borgbackup-job-system.service
                     echo "Success: Backup triggered manually"
 

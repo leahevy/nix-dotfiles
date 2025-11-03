@@ -128,10 +128,13 @@ args@{
 
       checkDailyBackupCompleteScript = ''
         check_daily_backup_complete() {
-          TODAY=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
-          if ${pkgs.systemd}/bin/journalctl -u borgbackup-job-system.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="SUCCESS: System backup completed successfully" >/dev/null 2>&1; then
-            exit 0
+          if [[ ! -f "/tmp/nx-force-backup" ]]; then
+            TODAY=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
+            if ${pkgs.systemd}/bin/journalctl -u borgbackup-job-system.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="SUCCESS: System backup completed successfully" >/dev/null 2>&1; then
+              exit 0
+            fi
           fi
+          ${pkgs.coreutils}/bin/rm -f /tmp/nx-force-backup
         }
       '';
 

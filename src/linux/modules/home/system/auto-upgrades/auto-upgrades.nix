@@ -98,6 +98,7 @@ args@{
           fi
 
           sudo -v
+          sudo touch /tmp/nx-force-upgrade
           sudo systemctl start nx-auto-upgrade.service >/dev/null 2>&1 &
           echo "Auto-upgrade triggered manually"
 

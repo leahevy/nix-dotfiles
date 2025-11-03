@@ -144,10 +144,13 @@ args@{
 
       checkDailyStartScript = ''
         check_daily_start() {
-          TODAY=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
-          if ${pkgs.systemd}/bin/journalctl -u nx-auto-upgrade.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="STARTED: Auto-upgrade beginning" >/dev/null 2>&1; then
-            exit 0
+          if [[ ! -f "/tmp/nx-force-upgrade" ]]; then
+            TODAY=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
+            if ${pkgs.systemd}/bin/journalctl -u nx-auto-upgrade.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="STARTED: Auto-upgrade beginning" >/dev/null 2>&1; then
+              exit 0
+            fi
           fi
+          ${pkgs.coreutils}/bin/rm -f /tmp/nx-force-upgrade
         }
       '';
 
