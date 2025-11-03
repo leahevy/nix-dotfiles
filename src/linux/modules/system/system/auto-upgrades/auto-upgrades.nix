@@ -441,12 +441,22 @@ args@{
         ${
           if self.settings.dryRun then
             ''
-              ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild switch --flake '.#${profileName}' --impure --override-input config 'path:${nxconfigDir}' --override-input profile 'path:$PROFILE_PATH' --print-build-logs"
+              REBUILD_ACTION="switch"
+              if [[ "$FORCE_REBOOT" == "true" ]]; then
+                REBUILD_ACTION="boot"
+              fi
+              ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild $REBUILD_ACTION --flake '.#${profileName}' --impure --override-input config 'path:${nxconfigDir}' --override-input profile 'path:$PROFILE_PATH' --print-build-logs"
               ${logScript "info" "System rebuild command prepared"}
             ''
           else
             ''
-              if ! ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch \
+              REBUILD_ACTION="switch"
+              if [[ "$FORCE_REBOOT" == "true" ]]; then
+                REBUILD_ACTION="boot"
+                ${logScript "info" "INFO: Using boot action since reboot is required"}
+              fi
+
+              if ! ${pkgs.nixos-rebuild}/bin/nixos-rebuild $REBUILD_ACTION \
                 --flake ".#${profileName}" \
                 --impure \
                 --no-update-lock-file \
