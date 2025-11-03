@@ -21,8 +21,8 @@ args@{
     useLsp = true;
     useTreesitter = true;
     useGit = false;
-    minimapWidth = 6;
-    widthMultiplier = 6;
+    minimapWidth = 15;
+    widthMultiplier = 1;
     windowBorder = "single";
     screenBounds = "lines";
     excludeFiletypes = [
@@ -111,7 +111,10 @@ args@{
               end
             end
 
-            codewindow.open_minimap()
+            if ft ~= "" and vim.bo.buftype == "" then
+              vim.cmd("syntax sync fromstart")
+              codewindow.open_minimap()
+            end
           end
         end
 
@@ -125,11 +128,35 @@ args@{
         end
 
         vim.api.nvim_create_autocmd({
-          "BufEnter", "TabEnter"
+          "BufEnter", "TabEnter", "Syntax"
         }, {
           callback = function()
-            vim.defer_fn(handle_minimap, 10)
+            vim.defer_fn(handle_minimap, 100)
           end
+        })
+
+        vim.api.nvim_create_autocmd("User", {
+          pattern = "SessionLoadPost",
+          callback = function()
+            vim.defer_fn(function()
+              if _G.codewindow_enabled then
+                codewindow.close_minimap()
+                vim.defer_fn(handle_minimap, 200)
+              end
+            end, 500)
+          end
+        })
+
+        vim.api.nvim_create_autocmd("VimEnter", {
+          callback = function()
+            vim.defer_fn(function()
+              if _G.codewindow_enabled then
+                pcall(vim.treesitter.start)
+                vim.defer_fn(handle_minimap, 50)
+              end
+            end, 300)
+          end,
+          once = true
         })
 
         vim.api.nvim_create_autocmd("TabLeave", {
