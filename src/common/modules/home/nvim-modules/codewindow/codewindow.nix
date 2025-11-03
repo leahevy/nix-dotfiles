@@ -152,7 +152,7 @@ args@{
             vim.defer_fn(function()
               if _G.codewindow_enabled then
                 pcall(vim.treesitter.start)
-                vim.defer_fn(handle_minimap, 50)
+                vim.defer_fn(handle_minimap, 100)
               end
             end, 300)
           end,
