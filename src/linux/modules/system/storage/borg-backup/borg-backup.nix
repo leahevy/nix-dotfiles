@@ -349,6 +349,8 @@ args@{
           ]
           ++ lib.optional self.settings.withData "${self.settings.dataPath}/.snapshots";
 
+          PrivateTmp = lib.mkForce false;
+
           ExecStopPost = "${pkgs.writeShellScript "borg-backup-stop-handler" ''
             if [ "$EXIT_CODE" = "killed" ]; then
               ${logScript "err" "FAILURE: System backup was stopped/interrupted"}
