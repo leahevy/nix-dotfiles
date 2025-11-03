@@ -26,6 +26,8 @@ args@{
       krb5
       nss
       nspr
+      openssl
+      curl
     ];
     desktopLibraries = with args.pkgs; [
       xorg.libX11
@@ -47,6 +49,7 @@ args@{
       freetype
       fontconfig
       alsa-lib
+      icu
     ];
     additionalLibraries = [ ];
   };
