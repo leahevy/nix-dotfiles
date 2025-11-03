@@ -26,56 +26,176 @@ args@{
     cwdChangeHandling = false;
     logLevel = "error";
     sessionLensLoadOnSetup = true;
+
+    ignoredBufferTypes = [
+      "terminal"
+      "nofile"
+      "nowrite"
+      "prompt"
+      "help"
+      "quickfix"
+    ];
+
+    bypassSaveFiletypes = [
+      "dashboard"
+      "alpha"
+      "netrw"
+      "toggleterm"
+      "Codewindow"
+      "terminal"
+      "help"
+      "qf"
+      "prompt"
+      "nofile"
+      "nowrite"
+    ];
   };
 
   configuration =
     context@{ config, options, ... }:
     {
+      home.file.".config/nvim-init/10-auto-session-setup.lua".text = ''
+        local function clean_session_file(file_path)
+          if vim.fn.filereadable(file_path) == 1 then
+            local lines = vim.fn.readfile(file_path)
+            local modified = false
+            local ignored_types = {${
+              lib.concatMapStringsSep ", " (t: "\"" + t + "\"") self.settings.ignoredBufferTypes
+            }}
+
+            for i, line in ipairs(lines) do
+              if line:match("^setlocal buftype=") then
+                for _, ignored_type in ipairs(ignored_types) do
+                  if line == "setlocal buftype=" .. ignored_type then
+                    lines[i] = '" ' .. line
+                    modified = true
+                    break
+                  end
+                end
+              end
+            end
+
+            if modified then
+              vim.fn.writefile(lines, file_path)
+            end
+          end
+        end
+
+        local session_dir = vim.fn.stdpath("data") .. "/sessions/"
+        local cwd = vim.fn.getcwd()
+        local session_name = cwd:gsub("([^A-Za-z0-9])", function(c)
+          return string.format("%%%02X", string.byte(c))
+        end)
+        local session_file = session_dir .. session_name .. ".vim"
+        clean_session_file(session_file)
+
+        require("auto-session").setup({
+          enabled = ${if self.settings.autoRestore then "true" else "false"},
+          auto_save = ${if self.settings.autoSave then "true" else "false"},
+          auto_restore = false,
+          auto_create = ${if self.settings.autoCreate then "true" else "false"},
+          suppressed_dirs = {${
+            lib.concatMapStringsSep ", " (d: "\"" + d + "\"") self.settings.suppressedDirs
+          }},
+          use_git_branch = false,
+          cwd_change_handling = ${if self.settings.cwdChangeHandling then "true" else "false"},
+          log_level = "${self.settings.logLevel}",
+          close_unsupported_windows = true,
+          bypass_save_filetypes = {${
+            lib.concatMapStringsSep ", " (t: "\"" + t + "\"") self.settings.bypassSaveFiletypes
+          }},
+
+          pre_save_cmds = {
+            function()
+              if vim.fn.exists(":NvimTreeClose") == 2 then
+                vim.cmd("tabdo NvimTreeClose")
+              end
+
+              local ignored_types = {${
+                lib.concatMapStringsSep ", " (t: "\"" + t + "\"") self.settings.ignoredBufferTypes
+              }}
+              for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+                local buftype = vim.bo[buf].buftype
+                for _, ignored_type in ipairs(ignored_types) do
+                  if buftype == ignored_type then
+                    pcall(vim.api.nvim_buf_delete, buf, { force = true })
+                    break
+                  end
+                end
+              end
+            end
+          },
+
+          post_restore_cmds = {
+            function()
+              local ignored_types = {${
+                lib.concatMapStringsSep ", " (t: "\"" + t + "\"") self.settings.ignoredBufferTypes
+              }}
+              for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+                local bufname = vim.api.nvim_buf_get_name(buf)
+                local buftype = vim.bo[buf].buftype
+
+                local is_ignored = false
+                for _, ignored_type in ipairs(ignored_types) do
+                  if buftype == ignored_type and ignored_type ~= "help" then
+                    is_ignored = true
+                    break
+                  end
+                end
+
+                if is_ignored then
+                  pcall(vim.api.nvim_buf_delete, buf, { force = true })
+                elseif bufname ~= "" and not bufname:match("^%w+://") then
+                  if vim.fn.filereadable(bufname) ~= 1 then
+                    pcall(vim.api.nvim_buf_delete, buf, { force = true })
+                  end
+                end
+              end
+            end
+          },
+
+          session_lens = {
+            load_on_setup = ${if self.settings.sessionLensLoadOnSetup then "true" else "false"},
+            previewer = false,
+            picker_opts = {
+              layout_strategy = "horizontal",
+              layout_config = {
+                width = 0.8,
+                height = 0.8,
+              },
+            },
+          },
+        })
+
+        ${
+          if self.settings.autoRestore then
+            ''
+              if #vim.fn.argv() == 0 then
+                local session_dir = vim.fn.stdpath("data") .. "/sessions/"
+                local cwd = vim.fn.getcwd()
+                local session_name = cwd:gsub("([^A-Za-z0-9])", function(c)
+                  return string.format("%%%02X", string.byte(c))
+                end)
+                local session_file = session_dir .. session_name .. ".vim"
+
+                clean_session_file(session_file)
+
+                require("auto-session").RestoreSession()
+              end
+            ''
+          else
+            ""
+        }
+      '';
+
       programs.nixvim = {
         opts = {
-          sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions";
+          sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,localoptions";
         };
 
-        plugins.auto-session = {
-          enable = true;
-
-          settings = {
-            enabled = true;
-            auto_save = self.settings.autoSave;
-            auto_restore = self.settings.autoRestore;
-            auto_create = self.settings.autoCreate;
-            suppressed_dirs = self.settings.suppressedDirs;
-            use_git_branch = false;
-            cwd_change_handling = self.settings.cwdChangeHandling;
-            log_level = self.settings.logLevel;
-
-            bypass_save_filetypes = [
-              "dashboard"
-              "alpha"
-              "netrw"
-              "toggleterm"
-              "Codewindow"
-            ];
-
-            pre_save_cmds = lib.mkIf (self.isModuleEnabled "nvim-modules.nvim-tree") [
-              "tabdo NvimTreeClose"
-            ];
-
-            post_restore_cmds = [ ];
-
-            session_lens = {
-              load_on_setup = self.settings.sessionLensLoadOnSetup;
-              previewer = false;
-              picker_opts = {
-                layout_strategy = "horizontal";
-                layout_config = {
-                  width = 0.8;
-                  height = 0.8;
-                };
-              };
-            };
-          };
-        };
+        extraPlugins = with pkgs.vimPlugins; [
+          auto-session
+        ];
 
         keymaps = [
           {
