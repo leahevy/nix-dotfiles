@@ -142,6 +142,15 @@ args@{
         }
       '';
 
+      checkDailyStartScript = ''
+        check_daily_start() {
+          TODAY=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
+          if ${pkgs.systemd}/bin/journalctl -u nx-auto-upgrade.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="STARTED: Auto-upgrade beginning" >/dev/null 2>&1; then
+            exit 0
+          fi
+        }
+      '';
+
       signatureVerificationScript = lib.optionalString self.settings.verifySignatures ''
         setup_verification_keyring() {
           local keyring_dir=$(${pkgs.coreutils}/bin/mktemp -d -t nx-auto-upgrade-keyring-XXXXXX)
@@ -760,6 +769,9 @@ args@{
               done
             }
             trap cleanup EXIT TERM
+
+            ${checkDailyStartScript}
+            check_daily_start
 
             ${logScript "info" "STARTED: Auto-upgrade beginning"}
             ${pkgs.coreutils}/bin/sleep 5
