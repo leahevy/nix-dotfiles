@@ -132,6 +132,7 @@ args@{
             TODAY=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
             if ${pkgs.systemd}/bin/journalctl -u borg-backup-log-success.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="SUCCESS: System backup completed successfully" >/dev/null 2>&1; then
               ${pkgs.coreutils}/bin/touch /tmp/nx-backup-skipped
+              ${pkgs.coreutils}/bin/touch /tmp/nx-backup-no-success
               exit 0
             fi
           fi
@@ -266,7 +267,7 @@ args@{
         prune.keep = self.settings.prune.keep;
 
         preHook = ''
-          ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped /tmp/nx-backup-completed
+          ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped /tmp/nx-backup-completed /tmp/nx-backup-no-success
           ${checkDailyBackupCompleteScript}
           check_daily_backup_complete
           ${pkgs.coreutils}/bin/echo "Waiting 2 minutes for system readiness..."
@@ -337,11 +338,11 @@ args@{
           User = "root";
         };
         script = ''
-          if [ "$MONITOR_EXIT_CODE" = "exited" ] && [ -f "/tmp/nx-backup-completed" ] && [ ! -f "/tmp/nx-backup-skipped" ]; then
+          if [ "$MONITOR_EXIT_CODE" = "exited" ] && [ -f "/tmp/nx-backup-completed" ] && [ ! -f "/tmp/nx-backup-no-success" ]; then
             ${logScript "info" "SUCCESS: System backup completed successfully"}
             ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-completed
           fi
-          ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped
+          ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped /tmp/nx-backup-no-success
         '';
       };
 
