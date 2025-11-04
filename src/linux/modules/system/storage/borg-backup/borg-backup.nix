@@ -337,10 +337,11 @@ args@{
           User = "root";
         };
         script = ''
-          if [ "$MONITOR_EXIT_CODE" = "exited" ] && [ -f "/tmp/nx-backup-completed" ]; then
+          if [ "$MONITOR_EXIT_CODE" = "exited" ] && [ -f "/tmp/nx-backup-completed" ] && [ ! -f "/tmp/nx-backup-skipped" ]; then
             ${logScript "info" "SUCCESS: System backup completed successfully"}
             ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-completed
           fi
+          ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped
         '';
       };
 
