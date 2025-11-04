@@ -154,6 +154,17 @@ args@{
         }
       '';
 
+      checkDailyStartNotifyScript = ''
+        check_daily_start_notify() {
+          if [[ ! -f "/tmp/nx-force-upgrade" ]]; then
+            TODAY=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
+            if ${pkgs.systemd}/bin/journalctl -u nx-auto-upgrade.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="STARTED: Auto-upgrade beginning" >/dev/null 2>&1; then
+              exit 0
+            fi
+          fi
+        }
+      '';
+
       signatureVerificationScript = lib.optionalString self.settings.verifySignatures ''
         setup_verification_keyring() {
           local keyring_dir=$(${pkgs.coreutils}/bin/mktemp -d -t nx-auto-upgrade-keyring-XXXXXX)
@@ -697,7 +708,11 @@ args@{
               }).custom.pushoverSendScript
             ];
 
-        script = logScript "info" "NOTICE: Auto-upgrade starting in ${builtins.toString self.settings.preNotificationTimeMinutes}M - avoid repository changes";
+        script = ''
+          ${checkDailyStartNotifyScript}
+          check_daily_start_notify
+          ${logScript "info" "NOTICE: Auto-upgrade starting in ${builtins.toString self.settings.preNotificationTimeMinutes}M - avoid repository changes"}
+        '';
       };
 
       systemd.services.nx-auto-upgrade = {
