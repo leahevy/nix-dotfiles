@@ -131,6 +131,7 @@ args@{
           if [[ ! -f "/tmp/nx-force-backup" ]]; then
             TODAY=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
             if ${pkgs.systemd}/bin/journalctl -u borg-backup-log-success.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="SUCCESS: System backup completed successfully" >/dev/null 2>&1; then
+              ${pkgs.coreutils}/bin/touch /tmp/nx-backup-skipped
               exit 0
             fi
           fi
@@ -265,6 +266,7 @@ args@{
         prune.keep = self.settings.prune.keep;
 
         preHook = ''
+          ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped /tmp/nx-backup-completed
           ${pkgs.coreutils}/bin/echo "Waiting 2 minutes for system readiness..."
           ${pkgs.coreutils}/bin/sleep 120
           ${checkDailyBackupCompleteScript}
@@ -295,6 +297,7 @@ args@{
         exclude = allExcludes;
 
         postHook = ''
+          ${pkgs.coreutils}/bin/touch /tmp/nx-backup-completed
           ${cleanupSnapshotScript {
             snapshotName = "persist";
             snapshotDir = "/persist/.snapshots";
@@ -310,7 +313,10 @@ args@{
             snapshotDir = "${self.settings.dataPath}/.snapshots";
             canFail = true;
           })}
-          ${logScript "info" "INFO: All snapshots deleted successfully"}
+          if [[ ! -f "/tmp/nx-backup-skipped" ]]; then
+            ${logScript "info" "INFO: All snapshots deleted successfully"}
+          fi
+          ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped
         '';
 
       };
@@ -331,8 +337,9 @@ args@{
           User = "root";
         };
         script = ''
-          if [ "$MONITOR_EXIT_CODE" = "exited" ]; then
+          if [ "$MONITOR_EXIT_CODE" = "exited" ] && [ -f "/tmp/nx-backup-completed" ]; then
             ${logScript "info" "SUCCESS: System backup completed successfully"}
+            ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-completed
           fi
         '';
       };
