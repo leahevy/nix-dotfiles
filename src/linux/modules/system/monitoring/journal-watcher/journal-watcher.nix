@@ -145,6 +145,7 @@ args@{
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
       "nvidia.*invalid EDID header"
+      "nvidia-modeset:.*Unable to read EDID for display device.*"
       "nvidia: module license 'NVIDIA' taints kernel"
       "nvidia: module license taints kernel"
       "Disabling lock debugging due to kernel taint"
