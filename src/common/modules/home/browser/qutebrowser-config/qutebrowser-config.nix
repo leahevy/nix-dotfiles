@@ -16,6 +16,7 @@ args@{
   namespace = "home";
 
   settings = {
+    backend = "webengine";
     privacySearch = true;
     startpageAsPrivacySearch = true;
     addAmazon = false;
@@ -524,209 +525,221 @@ args@{
         loadAutoconfig = false;
         enableDefaultBindings = false;
 
-        settings = {
-          confirm_quit =
-            if self.settings.askOnQuit then
-              [
-                "always"
-              ]
-            else
-              [ "downloads" ];
-          new_instance_open_target = "tab";
-          new_instance_open_target_window = "last-focused";
-          fonts = {
-            default_size = lib.mkForce ((builtins.toString self.settings.fontSize) + "pt");
-            hints = lib.mkForce (
-              "normal "
-              + (builtins.toString (builtins.floor (self.settings.fontSize * 0.8)))
-              + "pt default_family"
-            );
-            web = {
-              size = {
-                default = lib.mkForce self.settings.webFontSize;
-                default_fixed = lib.mkForce (builtins.floor (self.settings.webFontSize * 0.9));
-                minimum = 0;
-                minimum_logical = lib.mkForce (builtins.floor (self.settings.webFontSize * 0.6));
+        settings = lib.recursiveUpdate (lib.recursiveUpdate
+          {
+            backend = self.settings.backend;
+            confirm_quit =
+              if self.settings.askOnQuit then
+                [
+                  "always"
+                ]
+              else
+                [ "downloads" ];
+            new_instance_open_target = "tab";
+            new_instance_open_target_window = "last-focused";
+            fonts = {
+              default_size = lib.mkForce ((builtins.toString self.settings.fontSize) + "pt");
+              hints = lib.mkForce (
+                "normal "
+                + (builtins.toString (builtins.floor (self.settings.fontSize * 0.8)))
+                + "pt default_family"
+              );
+              web = {
+                size = {
+                  default = lib.mkForce self.settings.webFontSize;
+                  default_fixed = lib.mkForce (builtins.floor (self.settings.webFontSize * 0.9));
+                  minimum = 0;
+                  minimum_logical = lib.mkForce (builtins.floor (self.settings.webFontSize * 0.6));
+                };
               };
             };
-          };
-          url = {
-            open_base_url = true;
-            default_page = homeUrl;
-            start_pages =
-              (
-                if (self.settings.addHomeToStartPages || self.settings.additionalStartPages == [ ]) then
-                  [ homeUrl ]
-                else
-                  [ ]
-              )
-              ++ self.settings.additionalStartPages;
-          };
-          window = {
-            hide_decoration = isNiriEnabled;
-            transparent = true;
-            title_format = "{audio} {current_title} ({host}) {private}";
-          };
-          colors = {
-            contextmenu = {
-              menu = {
+            url = {
+              open_base_url = true;
+              default_page = homeUrl;
+              start_pages =
+                (
+                  if (self.settings.addHomeToStartPages || self.settings.additionalStartPages == [ ]) then
+                    [ homeUrl ]
+                  else
+                    [ ]
+                )
+                ++ self.settings.additionalStartPages;
+            };
+            window = {
+              hide_decoration = isNiriEnabled;
+              transparent = true;
+              title_format = "{audio} {current_title} ({host}) {private}";
+            };
+            colors = {
+              contextmenu = {
+                menu = {
+                  fg = lib.mkForce "#99ee88";
+                  bg = lib.mkForce "#000000";
+                };
+                selected = {
+                  fg = lib.mkForce "#000000";
+                  bg = lib.mkForce "#ddddff";
+                };
+                disabled = {
+                  fg = lib.mkForce "#dddddd";
+                  bg = lib.mkForce "#444444";
+                };
+              };
+              hints = {
+                bg = lib.mkForce "#000000";
                 fg = lib.mkForce "#99ee88";
-                bg = lib.mkForce "#000000";
+                match = {
+                  fg = lib.mkForce "#ee9988";
+                };
               };
-              selected = {
-                fg = lib.mkForce "#000000";
-                bg = lib.mkForce "#ddddff";
-              };
-              disabled = {
-                fg = lib.mkForce "#dddddd";
-                bg = lib.mkForce "#444444";
-              };
-            };
-            hints = {
-              bg = lib.mkForce "#000000";
-              fg = lib.mkForce "#99ee88";
-              match = {
-                fg = lib.mkForce "#ee9988";
-              };
-            };
-            tabs = {
-              even = {
-                bg = lib.mkForce "#000000";
-                fg = lib.mkForce "#77dd77";
-              };
-              odd = {
-                bg = lib.mkForce "#000000";
-                fg = lib.mkForce "#77dd77";
-              };
-              selected = {
+              tabs = {
                 even = {
                   bg = lib.mkForce "#000000";
-                  fg = lib.mkForce "#ee9988";
+                  fg = lib.mkForce "#77dd77";
                 };
                 odd = {
                   bg = lib.mkForce "#000000";
-                  fg = lib.mkForce "#ee9988";
+                  fg = lib.mkForce "#77dd77";
+                };
+                selected = {
+                  even = {
+                    bg = lib.mkForce "#000000";
+                    fg = lib.mkForce "#ee9988";
+                  };
+                  odd = {
+                    bg = lib.mkForce "#000000";
+                    fg = lib.mkForce "#ee9988";
+                  };
                 };
               };
-            };
-            webpage = {
-              darkmode = {
-                enabled = self.settings.darkMode;
+              webpage = {
+                darkmode = {
+                  enabled = self.settings.darkMode;
+                };
+                preferred_color_scheme = if self.settings.darkMode then "dark" else "auto";
               };
-              preferred_color_scheme = if self.settings.darkMode then "dark" else "auto";
             };
-          };
-          content = {
-            local_content_can_access_remote_urls = true;
-            canvas_reading = true;
-            cache = {
-              maximum_pages = 5;
+            content = {
+              local_content_can_access_remote_urls = true;
+              canvas_reading = true;
+              fullscreen = {
+                window = self.isLinux && isNiriEnabled;
+              };
+              default_encoding = "utf-8";
+              pdfjs = true;
+              autoplay = self.settings.autoplay;
+              blocking = lib.mkIf (self.settings.blockAds && (self.isDarwin || self.isLinux)) {
+                enabled = true;
+                method = if self.isLinux then "both" else "hosts";
+                whitelist = self.settings.whitelistPatterns;
+              };
+              javascript = {
+                clipboard = "access-paste";
+                can_open_tabs_automatically = false;
+              };
+              geolocation = "ask";
+              notifications = {
+                enabled = true;
+                presenter = if self.isLinux then "auto" else "messages";
+              };
+              media = {
+                audio_capture = "ask";
+                audio_video_capture = "ask";
+                video_capture = "ask";
+              };
+              cookies = {
+                accept = "all";
+              };
+              headers = {
+                accept_language = "${self.settings.locale},${builtins.head (lib.strings.splitString "-" self.settings.locale)};q=0.9";
+                do_not_track = true;
+                referer = "same-domain";
+                user_agent = if self.settings.spoofUserAgent then spoofedUserAgent else userAgent;
+              };
+              tls = {
+                certificate_errors = "ask-block-thirdparty";
+              };
+              webgl = true;
+              dns_prefetch = false;
             };
-            fullscreen = {
-              window = self.isLinux && isNiriEnabled;
+            downloads = {
+              position = "bottom";
+              location = {
+                directory = config.xdg.userDirs.download;
+                prompt = false;
+                remember = false;
+              };
             };
-
-            default_encoding = "utf-8";
-            pdfjs = true;
-            autoplay = self.settings.autoplay;
-            blocking = lib.mkIf (self.settings.blockAds && (self.isDarwin || self.isLinux)) {
-              enabled = true;
-              method = if self.isLinux then "both" else "hosts";
-              whitelist = self.settings.whitelistPatterns;
+            hints = {
+              uppercase = true;
             };
-            javascript = {
-              clipboard = "access-paste";
-              can_open_tabs_automatically = false;
+            tabs = {
+              show = "multiple";
+              last_close = "default-page";
+              mode_on_change = "restore";
             };
-            geolocation = "ask";
-            notifications = {
-              enabled = true;
-              presenter = if self.isLinux then "auto" else "messages";
+            messages = {
+              timeout = 0;
             };
-            media = {
-              audio_capture = "ask";
-              audio_video_capture = "ask";
-              video_capture = "ask";
+            scrolling = {
+              smooth = self.settings.smoothScrollingEnabled;
+              bar = "when-searching";
             };
-            cookies = {
-              accept = "all";
+            completion = {
+              use_best_match = true;
+              quick = true;
+              show = "always";
+              delay = 0;
+              min_chars = 1;
             };
-            headers = {
-              accept_language = "${self.settings.locale},${builtins.head (lib.strings.splitString "-" self.settings.locale)};q=0.9";
-              do_not_track = true;
-              referer = "same-domain";
-              user_agent = if self.settings.spoofUserAgent then spoofedUserAgent else userAgent;
+            auto_save = {
+              session = true;
             };
-            tls = {
-              certificate_errors = "ask-block-thirdparty";
+            spellcheck = {
+              languages = self.settings.dictLanguages;
             };
-            webgl = true;
-            dns_prefetch = false;
-          };
-          downloads = {
-            position = "bottom";
-            location = {
-              directory = config.xdg.userDirs.download;
-              prompt = false;
-              remember = false;
+            editor = {
+              command = self.settings.editor ++ [
+                "{file}"
+              ];
             };
-          };
-          hints = {
-            uppercase = true;
-          };
-          tabs = {
-            show = "multiple";
-            last_close = "default-page";
-            mode_on_change = "restore";
-          };
-          messages = {
-            timeout = 0;
-          };
-          scrolling = {
-            smooth = self.settings.smoothScrollingEnabled;
-            bar = "when-searching";
-          };
-          completion = {
-            use_best_match = true;
-            quick = true;
-            show = "always";
-            delay = 0;
-            min_chars = 1;
-          };
-          auto_save = {
-            session = true;
-          };
-          spellcheck = {
-            languages = self.settings.dictLanguages;
-          };
-          editor = {
-            command = self.settings.editor ++ [
-              "{file}"
-            ];
-          };
-          fileselect = {
-            folder.command = self.settings.fileManager ++ [
-              "{}"
-            ];
-            multiple_files.command = self.settings.fileManager ++ [
-              "{}"
-            ];
-            single_file.command = self.settings.fileManager ++ [
-              "{}"
-            ];
-          };
-          qt = {
-            force_software_rendering =
-              if self.isLinux then
-                if (self.linux.isModuleEnabled "graphics.nvidia-setup") then
-                  self.settings.linuxRenderingNvidia
+            fileselect = {
+              folder.command = self.settings.fileManager ++ [
+                "{}"
+              ];
+              multiple_files.command = self.settings.fileManager ++ [
+                "{}"
+              ];
+              single_file.command = self.settings.fileManager ++ [
+                "{}"
+              ];
+            };
+            qt = {
+              force_software_rendering =
+                if self.isLinux then
+                  if (self.linux.isModuleEnabled "graphics.nvidia-setup") then
+                    self.settings.linuxRenderingNvidia
+                  else
+                    self.settings.linuxRenderingGeneric
                 else
-                  self.settings.linuxRenderingGeneric
-              else
-                self.settings.darwinRendering;
-          };
-        }
-        // self.settings.customSettings;
+                  self.settings.darwinRendering;
+            };
+          }
+          (
+            if self.settings.backend == "webkit" then
+              {
+                content = {
+                  cache = {
+                    maximum_pages = 5;
+                  };
+                };
+              }
+            else if self.settings.backend == "webengine" then
+              { }
+            else
+              { }
+          )
+        ) self.settings.customSettings;
 
         searchEngines =
           let
