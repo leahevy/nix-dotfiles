@@ -893,26 +893,6 @@ args@{
               hotkey-overlay.title = "Windows:Size right";
             };
 
-            "Mod+Ctrl+Left" = {
-              action = switch-preset-column-width-back;
-              hotkey-overlay.title = "Windows:Size left";
-            };
-
-            "Mod+Ctrl+Down" = {
-              action = switch-preset-window-height-back;
-              hotkey-overlay.title = "Windows:Size down";
-            };
-
-            "Mod+Ctrl+Up" = {
-              action = switch-preset-window-height;
-              hotkey-overlay.title = "Windows:Size up";
-            };
-
-            "Mod+Ctrl+Right" = {
-              action = switch-preset-column-width;
-              hotkey-overlay.title = "Windows:Size right";
-            };
-
             "Mod+R" = {
               action = reset-window-height;
               hotkey-overlay.title = "Windows:Reset height";
