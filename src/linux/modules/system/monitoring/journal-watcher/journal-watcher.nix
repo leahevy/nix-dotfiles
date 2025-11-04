@@ -70,6 +70,9 @@ args@{
       "buffer_io_error: [0-9]+ callbacks suppressed"
       "hrtimer: interrupt took [0-9]+ ns"
       "Failed to activate with specified passphrase\\. \\(Passphrase incorrect\\?\\)"
+      "File /var/log/journal/.* corrupted or uncleanly shut down, renaming and replacing"
+      "Failed to read journal file .* for rotation.*Device or resource busy"
+      "usb .*device descriptor read/[0-9]+, error -[0-9]+"
     ];
     desktopStringsToIgnore = [
       "qt\\.multimedia\\.symbolsresolver: Couldn't.*pipewire"
