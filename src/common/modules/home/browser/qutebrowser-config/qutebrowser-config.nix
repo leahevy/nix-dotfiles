@@ -104,6 +104,7 @@ args@{
         "th" = "back -t";
         "wh" = "back -w";
         "L" = "forward";
+        "C" = "clear-messages";
         "<Forward>" = "forward";
         "tl" = "forward -t";
         "wl" = "forward -w";
@@ -679,7 +680,7 @@ args@{
             mode_on_change = "restore";
           };
           messages = {
-            timeout = 1500;
+            timeout = 0;
           };
           scrolling = {
             smooth = self.settings.smoothScrollingEnabled;

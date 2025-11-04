@@ -51,6 +51,7 @@ args@{
                   'q': 'close',
                   'r': 'reload',
                   'R': 'reload -f',
+                  'C': 'clear-messages',
                   'f': 'hint',
                   'F': 'hint all tab',
                   'j': 'scroll down',
