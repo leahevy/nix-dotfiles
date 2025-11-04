@@ -267,10 +267,10 @@ args@{
 
         preHook = ''
           ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped /tmp/nx-backup-completed
-          ${pkgs.coreutils}/bin/echo "Waiting 2 minutes for system readiness..."
-          ${pkgs.coreutils}/bin/sleep 120
           ${checkDailyBackupCompleteScript}
           check_daily_backup_complete
+          ${pkgs.coreutils}/bin/echo "Waiting 2 minutes for system readiness..."
+          ${pkgs.coreutils}/bin/sleep 120
           ${checkAutoUpgradeRunningScript}
           check_auto_upgrade_running
           ${networkWaitScript}
