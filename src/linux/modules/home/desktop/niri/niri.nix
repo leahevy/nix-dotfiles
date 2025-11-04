@@ -510,6 +510,14 @@ args@{
         '';
       };
 
+      home.file.".local/bin/nop" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          exit 0
+        '';
+      };
+
       systemd.user.services = {
         waybar = {
           Unit = {
@@ -721,433 +729,536 @@ args@{
 
           workspaces = generateWorkspaces mainDisplay secondaryDisplay;
 
-          binds = with config.lib.niri.actions; {
-
-            "Mod+Return" = {
-              action = spawn-sh self.user.settings.terminal;
-              hotkey-overlay.title = "Apps:Terminal";
-            };
-
-            "Mod+Shift+Return" = {
-              action = spawn-sh "${self.user.settings.terminal} -e tx";
-              hotkey-overlay.title = "Apps:Tmux Session";
-            };
-
-            "Mod+Space" = {
-              action = spawn-sh "fuzzel";
-              hotkey-overlay.title = "Apps:App launcher";
-            };
-
-            "Mod+Shift+Space" = {
-              action = spawn-sh "niri-window-switcher";
-              hotkey-overlay.title = "Apps:Window switcher";
-            };
-
-            "Mod+Q" = {
-              action = close-window;
-              hotkey-overlay.title = "Windows:Close window";
-            };
-
-            "Mod+H" = {
-              action = focus-column-left;
-              hotkey-overlay.title = "Focus:Focus left";
-            };
-
-            "Mod+J" = {
-              action = focus-window-down;
-              hotkey-overlay.title = "Focus:Focus down";
-            };
-
-            "Mod+K" = {
-              action = focus-window-up;
-              hotkey-overlay.title = "Focus:Focus up";
-            };
-
-            "Mod+L" = {
-              action = focus-column-right;
-              hotkey-overlay.title = "Focus:Focus right";
-            };
-
-            "Mod+Home" = {
-              action = focus-column-first;
-              hotkey-overlay.title = "Focus:Focus first";
-            };
-
-            "Mod+End" = {
-              action = focus-column-last;
-              hotkey-overlay.title = "Focus:Focus last";
-            };
-
-            "Mod+Page_Up" = {
-              action = focus-column-first;
-              hotkey-overlay.title = "Focus:Focus first";
-            };
-
-            "Mod+Page_Down" = {
-              action = focus-column-last;
-              hotkey-overlay.title = "Focus:Focus last";
-            };
-
-            "Print" = {
-              action = screenshot { show-pointer = false; };
-              hotkey-overlay.title = "Screenshot:Screenshot";
-            };
-
-            "Shift+Print" = {
-              action = screenshot-window { write-to-disk = true; };
-              hotkey-overlay.title = "Screenshot:Window screenshot";
-            };
-
-            "Mod+P" = {
-              action = screenshot { show-pointer = false; };
-              hotkey-overlay.title = "Screenshot:Screenshot";
-            };
-
-            "Mod+Shift+P" = {
-              action = screenshot-window { write-to-disk = true; };
-              hotkey-overlay.title = "Screenshot:Window screenshot";
-            };
-
-            "Mod+Ctrl+P" = {
-              action = spawn-sh "${programsConfig.fileBrowser.openFileCommand} '${screenshotDir}'";
-              hotkey-overlay.title = "Screenshot:Open screenshots folder";
-            };
-
-            "Mod+O" = {
-              action = toggle-overview;
-              hotkey-overlay.title = "Windows:Toggle overview";
-            };
-
-            "Mod+Y" = {
-              action = spawn-sh "systemctl --user kill -s SIGUSR1 waybar.service";
-              hotkey-overlay.title = "UI:Toggle waybar visibility";
-            };
-
-            "Mod+Shift+Y" = {
-              action = spawn-sh "systemctl --user restart waybar.service";
-              hotkey-overlay.title = "UI:Restart waybar";
-            };
-
-            "Mod+Tab" = {
-              action = focus-workspace-previous;
-              hotkey-overlay.title = "Workspace:Toggle workspaces";
-            };
-
-            "Mod+Shift+H" = {
-              action = consume-or-expel-window-left;
-              hotkey-overlay.title = "Windows:Move window left";
-            };
-
-            "Mod+Shift+J" = {
-              action = move-window-down;
-              hotkey-overlay.title = "Windows:Move window down";
-            };
-
-            "Mod+Shift+K" = {
-              action = move-window-up;
-              hotkey-overlay.title = "Windows:Move window up";
-            };
-
-            "Mod+Shift+L" = {
-              action = consume-or-expel-window-right;
-              hotkey-overlay.title = "Windows:Move window right";
-            };
-
-            "Mod+Shift+Left" = {
-              action = spawn-sh "niri-workspace-action --change-wallpaper move-column-to-monitor-left";
-              hotkey-overlay.title = "Windows:Column to monitor left";
-            };
-
-            "Mod+Shift+Down" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace-down";
-              hotkey-overlay.title = "Windows:Move column down";
-            };
-
-            "Mod+Shift+Up" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace-up";
-              hotkey-overlay.title = "Windows:Move column up";
-            };
-
-            "Mod+Shift+Right" = {
-              action = spawn-sh "niri-workspace-action --change-wallpaper move-column-to-monitor-right";
-              hotkey-overlay.title = "Windows:Column to monitor right";
-            };
-
-            "Mod+Ctrl+H" = {
-              action = switch-preset-column-width-back;
-              hotkey-overlay.title = "Windows:Size left";
-            };
-
-            "Mod+Ctrl+J" = {
-              action = switch-preset-window-height-back;
-              hotkey-overlay.title = "Windows:Size down";
-            };
-
-            "Mod+Ctrl+K" = {
-              action = switch-preset-window-height;
-              hotkey-overlay.title = "Windows:Size up";
-            };
-
-            "Mod+Ctrl+L" = {
-              action = switch-preset-column-width;
-              hotkey-overlay.title = "Windows:Size right";
-            };
-
-            "Mod+R" = {
-              action = reset-window-height;
-              hotkey-overlay.title = "Windows:Reset height";
-            };
-
-            "Mod+Left" = {
-              action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-left";
-              hotkey-overlay.title = "Monitor:Monitor left";
-            };
-
-            "Mod+Right" = {
-              action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-right";
-              hotkey-overlay.title = "Monitor:Monitor right";
-            };
-
-            "Mod+D" = {
-              action = spawn-sh "niri-workspace-action focus-workspace-down";
-              hotkey-overlay.title = "Workspace:Workspace down";
-            };
-
-            "Mod+U" = {
-              action = spawn-sh "niri-workspace-action focus-workspace-up";
-              hotkey-overlay.title = "Workspace:Workspace up";
-            };
-
-            "Mod+Down" = {
-              action = spawn-sh "niri-workspace-action focus-workspace-down";
-              hotkey-overlay.title = "Workspace:Workspace down";
-            };
-
-            "Mod+Up" = {
-              action = spawn-sh "niri-workspace-action focus-workspace-up";
-              hotkey-overlay.title = "Workspace:Workspace up";
-            };
-
-            "Mod+WheelScrollDown" = {
-              action = focus-column-left;
-              cooldown-ms = 150;
-            };
-
-            "Mod+WheelScrollUp" = {
-              action = focus-column-right;
-              cooldown-ms = 150;
-            };
-
-            "Mod+Shift+WheelScrollDown" = {
-              action = spawn-sh "niri-workspace-action focus-workspace-down";
-              cooldown-ms = 150;
-            };
-
-            "Mod+Shift+WheelScrollUp" = {
-              action = spawn-sh "niri-workspace-action focus-workspace-up";
-              cooldown-ms = 150;
-            };
-
-            "Mod+1" = {
-              action = spawn-sh "niri-workspace-action focus-workspace 1";
-              hotkey-overlay.title = "Workspace:Workspace 1";
-            };
-
-            "Mod+2" = {
-              action = spawn-sh "niri-workspace-action focus-workspace 2";
-              hotkey-overlay.title = "Workspace:Workspace 2";
-            };
-
-            "Mod+3" = {
-              action = spawn-sh "niri-workspace-action focus-workspace 3";
-              hotkey-overlay.title = "Workspace:Workspace 3";
-            };
-
-            "Mod+4" = {
-              action = spawn-sh "niri-workspace-action focus-workspace 4";
-              hotkey-overlay.title = "Workspace:Workspace 4";
-            };
-
-            "Mod+5" = {
-              action = spawn-sh "niri-workspace-action focus-workspace 5";
-              hotkey-overlay.title = "Workspace:Workspace 5";
-            };
-
-            "Mod+6" = {
-              action = spawn-sh "niri-workspace-action focus-workspace 6";
-              hotkey-overlay.title = "Workspace:Workspace 6";
-            };
-
-            "Mod+7" = {
-              action = spawn-sh "niri-workspace-action focus-workspace 7";
-              hotkey-overlay.title = "Workspace:Workspace 7";
-            };
-
-            "Mod+8" = {
-              action = spawn-sh "niri-workspace-action focus-workspace 8";
-              hotkey-overlay.title = "Workspace:Workspace 8";
-            };
-
-            "Mod+9" = {
-              action = spawn-sh "niri-workspace-action focus-workspace 9";
-              hotkey-overlay.title = "Workspace:Workspace 9";
-            };
-
-            "Mod+0" = {
-              action = spawn-sh "niri-workspace-action focus-workspace 10";
-              hotkey-overlay.title = "Workspace:Workspace 10";
-            };
-
-            "Mod+S" = {
-              action = spawn-sh "niri-workspace-action focus-workspace scratch";
-              hotkey-overlay.title = "Workspace:Scratchpad";
-            };
-
-            "Mod+Shift+D" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace-down";
-              hotkey-overlay.title = "Windows:Move column down";
-            };
-
-            "Mod+Shift+U" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace-up";
-              hotkey-overlay.title = "Windows:Move column up";
-            };
-
-            "Mod+Shift+1" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace 1";
-              hotkey-overlay.title = "Windows:Move to workspace 1";
-            };
-
-            "Mod+Shift+2" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace 2";
-              hotkey-overlay.title = "Windows:Move to workspace 2";
-            };
-
-            "Mod+Shift+3" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace 3";
-              hotkey-overlay.title = "Windows:Move to workspace 3";
-            };
-
-            "Mod+Shift+4" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace 4";
-              hotkey-overlay.title = "Windows:Move to workspace 4";
-            };
-
-            "Mod+Shift+5" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace 5";
-              hotkey-overlay.title = "Windows:Move to workspace 5";
-            };
-
-            "Mod+Shift+6" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace 6";
-              hotkey-overlay.title = "Windows:Move to workspace 6";
-            };
-
-            "Mod+Shift+7" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace 7";
-              hotkey-overlay.title = "Windows:Move to workspace 7";
-            };
-
-            "Mod+Shift+8" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace 8";
-              hotkey-overlay.title = "Windows:Move to workspace 8";
-            };
-
-            "Mod+Shift+9" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace 9";
-              hotkey-overlay.title = "Windows:Move to workspace 9";
-            };
-
-            "Mod+Shift+0" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace 10";
-              hotkey-overlay.title = "Windows:Move to workspace 10";
-            };
-
-            "Mod+Shift+S" = {
-              action = spawn-sh "niri-workspace-action move-column-to-workspace scratch";
-              hotkey-overlay.title = "Windows:Move to scratchpad";
-            };
-
-            "Mod+F" = {
-              action = maximize-column;
-              hotkey-overlay.title = "Windows:Maximize column";
-            };
-
-            "Mod+Shift+F" = {
-              action = fullscreen-window;
-              hotkey-overlay.title = "Windows:Fullscreen";
-            };
-
-            "Mod+G" = {
-              action = center-column;
-              hotkey-overlay.title = "Windows:Center column";
-            };
-
-            "Mod+Shift+Backspace" = {
-              action = toggle-window-floating;
-              hotkey-overlay.title = "Windows:Toggle floating for window";
-            };
-
-            "Mod+Backspace" = {
-              action = switch-focus-between-floating-and-tiling;
-              hotkey-overlay.title = "Windows:Switch float/tile view";
-            };
-
-            "Mod+Ctrl+Q" = {
-              action = spawn "loginctl" "lock-session";
-              hotkey-overlay.title = "System:Lock screen";
-            };
-
-            "Ctrl+Alt+Mod+Backspace" = {
-              action = spawn-sh "power-menu";
-              hotkey-overlay.title = "System:Power menu";
-            };
-
-            "Ctrl+Mod+Alt+R" = lib.mkIf self.settings.addRestartShortcut {
-              action = spawn-sh "restart-niri";
-              hotkey-overlay.title = "System:Restart niri";
-            };
-
-            "XF86AudioRaiseVolume" = {
-              action = spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+";
-              hotkey-overlay.title = "Audio:Volume up";
-            };
-
-            "XF86AudioLowerVolume" = {
-              action = spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-";
-              hotkey-overlay.title = "Audio:Volume down";
-            };
-
-            "XF86AudioMute" = {
-              action = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
-              hotkey-overlay.title = "Audio:Mute toggle";
-            };
-
-            "Mod+Equal" = {
-              action = spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+";
-              hotkey-overlay.title = "Audio:Volume up";
-            };
-
-            "Mod+Minus" = {
-              action = spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-";
-              hotkey-overlay.title = "Audio:Volume down";
-            };
-
-            "Mod+Shift+Minus" = {
-              action = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
-              hotkey-overlay.title = "Audio:Mute toggle";
-            };
-
-            "Mod+Shift+Equal" = {
-              action = spawn "pavucontrol";
-              hotkey-overlay.title = "Audio:Audio control";
-            };
-
-            "Ctrl+Mod+Alt+Return" = {
-              action = spawn-sh "niri-scratchpad --app-id org.nx.scratchpad --all-windows --spawn scratchpad-terminal";
-              hotkey-overlay.title = "Apps:Scratchpad term";
-            };
-          };
+          binds =
+            with config.lib.niri.actions;
+            let
+              basicKeys = [
+                "A"
+                "B"
+                "C"
+                "D"
+                "E"
+                "F"
+                "G"
+                "H"
+                "I"
+                "J"
+                "K"
+                "L"
+                "M"
+                "N"
+                "O"
+                "P"
+                "Q"
+                "R"
+                "S"
+                "T"
+                "U"
+                "V"
+                "W"
+                "X"
+                "Y"
+                "Z"
+                "1"
+                "2"
+                "3"
+                "4"
+                "5"
+                "6"
+                "7"
+                "8"
+                "9"
+                "0"
+                "F1"
+                "F2"
+                "F3"
+                "F4"
+                "F5"
+                "F6"
+                "F7"
+                "F8"
+                "F9"
+                "F10"
+                "F11"
+                "F12"
+                "Escape"
+                "Tab"
+                "Space"
+                "Return"
+                "Backspace"
+                "Delete"
+                "Insert"
+                "Home"
+                "End"
+                "Page_Up"
+                "Page_Down"
+                "Left"
+                "Right"
+                "Up"
+                "Down"
+                "Minus"
+                "Equal"
+                "Backslash"
+                "Grave"
+                "Semicolon"
+                "Apostrophe"
+                "Comma"
+                "Period"
+                "Slash"
+                "BracketLeft"
+                "BracketRight"
+              ];
+
+              modifierCombinations = [
+                "Mod+"
+                "Mod+Shift+"
+                "Mod+Ctrl+"
+                "Mod+Alt+"
+                "Mod+Shift+Ctrl+"
+                "Mod+Shift+Alt+"
+                "Mod+Ctrl+Alt+"
+                "Mod+Shift+Ctrl+Alt+"
+              ];
+
+              nopBindings = lib.listToAttrs (
+                lib.flatten (
+                  map (
+                    key:
+                    map (
+                      modCombo: lib.nameValuePair "${modCombo}${key}" (lib.mkDefault { action = spawn-sh "nop"; })
+                    ) modifierCombinations
+                  ) basicKeys
+                )
+              );
+
+              actualBindings = {
+                "Mod+Return" = {
+                  action = spawn-sh self.user.settings.terminal;
+                  hotkey-overlay.title = "Apps:Terminal";
+                };
+
+                "Mod+Shift+Return" = {
+                  action = spawn-sh "${self.user.settings.terminal} -e tx";
+                  hotkey-overlay.title = "Apps:Tmux Session";
+                };
+
+                "Mod+Space" = {
+                  action = spawn-sh "fuzzel";
+                  hotkey-overlay.title = "Apps:App launcher";
+                };
+
+                "Mod+Shift+Space" = {
+                  action = spawn-sh "niri-window-switcher";
+                  hotkey-overlay.title = "Apps:Window switcher";
+                };
+
+                "Mod+Q" = {
+                  action = close-window;
+                  hotkey-overlay.title = "Windows:Close window";
+                };
+
+                "Mod+H" = {
+                  action = focus-column-left;
+                  hotkey-overlay.title = "Focus:Focus left";
+                };
+
+                "Mod+J" = {
+                  action = focus-window-down;
+                  hotkey-overlay.title = "Focus:Focus down";
+                };
+
+                "Mod+K" = {
+                  action = focus-window-up;
+                  hotkey-overlay.title = "Focus:Focus up";
+                };
+
+                "Mod+L" = {
+                  action = focus-column-right;
+                  hotkey-overlay.title = "Focus:Focus right";
+                };
+
+                "Mod+Home" = {
+                  action = focus-column-first;
+                  hotkey-overlay.title = "Focus:Focus first";
+                };
+
+                "Mod+End" = {
+                  action = focus-column-last;
+                  hotkey-overlay.title = "Focus:Focus last";
+                };
+
+                "Mod+Page_Up" = {
+                  action = focus-column-first;
+                  hotkey-overlay.title = "Focus:Focus first";
+                };
+
+                "Mod+Page_Down" = {
+                  action = focus-column-last;
+                  hotkey-overlay.title = "Focus:Focus last";
+                };
+
+                "Print" = {
+                  action = screenshot { show-pointer = false; };
+                  hotkey-overlay.title = "Screenshot:Screenshot";
+                };
+
+                "Shift+Print" = {
+                  action = screenshot-window { write-to-disk = true; };
+                  hotkey-overlay.title = "Screenshot:Window screenshot";
+                };
+
+                "Mod+P" = {
+                  action = screenshot { show-pointer = false; };
+                  hotkey-overlay.title = "Screenshot:Screenshot";
+                };
+
+                "Mod+Shift+P" = {
+                  action = screenshot-window { write-to-disk = true; };
+                  hotkey-overlay.title = "Screenshot:Window screenshot";
+                };
+
+                "Mod+Ctrl+P" = {
+                  action = spawn-sh "${programsConfig.fileBrowser.openFileCommand} '${screenshotDir}'";
+                  hotkey-overlay.title = "Screenshot:Open screenshots folder";
+                };
+
+                "Mod+O" = {
+                  action = toggle-overview;
+                  hotkey-overlay.title = "Windows:Toggle overview";
+                };
+
+                "Mod+Y" = {
+                  action = spawn-sh "systemctl --user kill -s SIGUSR1 waybar.service";
+                  hotkey-overlay.title = "UI:Toggle waybar visibility";
+                };
+
+                "Mod+Shift+Y" = {
+                  action = spawn-sh "systemctl --user restart waybar.service";
+                  hotkey-overlay.title = "UI:Restart waybar";
+                };
+
+                "Mod+Tab" = {
+                  action = focus-workspace-previous;
+                  hotkey-overlay.title = "Workspace:Toggle workspaces";
+                };
+
+                "Mod+Shift+H" = {
+                  action = consume-or-expel-window-left;
+                  hotkey-overlay.title = "Windows:Move window left";
+                };
+
+                "Mod+Shift+J" = {
+                  action = move-window-down;
+                  hotkey-overlay.title = "Windows:Move window down";
+                };
+
+                "Mod+Shift+K" = {
+                  action = move-window-up;
+                  hotkey-overlay.title = "Windows:Move window up";
+                };
+
+                "Mod+Shift+L" = {
+                  action = consume-or-expel-window-right;
+                  hotkey-overlay.title = "Windows:Move window right";
+                };
+
+                "Mod+Shift+Left" = {
+                  action = spawn-sh "niri-workspace-action --change-wallpaper move-column-to-monitor-left";
+                  hotkey-overlay.title = "Windows:Column to monitor left";
+                };
+
+                "Mod+Shift+Down" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace-down";
+                  hotkey-overlay.title = "Windows:Move column down";
+                };
+
+                "Mod+Shift+Up" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace-up";
+                  hotkey-overlay.title = "Windows:Move column up";
+                };
+
+                "Mod+Shift+Right" = {
+                  action = spawn-sh "niri-workspace-action --change-wallpaper move-column-to-monitor-right";
+                  hotkey-overlay.title = "Windows:Column to monitor right";
+                };
+
+                "Mod+Ctrl+H" = {
+                  action = switch-preset-column-width-back;
+                  hotkey-overlay.title = "Windows:Size left";
+                };
+
+                "Mod+Ctrl+J" = {
+                  action = switch-preset-window-height-back;
+                  hotkey-overlay.title = "Windows:Size down";
+                };
+
+                "Mod+Ctrl+K" = {
+                  action = switch-preset-window-height;
+                  hotkey-overlay.title = "Windows:Size up";
+                };
+
+                "Mod+Ctrl+L" = {
+                  action = switch-preset-column-width;
+                  hotkey-overlay.title = "Windows:Size right";
+                };
+
+                "Mod+R" = {
+                  action = reset-window-height;
+                  hotkey-overlay.title = "Windows:Reset height";
+                };
+
+                "Mod+Left" = {
+                  action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-left";
+                  hotkey-overlay.title = "Monitor:Monitor left";
+                };
+
+                "Mod+Right" = {
+                  action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-right";
+                  hotkey-overlay.title = "Monitor:Monitor right";
+                };
+
+                "Mod+D" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace-down";
+                  hotkey-overlay.title = "Workspace:Workspace down";
+                };
+
+                "Mod+U" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace-up";
+                  hotkey-overlay.title = "Workspace:Workspace up";
+                };
+
+                "Mod+Down" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace-down";
+                  hotkey-overlay.title = "Workspace:Workspace down";
+                };
+
+                "Mod+Up" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace-up";
+                  hotkey-overlay.title = "Workspace:Workspace up";
+                };
+
+                "Mod+WheelScrollDown" = {
+                  action = focus-column-left;
+                  cooldown-ms = 150;
+                };
+
+                "Mod+WheelScrollUp" = {
+                  action = focus-column-right;
+                  cooldown-ms = 150;
+                };
+
+                "Mod+Shift+WheelScrollDown" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace-down";
+                  cooldown-ms = 150;
+                };
+
+                "Mod+Shift+WheelScrollUp" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace-up";
+                  cooldown-ms = 150;
+                };
+
+                "Mod+1" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace 1";
+                  hotkey-overlay.title = "Workspace:Workspace 1";
+                };
+
+                "Mod+2" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace 2";
+                  hotkey-overlay.title = "Workspace:Workspace 2";
+                };
+
+                "Mod+3" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace 3";
+                  hotkey-overlay.title = "Workspace:Workspace 3";
+                };
+
+                "Mod+4" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace 4";
+                  hotkey-overlay.title = "Workspace:Workspace 4";
+                };
+
+                "Mod+5" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace 5";
+                  hotkey-overlay.title = "Workspace:Workspace 5";
+                };
+
+                "Mod+6" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace 6";
+                  hotkey-overlay.title = "Workspace:Workspace 6";
+                };
+
+                "Mod+7" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace 7";
+                  hotkey-overlay.title = "Workspace:Workspace 7";
+                };
+
+                "Mod+8" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace 8";
+                  hotkey-overlay.title = "Workspace:Workspace 8";
+                };
+
+                "Mod+9" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace 9";
+                  hotkey-overlay.title = "Workspace:Workspace 9";
+                };
+
+                "Mod+0" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace 10";
+                  hotkey-overlay.title = "Workspace:Workspace 10";
+                };
+
+                "Mod+S" = {
+                  action = spawn-sh "niri-workspace-action focus-workspace scratch";
+                  hotkey-overlay.title = "Workspace:Scratchpad";
+                };
+
+                "Mod+Shift+D" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace-down";
+                  hotkey-overlay.title = "Windows:Move column down";
+                };
+
+                "Mod+Shift+U" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace-up";
+                  hotkey-overlay.title = "Windows:Move column up";
+                };
+
+                "Mod+Shift+1" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace 1";
+                  hotkey-overlay.title = "Windows:Move to workspace 1";
+                };
+
+                "Mod+Shift+2" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace 2";
+                  hotkey-overlay.title = "Windows:Move to workspace 2";
+                };
+
+                "Mod+Shift+3" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace 3";
+                  hotkey-overlay.title = "Windows:Move to workspace 3";
+                };
+
+                "Mod+Shift+4" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace 4";
+                  hotkey-overlay.title = "Windows:Move to workspace 4";
+                };
+
+                "Mod+Shift+5" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace 5";
+                  hotkey-overlay.title = "Windows:Move to workspace 5";
+                };
+
+                "Mod+Shift+6" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace 6";
+                  hotkey-overlay.title = "Windows:Move to workspace 6";
+                };
+
+                "Mod+Shift+7" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace 7";
+                  hotkey-overlay.title = "Windows:Move to workspace 7";
+                };
+
+                "Mod+Shift+8" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace 8";
+                  hotkey-overlay.title = "Windows:Move to workspace 8";
+                };
+
+                "Mod+Shift+9" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace 9";
+                  hotkey-overlay.title = "Windows:Move to workspace 9";
+                };
+
+                "Mod+Shift+0" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace 10";
+                  hotkey-overlay.title = "Windows:Move to workspace 10";
+                };
+
+                "Mod+Shift+S" = {
+                  action = spawn-sh "niri-workspace-action move-column-to-workspace scratch";
+                  hotkey-overlay.title = "Windows:Move to scratchpad";
+                };
+
+                "Mod+F" = {
+                  action = maximize-column;
+                  hotkey-overlay.title = "Windows:Maximize column";
+                };
+
+                "Mod+Shift+F" = {
+                  action = fullscreen-window;
+                  hotkey-overlay.title = "Windows:Fullscreen";
+                };
+
+                "Mod+G" = {
+                  action = center-column;
+                  hotkey-overlay.title = "Windows:Center column";
+                };
+
+                "Mod+Shift+Backspace" = {
+                  action = toggle-window-floating;
+                  hotkey-overlay.title = "Windows:Toggle floating for window";
+                };
+
+                "Mod+Backspace" = {
+                  action = switch-focus-between-floating-and-tiling;
+                  hotkey-overlay.title = "Windows:Switch float/tile view";
+                };
+
+                "Mod+Ctrl+Q" = {
+                  action = spawn "loginctl" "lock-session";
+                  hotkey-overlay.title = "System:Lock screen";
+                };
+
+                "Mod+Ctrl+Alt+Backspace" = {
+                  action = spawn-sh "power-menu";
+                  hotkey-overlay.title = "System:Power menu";
+                };
+
+                "Mod+Ctrl+Alt+R" = lib.mkIf self.settings.addRestartShortcut {
+                  action = spawn-sh "restart-niri";
+                  hotkey-overlay.title = "System:Restart niri";
+                };
+
+                "XF86AudioRaiseVolume" = {
+                  action = spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+";
+                  hotkey-overlay.title = "Audio:Volume up";
+                };
+
+                "XF86AudioLowerVolume" = {
+                  action = spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-";
+                  hotkey-overlay.title = "Audio:Volume down";
+                };
+
+                "XF86AudioMute" = {
+                  action = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
+                  hotkey-overlay.title = "Audio:Mute toggle";
+                };
+
+                "Mod+Equal" = {
+                  action = spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+";
+                  hotkey-overlay.title = "Audio:Volume up";
+                };
+
+                "Mod+Minus" = {
+                  action = spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-";
+                  hotkey-overlay.title = "Audio:Volume down";
+                };
+
+                "Mod+Shift+Minus" = {
+                  action = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
+                  hotkey-overlay.title = "Audio:Mute toggle";
+                };
+
+                "Mod+Shift+Equal" = {
+                  action = spawn "pavucontrol";
+                  hotkey-overlay.title = "Audio:Audio control";
+                };
+
+                "Mod+Ctrl+Alt+Return" = {
+                  action = spawn-sh "niri-scratchpad --app-id org.nx.scratchpad --all-windows --spawn scratchpad-terminal";
+                  hotkey-overlay.title = "Apps:Scratchpad term";
+                };
+              };
+            in
+            nopBindings // actualBindings;
 
           animations = {
             slowdown = 2.5;

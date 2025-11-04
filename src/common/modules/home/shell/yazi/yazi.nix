@@ -83,7 +83,7 @@ args@{
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {
-            "Ctrl+Mod+Alt+M" = {
+            "Mod+Ctrl+Alt+M" = {
               action = spawn-sh "niri-scratchpad --app-id org.nx.yazi --all-windows --spawn nx-yazi-term";
               hotkey-overlay.title = "Apps:File manager";
             };

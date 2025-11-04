@@ -361,7 +361,7 @@ args@{
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {
-            "Ctrl+Mod+Alt+S" = {
+            "Mod+Ctrl+Alt+S" = {
               action = spawn-sh "${self.settings.terminal} -e sh -c 'syncthing-status'";
               hotkey-overlay.title = "System:Syncthing status";
             };

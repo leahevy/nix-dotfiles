@@ -81,7 +81,9 @@ args@{
                 "Unknown";
           }) binds;
 
-          validBinds = builtins.filter (bind: bind.fullTitle != "Unknown") bindsList;
+          validBinds = builtins.filter (
+            bind: bind.fullTitle != "Unknown" && !(lib.hasPrefix "XF86" bind.key)
+          ) bindsList;
 
           parseTitle =
             bind:
@@ -124,7 +126,12 @@ args@{
         let
           mappedBindings = map (bind: {
             inherit (bind) desc;
-            mappedKey = mapBind bind.key;
+            mappedKey =
+              let
+                keyWithoutMod =
+                  if lib.hasPrefix "Mod+" bind.key then lib.removePrefix "Mod+" bind.key else bind.key;
+              in
+              mapBind keyWithoutMod;
           }) bindings;
 
           maxKeyWidth = lib.foldl (

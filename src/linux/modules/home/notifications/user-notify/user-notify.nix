@@ -242,7 +242,7 @@ args@{
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {
-            "Ctrl+Mod+Alt+L" = {
+            "Mod+Ctrl+Alt+L" = {
               action = spawn-sh "${self.settings.terminal} -e sh -c 'nx-user-notify-logs'";
               hotkey-overlay.title = "System:User notification logs";
             };

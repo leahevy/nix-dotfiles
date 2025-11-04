@@ -81,7 +81,7 @@ args@{
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {
-            "Ctrl+Mod+Alt+U" = {
+            "Mod+Ctrl+Alt+U" = {
               action = spawn-sh "niri-scratchpad --app-id org.keepassxc.KeePassXC --all-windows --spawn keepassxc";
               hotkey-overlay.title = "Apps:Password manager";
             };

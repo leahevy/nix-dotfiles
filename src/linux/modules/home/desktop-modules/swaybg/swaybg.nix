@@ -197,7 +197,7 @@ args@{
 
       programs.niri.settings = lib.mkIf (self.isModuleEnabled "desktop.niri") {
         binds = with config.lib.niri.actions; {
-          "Mod+Shift+backslash" = {
+          "Mod+Shift+Backslash" = {
             action = spawn "swaybg-next-wallpaper";
             hotkey-overlay.title = "UI:Next wallpaper";
           };

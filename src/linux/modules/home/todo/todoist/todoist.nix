@@ -34,7 +34,7 @@ args@{
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {
-            "Ctrl+Mod+Alt+Y" = {
+            "Mod+Ctrl+Alt+Y" = {
               action = spawn-sh "niri-scratchpad --app-id Todoist --all-windows --spawn todoist-electron";
               hotkey-overlay.title = "Apps:Todo app";
             };

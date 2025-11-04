@@ -143,7 +143,7 @@ args@{
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {
-            "Ctrl+Mod+Alt+G" = {
+            "Mod+Ctrl+Alt+G" = {
               action = spawn-sh "${self.settings.terminal} -e sh -c 'auto-upgrade-status'";
               hotkey-overlay.title = "System:Auto-upgrade status";
             };

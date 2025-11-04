@@ -287,7 +287,7 @@ args@{
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {
-            "Ctrl+Mod+Alt+B" = {
+            "Mod+Ctrl+Alt+B" = {
               action = spawn-sh "${self.settings.terminal} -e sh -c 'borg-backup-status'";
               hotkey-overlay.title = "System:Backup status";
             };

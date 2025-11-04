@@ -36,7 +36,7 @@ args@{
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {
-            "Ctrl+Mod+Alt+O" = {
+            "Mod+Ctrl+Alt+O" = {
               action = spawn-sh "niri-scratchpad --app-id thunderbird --all-windows --spawn thunderbird";
               hotkey-overlay.title = "Apps:Mails";
             };

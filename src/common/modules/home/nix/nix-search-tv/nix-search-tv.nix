@@ -55,7 +55,7 @@ args@{
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {
-            "Ctrl+Mod+Alt+H" = {
+            "Mod+Ctrl+Alt+H" = {
               action = spawn-sh "niri-scratchpad --app-id org.nx.nix-search-tv --all-windows --spawn nstv-term";
               hotkey-overlay.title = "System:Search Nix Packages";
             };
