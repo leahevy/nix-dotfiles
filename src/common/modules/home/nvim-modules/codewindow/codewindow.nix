@@ -22,7 +22,7 @@ args@{
     useTreesitter = true;
     useGit = false;
     minimapWidth = 15;
-    widthMultiplier = 1;
+    widthMultiplier = 2;
     windowBorder = "single";
     screenBounds = "lines";
     excludeFiletypes = [
@@ -152,7 +152,7 @@ args@{
             vim.defer_fn(function()
               if _G.codewindow_enabled then
                 pcall(vim.treesitter.start)
-                vim.defer_fn(handle_minimap, 100)
+                vim.defer_fn(handle_minimap, 150)
               end
             end, 300)
           end,
