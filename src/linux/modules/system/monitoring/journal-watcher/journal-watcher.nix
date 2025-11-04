@@ -76,6 +76,7 @@ args@{
       "usb.*cannot submit urb.*err = -[0-9]+"
     ];
     desktopStringsToIgnore = [
+      "Failed to associate portal window with parent window"
       "qt\\.multimedia\\.symbolsresolver: Couldn't.*pipewire"
       "qt\\.dbus\\.integration: QDBusConnection: name .* had owner"
       "qt\\.dbus\\.integration: QDBusConnection: couldn't handle call to CreateMonitor"
