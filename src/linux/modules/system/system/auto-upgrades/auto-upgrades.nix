@@ -491,11 +491,11 @@ args@{
           local upper="${self.settings.rebootWindow.upper}"
 
           if [[ "''${lower}" < "''${upper}" ]]; then
-            if [[ "''${current_time}" > "''${lower}" ]] && [[ "''${current_time}" < "''${upper}" ]]; then
+            if ( [[ "''${current_time}" > "''${lower}" ]] || [[ "''${current_time}" == "''${lower}" ]] ) && [[ "''${current_time}" < "''${upper}" ]]; then
               return 0
             fi
           else
-            if [[ "''${current_time}" < "''${upper}" ]] || [[ "''${current_time}" > "''${lower}" ]]; then
+            if [[ "''${current_time}" < "''${upper}" ]] || [[ "''${current_time}" > "''${lower}" ]] || [[ "''${current_time}" == "''${lower}" ]]; then
               return 0
             fi
           fi
