@@ -58,6 +58,8 @@ args@{
                 "Auto-Upgrade (starting)|system-software-install: ${lib.removePrefix "STARTED: " message}"
               else if lib.hasPrefix "SUCCESS:" message then
                 "Auto-Upgrade (completed)|checkmark: ${lib.removePrefix "SUCCESS: " message}"
+              else if lib.hasPrefix "SUCCESS-REBOOT-LATER:" message then
+                "Auto-Upgrade (completed)|checkmark: ${lib.removePrefix "SUCCESS-REBOOT-LATER: " message}"
               else if lib.hasPrefix "FAILURE:" message then
                 "Auto-Upgrade (failed)|dialog-error: ${lib.removePrefix "FAILURE: " message}"
               else if lib.hasPrefix "WARNING:" message then
@@ -517,16 +519,14 @@ args@{
 
         ${checkRebootWindow}
 
-        ${logScript "info" "Checking if reboot is needed"}
+        ${logScript "info" "INFO: Checking if reboot is needed"}
         if [[ "$FORCE_REBOOT" == "true" ]] || check_reboot_needed; then
           ${
             if self.settings.rebootWindow != null then
               ''
                 if check_reboot_window; then
                   if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
-                    ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed and within window but borg backup is running - ${
-                      if self.settings.dryRun then "would create" else "creating"
-                    } marker file"}
+                    ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed and within window but borg backup is running - scheduling reboot in window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper})"}
                     ${
                       if self.settings.dryRun then
                         ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
@@ -549,9 +549,7 @@ args@{
                     }
                   fi
                 else
-                  ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed but outside window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper}) - ${
-                    if self.settings.dryRun then "would create" else "creating"
-                  } marker file"}
+                  ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed and scheduled in window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper})"}
                   ${
                     if self.settings.dryRun then
                       ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
@@ -567,9 +565,7 @@ args@{
             else
               ''
                 if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
-                  ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed but borg backup is running - ${
-                    if self.settings.dryRun then "would create" else "creating"
-                  } marker file"}
+                  ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed but borg backup is running - scheduling reboot in window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper})"}
                   ${
                     if self.settings.dryRun then
                       ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
@@ -605,12 +601,12 @@ args@{
           exit 0
         fi
 
+        ${checkRebootWindow}
+
         if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
           ${logScript "info" "INFO: Borg backup is currently running, skipping reboot iteration"}
           exit 0
         fi
-
-        ${checkRebootWindow}
 
         ${
           if self.settings.dryRun then
@@ -863,11 +859,21 @@ args@{
           User = "root";
         };
 
-        path = with pkgs; [
-          coreutils
-          util-linux
-          config.systemd.package
-        ];
+        path =
+          with pkgs;
+          [
+            coreutils
+            util-linux
+            config.systemd.package
+          ]
+          ++
+            lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
+              [
+                (self.importFileFromOtherModuleSameInput {
+                  inherit args self;
+                  modulePath = "notifications.pushover";
+                }).custom.pushoverSendScript
+              ];
 
         script = delayedRebootScript;
         after = [ "multi-user.target" ];
