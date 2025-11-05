@@ -57,9 +57,23 @@ in
                       mkdir -p $out/bin $out/share/nx
                       cp -r scripts $out/share/nx/
                       cp nx $out/share/nx/
-                      
+
+                      find $out/share/nx/scripts -type f -exec sh -c '
+                        if head -1 "$1" 2>/dev/null | grep -q "^#!/usr/bin/env bash"; then
+                          chmod +w "$1"
+                          sed -i "1s|#!/usr/bin/env bash|#!${pkgs.bash}/bin/bash|" "$1"
+                          chmod -w "$1"
+                        fi
+                      ' _ {} \;
+
+                      if head -1 $out/share/nx/nx 2>/dev/null | grep -q "^#!/usr/bin/env bash"; then
+                        chmod +w $out/share/nx/nx
+                        sed -i "1s|#!/usr/bin/env bash|#!${pkgs.bash}/bin/bash|" $out/share/nx/nx
+                        chmod -w $out/share/nx/nx
+                      fi
+
                       cat > $out/bin/nx << EOF
-            #!/usr/bin/env bash
+            #!${pkgs.bash}/bin/bash
             export ACTUAL_PWD="\$PWD"
             export NX_INSTALL_PATH="$out/share/nx"
             cd $out/share/nx
