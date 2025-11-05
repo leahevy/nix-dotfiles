@@ -342,7 +342,8 @@ check_git_worktrees_clean() {
 
 verify_commits() {
     if [[ "${SKIP_VERIFICATION:-false}" == "true" ]]; then
-        echo -e "${YELLOW}Skipping commit verification due to --skip-verification flag${RESET}" >&2
+        echo -e "${MAGENTA}Skipping commit verification due to --skip-verification flag${RESET}" >&2
+        echo
         return 0
     fi
 
@@ -380,11 +381,11 @@ verify_repo_commits() {
             return 0
             ;;
         "last")
-            echo -e "${WHITE}Verifying last commit in $repo_name...${RESET}" >&2
+            echo -e "${CYAN}Verifying last commit in $repo_name...${RESET}" >&2
             verify_commit_range "$repo_path" "$repo_name" "HEAD~1..HEAD"
             ;;
         "all")
-            echo -e "${WHITE}Verifying all commits in $repo_name...${RESET}" >&2
+            echo -e "${CYAN}Verifying all commits in $repo_name...${RESET}" >&2
             verify_all_repo_commits "$repo_path" "$repo_name"
             ;;
         *)
@@ -415,14 +416,21 @@ verify_commit_range() {
     done
 
     if [[ ${#failed_commits[@]} -gt 0 ]]; then
+        echo
         echo -e "${RED}Commits without good signatures found in $repo_name:${RESET}" >&2
         for commit in "${failed_commits[@]}"; do
             echo -e "  ${WHITE}- $(git log --oneline -1 "$commit")${RESET}" >&2
         done
+        echo
         return 1
     fi
 
-    echo -e "${GREEN}All commits verified in $repo_name${RESET}" >&2
+    local num_commits=$(echo "$commits" | wc -l | tr -d ' ')
+    if [[ "$num_commits" -eq 1 ]]; then
+        echo -e "${BLUE}Commit verification: ${GREEN}Last commit verified in $repo_name${RESET}" >&2
+    else
+        echo -e "${BLUE}Commit verification: ${GREEN}$num_commits commits verified in $repo_name${RESET}" >&2
+    fi
     echo
     return 0
     )
@@ -440,7 +448,7 @@ verify_all_repo_commits() {
         return 0
     fi
 
-    local total_commits=$(echo "$all_commits" | wc -l)
+    local total_commits=$(echo "$all_commits" | wc -l | tr -d ' ')
     local failed_commits=()
     local count=0
 
@@ -458,6 +466,7 @@ verify_all_repo_commits() {
     done
 
     if [[ ${#failed_commits[@]} -gt 0 ]]; then
+        echo
         echo -e "${RED}Found ${#failed_commits[@]} commits without good signatures in $repo_name${RESET}" >&2
 
         local show_count=$((${#failed_commits[@]} > 5 ? 5 : ${#failed_commits[@]}))
@@ -467,10 +476,11 @@ verify_all_repo_commits() {
         if [[ ${#failed_commits[@]} -gt 5 ]]; then
             echo -e "  ${GRAY}... and $((${#failed_commits[@]} - 5)) more${RESET}" >&2
         fi
+        echo
         return 1
     fi
 
-    echo -e "${GREEN}All $total_commits commits verified in $repo_name${RESET}" >&2
+    echo -e "${BLUE}Commit verification: ${GREEN}All $total_commits commits verified in $repo_name${RESET}" >&2
     echo
     return 0
     )
@@ -865,6 +875,10 @@ check_nh_activity() {
 }
 
 load_nx_config() {
+    if [[ "${NX_CONFIG_LOADED:-0}" -eq 1 ]]; then
+        return
+    fi
+
     local config_file=""
     local config_json=""
 
@@ -880,11 +894,13 @@ load_nx_config() {
         echo -e "${YELLOW}No nx config found, using defaults${RESET}" >&2
         config_json=""
     fi
+    echo
 
+    NX_CONFIG_LOADED=1
     COMMIT_VERIFICATION_NXCORE=$(get_config_value "security.commitVerification.nxcore" "$config_json")
     COMMIT_VERIFICATION_NXCONFIG=$(get_config_value "security.commitVerification.nxconfig" "$config_json")
 
-    export COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG
+    export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG
 }
 
 check_brew_activity() {
