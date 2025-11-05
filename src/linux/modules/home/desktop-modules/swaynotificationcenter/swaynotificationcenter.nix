@@ -209,6 +209,7 @@ args@{
 
         Service = {
           ExecStart = "${pkgs.swaynotificationcenter}/bin/swaync";
+          ExecStartPost = "${pkgs.bash}/bin/bash -c 'sleep 2 && ${pkgs.swaynotificationcenter}/bin/swaync-client -df'";
           ExecReload = "${pkgs.swaynotificationcenter}/bin/swaync-client --reload-config && ${pkgs.swaynotificationcenter}/bin/swaync-client --reload-css";
           Environment = [
             "GTK_IM_MODULE=wayland"
