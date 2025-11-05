@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
 
-declare -A nx_defaults=(
-    ["security.commitVerification.nxcore"]="all"
-    ["security.commitVerification.nxconfig"]="all"
-)
-
 RED='\033[1;31m'
 YELLOW='\033[1;33m'
 GREEN='\033[1;32m'
@@ -15,16 +10,85 @@ CYAN='\033[1;36m'
 GRAY='\033[1;90m'
 RESET='\033[0m'
 
+get_nx_default() {
+    local key="$1"
+    case "$key" in
+        "security.commitVerification.nxcore")
+            echo "all"
+            ;;
+        "security.commitVerification.nxconfig")
+            echo "all"
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
+}
+
 get_config_value() {
     local key="$1"
     local config_json="$2"
-    local default_value="${nx_defaults[$key]}"
+    local default_value="$(get_nx_default "$key")"
 
     if [[ -n "$config_json" ]] && command -v jq >/dev/null 2>&1; then
         echo "$config_json" | jq -r ".$key // \"$default_value\""
     else
         echo "$default_value"
     fi
+}
+
+check_config_directory() {
+    local OPERATION="$1"
+    local CONTEXT="${2:-deployment}"
+    local REQUIRED="${3:-true}"
+
+    if [[ -f /etc/NIXOS && "$CONTEXT" != "deployment" ]]; then
+        NXCORE_DIR="/nxcore"
+        CONFIG_DIR="/nxconfig"
+
+        local errors=()
+        [[ -d "$NXCORE_DIR" ]] || errors+=("Core repository not found at /nxcore")
+        [[ -d "$CONFIG_DIR" ]] || errors+=("Config repository not found at /nxconfig")
+        [[ -d "$NXCORE_DIR/.git" ]] || errors+=("Core repository at /nxcore is not a git repository")
+        [[ -d "$CONFIG_DIR/.git" ]] || errors+=("Config repository at /nxconfig is not a git repository")
+        [[ -f "$NXCORE_DIR/flake.nix" ]] || errors+=("Core repository missing flake.nix")
+        [[ -d "$CONFIG_DIR/profiles" ]] || errors+=("Config repository missing profiles directory")
+
+        if [[ ${#errors[@]} -gt 0 && "$REQUIRED" == "true" ]]; then
+            echo -e "${RED}Error: Live disk setup incomplete for operation '${WHITE}$OPERATION${RED}'${RESET}" >&2
+            echo "" >&2
+            printf "  ${WHITE}- ${RED}%s${RESET}\n" "${errors[@]}" >&2
+            echo "" >&2
+            echo -e "${RED}Expected live disk setup:${RESET}" >&2
+            echo -e "  ${WHITE}git clone <core-repo> /nxcore${RESET}" >&2
+            echo -e "  ${WHITE}git clone <config-repo> /nxconfig${RESET}" >&2
+            echo "" >&2
+            exit 1
+        fi
+    else
+        NXCORE_DIR="$HOME/.config/nx/nxcore"
+        CONFIG_DIR="$HOME/.config/nx/nxconfig"
+
+        if [[ ! -d "$CONFIG_DIR" && "$REQUIRED" == "true" ]]; then
+            echo -e "${RED}Error: Config directory not found!${RESET}" >&2
+            echo "" >&2
+            echo -e "Expected path: ${WHITE}$CONFIG_DIR${RESET}" >&2
+            echo -e "Operation '${WHITE}$OPERATION${RESET}' requires access to config data." >&2
+            exit 1
+        fi
+
+        if [[ ! -d "$CONFIG_DIR" ]]; then
+            CONFIG_DIR=""
+        fi
+    fi
+
+    export NXCORE_DIR CONFIG_DIR
+}
+
+check_config_directory_optional() {
+    local OPERATION="$1"
+    local CONTEXT="${2:-deployment}"
+    check_config_directory "$OPERATION" "$CONTEXT" "false"
 }
 
 deployment_script_setup() {
@@ -236,60 +300,6 @@ ensure_nix_path() {
 if [[ "${BOOTSTRAP_NEEDS_NIX:-false}" == "true" ]]; then
   ensure_nix_path
 fi
-
-check_config_directory() {
-    local OPERATION="$1"
-    local CONTEXT="${2:-deployment}"
-    local REQUIRED="${3:-true}"
-    
-    if [[ -f /etc/NIXOS && "$CONTEXT" != "deployment" ]]; then
-        NXCORE_DIR="/nxcore"
-        CONFIG_DIR="/nxconfig"
-        
-        local errors=()
-        [[ -d "$NXCORE_DIR" ]] || errors+=("Core repository not found at /nxcore")
-        [[ -d "$CONFIG_DIR" ]] || errors+=("Config repository not found at /nxconfig")
-        [[ -d "$NXCORE_DIR/.git" ]] || errors+=("Core repository at /nxcore is not a git repository")
-        [[ -d "$CONFIG_DIR/.git" ]] || errors+=("Config repository at /nxconfig is not a git repository")
-        [[ -f "$NXCORE_DIR/flake.nix" ]] || errors+=("Core repository missing flake.nix")
-        [[ -d "$CONFIG_DIR/profiles" ]] || errors+=("Config repository missing profiles directory")
-        
-        if [[ ${#errors[@]} -gt 0 && "$REQUIRED" == "true" ]]; then
-            echo -e "${RED}Error: Live disk setup incomplete for operation '${WHITE}$OPERATION${RED}'${RESET}" >&2
-            echo "" >&2
-            printf "  ${WHITE}- ${RED}%s${RESET}\n" "${errors[@]}" >&2
-            echo "" >&2
-            echo -e "${RED}Expected live disk setup:${RESET}" >&2
-            echo -e "  ${WHITE}git clone <core-repo> /nxcore${RESET}" >&2
-            echo -e "  ${WHITE}git clone <config-repo> /nxconfig${RESET}" >&2
-            echo "" >&2
-            exit 1
-        fi
-    else
-        NXCORE_DIR="$HOME/.config/nx/nxcore"
-        CONFIG_DIR="$HOME/.config/nx/nxconfig"
-        
-        if [[ ! -d "$CONFIG_DIR" && "$REQUIRED" == "true" ]]; then
-            echo -e "${RED}Error: Config directory not found!${RESET}" >&2
-            echo "" >&2
-            echo -e "Expected path: ${WHITE}$CONFIG_DIR${RESET}" >&2
-            echo -e "Operation '${WHITE}$OPERATION${RESET}' requires access to config data." >&2
-            exit 1
-        fi
-        
-        if [[ ! -d "$CONFIG_DIR" ]]; then
-            CONFIG_DIR=""
-        fi
-    fi
-
-    export NXCORE_DIR CONFIG_DIR
-}
-
-check_config_directory_optional() {
-    local OPERATION="$1"
-    local CONTEXT="${2:-deployment}"
-    check_config_directory "$OPERATION" "$CONTEXT" "false"
-}
 
 check_git_worktrees_clean() {
     local main_dirty=false
