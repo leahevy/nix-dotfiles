@@ -32,6 +32,7 @@ if [[ -d "$HOME/.config/nx/nxconfig" ]]; then
     CONFIG_DIR="$HOME/.config/nx/nxconfig"
     export CONFIG_DIR
     check_git_worktrees_clean
+    verify_commits
 else
     if [[ "$(git status --porcelain)" != "" ]]; then
         echo -e "${RED}!!! Git worktree is dirty!${RESET}" >&2
@@ -41,9 +42,11 @@ else
         echo >&2
         exit 1
     fi
+    verify_commits
 fi
 
 EXTRA_ARGS=()
+SKIP_VERIFICATION=false
 
 HOST_ARCH="$(uname -m)"
 if [[ "$HOST_ARCH" == "arm64" ]] || [[ "$HOST_ARCH" == "aarch64" ]]; then
@@ -72,6 +75,10 @@ while [[ $# -gt 0 ]]; do
       EXTRA_ARGS+=("--option" "substitute" "false")
       shift
       ;;
+    --skip-verification)
+      SKIP_VERIFICATION=true
+      shift
+      ;;
     --help)
       echo "Usage: $0 [OPTIONS]"
       echo ""
@@ -82,6 +89,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --timeout SECONDS              Build timeout in seconds (default: 3600)"
       echo "  --output-dir DIR               Output directory (default: ./result)"
       echo "  --offline                      Build without network access"
+      echo "  --skip-verification            Skip commit signature verification"
       echo "  --help                         Show this help message"
       echo ""
       echo "Examples:"
@@ -102,6 +110,8 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+export SKIP_VERIFICATION
 
 TEMP_DIR="$(mktemp -d)"
 cleanup() {

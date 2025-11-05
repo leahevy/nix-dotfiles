@@ -8,6 +8,7 @@ parse_common_deployment_args "$@"
 ensure_nixos_only "boot"
 
 check_git_worktrees_clean
+verify_commits
 check_deployment_conflicts "boot"
 
 PROFILE="$(retrieve_active_profile)"

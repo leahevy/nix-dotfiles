@@ -24,6 +24,7 @@ args@{
         tokens = true;
         sops = true;
         path = true;
+        nx-config-standalone = true;
       };
       desktop = {
         desktop = true;

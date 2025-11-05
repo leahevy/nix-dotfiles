@@ -54,9 +54,12 @@ complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandli
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l dry-run -d "Test build without actual building"
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l offline -d "Build without network access"
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l diff -d "Compare built config with current active system"
+complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l skip-verification -d "Skip commit signature verification"
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -f
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -l offline -d "Run without network access"
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -l show-trace -d "Show detailed trace output"
+complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -l allow-dirty-git -d "Allow proceeding with uncommitted changes"
+complete -c nx -n "__fish_seen_subcommand_from sync boot" -n "test (count (commandline -opc)) = 2" -l skip-verification -d "Skip commit signature verification"
 complete -c nx -n "__fish_seen_subcommand_from log diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -f
 complete -c nx -n "__fish_seen_subcommand_from log head diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -l only-core -d "Run only on core repository"
 complete -c nx -n "__fish_seen_subcommand_from log head diff diffc status commit pull push add addp stash" -n "test (count (commandline -opc)) = 2" -l only-config -d "Run only on config repository"
@@ -127,8 +130,12 @@ complete -c nx -n "__fish_seen_subcommand_from modules" -n "__fish_seen_subcomma
 complete -c nx -n "__fish_seen_subcommand_from package" -l unstable -d "Use nixpkgs-unstable instead of nixpkgs"
 complete -c nx -n "__fish_seen_subcommand_from package" -f
 
+# 'nx rollback'
+complete -c nx -n "__fish_seen_subcommand_from rollback" -n "test (count (commandline -opc)) = 2" -f
+complete -c nx -n "__fish_seen_subcommand_from rollback" -n "test (count (commandline -opc)) = 2" -l allow-dirty-git -d "Allow proceeding with uncommitted changes"
+
 # Other commands
-complete -c nx -n "__fish_seen_subcommand_from gc rollback news config core update eval" -f
+complete -c nx -n "__fish_seen_subcommand_from gc news config core update eval" -f
 complete -c nx -n "__fish_seen_subcommand_from commit" -f
 
 # Universal commands

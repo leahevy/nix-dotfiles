@@ -78,7 +78,8 @@ _nx() {
                                 '--timeout[Set timeout in seconds]:timeout:' \
                                 '--dry-run[Test build without actual building]' \
                                 '--offline[Build without network access]' \
-                                '--diff[Compare built config with current active system]'
+                                '--diff[Compare built config with current active system]' \
+                                '--skip-verification[Skip commit signature verification]'
                             ;;
                     esac
                     ;;
@@ -87,7 +88,24 @@ _nx() {
                         2)
                             _arguments \
                                 '--offline[Run without network access]' \
-                                '--show-trace[Show detailed trace output]'
+                                '--show-trace[Show detailed trace output]' \
+                                '--allow-dirty-git[Allow proceeding with uncommitted changes]'
+                            ;;
+                    esac
+                    ;;
+                sync|boot)
+                    case $CURRENT in
+                        2)
+                            _arguments \
+                                '--skip-verification[Skip commit signature verification]'
+                            ;;
+                    esac
+                    ;;
+                rollback)
+                    case $CURRENT in
+                        2)
+                            _arguments \
+                                '--allow-dirty-git[Allow proceeding with uncommitted changes]'
                             ;;
                     esac
                     ;;

@@ -113,13 +113,13 @@
 
       variables-base = import ./variables.nix { inherit lib; };
       variables-config = import (inputs.config + "/variables.nix") { inherit lib; };
-      variables =
-        variables-base
-        // variables-config
+      variables = lib.recursiveUpdate variables-base (
+        variables-config
         // {
           allowedUnfreePackages =
             variables-base.allowedUnfreePackages ++ (variables-config.allowedUnfreePackages or [ ]);
-        };
+        }
+      );
       configInputs = inputs.config.configInputs or { };
 
       defs = import (inputs.lib + "/defs.nix") { inherit lib; };

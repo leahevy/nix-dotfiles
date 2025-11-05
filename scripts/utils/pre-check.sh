@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+declare -A nx_defaults=(
+    ["security.commitVerification.nxcore"]="all"
+    ["security.commitVerification.nxconfig"]="all"
+)
+
 RED='\033[1;31m'
 YELLOW='\033[1;33m'
 GREEN='\033[1;32m'
@@ -9,6 +14,18 @@ BLUE='\033[1;34m'
 CYAN='\033[1;36m'
 GRAY='\033[1;90m'
 RESET='\033[0m'
+
+get_config_value() {
+    local key="$1"
+    local config_json="$2"
+    local default_value="${nx_defaults[$key]}"
+
+    if [[ -n "$config_json" ]] && command -v jq >/dev/null 2>&1; then
+        echo "$config_json" | jq -r ".$key // \"$default_value\""
+    else
+        echo "$default_value"
+    fi
+}
 
 deployment_script_setup() {
     local script_name="$1"
@@ -42,7 +59,8 @@ parse_common_deployment_args() {
     PROFILE_PATH="$(retrieve_active_profile_path)"
     EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
     ALLOW_DIRTY_GIT=false
-    
+    SKIP_VERIFICATION=false
+
     while [[ $# -gt 0 ]]; do
         case "${1:-}" in
             --offline)
@@ -57,6 +75,10 @@ parse_common_deployment_args() {
                 ALLOW_DIRTY_GIT=true
                 shift
                 ;;
+            --skip-verification)
+                SKIP_VERIFICATION=true
+                shift
+                ;;
             -*|--*)
                 echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
                 exit 1
@@ -67,8 +89,8 @@ parse_common_deployment_args() {
                 ;;
         esac
     done
-    
-    export EXTRA_ARGS ALLOW_DIRTY_GIT PROFILE_PATH
+
+    export EXTRA_ARGS ALLOW_DIRTY_GIT SKIP_VERIFICATION PROFILE_PATH
 }
 
 parse_build_deployment_args() {
@@ -77,6 +99,7 @@ parse_build_deployment_args() {
     TIMEOUT=600
     DRY_RUN=""
     BUILD_DIFF=false
+    SKIP_VERIFICATION=false
 
     while [[ $# -gt 0 ]]; do
         case "${1:-}" in
@@ -96,6 +119,10 @@ parse_build_deployment_args() {
                 BUILD_DIFF=true
                 shift
                 ;;
+            --skip-verification)
+                SKIP_VERIFICATION=true
+                shift
+                ;;
             --help|-h)
                 echo "build: Test build configuration without deploying"
                 echo ""
@@ -104,6 +131,7 @@ parse_build_deployment_args() {
                 echo "  --dry-run            Test build without actual building"
                 echo "  --offline            Build without network access"
                 echo "  --diff               Compare built config with current active system"
+                echo "  --skip-verification  Skip commit signature verification"
                 exit 0
                 ;;
             -*|--*)
@@ -116,8 +144,8 @@ parse_build_deployment_args() {
                 ;;
         esac
     done
-    
-    export EXTRA_ARGS TIMEOUT DRY_RUN PROFILE_PATH BUILD_DIFF
+
+    export EXTRA_ARGS TIMEOUT DRY_RUN PROFILE_PATH BUILD_DIFF SKIP_VERIFICATION
 }
 
 ensure_nixos_only() {
@@ -147,7 +175,7 @@ ensure_darwin_only() {
 parse_minimal_deployment_args() {
     EXTRA_ARGS=()
     ALLOW_DIRTY_GIT=false
-    
+
     while [[ $# -gt 0 ]]; do
         case "${1:-}" in
             --allow-dirty-git)
@@ -164,7 +192,7 @@ parse_minimal_deployment_args() {
                 ;;
         esac
     done
-    
+
     export EXTRA_ARGS ALLOW_DIRTY_GIT
 }
 
@@ -300,6 +328,142 @@ check_git_worktrees_clean() {
             exit 1
         fi
     fi
+}
+
+verify_commits() {
+    if [[ "${SKIP_VERIFICATION:-false}" == "true" ]]; then
+        echo -e "${YELLOW}Skipping commit verification due to --skip-verification flag${RESET}" >&2
+        return 0
+    fi
+
+    if [[ -z "${COMMIT_VERIFICATION_NXCORE:-}" ]]; then
+        load_nx_config
+    fi
+
+    local verification_failed=false
+
+    if [[ -n "${NXCORE_DIR:-}" && -d "$NXCORE_DIR" ]]; then
+        verify_repo_commits "$NXCORE_DIR" "nxcore" "$COMMIT_VERIFICATION_NXCORE" || verification_failed=true
+    fi
+
+    if [[ -n "${CONFIG_DIR:-}" && -d "$CONFIG_DIR" ]]; then
+        verify_repo_commits "$CONFIG_DIR" "nxconfig" "$COMMIT_VERIFICATION_NXCONFIG" || verification_failed=true
+    fi
+
+    if [[ "$verification_failed" == true ]]; then
+        echo >&2
+        echo -e "${RED}Commit verification failed. Use ${WHITE}--skip-verification${RED} to override.${RESET}" >&2
+        return 1
+    fi
+
+    return 0
+}
+
+verify_repo_commits() {
+    local repo_path="$1"
+    local repo_name="$2"
+    local mode="$3"
+
+    case "$mode" in
+        "none")
+            echo -e "${GRAY}Skipping commit verification for $repo_name (mode: none)${RESET}" >&2
+            return 0
+            ;;
+        "last")
+            echo -e "${WHITE}Verifying last commit in $repo_name...${RESET}" >&2
+            verify_commit_range "$repo_path" "$repo_name" "HEAD~1..HEAD"
+            ;;
+        "all")
+            echo -e "${WHITE}Verifying all commits in $repo_name...${RESET}" >&2
+            verify_all_repo_commits "$repo_path" "$repo_name"
+            ;;
+        *)
+            echo -e "${RED}Unknown verification mode for $repo_name: $mode${RESET}" >&2
+            return 1
+            ;;
+    esac
+}
+
+verify_commit_range() {
+    local repo_path="$1"
+    local repo_name="$2"
+    local range="$3"
+
+    (cd "$repo_path" || return 1
+
+    local commits=$(git rev-list "$range" 2>/dev/null || echo "")
+    if [[ -z "$commits" ]]; then
+        echo -e "${GRAY}No commits to verify in $repo_name range $range${RESET}" >&2
+        return 0
+    fi
+
+    local failed_commits=()
+    for commit in $commits; do
+        if ! git verify-commit "$commit" 2>&1 | grep -q "Good signature"; then
+            failed_commits+=("$commit")
+        fi
+    done
+
+    if [[ ${#failed_commits[@]} -gt 0 ]]; then
+        echo -e "${RED}Commits without good signatures found in $repo_name:${RESET}" >&2
+        for commit in "${failed_commits[@]}"; do
+            echo -e "  ${WHITE}- $(git log --oneline -1 "$commit")${RESET}" >&2
+        done
+        return 1
+    fi
+
+    echo -e "${GREEN}All commits verified in $repo_name${RESET}" >&2
+    echo
+    return 0
+    )
+}
+
+verify_all_repo_commits() {
+    local repo_path="$1"
+    local repo_name="$2"
+
+    (cd "$repo_path" || return 1
+
+    local all_commits=$(git rev-list HEAD 2>/dev/null || echo "")
+    if [[ -z "$all_commits" ]]; then
+        echo -e "${GRAY}No commits to verify in $repo_name${RESET}" >&2
+        return 0
+    fi
+
+    local total_commits=$(echo "$all_commits" | wc -l)
+    local failed_commits=()
+    local count=0
+
+    echo -e "${WHITE}Checking $total_commits commits in $repo_name...${RESET}" >&2
+
+    for commit in $all_commits; do
+        ((count++))
+        if ! git verify-commit "$commit" 2>&1 | grep -q "Good signature"; then
+            failed_commits+=("$commit")
+        fi
+
+        if [[ $((count % 50)) -eq 0 ]]; then
+            echo -e "${GRAY}Verified $count/$total_commits commits...${RESET}" >&2
+        fi
+    done
+
+    if [[ ${#failed_commits[@]} -gt 0 ]]; then
+        echo -e "${RED}Found ${#failed_commits[@]} commits without good signatures in $repo_name${RESET}" >&2
+
+        local show_count=$((${#failed_commits[@]} > 5 ? 5 : ${#failed_commits[@]}))
+        for ((i=0; i<show_count; i++)); do
+            echo -e "  ${WHITE}- $(git log --oneline -1 "${failed_commits[i]}")${RESET}" >&2
+        done
+        if [[ ${#failed_commits[@]} -gt 5 ]]; then
+            echo -e "  ${GRAY}... and $((${#failed_commits[@]} - 5)) more${RESET}" >&2
+        fi
+        return 1
+    fi
+
+    echo -e "${GREEN}All $total_commits commits verified in $repo_name${RESET}" >&2
+    echo
+    return 0
+    )
 }
 
 parse_git_args() {
@@ -688,6 +852,29 @@ check_nh_activity() {
     fi
 
     return 0
+}
+
+load_nx_config() {
+    local config_file=""
+    local config_json=""
+
+    if [[ -f "/etc/nx/config.json" ]]; then
+        config_file="/etc/nx/config.json"
+        echo -e "${GREEN}Using system config: ${WHITE}/etc/nx/config.json${RESET}" >&2
+        config_json=$(cat "$config_file")
+    elif [[ -f "$HOME/.config/nx/config.json" ]]; then
+        config_file="$HOME/.config/nx/config.json"
+        echo -e "${GREEN}Using user config: ${WHITE}$HOME/.config/nx/config.json${RESET}" >&2
+        config_json=$(cat "$config_file")
+    else
+        echo -e "${YELLOW}No nx config found, using defaults${RESET}" >&2
+        config_json=""
+    fi
+
+    COMMIT_VERIFICATION_NXCORE=$(get_config_value "security.commitVerification.nxcore" "$config_json")
+    COMMIT_VERIFICATION_NXCONFIG=$(get_config_value "security.commitVerification.nxconfig" "$config_json")
+
+    export COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG
 }
 
 check_brew_activity() {

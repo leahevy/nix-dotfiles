@@ -7,6 +7,7 @@ deployment_script_setup "build-test"
 PROFILE="$(retrieve_active_profile)"
 
 parse_build_deployment_args "$@"
+verify_commits
 
 if [[ -e /etc/NIXOS ]]; then
   NEW_SYSTEM=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" --print-out-paths)

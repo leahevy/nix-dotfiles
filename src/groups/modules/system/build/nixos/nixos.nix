@@ -27,6 +27,7 @@ args@{
         nix-ld = true;
         tokens = true;
         sops = true;
+        nx-config = true;
       };
       desktop = {
         desktop = true;

@@ -11,10 +11,16 @@ _complete_nx() {
                 COMPREPLY=($(compgen -W "user edit select reset help" -- "${cur}"))
                 ;;
             build)
-                COMPREPLY=($(compgen -W "--timeout --dry-run --offline --diff" -- "${cur}"))
+                COMPREPLY=($(compgen -W "--timeout --dry-run --offline --diff --skip-verification" -- "${cur}"))
                 ;;
-            sync|dry|test|boot)
-                COMPREPLY=($(compgen -W "--offline --show-trace" -- "${cur}"))
+            sync|boot)
+                COMPREPLY=($(compgen -W "--offline --show-trace --allow-dirty-git --skip-verification" -- "${cur}"))
+                ;;
+            dry|test)
+                COMPREPLY=($(compgen -W "--offline --show-trace --allow-dirty-git" -- "${cur}"))
+                ;;
+            rollback)
+                COMPREPLY=($(compgen -W "--allow-dirty-git" -- "${cur}"))
                 ;;
             log|head|diff|diffc|status|commit|pull|push|add|addp|stash)
                 COMPREPLY=($(compgen -W "--only-core --only-config" -- "${cur}"))

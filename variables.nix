@@ -21,4 +21,13 @@
   };
 
   httpConnections = 15;
+
+  nx.config = {
+    security = {
+      commitVerification = {
+        nxcore = "last"; # "all" | "last" | "none"
+        nxconfig = "last"; # "all" | "last" | "none"
+      };
+    };
+  };
 }
