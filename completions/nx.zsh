@@ -41,6 +41,7 @@ _nx() {
                 'modules:Manage and inspect NX modules'
                 'eval:Evaluate a flake path with config override'
                 'package:Get store path for package(s)'
+                'version:Show the current NixOS version'
             )
             _describe 'commands' commands
             ;;

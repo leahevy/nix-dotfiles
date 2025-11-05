@@ -90,6 +90,7 @@ installed system during the live ISO installation process.
 
 - `nx eval <path>`: Evaluate a flake path with config override.
 - `nx package <pkg>`: Get store path for package(s). Use `--unstable` for nixpkgs-unstable.
+- `nx version`: Show the current NixOS version.
 
 ### Home-Manager only:
 
