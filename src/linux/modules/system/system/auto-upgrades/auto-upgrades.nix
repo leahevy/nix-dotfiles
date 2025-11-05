@@ -613,19 +613,19 @@ args@{
             ''
               ${logScript "info" "Would check reboot marker and reboot if in window"}
               ${pkgs.coreutils}/bin/echo "Would check marker file: $reboot_marker"
-              ${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1"
+              ${pkgs.coreutils}/bin/echo "Would execute: shutdown -r now"
             ''
           else if self.settings.rebootWindow != null then
             ''
               if check_reboot_window; then
-                ${logScript "info" "INFO: Delayed reboot marker found and inside reboot window, rebooting in 1 minute"}
-                ${config.systemd.package}/bin/shutdown -r +1
+                ${logScript "info" "INFO: Delayed reboot marker found and inside reboot window, rebooting now"}
+                ${config.systemd.package}/bin/shutdown -r now
               fi
             ''
           else
             ''
-              ${logScript "info" "INFO: Delayed reboot marker found, rebooting in 1 minute"}
-              ${config.systemd.package}/bin/shutdown -r +1
+              ${logScript "info" "INFO: Delayed reboot marker found, rebooting now"}
+              ${config.systemd.package}/bin/shutdown -r now
             ''
         }
       '';
