@@ -217,20 +217,51 @@ jobs:
           echo "its_mergeday=false" >> $GITHUB_OUTPUT
 
       - name: Notify PR Created via Pushover
-        if: steps.changes.outputs.changed == 'true' && steps.cpr.outputs.pull-request-operation == 'created' && (steps.check-day.outputs.its_mergeday != 'true' || env.REQUIRES_REBOOT == 'true')
+        if: steps.changes.outputs.changed == 'true' && steps.cpr.outputs.pull-request-operation == 'created'
         env:
-          PUSHHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
-          PUSHHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
         run: |
           set -euo pipefail
+          if [ "${{ env.REQUIRES_REBOOT }}" == "true" ]; then
+            PRIORITY="1"
+            SOUND="gamelan"
+            TTL="604800"
+            CIRCLE_COLOR="🟡"
+            STATUS="New PR (Manual Review Required)"
+            EXTRA_MESSAGE="⚠️ <b>Reboot Required</b> - Auto-merge disabled"
+          elif [ "${{ steps.check-day.outputs.its_mergeday }}" == "true" ]; then
+            PRIORITY="0"
+            SOUND="pianobar"
+            TTL="129600"
+            CIRCLE_COLOR="🟢"
+            STATUS="New PR (Auto-merge Enabled)"
+            EXTRA_MESSAGE="✅ <b>Auto-merge enabled</b> - Will merge automatically"
+          else
+            PRIORITY="0"
+            SOUND="vibrate"
+            TTL="129600"
+            CIRCLE_COLOR="🔵"
+            STATUS="New PR"
+            EXTRA_MESSAGE=""
+          fi
+
+          MESSAGE="<b>Repository:</b> ${{ github.repository }}<br><b>Branch:</b> update-flake-inputs<br><b>Pull Request Title:</b> Update flake inputs: ${{ env.UPDATED_INPUTS }}"
+          if [ -n "$EXTRA_MESSAGE" ]; then
+            MESSAGE="$MESSAGE<br><br>$EXTRA_MESSAGE"
+          fi
+
           curl -fsS -m 20 --retry 10 -o /dev/null \
-            --form-string "token=${PUSHHOVER_TOKEN}" \
-            --form-string "user=${PUSHHOVER_USER}" \
-            --form-string "message=<b>Repository:</b> ${{ github.repository }}<br><b>Branch:</b> update-flake-inputs<br><b>Pull Request Title:</b> Update flake inputs: ${{ env.UPDATED_INPUTS }}<br><br><a href='${{ steps.cpr.outputs.pull-request-url }}'>View Pull Request</a>" \
-            --form-string "title=🔵 New PR for ${{ github.repository }}: Update flake inputs: ${{ env.UPDATED_INPUTS }}" \
-            --form-string "priority=0" \
+            --form-string "token=${PUSHOVER_TOKEN}" \
+            --form-string "user=${PUSHOVER_USER}" \
+            --form-string "message=$MESSAGE" \
+            --form-string "title=${CIRCLE_COLOR} $STATUS for ${{ github.repository }}: Update flake inputs: ${{ env.UPDATED_INPUTS }}" \
+            --form-string "priority=${PRIORITY}" \
+            --form-string "sound=${SOUND}" \
+            --form-string "ttl=${TTL}" \
             --form-string "html=1" \
             --form-string "url=${{ steps.cpr.outputs.pull-request-url }}" \
+            --form-string "url_title=View Pull Request" \
             https://api.pushover.net/1/messages.json
 
       - name: Enable auto-merge
