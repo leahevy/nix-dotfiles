@@ -15,6 +15,11 @@ args@{
   input = "common";
   namespace = "home";
 
+  settings = {
+    additionalEnvironment = { };
+    additionalAliases = { };
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
