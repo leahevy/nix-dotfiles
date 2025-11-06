@@ -461,6 +461,11 @@ args@{
         vim.deprecate = function() end
       '';
 
+      home.file.".config/nvim-init/05-disable-mouse-popup.lua".text = ''
+        vim.cmd("silent! aunmenu PopUp")
+        vim.cmd("autocmd! nvim.popupmenu")
+      '';
+
       home.file.".config/nvim-init/11-insert-leave.lua".text = ''
         vim.api.nvim_create_autocmd({"InsertLeave"}, {
           callback = function()
