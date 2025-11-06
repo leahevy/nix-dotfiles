@@ -23,6 +23,13 @@ args@{
     };
   };
 
+  settings = {
+    serversToEnforceSSH = [
+      "github.com"
+      "gitlab.com"
+    ];
+  };
+
   configuration =
     context@{ config, options, ... }:
     let
@@ -65,11 +72,14 @@ args@{
             autocorrect = "prompt";
           };
 
-          url = {
-            "git@github.com:" = {
-              insteadOf = "https://github.com/";
-            };
-          };
+          url = lib.listToAttrs (
+            map (server: {
+              name = "git@${server}:";
+              value = {
+                insteadOf = "https://${server}/";
+              };
+            }) self.settings.serversToEnforceSSH
+          );
 
           rerere = {
             enabled = true;
