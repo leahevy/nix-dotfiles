@@ -20,6 +20,7 @@ args@{
     build = {
       core = {
         boot = true;
+        journal = true;
         sudo = true;
         i18n = true;
         network = true;
