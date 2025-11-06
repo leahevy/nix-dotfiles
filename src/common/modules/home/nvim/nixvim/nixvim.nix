@@ -18,6 +18,7 @@ args@{
   submodules = {
     common = {
       nvim-modules = {
+        filetypes = true;
         auto-create-dirs = true;
         template = true;
         highlight-dead-chars = true;
