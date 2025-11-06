@@ -543,9 +543,9 @@ args@{
                     } in +1 minute"}
                     ${
                       if self.settings.dryRun then
-                        ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1"''
+                        ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1 --no-wall"''
                       else
-                        ''${config.systemd.package}/bin/shutdown -r +1''
+                        ''${config.systemd.package}/bin/shutdown -r +1 --no-wall''
                     }
                   fi
                 else
@@ -582,9 +582,9 @@ args@{
                   } in +1 minute"}
                   ${
                     if self.settings.dryRun then
-                      ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1"''
+                      ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1 --no-wall"''
                     else
-                      ''${config.systemd.package}/bin/shutdown -r +1''
+                      ''${config.systemd.package}/bin/shutdown -r +1 --no-wall''
                   }
                 fi
               ''
@@ -613,19 +613,19 @@ args@{
             ''
               ${logScript "info" "Would check reboot marker and reboot if in window"}
               ${pkgs.coreutils}/bin/echo "Would check marker file: $reboot_marker"
-              ${pkgs.coreutils}/bin/echo "Would execute: shutdown -r now"
+              ${pkgs.coreutils}/bin/echo "Would execute: shutdown -r now --no-wall"
             ''
           else if self.settings.rebootWindow != null then
             ''
               if check_reboot_window; then
                 ${logScript "info" "INFO: Delayed reboot marker found and inside reboot window, rebooting now"}
-                ${config.systemd.package}/bin/shutdown -r now
+                ${config.systemd.package}/bin/shutdown -r now --no-wall
               fi
             ''
           else
             ''
               ${logScript "info" "INFO: Delayed reboot marker found, rebooting now"}
-              ${config.systemd.package}/bin/shutdown -r now
+              ${config.systemd.package}/bin/shutdown -r now --no-wall
             ''
         }
       '';
