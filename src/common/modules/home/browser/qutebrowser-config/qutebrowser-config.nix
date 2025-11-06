@@ -57,7 +57,7 @@ args@{
     additionalPerDomainSettings = { };
     smoothScrollingEnabled = false;
     linuxRenderingGeneric = "none";
-    linuxRenderingNvidia = "chromium";
+    linuxRenderingNvidia = "software-opengl";
     darwinRendering = "none";
     keyBindings = {
       normal = {
