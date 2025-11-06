@@ -457,6 +457,10 @@ args@{
         })
       '';
 
+      home.file.".config/nvim-init/04-suppress-deprecation-warnings.lua".text = ''
+        vim.deprecate = function() end
+      '';
+
       home.file.".config/nvim-init/11-insert-leave.lua".text = ''
         vim.api.nvim_create_autocmd({"InsertLeave"}, {
           callback = function()
