@@ -19,6 +19,7 @@ args@{
     common = {
       nvim-modules = {
         filetypes = true;
+        tiny-glimmer = true;
         auto-create-dirs = true;
         template = true;
         highlight-dead-chars = true;
