@@ -39,6 +39,12 @@ args@{
           killall
           nvd
           keyutils
+          usbutils
+          pciutils
+          hwinfo
+          psmisc
+          lsof
+          tree
         ]
         ++ (if self.isLinux then with pkgs; [ pinentry-curses ] else [ ]);
 
