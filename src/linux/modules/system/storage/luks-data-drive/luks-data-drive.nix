@@ -119,11 +119,13 @@ args@{
 
       systemd.services."nx-setup-data-structure" = {
         description = "Setup data directory structure";
-        wantedBy = [ "local-fs.target" ];
+        wantedBy = [
+          "local-fs.target"
+          "user@${toString config.users.users.${self.host.mainUser.username}.uid}.service"
+        ];
         after = [ "nx-mount-${self.settings.mappedName}.service" ];
         wants = [ "nx-mount-${self.settings.mappedName}.service" ];
         before = [ "user@${toString config.users.users.${self.host.mainUser.username}.uid}.service" ];
-        requiredBy = [ "user@${toString config.users.users.${self.host.mainUser.username}.uid}.service" ];
 
         script =
           let
