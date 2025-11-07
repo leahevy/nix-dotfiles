@@ -18,6 +18,7 @@ args@{
   submodules = {
     common = {
       nvim-modules = {
+        blink-indent = true;
         filetypes = true;
         tiny-glimmer = true;
         auto-create-dirs = true;
