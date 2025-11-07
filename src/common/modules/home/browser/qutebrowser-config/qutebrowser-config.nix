@@ -59,6 +59,12 @@ args@{
     linuxRenderingGeneric = "none";
     linuxRenderingNvidia = "software-opengl";
     darwinRendering = "none";
+    linuxQTEnviron = { };
+    linuxNvidiaQTEnviron = {
+      QTWEBENGINE_FORCE_USE_GBM = "0";
+      QT_XCB_GL_INTEGRATION = "none";
+    };
+    darwinQTEnviron = { };
     keyBindings = {
       normal = {
         "<Escape>" = "clear-keychain ;; search ;; fullscreen --leave";
@@ -975,6 +981,23 @@ args@{
               in
               perDomainPythonConfig;
           };
+
+      home.file.".config/qutebrowser-init/qt-environ.py" =
+        let
+          qtEnvironVars =
+            if self.isLinux then
+              if (self.linux.isModuleEnabled "graphics.nvidia-setup") then
+                self.settings.linuxQTEnviron // self.settings.linuxNvidiaQTEnviron
+              else
+                self.settings.linuxQTEnviron
+            else
+              self.settings.darwinQTEnviron;
+        in
+        lib.mkIf (qtEnvironVars != { }) {
+          text = lib.concatStringsSep "\n" (
+            lib.mapAttrsToList (name: value: ''c.qt.environ["${name}"] = "${value}"'') qtEnvironVars
+          );
+        };
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
