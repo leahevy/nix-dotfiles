@@ -58,6 +58,8 @@ args@{
         Unit = {
           Description = "Emacs text editor (custom)";
           After = [ "graphical-session.target" ] ++ lib.optional sshAgentEnabled "ssh-agent.service";
+          StartLimitBurst = 5;
+          StartLimitIntervalSec = 300;
         }
         // lib.optionalAttrs sshAgentEnabled {
           Requires = [ "ssh-agent.service" ];
@@ -74,7 +76,7 @@ args@{
               --eval "(setq server-use-tcp t)"
           '';
 
-          Restart = "always";
+          Restart = "on-failure";
           RestartSec = "5s";
 
           RuntimeDirectory = "emacs-auth";
