@@ -154,7 +154,7 @@ args@{
         check_daily_start() {
           if [[ ! -f "/tmp/nx-force-upgrade" ]]; then
             TODAY=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
-            if ${pkgs.systemd}/bin/journalctl -u nx-auto-upgrade.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="STARTED: Auto-upgrade beginning" >/dev/null 2>&1; then
+            if ${pkgs.systemd}/bin/journalctl -u nx-auto-upgrade.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="Starting NX Auto-Upgrade" >/dev/null 2>&1; then
               exit 0
             fi
           fi
@@ -166,7 +166,7 @@ args@{
         check_daily_start_notify() {
           if [[ ! -f "/tmp/nx-force-upgrade" ]]; then
             TODAY=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
-            if ${pkgs.systemd}/bin/journalctl -u nx-auto-upgrade.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="STARTED: Auto-upgrade beginning" >/dev/null 2>&1; then
+            if ${pkgs.systemd}/bin/journalctl -u nx-auto-upgrade.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="Starting NX Auto-Upgrade" >/dev/null 2>&1; then
               exit 0
             fi
           fi
