@@ -77,6 +77,7 @@ args@{
             go-programs = true;
             timg = true;
             yazi = true;
+            clipboard = true;
           };
           spell = {
             ispell = true;
@@ -192,6 +193,7 @@ args@{
             go-programs = true;
             timg = true;
             yazi = true;
+            clipboard = true;
           };
           spell = {
             ispell = true;
@@ -307,6 +309,7 @@ args@{
             go-programs = true;
             timg = true;
             yazi = true;
+            clipboard = true;
           };
           spell = {
             ispell = true;

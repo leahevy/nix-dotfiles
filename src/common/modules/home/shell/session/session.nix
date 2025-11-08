@@ -90,7 +90,6 @@ args@{
           dotfiles-configure = "/usr/bin/env git --git-dir=\"$HOME/.dotfiles/\" --work-tree=\"$HOME\" config status.showUntrackedFiles no";
 
           home = "cd $HOME";
-          x = "z";
 
           dev-create = "nix flake init --template github:cachix/devenv";
           nix-search = "nix-env -f '<nixpkgs>' -qaP";
