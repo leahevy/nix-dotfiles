@@ -75,6 +75,8 @@ args@{
       "usb .*device descriptor read/[0-9]+, error -[0-9]+"
       "usb.*cannot submit urb.*err = -[0-9]+"
       "uvcvideo.*UVC non compliance.*max payload transmission size.*exceeds.*ep max packet.*Using the max size"
+      "Failed to get EXE, ignoring: No such process"
+      "Failed to initialize pidref: No such process"
     ];
     desktopStringsToIgnore = [
       "Failed to associate portal window with parent window"
