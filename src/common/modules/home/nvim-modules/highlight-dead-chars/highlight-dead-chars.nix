@@ -83,14 +83,18 @@ args@{
           lib.concatMapStringsSep ", " (ft: "'${ft}'") self.settings.excludeFiletypes
         } }
 
+        local cached_ft = nil
+        local excluded_ft_set = {}
+        for _, ft in ipairs(excluded_fts) do
+          excluded_ft_set[ft] = true
+        end
+
         local function is_excluded_filetype()
           local ft = vim.bo.filetype
-          for _, excluded_ft in ipairs(excluded_fts) do
-            if ft == excluded_ft then
-              return true
-            end
+          if cached_ft ~= ft then
+            cached_ft = ft
           end
-          return false
+          return excluded_ft_set[ft] or false
         end
 
         local function clear_eol_fill()
@@ -111,9 +115,11 @@ args@{
           local start_line = math.max(0, vim.fn.line('w0') - 2)
           local end_line = math.min(vim.api.nvim_buf_line_count(bufnr) - 1, vim.fn.line('w$') + 1)
 
-          for line_nr = start_line, end_line do
-            local line_content = vim.api.nvim_buf_get_lines(bufnr, line_nr, line_nr + 1, false)[1]
+          local lines = vim.api.nvim_buf_get_lines(bufnr, start_line, end_line + 1, false)
+
+          for i, line_content in ipairs(lines) do
             if line_content and line_content ~= "" then
+              local line_nr = start_line + i - 1
               local content_width = vim.fn.strdisplaywidth(line_content)
               local dots_needed = math.max(0, win_width - content_width - 3)
 
@@ -128,12 +134,40 @@ args@{
           end
         end
 
+        local cursor_timer = nil
+        local main_timer = nil
         local augroup = vim.api.nvim_create_augroup('eol_fill', { clear = true })
 
-        vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter', 'TextChanged', 'TextChangedI', 'VimResized', 'WinScrolled', 'CursorMoved', 'CursorMovedI' }, {
+        vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
           group = augroup,
           callback = function()
-            vim.defer_fn(add_eol_fill, 10)
+            add_eol_fill()
+          end
+        })
+
+        vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'VimResized', 'WinScrolled' }, {
+          group = augroup,
+          callback = function()
+            if main_timer then
+              vim.fn.timer_stop(main_timer)
+            end
+            main_timer = vim.fn.timer_start(30, function()
+              pcall(add_eol_fill)
+              main_timer = nil
+            end)
+          end
+        })
+
+        vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
+          group = augroup,
+          callback = function()
+            if cursor_timer then
+              vim.fn.timer_stop(cursor_timer)
+            end
+            cursor_timer = vim.fn.timer_start(60, function()
+              pcall(add_eol_fill)
+              cursor_timer = nil
+            end)
           end
         })
 
