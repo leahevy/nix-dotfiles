@@ -405,8 +405,6 @@ in
 
         files = [
           ".local/share/user-places.xbel"
-          ".local/share/user-places.xbel.tbcache"
-          ".local/share/recently-used.xbel"
         ]
         ++ lib.optionals isKDE [
           ".config/kglobalshortcutsrc"
