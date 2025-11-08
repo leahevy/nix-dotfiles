@@ -213,8 +213,8 @@ jobs:
           #   echo "its_mergeday=false" >> $GITHUB_OUTPUT
           # fi
           #
-          # Disabled:
-          echo "its_mergeday=false" >> $GITHUB_OUTPUT
+          # Disabled: Every day is merge day but only auto-merge if no reboot is required!
+          echo "its_mergeday=true" >> $GITHUB_OUTPUT
 
       - name: Notify PR Created via Pushover
         if: steps.changes.outputs.changed == 'true' && steps.cpr.outputs.pull-request-operation == 'created'
