@@ -56,7 +56,16 @@ args@{
                   wrapProgram $out/bin/qutebrowser \
                     --prefix LD_LIBRARY_PATH : "${prev.curl.out}/lib" \
                     --prefix XDG_DATA_DIRS : "${prev.gtk3}/share/gsettings-schemas/${prev.gtk3.name}:${prev.gsettings-desktop-schemas}/share" \
-                    --prefix QT_PLUGIN_PATH : "${prev.kdePackages.qtpositioning}/lib/qt-6/plugins"
+                    --prefix QT_PLUGIN_PATH : "${prev.kdePackages.qtpositioning}/lib/qt-6/plugins" \
+                    --set QTWEBENGINE_FORCE_USE_GBM "0" \
+                    --set QT_XCB_GL_INTEGRATION "none" \
+                    --set QT_WEBENGINE_DISABLE_GPU "1" \
+                    --set QT_OPENGL "software" \
+                    --set QT6_OPENGL "software" \
+                    --set QT_QUICK_BACKEND "software" \
+                    --set QT_FONT_DPI "96" \
+                    --set QT_WEBENGINE_DISABLE_NOUVEAU_WORKAROUND "1" \
+                    --set QTWEBENGINE_CHROMIUM_FLAGS "--disable-gpu --disable-gpu-compositing --disable-software-rasterizer --disable-features=VizDisplayCompositor --force-device-scale-factor=1"
                 '';
               });
           })

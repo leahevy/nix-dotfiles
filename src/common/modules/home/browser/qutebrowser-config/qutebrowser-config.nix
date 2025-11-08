@@ -60,13 +60,7 @@ args@{
     linuxRenderingNvidia = "software-opengl";
     darwinRendering = "none";
     linuxQTEnviron = { };
-    linuxNvidiaQTEnviron = {
-      QTWEBENGINE_FORCE_USE_GBM = "0";
-      QT_XCB_GL_INTEGRATION = "none";
-      QT_WEBENGINE_DISABLE_GPU = "1";
-      QT_OPENGL = "software";
-      QT_FONT_DPI = "96";
-    };
+    linuxNvidiaQTEnviron = { };
     darwinQTEnviron = { };
     keyBindings = {
       normal = {
