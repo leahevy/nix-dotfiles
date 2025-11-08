@@ -77,6 +77,8 @@ args@{
       "uvcvideo.*UVC non compliance.*max payload transmission size.*exceeds.*ep max packet.*Using the max size"
       "Failed to get EXE, ignoring: No such process"
       "Failed to initialize pidref: No such process"
+      "Couldn't find existing drive object for device.*uevent action 'change'"
+      "Partitions found on device '/dev/sd[a-z]+' but couldn't read partition table signature.*No such device or address"
     ];
     desktopStringsToIgnore = [
       "Failed to associate portal window with parent window"
