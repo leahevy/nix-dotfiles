@@ -53,7 +53,9 @@ args@{
                 action.id == "org.freedesktop.udisks2.filesystem-mount" ||
                 action.id == "org.freedesktop.udisks2.encrypted-unlock" ||
                 action.id == "org.freedesktop.udisks2.encrypted-lock" ||
-                action.id == "org.freedesktop.udisks2.eject-media") {
+                action.id == "org.freedesktop.udisks2.eject-media" ||
+                action.id == "org.freedesktop.udisks2.open-device" ||
+                action.id == "org.freedesktop.udisks2.modify-device") {
 
                 if (subject.isInGroup("wheel")) {
                     var isRemovable = (action.lookup("drive.removable") === "true");
