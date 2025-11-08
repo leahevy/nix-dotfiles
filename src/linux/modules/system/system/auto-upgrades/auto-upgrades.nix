@@ -67,14 +67,18 @@ args@{
               else if lib.hasPrefix "INFO:" message then
                 if lib.hasSuffix "skipping upgrade" message then
                   "Auto-Upgrade (info)|stop: ${lib.removePrefix "INFO: " message}"
-                else
+                else if lib.hasInfix "Borg backup" message then
                   "Auto-Upgrade (info)|system-software-install: ${lib.removePrefix "INFO: " message}"
+                else
+                  null
               else if lib.hasPrefix "NOTICE:" message then
                 "Auto-Upgrade (notice)|system-software-install: ${lib.removePrefix "NOTICE: " message}"
               else
                 "Auto-Upgrade|system-software-install: ${message}"
             else
-              "";
+              null;
+
+          shouldSendUserNotify = userNotifyEnabled && userNotifyMessage != null;
 
           pushoverType =
             if lib.hasPrefix "STARTED:" message then
@@ -117,6 +121,8 @@ args@{
               lib.removePrefix "SUCCESS-REBOOT-LATER: " message
             else if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then
               lib.removePrefix "INFO: " message
+            else if lib.hasPrefix "INFO:" message && lib.hasInfix "Borg backup" message then
+              lib.removePrefix "INFO: " message
             else if lib.hasPrefix "FAILURE:" message then
               lib.removePrefix "FAILURE: " message
             else if lib.hasPrefix "WARNING:" message then
@@ -125,7 +131,7 @@ args@{
               message;
         in
         ''
-          ${lib.optionalString userNotifyEnabled ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
+          ${lib.optionalString shouldSendUserNotify ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
           ${lib.optionalString shouldSendPushover ''pushover-send --title "Auto-Upgrade" --message "${pushoverMessage}" --type ${pushoverType} ${
             if pushoverPriorityOverride != null then
               "--priority ${builtins.toString pushoverPriorityOverride}"
@@ -455,19 +461,23 @@ args@{
           if self.settings.dryRun then
             ''
               REBUILD_ACTION="switch"
-              if [[ "$FORCE_REBOOT" == "true" ]]; then
-                REBUILD_ACTION="boot"
-              fi
+              ${lib.optionalString self.settings.allowReboot ''
+                if [[ "$FORCE_REBOOT" == "true" ]]; then
+                  REBUILD_ACTION="boot"
+                fi
+              ''}
               ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild $REBUILD_ACTION --flake '.#${profileName}' --impure --override-input config 'path:${nxconfigDir}' --override-input profile 'path:$PROFILE_PATH' --print-build-logs"
               ${logScript "info" "System rebuild command prepared"}
             ''
           else
             ''
               REBUILD_ACTION="switch"
-              if [[ "$FORCE_REBOOT" == "true" ]]; then
-                REBUILD_ACTION="boot"
-                ${logScript "info" "INFO: Using boot action since reboot is required"}
-              fi
+              ${lib.optionalString self.settings.allowReboot ''
+                if [[ "$FORCE_REBOOT" == "true" ]]; then
+                  REBUILD_ACTION="boot"
+                  ${logScript "info" "INFO: Using boot action since reboot is required"}
+                fi
+              ''}
 
               if ! ${pkgs.nixos-rebuild}/bin/nixos-rebuild $REBUILD_ACTION \
                 --flake ".#${profileName}" \
@@ -565,7 +575,7 @@ args@{
             else
               ''
                 if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
-                  ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed but borg backup is running - scheduling reboot in window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper})"}
+                  ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed but borg backup is running - scheduling reboot"}
                   ${
                     if self.settings.dryRun then
                       ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
