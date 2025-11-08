@@ -15,6 +15,50 @@ args@{
   input = "common";
   namespace = "home";
 
+  settings = {
+    baseFiletypesToEnable = [
+      "nix"
+      "python"
+      "rust"
+      "go"
+      "javascript"
+      "typescript"
+      "lua"
+      "c"
+      "cpp"
+      "c_sharp"
+      "haskell"
+      "ruby"
+      "scala"
+      "swift"
+      "r"
+      "matlab"
+      "objc"
+      "solidity"
+      "html"
+      "css"
+      "scss"
+      "graphql"
+      "json"
+      "jsonc"
+      "bash"
+      "fish"
+      "powershell"
+      "vim"
+      "dockerfile"
+      "terraform"
+      "cmake"
+      "make"
+      "asm"
+      "nasm"
+      "glsl"
+      "sql"
+      "proto"
+      "groovy"
+    ];
+    additionalFiletypesToEnable = [ ];
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
@@ -30,6 +74,7 @@ args@{
         globals = {
           copilot_no_tab_map = true;
           copilot_assume_mapped = true;
+          copilot_enabled = false;
         };
 
         keymaps = [
@@ -107,5 +152,57 @@ args@{
           ".config/github-copilot"
         ];
       };
+
+      home.file.".config/nvim-init/50-copilot-filetypes.lua".text = ''
+        local copilot_filetypes = {
+          ${lib.concatStringsSep ",\n          " (
+            map (ft: "\"${ft}\"") (
+              self.settings.baseFiletypesToEnable ++ self.settings.additionalFiletypesToEnable
+            )
+          )}
+        }
+
+        local copilot_ft_set = {}
+        for _, ft in ipairs(copilot_filetypes) do
+          copilot_ft_set[ft] = true
+        end
+
+        local function toggle_copilot_for_filetype()
+          local current_ft = vim.api.nvim_buf_get_option(0, 'filetype')
+
+          if vim.fn.exists(":Copilot") == 0 then
+            vim.defer_fn(function()
+              if vim.fn.exists(":Copilot") > 0 then
+                toggle_copilot_for_filetype()
+              end
+            end, 100)
+            return
+          end
+
+          if copilot_ft_set[current_ft] then
+            vim.cmd("Copilot enable")
+          else
+            vim.cmd("Copilot disable")
+          end
+        end
+
+        vim.api.nvim_create_autocmd({
+          "FileType", "BufEnter", "WinEnter", "TabEnter",
+          "BufWinEnter", "WinNew", "TabNew", "FocusGained"
+        }, {
+          pattern = "*",
+          callback = function()
+            vim.defer_fn(toggle_copilot_for_filetype, 50)
+          end,
+          desc = "Enable/disable Copilot based on filetype"
+        })
+
+        vim.api.nvim_create_autocmd("VimEnter", {
+          callback = function()
+            vim.defer_fn(toggle_copilot_for_filetype, 200)
+          end,
+          desc = "Initial Copilot filetype check on startup"
+        })
+      '';
     };
 }
