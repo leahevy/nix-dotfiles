@@ -130,7 +130,7 @@ args@{
 
         local augroup = vim.api.nvim_create_augroup('eol_fill', { clear = true })
 
-        vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter', 'TextChanged', 'TextChangedI', 'VimResized', 'WinScrolled' }, {
+        vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter', 'TextChanged', 'TextChangedI', 'VimResized', 'WinScrolled', 'CursorMoved', 'CursorMovedI' }, {
           group = augroup,
           callback = function()
             vim.defer_fn(add_eol_fill, 10)
