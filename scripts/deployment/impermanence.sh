@@ -169,8 +169,9 @@ subcommand_check() {
   is_item_filtered() {
     local item_path="$1"
     local item_rel="${item_path#/}"
+    local item_home_rel="${item_path#$user_home/}"
 
-    if echo "$system_dirs $system_files $user_dirs $user_files" | grep -Fq "$item_rel" || mount | grep -Fq " on /$item_rel type "; then
+    if echo "$system_dirs $system_files $user_dirs $user_files" | grep -Fq "$item_rel" || echo "$user_dirs $user_files" | grep -Fq "$item_home_rel" || echo "$mount_output" | grep -Fq " on $item_path type "; then
       return 0
     fi
 
@@ -184,6 +185,9 @@ subcommand_check() {
 
     case "$item_path" in
       /etc/aliases|/etc/group|/etc/passwd|/etc/printcap|/etc/shadow|/etc/subgid|/etc/subuid|/etc/sudoers)
+        return 0
+        ;;
+      /proc|/proc/*|/sys|/sys/*|/dev|/dev/*|/run|/run/*|/tmp|/tmp/*|/var/tmp|/var/tmp/*)
         return 0
         ;;
     esac
@@ -247,6 +251,14 @@ subcommand_check() {
   local system_files=""
   local user_dirs=""
   local user_files=""
+  local mount_output
+  mount_output="$(mount)"
+
+  if [[ -z "$mount_output" ]] || ! echo "$mount_output" | grep -q "on / type"; then
+    echo -e "${RED}Error: Failed to get mount information${RESET}" >&2
+    echo -e "Mount command output appears invalid or empty" >&2
+    exit 1
+  fi
   
   if [[ -d "$CONFIG_DIR" ]]; then
     local full_profile="$(construct_profile_name "$hostname")"
