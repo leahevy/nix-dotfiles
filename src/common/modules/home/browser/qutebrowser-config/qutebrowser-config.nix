@@ -56,6 +56,7 @@ args@{
     basePerDomainSettings = { };
     additionalPerDomainSettings = { };
     smoothScrollingEnabled = false;
+    nvidiaQuirks = true;
     linuxRenderingGeneric = "none";
     linuxRenderingNvidia = "software-opengl";
     darwinRendering = "none";
@@ -528,6 +529,7 @@ args@{
           else
             throw "Unsupported value type for Python conversion: ${builtins.typeOf val}";
       };
+
     in
     {
       programs.qutebrowser = {
@@ -729,7 +731,7 @@ args@{
             qt = {
               force_software_rendering =
                 if self.isLinux then
-                  if (self.linux.isModuleEnabled "graphics.nvidia-setup") then
+                  if (self.linux.isModuleEnabled "graphics.nvidia-setup") && self.settings.nvidiaQuirks then
                     self.settings.linuxRenderingNvidia
                   else
                     self.settings.linuxRenderingGeneric
@@ -737,7 +739,7 @@ args@{
                   self.settings.darwinRendering;
               args =
                 if self.isLinux then
-                  if (self.linux.isModuleEnabled "graphics.nvidia-setup") then
+                  if (self.linux.isModuleEnabled "graphics.nvidia-setup") && self.settings.nvidiaQuirks then
                     self.settings.linuxQTArgs ++ self.settings.linuxNvidiaQTArgs
                   else
                     self.settings.linuxQTArgs
@@ -1000,7 +1002,7 @@ args@{
         let
           qtEnvironVars =
             if self.isLinux then
-              if (self.linux.isModuleEnabled "graphics.nvidia-setup") then
+              if (self.linux.isModuleEnabled "graphics.nvidia-setup") && self.settings.nvidiaQuirks then
                 self.settings.linuxQTEnviron // self.settings.linuxNvidiaQTEnviron
               else
                 self.settings.linuxQTEnviron
