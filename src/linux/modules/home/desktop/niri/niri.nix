@@ -962,9 +962,9 @@ args@{
                   hotkey-overlay.title = "Windows:Move window right";
                 };
 
-                "Mod+Shift+Left" = {
-                  action = spawn-sh "niri-workspace-action --change-wallpaper move-column-to-monitor-left";
-                  hotkey-overlay.title = "Windows:Column to monitor left";
+                "Mod+Ctrl+Tab" = {
+                  action = spawn-sh "niri-workspace-action --change-wallpaper move-column-to-monitor-next";
+                  hotkey-overlay.title = "Windows:Move column to next monitor";
                 };
 
                 "Mod+Shift+Down" = {
@@ -975,11 +975,6 @@ args@{
                 "Mod+Shift+Up" = {
                   action = spawn-sh "niri-workspace-action move-column-to-workspace-up";
                   hotkey-overlay.title = "Windows:Move column up";
-                };
-
-                "Mod+Shift+Right" = {
-                  action = spawn-sh "niri-workspace-action --change-wallpaper move-column-to-monitor-right";
-                  hotkey-overlay.title = "Windows:Column to monitor right";
                 };
 
                 "Mod+Ctrl+H" = {
@@ -1007,14 +1002,9 @@ args@{
                   hotkey-overlay.title = "Windows:Reset height";
                 };
 
-                "Mod+Left" = {
-                  action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-left";
-                  hotkey-overlay.title = "Monitor:Monitor left";
-                };
-
-                "Mod+Right" = {
-                  action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-right";
-                  hotkey-overlay.title = "Monitor:Monitor right";
+                "Mod+Shift+Tab" = {
+                  action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-next";
+                  hotkey-overlay.title = "Monitor:Cycle monitor focus";
                 };
 
                 "Mod+D" = {

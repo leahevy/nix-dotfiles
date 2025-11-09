@@ -303,6 +303,23 @@ args@{
         '';
       };
 
+      home.file.".local/bin/nwg-wrapper-restart" = {
+        text = ''
+          #!/usr/bin/env bash
+          systemctl --user restart nx-nwg-wrapper-1 || true
+          ${
+            if self.settings.niriKeybindings then
+              ''
+                systemctl --user restart nx-nwg-wrapper-2 || true
+                systemctl --user restart nx-nwg-wrapper-3 || true
+              ''
+            else
+              ""
+          }
+        '';
+        executable = true;
+      };
+
       systemd.user.services.nx-nwg-wrapper-1 = {
         Unit = {
           Description = "Background window daemon 1";
