@@ -98,63 +98,75 @@ args@{
 
         _G.codewindow_enabled = ${if self.settings.autoEnable then "true" else "false"}
 
-        local function handle_minimap()
-          if _G.codewindow_enabled then
-            local ft = vim.bo.filetype
-            local excluded = { ${
-              lib.concatMapStringsSep ", " (ft: "'${ft}'") self.settings.excludeFiletypes
-            } }
-
-            for _, exclude_ft in ipairs(excluded) do
-              if ft == exclude_ft then
-                return
-              end
+        local function refresh_treesitter(callback)
+          local function do_treesitter_refresh()
+            pcall(vim.treesitter.start, vim.api.nvim_get_current_buf())
+            vim.cmd("syntax sync fromstart")
+            if callback then
+              vim.defer_fn(callback, 250)
             end
+          end
 
-            if ft ~= "" and vim.bo.buftype == "" then
-              vim.cmd("syntax sync fromstart")
+          pcall(vim.treesitter.stop, vim.api.nvim_get_current_buf())
+
+          vim.defer_fn(do_treesitter_refresh, 150)
+        end
+
+        local function refresh_minimap()
+          if not _G.codewindow_enabled then
+            refresh_treesitter()
+            return
+          end
+
+          local ft = vim.bo.filetype
+          local excluded = { ${
+            lib.concatMapStringsSep ", " (ft: "'${ft}'") self.settings.excludeFiletypes
+          } }
+
+          for _, exclude_ft in ipairs(excluded) do
+            if ft == exclude_ft then
+              refresh_treesitter()
+              return
+            end
+          end
+
+          if ft ~= "" and vim.bo.buftype == "" then
+            refresh_treesitter(function()
               codewindow.open_minimap()
-            end
+            end)
+          else
+            refresh_treesitter()
           end
         end
 
         function _G.toggle_codewindow()
           _G.codewindow_enabled = not _G.codewindow_enabled
           if _G.codewindow_enabled then
-            handle_minimap()
+            refresh_minimap()
           else
             codewindow.close_minimap()
           end
         end
 
         vim.api.nvim_create_autocmd({
-          "BufEnter", "TabEnter", "Syntax"
+          "BufEnter", "BufReadPost", "BufNewFile", "TabEnter", "Syntax", "FileType", "LspAttach", "BufWinEnter"
         }, {
-          callback = function()
-            vim.defer_fn(handle_minimap, 100)
-          end
+          callback = refresh_minimap
         })
 
         vim.api.nvim_create_autocmd("User", {
           pattern = "SessionLoadPost",
           callback = function()
             vim.defer_fn(function()
-              if _G.codewindow_enabled then
-                codewindow.close_minimap()
-                vim.defer_fn(handle_minimap, 200)
-              end
+              codewindow.close_minimap()
+              refresh_minimap()
             end, 500)
           end
         })
 
         vim.api.nvim_create_autocmd("VimEnter", {
           callback = function()
-            vim.defer_fn(function()
-              if _G.codewindow_enabled then
-                pcall(vim.treesitter.start)
-                vim.defer_fn(handle_minimap, 150)
-              end
-            end, 300)
+            vim.defer_fn(refresh_minimap, 300)
           end,
           once = true
         })
