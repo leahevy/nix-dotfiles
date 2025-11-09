@@ -331,6 +331,13 @@ args@{
           };
 
           onAttach = ''
+            local bufname = vim.api.nvim_buf_get_name(bufnr)
+            local filetype = vim.bo[bufnr].filetype
+            if filetype == "man" or bufname:match("^%w+://") then
+              vim.lsp.buf_detach_client(bufnr, client.id)
+              return
+            end
+
             vim.bo[bufnr].omnifunc = 'v:lua.vim.lsp.omnifunc'
 
             if client.server_capabilities.documentHighlightProvider then

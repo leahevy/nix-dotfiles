@@ -171,6 +171,7 @@ args@{
           undoreload = 10000;
 
           backup = false;
+          shortmess = "aoOtTIcF";
         };
 
         extraConfigLua = nvim_init_dir_loader;
@@ -417,6 +418,11 @@ args@{
         ];
 
       };
+
+      home.file.".config/nvim-init/00-early-background.lua".text = ''
+        vim.api.nvim_set_hl(0, "Normal", { bg = "#000000" })
+        vim.cmd("highlight Normal guibg=#000000 ctermbg=black")
+      '';
 
       home.file.".config/nvim-init/00-colorscheme.lua" =
         lib.mkIf (self.settings.foreignTheme != null || self.settings.overrideThemeName != null)

@@ -34,6 +34,7 @@ args@{
       "prompt"
       "help"
       "quickfix"
+      "man"
     ];
 
     bypassSaveFiletypes = [
@@ -48,6 +49,7 @@ args@{
       "prompt"
       "nofile"
       "nowrite"
+      "man"
     ];
   };
 
@@ -177,10 +179,36 @@ args@{
                   return string.format("%%%02X", string.byte(c))
                 end)
                 local session_file = session_dir .. session_name .. ".vim"
+                local session_exists = vim.fn.filereadable(session_file) == 1
 
-                clean_session_file(session_file)
+                if session_exists then
+                  vim.defer_fn(function()
+                    local should_skip = false
 
-                require("auto-session").RestoreSession()
+                    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+                      local bufname = vim.api.nvim_buf_get_name(buf)
+
+                      if bufname:match("^%w+://") then
+                        should_skip = true
+                        break
+                      end
+
+                      if bufname == "" then
+                        local line_count = vim.api.nvim_buf_line_count(buf)
+                        local first_line = vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] or ""
+                        if line_count > 1 or first_line ~= "" then
+                          should_skip = true
+                          break
+                        end
+                      end
+                    end
+
+                    if not should_skip then
+                      clean_session_file(session_file)
+                      require("auto-session").RestoreSession()
+                    end
+                  end, 10)
+                end
               end
             ''
           else
