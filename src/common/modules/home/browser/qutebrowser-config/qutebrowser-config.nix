@@ -62,6 +62,15 @@ args@{
     linuxQTEnviron = { };
     linuxNvidiaQTEnviron = { };
     darwinQTEnviron = { };
+    linuxQTArgs = [ ];
+    linuxNvidiaQTArgs = [
+      "disable-gpu"
+      "disable-gpu-compositing"
+      "disable-software-rasterizer"
+      "disable-features=VizDisplayCompositor"
+      "force-device-scale-factor=1"
+    ];
+    darwinQTArgs = [ ];
     keyBindings = {
       normal = {
         "<Escape>" = "clear-keychain ;; search ;; fullscreen --leave";
@@ -726,6 +735,14 @@ args@{
                     self.settings.linuxRenderingGeneric
                 else
                   self.settings.darwinRendering;
+              args =
+                if self.isLinux then
+                  if (self.linux.isModuleEnabled "graphics.nvidia-setup") then
+                    self.settings.linuxQTArgs ++ self.settings.linuxNvidiaQTArgs
+                  else
+                    self.settings.linuxQTArgs
+                else
+                  self.settings.darwinQTArgs;
             };
           }
           (

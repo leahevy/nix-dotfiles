@@ -72,8 +72,7 @@ args@{
                     --set QT_SCALE_FACTOR "1" \
                     --set QT_NO_OPENGL_BUGLIST "1" \
                     --set QT_WAYLAND_FORCE_DPI "96" \
-                    --set QSG_RHI_BACKEND "opengl" \
-                    --set QTWEBENGINE_CHROMIUM_FLAGS "--disable-gpu --disable-gpu-compositing --disable-software-rasterizer --disable-features=VizDisplayCompositor --force-device-scale-factor=1"
+                    --set QSG_RHI_BACKEND "opengl"
                 '';
               });
           })
