@@ -65,6 +65,14 @@ args@{
                     --set QT_QUICK_BACKEND "software" \
                     --set QT_FONT_DPI "96" \
                     --set QT_WEBENGINE_DISABLE_NOUVEAU_WORKAROUND "1" \
+                    --set QT_AUTO_SCREEN_SCALE_FACTOR "0" \
+                    --set QT_ENABLE_HIGHDPI_SCALING "0" \
+                    --set QT_QPA_NO_SIGNAL_HANDLER "1" \
+                    --set QSG_RHI_PREFER_SOFTWARE_RENDERER "1" \
+                    --set QT_SCALE_FACTOR "1" \
+                    --set QT_NO_OPENGL_BUGLIST "1" \
+                    --set QT_WAYLAND_FORCE_DPI "96" \
+                    --set QSG_RHI_BACKEND "opengl" \
                     --set QTWEBENGINE_CHROMIUM_FLAGS "--disable-gpu --disable-gpu-compositing --disable-software-rasterizer --disable-features=VizDisplayCompositor --force-device-scale-factor=1"
                 '';
               });
