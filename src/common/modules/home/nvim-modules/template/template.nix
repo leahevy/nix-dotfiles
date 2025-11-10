@@ -97,7 +97,7 @@ args@{
           in
           [
             {
-              key = "<leader>y${template.shortcut}";
+              key = "<leader>j${template.shortcut}";
               action = "<cmd>set ft=${template.extension}<cr><cmd>Template ${sanitizedName}<cr>";
               mode = [ "n" ];
               options = {
@@ -106,7 +106,7 @@ args@{
               };
             }
             {
-              key = "<leader>y<leader>${template.shortcut}";
+              key = "<leader>j<leader>${template.shortcut}";
               action = "<cmd>r ${config.home.homeDirectory}/${templateDir}/${template.extension}/${sanitizedName}-raw.md<cr>";
               mode = [ "n" ];
               options = {
@@ -121,12 +121,12 @@ args@{
       templateWhichKeySpecs = lib.flatten (
         map (template: [
           {
-            __unkeyed-1 = "<leader>y${template.shortcut}";
+            __unkeyed-1 = "<leader>j${template.shortcut}";
             desc = template.name;
             icon = if template ? icon then template.icon else "󰷈";
           }
           {
-            __unkeyed-1 = "<leader>y<leader>${template.shortcut}";
+            __unkeyed-1 = "<leader>j<leader>${template.shortcut}";
             desc = "${template.name} (raw)";
             icon = if template ? icon then template.icon else "󰷈";
           }
@@ -312,12 +312,12 @@ args@{
           (
             [
               {
-                __unkeyed-1 = "<leader>y";
+                __unkeyed-1 = "<leader>j";
                 group = "Templates";
                 icon = "󰷈";
               }
               {
-                __unkeyed-1 = "<leader>y<leader>";
+                __unkeyed-1 = "<leader>j<leader>";
                 group = "Raw Templates";
                 icon = "󰈔";
               }

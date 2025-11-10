@@ -51,6 +51,7 @@ args@{
       "nowrite"
       "man"
       "notify"
+      "yazi"
     ];
   };
 

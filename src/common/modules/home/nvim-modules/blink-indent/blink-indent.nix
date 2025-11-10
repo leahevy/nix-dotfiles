@@ -39,6 +39,7 @@ args@{
       "notify"
       "popup"
       "qf"
+      "yazi"
       ""
     ];
 

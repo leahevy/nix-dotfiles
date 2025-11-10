@@ -38,6 +38,7 @@ args@{
         which-key = true;
         lsp = true;
         lazygit = true;
+        yazi = true;
         cmp = true;
         project = true;
         vimwiki = true;

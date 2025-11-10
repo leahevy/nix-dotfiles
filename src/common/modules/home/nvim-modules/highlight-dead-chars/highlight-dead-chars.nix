@@ -43,6 +43,7 @@ args@{
       "popup"
       "qf"
       "Codewindow"
+      "yazi"
       ""
     ];
   };

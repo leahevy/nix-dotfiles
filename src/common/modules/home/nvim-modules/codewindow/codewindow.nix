@@ -39,6 +39,7 @@ args@{
       "fugitive"
       "startify"
       "notify"
+      "yazi"
       ""
     ];
     activeInTerminals = false;
