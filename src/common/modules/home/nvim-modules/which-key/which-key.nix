@@ -57,11 +57,6 @@ in
           expand = 1;
           notify = false;
           preset = "modern";
-          filter.__raw = ''
-            function(mapping)
-              return mapping.group ~= nil or (mapping.desc ~= nil and mapping.desc ~= "")
-            end
-          '';
 
           icons = {
             mappings = true;
