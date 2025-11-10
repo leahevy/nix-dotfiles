@@ -63,6 +63,7 @@ args@{
         codewindow = true;
         notify = true;
         trouble = true;
+        autosource = true;
       };
     };
   };
