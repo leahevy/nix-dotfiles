@@ -140,13 +140,13 @@ args@{
     ];
 
     tools = [
-      "ansible"
+      # "ansible"
       # "biblio"
       # "collab"
       # "debugger"
       "direnv"
-      "docker"
-      "editorconfig"
+      # "docker"
+      # "editorconfig"
       # "ein"
       {
         name = "eval";
@@ -159,7 +159,7 @@ args@{
       "make"
       # "pass"
       # "pdf"
-      "terraform"
+      # "terraform"
       "tmux"
       "tree-sitter"
       # "upload"
@@ -176,16 +176,16 @@ args@{
     lang = [
       # "agda"
       # "beancount"
-      {
-        name = "cc";
-        flags = [ "+lsp" ];
-      }
-      "clojure"
-      "common-lisp"
+      # {
+      #   name = "cc";
+      #   flags = [ "+lsp" ];
+      # }
+      # "clojure"
+      # "common-lisp"
       # "coq"
       # "crystal"
       # "csharp"
-      "data"
+      # "data"
       # "dart"
       # "dhall"
       "elixir"
@@ -199,10 +199,10 @@ args@{
       # "fsharp"
       # "fstar"
       # "gdscript"
-      {
-        name = "go";
-        flags = [ "+lsp" ];
-      }
+      # {
+      #   name = "go";
+      #   flags = [ "+lsp" ];
+      # }
       {
         name = "graphql";
         flags = [ "+lsp" ];
@@ -212,19 +212,19 @@ args@{
         flags = [ "+lsp" ];
       }
       # "hy"
-      "idris"
+      # "idris"
       "json"
       # "janet"
-      {
-        name = "java";
-        flags = [ "+lsp" ];
-      }
-      {
-        name = "javascript";
-        flags = [ "+lsp" ];
-      }
+      # {
+      #   name = "java";
+      #   flags = [ "+lsp" ];
+      # }
+      # {
+      #   name = "javascript";
+      #   flags = [ "+lsp" ];
+      # }
       # "julia"
-      "kotlin"
+      # "kotlin"
       "latex"
       # "lean"
       # "ledger"
@@ -234,9 +234,9 @@ args@{
       "nix"
       # "ocaml"
       "org"
-      "php"
-      "plantuml"
-      "graphviz"
+      # "php"
+      # "plantuml"
+      # "graphviz"
       # "purescript"
       {
         name = "python";
