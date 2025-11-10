@@ -4,6 +4,8 @@
 *.un~
 Session.vim
 .netrwhist
+.vimrc
+.vimrc.lua
 
 # Emacs
 .\#*
