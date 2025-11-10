@@ -58,6 +58,7 @@ args@{
         rainbow-delimiters = true;
         web-devicons = true;
         autoclose = true;
+        twilight = true;
         neoscroll = true;
         codewindow = true;
         notify = true;
