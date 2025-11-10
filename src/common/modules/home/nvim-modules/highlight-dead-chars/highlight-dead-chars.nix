@@ -37,6 +37,7 @@ args@{
       "alpha"
       "neo-tree"
       "Trouble"
+      "trouble"
       "lazy"
       "mason"
       "notify"

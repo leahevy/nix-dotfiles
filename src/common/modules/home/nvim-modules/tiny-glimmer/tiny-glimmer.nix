@@ -44,6 +44,7 @@ args@{
       "nowrite"
       "notify"
       "yazi"
+      "trouble"
       ""
     ];
 

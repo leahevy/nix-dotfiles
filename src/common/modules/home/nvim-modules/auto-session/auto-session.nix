@@ -52,6 +52,7 @@ args@{
       "man"
       "notify"
       "yazi"
+      "trouble"
     ];
   };
 

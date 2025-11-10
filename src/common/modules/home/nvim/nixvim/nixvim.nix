@@ -59,6 +59,7 @@ args@{
         neoscroll = true;
         codewindow = true;
         notify = true;
+        trouble = true;
       };
     };
   };

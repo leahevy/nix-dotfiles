@@ -40,6 +40,7 @@ args@{
       "startify"
       "notify"
       "yazi"
+      "trouble"
       ""
     ];
     activeInTerminals = false;
