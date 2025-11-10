@@ -58,11 +58,42 @@ args@{
       ...
     }:
     let
-      customSchemePackage = pkgs.runCommand "custom-${self.settings.themeName}-schemes" { } ''
-        mkdir -p $out/share/themes
-        cp ${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml temp.yaml
-        ${pkgs.yq-go}/bin/yq eval '. ${lib.optionalString self.settings.overrideBlackBackground "| .palette.base00 = \"${self.settings.blackOverrideColour}\" | .palette.base01 = \"${self.settings.blackOverrideColour}\""}${lib.optionalString self.settings.overrideWhiteForeground "| .palette.base05 = \"${self.settings.whiteOverrideColourNormal}\" | .palette.base06 = \"${self.settings.whiteOverrideColourLight}\" | .palette.base07 = \"${self.settings.whiteOverrideColourBright}\""}' temp.yaml > $out/share/themes/${self.settings.themeName}.yaml
-      '';
+      baseSchemeContent = builtins.readFile "${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml";
+
+      overriddenScheme =
+        let
+          afterBlackOverride =
+            if self.settings.overrideBlackBackground then
+              builtins.replaceStrings
+                [ "base00: " "base01: " ]
+                [
+                  "base00: \"${self.settings.blackOverrideColour}\" #"
+                  "base01: \"${self.settings.blackOverrideColour}\" #"
+                ]
+                baseSchemeContent
+            else
+              baseSchemeContent;
+
+          afterWhiteOverride =
+            if self.settings.overrideWhiteForeground then
+              builtins.replaceStrings
+                [ "base05: " "base06: " "base07: " ]
+                [
+                  "base05: \"${self.settings.whiteOverrideColourNormal}\" #"
+                  "base06: \"${self.settings.whiteOverrideColourLight}\" #"
+                  "base07: \"${self.settings.whiteOverrideColourBright}\" #"
+                ]
+                afterBlackOverride
+            else
+              afterBlackOverride;
+        in
+        afterWhiteOverride;
+
+      customSchemePackage =
+        if self.settings.overrideBlackBackground || self.settings.overrideWhiteForeground then
+          pkgs.writeTextDir "share/themes/${self.settings.themeName}.yaml" overriddenScheme
+        else
+          pkgs.base16-schemes;
 
       getPackage =
         fontConfig:
@@ -87,11 +118,7 @@ args@{
       ]
       ++ lib.optionals (self.settings.cursor != null) [
         (getPackage self.settings.cursor.style)
-      ]
-      ++ (with pkgs; [
-        base16-schemes
-        yq-go
-      ]);
+      ];
 
       stylix = {
         enable = true;
