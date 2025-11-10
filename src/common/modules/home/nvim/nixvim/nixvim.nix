@@ -425,6 +425,40 @@ args@{
         vim.cmd("highlight Normal guibg=#000000 ctermbg=black")
       '';
 
+      home.file.".config/nvim-init/01-leader-nop.lua".text = ''
+        vim.defer_fn(function()
+          local chars = "abcdefghijklmnopqrstuvwxyz0123456789,.;:'[]\\-=`"
+
+          local function keymap_exists(mode, lhs)
+            local keymaps = vim.api.nvim_get_keymap(mode)
+            for _, keymap in ipairs(keymaps) do
+              if keymap.lhs == lhs then
+                return true
+              end
+            end
+            return false
+          end
+
+          local function setup_nop_keybindings(prefix)
+            for i = 1, #chars do
+              local c1 = chars:sub(i, i)
+              local key1 = prefix .. c1
+
+              if not keymap_exists("n", key1) then
+                vim.keymap.set("n", key1, "<nop>", {
+                  silent = true,
+                  nowait = true,
+                  desc = ""
+                })
+              end
+            end
+          end
+
+          setup_nop_keybindings("<leader>")
+          setup_nop_keybindings("<localleader>")
+        end, 200)
+      '';
+
       home.file.".config/nvim-init/00-colorscheme.lua" =
         lib.mkIf (self.settings.foreignTheme != null || self.settings.overrideThemeName != null)
           {
