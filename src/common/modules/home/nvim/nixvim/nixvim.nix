@@ -51,6 +51,7 @@ args@{
         calendar = true;
         render-markdown = true;
         treesitter = true;
+        zen-mode = true;
         rest = true;
         auto-session = true;
         colorizer = true;
