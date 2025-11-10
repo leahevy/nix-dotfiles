@@ -20,12 +20,13 @@ args@{
     max_width = 75;
     max_height = 20;
     stages = "fade_in_slide_out";
-    render = "wrapped-compact";
+    render = "wrapped-default";
     background_colour = "#000000";
     fps = 30;
     level = "debug";
     minimum_width = 50;
     top_down = true;
+    addEventNotifications = true;
     icons = {
       debug = "";
       error = "";
@@ -45,7 +46,7 @@ args@{
           max_width = self.settings.max_width;
           max_height = self.settings.max_height;
           stages = self.settings.stages;
-          render = self.settings.render;
+          render.__raw = ''"${self.settings.render}"'';
           background_colour = self.settings.background_colour;
           fps = self.settings.fps;
           level = self.settings.level;
@@ -128,6 +129,129 @@ args@{
             vim.defer_fn(fix_notify_background, 150)
           end,
         })
+
+        ${lib.optionalString self.settings.addEventNotifications ''
+          vim.api.nvim_create_autocmd("BufWritePost", {
+            callback = function()
+              local filename = vim.fn.expand("%:t")
+              vim.notify("💾 File saved: " .. filename, vim.log.levels.INFO)
+            end,
+          })
+
+          vim.api.nvim_create_autocmd("BufReadPost", {
+            callback = function()
+              local filepath = vim.fn.expand("%:p")
+              local filesize = vim.fn.getfsize(filepath)
+              if filesize > 5000000 then
+                vim.defer_fn(function()
+                  local size_mb = math.floor(filesize / 1024 / 1024 * 100) / 100
+                  vim.notify("⚠️ Large file loaded: " .. size_mb .. "MB", vim.log.levels.WARN, {
+                    title = "Performance Warning"
+                  })
+                end, 100)
+              end
+            end,
+          })
+
+          local lsp_state = {}
+
+          local function handle_lsp_event(client_name, event_type)
+            local current_time = vim.loop.now()
+            local state = lsp_state[client_name] or {}
+
+            if state.timer then
+              pcall(vim.fn.timer_stop, state.timer)
+              state.timer = nil
+            end
+
+            if state.last_event and current_time - state.last_time < 5000 then
+              if state.last_event ~= event_type then
+                vim.notify("🔄 " .. client_name .. " reconnected", vim.log.levels.INFO, {
+                  title = "LSP"
+                })
+                lsp_state[client_name] = nil
+                return
+              end
+            end
+
+            lsp_state[client_name] = {
+              last_event = event_type,
+              last_time = current_time,
+              timer = vim.fn.timer_start(5000, function()
+                if event_type == "attach" then
+                  vim.notify("✅ " .. client_name .. " connected", vim.log.levels.INFO, {
+                    title = "LSP"
+                  })
+                else
+                  vim.notify("❌ " .. client_name .. " disconnected", vim.log.levels.WARN, {
+                    title = "LSP"
+                  })
+                end
+                lsp_state[client_name] = nil
+              end)
+            }
+          end
+
+          vim.api.nvim_create_autocmd("LspAttach", {
+            callback = function(event)
+              local client = vim.lsp.get_client_by_id(event.data.client_id)
+              if client then
+                vim.defer_fn(function()
+                  handle_lsp_event(client.name, "attach")
+                end, 100)
+              end
+            end,
+          })
+
+          vim.api.nvim_create_autocmd("LspDetach", {
+            callback = function(event)
+              local client = vim.lsp.get_client_by_id(event.data.client_id)
+              if client then
+                vim.defer_fn(function()
+                  handle_lsp_event(client.name, "detach")
+                end, 100)
+              end
+            end,
+          })
+
+          vim.api.nvim_create_autocmd("DirChanged", {
+            callback = function(event)
+              local new_dir = vim.fn.fnamemodify(event.file, ":t")
+              vim.notify("🏠 Directory changed to " .. new_dir, vim.log.levels.INFO)
+            end,
+          })
+
+          local session_checked = false
+          local function check_for_session()
+            if session_checked then return end
+
+            if _G.session_was_restored then
+              local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
+              vim.notify("👋 Welcome to " .. project_name, vim.log.levels.INFO, {
+                title = "Session Restored"
+              })
+              session_checked = true
+            end
+          end
+
+          vim.api.nvim_create_autocmd("VimEnter", {
+            once = true,
+            callback = function()
+              vim.defer_fn(check_for_session, 1000)
+              vim.defer_fn(check_for_session, 2000)
+            end,
+          })
+
+          vim.api.nvim_create_autocmd("BufWritePre", {
+            callback = function()
+              if vim.bo.readonly then
+                vim.notify("🚫 Cannot save readonly file", vim.log.levels.ERROR, {
+                  title = "Write Error"
+                })
+              end
+            end,
+          })
+        ''}
       '';
     };
 }

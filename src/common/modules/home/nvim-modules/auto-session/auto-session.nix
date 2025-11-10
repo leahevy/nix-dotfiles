@@ -60,6 +60,8 @@ args@{
     context@{ config, options, ... }:
     {
       home.file.".config/nvim-init/10-auto-session-setup.lua".text = ''
+        _G.session_was_restored = false
+
         local function clean_session_file(file_path)
           if vim.fn.filereadable(file_path) == 1 then
             local lines = vim.fn.readfile(file_path)
@@ -209,6 +211,7 @@ args@{
                     if not should_skip then
                       clean_session_file(session_file)
                       require("auto-session").RestoreSession()
+                      _G.session_was_restored = true
                     end
                   end, 10)
                 end
