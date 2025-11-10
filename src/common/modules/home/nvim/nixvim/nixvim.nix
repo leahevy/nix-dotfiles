@@ -45,6 +45,7 @@ args@{
         tmuxline = false;
         vim-tmux-navigator = true;
         copilot = true;
+        arrow = true;
         searchbox = true;
         grug-far = true;
         calendar = true;
