@@ -62,6 +62,7 @@ args@{
         neoscroll = true;
         codewindow = true;
         notify = true;
+        cursorline = true;
         trouble = true;
         autosource = true;
       };
