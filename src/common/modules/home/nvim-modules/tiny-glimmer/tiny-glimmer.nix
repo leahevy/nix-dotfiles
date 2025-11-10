@@ -42,6 +42,7 @@ args@{
       "prompt"
       "nofile"
       "nowrite"
+      "notify"
       ""
     ];
 

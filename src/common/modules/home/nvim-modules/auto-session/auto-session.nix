@@ -50,6 +50,7 @@ args@{
       "nofile"
       "nowrite"
       "man"
+      "notify"
     ];
   };
 

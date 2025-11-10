@@ -57,6 +57,7 @@ args@{
         autoclose = true;
         neoscroll = true;
         codewindow = true;
+        notify = true;
       };
     };
   };

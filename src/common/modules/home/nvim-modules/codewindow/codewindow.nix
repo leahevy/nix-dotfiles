@@ -38,6 +38,7 @@ args@{
       "gitrebase"
       "fugitive"
       "startify"
+      "notify"
       ""
     ];
     activeInTerminals = false;
