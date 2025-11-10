@@ -339,6 +339,74 @@ args@{
           }
           {
             mode = "n";
+            key = "<C-D>";
+            action.__raw = ''
+              function()
+                local now = vim.loop.now()
+                if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 100) then
+                  return
+                end
+                _G.scroll_processing = true
+                _G.last_scroll_time = now
+
+                local win_height = vim.api.nvim_win_get_height(0)
+                local cursor_line = vim.fn.line('.')
+                local win_top = vim.fn.line('w0')
+                local win_bottom = vim.fn.line('w$')
+                local lines_to_move = math.floor(win_height / 5)
+                local edge_threshold = 10
+
+                if cursor_line == win_bottom then
+                  vim.cmd('normal! ' .. lines_to_move .. 'j')
+                  vim.cmd('normal! zz')
+                  _G.scroll_processing = false
+                else
+                  vim.cmd('normal! ' .. lines_to_move .. 'j')
+                  _G.scroll_processing = false
+                end
+              end
+            '';
+            options = {
+              desc = "Smart scroll down";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<C-U>";
+            action.__raw = ''
+              function()
+                local now = vim.loop.now()
+                if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 100) then
+                  return
+                end
+                _G.scroll_processing = true
+                _G.last_scroll_time = now
+
+                local win_height = vim.api.nvim_win_get_height(0)
+                local cursor_line = vim.fn.line('.')
+                local win_top = vim.fn.line('w0')
+                local win_bottom = vim.fn.line('w$')
+                local lines_to_move = math.floor(win_height / 5)
+                local edge_threshold = 10
+
+                if cursor_line == win_top then
+                  vim.cmd('normal! ' .. lines_to_move .. 'k')
+                  vim.cmd('normal! zz')
+                  _G.scroll_processing = false
+                else
+                  vim.cmd('normal! ' .. lines_to_move .. 'k')
+                  _G.scroll_processing = false
+                end
+              end
+            '';
+            options = {
+              desc = "Smart scroll up";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
             key = "<leader>n";
             action = "<cmd>tabnew | Dashboard<cr>";
             options = {
