@@ -636,6 +636,9 @@ args@{
             vim.api.nvim_set_hl(0, "qfLineNr", { fg = "#606080" })
             vim.api.nvim_set_hl(0, "qfFileName", { fg = "#8080ff" })
             vim.api.nvim_set_hl(0, "qfSeparator", { fg = "#404040" })
+
+            vim.api.nvim_set_hl(0, "MsgArea", { bg = "NONE", fg = "#33dd77" })
+            vim.api.nvim_set_hl(0, "Visual", { bg = "#1a4d33" })
           end
 
           vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
