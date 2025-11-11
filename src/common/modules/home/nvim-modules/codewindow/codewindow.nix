@@ -34,6 +34,7 @@ args@{
       "lspinfo"
       "checkhealth"
       "man"
+      "qf"
       "gitcommit"
       "gitrebase"
       "fugitive"
