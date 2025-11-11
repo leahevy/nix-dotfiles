@@ -131,10 +131,20 @@ args@{
         })
 
         ${lib.optionalString self.settings.addEventNotifications ''
+          local write_failed = {}
+          local was_modified = {}
+
           vim.api.nvim_create_autocmd("BufWritePost", {
             callback = function()
-              local filename = vim.fn.expand("%:t")
-              vim.notify("💾 File saved: " .. filename, vim.log.levels.INFO)
+              local bufnr = vim.api.nvim_get_current_buf()
+              if not write_failed[bufnr] and was_modified[bufnr] then
+                local filename = vim.fn.expand("%:t")
+                vim.notify("💾 Path: " .. filename, vim.log.levels.INFO, {
+                  title = "File Saved"
+                })
+              end
+              write_failed[bufnr] = nil
+              was_modified[bufnr] = nil
             end,
           })
 
@@ -217,7 +227,9 @@ args@{
           vim.api.nvim_create_autocmd("DirChanged", {
             callback = function(event)
               local new_dir = vim.fn.fnamemodify(event.file, ":t")
-              vim.notify("🏠 Directory changed to " .. new_dir, vim.log.levels.INFO)
+              vim.notify("🏠 New working directory: " .. new_dir, vim.log.levels.INFO, {
+                title = "Directory Changed"
+              })
             end,
           })
 
@@ -244,10 +256,15 @@ args@{
 
           vim.api.nvim_create_autocmd("BufWritePre", {
             callback = function()
+              local bufnr = vim.api.nvim_get_current_buf()
+              was_modified[bufnr] = vim.bo.modified
               if vim.bo.readonly then
+                write_failed[bufnr] = true
                 vim.notify("🚫 Cannot save readonly file", vim.log.levels.ERROR, {
                   title = "Write Error"
                 })
+              else
+                write_failed[bufnr] = false
               end
             end,
           })
