@@ -175,8 +175,8 @@ in
           };
 
           keys = {
-            scroll_down = "<C-PageDown>";
-            scroll_up = "<C-PageUp>";
+            scroll_down = "<PageDown>";
+            scroll_up = "<PageUp>";
           };
 
           show_help = self.settings.showHelp;
