@@ -139,9 +139,17 @@ args@{
               local bufnr = vim.api.nvim_get_current_buf()
               if not write_failed[bufnr] and was_modified[bufnr] then
                 local filename = vim.fn.expand("%:t")
-                vim.notify("💾 Path: " .. filename, vim.log.levels.INFO, {
-                  title = "File Saved"
-                })
+
+                if _G.autosave_in_progress then
+                  vim.notify("🔄 Auto-saved: " .. filename, vim.log.levels.INFO, {
+                    title = "Auto Save",
+                    timeout = 1
+                  })
+                else
+                  vim.notify("💾 Path: " .. filename, vim.log.levels.INFO, {
+                    title = "File Saved"
+                  })
+                end
               end
               write_failed[bufnr] = nil
               was_modified[bufnr] = nil
