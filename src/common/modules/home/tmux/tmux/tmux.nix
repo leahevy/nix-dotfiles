@@ -17,16 +17,16 @@ args@{
 
   settings = {
     waylandClipboard = false;
-    primaryBg = "#dfff00";
-    primaryFg = "#00005f";
-    prefixFg = "#ffffff";
-    prefixBg = "#cc0055";
-    secondaryBg = "#444444";
-    secondaryFg = "#ffffff";
-    statusBg = "#202020";
-    statusFg = "#9cffd3";
-    borderColor = "#444444";
-    activeBorderColor = "#dfff00";
+    primaryBg = "#37f499";
+    primaryFg = "#1a4d33";
+    prefixFg = "#ffaa00";
+    prefixBg = "#332200";
+    secondaryBg = "#1a4d33";
+    secondaryFg = "#37f499";
+    statusBg = "#000000";
+    statusFg = "#04d1f9";
+    borderColor = "#1a4d33";
+    activeBorderColor = "#37f499";
     defaultShell = "fish";
     tmuxinatorConfigs = { };
     tmuxinatorBaseConfigs = {
