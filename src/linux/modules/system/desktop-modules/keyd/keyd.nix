@@ -62,6 +62,7 @@ args@{
             a = macro(C-S-u 00e4 enter)
             o = macro(C-S-u 00f6 enter)
             u = macro(C-S-u 00fc enter)
+            e = macro(C-S-u 20ac enter)
             shift = layer(umlauts_upper)
 
             [umlauts_upper]
@@ -73,6 +74,7 @@ args@{
             a = ä
             o = ö
             u = ü
+            e = €
             shift = layer(umlauts_direct_upper)
 
             [umlauts_direct_upper]
