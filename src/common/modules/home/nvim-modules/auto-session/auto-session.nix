@@ -62,7 +62,35 @@ args@{
       home.file.".config/nvim-init/10-auto-session-setup.lua".text = ''
         _G.session_was_restored = false
 
-        local function clean_session_file(file_path)
+        _G.get_canonical_path = function(path)
+          local resolved = vim.fn.resolve(path or vim.fn.getcwd())
+          return vim.fn.fnamemodify(resolved, ':p'):gsub('/$', "")
+        end
+
+        local function encode_session_name(path)
+          return path:gsub("([/\\:*?\"'<>+ |%.%%])", function(c)
+            return string.format("%%%02X", string.byte(c))
+          end)
+        end
+
+        local function find_session_file(cwd)
+          local session_dir = vim.fn.stdpath("data") .. "/sessions/"
+
+          local current_session = session_dir .. encode_session_name(cwd) .. ".vim"
+          if vim.fn.filereadable(current_session) == 1 then
+            return current_session, cwd
+          end
+
+          local canonical = _G.get_canonical_path(cwd)
+          local canonical_session = session_dir .. encode_session_name(canonical) .. ".vim"
+          if vim.fn.filereadable(canonical_session) == 1 then
+            return canonical_session, canonical
+          end
+
+          return nil, canonical
+        end
+
+        local function clean_session_file(file_path, target_cwd)
           if vim.fn.filereadable(file_path) == 1 then
             local lines = vim.fn.readfile(file_path)
             local modified = false
@@ -79,6 +107,13 @@ args@{
                     break
                   end
                 end
+              elseif target_cwd and (line:match("^cd ") or line:match("^lcd ")) then
+                local old_path = line:match("^l?cd (.+)$")
+                local cmd_type = line:match("^(l?cd) ")
+                if old_path and (vim.fn.isdirectory(vim.fn.expand(old_path)) == 0 or old_path ~= target_cwd) then
+                  lines[i] = cmd_type .. " " .. target_cwd
+                  modified = true
+                end
               end
             end
 
@@ -89,12 +124,10 @@ args@{
         end
 
         local session_dir = vim.fn.stdpath("data") .. "/sessions/"
-        local cwd = vim.fn.getcwd()
-        local session_name = cwd:gsub("([^A-Za-z0-9])", function(c)
-          return string.format("%%%02X", string.byte(c))
-        end)
+        local canonical_cwd = _G.get_canonical_path()
+        local session_name = encode_session_name(canonical_cwd)
         local session_file = session_dir .. session_name .. ".vim"
-        clean_session_file(session_file)
+        clean_session_file(session_file, canonical_cwd)
 
         require("auto-session").setup({
           enabled = ${if self.settings.autoRestore then "true" else "false"},
@@ -178,13 +211,9 @@ args@{
           if self.settings.autoRestore then
             ''
               if #vim.fn.argv() == 0 then
-                local session_dir = vim.fn.stdpath("data") .. "/sessions/"
                 local cwd = vim.fn.getcwd()
-                local session_name = cwd:gsub("([^A-Za-z0-9])", function(c)
-                  return string.format("%%%02X", string.byte(c))
-                end)
-                local session_file = session_dir .. session_name .. ".vim"
-                local session_exists = vim.fn.filereadable(session_file) == 1
+                local session_file, canonical_path = find_session_file(cwd)
+                local session_exists = session_file ~= nil
 
                 if session_exists then
                   vim.defer_fn(function()
@@ -209,7 +238,7 @@ args@{
                     end
 
                     if not should_skip then
-                      clean_session_file(session_file)
+                      clean_session_file(session_file, canonical_path)
                       require("auto-session").RestoreSession()
                       _G.session_was_restored = true
                     end
