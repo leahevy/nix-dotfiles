@@ -173,6 +173,21 @@ jobs:
             sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-reboot-required
           fi
 
+      - name: Check if merge day
+        id: check-day
+        run: |
+          set -euo pipefail
+          # MERGE_DAYS="6"
+          # current_day=$(date +%u)
+          # if echo "$MERGE_DAYS" | grep -q "\b$current_day\b"; then
+          #   echo "its_mergeday=true" >> $GITHUB_OUTPUT
+          # else
+          #   echo "its_mergeday=false" >> $GITHUB_OUTPUT
+          # fi
+          #
+          # Disabled: Every day is merge day but only auto-merge if no reboot is required!
+          echo "its_mergeday=true" >> $GITHUB_OUTPUT
+
       - name: Create Pull Request
         if: steps.changes.outputs.changed == 'true'
         id: cpr
@@ -204,21 +219,6 @@ jobs:
           branch: update-flake-inputs
           delete-branch: true
           sign-commits: true
-
-      - name: Check if merge day
-        id: check-day
-        run: |
-          set -euo pipefail
-          # MERGE_DAYS="6"
-          # current_day=$(date +%u)
-          # if echo "$MERGE_DAYS" | grep -q "\b$current_day\b"; then
-          #   echo "its_mergeday=true" >> $GITHUB_OUTPUT
-          # else
-          #   echo "its_mergeday=false" >> $GITHUB_OUTPUT
-          # fi
-          #
-          # Disabled: Every day is merge day but only auto-merge if no reboot is required!
-          echo "its_mergeday=true" >> $GITHUB_OUTPUT
 
       - name: Notify PR Created via Pushover
         if: steps.changes.outputs.changed == 'true' && steps.cpr.outputs.pull-request-operation == 'created'
