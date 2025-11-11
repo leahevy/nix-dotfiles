@@ -131,9 +131,9 @@ jobs:
                     commit_count=$(echo "$regular_commits" | wc -l)
                     commits_to_show="$regular_commits"
 
-                    if [ "$commit_count" -gt 300 ]; then
-                      commits_to_show=$(echo "$regular_commits" | head -300)
-                      commits_to_show="$commits_to_show"$'\n'"- ... and $(($commit_count - 300)) more commits"
+                    if [ "$commit_count" -gt 500 ]; then
+                      commits_to_show=$(echo "$regular_commits" | head -500)
+                      commits_to_show="$commits_to_show"$'\n'"- ... and $(($commit_count - 500)) more commits"
                     fi
 
                     commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"$commits_to_show"
@@ -183,6 +183,10 @@ jobs:
           title: "Update flake inputs: ${{ env.UPDATED_INPUTS }}"
           body: |
             ## Automated update of flake inputs.
+
+            ${{ env.REQUIRES_REBOOT != 'true' && '> [!NOTE]' || '' }}
+            ${{ env.REQUIRES_REBOOT != 'true' && '> ✅ **This pull request will be automatically merged**' || '' }}
+            ${{ env.REQUIRES_REBOOT != 'true' && '> No reboot detected - auto-merge enabled' || '' }}
 
             ${{ env.REQUIRES_REBOOT == 'true' && '> [!WARNING]' || '' }}
             ${{ env.REQUIRES_REBOOT == 'true' && '> ⚠️ **System Reboot Required** ⚠️' || '' }}
