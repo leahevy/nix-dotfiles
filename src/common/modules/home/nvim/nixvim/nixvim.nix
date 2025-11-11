@@ -348,7 +348,7 @@ args@{
             action.__raw = ''
               function()
                 local now = vim.loop.now()
-                if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 100) then
+                if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 50) then
                   return
                 end
                 _G.scroll_processing = true
@@ -358,7 +358,7 @@ args@{
                 local cursor_line = vim.fn.line('.')
                 local win_top = vim.fn.line('w0')
                 local win_bottom = vim.fn.line('w$')
-                local lines_to_move = math.floor(win_height / 8)
+                local lines_to_move = math.floor(win_height / 6)
                 local edge_threshold = 10
 
                 if cursor_line == win_bottom then
@@ -382,7 +382,7 @@ args@{
             action.__raw = ''
               function()
                 local now = vim.loop.now()
-                if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 100) then
+                if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 50) then
                   return
                 end
                 _G.scroll_processing = true
@@ -392,7 +392,7 @@ args@{
                 local cursor_line = vim.fn.line('.')
                 local win_top = vim.fn.line('w0')
                 local win_bottom = vim.fn.line('w$')
-                local lines_to_move = math.floor(win_height / 8)
+                local lines_to_move = math.floor(win_height / 6)
                 local edge_threshold = 10
 
                 if cursor_line == win_top then
