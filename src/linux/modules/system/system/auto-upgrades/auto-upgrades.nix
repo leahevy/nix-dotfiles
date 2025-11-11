@@ -60,6 +60,8 @@ args@{
                 "Auto-Upgrade (completed)|checkmark: ${lib.removePrefix "SUCCESS: " message}"
               else if lib.hasPrefix "SUCCESS-REBOOT-LATER:" message then
                 "Auto-Upgrade (completed)|checkmark: ${lib.removePrefix "SUCCESS-REBOOT-LATER: " message}"
+              else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
+                "Auto-Upgrade (post-reboot)|checkmark: ${lib.removePrefix "SUCCESS-POST-REBOOT: " message}"
               else if lib.hasPrefix "FAILURE:" message then
                 "Auto-Upgrade (failed)|dialog-error: ${lib.removePrefix "FAILURE: " message}"
               else if lib.hasPrefix "WARNING:" message then
@@ -88,6 +90,8 @@ args@{
             else if lib.hasPrefix "SUCCESS-REBOOT-NOW:" message then
               "warn"
             else if lib.hasPrefix "SUCCESS-REBOOT-LATER:" message then
+              "success"
+            else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
               "success"
             else if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then
               "info"
@@ -119,6 +123,8 @@ args@{
               lib.removePrefix "SUCCESS-REBOOT-NOW: " message
             else if lib.hasPrefix "SUCCESS-REBOOT-LATER:" message then
               lib.removePrefix "SUCCESS-REBOOT-LATER: " message
+            else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
+              lib.removePrefix "SUCCESS-POST-REBOOT: " message
             else if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then
               lib.removePrefix "INFO: " message
             else if lib.hasPrefix "INFO:" message && lib.hasInfix "Borg backup" message then
@@ -140,6 +146,19 @@ args@{
           } || true''}
           echo "${message}" ${if level == "err" then ">&2" else ""}
         '';
+
+      createPersistentRebootMarkerScript =
+        rebootType:
+        if self.settings.dryRun then
+          ''${pkgs.coreutils}/bin/echo "Would create persistent marker: /var/lib/nx-auto-upgrade/last-reboot (${rebootType})"''
+        else
+          ''
+            ${pkgs.coreutils}/bin/mkdir -p /var/lib/nx-auto-upgrade
+            ${pkgs.coreutils}/bin/touch /var/lib/nx-auto-upgrade/last-reboot
+            ${pkgs.coreutils}/bin/chown root:root /var/lib/nx-auto-upgrade/last-reboot
+            ${pkgs.coreutils}/bin/chmod 600 /var/lib/nx-auto-upgrade/last-reboot
+            ${pkgs.coreutils}/bin/echo "$(${pkgs.coreutils}/bin/date +%s):$(${pkgs.coreutils}/bin/date '+%Y-%m-%d %H:%M:%S'):auto-upgrade-reboot:${rebootType}" > /var/lib/nx-auto-upgrade/last-reboot
+          '';
 
       checkBorgRunningScript = ''
         check_borg_running() {
@@ -551,6 +570,7 @@ args@{
                     ${logScript "info" "SUCCESS-REBOOT-NOW: Reboot needed and within window - ${
                       if self.settings.dryRun then "would reboot" else "rebooting"
                     } in +1 minute"}
+                    ${createPersistentRebootMarkerScript "immediate-window"}
                     ${
                       if self.settings.dryRun then
                         ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1 --no-wall"''
@@ -590,6 +610,7 @@ args@{
                   ${logScript "info" "SUCCESS-REBOOT-NOW: Reboot needed - ${
                     if self.settings.dryRun then "would reboot" else "rebooting"
                   } in +1 minute"}
+                  ${createPersistentRebootMarkerScript "immediate-no-window"}
                   ${
                     if self.settings.dryRun then
                       ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1 --no-wall"''
@@ -629,12 +650,14 @@ args@{
             ''
               if check_reboot_window; then
                 ${logScript "info" "INFO: Delayed reboot marker found and inside reboot window, rebooting now"}
+                ${createPersistentRebootMarkerScript "delayed-window"}
                 ${config.systemd.package}/bin/shutdown -r now --no-wall
               fi
             ''
           else
             ''
               ${logScript "info" "INFO: Delayed reboot marker found, rebooting now"}
+              ${createPersistentRebootMarkerScript "delayed-no-window"}
               ${config.systemd.package}/bin/shutdown -r now --no-wall
             ''
         }
@@ -899,9 +922,82 @@ args@{
         wantedBy = [ "timers.target" ];
       };
 
+      systemd.services.nx-auto-upgrade-post-reboot-notify = {
+        description = "NX Auto-Upgrade Post-Reboot Notification";
+
+        serviceConfig = {
+          Type = "oneshot";
+          User = "root";
+        };
+
+        path =
+          with pkgs;
+          [
+            coreutils
+            iputils
+            util-linux
+          ]
+          ++
+            lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
+              [
+                (self.importFileFromOtherModuleSameInput {
+                  inherit args self;
+                  modulePath = "notifications.pushover";
+                }).custom.pushoverSendScript
+              ];
+
+        script = ''
+          marker_file="/var/lib/nx-auto-upgrade/last-reboot"
+
+          if [[ ! -f "$marker_file" ]]; then
+            exit 0
+          fi
+
+          marker_content=$(${pkgs.coreutils}/bin/cat "$marker_file")
+          ${pkgs.coreutils}/bin/rm -f "$marker_file"
+
+          reboot_type=$(${pkgs.coreutils}/bin/echo "$marker_content" | ${pkgs.coreutils}/bin/cut -d':' -f4)
+          reboot_time=$(${pkgs.coreutils}/bin/echo "$marker_content" | ${pkgs.coreutils}/bin/cut -d':' -f2)
+
+          ${lib.optionalString self.settings.waitForNetwork ''
+            ${pkgs.coreutils}/bin/echo "Checking network connectivity..."
+            retries=0
+            max_retries=${toString self.settings.maxNetworkRetries}
+
+            for host in "${coreRepoHost}" "${configRepoHost}"; do
+              ${pkgs.coreutils}/bin/echo "Testing connectivity to $host..."
+              host_retries=0
+              until ${pkgs.iputils}/bin/ping -c1 -q "$host" >/dev/null 2>&1; do
+                host_retries=$((host_retries + 1))
+                if [ $host_retries -ge $max_retries ]; then
+                  ${pkgs.coreutils}/bin/echo "Network connectivity to $host failed after $max_retries attempts, skipping notification"
+                  exit 0
+                fi
+                ${pkgs.coreutils}/bin/echo "Host $host not reachable, waiting 30s... (attempt $host_retries/$max_retries)"
+                ${pkgs.coreutils}/bin/sleep 30
+              done
+            done
+          ''}
+
+          ${logScript "info" "SUCCESS-POST-REBOOT: Auto-upgrade reboot completed successfully - system back online (type: $reboot_type, initiated: $reboot_time)"}
+        '';
+      };
+
+      systemd.timers.nx-auto-upgrade-post-reboot-notify = {
+        description = "NX Auto-Upgrade Post-Reboot Notification Timer";
+        timerConfig = {
+          OnBootSec = "3min";
+          RemainAfterElapse = false;
+        };
+        wantedBy = [ "timers.target" ];
+      };
+
       system.autoUpgrade.enable = lib.mkForce false;
 
       environment.persistence."${self.persist}" = {
+        directories = [
+          "/var/lib/nx-auto-upgrade"
+        ];
         files = [
           "/root/.gitconfig"
         ];
