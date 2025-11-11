@@ -250,26 +250,34 @@ args@{
           bind-key -T copy-mode-vi 'C-\' select-pane -l
         '';
 
-        ".config/tmux/30-statusbar.conf".text = ''
-          set -g status-justify "centre"
-          set -g status "on"
-          set -g status-left-style "none"
-          set -g message-command-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
-          set -g status-right-style "none"
-          set -g pane-active-border-style "fg=${colors.activeBorderColor}"
-          set -g status-style "none,bg=${colors.statusBg}"
-          set -g message-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
-          set -g pane-border-style "fg=${colors.borderColor}"
-          set -g status-right-length "100"
-          set -g status-left-length "100"
-          setw -g window-status-activity-style "none"
-          setw -g window-status-separator ""
-          setw -g window-status-style "none,fg=${colors.statusFg},bg=${colors.statusBg}"
-          set -g status-left "#{?client_prefix,#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #S #[fg=${colors.prefixBg}]#[bg=${colors.statusBg}],#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg},bg=${colors.statusBg}]}"
-          set -g status-right "#[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.secondaryBg}] %Y-%m-%d  %H:%M #{?client_prefix,#[fg=${colors.prefixBg}]#[bg=${colors.secondaryBg}]#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #h ,#[fg=${colors.primaryBg},bg=${colors.secondaryBg},nobold,nounderscore,noitalics]#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #h }"
-          setw -g window-status-format "#[fg=${colors.statusFg},bg=${colors.statusBg}] #I #[fg=${colors.statusFg},bg=${colors.statusBg}] #W "
-          setw -g window-status-current-format "#[fg=${colors.statusBg},bg=${colors.borderColor},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #I #[fg=${colors.secondaryFg},bg=${colors.borderColor}] #W #[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]"
-        '';
+        ".config/tmux/30-statusbar.conf".text =
+          let
+            status-left = "#{?client_prefix,#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #S #[fg=${colors.prefixBg}]#[bg=${colors.statusBg}],#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg},bg=${colors.statusBg}]}";
+            status-right = "#[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.secondaryBg}] %Y-%m-%d  %H:%M #{?client_prefix,#[fg=${colors.prefixBg}]#[bg=${colors.secondaryBg}]#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #h ,#[fg=${colors.primaryBg},bg=${colors.secondaryBg},nobold,nounderscore,noitalics]#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #h }";
+            window-status-format = "#[fg=${colors.statusFg},bg=${colors.statusBg}] #I #[fg=${colors.statusFg},bg=${colors.statusBg}] #W ";
+            window-status-current-format = "#[fg=${colors.statusBg},bg=${colors.borderColor},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #I #[fg=${colors.secondaryFg},bg=${colors.borderColor}] #W #[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]";
+          in
+          ''
+            set -g status-justify "centre"
+            set -g status "on"
+            set -g status-left-style "none"
+            set -g status 2
+            set -g status-format[0] "#[bg=default] "
+            set -g status-format[1] "#[align=left]${status-left}#[align=centre]#{W:#{E:window-status-format},#{E:window-status-current-format}}#[align=right]${status-right}"
+            set -g message-command-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
+            set -g status-right-style "none"
+            set -g pane-active-border-style "fg=${colors.activeBorderColor}"
+            set -g status-style "none,bg=${colors.statusBg}"
+            set -g message-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
+            set -g pane-border-style "fg=${colors.borderColor}"
+            set -g status-right-length "100"
+            set -g status-left-length "100"
+            setw -g window-status-activity-style "none"
+            setw -g window-status-separator ""
+            setw -g window-status-style "none,fg=${colors.statusFg},bg=${colors.statusBg}"
+            setw -g window-status-format "${window-status-format}"
+            setw -g window-status-current-format "${window-status-current-format}"
+          '';
       };
 
       home.persistence."${self.persist}" = {
