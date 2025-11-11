@@ -20,6 +20,8 @@ args@{
     debounceDelay = 500;
     onlyInHomeDirectories = true;
     showNotifications = true;
+    withData = false;
+    dataPath = "/data";
 
     excludedFiletypes = [
       "help"
@@ -100,7 +102,14 @@ args@{
                   if self.settings.onlyInHomeDirectories then
                     ''
                       local home_pattern = ${if self.isLinux then ''"^/home/"'' else ''"^/Users/"''}
-                      if not bufname:match(home_pattern) then
+                      local in_home = bufname:match(home_pattern)
+                      ${lib.optionalString (!self.user.isStandalone && self.settings.withData) ''
+                        local data_pattern = "^${self.settings.dataPath}/"
+                        local in_data = bufname:match(data_pattern)
+                      ''}
+                      if not in_home${
+                        lib.optionalString (!self.user.isStandalone && self.settings.withData) " and not in_data"
+                      } then
                         return false
                       end
                     ''
