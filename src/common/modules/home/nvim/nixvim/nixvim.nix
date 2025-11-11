@@ -567,8 +567,10 @@ args@{
             vim.api.nvim_set_hl(0, "Normal", { bg = "#000000" })
             vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#000000" })
             vim.api.nvim_set_hl(0, "NormalNC", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "NormalSB", { bg = "#000000" })
             vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "#000000" })
             vim.api.nvim_set_hl(0, "SignColumn", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "SignColumnSB", { bg = "#000000" })
             vim.api.nvim_set_hl(0, "LineNr", { bg = "#000000" })
             vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "#000000" })
 
@@ -579,11 +581,33 @@ args@{
             vim.api.nvim_set_hl(0, "StatusLineNC", { bg = "#000000" })
             vim.api.nvim_set_hl(0, "TabLine", { bg = "#000000" })
             vim.api.nvim_set_hl(0, "TabLineFill", { bg = "#000000" })
+
+            vim.api.nvim_set_hl(0, "Pmenu", { bg = "#050505" })
+            vim.api.nvim_set_hl(0, "PmenuSel", { bg = "#04293a" })
+            vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "#030303" })
+            vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "#1a1a1a" })
+
+            vim.api.nvim_set_hl(0, "QuickFixLine", { bg = "#04293a", bold = true })
+            vim.api.nvim_set_hl(0, "qfText", { fg = "#606080" })
+            vim.api.nvim_set_hl(0, "qfLineNr", { fg = "#606080" })
+            vim.api.nvim_set_hl(0, "qfFileName", { fg = "#8080ff" })
+            vim.api.nvim_set_hl(0, "qfSeparator", { fg = "#404040" })
           end
 
           vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
             callback = function()
               vim.defer_fn(fix_black_background, 100)
+            end,
+          })
+
+          local qf_ns = vim.api.nvim_create_namespace("quickfix_highlights")
+          vim.api.nvim_set_hl(qf_ns, "CursorLine", { bg = "#031313" })
+
+          vim.api.nvim_create_autocmd("FileType", {
+            pattern = "qf",
+            callback = function()
+              vim.wo.winhighlight = "CursorLine:CursorLine,Normal:NormalSB,SignColumn:SignColumnSB"
+              vim.api.nvim_win_set_hl_ns(0, qf_ns)
             end,
           })
         '';
