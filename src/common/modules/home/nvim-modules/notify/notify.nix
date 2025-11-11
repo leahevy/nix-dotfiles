@@ -16,15 +16,15 @@ args@{
   namespace = "home";
 
   settings = {
-    timeout = 10000;
+    timeout = 6000;
     max_width = 75;
-    max_height = 20;
+    max_height = 75;
     stages = "fade_in_slide_out";
     render = "wrapped-default";
     background_colour = "#000000";
     fps = 30;
     level = "debug";
-    minimum_width = 50;
+    minimum_width = 25;
     top_down = true;
     addEventNotifications = true;
     icons = {
@@ -174,7 +174,7 @@ args@{
               state.timer = nil
             end
 
-            if state.last_event and current_time - state.last_time < 5000 then
+            if state.last_event and current_time - state.last_time < 3000 then
               if state.last_event ~= event_type then
                 vim.notify("🔄 " .. client_name .. " reconnected", vim.log.levels.INFO, {
                   title = "LSP"
@@ -187,7 +187,7 @@ args@{
             lsp_state[client_name] = {
               last_event = event_type,
               last_time = current_time,
-              timer = vim.fn.timer_start(5000, function()
+              timer = vim.fn.timer_start(3000, function()
                 if event_type == "attach" then
                   vim.notify("✅ " .. client_name .. " connected", vim.log.levels.INFO, {
                     title = "LSP"
