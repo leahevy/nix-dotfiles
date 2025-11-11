@@ -508,7 +508,9 @@ args@{
                 --show-trace; then
                 exit 1
               fi
-              ${logScript "info" "SUCCESS: System rebuild completed successfully"}
+              ${lib.optionalString (
+                !self.settings.allowReboot
+              ) ''${logScript "info" "SUCCESS: Auto-upgrade completed successfully"}''}
             ''
         }
       '';
