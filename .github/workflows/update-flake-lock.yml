@@ -199,9 +199,9 @@ jobs:
           body: |
             ## Automated update of flake inputs.
 
-            ${{ env.REQUIRES_REBOOT != 'true' && '> [!NOTE]' || '' }}
-            ${{ env.REQUIRES_REBOOT != 'true' && '> ✅ **This pull request will be automatically merged**' || '' }}
-            ${{ env.REQUIRES_REBOOT != 'true' && '> No reboot detected - auto-merge enabled' || '' }}
+            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.REQUIRES_REBOOT != 'true' && '> [!NOTE]' || '' }}
+            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.REQUIRES_REBOOT != 'true' && '> ✅ **This pull request will be automatically merged**' || '' }}
+            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.REQUIRES_REBOOT != 'true' && '> No reboot detected - auto-merge enabled' || '' }}
 
             ${{ env.REQUIRES_REBOOT == 'true' && '> [!WARNING]' || '' }}
             ${{ env.REQUIRES_REBOOT == 'true' && '> ⚠️ **System Reboot Required** ⚠️' || '' }}
