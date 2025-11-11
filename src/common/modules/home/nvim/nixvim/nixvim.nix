@@ -18,6 +18,7 @@ args@{
   submodules = {
     common = {
       nvim-modules = {
+        auto-save = true;
         blink-indent = true;
         filetypes = true;
         tiny-glimmer = true;
