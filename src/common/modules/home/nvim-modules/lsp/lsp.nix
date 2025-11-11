@@ -317,6 +317,19 @@ args@{
               lspBufAction = "code_action";
               options.desc = "Code actions";
             }
+            {
+              key = "<leader>cF";
+              action.__raw = ''
+                function()
+                  local filename = vim.fn.expand("%:t")
+                  vim.cmd([[%s/\s\+$//e]])
+                  vim.notify("🧹 Trailing whitespace removed from " .. filename, vim.log.levels.INFO, {
+                    title = "Cleanup"
+                  })
+                end
+              '';
+              options.desc = "Remove trailing whitespace";
+            }
           ]
           ++ lib.optionals self.settings.enableGlobalFormatting [
             {
@@ -381,6 +394,11 @@ args@{
           {
             __unkeyed-1 = "<leader>cf";
             desc = "Format buffer";
+            icon = "";
+          }
+          {
+            __unkeyed-1 = "<leader>cF";
+            desc = "Remove trailing whitespace";
             icon = "";
           }
         ];
