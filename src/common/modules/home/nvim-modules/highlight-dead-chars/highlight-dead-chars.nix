@@ -187,6 +187,12 @@ args@{
           else
             clear_eol_fill()
           end
+
+          local status = _G.eol_fill_enabled and "enabled" or "disabled"
+          local icon = _G.eol_fill_enabled and "✅" or "❌"
+          vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
+            title = "EOL Fill"
+          })
         end
       '';
     };

@@ -108,7 +108,13 @@ args@{
           vim.keymap.set('n', '<leader>sR', ':SearchBoxReplace -- <C-r>=expand("<cword>")<CR><CR>', { desc = 'Replace word under cursor', unpack(opts) })
           vim.keymap.set('n', '<leader>sc', ':SearchBoxMatchAll clear_matches=false<CR>', { desc = 'Search and highlight all', unpack(opts) })
           vim.keymap.set('n', '<leader>sC', ':SearchBoxMatchAll clear_matches=false exact=true -- <C-r>=expand("<cword>")<CR><CR>', { desc = 'Highlight word under cursor', unpack(opts) })
-          vim.keymap.set('n', '<leader>sq', ':SearchBoxClear<CR>:nohlsearch<CR>', { desc = 'Clear all highlights', unpack(opts) })
+          vim.keymap.set('n', '<leader>sq', function()
+            vim.cmd('SearchBoxClear')
+            vim.cmd('nohlsearch')
+            vim.notify('🧹 Search highlights cleared', vim.log.levels.INFO, {
+              title = 'Search'
+            })
+          end, { desc = 'Clear all highlights', unpack(opts) })
         '';
       };
     };

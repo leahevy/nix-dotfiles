@@ -99,7 +99,7 @@ args@{
           {
             mode = "n";
             key = "<leader>z";
-            action = "<cmd>ZenMode<cr>";
+            action = "<cmd>lua _G.toggle_zen_mode()<cr>";
             options = {
               desc = "Toggle zen mode";
               silent = true;
@@ -111,6 +111,21 @@ args@{
       home.file = {
         ".config/nvim-init/85-zen-mode-backdrop.lua".text = ''
           vim.api.nvim_set_hl(0, "ZenBg", { bg = "#000000" })
+        '';
+
+        ".config/nvim-init/50-zen-mode-toggle.lua".text = ''
+          _G.zen_mode_enabled = false
+
+          function _G.toggle_zen_mode()
+            _G.zen_mode_enabled = not _G.zen_mode_enabled
+            require("zen-mode").toggle()
+
+            local status = _G.zen_mode_enabled and "enabled" or "disabled"
+            local icon = _G.zen_mode_enabled and "✅" or "❌"
+            vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
+              title = "Zen Mode"
+            })
+          end
         '';
       };
 

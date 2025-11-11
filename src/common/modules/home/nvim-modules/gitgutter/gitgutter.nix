@@ -39,7 +39,7 @@ args@{
           {
             mode = "n";
             key = "<leader>gs";
-            action = ":GitGutterStageHunk<CR>";
+            action = ":GitGutterStageHunk | lua vim.notify('✅ Git hunk staged', vim.log.levels.INFO, { title = 'Git' })<CR>";
             options = {
               silent = true;
               desc = "Stage hunk";
@@ -48,7 +48,7 @@ args@{
           {
             mode = "n";
             key = "<leader>gu";
-            action = ":GitGutterUndoHunk<CR>";
+            action = ":GitGutterUndoHunk | lua vim.notify('↩️ Git hunk undone', vim.log.levels.INFO, { title = 'Git' })<CR>";
             options = {
               silent = true;
               desc = "Undo hunk";

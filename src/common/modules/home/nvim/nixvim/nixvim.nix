@@ -105,7 +105,7 @@ args@{
         if vim.fn.isdirectory(nvim_init_dir) == 1 then
           local files = vim.fn.glob(nvim_init_dir .. '/*.lua', false, true)
           table.sort(files)
-          
+
           for _, file in ipairs(files) do
             dofile(file)
           end
@@ -414,7 +414,14 @@ args@{
           {
             mode = "n";
             key = "<leader>n";
-            action = "<cmd>tabnew | Dashboard<cr>";
+            action.__raw = ''
+              function()
+                vim.cmd("tabnew | Dashboard")
+                vim.notify("📄 New tab created", vim.log.levels.INFO, {
+                  title = "Tab"
+                })
+              end
+            '';
             options = {
               desc = "New tab";
               silent = true;
@@ -423,7 +430,19 @@ args@{
           {
             mode = "n";
             key = "<leader>q";
-            action = "<cmd>if tabpagenr('$') == 1 | quit | else | tabclose | endif<cr>";
+            action.__raw = ''
+              function()
+                local tab_count = vim.fn.tabpagenr('$')
+                if tab_count == 1 then
+                  vim.cmd("quit")
+                else
+                  vim.cmd("tabclose")
+                  vim.notify("❌ Tab closed", vim.log.levels.INFO, {
+                    title = "Tab"
+                  })
+                end
+              end
+            '';
             options = {
               desc = "Close tab";
               silent = true;
@@ -432,7 +451,15 @@ args@{
           {
             mode = "n";
             key = "<leader>v";
-            action = "<cmd>vsplit<CR>";
+            action.__raw = ''
+              function()
+                local filename = vim.fn.expand("%:t")
+                vim.cmd("vsplit")
+                vim.notify("↔️ Split vertically: " .. filename, vim.log.levels.INFO, {
+                  title = "Split"
+                })
+              end
+            '';
             options = {
               desc = "Split vertical";
               silent = true;
@@ -441,7 +468,15 @@ args@{
           {
             mode = "n";
             key = "<leader>h";
-            action = "<cmd>split<CR>";
+            action.__raw = ''
+              function()
+                local filename = vim.fn.expand("%:t")
+                vim.cmd("split")
+                vim.notify("↕️ Split horizontally: " .. filename, vim.log.levels.INFO, {
+                  title = "Split"
+                })
+              end
+            '';
             options = {
               desc = "Split horizontal";
               silent = true;
@@ -486,7 +521,15 @@ args@{
           {
             mode = "n";
             key = "<leader>W";
-            action = "<cmd>wa<CR>";
+            action.__raw = ''
+              function()
+                vim.cmd("wa")
+                local buf_count = #vim.api.nvim_list_bufs()
+                vim.notify("💾 All " .. buf_count .. " buffers saved", vim.log.levels.INFO, {
+                  title = "Save"
+                })
+              end
+            '';
             options = {
               desc = "Save all";
               silent = true;

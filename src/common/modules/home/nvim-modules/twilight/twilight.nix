@@ -198,7 +198,7 @@ args@{
           {
             mode = "n";
             key = "<leader>k";
-            action = "<cmd>Twilight<cr>";
+            action = "<cmd>lua _G.toggle_twilight()<cr>";
             options = {
               desc = "Toggle focus mode";
               silent = true;
@@ -242,6 +242,25 @@ args@{
           }
         ];
       };
+
+      home.file.".config/nvim-init/50-twilight-toggle.lua".text = ''
+        _G.twilight_enabled = false
+
+        function _G.toggle_twilight()
+          _G.twilight_enabled = not _G.twilight_enabled
+          if _G.twilight_enabled then
+            require("twilight").enable()
+          else
+            require("twilight").disable()
+          end
+
+          local status = _G.twilight_enabled and "enabled" or "disabled"
+          local icon = _G.twilight_enabled and "✅" or "❌"
+          vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
+            title = "Twilight"
+          })
+        end
+      '';
 
       programs.nixvim.plugins.which-key.settings.spec =
         lib.mkIf (self.isModuleEnabled "nvim-modules.which-key")

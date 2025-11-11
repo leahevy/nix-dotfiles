@@ -101,7 +101,7 @@ args@{
           {
             mode = "n";
             key = "<leader>cq";
-            action = ":lua local status = vim.fn.execute('Copilot status'); if string.match(status, 'Ready') then print('Disabling Copilot...'); vim.cmd('Copilot disable') else print('Enabling Copilot...'); vim.cmd('Copilot enable') end<CR>";
+            action = ":lua local status = vim.fn.execute('Copilot status'); if string.match(status, 'Ready') then vim.notify('❌ Feature disabled', vim.log.levels.INFO, { title = 'Copilot' }); vim.cmd('Copilot disable') else vim.notify('✅ Feature enabled', vim.log.levels.INFO, { title = 'Copilot' }); vim.cmd('Copilot enable') end<CR>";
             options = {
               desc = "Toggle Copilot";
               silent = false;

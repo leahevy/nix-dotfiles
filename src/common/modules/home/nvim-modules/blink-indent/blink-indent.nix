@@ -144,6 +144,12 @@ args@{
         function _G.toggle_blink_indent()
           vim.g.indent_guide = not vim.g.indent_guide
           require('blink.indent').enable(vim.g.indent_guide)
+
+          local status = vim.g.indent_guide and "enabled" or "disabled"
+          local icon = vim.g.indent_guide and "✅" or "❌"
+          vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
+            title = "Blink Indent"
+          })
         end
       '';
     };

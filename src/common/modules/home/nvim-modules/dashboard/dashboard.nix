@@ -372,7 +372,10 @@ args@{
         vim.api.nvim_create_user_command('DashboardAddProject', function(opts)
           local path = opts.args ~= ''' and opts.args or vim.fn.getcwd()
           add_project_to_cache(path)
-          print('Added project: ' .. path)
+          local project_name = vim.fn.fnamemodify(path, ':t')
+          vim.notify('✅ Project added: ' .. project_name, vim.log.levels.INFO, {
+            title = 'Dashboard'
+          })
         end, { nargs = '?', complete = 'dir' })
 
         local function find_git_root(path)

@@ -150,6 +150,12 @@ args@{
           else
             codewindow.close_minimap()
           end
+
+          local status = _G.codewindow_enabled and "enabled" or "disabled"
+          local icon = _G.codewindow_enabled and "✅" or "❌"
+          vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
+            title = "Codewindow"
+          })
         end
 
         vim.api.nvim_create_autocmd({

@@ -334,7 +334,15 @@ args@{
           ++ lib.optionals self.settings.enableGlobalFormatting [
             {
               key = "<leader>cf";
-              lspBufAction = "format";
+              action.__raw = ''
+                function()
+                  local filename = vim.fn.expand("%:t")
+                  vim.lsp.buf.format()
+                  vim.notify("📝 File " .. filename .. " was formatted", vim.log.levels.INFO, {
+                    title = "Formatting"
+                  })
+                end
+              '';
               options.desc = "Format buffer";
             }
           ];

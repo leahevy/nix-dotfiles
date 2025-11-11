@@ -249,6 +249,22 @@ args@{
           else
             ""
         }
+
+        function _G.save_session_with_notify()
+          local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
+          vim.cmd("Autosession save")
+          vim.notify("💾 Session saved for " .. project_name, vim.log.levels.INFO, {
+            title = "Session"
+          })
+        end
+
+        function _G.restore_session_with_notify()
+          local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
+          require('auto-session').RestoreSession(_G.get_canonical_path())
+          vim.notify("📂 Session restored for " .. project_name, vim.log.levels.INFO, {
+            title = "Session"
+          })
+        end
       '';
 
       programs.nixvim = {
@@ -291,7 +307,7 @@ args@{
           {
             mode = "n";
             key = "<leader>Ss";
-            action = "<cmd>Autosession save<CR>";
+            action = "<cmd>lua _G.save_session_with_notify()<CR>";
             options = {
               silent = true;
               desc = "Save current session";
@@ -300,7 +316,7 @@ args@{
           {
             mode = "n";
             key = "<leader>Sr";
-            action = "<cmd>lua require('auto-session').RestoreSession(vim.fn.getcwd())<CR>";
+            action = "<cmd>lua _G.restore_session_with_notify()<CR>";
             options = {
               silent = true;
               desc = "Restore session for current directory";
