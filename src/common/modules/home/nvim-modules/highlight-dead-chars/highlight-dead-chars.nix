@@ -123,14 +123,31 @@ args@{
             if line_content and line_content ~= "" then
               local line_nr = start_line + i - 1
               local content_width = vim.fn.strdisplaywidth(line_content)
-              local dots_needed = math.max(0, win_width - content_width - 3)
 
-              if dots_needed > 0 then
-                vim.api.nvim_buf_set_extmark(bufnr, ns, line_nr, -1, {
-                  virt_text = {{ string.rep("${self.settings.eolFill.char}", dots_needed), "EolFill" }},
-                  virt_text_pos = "eol",
-                  priority = 100
-                })
+              if content_width > win_width then
+                local remaining_width = content_width % win_width
+                if remaining_width == 0 then
+                  remaining_width = win_width
+                end
+                local dots_needed = math.max(0, win_width - remaining_width - 3)
+
+                if dots_needed > 0 then
+                  vim.api.nvim_buf_set_extmark(bufnr, ns, line_nr, -1, {
+                    virt_text = {{ string.rep("${self.settings.eolFill.char}", dots_needed), "EolFill" }},
+                    virt_text_pos = "eol",
+                    priority = 100
+                  })
+                end
+              else
+                local dots_needed = math.max(0, win_width - content_width - 3)
+
+                if dots_needed > 0 then
+                  vim.api.nvim_buf_set_extmark(bufnr, ns, line_nr, -1, {
+                    virt_text = {{ string.rep("${self.settings.eolFill.char}", dots_needed), "EolFill" }},
+                    virt_text_pos = "eol",
+                    priority = 100
+                  })
+                end
               end
             end
           end
