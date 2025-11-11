@@ -981,7 +981,7 @@ args@{
             done
           ''}
 
-          ${logScript "info" "SUCCESS-POST-REBOOT: Auto-upgrade reboot completed successfully - system back online (type: $reboot_type, initiated: $reboot_time)"}
+          ${logScript "info" "SUCCESS-POST-REBOOT: System has been restarted (type: $reboot_type, initiated: $reboot_time)"}
         '';
       };
 
