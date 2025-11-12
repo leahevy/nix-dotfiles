@@ -409,6 +409,74 @@ args@{
         '';
       };
 
+      home.file.".local/bin/tmux-session-manager" = lib.mkIf (self.common.isModuleEnabled "tmux.tmux") {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+
+          set -euo pipefail
+
+          ${
+            let
+              tmuxConfig = self.common.getModuleConfig "tmux.tmux";
+              allConfigs = tmuxConfig.tmuxinatorBaseConfigs // tmuxConfig.tmuxinatorConfigs;
+              sessionNames = lib.attrNames allConfigs;
+            in
+            ''
+              current_sessions=()
+              if ${pkgs.tmux}/bin/tmux list-sessions 2>/dev/null; then
+                while IFS=: read -r session_name _; do
+                  current_sessions+=("$session_name")
+                done < <(${pkgs.tmux}/bin/tmux list-sessions -F "#{session_name}" 2>/dev/null || true)
+              fi
+
+              session_list=""
+
+              for session in "''${current_sessions[@]}"; do
+                session_list+="● $session (running)"$'\n'
+              done
+
+              ${lib.concatStringsSep "\n" (
+                map (name: ''
+                  found=false
+                  for current in "''${current_sessions[@]}"; do
+                    if [[ "$current" == "${name}" ]]; then
+                      found=true
+                      break
+                    fi
+                  done
+                  if [[ "$found" == "false" ]]; then
+                    session_list+="○ ${name} (start)"$'\n'
+                  fi
+                '') sessionNames
+              )}
+
+              session_list+="+ New session"$'\n'
+
+              if [[ -n "$session_list" ]]; then
+                session_list=$(echo "$session_list" | head -c -1)
+              fi
+
+              selection=$(echo -e "$session_list" | fuzzel --dmenu --prompt="Tmux sessions: " --width=35)
+
+              if [[ -z "$selection" ]]; then
+                exit 0
+              fi
+
+              if [[ "$selection" == "+ New session" ]]; then
+                exec ${self.user.settings.terminal} -e ${pkgs.tmux}/bin/tmux new-session
+              elif [[ "$selection" =~ ^○\ (.+)\ \(start\)$ ]]; then
+                session_name="''${BASH_REMATCH[1]}"
+                exec ${self.user.settings.terminal} -e ${pkgs.tmuxinator}/bin/tmuxinator start "$session_name"
+              elif [[ "$selection" =~ ^●\ (.+)\ \(running\)$ ]]; then
+                session_name="''${BASH_REMATCH[1]}"
+                exec ${self.user.settings.terminal} -e ${pkgs.tmux}/bin/tmux attach-session -t "$session_name"
+              fi
+            ''
+          }
+        '';
+      };
+
       home.file.".local/bin/niri-window-switcher" = {
         executable = true;
         text = ''
@@ -838,7 +906,12 @@ args@{
                 };
 
                 "Mod+Shift+Return" = {
-                  action = spawn-sh "${self.user.settings.terminal} -e tx";
+                  action = spawn-sh "${
+                    if self.common.isModuleEnabled "tmux.tmux" then
+                      "tmux-session-manager"
+                    else
+                      "${self.user.settings.terminal} -e tx"
+                  }";
                   hotkey-overlay.title = "Apps:Tmux Session";
                 };
 
