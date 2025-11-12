@@ -371,7 +371,7 @@ args@{
                 local cursor_line = vim.fn.line('.')
                 local win_top = vim.fn.line('w0')
                 local win_bottom = vim.fn.line('w$')
-                local lines_to_move = math.floor(win_height / 6)
+                local lines_to_move = math.floor(win_height / 7)
                 local edge_threshold = 10
 
                 if cursor_line == win_bottom then
@@ -405,7 +405,7 @@ args@{
                 local cursor_line = vim.fn.line('.')
                 local win_top = vim.fn.line('w0')
                 local win_bottom = vim.fn.line('w$')
-                local lines_to_move = math.floor(win_height / 6)
+                local lines_to_move = math.floor(win_height / 7)
                 local edge_threshold = 10
 
                 if cursor_line == win_top then
