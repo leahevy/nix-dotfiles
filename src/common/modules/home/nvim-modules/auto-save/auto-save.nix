@@ -17,7 +17,7 @@ args@{
 
   settings = {
     enable = true;
-    debounceDelay = 500;
+    debounceDelay = 1500;
     onlyInHomeDirectories = true;
     showNotifications = true;
     withData = false;
