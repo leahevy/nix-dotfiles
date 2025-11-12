@@ -28,6 +28,7 @@ args@{
     borderColor = "#1a4d33";
     activeBorderColor = "#37f499";
     defaultShell = "fish";
+    useTransparency = true;
     tmuxinatorConfigs = { };
     tmuxinatorBaseConfigs = {
       main = { };
@@ -252,10 +253,13 @@ args@{
 
         ".config/tmux/30-statusbar.conf".text =
           let
-            status-left = "#{?client_prefix,#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #S #[fg=${colors.prefixBg}]#[bg=${colors.statusBg}],#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg},bg=${colors.statusBg}]}";
-            status-right = "#[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.secondaryBg}] %Y-%m-%d  %H:%M #{?client_prefix,#[fg=${colors.prefixBg}]#[bg=${colors.secondaryBg}]#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #h ,#[fg=${colors.primaryBg},bg=${colors.secondaryBg},nobold,nounderscore,noitalics]#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #h }";
-            window-status-format = "#[fg=${colors.statusFg},bg=${colors.statusBg}] #I #[fg=${colors.statusFg},bg=${colors.statusBg}] #W ";
-            window-status-current-format = "#[fg=${colors.statusBg},bg=${colors.borderColor},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #I #[fg=${colors.secondaryFg},bg=${colors.borderColor}] #W #[fg=${colors.borderColor},bg=${colors.statusBg},nobold,nounderscore,noitalics]";
+            statusBg = if self.settings.useTransparency then "default" else colors.statusBg;
+            statusBgInverted = colors.statusBg;
+
+            status-left = "#{?client_prefix,#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #S #[fg=${colors.prefixBg}]#[bg=${statusBg}],#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg},bg=${statusBg}]}";
+            status-right = "#[fg=${colors.borderColor},bg=${statusBg},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.secondaryBg}] %Y-%m-%d  %H:%M #{?client_prefix,#[fg=${colors.prefixBg}]#[bg=${colors.secondaryBg}]#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #h ,#[fg=${colors.primaryBg},bg=${colors.secondaryBg},nobold,nounderscore,noitalics]#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #h }";
+            window-status-format = "#[fg=${colors.statusFg},bg=${statusBg}] #I #[fg=${colors.statusFg},bg=${statusBg}] #W ";
+            window-status-current-format = "#[fg=${statusBgInverted},bg=${colors.borderColor},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #I #[fg=${colors.secondaryFg},bg=${colors.borderColor}] #W #[fg=${colors.borderColor},bg=${statusBg},nobold,nounderscore,noitalics]";
           in
           ''
             set -g status-justify "centre"
