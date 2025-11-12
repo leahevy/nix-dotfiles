@@ -16,116 +16,300 @@ args@{
   namespace = "home";
 
   settings = {
-    enableEmoji = true;
-    enableSpell = true;
-    enableGit = true;
-    enableVimwikiTags = true;
-    enableNvimLua = true;
+    baseSourcesToEnable = [
+      "nvim_lsp"
+      "path"
+      "buffer"
+    ];
+
+    additionalSourcesToEnable = [
+      "emoji"
+      "spell"
+      "git"
+      "vimwiki-tags"
+      "nvim_lua"
+      "treesitter"
+    ];
+
+    autoCompleteSources = [
+      "nvim_lsp"
+      "treesitter"
+    ];
+
     enableCmdline = true;
-    enableTreesitter = true;
+    enableAutoComplete = true;
+    globalAutoCompleteEnabled = true;
+    excludeFiletypesFromAutoComplete = [
+      "help"
+      "dashboard"
+      "alpha"
+      "startify"
+      "NvimTree"
+      "neo-tree"
+      "netrw"
+      "telescope"
+      "TelescopePrompt"
+      "TelescopeResults"
+      "trouble"
+      "Trouble"
+      "toggleterm"
+      "terminal"
+      "lspinfo"
+      "checkhealth"
+      "man"
+      "qf"
+      "quickfix"
+      "gitcommit"
+      "gitrebase"
+      "fugitive"
+      "notify"
+      "yazi"
+      "Codewindow"
+      "lazy"
+      "mason"
+      "prompt"
+      "nofile"
+      "nowrite"
+      "markdown"
+      "text"
+      "vimwiki"
+      ""
+    ];
   };
 
   configuration =
     context@{ config, options, ... }:
+    let
+      mkSource = name: { inherit name; };
+
+      allEnabledSources = self.settings.baseSourcesToEnable ++ self.settings.additionalSourcesToEnable;
+
+      mkAllSources = map mkSource allEnabledSources;
+      mkAutoSources = map mkSource self.settings.autoCompleteSources;
+
+      mkLuaSourceArray = sources: lib.concatMapStringsSep ", " (s: ''{ name = "${s}" }'') sources;
+    in
     {
       programs.nixvim = {
-        plugins.cmp = {
-          enable = true;
-          autoEnableSources = true;
-
-          settings = {
-            completion = {
-              autocomplete = false;
-            };
-
-            mapping = lib.mkMerge [
-              {
-                "<C-b>" = "cmp.mapping.scroll_docs(-4)";
-                "<C-f>" = "cmp.mapping.scroll_docs(4)";
-                "<C-Space>" = "cmp.mapping.complete()";
-                "<C-e>" = "cmp.mapping.abort()";
-                "<CR>" = "cmp.mapping.confirm({ select = true })";
-                "<PageUp>" = "cmp.mapping.select_prev_item({ count = 10 })";
-                "<PageDown>" = "cmp.mapping.select_next_item({ count = 10 })";
-              }
-              (lib.mkIf (!self.isModuleEnabled "nvim-modules.copilot") {
-                "<C-n>" =
-                  "cmp.mapping(function(fallback) if cmp.visible() then cmp.select_next_item() else cmp.complete() end end, { 'i', 's' })";
-                "<C-p>" =
-                  "cmp.mapping(function(fallback) if cmp.visible() then cmp.select_prev_item() else cmp.complete() end end, { 'i', 's' })";
-              })
-            ];
-
-            sources = lib.mkMerge [
-              [
-                { name = "nvim_lsp"; }
-                { name = "path"; }
-                { name = "buffer"; }
-              ]
-              (lib.mkIf self.settings.enableEmoji [
-                { name = "emoji"; }
-              ])
-              (lib.mkIf self.settings.enableSpell [
-                { name = "spell"; }
-              ])
-              (lib.mkIf self.settings.enableGit [
-                { name = "git"; }
-              ])
-              (lib.mkIf (self.settings.enableVimwikiTags && self.isModuleEnabled "nvim-modules.vimwiki") [
-                { name = "vimwiki-tags"; }
-              ])
-              (lib.mkIf self.settings.enableNvimLua [
-                { name = "nvim_lua"; }
-              ])
-              (lib.mkIf self.settings.enableTreesitter [
-                { name = "treesitter"; }
-              ])
-            ];
-          };
-        };
-
-        plugins.cmp-nvim-lsp = {
-          enable = true;
-        };
-
-        plugins.cmp-buffer = {
-          enable = true;
-        };
-
-        plugins.cmp-path = {
-          enable = true;
-        };
-
-        plugins.cmp-emoji = lib.mkIf self.settings.enableEmoji {
-          enable = true;
-        };
-
-        plugins.cmp-spell = lib.mkIf self.settings.enableSpell {
-          enable = true;
-        };
-
-        plugins.cmp-git = lib.mkIf self.settings.enableGit {
-          enable = true;
-        };
-
-        plugins.cmp-vimwiki-tags =
-          lib.mkIf (self.settings.enableVimwikiTags && self.isModuleEnabled "nvim-modules.vimwiki")
+        plugins = lib.mkMerge (
+          [
             {
+              cmp = {
+                enable = true;
+                autoEnableSources = false;
+
+                settings = lib.mkMerge [
+                  {
+                    performance = {
+                      debounce = 60;
+                      throttle = 30;
+                      fetching_timeout = 500;
+                    };
+
+                    matching = {
+                      disallow_fullfuzzy_matching = true;
+                    };
+
+                    formatting = {
+                      expandable_indicator = false;
+                    };
+
+                    window = {
+                      completion = {
+                        border = "single";
+                        side_padding = 1;
+                        scrollbar = true;
+                      };
+                    };
+
+                    mapping = lib.mkMerge [
+                      {
+                        "<C-b>" = "cmp.mapping.scroll_docs(-4)";
+                        "<C-f>" = "cmp.mapping.scroll_docs(4)";
+                        "<C-Space>" = "cmp.mapping.complete()";
+                        "<C-e>" = "cmp.mapping.abort()";
+                        "<CR>" = "cmp.mapping.confirm({ select = true })";
+                        "<PageUp>" = "cmp.mapping.select_prev_item({ count = 10 })";
+                        "<PageDown>" = "cmp.mapping.select_next_item({ count = 10 })";
+                      }
+                      (lib.mkIf (!self.isModuleEnabled "nvim-modules.copilot") {
+                        "<C-n>" =
+                          "cmp.mapping(function(fallback) if cmp.visible() then cmp.select_next_item() else cmp.complete() end end, { 'i', 's' })";
+                        "<C-p>" =
+                          "cmp.mapping(function(fallback) if cmp.visible() then cmp.select_prev_item() else cmp.complete() end end, { 'i', 's' })";
+                      })
+                    ];
+
+                    sources = if self.settings.enableAutoComplete then mkAutoSources else mkAllSources;
+                  }
+                  (lib.mkIf (!self.settings.enableAutoComplete) {
+                    completion = {
+                      autocomplete = false;
+                    };
+                  })
+                ];
+              };
+            }
+          ]
+          ++ (map (source: {
+            "cmp-${builtins.replaceStrings [ "_" ] [ "-" ] source}" = {
               enable = true;
             };
+          }) allEnabledSources)
+          ++ lib.optional self.settings.enableCmdline {
+            cmp-cmdline = {
+              enable = true;
+            };
+          }
+          ++ lib.optional (self.isModuleEnabled "nvim-modules.which-key") {
+            which-key.settings.spec = [
+              {
+                __unkeyed-1 = "<leader>l";
+                desc = "Toggle auto-completion";
+                icon = "💬";
+              }
+            ];
+          }
+        );
 
-        plugins.cmp-nvim-lua = lib.mkIf self.settings.enableNvimLua {
-          enable = true;
-        };
+        keymaps = lib.mkMerge [
+          (lib.mkIf self.settings.enableAutoComplete [
+            {
+              mode = "i";
+              key = "<C-x>";
+              action.__raw = ''
+                function()
+                  local cmp = require('cmp')
+                  local all_sources_config = {
+                    config = {
+                      sources = {
+                        ${mkLuaSourceArray allEnabledSources}
+                      }
+                    }
+                  }
 
-        plugins.cmp-treesitter = lib.mkIf self.settings.enableTreesitter {
-          enable = true;
-        };
+                  if cmp.visible() then
+                    cmp.abort()
+                  end
 
-        plugins.cmp-cmdline = lib.mkIf self.settings.enableCmdline {
-          enable = true;
-        };
+                  cmp.complete(all_sources_config)
+                end
+              '';
+              options = {
+                desc = "Manual completion with all sources";
+                silent = true;
+              };
+            }
+            {
+              mode = "i";
+              key = "<C-z>";
+              action.__raw = ''
+                function()
+                  local cmp = require('cmp')
+                  local auto_sources_config = {
+                    config = {
+                      sources = {
+                        ${mkLuaSourceArray self.settings.autoCompleteSources}
+                      }
+                    }
+                  }
+
+                  if cmp.visible() then
+                    cmp.abort()
+                  end
+
+                  cmp.complete(auto_sources_config)
+                end
+              '';
+              options = {
+                desc = "Manual completion with auto sources only";
+                silent = true;
+              };
+            }
+          ])
+          [
+            {
+              mode = "n";
+              key = "<C-z>";
+              action = "<Nop>";
+              options = {
+                desc = "Disabled - use <C-z> in insert mode for completion";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>l";
+              action.__raw = ''
+                function()
+                  vim.g.cmp_global_enabled = not vim.g.cmp_global_enabled
+                  require('cmp').setup.buffer { enabled = vim.g.cmp_global_enabled }
+                  local icon = vim.g.cmp_global_enabled and "✅" or "❌"
+                  local status = vim.g.cmp_global_enabled and "Feature enabled" or "Feature disabled"
+                  vim.notify(icon .. " " .. status, vim.log.levels.INFO, {
+                    title = "Auto-Completion"
+                  })
+                end
+              '';
+              options = {
+                desc = "Toggle auto-completion";
+                silent = true;
+              };
+            }
+          ]
+        ];
       };
+
+      home.file.".config/nvim-init/38-cmp-global.lua".text = ''
+        vim.opt.complete = ""
+        vim.opt.completefunc = ""
+        vim.lsp.omnifunc = function() return {} end
+
+        vim.g.cmp_global_enabled = ${if self.settings.globalAutoCompleteEnabled then "true" else "false"}
+
+        local excluded_filetypes = {
+          ${lib.concatMapStringsSep ", " (ft: "\"${ft}\"") self.settings.excludeFiletypesFromAutoComplete}
+        }
+
+        local function should_disable_for_filetype(filetype)
+          for _, excluded_ft in ipairs(excluded_filetypes) do
+            if filetype == excluded_ft then
+              return true
+            end
+          end
+          return false
+        end
+
+        local function apply_cmp_to_buffer()
+          local cmp = require('cmp')
+          local filetype = vim.bo.filetype
+
+          if should_disable_for_filetype(filetype) then
+            cmp.setup.buffer({ enabled = false })
+          else
+            cmp.setup.buffer({ enabled = vim.g.cmp_global_enabled })
+          end
+        end
+
+        vim.api.nvim_create_augroup('CmpGlobalToggle', { clear = true })
+        vim.api.nvim_create_autocmd({ 'BufEnter', 'BufNew', 'FileType' }, {
+          group = 'CmpGlobalToggle',
+          callback = function()
+            vim.schedule(function()
+              apply_cmp_to_buffer()
+              vim.opt_local.completefunc = ""
+              vim.opt_local.omnifunc = ""
+            end)
+          end,
+        })
+
+        vim.api.nvim_create_autocmd('LspAttach', {
+          group = 'CmpGlobalToggle',
+          callback = function()
+            vim.opt_local.omnifunc = ""
+          end,
+        })
+      '';
 
       home.file.".config/nvim-init/39-cmp-copilot.lua".text =
         lib.mkIf (self.isModuleEnabled "nvim-modules.copilot") ''
@@ -157,13 +341,6 @@ args@{
             end
           end, { desc = "Previous completion (dismiss copilot first)" })
         '';
-
-      home.file.".config/nvim-init/99-cmp-colors.lua".text = ''
-        vim.api.nvim_set_hl(0, "Pmenu", { bg = "#0a0a0a", fg = "#ffffff" })
-        vim.api.nvim_set_hl(0, "PmenuSel", { bg = "#1a1a1a", fg = "#ffffff", bold = true })
-        vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "#0a0a0a" })
-        vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "#222222" })
-      '';
 
       home.file.".config/nvim-init/40-cmp-cmdline.lua".text = lib.mkIf self.settings.enableCmdline ''
         local cmp = require("cmp")
