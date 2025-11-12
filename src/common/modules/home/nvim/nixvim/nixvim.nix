@@ -74,6 +74,10 @@ args@{
     withNeovide = false;
     terminal = "ghostty";
     manpageViewer = true;
+    dictionaries = [
+      "en"
+      "de"
+    ];
     overrideThemeName = "ayu"; # Or null
     overrideThemeSettings = {
       onedark = {
@@ -181,6 +185,9 @@ args@{
 
           backup = false;
           shortmess = "aoOtTIcF";
+
+          spelllang = self.settings.dictionaries;
+          spellfile = "${config.xdg.configHome}/nvim/spell/custom.utf-8.add";
         };
 
         extraConfigLua = nvim_init_dir_loader;
@@ -265,6 +272,11 @@ args@{
               __unkeyed-1 = "<leader>W";
               desc = "Save all";
               icon = "💾";
+            }
+            {
+              __unkeyed-1 = "<leader>fs";
+              desc = "Toggle spell check";
+              icon = "📝";
             }
           ];
         };
@@ -532,6 +544,24 @@ args@{
             '';
             options = {
               desc = "Save all";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>fs";
+            action.__raw = ''
+              function()
+                vim.opt_local.spell = not vim.opt_local.spell:get()
+                local status = vim.opt_local.spell:get() and "enabled" or "disabled"
+                local emoji = vim.opt_local.spell:get() and "✅" or "❌"
+                vim.notify(emoji .. " Spell check " .. status, vim.log.levels.INFO, {
+                  title = "Spell Check"
+                })
+              end
+            '';
+            options = {
+              desc = "Toggle spell check";
               silent = true;
             };
           }
