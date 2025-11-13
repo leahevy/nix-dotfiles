@@ -905,15 +905,17 @@ args@{
                   hotkey-overlay.title = "Apps:Terminal";
                 };
 
-                "Mod+Shift+Return" = {
-                  action = spawn-sh "${
-                    if self.common.isModuleEnabled "tmux.tmux" then
-                      "tmux-session-manager"
-                    else
-                      "${self.user.settings.terminal} -e tx"
-                  }";
-                  hotkey-overlay.title = "Apps:Tmux Session";
-                };
+                "Mod+Shift+Return" =
+                  let
+                    withSessionManager = self.common.isModuleEnabled "tmux.tmux";
+                  in
+                  {
+                    action = spawn-sh "${
+                      if withSessionManager then "tmux-session-manager" else "${self.user.settings.terminal} -e tx"
+                    }";
+                    hotkey-overlay.title =
+                      if withSessionManager then "Apps:Tmux Session Manager" else "Apps:Tmux Main Session";
+                  };
 
                 "Mod+Space" = {
                   action = spawn-sh "fuzzel";
