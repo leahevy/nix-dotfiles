@@ -40,6 +40,27 @@ args@{
         dataDir = ".local/state/web-apps/${appName}";
         configPath = ".config/qutebrowser/web-app-${appName}-config.py";
 
+        enableKeepassxc = (
+          self.user.gpg != null
+          && self.user.gpg != ""
+          && (
+            self.common.isModuleEnabled "passwords.keepassxc"
+            || (self.common.getModuleConfig "browser.qutebrowser-config").alwaysCreateKeepassxcKeybindings
+          )
+        );
+
+        keepassxcKeybindings =
+          if enableKeepassxc then
+            '''pw': 'spawn --userscript qute-keepassxc --key ${self.user.gpg}',''
+          else
+            "";
+
+        keepassxcInsertKeybindings =
+          if enableKeepassxc then
+            '''<Alt+Shift+u>': 'spawn --userscript qute-keepassxc --key ${self.user.gpg}',''
+          else
+            "";
+
         webAppConfig = ''
           import os
 
@@ -110,12 +131,14 @@ args@{
                   '<Ctrl+s>': 'stop',
                   '<F5>': 'reload',
                   '<Ctrl+F5>': 'reload -f',
+                  ${keepassxcKeybindings}
               },
               'insert': {
                   '<Escape>': 'mode-leave',
                   '<Ctrl+Escape>': 'fake-key <Escape>',
                   '<Ctrl+e>': 'edit-text',
                   '<Shift+Ins>': 'insert-text -- {primary}',
+                  ${keepassxcInsertKeybindings}
               },
               'caret': {
                   '<Escape>': 'mode-leave',
