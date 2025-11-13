@@ -124,9 +124,12 @@ args@{
           vim.api.nvim_set_hl(0, "NotifyTRACEBody", { fg = "#FFFFFF", bg = "${self.settings.background_colour}" })
         end
 
+        local startup_time = vim.loop.now()
+
         vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
           callback = function()
-            vim.defer_fn(fix_notify_background, 150)
+            fix_notify_background()
+            vim.defer_fn(fix_notify_background, 100)
           end,
         })
 
@@ -234,10 +237,17 @@ args@{
 
           vim.api.nvim_create_autocmd("DirChanged", {
             callback = function(event)
+              local current_time = vim.loop.now()
+              if current_time - startup_time < 5000 then
+                return
+              end
+
               local new_dir = vim.fn.fnamemodify(event.file, ":t")
-              vim.notify("🏠 New working directory: " .. new_dir, vim.log.levels.INFO, {
-                title = "Directory Changed"
-              })
+              vim.defer_fn(function()
+                vim.notify("🏠 New working directory: " .. new_dir, vim.log.levels.INFO, {
+                  title = "Directory Changed"
+                })
+              end, 50)
             end,
           })
 
