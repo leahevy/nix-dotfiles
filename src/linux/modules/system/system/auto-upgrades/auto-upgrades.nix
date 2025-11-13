@@ -22,7 +22,7 @@ args@{
       lower = "01:00";
       upper = "03:00";
     };
-    preNotificationTimeMinutes = 30;
+    preNotificationTimeMinutes = 10;
     maxNetworkRetries = 30;
     waitForNetwork = true;
     dryRun = false;
