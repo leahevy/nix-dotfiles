@@ -548,9 +548,20 @@ args@{
 
               check_folders() {
                   declare -A prev_folder_states
+                  declare -A prev_folder_sequences
                   if [[ -f "$FOLDER_STATE_FILE" ]]; then
-                      while IFS='=' read -r folder_id state; do
-                          [[ -n "$folder_id" && -n "$state" ]] && prev_folder_states["$folder_id"]="$state"
+                      while IFS='=' read -r folder_id state_and_seq; do
+                          if [[ -n "$folder_id" && -n "$state_and_seq" ]]; then
+                              if [[ "$state_and_seq" == *"|"* ]]; then
+                                  state="''${state_and_seq%|*}"
+                                  sequence="''${state_and_seq#*|}"
+                                  prev_folder_states["$folder_id"]="$state"
+                                  prev_folder_sequences["$folder_id"]="$sequence"
+                              else
+                                  prev_folder_states["$folder_id"]="$state_and_seq"
+                                  prev_folder_sequences["$folder_id"]="0"
+                              fi
+                          fi
                       done < "$FOLDER_STATE_FILE"
                   fi
 
@@ -567,6 +578,7 @@ args@{
                               if curl -s -H @"$HEADER_FILE" "http://127.0.0.1:$SYNCTHING_GUI_PORT/rest/db/status?folder=$folder_id" > "$FOLDER_STATUS_FILE"; then
 
                                   state=$(jq -r '.state' "$FOLDER_STATUS_FILE" 2>/dev/null || echo "unknown")
+                                  sequence=$(jq -r '.sequence' "$FOLDER_STATUS_FILE" 2>/dev/null || echo "0")
                                   pull_errors=$(jq -r '.pullErrors' "$FOLDER_STATUS_FILE" 2>/dev/null || echo "0")
                                   need_items=$(jq -r '.needTotalItems' "$FOLDER_STATUS_FILE" 2>/dev/null || echo "0")
 
@@ -578,7 +590,7 @@ args@{
                                   fi
 
                                   current_folder_states["$folder_id"]="$effective_state"
-                                  echo "$folder_id=$effective_state" >> "$FOLDER_STATE_FILE"
+                                  echo "$folder_id=$effective_state|$sequence" >> "$FOLDER_STATE_FILE"
 
                                   folder_display=$(get_folder_display_string "$folder_id" "$folder_label" "$folder_path")
 
@@ -619,6 +631,12 @@ args@{
                                                   notify "normal" "Syncthing: Folder Sync" "Out of sync: $folder_display has $need_items items pending" "folder-sync"
                                                   ;;
                                           esac
+                                      else
+                                          prev_sequence="''${prev_folder_sequences[$folder_id]:-0}"
+                                          if [[ "$prev_sequence" != "0" && "$sequence" != "$prev_sequence" && "$effective_state" == "idle" ]]; then
+                                              sync_status=$(check_folder_device_sync_status "$folder_id")
+                                              notify "normal" "Syncthing: Folder Sync" "Updated: $folder_display$sync_status" "checkmark"
+                                          fi
                                       fi
                                   fi
                               fi
