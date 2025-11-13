@@ -609,21 +609,21 @@ args@{
               };
               tabs = {
                 even = {
-                  bg = lib.mkForce "#000000";
-                  fg = lib.mkForce "#77dd77";
+                  bg = lib.mkForce "#030303";
+                  fg = lib.mkForce "#116644";
                 };
                 odd = {
-                  bg = lib.mkForce "#000000";
-                  fg = lib.mkForce "#77dd77";
+                  bg = lib.mkForce "#030303";
+                  fg = lib.mkForce "#116644";
                 };
                 selected = {
                   even = {
                     bg = lib.mkForce "#000000";
-                    fg = lib.mkForce "#ee9988";
+                    fg = lib.mkForce "#99ff99";
                   };
                   odd = {
                     bg = lib.mkForce "#000000";
-                    fg = lib.mkForce "#ee9988";
+                    fg = lib.mkForce "#99ff99";
                   };
                 };
               };
