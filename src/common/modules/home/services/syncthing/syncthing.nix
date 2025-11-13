@@ -489,9 +489,20 @@ args@{
 
               check_device_sync() {
                   declare -A prev_device_sync_states
+                  declare -A prev_device_state_hashes
                   if [[ -f "$DEVICE_SYNC_STATE_FILE" ]]; then
-                      while IFS='=' read -r device_id sync_status; do
-                          [[ -n "$device_id" && -n "$sync_status" ]] && prev_device_sync_states["$device_id"]="$sync_status"
+                      while IFS='=' read -r device_id status_and_hash; do
+                          if [[ -n "$device_id" && -n "$status_and_hash" ]]; then
+                              if [[ "$status_and_hash" == *"|"* ]]; then
+                                  sync_status="''${status_and_hash%|*}"
+                                  state_hash="''${status_and_hash#*|}"
+                                  prev_device_sync_states["$device_id"]="$sync_status"
+                                  prev_device_state_hashes["$device_id"]="$state_hash"
+                              else
+                                  prev_device_sync_states["$device_id"]="$status_and_hash"
+                                  prev_device_state_hashes["$device_id"]="0"
+                              fi
+                          fi
                       done < "$DEVICE_SYNC_STATE_FILE"
                   fi
 
@@ -506,6 +517,7 @@ args@{
                               COMPLETION_FILE="$TEMP_DIR/completion_$device_id"
                               if curl -s -H @"$HEADER_FILE" "http://127.0.0.1:$SYNCTHING_GUI_PORT/rest/db/completion?device=$device_id" > "$COMPLETION_FILE"; then
                                   completion=$(jq -r '.completion' "$COMPLETION_FILE" 2>/dev/null || echo "100")
+                                  state_hash=$(jq -S '.' "$COMPLETION_FILE" 2>/dev/null | sha256sum | cut -d' ' -f1 || echo "0")
 
                                   if [[ "$completion" == "100" ]]; then
                                       sync_status="idle"
@@ -514,7 +526,7 @@ args@{
                                   fi
 
                                   current_device_sync_states["$device_id"]="$sync_status"
-                                  echo "$device_id=$sync_status" >> "$DEVICE_SYNC_STATE_FILE"
+                                  echo "$device_id=$sync_status|$state_hash" >> "$DEVICE_SYNC_STATE_FILE"
 
                                   if [[ "$is_first_check" == "true" ]]; then
                                       if [[ "$sync_status" == "syncing" ]]; then
@@ -538,6 +550,12 @@ args@{
                                                   fi
                                                   ;;
                                           esac
+                                      else
+                                          prev_hash="''${prev_device_state_hashes[$device_id]:-0}"
+                                          if [[ "$prev_hash" != "0" && "$state_hash" != "$prev_hash" && "$sync_status" == "idle" ]]; then
+                                              device_display_name=$(get_device_display_name "$device_id")
+                                              notify "normal" "Syncthing: Device Sync" "Updated: <b>$device_display_name</b> (Up to Date)" "checkmark"
+                                          fi
                                       fi
                                   fi
                               fi
