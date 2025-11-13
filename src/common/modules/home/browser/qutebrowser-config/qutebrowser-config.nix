@@ -154,6 +154,7 @@ args@{
         "i" = "mode-enter insert";
         "a" = "mode-enter insert ;; fake-key <space>";
         "<Shift+a>" = "mode-enter insert ;; fake-key <end> ;; fake-key <space>";
+        "<Backspace>" = "mode-enter insert ;; fake-key <backspace>";
         "v" = "mode-enter caret";
         "V" = "mode-enter caret ;; selection-toggle --line";
         "`" = "mode-enter set_mark";
