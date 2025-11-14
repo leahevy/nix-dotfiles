@@ -115,6 +115,7 @@ in
       gamesMine = defineAll { name = "kmines"; } { name = "gnome-mines"; };
       gamesCards = defineAll { name = "kpat"; } { name = "aisleriot"; };
       sudoku = defineAll { name = "ksudoku"; } { name = "gnome-sudoku"; };
+      dialog = defineAll { name = "kdialog"; } { name = "zenity"; };
       gitGui = defineAll {
         name = "dolphin-plugins";
         openCommand = "dolphin";
@@ -180,6 +181,7 @@ in
             resolvedPackage ++ additionalPackages;
         in
         (conditionallyAdd "wallet")
+        ++ (conditionallyAdd "dialog")
         ++ (conditionallyAdd "fileBrowser")
         ++ (conditionallyAdd "archiver")
         ++ (conditionallyAdd "textEditor")
