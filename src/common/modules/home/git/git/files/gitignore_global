@@ -1,5 +1,7 @@
 # vi/vim
 *.swp
+*.socket
+*.sock
 *~
 *.un~
 Session.vim
