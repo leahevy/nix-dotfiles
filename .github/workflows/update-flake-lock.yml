@@ -82,7 +82,32 @@ jobs:
             echo "${!repo_var:-}"
           }
 
-          REBOOT_PATTERNS="\blinux[-_][0-9]|\blinuxKernel\b|\blinuxPackages\b|\bkernelPackages\b|\bsystemd\b|\bglibc\b|\bmicrocode\b|\blinux-firmware\b|\bnix:\b|\bnix[[:space:]]|\bnix$"
+          REBOOT_PACKAGES=(
+            "linux[-_][0-9]"
+            "linuxKernel"
+            "linuxPackages"
+            "kernelPackages"
+            "systemd"
+            "glibc"
+            "microcode"
+            "linux-firmware"
+            "nix:"
+            "nix[[:space:]]"
+            "nix$"
+            "niri"
+            "uwsm"
+          )
+
+          REBOOT_PATTERNS=""
+          for pattern in "${REBOOT_PACKAGES[@]}"; do
+            if [[ "$pattern" =~ ^(nix:|nix\[|nix\$)$ ]]; then
+              REBOOT_PATTERNS="${REBOOT_PATTERNS}\\b${pattern}"
+            else
+              REBOOT_PATTERNS="${REBOOT_PATTERNS}\\b${pattern}\\b"
+            fi
+            REBOOT_PATTERNS="${REBOOT_PATTERNS}|"
+          done
+          REBOOT_PATTERNS="${REBOOT_PATTERNS%|}"
 
           IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
 
