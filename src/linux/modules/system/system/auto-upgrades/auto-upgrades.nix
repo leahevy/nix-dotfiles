@@ -993,7 +993,7 @@ args@{
       systemd.timers.nx-auto-upgrade-post-reboot-notify = {
         description = "NX Auto-Upgrade Post-Reboot Notification Timer";
         timerConfig = {
-          OnBootSec = "3min";
+          OnBootSec = "1min";
           RemainAfterElapse = false;
         };
         wantedBy = [ "timers.target" ];
