@@ -71,6 +71,10 @@ args@{
   };
 
   settings = {
+    withInitialTabs = true;
+    withSocket = true;
+    withData = false;
+    dataPath = "/data";
     withNeovide = false;
     terminal = "ghostty";
     manpageViewer = true;
@@ -710,25 +714,78 @@ args@{
 
       home = {
         sessionVariables = {
-          EDITOR = lib.mkForce "nvim";
-          SUDO_EDITOR = lib.mkForce "nvim";
+          EDITOR = lib.mkForce "nvim-run";
+          SUDO_EDITOR = lib.mkForce "nvim-run";
         }
         // lib.optionalAttrs self.settings.manpageViewer {
-          MANPAGER = lib.mkForce "nvim +Man!";
+          MANPAGER = lib.mkForce "nvim-run +Man!";
         };
 
         shellAliases = {
-          vim = lib.mkForce "nvim -p";
-          vi = lib.mkForce "nvim -p";
-          v = lib.mkForce "nvim -p";
+          nvim = lib.mkForce "nvim-run";
+          vim = lib.mkForce "nvim-run";
+          vi = lib.mkForce "nvim-run";
+          v = lib.mkForce "nvim-run";
         };
+      };
+
+      home.file.".local/bin/nvim-run" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+
+          ADDITIONAL_ARGS=()
+
+          ${lib.optionalString self.settings.withInitialTabs ''
+            ADDITIONAL_ARGS+=("-p")
+          ''}
+
+          ${lib.optionalString self.settings.withSocket ''
+            SOCKET_NAME=""
+            ${
+              if self.isLinux then
+                ''
+                  if [[ "$PWD" == /home/* ]]; then
+                    SOCKET_NAME="./.nvim.socket"
+                  fi
+                ''
+              else if self.isDarwin then
+                ''
+                  if [[ "$PWD" == /Users/* ]]; then
+                    SOCKET_NAME="./.nvim.socket"
+                  fi
+                ''
+              else
+                ''
+                  SOCKET_NAME="/tmp/nvim-${self.user.username}.socket"
+                ''
+            }
+            ${lib.optionalString (!self.user.isStandalone && self.settings.withData) ''
+              if [[ "$PWD" == ${self.settings.dataPath}/* ]]; then
+                SOCKET_NAME="./.nvim.socket"
+              fi
+            ''}
+
+            if [[ -z "$SOCKET_NAME" || ! -e "$(dirname "$SOCKET_NAME")" || ! -w "$(dirname "$SOCKET_NAME")" ]]; then
+              SOCKET_NAME="/tmp/nvim-${self.user.username}.socket"
+            fi
+
+            ADDITIONAL_ARGS+=("--listen" "$SOCKET_NAME")
+          ''}
+
+          if [ ''${#ADDITIONAL_ARGS[@]} -gt 0 ]; then
+            exec ${config.programs.nixvim.build.package}/bin/nvim "''${ADDITIONAL_ARGS[@]}" "$@"
+          else
+            exec ${config.programs.nixvim.build.package}/bin/nvim "$@"
+          fi
+        '';
       };
 
       home.file.".local/bin/nvim-desktop" = lib.mkIf self.isLinux {
         executable = true;
         text = ''
           #!/usr/bin/env bash
-          exec ${self.settings.terminal} -e nvim "$@"
+          exec ${self.settings.terminal} -e nvim-run "$@"
         '';
       };
 
