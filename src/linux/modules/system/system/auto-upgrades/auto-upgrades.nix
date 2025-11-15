@@ -28,6 +28,7 @@ args@{
     dryRun = false;
     pushoverNotifications = true;
     verifySignatures = true;
+    alwaysNotifyOnReboot = false;
   };
 
   configuration =
@@ -951,15 +952,19 @@ args@{
         script = ''
           marker_file="/var/lib/nx-auto-upgrade/last-reboot"
 
-          if [[ ! -f "$marker_file" ]]; then
+          if [[ -f "$marker_file" ]]; then
+            marker_content=$(${pkgs.coreutils}/bin/cat "$marker_file")
+            ${pkgs.coreutils}/bin/rm -f "$marker_file"
+
+            reboot_type=$(${pkgs.coreutils}/bin/echo "$marker_content" | ${pkgs.coreutils}/bin/cut -d':' -f4)
+            reboot_time=$(${pkgs.coreutils}/bin/echo "$marker_content" | ${pkgs.coreutils}/bin/cut -d':' -f2)
+          elif [[ "${lib.boolToString self.settings.alwaysNotifyOnReboot}" == "true" ]]; then
+            reboot_type="unknown"
+            reboot_time="$(${pkgs.coreutils}/bin/date '+%Y-%m-%d %H:%M:%S')"
+            ${pkgs.coreutils}/bin/echo "No reboot marker found, using fallback notification"
+          else
             exit 0
           fi
-
-          marker_content=$(${pkgs.coreutils}/bin/cat "$marker_file")
-          ${pkgs.coreutils}/bin/rm -f "$marker_file"
-
-          reboot_type=$(${pkgs.coreutils}/bin/echo "$marker_content" | ${pkgs.coreutils}/bin/cut -d':' -f4)
-          reboot_time=$(${pkgs.coreutils}/bin/echo "$marker_content" | ${pkgs.coreutils}/bin/cut -d':' -f2)
 
           ${lib.optionalString self.settings.waitForNetwork ''
             ${pkgs.coreutils}/bin/echo "Checking network connectivity..."
