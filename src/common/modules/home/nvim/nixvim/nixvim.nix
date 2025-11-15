@@ -742,6 +742,7 @@ args@{
 
           ${lib.optionalString self.settings.withSocket ''
             SOCKET_NAME=""
+            USE_TMP_SOCKET=false
             ${
               if self.isLinux then
                 ''
@@ -758,6 +759,7 @@ args@{
               else
                 ''
                   SOCKET_NAME="/tmp/nvim-${self.user.username}.socket"
+                  USE_TMP_SOCKET=true
                 ''
             }
             ${lib.optionalString (!self.user.isStandalone && self.settings.withData) ''
@@ -768,9 +770,17 @@ args@{
 
             if [[ -z "$SOCKET_NAME" || ! -e "$(dirname "$SOCKET_NAME")" || ! -w "$(dirname "$SOCKET_NAME")" ]]; then
               SOCKET_NAME="/tmp/nvim-${self.user.username}.socket"
+              USE_TMP_SOCKET=true
             fi
 
-            ADDITIONAL_ARGS+=("--listen" "$SOCKET_NAME")
+            if [[ -e "$SOCKET_NAME" ]]; then
+              if [[ "$USE_TMP_SOCKET" != "true" ]]; then
+                rm -f "$SOCKET_NAME"
+                ADDITIONAL_ARGS+=("--listen" "$SOCKET_NAME")
+              fi
+            else
+              ADDITIONAL_ARGS+=("--listen" "$SOCKET_NAME")
+            fi
           ''}
 
           if [ ''${#ADDITIONAL_ARGS[@]} -gt 0 ]; then
