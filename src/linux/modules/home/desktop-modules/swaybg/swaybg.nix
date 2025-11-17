@@ -20,7 +20,7 @@ args@{
     mode = "fit";
     backgroundColor = "#000000";
     timerIntervalSeconds = 600;
-    deactivateTimer = false;
+    deactivateTimer = true;
     additionalWallpaperDirectories = [ ];
   };
 
