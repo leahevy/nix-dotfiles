@@ -118,7 +118,8 @@ args@{
       ]
       ++ lib.optionals (self.settings.cursor != null) [
         (getPackage self.settings.cursor.style)
-      ];
+      ]
+      ++ [ pkgs.base16-schemes ];
 
       stylix = {
         enable = true;
