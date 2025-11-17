@@ -86,6 +86,7 @@ args@{
       "qt\\.dbus\\.integration: QDBusConnection: name .* had owner"
       "qt\\.dbus\\.integration: QDBusConnection: couldn't handle call to CreateMonitor"
       "qt\\.dbus\\.integration: Could not find slot.*CreateMonitor"
+      "org.kde.kdegraphics.*: .*alignment=.*"
       "xdp-kde-settings: Namespace .* is not supported"
       "Choosing gtk\\.portal for .* as a last-resort fallback"
       "g_dbus_proxy_get_object_path: assertion .* failed"
