@@ -22,6 +22,7 @@ args@{
     timerIntervalSeconds = 600;
     deactivateTimer = true;
     additionalWallpaperDirectories = [ ];
+    useSwitcher = true;
   };
 
   configuration =
@@ -252,6 +253,68 @@ args@{
         '';
       };
 
+      home.file.".local/bin/swaybg-switch-wallpaper" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+
+          WALLPAPERS_DIR="${wallpapersDir}"
+          STATE_FILE="${config.home.homeDirectory}/.local/state/swaybg/current-wallpaper"
+          CURRENT_WALLPAPER=""
+
+          if [[ -f "$STATE_FILE" ]]; then
+            CURRENT_WALLPAPER="$(${pkgs.coreutils}/bin/basename "$(${pkgs.coreutils}/bin/cat "$STATE_FILE" 2>/dev/null || echo "")")"
+          fi
+
+          WALLPAPERS=()
+
+          if [[ -d "$WALLPAPERS_DIR" ]]; then
+            while IFS= read -r -d "" wallpaper; do
+              WALLPAPERS+=("$wallpaper")
+            done < <(${pkgs.findutils}/bin/find "$WALLPAPERS_DIR" -maxdepth 1 \( -type f -o -type l \) \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" \) -print0 2>/dev/null)
+          fi
+
+          ${lib.concatMapStringsSep "\n" (dir: ''
+            if [[ -d "${dir}" ]]; then
+              while IFS= read -r -d "" wallpaper; do
+                WALLPAPERS+=("$wallpaper")
+              done < <(${pkgs.findutils}/bin/find "${dir}" -maxdepth 1 \( -type f -o -type l \) \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" \) -print0 2>/dev/null)
+            fi
+          '') expandedAdditionalDirs}
+
+          if [[ ''${#WALLPAPERS[@]} -eq 0 ]]; then
+            echo "No wallpapers found in any configured directory" >&2
+            exit 1
+          fi
+
+          FUZZEL_INPUT=""
+          for wallpaper in "''${WALLPAPERS[@]}"; do
+            BASENAME="$(${pkgs.coreutils}/bin/basename "$wallpaper")"
+
+            if [[ "$BASENAME" == "$CURRENT_WALLPAPER" ]]; then
+              DISPLAY_NAME="● $BASENAME"
+            else
+              DISPLAY_NAME="○ $BASENAME"
+            fi
+
+            if [[ -n "$FUZZEL_INPUT" ]]; then
+              FUZZEL_INPUT+="\n"
+            fi
+            FUZZEL_INPUT+="$DISPLAY_NAME"
+          done
+
+          SELECTED=$(echo -en "$FUZZEL_INPUT" | fuzzel --dmenu --prompt="Select wallpaper: ")
+
+          if [[ -n "$SELECTED" ]]; then
+            SELECTED_BASENAME="''${SELECTED#● }"
+            SELECTED_BASENAME="''${SELECTED_BASENAME#○ }"
+
+            echo "Selected wallpaper: $SELECTED_BASENAME"
+            exec "${config.home.homeDirectory}/.local/bin/swaybg-enable-wallpaper" "$SELECTED_BASENAME"
+          fi
+        '';
+      };
+
       home.file.".local/bin/scripts/swaybg-update-wallpaper" = {
         executable = true;
         text = ''
@@ -389,8 +452,11 @@ args@{
       programs.niri.settings = lib.mkIf (self.isModuleEnabled "desktop.niri") {
         binds = with config.lib.niri.actions; {
           "Mod+Shift+Backslash" = {
-            action = spawn "swaybg-next-wallpaper";
-            hotkey-overlay.title = "UI:Next wallpaper";
+            action = spawn (
+              if self.settings.useSwitcher then "swaybg-switch-wallpaper" else "swaybg-next-wallpaper"
+            );
+            hotkey-overlay.title =
+              if self.settings.useSwitcher then "UI:Switch wallpaper" else "UI:Next wallpaper";
           };
         };
       };
