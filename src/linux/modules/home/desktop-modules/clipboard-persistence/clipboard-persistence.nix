@@ -1,6 +1,7 @@
 args@{
   lib,
   pkgs,
+  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -23,19 +24,31 @@ args@{
 
   configuration =
     context@{ config, ... }:
+    let
+      clipmanPackage = pkgs-unstable.clipman;
+      wlClipboardPackage = pkgs-unstable.wl-clipboard;
+    in
     lib.mkMerge [
       {
-        home.packages = with pkgs; [
-          wl-clipboard
-          clipman
+        home.packages = [
+          wlClipboardPackage
         ];
 
-        services.clipman.enable = true;
+        services.clipman = {
+          enable = true;
+          package = clipmanPackage;
+        };
+
+        systemd.user.services."clipman" = {
+          Service = {
+            ExecStart = lib.mkForce "${wlClipboardPackage}/bin/wl-paste -t text --watch ${clipmanPackage}/bin/clipman store --no-persist";
+          };
+        };
       }
 
       (lib.mkIf (self.isModuleEnabled "desktop.niri") {
         programs.niri.settings.binds."Mod+B" = with config.lib.niri.actions; {
-          action = spawn-sh "${pkgs.clipman}/bin/clipman pick --tool=CUSTOM --tool-args=\"fuzzel -d\"";
+          action = spawn-sh "${clipmanPackage}/bin/clipman pick --tool=CUSTOM --tool-args=\"fuzzel -d\"";
           hotkey-overlay.title = "Clipboard:Clipboard manager";
         };
       })
