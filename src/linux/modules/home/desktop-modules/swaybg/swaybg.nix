@@ -78,7 +78,7 @@ args@{
         text = ''
           #!/usr/bin/env bash
 
-          LAST_CHANGE_FILE="${self.user.home}/.local/state/swaybg-last-change"
+          LAST_CHANGE_FILE="${self.user.home}/.local/state/swaybg/last-change"
           CURRENT_TIME=$(${pkgs.coreutils}/bin/date +%s)
           RATE_LIMIT=1
 
@@ -87,15 +87,82 @@ args@{
           if [[ ! -f "$LAST_CHANGE_FILE" ]] || [[ $((CURRENT_TIME - $(${pkgs.coreutils}/bin/cat "$LAST_CHANGE_FILE" 2>/dev/null || echo 0))) -gt $RATE_LIMIT ]]; then
             echo "$CURRENT_TIME" > "$LAST_CHANGE_FILE"
 
+            ${config.home.homeDirectory}/.local/bin/scripts/swaybg-update-wallpaper --randomize
+
             ${lib.optionalString (!self.settings.deactivateTimer) ''
               systemctl --user restart nx-swaybg-rotate.timer
-              systemctl --user start nx-swaybg-rotate.service
             ''}
 
-            ${lib.optionalString (self.settings.deactivateTimer) ''
-              systemctl --user restart nx-swaybg.service
-            ''}
+            systemctl --user restart nx-swaybg.service
           fi
+        '';
+      };
+
+      home.file.".local/bin/scripts/swaybg-update-wallpaper" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          WALLPAPERS_DIR="${wallpapersDir}"
+          STATE_FILE="${config.home.homeDirectory}/.local/state/swaybg/current-wallpaper"
+          WALLPAPER=""
+
+          RANDOMIZE=0
+          if [[ "''${1:-}" == "--randomize" ]]; then
+            RANDOMIZE=1
+          else
+            if [[ ! -f "$STATE_FILE" ]]; then
+              RANDOMIZE=1
+            else
+              WALLPAPER="$(cat "$STATE_FILE" 2>/dev/null || echo "")"
+
+              if [[ ! -f "$WALLPAPER" ]]; then
+                RANDOMIZE=1
+              fi
+            fi
+          fi
+
+          if (( RANDOMIZE )); then
+            WALLPAPERS=($(${pkgs.findutils}/bin/find "$WALLPAPERS_DIR" \( -type f -o -type l \) \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" \) 2>/dev/null))
+
+            ${lib.concatMapStringsSep "\n" (dir: ''
+              if [ -d "${dir}" ]; then
+                while IFS= read -r -d "" wallpaper; do
+                  WALLPAPERS+=("$wallpaper")
+                done < <(${pkgs.findutils}/bin/find "${dir}" \( -type f -o -type l \) \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" \) -print0 2>/dev/null)
+              fi
+            '') expandedAdditionalDirs}
+
+            if [ ''${#WALLPAPERS[@]} -eq 0 ]; then
+              echo "No wallpapers found, exiting gracefully"
+              exit 0
+            fi
+
+            CURRENT_WALLPAPER=""
+            if [ -f "$STATE_FILE" ]; then
+              CURRENT_WALLPAPER=$(cat "$STATE_FILE")
+            fi
+
+            if [ ''${#WALLPAPERS[@]} -eq 1 ]; then
+              WALLPAPER="''${WALLPAPERS[0]}"
+            else
+              for i in {1..10}; do
+                WALLPAPER=$(printf '%s\n' "''${WALLPAPERS[@]}" | ${pkgs.coreutils}/bin/shuf -n 1)
+                if [ "$WALLPAPER" != "$CURRENT_WALLPAPER" ]; then
+                  break
+                fi
+              done
+            fi
+          fi
+
+          if [ ! -f "$WALLPAPER" ]; then
+            echo "Wallpaper file not found: $WALLPAPER" >&2
+            exit 1
+          fi
+
+          mkdir -p "$(dirname "$STATE_FILE")"
+          echo "$WALLPAPER" > "$STATE_FILE"
+
+          echo "$WALLPAPER"
         '';
       };
 
@@ -103,38 +170,11 @@ args@{
         executable = true;
         text = ''
           #!/usr/bin/env bash
-          WALLPAPERS_DIR="${wallpapersDir}"
-          STATE_FILE="${config.home.homeDirectory}/.local/state/swaybg-wallpaper"
+          WALLPAPER="$(${config.home.homeDirectory}/.local/bin/scripts/swaybg-update-wallpaper "$@")"
 
-          WALLPAPERS=($(${pkgs.findutils}/bin/find "$WALLPAPERS_DIR" \( -type f -o -type l \) \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" \) 2>/dev/null))
-
-          ${lib.concatMapStringsSep "\n" (dir: ''
-            if [ -d "${dir}" ]; then
-              while IFS= read -r -d "" wallpaper; do
-                WALLPAPERS+=("$wallpaper")
-              done < <(${pkgs.findutils}/bin/find "${dir}" \( -type f -o -type l \) \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" \) -print0 2>/dev/null)
-            fi
-          '') expandedAdditionalDirs}
-
-          if [ ''${#WALLPAPERS[@]} -eq 0 ]; then
-            echo "No wallpapers found, exiting gracefully"
-            exit 0
-          fi
-
-          CURRENT_WALLPAPER=""
-          if [ -f "$STATE_FILE" ]; then
-            CURRENT_WALLPAPER=$(cat "$STATE_FILE")
-          fi
-
-          if [ ''${#WALLPAPERS[@]} -eq 1 ]; then
-            WALLPAPER="''${WALLPAPERS[0]}"
-          else
-            for i in {1..10}; do
-              WALLPAPER=$(printf '%s\n' "''${WALLPAPERS[@]}" | ${pkgs.coreutils}/bin/shuf -n 1)
-              if [ "$WALLPAPER" != "$CURRENT_WALLPAPER" ]; then
-                break
-              fi
-            done
+          if [[ "$WALLPAPER" == "" ]]; then
+            echo "No wallpaper found, aborting swaybg start"
+            exit 1
           fi
 
           echo "Using wallpaper: $WALLPAPER"
@@ -142,9 +182,6 @@ args@{
           echo "Mode: ${self.settings.mode}"
           echo "Background color: ${self.settings.backgroundColor}"
           echo "Full command: ${pkgs.swaybg}/bin/swaybg -o ${self.settings.output} -i \"$WALLPAPER\" -m ${self.settings.mode} -c \"${self.settings.backgroundColor}\""
-
-          mkdir -p "$(dirname "$STATE_FILE")"
-          echo "$WALLPAPER" > "$STATE_FILE"
 
           exec ${pkgs.swaybg}/bin/swaybg -o "${self.settings.output}" -i "$WALLPAPER" -m "${self.settings.mode}" -c "${lib.removePrefix "#" self.settings.backgroundColor}"
         '';
@@ -191,7 +228,7 @@ args@{
 
         Service = {
           Type = "oneshot";
-          ExecStart = "${pkgs.systemd}/bin/systemctl --user restart nx-swaybg.service";
+          ExecStart = "${config.home.homeDirectory}/.local/bin/swaybg-next-wallpaper";
         };
       };
 
@@ -207,6 +244,7 @@ args@{
       home.persistence."${self.persist}" = {
         directories = [
           ".config/swaybg/wallpapers"
+          ".local/state/swaybg"
         ];
       };
     };
