@@ -618,7 +618,7 @@ args@{
                       if self.settings.dryRun then
                         ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1 --no-wall"''
                       else
-                        ''${config.systemd.package}/bin/shutdown -r +1 --no-wall''
+                        ''${pkgs.systemd}/bin/systemd-run --on-active=1m ${config.systemd.package}/bin/shutdown -r now --no-wall''
                     }
                   fi
                 else
@@ -658,7 +658,7 @@ args@{
                     if self.settings.dryRun then
                       ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1 --no-wall"''
                     else
-                      ''${config.systemd.package}/bin/shutdown -r +1 --no-wall''
+                      ''${pkgs.systemd}/bin/systemd-run --on-active=1m ${config.systemd.package}/bin/shutdown -r now --no-wall''
                   }
                 fi
               ''
