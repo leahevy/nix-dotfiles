@@ -91,17 +91,21 @@ jobs:
             "glibc"
             "microcode"
             "linux-firmware"
-            "nix:"
-            "nix[[:space:]]"
-            "nix$"
+            "^nix:"
+            "^nix[[:space:]]"
+            "^nix$"
+            "^nix-"
+            "^nix_"
+            "^nixos"
+            "^nixpkgs"
             "niri"
             "uwsm"
           )
 
           REBOOT_PATTERNS=""
           for pattern in "${REBOOT_PACKAGES[@]}"; do
-            if [[ "$pattern" =~ ^(nix:|nix\[|nix\$)$ ]]; then
-              REBOOT_PATTERNS="${REBOOT_PATTERNS}\\b${pattern}"
+            if [[ "$pattern" =~ ^\^ ]]; then
+              REBOOT_PATTERNS="${REBOOT_PATTERNS}${pattern}"
             else
               REBOOT_PATTERNS="${REBOOT_PATTERNS}\\b${pattern}\\b"
             fi
