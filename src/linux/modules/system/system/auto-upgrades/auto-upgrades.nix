@@ -29,6 +29,8 @@ args@{
     pushoverNotifications = true;
     verifySignatures = true;
     alwaysNotifyOnReboot = false;
+    borgMonitoringTimeoutMinutes = 180;
+    borgCheckIntervalMinutes = 15;
   };
 
   configuration =
@@ -67,6 +69,8 @@ args@{
                 "Auto-Upgrade (failed)|dialog-error: ${lib.removePrefix "FAILURE: " message}"
               else if lib.hasPrefix "WARNING:" message then
                 "Auto-Upgrade (warning)|dialog-warning: ${lib.removePrefix "WARNING: " message}"
+              else if lib.hasPrefix "DEBUG:" message then
+                null
               else if lib.hasPrefix "INFO:" message then
                 if lib.hasSuffix "skipping upgrade" message then
                   "Auto-Upgrade (info)|stop: ${lib.removePrefix "INFO: " message}"
@@ -94,6 +98,8 @@ args@{
               "success"
             else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
               "success"
+            else if lib.hasPrefix "DEBUG:" message then
+              null
             else if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then
               "info"
             else if lib.hasPrefix "INFO:" message && lib.hasInfix "Borg backup" message then
@@ -167,6 +173,38 @@ args@{
             ${logScript "info" "INFO: Borg backup is currently running, delaying auto-upgrade"}
             exit 0
           fi
+        }
+      '';
+
+      borgMonitoringLoopScript = ''
+        monitor_borg_backup() {
+          local timeout_minutes=${toString self.settings.borgMonitoringTimeoutMinutes}
+          local check_interval_minutes=${toString self.settings.borgCheckIntervalMinutes}
+          local timeout_seconds=$((timeout_minutes * 60))
+          local check_interval_seconds=$((check_interval_minutes * 60))
+          local start_time=$(${pkgs.coreutils}/bin/date +%s)
+          local end_time=$((start_time + timeout_seconds))
+
+          ${logScript "info" "DEBUG: Starting borg backup monitoring for $timeout_minutes minutes"}
+
+          while true; do
+            local current_time=$(${pkgs.coreutils}/bin/date +%s)
+
+            if [[ $current_time -ge $end_time ]]; then
+              ${logScript "err" "FAILURE: Borg backup has been running for more than $timeout_minutes minutes, aborting auto-upgrade timer!"}
+              exit 1
+            fi
+
+            if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service 2>/dev/null; then
+              local elapsed_minutes=$(( (current_time - start_time) / 60 ))
+              ${logScript "info" "DEBUG: Borg backup still running after $elapsed_minutes minutes, continuing to monitor"}
+              ${pkgs.coreutils}/bin/sleep $check_interval_seconds
+            else
+              local elapsed_minutes=$(( (current_time - start_time) / 60 ))
+              ${logScript "info" "DEBUG: Borg backup stopped after $elapsed_minutes minutes, proceeding with auto-upgrade"}
+              return 0
+            fi
+          done
         }
       '';
 
@@ -741,9 +779,16 @@ args@{
             ];
 
         script = ''
+          ${logScript "info" "DEBUG: Auto-upgrade notify service starting, waiting 30s to avoid race conditions"}
+          ${pkgs.coreutils}/bin/sleep 30
+
           ${checkDailyStartNotifyScript}
           check_daily_start_notify
-          ${logScript "info" "NOTICE: Auto-upgrade starting in ${builtins.toString self.settings.preNotificationTimeMinutes}M - avoid repository changes"}
+
+          ${borgMonitoringLoopScript}
+          monitor_borg_backup
+
+          ${logScript "info" "NOTICE: Auto-upgrade starting in ${builtins.toString self.settings.preNotificationTimeMinutes} minutes!"}
         '';
       };
 
