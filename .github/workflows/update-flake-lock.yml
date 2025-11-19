@@ -301,7 +301,23 @@ jobs:
         run: |
           set -euo pipefail
           echo "Enabling auto-merge for PR #${{ steps.cpr.outputs.pull-request-number }}"
-          gh pr merge --auto --squash ${{ steps.cpr.outputs.pull-request-number }}
+          sleep 10
+
+          for attempt in {1..10}; do
+            echo "Attempt $attempt/10: Enabling auto-merge..."
+            if gh pr merge --auto --squash ${{ steps.cpr.outputs.pull-request-number }}; then
+              echo "Auto-merge enabled successfully on attempt $attempt"
+              exit 0
+            else
+              echo "Auto-merge failed on attempt $attempt"
+              if [ $attempt -eq 10 ]; then
+                echo "All 10 attempts failed. Exiting..."
+                exit 1
+              fi
+              sleep_time="$(( 5 + $attempt ))"
+              sleep $sleep_time
+            fi
+          done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
