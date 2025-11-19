@@ -83,22 +83,22 @@ jobs:
           }
 
           REBOOT_PACKAGES=(
-            "linux[-_][0-9]"
-            "linuxKernel"
-            "linuxPackages"
-            "kernelPackages"
-            "systemd"
+            "^linux[-_][0-9]"
+            "^linuxKernel"
+            "^linuxPackages"
+            "^kernelPackages"
+            "^systemd:"
             "^systemd-"
-            "glibc"
-            "microcode"
-            "linux-firmware"
+            "^glibc"
+            "^microcode"
+            "^linux-firmware"
             "^nix:"
             "^nix[[:space:]]"
             "^nix$"
             "^nixVersions"
             "^nixos:"
-            "niri"
-            "uwsm"
+            "^niri"
+            "^uwsm"
           )
 
           REBOOT_PATTERNS=""
