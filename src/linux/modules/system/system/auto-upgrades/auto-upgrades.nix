@@ -61,6 +61,8 @@ args@{
                 "Auto-Upgrade (starting)|system-software-install: ${lib.removePrefix "STARTED: " message}"
               else if lib.hasPrefix "SUCCESS:" message then
                 "Auto-Upgrade (completed)|checkmark: ${lib.removePrefix "SUCCESS: " message}"
+              else if lib.hasPrefix "SUCCESS-REBOOT-NOW:" message then
+                "Auto-Upgrade (rebooting)|system-reboot: ${lib.removePrefix "SUCCESS-REBOOT-NOW: " message}"
               else if lib.hasPrefix "SUCCESS-REBOOT-LATER:" message then
                 "Auto-Upgrade (completed)|checkmark: ${lib.removePrefix "SUCCESS-REBOOT-LATER: " message}"
               else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
