@@ -880,7 +880,6 @@ args@{
             ${checkDailyStartScript}
             check_daily_start
 
-            ${logScript "info" "STARTED: Auto-upgrade beginning"}
             ${pkgs.coreutils}/bin/sleep 5
 
             ${checkBorgRunningScript}
@@ -903,6 +902,7 @@ args@{
             ''}
 
             ${checkForChangesScript}
+            ${logScript "info" "STARTED: Auto-upgrade beginning"}
             ${pullRepositoriesScript}
             ${upgradeScript}
             ${rebootScript}
