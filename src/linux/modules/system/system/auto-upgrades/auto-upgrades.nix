@@ -103,7 +103,7 @@ args@{
             else if lib.hasPrefix "DEBUG:" message then
               null
             else if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then
-              "info"
+              null
             else if lib.hasPrefix "INFO:" message && lib.hasInfix "Borg backup" message then
               "info"
             else if lib.hasPrefix "FAILURE:" message then
