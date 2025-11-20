@@ -58,7 +58,7 @@ args@{
           userNotifyMessage =
             if userNotifyEnabled then
               if lib.hasPrefix "STARTED:" message then
-                "Auto-Upgrade (starting)|system-software-install: ${lib.removePrefix "STARTED: " message}"
+                "Auto-Upgrade (starting)|system-reboot: ${lib.removePrefix "STARTED: " message}"
               else if lib.hasPrefix "SUCCESS:" message then
                 "Auto-Upgrade (completed)|checkmark: ${lib.removePrefix "SUCCESS: " message}"
               else if lib.hasPrefix "SUCCESS-REBOOT-NOW:" message then
@@ -75,15 +75,15 @@ args@{
                 null
               else if lib.hasPrefix "INFO:" message then
                 if lib.hasSuffix "skipping upgrade" message then
-                  "Auto-Upgrade (info)|stop: ${lib.removePrefix "INFO: " message}"
+                  "Auto-Upgrade (info)|system-reboot: ${lib.removePrefix "INFO: " message}"
                 else if lib.hasInfix "Borg backup" message then
-                  "Auto-Upgrade (info)|system-software-install: ${lib.removePrefix "INFO: " message}"
+                  "Auto-Upgrade (info)|system-reboot: ${lib.removePrefix "INFO: " message}"
                 else
                   null
               else if lib.hasPrefix "NOTICE:" message then
-                "Auto-Upgrade (notice)|system-software-install: ${lib.removePrefix "NOTICE: " message}"
+                "Auto-Upgrade (notice)|system-reboot: ${lib.removePrefix "NOTICE: " message}"
               else
-                "Auto-Upgrade|system-software-install: ${message}"
+                "Auto-Upgrade|system-reboot: ${message}"
             else
               null;
 
