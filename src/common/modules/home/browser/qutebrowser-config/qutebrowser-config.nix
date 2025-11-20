@@ -435,7 +435,17 @@ args@{
       "-e"
       "nvim"
     ];
+    darwinEditor = [
+      "open"
+      "-nWa"
+      "/Applications/Ghostty.app"
+      "--args"
+      "-e"
+      "$HOME/.nix-profile/bin/nvim"
+    ];
+    useHomeApplicationsOnDarwin = false;
     fileManager = [ "dolphin" ];
+    darwinFileManager = [ "open" ];
   };
 
   configuration =
@@ -713,22 +723,41 @@ args@{
             spellcheck = {
               languages = self.settings.dictLanguages;
             };
-            editor = {
-              command = self.settings.editor ++ [
-                "{file}"
-              ];
-            };
-            fileselect = {
-              folder.command = self.settings.fileManager ++ [
-                "{}"
-              ];
-              multiple_files.command = self.settings.fileManager ++ [
-                "{}"
-              ];
-              single_file.command = self.settings.fileManager ++ [
-                "{}"
-              ];
-            };
+            editor =
+              let
+                editorCommandLine = if self.isDarwin then self.settings.darwinEditor else self.settings.editor;
+                processedCommandLine = map (
+                  arg:
+                  let
+                    homeReplaced = builtins.replaceStrings [ "$HOME" ] [ self.user.home ] arg;
+                  in
+                  if self.isDarwin && self.settings.useHomeApplicationsOnDarwin then
+                    builtins.replaceStrings [ "/Applications" ] [ "${self.user.home}/Applications" ] homeReplaced
+                  else
+                    homeReplaced
+                ) editorCommandLine;
+              in
+              {
+                command = processedCommandLine ++ [
+                  "{file}"
+                ];
+              };
+            fileselect =
+              let
+                fileManagerCommand =
+                  if self.isDarwin then self.settings.darwinFileManager else self.settings.fileManager;
+              in
+              {
+                folder.command = fileManagerCommand ++ [
+                  "{}"
+                ];
+                multiple_files.command = fileManagerCommand ++ [
+                  "{}"
+                ];
+                single_file.command = fileManagerCommand ++ [
+                  "{}"
+                ];
+              };
             qt = {
               force_software_rendering =
                 if self.isLinux then
