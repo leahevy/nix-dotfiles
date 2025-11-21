@@ -191,7 +191,7 @@ rec {
 
       if [[ -n "$TYPE" && "$PRIORITY_SET" == "false" ]]; then
           case "$TYPE" in
-              started) PRIORITY="-1" ;;
+              started) PRIORITY="-2" ;;
               stopped) PRIORITY="0" ;;
               failed) PRIORITY="1" ;;
               warn) PRIORITY="1" ;;
