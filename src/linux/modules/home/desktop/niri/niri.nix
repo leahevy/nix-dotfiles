@@ -146,6 +146,8 @@ args@{
     switchBackgroundOnWorkspaceChange = true;
     modKey = "Super";
     modKeyNested = "Alt";
+    honorXDGActivation = true;
+    deactivateUnfocusedWindows = true;
     appIdMapping = {
       "org.nx.scratchpad" = "com.mitchellh.ghostty";
       "org.nx.start-terminal" = "com.mitchellh.ghostty";
@@ -684,6 +686,15 @@ args@{
           prefer-no-csd = true;
           hotkey-overlay.skip-at-startup = true;
           screenshot-path = screenshotPath;
+
+          debug = lib.mkMerge [
+            (lib.mkIf self.settings.honorXDGActivation {
+              honor-xdg-activation-with-invalid-serial = [ ];
+            })
+            (lib.mkIf self.settings.deactivateUnfocusedWindows {
+              deactivate-unfocused-windows = [ ];
+            })
+          ];
 
           spawn-at-startup =
             (generateStartupCommands startupApps) ++ (generateDelayedStartupCommands delayedStartupApps);
