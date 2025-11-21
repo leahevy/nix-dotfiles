@@ -89,7 +89,7 @@ args@{
           systemctl --user start mbsync.service
 
           echo "Waiting for sync to complete..."
-          systemctl --user --no-pager status mbsync.service --lines=5
+          systemctl --user --no-pager status mbsync.service --lines=5 || true
 
           if systemctl --user is-active mbsync.service >/dev/null 2>&1; then
             echo "Mail sync is running..."
@@ -105,7 +105,7 @@ args@{
             if systemctl --user is-failed mbsync.service >/dev/null 2>&1; then
               echo "Mail sync failed!"
               echo
-              systemctl --user --no-pager status mbsync.service --lines=10
+              systemctl --user --no-pager status mbsync.service --lines=10 || true
               exit 1
             else
               echo "Mail sync completed successfully."
