@@ -166,7 +166,7 @@ args@{
             ${pkgs.coreutils}/bin/touch /var/lib/nx-auto-upgrade/last-reboot
             ${pkgs.coreutils}/bin/chown root:root /var/lib/nx-auto-upgrade/last-reboot
             ${pkgs.coreutils}/bin/chmod 600 /var/lib/nx-auto-upgrade/last-reboot
-            ${pkgs.coreutils}/bin/echo "$(${pkgs.coreutils}/bin/date +%s):$(${pkgs.coreutils}/bin/date '+%Y-%m-%d %H:%M:%S'):auto-upgrade-reboot:${rebootType}" > /var/lib/nx-auto-upgrade/last-reboot
+            ${pkgs.coreutils}/bin/echo "$(${pkgs.coreutils}/bin/date +%s)|$(${pkgs.coreutils}/bin/date '+%Y-%m-%d %H:%M:%S')|auto-upgrade-reboot|${rebootType}" > /var/lib/nx-auto-upgrade/last-reboot
           '';
 
       checkBorgRunningScript = ''
@@ -1005,8 +1005,8 @@ args@{
             marker_content=$(${pkgs.coreutils}/bin/cat "$marker_file")
             ${pkgs.coreutils}/bin/rm -f "$marker_file"
 
-            reboot_type=$(${pkgs.coreutils}/bin/echo "$marker_content" | ${pkgs.coreutils}/bin/cut -d':' -f4)
-            reboot_time=$(${pkgs.coreutils}/bin/echo "$marker_content" | ${pkgs.coreutils}/bin/cut -d':' -f2)
+            reboot_type=$(${pkgs.coreutils}/bin/echo "$marker_content" | ${pkgs.coreutils}/bin/cut -d'|' -f4)
+            reboot_time=$(${pkgs.coreutils}/bin/echo "$marker_content" | ${pkgs.coreutils}/bin/cut -d'|' -f2)
           elif [[ "${lib.boolToString self.settings.alwaysNotifyOnReboot}" == "true" ]]; then
             reboot_type="unknown"
             reboot_time="$(${pkgs.coreutils}/bin/date '+%Y-%m-%d %H:%M:%S')"
