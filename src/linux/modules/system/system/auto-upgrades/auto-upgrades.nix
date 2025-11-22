@@ -536,6 +536,8 @@ args@{
                 if [[ "$FORCE_REBOOT" == "true" ]]; then
                   REBUILD_ACTION="boot"
                   ${logScript "info" "INFO: Using boot action since reboot is required"}
+                else
+                  ${logScript "info" "INFO: Using switch action since no reboot is required"}
                 fi
               ''}
 
