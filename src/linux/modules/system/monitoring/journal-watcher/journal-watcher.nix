@@ -161,6 +161,8 @@ args@{
       "Couldn't start kglobalaccel from org\\.kde\\.kglobalaccel\\.service.*"
       "kpipewire_vaapi_logging: VAAPI:.*"
       "application: invalid escaped exec argument character:.*"
+      "GFileInfo created without standard::.*"
+      "file ../gio/gfileinfo\\.c:.*should not be reached"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
