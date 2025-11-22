@@ -19,6 +19,7 @@ args@{
       mail-stack = {
         accounts = true;
         mbsync = true;
+        msmtp = true;
       };
     };
   };

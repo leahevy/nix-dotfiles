@@ -86,31 +86,36 @@ args@{
           set -euo pipefail
 
           echo "Triggering manual mail sync..."
-          systemctl --user start mbsync.service
+          systemctl --user start mbsync.service &
+          sleep 0.5
 
-          echo "Waiting for sync to complete..."
-          systemctl --user --no-pager status mbsync.service --lines=5 || true
+          echo "Monitoring sync progress..."
+          echo
 
-          if systemctl --user is-active mbsync.service >/dev/null 2>&1; then
-            echo "Mail sync is running..."
+          journalctl --user -u mbsync.service -f --since "30 seconds ago" --no-pager &
+          JOURNAL_PID=$!
+
+          cleanup() {
+            kill $JOURNAL_PID 2>/dev/null || true
+          }
+          trap cleanup EXIT INT TERM
+
+          if timeout 120s bash -c 'while systemctl --user is-active mbsync.service >/dev/null 2>&1; do sleep 1; done'; then
+            sleep 5
             echo
-            if timeout 120s bash -c 'while systemctl --user is-active mbsync.service >/dev/null 2>&1; do sleep 1; done'; then
-              echo "Mail sync completed successfully."
-              exit 0
-            else
-              echo "Mail sync is taking longer than expected!"
-              exit 2
-            fi
-          else
             if systemctl --user is-failed mbsync.service >/dev/null 2>&1; then
               echo "Mail sync failed!"
-              echo
-              systemctl --user --no-pager status mbsync.service --lines=10 || true
               exit 1
             else
               echo "Mail sync completed successfully."
               exit 0
             fi
+          else
+            echo
+            echo "Mail sync is taking longer than expected!"
+            echo "Current status:"
+            systemctl --user --no-pager status mbsync.service --lines=10 || true
+            exit 2
           fi
         '')
       ];

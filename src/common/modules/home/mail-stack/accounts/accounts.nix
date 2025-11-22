@@ -37,6 +37,59 @@ args@{
 
     baseDataDir = "mails";
     maildirPath = "maildir";
+
+    # providerName = {
+    #   imap = {
+    #     host = "imap.example.com";           # Or hostPattern = "imap.%DOMAIN%"
+    #     port = 993;                          # Optional: defaults based on ssl
+    #     ssl = true;                          # true=IMAPS(993), false=STARTTLS(143)
+    #   };
+    #   smtp = {
+    #     host = "smtp.example.com";           # Or hostPattern = "smtp.%DOMAIN%"
+    #     port = 587;                          # Optional: defaults based on ssl
+    #     ssl = false;                         # false=STARTTLS(587), true=SSL(465)
+    #   };
+    #   folders = {
+    #     sent = "Sent";
+    #     drafts = "Drafts";
+    #     trash = "Trash";
+    #     archive = "Archive";
+    #   };
+    # };
+    providers = {
+      "gmail.com" = {
+        imap = {
+          host = "imap.gmail.com";
+          ssl = true;
+        };
+        smtp = {
+          host = "smtp.gmail.com";
+          ssl = false;
+        };
+        folders = {
+          sent = "[Gmail]/Sent Mail";
+          drafts = "[Gmail]/Drafts";
+          trash = "[Gmail]/Trash";
+          archive = "[Gmail]/All Mail";
+        };
+      };
+      default = {
+        imap = {
+          hostPattern = "imap.%DOMAIN%";
+          ssl = true;
+        };
+        smtp = {
+          hostPattern = "smtp.%DOMAIN%";
+          ssl = false;
+        };
+        folders = {
+          sent = "Sent";
+          drafts = "Drafts";
+          trash = "Trash";
+          archive = "Archive";
+        };
+      };
+    };
   };
 
   assertions = [
@@ -68,53 +121,45 @@ args@{
 
       passwordsConfig = self.getModuleConfig "mail-stack.passwords";
 
-      providers = {
-        "gmail.com" = {
-          imap = {
-            host = "imap.gmail.com";
-            port = 993;
-          };
-          folders = {
-            sent = "[Gmail]/Sent Mail";
-            drafts = "[Gmail]/Drafts";
-            trash = "[Gmail]/Trash";
-            archive = "[Gmail]/All Mail";
-          };
-        };
-        default = {
-          imap = {
-            hostPattern = "imap.%DOMAIN%";
-            port = 993;
-          };
-          folders = {
-            sent = "Sent";
-            drafts = "Drafts";
-            trash = "Trash";
-            archive = "Archive";
-          };
-        };
-      };
+      providers = self.settings.providers;
 
       getProviderConfig =
         account:
         let
-          domain = lib.last (lib.splitString "@" account.address);
+          providerKey =
+            if account ? provider then account.provider else lib.last (lib.splitString "@" account.address);
         in
-        providers.${domain} or providers.default;
+        providers.${providerKey} or providers.default;
 
       buildServerConfig =
         accountKey: account:
         let
           providerConfig = getProviderConfig account;
           domain = lib.last (lib.splitString "@" account.address);
+          imapSsl = providerConfig.imap.ssl or true;
+          defaultImapPort = if imapSsl then 993 else 143;
+          smtpSsl = providerConfig.smtp.ssl or false;
+          defaultSmtpPort = if smtpSsl then 465 else 587;
         in
         {
-          host =
-            if providerConfig.imap ? hostPattern then
-              lib.replaceStrings [ "%DOMAIN%" ] [ domain ] providerConfig.imap.hostPattern
-            else
-              providerConfig.imap.host;
-          inherit (providerConfig.imap) port;
+          imap = {
+            host =
+              if providerConfig.imap ? hostPattern then
+                lib.replaceStrings [ "%DOMAIN%" ] [ domain ] providerConfig.imap.hostPattern
+              else
+                providerConfig.imap.host;
+            port = providerConfig.imap.port or defaultImapPort;
+            ssl = imapSsl;
+          };
+          smtp = {
+            host =
+              if providerConfig.smtp ? hostPattern then
+                lib.replaceStrings [ "%DOMAIN%" ] [ domain ] providerConfig.smtp.hostPattern
+              else
+                providerConfig.smtp.host;
+            port = providerConfig.smtp.port or defaultSmtpPort;
+            ssl = smtpSsl;
+          };
           folders = providerConfig.folders;
         };
 
@@ -136,9 +181,21 @@ args@{
             primary = account.default or false;
 
             imap = {
-              host = serverConfig.host;
-              port = serverConfig.port;
-              tls.enable = true;
+              host = serverConfig.imap.host;
+              port = serverConfig.imap.port;
+              tls = {
+                enable = true;
+                useStartTls = !serverConfig.imap.ssl;
+              };
+            };
+
+            smtp = {
+              host = serverConfig.smtp.host;
+              port = serverConfig.smtp.port;
+              tls = {
+                enable = true;
+                useStartTls = !serverConfig.smtp.ssl;
+              };
             };
 
             folders = lib.removeAttrs serverConfig.folders [ "archive" ];
