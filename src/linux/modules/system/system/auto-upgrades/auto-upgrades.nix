@@ -600,7 +600,7 @@ args@{
               ''
                 if check_reboot_window; then
                   if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
-                    ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed and within window but borg backup is running - scheduling reboot in window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper})"}
+                    ${logScript "info" "SUCCESS-REBOOT-LATER: Auto-upgrade completed successfully! Reboot needed and within window but borg backup is running - scheduling reboot in window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper})"}
                     ${
                       if self.settings.dryRun then
                         ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
@@ -612,7 +612,7 @@ args@{
                         ''
                     }
                   else
-                    ${logScript "info" "SUCCESS-REBOOT-NOW: Reboot needed and within window - ${
+                    ${logScript "info" "SUCCESS-REBOOT-NOW: Auto-upgrade completed successfully! Reboot needed and within window - ${
                       if self.settings.dryRun then "would reboot" else "rebooting"
                     } in +1 minute"}
                     ${createPersistentRebootMarkerScript "immediate-window"}
@@ -624,7 +624,7 @@ args@{
                     }
                   fi
                 else
-                  ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed and scheduled in window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper})"}
+                  ${logScript "info" "SUCCESS-REBOOT-LATER: Auto-upgrade completed successfully! Reboot needed and scheduled in window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper})"}
                   ${
                     if self.settings.dryRun then
                       ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
@@ -640,7 +640,7 @@ args@{
             else
               ''
                 if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
-                  ${logScript "info" "SUCCESS-REBOOT-LATER: Reboot needed but borg backup is running - scheduling reboot"}
+                  ${logScript "info" "SUCCESS-REBOOT-LATER: Auto-upgrade completed successfully! Reboot needed but borg backup is running - scheduling reboot"}
                   ${
                     if self.settings.dryRun then
                       ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
@@ -652,7 +652,7 @@ args@{
                       ''
                   }
                 else
-                  ${logScript "info" "SUCCESS-REBOOT-NOW: Reboot needed - ${
+                  ${logScript "info" "SUCCESS-REBOOT-NOW: Auto-upgrade completed successfully! Reboot needed - ${
                     if self.settings.dryRun then "would reboot" else "rebooting"
                   } in +1 minute"}
                   ${createPersistentRebootMarkerScript "immediate-no-window"}
@@ -666,7 +666,7 @@ args@{
               ''
           }
         else
-          ${logScript "info" "SUCCESS: Auto-upgrade completed successfully, no reboot required"}
+          ${logScript "info" "SUCCESS: Auto-upgrade completed successfully! No reboot required"}
         fi
       '';
 
