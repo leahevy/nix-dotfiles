@@ -20,6 +20,7 @@ args@{
         accounts = true;
         mbsync = true;
         msmtp = true;
+        notmuch = true;
       };
     };
   };

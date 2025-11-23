@@ -8,7 +8,7 @@ args@{
   self,
   ...
 }:
-{
+rec {
   name = "accounts";
   group = "mail-stack";
   input = "common";
@@ -54,24 +54,22 @@ args@{
     #     drafts = "Drafts";
     #     trash = "Trash";
     #     archive = "Archive";
+    #     spam = "Junk";
     #   };
+    #   archiveContainsAllMail = false;
     # };
     providers = {
       "gmail.com" = {
-        imap = {
-          host = "imap.gmail.com";
-          ssl = true;
-        };
-        smtp = {
-          host = "smtp.gmail.com";
-          ssl = false;
-        };
+        imap.host = "imap.gmail.com";
+        smtp.host = "smtp.gmail.com";
         folders = {
           sent = "[Gmail]/Sent Mail";
           drafts = "[Gmail]/Drafts";
           trash = "[Gmail]/Trash";
           archive = "[Gmail]/All Mail";
+          spam = "[Gmail]/Spam";
         };
+        archiveContainsAllMail = true;
       };
       default = {
         imap = {
@@ -87,7 +85,9 @@ args@{
           drafts = "Drafts";
           trash = "Trash";
           archive = "Archive";
+          spam = "Junk";
         };
+        archiveContainsAllMail = false;
       };
     };
   };
@@ -106,6 +106,44 @@ args@{
       message = "Exactly one account must have default = true.";
     }
   ];
+
+  custom = {
+    buildServerConfig =
+      accountKey: account:
+      let
+        providers = self.settings.providers;
+        providerKey =
+          if account ? provider then account.provider else lib.last (lib.splitString "@" account.address);
+        providerConfig = lib.recursiveUpdate providers.default (providers.${providerKey} or { });
+        domain = lib.last (lib.splitString "@" account.address);
+        imapSsl = providerConfig.imap.ssl or true;
+        defaultImapPort = if imapSsl then 993 else 143;
+        smtpSsl = providerConfig.smtp.ssl or false;
+        defaultSmtpPort = if smtpSsl then 465 else 587;
+      in
+      {
+        imap = {
+          host =
+            if providerConfig.imap ? hostPattern then
+              lib.replaceStrings [ "%DOMAIN%" ] [ domain ] providerConfig.imap.hostPattern
+            else
+              providerConfig.imap.host;
+          port = providerConfig.imap.port or defaultImapPort;
+          ssl = imapSsl;
+        };
+        smtp = {
+          host =
+            if providerConfig.smtp ? hostPattern then
+              lib.replaceStrings [ "%DOMAIN%" ] [ domain ] providerConfig.smtp.hostPattern
+            else
+              providerConfig.smtp.host;
+          port = providerConfig.smtp.port or defaultSmtpPort;
+          ssl = smtpSsl;
+        };
+        folders = providerConfig.folders;
+        archiveContainsAllMail = providerConfig.archiveContainsAllMail or false;
+      };
+  };
 
   configuration =
     context@{ config, options, ... }:
@@ -131,37 +169,7 @@ args@{
         in
         providers.${providerKey} or providers.default;
 
-      buildServerConfig =
-        accountKey: account:
-        let
-          providerConfig = getProviderConfig account;
-          domain = lib.last (lib.splitString "@" account.address);
-          imapSsl = providerConfig.imap.ssl or true;
-          defaultImapPort = if imapSsl then 993 else 143;
-          smtpSsl = providerConfig.smtp.ssl or false;
-          defaultSmtpPort = if smtpSsl then 465 else 587;
-        in
-        {
-          imap = {
-            host =
-              if providerConfig.imap ? hostPattern then
-                lib.replaceStrings [ "%DOMAIN%" ] [ domain ] providerConfig.imap.hostPattern
-              else
-                providerConfig.imap.host;
-            port = providerConfig.imap.port or defaultImapPort;
-            ssl = imapSsl;
-          };
-          smtp = {
-            host =
-              if providerConfig.smtp ? hostPattern then
-                lib.replaceStrings [ "%DOMAIN%" ] [ domain ] providerConfig.smtp.hostPattern
-              else
-                providerConfig.smtp.host;
-            port = providerConfig.smtp.port or defaultSmtpPort;
-            ssl = smtpSsl;
-          };
-          folders = providerConfig.folders;
-        };
+      buildServerConfig = custom.buildServerConfig;
 
     in
     {
@@ -198,7 +206,10 @@ args@{
               };
             };
 
-            folders = lib.removeAttrs serverConfig.folders [ "archive" ];
+            folders = lib.removeAttrs serverConfig.folders [
+              "archive"
+              "spam"
+            ];
           }
         ) self.settings.accounts;
       };

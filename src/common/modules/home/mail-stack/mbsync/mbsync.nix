@@ -48,6 +48,9 @@ args@{
               PipelineDepth = 50;
               Timeout = 120;
             };
+            channel = {
+              CopyArrivalDate = "yes";
+            };
           };
         };
       }) accountsConfig.accounts;
@@ -62,8 +65,45 @@ args@{
         };
         Service = {
           Type = "oneshot";
-          ExecStartPre = "+${pkgs.coreutils}/bin/mkdir -p %h/${lib.removePrefix "${config.home.homeDirectory}/" mailDir}";
-          ExecStart = "${pkgs.isync}/bin/mbsync -a";
+          ExecStartPre = pkgs.writeShellScript "mbsync-prep-maildir" ''
+            #!/usr/bin/env bash
+            set -euo pipefail
+
+            ${lib.concatMapStringsSep "\n" (accountKey: ''
+              ${pkgs.coreutils}/bin/mkdir -p "${mailDir}/${accountKey}"
+            '') (lib.attrNames accountsConfig.accounts)}
+          '';
+          ExecStart = pkgs.writeShellScript "mbsync-sync" ''
+            #!/usr/bin/env bash
+            set -euo pipefail
+            EXIT_CODE=0
+
+            echo "Starting mbsync..."
+            if ! ${pkgs.isync}/bin/mbsync -a; then
+              EXIT_CODE=$?
+              echo "mbsync encountered an error (exit code: $EXIT_CODE)"
+            fi
+
+            ${
+              if (self.isModuleEnabled "mail-stack.notmuch") then
+                ''
+                  echo "Updating Notmuch database..."
+                  if ! ${pkgs.notmuch}/bin/notmuch new; then
+                    EXIT_CODE=$?
+                    echo "Notmuch encountered an error (exit code: $EXIT_CODE)"
+                  fi
+                ''
+              else
+                ""
+            }
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              exit 1
+            else
+              echo "Mail sync completed without errors."
+              exit 0
+            fi
+          '';
           Restart = "on-failure";
           RestartSec = 60;
         };
@@ -85,14 +125,13 @@ args@{
           #!/usr/bin/env bash
           set -euo pipefail
 
-          echo "Triggering manual mail sync..."
-          systemctl --user start mbsync.service &
-          sleep 0.5
+          SYNC_START=$(date '+%Y-%m-%d %H:%M:%S')
 
+          echo "Triggering manual mail sync..."
           echo "Monitoring sync progress..."
           echo
 
-          journalctl --user -u mbsync.service -f --since "30 seconds ago" --no-pager &
+          journalctl --user -u mbsync.service -f --since "$SYNC_START" --no-pager &
           JOURNAL_PID=$!
 
           cleanup() {
@@ -100,9 +139,15 @@ args@{
           }
           trap cleanup EXIT INT TERM
 
-          if timeout 120s bash -c 'while systemctl --user is-active mbsync.service >/dev/null 2>&1; do sleep 1; done'; then
-            sleep 5
+          sleep 1
+          systemctl --user start mbsync.service &
+          sleep 1
+
+          if timeout 120s bash -c 'while [[ "$(systemctl --user is-active mbsync.service)" =~ ^(activating|active)$ ]]; do sleep 0.5; done'; then
+            sleep 1
             echo
+            echo "=== Final Status ==="
+
             if systemctl --user is-failed mbsync.service >/dev/null 2>&1; then
               echo "Mail sync failed!"
               exit 1
