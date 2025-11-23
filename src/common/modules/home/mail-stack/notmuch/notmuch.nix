@@ -23,7 +23,8 @@ args@{
   };
 
   settings = {
-    maxAgeToMove = 90;
+    maxAgeToProcess = 90;
+    excludeTags = [ ];
 
     virtualMailboxes = [
       # Example:
@@ -134,17 +135,14 @@ args@{
           ];
         };
 
-        search.excludeTags = [
-          "deleted"
-          "spam"
-        ];
+        search.excludeTags = self.settings.excludeTags;
 
         maildir.synchronizeFlags = true;
 
         hooks.postNew = ''
           ${pkgs.afew}/bin/afew --tag --new
-          ${pkgs.afew}/bin/afew --move-mails --all -T ${toString self.settings.maxAgeToMove}
-          ${pkgs.afew}/bin/afew --tag --all -T ${toString self.settings.maxAgeToMove}
+          ${pkgs.afew}/bin/afew --move-mails --all -T ${toString self.settings.maxAgeToProcess}
+          ${pkgs.afew}/bin/afew --tag --all -T ${toString self.settings.maxAgeToProcess}
         '';
       };
 
@@ -202,7 +200,7 @@ args@{
             )
           }
           rename = true
-          max_age = ${toString self.settings.maxAgeToMove}
+          max_age = ${toString self.settings.maxAgeToProcess}
 
           ${lib.concatMapStringsSep "\n" (
             accountKey:
