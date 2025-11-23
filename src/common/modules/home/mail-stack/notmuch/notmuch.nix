@@ -359,11 +359,5 @@ args@{
       home.packages = [
         pkgs.afew
       ];
-
-      home.persistence."${self.persist}" = {
-        directories = [
-          ".cache/afew"
-        ];
-      };
     };
 }
