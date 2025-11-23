@@ -143,8 +143,8 @@ args@{
 
         hooks.postNew = ''
           ${pkgs.afew}/bin/afew --tag --new
-          ${pkgs.afew}/bin/afew --tag --all -T ${toString self.settings.maxAgeToMove}
           ${pkgs.afew}/bin/afew --move-mails --all -T ${toString self.settings.maxAgeToMove}
+          ${pkgs.afew}/bin/afew --tag --all -T ${toString self.settings.maxAgeToMove}
         '';
       };
 
@@ -168,7 +168,7 @@ args@{
 
       home.file.".config/afew/config".text =
         let
-          numOfFiltersPerAccount = 8;
+          numOfFiltersPerAccount = 9;
         in
         ''
           [SpamFilter]
@@ -225,16 +225,21 @@ args@{
               srcFolder:
               let
                 rules = lib.filter (rule: rule != "") [
-                  (if srcFolder != "${accountKey}/INBOX" then "'tag:inbox':'${accountKey}/INBOX'" else "")
+                  (
+                    if srcFolder != "${accountKey}/INBOX" then
+                      "'tag:inbox AND NOT tag:trash AND NOT tag:spam':'${accountKey}/INBOX'"
+                    else
+                      ""
+                  )
                   (
                     if srcFolder != "${accountKey}/${folders.sent}" then
-                      "'tag:sent':'${accountKey}/${folders.sent}'"
+                      "'tag:sent AND NOT tag:trash AND NOT tag:spam':'${accountKey}/${folders.sent}'"
                     else
                       ""
                   )
                   (
                     if srcFolder != "${accountKey}/${folders.drafts}" then
-                      "'tag:drafts':'${accountKey}/${folders.drafts}'"
+                      "'tag:drafts AND NOT tag:trash AND NOT tag:spam':'${accountKey}/${folders.drafts}'"
                     else
                       ""
                   )
@@ -245,14 +250,16 @@ args@{
                       ""
                   )
                   (
-                    if !archiveContainsAllMail && srcFolder != "${accountKey}/${folders.archive}" then
-                      "'tag:archive':'${accountKey}/${folders.archive}'"
+                    if archiveContainsAllMail && srcFolder == "${accountKey}/INBOX" then
+                      "'tag:archive AND NOT tag:inbox AND NOT tag:trash AND NOT tag:spam':'${accountKey}/${folders.archive}'"
+                    else if !archiveContainsAllMail && srcFolder != "${accountKey}/${folders.archive}" then
+                      "'tag:archive AND NOT tag:inbox AND NOT tag:trash AND NOT tag:spam':'${accountKey}/${folders.archive}'"
                     else
                       ""
                   )
                   (
                     if srcFolder != "${accountKey}/${folders.spam}" then
-                      "'tag:spam OR tag:dkim-fail':'${accountKey}/${folders.spam}'"
+                      "'(tag:spam OR tag:dkim-fail) AND NOT tag:trash':'${accountKey}/${folders.spam}'"
                     else
                       ""
                   )
@@ -295,31 +302,36 @@ args@{
                 message = Tag ${accountKey} account
 
                 [Filter.${toString (baseIndex + 2)}]
-                query = folder:"${accountKey}/${folders.sent}"
-                tags = +sent
-                message = Tag sent emails
+                query = folder:"${accountKey}/INBOX"
+                tags = +inbox;-sent;-drafts;-archive;-trash;-spam
+                message = Tag inbox emails
 
                 [Filter.${toString (baseIndex + 3)}]
-                query = folder:"${accountKey}/${folders.drafts}"
-                tags = +drafts
-                message = Tag draft emails
+                query = folder:"${accountKey}/${folders.sent}"
+                tags = +sent;-inbox;-drafts;-archive;-spam
+                message = Tag sent emails
 
                 [Filter.${toString (baseIndex + 4)}]
-                query = folder:"${accountKey}/${folders.trash}"
-                tags = +trash;+deleted
-                message = Tag trash emails
+                query = folder:"${accountKey}/${folders.drafts}"
+                tags = +drafts;-inbox;-sent;-archive;-trash;-spam
+                message = Tag draft emails
 
                 [Filter.${toString (baseIndex + 5)}]
-                query = folder:"${accountKey}/${folders.archive}"
-                tags = +archive
-                message = Tag archive emails
+                query = folder:"${accountKey}/${folders.trash}"
+                tags = +trash;+deleted;-inbox;-sent;-drafts;-archive;-spam
+                message = Tag trash emails
 
                 [Filter.${toString (baseIndex + 6)}]
-                query = folder:"${accountKey}/${folders.spam}"
-                tags = +spam
-                message = Tag spam emails
+                query = folder:"${accountKey}/${folders.archive}"
+                tags = +archive;-inbox;-sent;-drafts;-spam
+                message = Tag archive emails
 
                 [Filter.${toString (baseIndex + 7)}]
+                query = folder:"${accountKey}/${folders.spam}"
+                tags = +spam;-inbox;-sent;-drafts;-archive
+                message = Tag spam emails
+
+                [Filter.${toString (baseIndex + 8)}]
                 query = tag:dkim-fail
                 tags = +spam
                 message = Tag DKIM failed emails as spam
