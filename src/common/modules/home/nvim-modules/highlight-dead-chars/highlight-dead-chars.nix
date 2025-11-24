@@ -21,7 +21,12 @@ args@{
     eolFill = {
       enabledOnStart = true;
       char = "‧";
+      currentLineChar = "┄";
       color = "#1c1c1c";
+      currentLineColor = "#61afef";
+      delimiterChars = " ";
+      onlyFillIfAllFit = true;
+      onlyShowOnCurrentLine = false;
     };
     excludeFiletypes = [
       "help"
@@ -78,6 +83,7 @@ args@{
         vim.api.nvim_set_hl(0, "Whitespace", { fg = "${self.settings.whiteSpaceColor}" })
         vim.api.nvim_set_hl(0, "NonText", { fg = "${self.settings.whiteSpaceColor}" })
         vim.api.nvim_set_hl(0, "EolFill", { fg = "${self.settings.eolFill.color}" })
+        vim.api.nvim_set_hl(0, "EolFillCurrent", { fg = "${self.settings.eolFill.currentLineColor}" })
 
         _G.eol_fill_enabled = ${if self.settings.eolFill.enabledOnStart then "true" else "false"}
         local ns = vim.api.nvim_create_namespace('eol_fill')
@@ -113,6 +119,7 @@ args@{
           local bufnr = vim.api.nvim_get_current_buf()
           local winnr = vim.api.nvim_get_current_win()
           local win_width = vim.api.nvim_win_get_width(winnr)
+          local actual_text_width = win_width - vim.fn.getwininfo(winnr)[1].textoff
 
           local start_line = math.max(0, vim.fn.line('w0') - 2)
           local end_line = math.min(vim.api.nvim_buf_line_count(bufnr) - 1, vim.fn.line('w$') + 1)
@@ -123,30 +130,100 @@ args@{
             if line_content and line_content ~= "" then
               local line_nr = start_line + i - 1
               local content_width = vim.fn.strdisplaywidth(line_content)
+              local dots_needed
 
-              if content_width > win_width then
-                local remaining_width = content_width % win_width
+              local listchars_offset = 0
+              if vim.o.list then
+                listchars_offset = listchars_offset + 1
+              end
+
+              if content_width > actual_text_width then
+                local remaining_width = content_width % actual_text_width
                 if remaining_width == 0 then
-                  remaining_width = win_width
-                end
-                local dots_needed = math.max(0, win_width - remaining_width - 3)
-
-                if dots_needed > 0 then
-                  vim.api.nvim_buf_set_extmark(bufnr, ns, line_nr, -1, {
-                    virt_text = {{ string.rep("${self.settings.eolFill.char}", dots_needed), "EolFill" }},
-                    virt_text_pos = "eol",
-                    priority = 100
-                  })
+                  dots_needed = 0
+                else
+                  dots_needed = math.max(0, actual_text_width - remaining_width - listchars_offset)
                 end
               else
-                local dots_needed = math.max(0, win_width - content_width - 3)
+                dots_needed = math.max(0, actual_text_width - content_width - listchars_offset)
+              end
 
-                if dots_needed > 0 then
-                  vim.api.nvim_buf_set_extmark(bufnr, ns, line_nr, -1, {
-                    virt_text = {{ string.rep("${self.settings.eolFill.char}", dots_needed), "EolFill" }},
-                    virt_text_pos = "eol",
-                    priority = 100
-                  })
+              if dots_needed > 0 then
+                local delimiter = "${self.settings.eolFill.delimiterChars}"
+                local delimiter_width = vim.fn.strdisplaywidth(delimiter)
+                local available_space = dots_needed - delimiter_width
+
+                if available_space > 0 then
+                  local current_line = vim.api.nvim_win_get_cursor(winnr)[1] - 1
+                  local char_pattern = line_nr == current_line and "${self.settings.eolFill.currentLineChar}" or "${self.settings.eolFill.char}"
+                  local pattern_width = vim.fn.strdisplaywidth(char_pattern)
+                  local full_repeats = math.floor(available_space / pattern_width)
+                  local remaining_space = available_space - (full_repeats * pattern_width)
+
+                  local only_fill_if_all_fit = ${
+                    if self.settings.eolFill.onlyFillIfAllFit then "true" else "false"
+                  }
+
+                  if not (only_fill_if_all_fit and full_repeats == 0) then
+                    local partial_chars = ""
+                    if not only_fill_if_all_fit and remaining_space > 0 then
+                      partial_chars = string.sub(char_pattern, 1, remaining_space)
+                    end
+
+                    local fill_text = delimiter .. string.rep(char_pattern, full_repeats) .. partial_chars
+
+                    local highlight_group = "EolFill"
+                    local only_show_on_current_line = ${
+                      if self.settings.eolFill.onlyShowOnCurrentLine then "true" else "false"
+                    }
+
+                    if line_nr == current_line then
+                      ${lib.optionalString (self.isModuleEnabled "nvim-modules.blink-indent") ''
+                        local current_indent = math.floor(vim.fn.indent(line_nr + 1) / vim.bo.shiftwidth)
+                        local effective_indent = current_indent
+
+                        local next_line_nr = line_nr + 2
+                        local total_lines = vim.api.nvim_buf_line_count(bufnr)
+                        while next_line_nr <= total_lines do
+                          local next_line = vim.api.nvim_buf_get_lines(bufnr, next_line_nr - 1, next_line_nr, false)[1]
+                          if next_line and vim.trim(next_line) ~= "" then
+                            local next_indent = math.floor(vim.fn.indent(next_line_nr) / vim.bo.shiftwidth)
+                            if next_indent > current_indent then
+                              effective_indent = next_indent
+                            end
+                            break
+                          end
+                          next_line_nr = next_line_nr + 1
+                        end
+
+                        if effective_indent > 0 then
+                          local blink_indent_groups = {
+                            "BlinkIndentRed", "BlinkIndentOrange", "BlinkIndentYellow",
+                            "BlinkIndentGreen", "BlinkIndentViolet", "BlinkIndentCyan", "BlinkIndentBlue"
+                          }
+                          local group_index = ((effective_indent - 1) % #blink_indent_groups) + 1
+                          highlight_group = blink_indent_groups[group_index]
+                        else
+                          highlight_group = "EolFillCurrent"
+                        end
+                      ''}
+                      ${lib.optionalString (!self.isModuleEnabled "nvim-modules.blink-indent") ''
+                        highlight_group = "EolFillCurrent"
+                      ''}
+                    else
+                      if only_show_on_current_line then
+                        goto continue
+                      end
+                    end
+
+                    vim.api.nvim_buf_set_extmark(bufnr, ns, line_nr, -1, {
+                      virt_text = {{ fill_text, highlight_group }},
+                      virt_text_pos = "eol",
+                      priority = 100
+                    })
+
+                    ::continue::
+                  end
                 end
               end
             end
@@ -157,7 +234,7 @@ args@{
         local main_timer = nil
         local augroup = vim.api.nvim_create_augroup('eol_fill', { clear = true })
 
-        vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
+        vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter', 'InsertEnter', 'InsertLeave' }, {
           group = augroup,
           callback = function()
             add_eol_fill()
