@@ -118,6 +118,35 @@ args@{
         })
       '';
 
+      home.file.".config/nvim-init/51-telescope-ui-select.lua".text = ''
+        vim.ui.select = function(items, opts, on_choice)
+          require("telescope.pickers").new({}, {
+            prompt_title = opts.prompt or "Select",
+            finder = require("telescope.finders").new_table({
+              results = items,
+              entry_maker = function(entry)
+                return {
+                  value = entry,
+                  display = entry.name or tostring(entry),
+                  ordinal = entry.name or tostring(entry),
+                }
+              end,
+            }),
+            sorter = require("telescope.config").values.generic_sorter({}),
+            attach_mappings = function(prompt_bufnr, map)
+              require("telescope.actions").select_default:replace(function()
+                require("telescope.actions").close(prompt_bufnr)
+                local selection = require("telescope.actions.state").get_selected_entry()
+                if selection then
+                  on_choice(selection.value)
+                end
+              end)
+              return true
+            end,
+          }):find()
+        end
+      '';
+
       home.packages = with pkgs; [
         fzf
         ripgrep
