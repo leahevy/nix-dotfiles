@@ -31,6 +31,7 @@ args@{
         startify = false;
         telescope = true;
         telescope-cmdline = true;
+        overseer = true;
         gitgutter = true;
         fugitive = true;
         toggleterm = true;
