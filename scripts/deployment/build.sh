@@ -10,7 +10,7 @@ parse_build_deployment_args "$@"
 verify_commits
 
 if [[ -e /etc/NIXOS ]]; then
-  NEW_SYSTEM=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" --print-out-paths)
+  NEW_SYSTEM=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
 
   if [[ "${BUILD_DIFF:-false}" == "true" ]]; then
     echo -e "${CYAN}Comparing new build with current active system...${RESET}"
@@ -22,7 +22,7 @@ if [[ -e /etc/NIXOS ]]; then
     nvd --color=always --version-highlight=xmas diff /run/current-system "$NEW_SYSTEM"
   fi
 else
-  NEW_HOME=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" --print-out-paths)
+  NEW_HOME=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
 
   if [[ "${BUILD_DIFF:-false}" == "true" ]]; then
     echo -e "${CYAN}Comparing new build with current active home configuration...${RESET}"
