@@ -23,5 +23,9 @@ args@{
         fd
         ripgrep
       ];
+
+      home.shellAliases = {
+        cat = "bat";
+      };
     };
 }
