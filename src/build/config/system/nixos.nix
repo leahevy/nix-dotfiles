@@ -94,6 +94,8 @@ in
           experimental-features = variables.experimental-features;
           trusted-users = [ host.mainUser.username ];
           http-connections = variables.httpConnections;
+          keep-outputs = true;
+          keep-derivations = true;
         };
       };
     }
