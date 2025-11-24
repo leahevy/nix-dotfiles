@@ -30,6 +30,7 @@ args@{
         lualine = false;
         startify = false;
         telescope = true;
+        telescope-cmdline = true;
         gitgutter = true;
         fugitive = true;
         toggleterm = true;
@@ -292,13 +293,23 @@ args@{
 
         keymaps = [
           {
-            key = ";";
-            action = ":";
-          }
-          {
             key = ":";
             action = ";";
           }
+          {
+            mode = "v";
+            key = ";";
+            action = ":";
+          }
+        ]
+        ++ lib.optionals (!(self.isModuleEnabled "nvim-modules.telescope-cmdline")) [
+          {
+            mode = "n";
+            key = ";";
+            action = ":";
+          }
+        ]
+        ++ [
           {
             mode = [
               "n"
