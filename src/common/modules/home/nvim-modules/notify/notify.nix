@@ -136,13 +136,13 @@ args@{
         ${lib.optionalString self.settings.addEventNotifications ''
           local write_failed = {}
           local was_modified = {}
+          local last_write_time = {}
 
           vim.api.nvim_create_autocmd("BufWritePost", {
             callback = function()
               local bufnr = vim.api.nvim_get_current_buf()
               if not write_failed[bufnr] and was_modified[bufnr] then
                 local filename = vim.fn.expand("%:t")
-
                 if _G.autosave_in_progress then
                   vim.notify("🔄 Auto-saved: " .. filename, vim.log.levels.INFO, {
                     title = "Auto Save",
@@ -154,6 +154,7 @@ args@{
                   })
                 end
               end
+              last_write_time[bufnr] = vim.loop.now()
               write_failed[bufnr] = nil
               was_modified[bufnr] = nil
             end,
@@ -275,7 +276,13 @@ args@{
           vim.api.nvim_create_autocmd("BufWritePre", {
             callback = function()
               local bufnr = vim.api.nvim_get_current_buf()
-              was_modified[bufnr] = vim.bo.modified
+              local current_time = vim.loop.now()
+
+              local actually_modified = vim.bo[bufnr].modified
+              local time_since_last_write = last_write_time[bufnr] and (current_time - last_write_time[bufnr]) or 999999
+
+              was_modified[bufnr] = actually_modified or time_since_last_write > 1000
+
               if vim.bo.readonly then
                 write_failed[bufnr] = true
                 vim.notify("🚫 Cannot save readonly file", vim.log.levels.ERROR, {
