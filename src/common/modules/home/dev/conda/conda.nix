@@ -82,47 +82,46 @@ args@{
             '';
           };
 
-      home.file.".config/nvim-init/70-toggleterm-conda-fix.lua" =
-        lib.mkIf (self.isModuleEnabled "nvim-modules.toggleterm")
-          {
-            text = ''
-              local function setup_conda_fix()
-                local toggleterm_ok, toggleterm = pcall(require, "toggleterm")
-                if not toggleterm_ok then
-                  return
-                end
+      programs.nixvim.extraConfigLua = lib.mkIf (self.isModuleEnabled "nvim-modules.toggleterm") ''
+        _G.nx_modules = _G.nx_modules or {}
+        _G.nx_modules["70-toggleterm-conda-fix"] = function()
+          local function setup_conda_fix()
+            local toggleterm_ok, toggleterm = pcall(require, "toggleterm")
+            if not toggleterm_ok then
+              return
+            end
 
-                local original_spawn = require("toggleterm.terminal").Terminal.spawn
+            local original_spawn = require("toggleterm.terminal").Terminal.spawn
 
-                require("toggleterm.terminal").Terminal.spawn = function(self)
-                  local conda_env = vim.env.CONDA_DEFAULT_ENV
-                  local conda_prefix = vim.env.CONDA_PREFIX
+            require("toggleterm.terminal").Terminal.spawn = function(self)
+              local conda_env = vim.env.CONDA_DEFAULT_ENV
+              local conda_prefix = vim.env.CONDA_PREFIX
 
-                  if conda_env and conda_prefix and conda_env ~= "base" then
-                    local conda_bin = conda_prefix .. "/bin"
-                    local stat = vim.loop.fs_stat(conda_bin)
+              if conda_env and conda_prefix and conda_env ~= "base" then
+                local conda_bin = conda_prefix .. "/bin"
+                local stat = vim.loop.fs_stat(conda_bin)
 
-                    if stat then
-                      local path = vim.env.PATH or ""
-                      if not path:match("^" .. vim.pesc(conda_bin)) then
-                        local new_path = path:gsub(vim.pesc(conda_bin) .. ":?", "")
-                        vim.env.PATH = conda_bin .. ":" .. new_path
-                      end
-                    end
+                if stat then
+                  local path = vim.env.PATH or ""
+                  if not path:match("^" .. vim.pesc(conda_bin)) then
+                    local new_path = path:gsub(vim.pesc(conda_bin) .. ":?", "")
+                    vim.env.PATH = conda_bin .. ":" .. new_path
                   end
-
-                  return original_spawn(self)
                 end
               end
 
-              vim.api.nvim_create_autocmd("VimEnter", {
-                pattern = "*",
-                callback = function()
-                  vim.defer_fn(setup_conda_fix, 100)
-                end,
-              })
-            '';
-          };
+              return original_spawn(self)
+            end
+          end
+
+          vim.api.nvim_create_autocmd("VimEnter", {
+            pattern = "*",
+            callback = function()
+              vim.defer_fn(setup_conda_fix, 100)
+            end,
+          })
+        end
+      '';
 
       home.persistence."${self.persist}" = lib.mkIf self.isLinux {
         directories = [

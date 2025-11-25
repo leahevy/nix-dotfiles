@@ -76,6 +76,7 @@ args@{
     withInitialTabs = true;
     withSocket = true;
     withData = false;
+    withPerformanceOptimisations = true;
     dataPath = "/data";
     withNeovide = false;
     terminal = "ghostty";
@@ -108,25 +109,31 @@ args@{
 
   configuration =
     context@{ config, options, ... }:
-    let
-      nvim_init_dir_loader = ''
-        local nvim_init_dir = vim.fn.expand('~/.config/nvim-init')
-
-        if vim.fn.isdirectory(nvim_init_dir) == 1 then
-          local files = vim.fn.glob(nvim_init_dir .. '/*.lua', false, true)
-          table.sort(files)
-
-          for _, file in ipairs(files) do
-            dofile(file)
-          end
-        end
-      '';
-    in
     {
       # See https://nix-community.github.io/nixvim/search/ for available options:
       programs.nixvim = {
         enable = true;
         package = pkgs-unstable.neovim-unwrapped;
+
+        performance = lib.mkIf self.settings.withPerformanceOptimisations {
+          byteCompileLua = {
+            enable = true;
+            initLua = true;
+            luaLib = true;
+            nvimRuntime = true;
+            plugins = true;
+          };
+          combinePlugins = {
+            enable = true;
+            standalonePlugins = lib.mkMerge [
+              [
+                "mini.nvim"
+              ]
+              (lib.mkIf (self.isModuleEnabled "nvim-modules.copilot") [ "copilot.vim" ])
+              (lib.mkIf (self.isModuleEnabled "nvim-modules.rest") [ "rest.nvim" ])
+            ];
+          };
+        };
 
         colorschemes =
           lib.mkIf (self.settings.foreignTheme == null && self.settings.overrideThemeName != null)
@@ -196,7 +203,210 @@ args@{
           spellfile = "${config.xdg.configHome}/nvim/spell/custom.utf-8.add";
         };
 
-        extraConfigLua = nvim_init_dir_loader;
+        extraConfigLua = lib.mkOrder 1500 (
+          lib.concatStringsSep "\n\n" (
+            [
+              "_G.nx_modules = _G.nx_modules or {}"
+
+              ''
+                _G.nx_modules["00-early-background"] = function()
+                  vim.api.nvim_set_hl(0, "Normal", { bg = "#000000" })
+                  vim.cmd("highlight Normal guibg=#000000 ctermbg=black")
+                end
+              ''
+            ]
+            ++ lib.optionals (self.settings.foreignTheme != null || self.settings.overrideThemeName != null) [
+              ''
+                _G.nx_modules["00-colorscheme"] = function()
+                  vim.cmd("colorscheme ${
+                    if self.settings.foreignTheme != null then
+                      self.settings.foreignTheme.name
+                    else
+                      self.settings.overrideThemeName
+                  }")
+                end
+              ''
+            ]
+            ++ lib.optionals (self.settings.foreignTheme != null) [
+              ''
+                _G.nx_modules["01-foreign-theme"] = function()
+                  require("${self.settings.foreignTheme.setupFunction}").setup(${builtins.toJSON self.settings.foreignTheme.settings})
+                end
+              ''
+            ]
+            ++ [
+              ''
+                _G.nx_modules["04-suppress-deprecation-warnings"] = function()
+                  vim.deprecate = function() end
+                end
+              ''
+
+              ''
+                _G.nx_modules["05-disable-mouse-popup"] = function()
+                  vim.cmd("silent! aunmenu PopUp")
+                  vim.cmd("autocmd! nvim.popupmenu")
+                end
+              ''
+
+              ''
+                _G.nx_modules["10-blinking-cursor"] = function()
+                  vim.opt.guicursor = ""
+
+                  vim.api.nvim_create_autocmd({"VimEnter"}, {
+                    callback = function()
+                      io.write("\27[1 q")
+                    end
+                  })
+
+                  vim.api.nvim_create_autocmd({"InsertEnter"}, {
+                    callback = function()
+                      io.write("\27[5 q")
+                    end
+                  })
+
+                  vim.api.nvim_create_autocmd({"InsertLeave"}, {
+                    callback = function()
+                      io.write("\27[1 q")
+                    end
+                  })
+                end
+              ''
+
+              ''
+                _G.nx_modules["11-insert-leave"] = function()
+                  vim.api.nvim_create_autocmd({"InsertLeave"}, {
+                    callback = function()
+                      local col = vim.fn.col('.')
+                      if col > 1 and col < vim.fn.col('$') - 1 then
+                        vim.fn.cursor(vim.fn.line('.'), col + 1)
+                      end
+                    end
+                  })
+                end
+              ''
+            ]
+            ++ lib.optionals self.settings.pureBlackBackground [
+              ''
+                _G.nx_modules["95-pure-black-background"] = function()
+                  local function fix_black_background()
+                    vim.api.nvim_set_hl(0, "Normal", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "NormalNC", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "NormalSB", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "SignColumn", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "SignColumnSB", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "LineNr", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "#000000" })
+
+                    vim.api.nvim_set_hl(0, "WinSeparator", { bg = "#000000", fg = "#000000" })
+                    vim.api.nvim_set_hl(0, "VertSplit", { bg = "#000000", fg = "#000000" })
+
+                    vim.api.nvim_set_hl(0, "StatusLine", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "StatusLineNC", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "TabLine", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "TabLineFill", { bg = "#000000" })
+
+                    vim.api.nvim_set_hl(0, "Pmenu", { bg = "#050505" })
+                    vim.api.nvim_set_hl(0, "PmenuSel", { bg = "#04293a" })
+                    vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "#030303" })
+                    vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "#1a1a1a" })
+
+                    vim.api.nvim_set_hl(0, "QuickFixLine", { bg = "#04293a", bold = true })
+                    vim.api.nvim_set_hl(0, "qfText", { fg = "#606080" })
+                    vim.api.nvim_set_hl(0, "qfLineNr", { fg = "#606080" })
+                    vim.api.nvim_set_hl(0, "qfFileName", { fg = "#8080ff" })
+                    vim.api.nvim_set_hl(0, "qfSeparator", { fg = "#404040" })
+
+                    vim.api.nvim_set_hl(0, "MsgArea", { bg = "NONE", fg = "#33dd77" })
+                    vim.api.nvim_set_hl(0, "Visual", { bg = "#1a4d33", fg = "#37f499" })
+                  end
+
+                  vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+                    callback = function()
+                      vim.defer_fn(fix_black_background, 100)
+                    end,
+                  })
+
+                  local qf_ns = vim.api.nvim_create_namespace("quickfix_highlights")
+                  vim.api.nvim_set_hl(qf_ns, "CursorLine", { bg = "#031313" })
+
+                  vim.api.nvim_create_autocmd("FileType", {
+                    pattern = "qf",
+                    callback = function()
+                      vim.wo.winhighlight = "CursorLine:CursorLine,Normal:NormalSB,SignColumn:SignColumnSB"
+                      vim.api.nvim_win_set_hl_ns(0, qf_ns)
+                    end,
+                  })
+                end
+              ''
+            ]
+            ++ lib.optionals (self.settings.overrideCursorHighlightColour != null) [
+              ''
+                _G.nx_modules["96-cursor-highlight-override"] = function()
+                  local function fix_cursor_highlight()
+                    vim.api.nvim_set_hl(0, "CursorLine", { bg = "${self.settings.overrideCursorHighlightColour}" })
+                    vim.api.nvim_set_hl(0, "CursorColumn", { bg = "${self.settings.overrideCursorHighlightColour}" })
+                  end
+
+                  vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+                    callback = function()
+                      vim.defer_fn(fix_cursor_highlight, 100)
+                    end,
+                  })
+                end
+              ''
+            ]
+            ++ [
+              ''
+                local init_start_time = vim.loop.hrtime()
+
+                local modules = _G.nx_modules or {}
+                local sorted_keys = {}
+                for name, _ in pairs(modules) do
+                  table.insert(sorted_keys, name)
+                end
+                table.sort(sorted_keys)
+
+                local loaded_count = 0
+                local failed_count = 0
+                for _, name in ipairs(sorted_keys) do
+                  local success, err = pcall(modules[name])
+                  if success then
+                    loaded_count = loaded_count + 1
+                  else
+                    failed_count = failed_count + 1
+                    vim.schedule(function()
+                      vim.defer_fn(function()
+                        vim.notify("❌ Module " .. name .. " failed: " .. err, vim.log.levels.ERROR, { title = "Module Loading" })
+                      end, 200)
+                    end)
+                  end
+                end
+
+                if failed_count > 0 then
+                  vim.schedule(function()
+                    vim.defer_fn(function()
+                        vim.notify("⚠️ Loaded " .. loaded_count .. "/" .. #sorted_keys .. " modules with " .. failed_count .. " failures", vim.log.levels.WARN, { title = "Neovim" })
+                    end, 100)
+                  end)
+                else
+                  vim.schedule(function()
+                    print("Neovim: Loaded " .. loaded_count .. "/" .. #sorted_keys .. " modules")
+                  end)
+                end
+
+                local init_end_time = vim.loop.hrtime()
+                local init_duration_ms = (init_end_time - init_start_time) / 1000000
+                vim.schedule(function()
+                  print(string.format("Neovim: Module initialization took %.2fms", init_duration_ms))
+                end)
+
+                _G.nx_modules = nil
+              ''
+            ]
+          )
+        );
 
         autoCmd = [
           {
@@ -582,143 +792,7 @@ args@{
             };
           }
         ];
-
       };
-
-      home.file.".config/nvim-init/00-early-background.lua".text = ''
-        vim.api.nvim_set_hl(0, "Normal", { bg = "#000000" })
-        vim.cmd("highlight Normal guibg=#000000 ctermbg=black")
-      '';
-
-      home.file.".config/nvim-init/00-colorscheme.lua" =
-        lib.mkIf (self.settings.foreignTheme != null || self.settings.overrideThemeName != null)
-          {
-            text = ''
-              vim.cmd("colorscheme ${
-                if self.settings.foreignTheme != null then
-                  self.settings.foreignTheme.name
-                else
-                  self.settings.overrideThemeName
-              }")
-            '';
-          };
-
-      home.file.".config/nvim-init/01-foreign-theme.lua" = lib.mkIf (self.settings.foreignTheme != null) {
-        text = ''
-          require("${self.settings.foreignTheme.setupFunction}").setup(${builtins.toJSON self.settings.foreignTheme.settings})
-        '';
-      };
-
-      home.file.".config/nvim-init/10-blinking-cursor.lua".text = ''
-        vim.opt.guicursor = ""
-
-        vim.api.nvim_create_autocmd({"VimEnter"}, {
-          callback = function()
-            io.write("\27[1 q")
-          end
-        })
-
-        vim.api.nvim_create_autocmd({"InsertEnter"}, {
-          callback = function()
-            io.write("\27[5 q")
-          end
-        })
-
-        vim.api.nvim_create_autocmd({"InsertLeave"}, {
-          callback = function()
-            io.write("\27[1 q")
-          end
-        })
-      '';
-
-      home.file.".config/nvim-init/04-suppress-deprecation-warnings.lua".text = ''
-        vim.deprecate = function() end
-      '';
-
-      home.file.".config/nvim-init/05-disable-mouse-popup.lua".text = ''
-        vim.cmd("silent! aunmenu PopUp")
-        vim.cmd("autocmd! nvim.popupmenu")
-      '';
-
-      home.file.".config/nvim-init/11-insert-leave.lua".text = ''
-        vim.api.nvim_create_autocmd({"InsertLeave"}, {
-          callback = function()
-            local col = vim.fn.col('.')
-            if col > 1 and col < vim.fn.col('$') - 1 then
-              vim.fn.cursor(vim.fn.line('.'), col + 1)
-            end
-          end
-        })
-      '';
-
-      home.file.".config/nvim-init/95-pure-black-background.lua".text =
-        lib.mkIf self.settings.pureBlackBackground ''
-          local function fix_black_background()
-            vim.api.nvim_set_hl(0, "Normal", { bg = "#000000" })
-            vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#000000" })
-            vim.api.nvim_set_hl(0, "NormalNC", { bg = "#000000" })
-            vim.api.nvim_set_hl(0, "NormalSB", { bg = "#000000" })
-            vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "#000000" })
-            vim.api.nvim_set_hl(0, "SignColumn", { bg = "#000000" })
-            vim.api.nvim_set_hl(0, "SignColumnSB", { bg = "#000000" })
-            vim.api.nvim_set_hl(0, "LineNr", { bg = "#000000" })
-            vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "#000000" })
-
-            vim.api.nvim_set_hl(0, "WinSeparator", { bg = "#000000", fg = "#000000" })
-            vim.api.nvim_set_hl(0, "VertSplit", { bg = "#000000", fg = "#000000" })
-
-            vim.api.nvim_set_hl(0, "StatusLine", { bg = "#000000" })
-            vim.api.nvim_set_hl(0, "StatusLineNC", { bg = "#000000" })
-            vim.api.nvim_set_hl(0, "TabLine", { bg = "#000000" })
-            vim.api.nvim_set_hl(0, "TabLineFill", { bg = "#000000" })
-
-            vim.api.nvim_set_hl(0, "Pmenu", { bg = "#050505" })
-            vim.api.nvim_set_hl(0, "PmenuSel", { bg = "#04293a" })
-            vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "#030303" })
-            vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "#1a1a1a" })
-
-            vim.api.nvim_set_hl(0, "QuickFixLine", { bg = "#04293a", bold = true })
-            vim.api.nvim_set_hl(0, "qfText", { fg = "#606080" })
-            vim.api.nvim_set_hl(0, "qfLineNr", { fg = "#606080" })
-            vim.api.nvim_set_hl(0, "qfFileName", { fg = "#8080ff" })
-            vim.api.nvim_set_hl(0, "qfSeparator", { fg = "#404040" })
-
-            vim.api.nvim_set_hl(0, "MsgArea", { bg = "NONE", fg = "#33dd77" })
-            vim.api.nvim_set_hl(0, "Visual", { bg = "#1a4d33", fg = "#37f499" })
-          end
-
-          vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
-            callback = function()
-              vim.defer_fn(fix_black_background, 100)
-            end,
-          })
-
-          local qf_ns = vim.api.nvim_create_namespace("quickfix_highlights")
-          vim.api.nvim_set_hl(qf_ns, "CursorLine", { bg = "#031313" })
-
-          vim.api.nvim_create_autocmd("FileType", {
-            pattern = "qf",
-            callback = function()
-              vim.wo.winhighlight = "CursorLine:CursorLine,Normal:NormalSB,SignColumn:SignColumnSB"
-              vim.api.nvim_win_set_hl_ns(0, qf_ns)
-            end,
-          })
-        '';
-
-      home.file.".config/nvim-init/96-cursor-highlight-override.lua".text =
-        lib.mkIf (self.settings.overrideCursorHighlightColour != null)
-          ''
-            local function fix_cursor_highlight()
-              vim.api.nvim_set_hl(0, "CursorLine", { bg = "${self.settings.overrideCursorHighlightColour}" })
-              vim.api.nvim_set_hl(0, "CursorColumn", { bg = "${self.settings.overrideCursorHighlightColour}" })
-            end
-
-            vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
-              callback = function()
-                vim.defer_fn(fix_cursor_highlight, 100)
-              end,
-            })
-          '';
 
       programs.neovide = lib.mkIf self.isLinux {
         enable = self.settings.withNeovide;

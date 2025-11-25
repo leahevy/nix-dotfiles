@@ -66,55 +66,56 @@ args@{
             icon = "🧹";
           }
         ];
-      };
 
-      home.file.".config/nvim-init/90-searchbox.lua" = {
-        text = ''
-          require('searchbox').setup({
-            defaults = {
-              reverse = false,
-              exact = false,
-              prompt = ' ',
-              modifier = 'plain',
-              confirm = 'off',
-              clear_matches = true,
-              show_matches = false,
-            },
-            popup = {
-              relative = 'win',
-              position = {
-                row = '5%',
-                col = '95%',
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
+          _G.nx_modules["90-searchbox"] = function()
+            require('searchbox').setup({
+              defaults = {
+                reverse = false,
+                exact = false,
+                prompt = ' ',
+                modifier = 'plain',
+                confirm = 'off',
+                clear_matches = true,
+                show_matches = false,
               },
-              size = 30,
-              border = {
-                style = 'rounded',
-                text = {
-                  top = ' Search ',
-                  top_align = 'center',
+              popup = {
+                relative = 'win',
+                position = {
+                  row = '5%',
+                  col = '95%',
+                },
+                size = 30,
+                border = {
+                  style = 'rounded',
+                  text = {
+                    top = ' Search ',
+                    top_align = 'center',
+                  },
+                },
+                win_options = {
+                  winhighlight = 'Normal:Normal,FloatBorder:FloatBorder',
                 },
               },
-              win_options = {
-                winhighlight = 'Normal:Normal,FloatBorder:FloatBorder',
-              },
-            },
-          })
-
-          local opts = { noremap = true, silent = true }
-
-          vim.keymap.set('n', '<leader>ss', ':SearchBoxIncSearch<CR>', { desc = 'Search forward', unpack(opts) })
-          vim.keymap.set('n', '<leader>sS', ':SearchBoxIncSearch reverse=true<CR>', { desc = 'Search reverse', unpack(opts) })
-          vim.keymap.set('n', '<leader>sr', ':SearchBoxReplace<CR>', { desc = 'Search and replace', unpack(opts) })
-          vim.keymap.set('n', '<leader>sR', ':SearchBoxReplace -- <C-r>=expand("<cword>")<CR><CR>', { desc = 'Replace word under cursor', unpack(opts) })
-          vim.keymap.set('n', '<leader>sc', ':SearchBoxMatchAll clear_matches=false<CR>', { desc = 'Search and highlight all', unpack(opts) })
-          vim.keymap.set('n', '<leader>sC', ':SearchBoxMatchAll clear_matches=false exact=true -- <C-r>=expand("<cword>")<CR><CR>', { desc = 'Highlight word under cursor', unpack(opts) })
-          vim.keymap.set('n', '<leader>sq', function()
-            vim.cmd('SearchBoxClear')
-            vim.cmd('nohlsearch')
-            vim.notify('🧹 Search highlights cleared', vim.log.levels.INFO, {
-              title = 'Search'
             })
-          end, { desc = 'Clear all highlights', unpack(opts) })
+
+            local opts = { noremap = true, silent = true }
+
+            vim.keymap.set('n', '<leader>ss', ':SearchBoxIncSearch<CR>', { desc = 'Search forward', unpack(opts) })
+            vim.keymap.set('n', '<leader>sS', ':SearchBoxIncSearch reverse=true<CR>', { desc = 'Search reverse', unpack(opts) })
+            vim.keymap.set('n', '<leader>sr', ':SearchBoxReplace<CR>', { desc = 'Search and replace', unpack(opts) })
+            vim.keymap.set('n', '<leader>sR', ':SearchBoxReplace -- <C-r>=expand("<cword>")<CR><CR>', { desc = 'Replace word under cursor', unpack(opts) })
+            vim.keymap.set('n', '<leader>sc', ':SearchBoxMatchAll clear_matches=false<CR>', { desc = 'Search and highlight all', unpack(opts) })
+            vim.keymap.set('n', '<leader>sC', ':SearchBoxMatchAll clear_matches=false exact=true -- <C-r>=expand("<cword>")<CR><CR>', { desc = 'Highlight word under cursor', unpack(opts) })
+            vim.keymap.set('n', '<leader>sq', function()
+              vim.cmd('SearchBoxClear')
+              vim.cmd('nohlsearch')
+              vim.notify('🧹 Search highlights cleared', vim.log.levels.INFO, {
+                title = 'Search'
+              })
+            end, { desc = 'Clear all highlights', unpack(opts) })
+          end
         '';
       };
     };

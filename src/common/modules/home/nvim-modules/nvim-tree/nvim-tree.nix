@@ -19,23 +19,26 @@ args@{
   configuration =
     context@{ config, options, ... }:
     {
-      home.file.".config/nvim-init/80-config-nvim-tree.lua".text = ''
-        require("nvim-tree").setup({
-          disable_netrw = false,
-          hijack_netrw = false,
-        })
+      programs.nixvim.extraConfigLua = ''
+        _G.nx_modules = _G.nx_modules or {}
+        _G.nx_modules["80-config-nvim-tree"] = function()
+          require("nvim-tree").setup({
+            disable_netrw = false,
+            hijack_netrw = false,
+          })
 
-        vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
-          callback = function()
-            vim.defer_fn(function()
-              vim.api.nvim_set_hl(0, "NvimTreeNormal", { bg = "#000000" })
-              vim.api.nvim_set_hl(0, "NvimTreeNormalNC", { bg = "#000000" })
-              vim.api.nvim_set_hl(0, "NvimTreeEndOfBuffer", { bg = "#000000" })
-              vim.api.nvim_set_hl(0, "NvimTreeWinSeparator", { bg = "#000000", fg = "#000000" })
-              vim.api.nvim_set_hl(0, "NvimTreeVertSplit", { bg = "#000000", fg = "#000000" })
-            end, 100)
-          end,
-        })
+          vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+            callback = function()
+              vim.defer_fn(function()
+                vim.api.nvim_set_hl(0, "NvimTreeNormal", { bg = "#000000" })
+                vim.api.nvim_set_hl(0, "NvimTreeNormalNC", { bg = "#000000" })
+                vim.api.nvim_set_hl(0, "NvimTreeEndOfBuffer", { bg = "#000000" })
+                vim.api.nvim_set_hl(0, "NvimTreeWinSeparator", { bg = "#000000", fg = "#000000" })
+                vim.api.nvim_set_hl(0, "NvimTreeVertSplit", { bg = "#000000", fg = "#000000" })
+              end, 100)
+            end,
+          })
+        end
       '';
 
       programs.nixvim.extraPlugins = with pkgs.vimPlugins; [

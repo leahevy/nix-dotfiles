@@ -226,140 +226,143 @@ args@{
             icon = "✨";
           }
         ];
-      };
 
-      home.file.".config/nvim-init/50-tiny-glimmer.lua".text = ''
-        local tiny_glimmer = require('tiny-glimmer')
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
+          _G.nx_modules["50-tiny-glimmer"] = function()
+            local tiny_glimmer = require('tiny-glimmer')
 
-        _G.tiny_glimmer_enabled = ${if self.settings.enabled then "true" else "false"}
+            _G.tiny_glimmer_enabled = ${if self.settings.enabled then "true" else "false"}
 
-        local excluded_filetypes = {
-          ${lib.concatMapStringsSep ", " (ft: "'${ft}'") self.settings.excludeFiletypes}
-        }
-
-        local function should_enable_animations()
-          local ft = vim.bo.filetype
-          local buftype = vim.bo.buftype
-
-          for _, excluded_ft in ipairs(excluded_filetypes) do
-            if ft == excluded_ft then
-              return false
-            end
-          end
-
-          if buftype ~= "" and buftype ~= "nofile" then
-            return false
-          end
-
-          return _G.tiny_glimmer_enabled
-        end
-
-        function _G.toggle_tiny_glimmer()
-          _G.tiny_glimmer_enabled = not _G.tiny_glimmer_enabled
-
-          if _G.tiny_glimmer_enabled then
-            tiny_glimmer.enable()
-            vim.notify("Tiny Glimmer animations enabled", vim.log.levels.INFO)
-          else
-            tiny_glimmer.disable()
-            vim.notify("Tiny Glimmer animations disabled", vim.log.levels.INFO)
-          end
-        end
-
-        tiny_glimmer.setup({
-          enabled = true,
-          disable_warnings = ${if self.settings.disableWarnings then "true" else "false"},
-          refresh_interval_ms = ${toString self.settings.refreshIntervalMs},
-          ${lib.optionalString (
-            self.settings.transparencyColor != null
-          ) "transparency_color = '${self.settings.transparencyColor}',"}
-
-          overwrite = {
-            auto_map = true,
-
-            ${lib.optionalString (self.settings.yank != null) ''
-              yank = {
-                enabled = true,
-                default_animation = "${self.settings.yank}",
-              },''}
-
-            ${lib.optionalString (self.settings.paste != null) ''
-              paste = {
-                enabled = true,
-                default_animation = "${self.settings.paste}",
-                paste_mapping = "p",
-                Paste_mapping = "P",
-              },''}
-
-            ${lib.optionalString (self.settings.search != null) ''
-              search = {
-                enabled = true,
-                default_animation = "${self.settings.search}",
-                next_mapping = "n",
-                prev_mapping = "N",
-              },''}
-
-            ${lib.optionalString (self.settings.undo != null) ''
-              undo = {
-                enabled = true,
-                default_animation = "${self.settings.undo}",
-                undo_mapping = "u",
-              },''}
-
-            ${lib.optionalString (self.settings.redo != null) ''
-              redo = {
-                enabled = true,
-                default_animation = "${self.settings.redo}",
-                redo_mapping = "<C-r>",
-              },''}
-          },
-
-          presets = {
-            pulsar = {
-              enabled = ${if self.settings.pulsar.animation != null then "true" else "false"},
-              on_events = { ${
-                lib.concatMapStringsSep ", " (event: "\"${event}\"") self.settings.pulsar.onEvents
-              } },
-              default_animation = {
-                name = "${self.settings.pulsar.animation}",
-                settings = {
-                  ${pulsarSettings}
-                }
-              }
+            local excluded_filetypes = {
+              ${lib.concatMapStringsSep ", " (ft: "'${ft}'") self.settings.excludeFiletypes}
             }
-          },
 
-          animations = {
-            ${allAnimations}
-          }
-        })
+            local function should_enable_animations()
+              local ft = vim.bo.filetype
+              local buftype = vim.bo.buftype
 
-        if not _G.tiny_glimmer_enabled then
-          tiny_glimmer.disable()
-        end
+              for _, excluded_ft in ipairs(excluded_filetypes) do
+                if ft == excluded_ft then
+                  return false
+                end
+              end
 
-        vim.api.nvim_create_autocmd({"BufEnter", "FileType"}, {
-          callback = function()
-            if not should_enable_animations() then
-              tiny_glimmer.disable()
-            elseif _G.tiny_glimmer_enabled then
-              tiny_glimmer.enable()
+              if buftype ~= "" and buftype ~= "nofile" then
+                return false
+              end
+
+              return _G.tiny_glimmer_enabled
             end
-          end
-        })
 
-        vim.api.nvim_create_autocmd("VimEnter", {
-          once = true,
-          callback = function()
-            vim.defer_fn(function()
-              if should_enable_animations() then
+            function _G.toggle_tiny_glimmer()
+              _G.tiny_glimmer_enabled = not _G.tiny_glimmer_enabled
+
+              if _G.tiny_glimmer_enabled then
                 tiny_glimmer.enable()
+                vim.notify("Tiny Glimmer animations enabled", vim.log.levels.INFO)
               else
                 tiny_glimmer.disable()
+                vim.notify("Tiny Glimmer animations disabled", vim.log.levels.INFO)
               end
-            end, 100)
+            end
+
+            tiny_glimmer.setup({
+              enabled = true,
+              disable_warnings = ${if self.settings.disableWarnings then "true" else "false"},
+              refresh_interval_ms = ${toString self.settings.refreshIntervalMs},
+              ${lib.optionalString (
+                self.settings.transparencyColor != null
+              ) "transparency_color = '${self.settings.transparencyColor}',"}
+
+              overwrite = {
+                auto_map = true,
+
+                ${lib.optionalString (self.settings.yank != null) ''
+                  yank = {
+                    enabled = true,
+                    default_animation = "${self.settings.yank}",
+                  },''}
+
+                ${lib.optionalString (self.settings.paste != null) ''
+                  paste = {
+                    enabled = true,
+                    default_animation = "${self.settings.paste}",
+                    paste_mapping = "p",
+                    Paste_mapping = "P",
+                  },''}
+
+                ${lib.optionalString (self.settings.search != null) ''
+                  search = {
+                    enabled = true,
+                    default_animation = "${self.settings.search}",
+                    next_mapping = "n",
+                    prev_mapping = "N",
+                  },''}
+
+                ${lib.optionalString (self.settings.undo != null) ''
+                  undo = {
+                    enabled = true,
+                    default_animation = "${self.settings.undo}",
+                    undo_mapping = "u",
+                  },''}
+
+                ${lib.optionalString (self.settings.redo != null) ''
+                  redo = {
+                    enabled = true,
+                    default_animation = "${self.settings.redo}",
+                    redo_mapping = "<C-r>",
+                  },''}
+              },
+
+              presets = {
+                pulsar = {
+                  enabled = ${if self.settings.pulsar.animation != null then "true" else "false"},
+                  on_events = { ${
+                    lib.concatMapStringsSep ", " (event: "\"${event}\"") self.settings.pulsar.onEvents
+                  } },
+                  default_animation = {
+                    name = "${self.settings.pulsar.animation}",
+                    settings = {
+                      ${pulsarSettings}
+                    }
+                  }
+                }
+              },
+
+              animations = {
+                ${allAnimations}
+              }
+            })
+
+            if not _G.tiny_glimmer_enabled then
+              tiny_glimmer.disable()
+            end
+
+            vim.api.nvim_create_autocmd({"BufEnter", "FileType"}, {
+              callback = function()
+                if not should_enable_animations() then
+                  tiny_glimmer.disable()
+                elseif _G.tiny_glimmer_enabled then
+                  tiny_glimmer.enable()
+                end
+              end
+            })
+
+            vim.api.nvim_create_autocmd("VimEnter", {
+              once = true,
+              callback = function()
+                vim.defer_fn(function()
+                  if should_enable_animations() then
+                    tiny_glimmer.enable()
+                  else
+                    tiny_glimmer.disable()
+                  end
+                end, 100)
+              end
+            })
           end
-        })
-      '';
+        '';
+      };
     };
 }

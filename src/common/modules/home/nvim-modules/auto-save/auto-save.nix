@@ -141,6 +141,14 @@ args@{
           };
         };
 
+        plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
+          {
+            __unkeyed-1 = "<leader>A";
+            desc = "Toggle auto-save";
+            icon = "🔄";
+          }
+        ];
+
         keymaps = [
           {
             mode = "n";
@@ -161,49 +169,43 @@ args@{
             };
           }
         ];
+
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
+          _G.nx_modules["70-auto-save"] = function()
+            _G.autosave_in_progress = false
+            _G.autosave_enabled = true
+
+            vim.api.nvim_create_autocmd("User", {
+              pattern = "AutoSaveWritePre",
+              callback = function()
+                _G.autosave_in_progress = true
+              end,
+            })
+
+            vim.api.nvim_create_autocmd("User", {
+              pattern = "AutoSaveWritePost",
+              callback = function()
+                _G.autosave_in_progress = false
+              end,
+            })
+
+            vim.api.nvim_create_autocmd("User", {
+              pattern = "AutoSaveEnable",
+              callback = function()
+                _G.autosave_enabled = true
+              end,
+            })
+
+            vim.api.nvim_create_autocmd("User", {
+              pattern = "AutoSaveDisable",
+              callback = function()
+                _G.autosave_enabled = false
+              end,
+            })
+          end
+        '';
       };
 
-      home.file.".config/nvim-init/70-auto-save.lua".text = ''
-        _G.autosave_in_progress = false
-        _G.autosave_enabled = true
-
-        vim.api.nvim_create_autocmd("User", {
-          pattern = "AutoSaveWritePre",
-          callback = function()
-            _G.autosave_in_progress = true
-          end,
-        })
-
-        vim.api.nvim_create_autocmd("User", {
-          pattern = "AutoSaveWritePost",
-          callback = function()
-            _G.autosave_in_progress = false
-          end,
-        })
-
-        vim.api.nvim_create_autocmd("User", {
-          pattern = "AutoSaveEnable",
-          callback = function()
-            _G.autosave_enabled = true
-          end,
-        })
-
-        vim.api.nvim_create_autocmd("User", {
-          pattern = "AutoSaveDisable",
-          callback = function()
-            _G.autosave_enabled = false
-          end,
-        })
-      '';
-
-      programs.nixvim.plugins.which-key.settings.spec =
-        lib.mkIf (self.isModuleEnabled "nvim-modules.which-key")
-          [
-            {
-              __unkeyed-1 = "<leader>A";
-              desc = "Toggle auto-save";
-              icon = "🔄";
-            }
-          ];
     };
 }

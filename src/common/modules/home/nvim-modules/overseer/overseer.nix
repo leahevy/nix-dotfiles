@@ -150,119 +150,122 @@ args@{
         ];
       };
 
-      home.file.".config/nvim-init/80-overseer.lua".text = ''
-        local overseer = require("overseer")
-
-        overseer.setup()
-
-        ${
-          let
-            allTasks =
-              self.settings.customTasks
-              // lib.optionalAttrs self.settings.addExampleTask self.settings.exampleTask;
-          in
-          lib.concatMapStringsSep "\n" (
-            taskName:
-            let
-              baseTaskConfig = allTasks.${taskName};
-              luaValue =
-                let
-                  stringValueToLua =
-                    value: builtins.replaceStrings [ "$HOME" ] [ self.user.home ] (builtins.toJSON value);
-                  toLua =
-                    value:
-                    if builtins.isString value then
-                      (if lib.hasPrefix "vim." value then value else stringValueToLua value)
-                    else if builtins.isList value then
-                      "{ ${lib.concatMapStringsSep ", " (item: toLua item) value} }"
-                    else if builtins.isAttrs value then
-                      let
-                        hasUnkeyed = builtins.hasAttr "__unkeyed-1" value;
-                        unkeyedValue = if hasUnkeyed then value.__unkeyed-1 else null;
-                        otherAttrs = if hasUnkeyed then builtins.removeAttrs value [ "__unkeyed-1" ] else value;
-                        unkeyedPart = if hasUnkeyed then "${toLua unkeyedValue}" else "";
-                        otherParts = lib.concatMapStringsSep ", " (key: "${key} = ${toLua otherAttrs.${key}}") (
-                          lib.attrNames otherAttrs
-                        );
-                        allParts = lib.concatStringsSep ", " (
-                          lib.filter (x: x != "") [
-                            unkeyedPart
-                            otherParts
-                          ]
-                        );
-                      in
-                      "{ ${allParts} }"
-                    else
-                      builtins.toJSON value;
-                in
-                toLua;
-              taskConfig = lib.recursiveUpdate {
-                args = [ ];
-                cwd = "vim.fn.getcwd()";
-                components = [
-                  {
-                    __unkeyed-1 = "display_duration";
-                    detail_level = 2;
-                  }
-                  "on_output_summarize"
-                  "on_exit_set_status"
-                  "nx.custom_notify"
-                  {
-                    __unkeyed-1 = "on_complete_dispose";
-                    require_view = [
-                      "SUCCESS"
-                      "FAILURE"
-                    ];
-                  }
-                  {
-                    __unkeyed-1 = "timeout";
-                    timeout = 900;
-                  }
-                  "unique"
-                  {
-                    __unkeyed-1 = "open_output";
-                    on_start = "never";
-                    on_complete = "failure";
-                  }
-                  "on_output_quickfix"
-                ];
-                env = { };
-                metadata = { };
-                extraLuaCode = "";
-                condition = { };
-              } baseTaskConfig;
-            in
-            ''
-              overseer.register_template({
-                name = "${taskConfig.name or taskConfig.cmd}",
-                builder = function(params)
-                  ${taskConfig.extraLuaCode}
-                  return {
-                    cmd = ${luaValue taskConfig.cmd},
-                    ${lib.optionalString (
-                      taskConfig.args != null && taskConfig.args != [ ]
-                    ) "args = ${luaValue taskConfig.args},"}
-                    cwd = ${luaValue taskConfig.cwd},
-                    components = ${luaValue taskConfig.components},
-                    env = ${luaValue taskConfig.env},
-                    metadata = ${luaValue taskConfig.metadata},
-                  }
-                end,
-                condition = ${builtins.toJSON taskConfig.condition},
-              })
-            ''
-          ) (lib.attrNames allTasks)
-        }
-
-        vim.api.nvim_create_user_command("OverseerRestartLast", function()
+      programs.nixvim.extraConfigLua = ''
+        _G.nx_modules = _G.nx_modules or {}
+        _G.nx_modules["80-overseer"] = function()
           local overseer = require("overseer")
-          local tasks = overseer.list_tasks({ recent_first = true })
-          if #tasks > 0 then
-            overseer.run_action(tasks[1], "restart")
-          else
-            vim.notify("No tasks to restart", vim.log.levels.WARN)
-          end
-        end, { desc = "Restart last overseer task" })
+
+          overseer.setup()
+
+          ${
+            let
+              allTasks =
+                self.settings.customTasks
+                // lib.optionalAttrs self.settings.addExampleTask self.settings.exampleTask;
+            in
+            lib.concatMapStringsSep "\n" (
+              taskName:
+              let
+                baseTaskConfig = allTasks.${taskName};
+                luaValue =
+                  let
+                    stringValueToLua =
+                      value: builtins.replaceStrings [ "$HOME" ] [ self.user.home ] (builtins.toJSON value);
+                    toLua =
+                      value:
+                      if builtins.isString value then
+                        (if lib.hasPrefix "vim." value then value else stringValueToLua value)
+                      else if builtins.isList value then
+                        "{ ${lib.concatMapStringsSep ", " (item: toLua item) value} }"
+                      else if builtins.isAttrs value then
+                        let
+                          hasUnkeyed = builtins.hasAttr "__unkeyed-1" value;
+                          unkeyedValue = if hasUnkeyed then value.__unkeyed-1 else null;
+                          otherAttrs = if hasUnkeyed then builtins.removeAttrs value [ "__unkeyed-1" ] else value;
+                          unkeyedPart = if hasUnkeyed then "${toLua unkeyedValue}" else "";
+                          otherParts = lib.concatMapStringsSep ", " (key: "${key} = ${toLua otherAttrs.${key}}") (
+                            lib.attrNames otherAttrs
+                          );
+                          allParts = lib.concatStringsSep ", " (
+                            lib.filter (x: x != "") [
+                              unkeyedPart
+                              otherParts
+                            ]
+                          );
+                        in
+                        "{ ${allParts} }"
+                      else
+                        builtins.toJSON value;
+                  in
+                  toLua;
+                taskConfig = lib.recursiveUpdate {
+                  args = [ ];
+                  cwd = "vim.fn.getcwd()";
+                  components = [
+                    {
+                      __unkeyed-1 = "display_duration";
+                      detail_level = 2;
+                    }
+                    "on_output_summarize"
+                    "on_exit_set_status"
+                    "nx.custom_notify"
+                    {
+                      __unkeyed-1 = "on_complete_dispose";
+                      require_view = [
+                        "SUCCESS"
+                        "FAILURE"
+                      ];
+                    }
+                    {
+                      __unkeyed-1 = "timeout";
+                      timeout = 900;
+                    }
+                    "unique"
+                    {
+                      __unkeyed-1 = "open_output";
+                      on_start = "never";
+                      on_complete = "failure";
+                    }
+                    "on_output_quickfix"
+                  ];
+                  env = { };
+                  metadata = { };
+                  extraLuaCode = "";
+                  condition = { };
+                } baseTaskConfig;
+              in
+              ''
+                overseer.register_template({
+                  name = "${taskConfig.name or taskConfig.cmd}",
+                  builder = function(params)
+                    ${taskConfig.extraLuaCode}
+                    return {
+                      cmd = ${luaValue taskConfig.cmd},
+                      ${lib.optionalString (
+                        taskConfig.args != null && taskConfig.args != [ ]
+                      ) "args = ${luaValue taskConfig.args},"}
+                      cwd = ${luaValue taskConfig.cwd},
+                      components = ${luaValue taskConfig.components},
+                      env = ${luaValue taskConfig.env},
+                      metadata = ${luaValue taskConfig.metadata},
+                    }
+                  end,
+                  condition = ${builtins.toJSON taskConfig.condition},
+                })
+              ''
+            ) (lib.attrNames allTasks)
+          }
+
+          vim.api.nvim_create_user_command("OverseerRestartLast", function()
+            local overseer = require("overseer")
+            local tasks = overseer.list_tasks({ recent_first = true })
+            if #tasks > 0 then
+              overseer.run_action(tasks[1], "restart")
+            else
+              vim.notify("No tasks to restart", vim.log.levels.WARN)
+            end
+          end, { desc = "Restart last overseer task" })
+        end
       '';
 
       home.file.".config/nvim/lua/overseer/component/nx/custom_notify.lua".text = ''

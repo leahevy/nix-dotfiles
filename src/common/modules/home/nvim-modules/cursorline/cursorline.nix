@@ -188,25 +188,28 @@ args@{
         return M
       '';
 
-      home.file.".config/nvim-init/45-cursorline-setup.lua".text = ''
-        local cursorline = require('nvim-cursorline')
+      programs.nixvim.extraConfigLua = ''
+        _G.nx_modules = _G.nx_modules or {}
+        _G.nx_modules["45-cursorline-setup"] = function()
+          local cursorline = require('nvim-cursorline')
 
-        cursorline.set_excluded_filetypes({
-          ${lib.concatMapStringsSep ", " (ft: "\"${ft}\"") self.settings.excludeFiletypes}
-        })
+          cursorline.set_excluded_filetypes({
+            ${lib.concatMapStringsSep ", " (ft: "\"${ft}\"") self.settings.excludeFiletypes}
+          })
 
-        cursorline.setup({
-          cursorline = {
-            enable = ${if self.settings.enableCursorline then "true" else "false"},
-            timeout = ${toString self.settings.cursorlineTimeout},
-            number = ${if self.settings.cursorlineNumber then "true" else "false"},
-          },
-          cursorword = {
-            enable = ${if self.settings.enableCursorword then "true" else "false"},
-            min_length = ${toString self.settings.cursorwordMinLength},
-            hl = { underline = ${if self.settings.cursorwordUnderline then "true" else "false"} },
-          },
-        })
+          cursorline.setup({
+            cursorline = {
+              enable = ${if self.settings.enableCursorline then "true" else "false"},
+              timeout = ${toString self.settings.cursorlineTimeout},
+              number = ${if self.settings.cursorlineNumber then "true" else "false"},
+            },
+            cursorword = {
+              enable = ${if self.settings.enableCursorword then "true" else "false"},
+              min_length = ${toString self.settings.cursorwordMinLength},
+              hl = { underline = ${if self.settings.cursorwordUnderline then "true" else "false"} },
+            },
+          })
+        end
       '';
     };
 }

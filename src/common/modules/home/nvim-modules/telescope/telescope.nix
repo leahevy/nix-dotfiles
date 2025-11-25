@@ -71,81 +71,85 @@ args@{
             };
           }
         ];
-      };
 
-      home.file.".config/nvim-init/50-telescope-project.lua".text = ''
-        local function find_git_root(path)
-          local current = path or vim.fn.expand('%:p:h')
-          while current and current ~= '/' do
-            if vim.fn.isdirectory(current .. '/.git') == 1 then
-              return current
-            end
-            current = vim.fn.fnamemodify(current, ':h')
-          end
-          return nil
-        end
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
 
-        _G.find_git_root = find_git_root
-
-        vim.api.nvim_create_user_command('ProjectFiles', function()
-          local git_root = find_git_root() or vim.fn.getcwd()
-          require('telescope.builtin').find_files({ cwd = git_root })
-        end, {})
-
-        vim.api.nvim_create_user_command('ProjectGrep', function(opts)
-          local git_root = find_git_root() or vim.fn.getcwd()
-          if opts.args and opts.args ~= "" then
-            require('telescope.builtin').grep_string({ search = opts.args, cwd = git_root })
-          else
-            require('telescope.builtin').live_grep({ cwd = git_root })
-          end
-        end, { nargs = '?' })
-      '';
-
-      home.file.".config/nvim-init/99-telescope-highlight.lua".text = ''
-        local function fix_telescope_background()
-          vim.api.nvim_set_hl(0, "TelescopeNormal", { bg = "#000000" })
-          vim.api.nvim_set_hl(0, "TelescopePromptNormal", { bg = "#000000" })
-          vim.api.nvim_set_hl(0, "TelescopeResultsNormal", { bg = "#000000" })
-          vim.api.nvim_set_hl(0, "TelescopePreviewNormal", { bg = "#000000" })
-          vim.api.nvim_set_hl(0, "TelescopeSelection", { bg = "#111111" })
-        end
-
-        vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
-          callback = function()
-            vim.defer_fn(fix_telescope_background, 100)
-          end,
-        })
-      '';
-
-      home.file.".config/nvim-init/51-telescope-ui-select.lua".text = ''
-        vim.ui.select = function(items, opts, on_choice)
-          require("telescope.pickers").new({}, {
-            prompt_title = opts.prompt or "Select",
-            finder = require("telescope.finders").new_table({
-              results = items,
-              entry_maker = function(entry)
-                return {
-                  value = entry,
-                  display = entry.name or tostring(entry),
-                  ordinal = entry.name or tostring(entry),
-                }
-              end,
-            }),
-            sorter = require("telescope.config").values.generic_sorter({}),
-            attach_mappings = function(prompt_bufnr, map)
-              require("telescope.actions").select_default:replace(function()
-                require("telescope.actions").close(prompt_bufnr)
-                local selection = require("telescope.actions.state").get_selected_entry()
-                if selection then
-                  on_choice(selection.value)
+          _G.nx_modules["50-telescope-project"] = function()
+            local function find_git_root(path)
+              local current = path or vim.fn.expand('%:p:h')
+              while current and current ~= '/' do
+                if vim.fn.isdirectory(current .. '/.git') == 1 then
+                  return current
                 end
-              end)
-              return true
-            end,
-          }):find()
-        end
-      '';
+                current = vim.fn.fnamemodify(current, ':h')
+              end
+              return nil
+            end
+
+            _G.find_git_root = find_git_root
+
+            vim.api.nvim_create_user_command('ProjectFiles', function()
+              local git_root = find_git_root() or vim.fn.getcwd()
+              require('telescope.builtin').find_files({ cwd = git_root })
+            end, {})
+
+            vim.api.nvim_create_user_command('ProjectGrep', function(opts)
+              local git_root = find_git_root() or vim.fn.getcwd()
+              if opts.args and opts.args ~= "" then
+                require('telescope.builtin').grep_string({ search = opts.args, cwd = git_root })
+              else
+                require('telescope.builtin').live_grep({ cwd = git_root })
+              end
+            end, { nargs = '?' })
+          end
+
+          _G.nx_modules["99-telescope-highlight"] = function()
+            local function fix_telescope_background()
+              vim.api.nvim_set_hl(0, "TelescopeNormal", { bg = "#000000" })
+              vim.api.nvim_set_hl(0, "TelescopePromptNormal", { bg = "#000000" })
+              vim.api.nvim_set_hl(0, "TelescopeResultsNormal", { bg = "#000000" })
+              vim.api.nvim_set_hl(0, "TelescopePreviewNormal", { bg = "#000000" })
+              vim.api.nvim_set_hl(0, "TelescopeSelection", { bg = "#111111" })
+            end
+
+            vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+              callback = function()
+                vim.defer_fn(fix_telescope_background, 100)
+              end,
+            })
+          end
+
+          _G.nx_modules["51-telescope-ui-select"] = function()
+            vim.ui.select = function(items, opts, on_choice)
+              require("telescope.pickers").new({}, {
+                prompt_title = opts.prompt or "Select",
+                finder = require("telescope.finders").new_table({
+                  results = items,
+                  entry_maker = function(entry)
+                    return {
+                      value = entry,
+                      display = entry.name or tostring(entry),
+                      ordinal = entry.name or tostring(entry),
+                    }
+                  end,
+                }),
+                sorter = require("telescope.config").values.generic_sorter({}),
+                attach_mappings = function(prompt_bufnr, map)
+                  require("telescope.actions").select_default:replace(function()
+                    require("telescope.actions").close(prompt_bufnr)
+                    local selection = require("telescope.actions.state").get_selected_entry()
+                    if selection then
+                      on_choice(selection.value)
+                    end
+                  end)
+                  return true
+                end,
+              }):find()
+            end
+          end
+        '';
+      };
 
       home.packages = with pkgs; [
         fzf

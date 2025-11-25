@@ -147,52 +147,51 @@ args@{
             };
           }
         ];
-      };
 
-      home.file = {
-        ".config/nvim-init/85-trouble-colors.lua".text = ''
-          vim.api.nvim_set_hl(0, "TroubleNormal", { bg = "#000000" })
+        plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
+          {
+            __unkeyed-1 = "<leader>a";
+            group = "Trouble";
+            icon = "🚦";
+          }
+          {
+            __unkeyed-1 = "<leader>aa";
+            desc = "Workspace diagnostics";
+            icon = "🌍";
+          }
+          {
+            __unkeyed-1 = "<leader>ab";
+            desc = "Buffer diagnostics";
+            icon = "📄";
+          }
+          {
+            __unkeyed-1 = "<leader>as";
+            desc = "Document symbols";
+            icon = "🔍";
+          }
+          {
+            __unkeyed-1 = "<leader>al";
+            desc = "LSP definitions/references";
+            icon = "🔗";
+          }
+          {
+            __unkeyed-1 = "<leader>aq";
+            desc = "Quickfix list";
+            icon = "🔧";
+          }
+          {
+            __unkeyed-1 = "<leader>aL";
+            desc = "Location list";
+            icon = "📍";
+          }
+        ];
+
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
+          _G.nx_modules["85-trouble-colors"] = function()
+            vim.api.nvim_set_hl(0, "TroubleNormal", { bg = "#000000" })
+          end
         '';
       };
-
-      programs.nixvim.plugins.which-key.settings.spec =
-        lib.mkIf (self.isModuleEnabled "nvim-modules.which-key")
-          [
-            {
-              __unkeyed-1 = "<leader>a";
-              group = "Trouble";
-              icon = "🚦";
-            }
-            {
-              __unkeyed-1 = "<leader>aa";
-              desc = "Workspace diagnostics";
-              icon = "🌍";
-            }
-            {
-              __unkeyed-1 = "<leader>ab";
-              desc = "Buffer diagnostics";
-              icon = "📄";
-            }
-            {
-              __unkeyed-1 = "<leader>as";
-              desc = "Document symbols";
-              icon = "🔍";
-            }
-            {
-              __unkeyed-1 = "<leader>al";
-              desc = "LSP definitions/references";
-              icon = "🔗";
-            }
-            {
-              __unkeyed-1 = "<leader>aq";
-              desc = "Quickfix list";
-              icon = "🔧";
-            }
-            {
-              __unkeyed-1 = "<leader>aL";
-              desc = "Location list";
-              icon = "📍";
-            }
-          ];
     };
 }

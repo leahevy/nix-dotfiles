@@ -258,159 +258,166 @@ args@{
             }
           ]
         ];
-      };
 
-      home.file.".config/nvim-init/38-cmp-global.lua".text = ''
-        vim.opt.complete = ""
-        vim.opt.completefunc = ""
-        vim.lsp.omnifunc = function() return {} end
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
 
-        vim.g.cmp_global_enabled = ${if self.settings.globalAutoCompleteEnabled then "true" else "false"}
+          _G.nx_modules["38-cmp-global"] = function()
+            vim.opt.complete = ""
+            vim.opt.completefunc = ""
+            vim.lsp.omnifunc = function() return {} end
 
-        local excluded_filetypes = {
-          ${lib.concatMapStringsSep ", " (ft: "\"${ft}\"") self.settings.excludeFiletypesFromAutoComplete}
-        }
+            vim.g.cmp_global_enabled = ${if self.settings.globalAutoCompleteEnabled then "true" else "false"}
 
-        local function should_disable_for_filetype(filetype)
-          for _, excluded_ft in ipairs(excluded_filetypes) do
-            if filetype == excluded_ft then
-              return true
+            local excluded_filetypes = {
+              ${lib.concatMapStringsSep ", " (ft: "\"${ft}\"") self.settings.excludeFiletypesFromAutoComplete}
+            }
+
+            local function should_disable_for_filetype(filetype)
+              for _, excluded_ft in ipairs(excluded_filetypes) do
+                if filetype == excluded_ft then
+                  return true
+                end
+              end
+              return false
             end
+
+            local function apply_cmp_to_buffer()
+              local cmp = require('cmp')
+              local filetype = vim.bo.filetype
+
+              if should_disable_for_filetype(filetype) then
+                cmp.setup.buffer({ enabled = false })
+              else
+                cmp.setup.buffer({ enabled = vim.g.cmp_global_enabled })
+              end
+            end
+
+            vim.api.nvim_create_augroup('CmpGlobalToggle', { clear = true })
+            vim.api.nvim_create_autocmd({ 'BufEnter', 'BufNew', 'FileType' }, {
+              group = 'CmpGlobalToggle',
+              callback = function()
+                vim.schedule(function()
+                  apply_cmp_to_buffer()
+                  vim.opt_local.completefunc = ""
+                  vim.opt_local.omnifunc = ""
+                end)
+              end,
+            })
+
+            vim.api.nvim_create_autocmd('LspAttach', {
+              group = 'CmpGlobalToggle',
+              callback = function()
+                vim.opt_local.omnifunc = ""
+              end,
+            })
           end
-          return false
-        end
 
-        local function apply_cmp_to_buffer()
-          local cmp = require('cmp')
-          local filetype = vim.bo.filetype
+          ${if !(self.isModuleEnabled "nvim-modules.copilot") then "--[[" else ""}
+          _G.nx_modules["39-cmp-copilot"] = function()
+            local cmp = require("cmp")
 
-          if should_disable_for_filetype(filetype) then
-            cmp.setup.buffer({ enabled = false })
-          else
-            cmp.setup.buffer({ enabled = vim.g.cmp_global_enabled })
+            vim.keymap.set("i", "<C-n>", function()
+              if vim.fn.exists("*copilot#GetDisplayedSuggestion") == 1 and
+                 vim.fn["copilot#GetDisplayedSuggestion"]() ~= "" then
+                vim.fn["copilot#Dismiss"]()
+              end
+
+              if cmp.visible() then
+                cmp.select_next_item()
+              else
+                cmp.complete()
+              end
+            end, { desc = "Next completion (dismiss copilot first)" })
+
+            vim.keymap.set("i", "<C-p>", function()
+              if vim.fn.exists("*copilot#GetDisplayedSuggestion") == 1 and
+                 vim.fn["copilot#GetDisplayedSuggestion"]() ~= "" then
+                vim.fn["copilot#Dismiss"]()
+              end
+
+              if cmp.visible() then
+                cmp.select_prev_item()
+              else
+                cmp.complete()
+              end
+            end, { desc = "Previous completion (dismiss copilot first)" })
           end
-        end
+          ${if !(self.isModuleEnabled "nvim-modules.copilot") then "]]" else ""}
 
-        vim.api.nvim_create_augroup('CmpGlobalToggle', { clear = true })
-        vim.api.nvim_create_autocmd({ 'BufEnter', 'BufNew', 'FileType' }, {
-          group = 'CmpGlobalToggle',
-          callback = function()
-            vim.schedule(function()
-              apply_cmp_to_buffer()
-              vim.opt_local.completefunc = ""
-              vim.opt_local.omnifunc = ""
-            end)
-          end,
-        })
+          ${if !(self.settings.enableCmdline) then "--[[" else ""}
+          _G.nx_modules["40-cmp-cmdline"] = function()
+            local cmp = require("cmp")
 
-        vim.api.nvim_create_autocmd('LspAttach', {
-          group = 'CmpGlobalToggle',
-          callback = function()
-            vim.opt_local.omnifunc = ""
-          end,
-        })
-      '';
+            vim.keymap.set('c', '<C-n>', '<Nop>', { silent = true })
+            vim.keymap.set('c', '<C-p>', '<Nop>', { silent = true })
 
-      home.file.".config/nvim-init/39-cmp-copilot.lua".text =
-        lib.mkIf (self.isModuleEnabled "nvim-modules.copilot") ''
-          local cmp = require("cmp")
+            cmp.setup.cmdline({ "/", "?" }, {
+              mapping = cmp.mapping.preset.cmdline({
+                ['<C-n>'] = {
+                  c = function(fallback)
+                    if cmp.visible() then
+                      cmp.select_next_item()
+                    else
+                      cmp.complete()
+                    end
+                  end,
+                },
+                ['<C-p>'] = {
+                  c = function(fallback)
+                    if cmp.visible() then
+                      cmp.select_prev_item()
+                    else
+                      cmp.complete()
+                    end
+                  end,
+                },
+                ['<PageDown>'] = { c = cmp.mapping.select_next_item({ count = 10 }) },
+                ['<PageUp>'] = { c = cmp.mapping.select_prev_item({ count = 10 }) },
+                ['<C-Space>'] = { c = cmp.mapping.complete() },
+                ['<C-e>'] = { c = cmp.mapping.abort() },
+                ['<CR>'] = { c = cmp.mapping.confirm({ select = false }) },
+              }),
+              sources = {
+                { name = "buffer" }
+              }
+            })
 
-          vim.keymap.set("i", "<C-n>", function()
-            if vim.fn.exists("*copilot#GetDisplayedSuggestion") == 1 and
-               vim.fn["copilot#GetDisplayedSuggestion"]() ~= "" then
-              vim.fn["copilot#Dismiss"]()
-            end
-
-            if cmp.visible() then
-              cmp.select_next_item()
-            else
-              cmp.complete()
-            end
-          end, { desc = "Next completion (dismiss copilot first)" })
-
-          vim.keymap.set("i", "<C-p>", function()
-            if vim.fn.exists("*copilot#GetDisplayedSuggestion") == 1 and
-               vim.fn["copilot#GetDisplayedSuggestion"]() ~= "" then
-              vim.fn["copilot#Dismiss"]()
-            end
-
-            if cmp.visible() then
-              cmp.select_prev_item()
-            else
-              cmp.complete()
-            end
-          end, { desc = "Previous completion (dismiss copilot first)" })
+            cmp.setup.cmdline(":", {
+              mapping = cmp.mapping.preset.cmdline({
+                ['<C-n>'] = {
+                  c = function(fallback)
+                    if cmp.visible() then
+                      cmp.select_next_item()
+                    else
+                      cmp.complete()
+                    end
+                  end,
+                },
+                ['<C-p>'] = {
+                  c = function(fallback)
+                    if cmp.visible() then
+                      cmp.select_prev_item()
+                    else
+                      cmp.complete()
+                    end
+                  end,
+                },
+                ['<PageDown>'] = { c = cmp.mapping.select_next_item({ count = 10 }) },
+                ['<PageUp>'] = { c = cmp.mapping.select_prev_item({ count = 10 }) },
+                ['<C-Space>'] = { c = cmp.mapping.complete() },
+                ['<C-e>'] = { c = cmp.mapping.abort() },
+                ['<CR>'] = { c = cmp.mapping.confirm({ select = false }) },
+              }),
+              sources = cmp.config.sources({
+                { name = "path" }
+              }, {
+                { name = "cmdline" }
+              })
+            })
+          end
+          ${if !(self.settings.enableCmdline) then "]]" else ""}
         '';
-
-      home.file.".config/nvim-init/40-cmp-cmdline.lua".text = lib.mkIf self.settings.enableCmdline ''
-        local cmp = require("cmp")
-
-        vim.keymap.set('c', '<C-n>', '<Nop>', { silent = true })
-        vim.keymap.set('c', '<C-p>', '<Nop>', { silent = true })
-
-        cmp.setup.cmdline({ "/", "?" }, {
-          mapping = cmp.mapping.preset.cmdline({
-            ['<C-n>'] = {
-              c = function(fallback)
-                if cmp.visible() then
-                  cmp.select_next_item()
-                else
-                  cmp.complete()
-                end
-              end,
-            },
-            ['<C-p>'] = {
-              c = function(fallback)
-                if cmp.visible() then
-                  cmp.select_prev_item()
-                else
-                  cmp.complete()
-                end
-              end,
-            },
-            ['<PageDown>'] = { c = cmp.mapping.select_next_item({ count = 10 }) },
-            ['<PageUp>'] = { c = cmp.mapping.select_prev_item({ count = 10 }) },
-            ['<C-Space>'] = { c = cmp.mapping.complete() },
-            ['<C-e>'] = { c = cmp.mapping.abort() },
-            ['<CR>'] = { c = cmp.mapping.confirm({ select = false }) },
-          }),
-          sources = {
-            { name = "buffer" }
-          }
-        })
-
-        cmp.setup.cmdline(":", {
-          mapping = cmp.mapping.preset.cmdline({
-            ['<C-n>'] = {
-              c = function(fallback)
-                if cmp.visible() then
-                  cmp.select_next_item()
-                else
-                  cmp.complete()
-                end
-              end,
-            },
-            ['<C-p>'] = {
-              c = function(fallback)
-                if cmp.visible() then
-                  cmp.select_prev_item()
-                else
-                  cmp.complete()
-                end
-              end,
-            },
-            ['<PageDown>'] = { c = cmp.mapping.select_next_item({ count = 10 }) },
-            ['<PageUp>'] = { c = cmp.mapping.select_prev_item({ count = 10 }) },
-            ['<C-Space>'] = { c = cmp.mapping.complete() },
-            ['<C-e>'] = { c = cmp.mapping.abort() },
-            ['<CR>'] = { c = cmp.mapping.confirm({ select = false }) },
-          }),
-          sources = cmp.config.sources({
-            { name = "path" }
-          }, {
-            { name = "cmdline" }
-          })
-        })
-      '';
+      };
     };
 }

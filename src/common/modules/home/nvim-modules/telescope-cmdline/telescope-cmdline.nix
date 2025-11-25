@@ -85,135 +85,138 @@ args@{
             icon = ":";
           }
         ];
-      };
 
-      home.file.".config/nvim-init/75-telescope-cmdline.lua".text = ''
-        local has_telescope, telescope = pcall(require, 'telescope')
-        if not has_telescope then
-          return
-        end
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
+          _G.nx_modules["75-telescope-cmdline"] = function()
+            local has_telescope, telescope = pcall(require, 'telescope')
+            if not has_telescope then
+              return
+            end
 
-        telescope.setup({
-          extensions = {
-            cmdline = {
-              picker = {
-                layout_config = {
-                  width = ${toString self.settings.picker.layout_config.width},
-                  height = ${toString self.settings.picker.layout_config.height}
+            telescope.setup({
+              extensions = {
+                cmdline = {
+                  picker = {
+                    layout_config = {
+                      width = ${toString self.settings.picker.layout_config.width},
+                      height = ${toString self.settings.picker.layout_config.height}
+                    }
+                  },
+                  mappings = {
+                    complete = '${self.settings.mappings.complete}',
+                    run_selection = '${self.settings.mappings.run_selection}',
+                    run_input = '${self.settings.mappings.run_input}'
+                  },
+                  overseer = {
+                    enabled = ${if self.isModuleEnabled "nvim-modules.overseer" then "true" else "false"}
+                  },
+                  output_pane = {
+                    enabled = false,
+                    min_lines = 3,
+                    max_height = 25
+                  }
                 }
-              },
-              mappings = {
-                complete = '${self.settings.mappings.complete}',
-                run_selection = '${self.settings.mappings.run_selection}',
-                run_input = '${self.settings.mappings.run_input}'
-              },
-              overseer = {
-                enabled = ${if self.isModuleEnabled "nvim-modules.overseer" then "true" else "false"}
-              },
-              output_pane = {
-                enabled = false,
-                min_lines = 3,
-                max_height = 25
               }
-            }
-          }
-        })
+            })
 
-        pcall(telescope.load_extension, 'cmdline')
+            pcall(telescope.load_extension, 'cmdline')
 
-        local has_cmdline_actions, cmdline_actions = pcall(require, 'cmdline.actions')
-        if has_cmdline_actions then
-          local original_run = cmdline_actions.run_input
-          local original_run_selection = cmdline_actions.run_selection
+            local has_cmdline_actions, cmdline_actions = pcall(require, 'cmdline.actions')
+            if has_cmdline_actions then
+              local original_run = cmdline_actions.run_input
+              local original_run_selection = cmdline_actions.run_selection
 
-          local function is_save_command(cmd)
-            if not cmd then return false end
-            local trimmed = vim.trim(cmd)
-            return trimmed == "w" or trimmed == "write" or
-                   trimmed:match("^w%s") or trimmed:match("^write%s") or
-                   trimmed:match("^w!") or trimmed:match("^write!")
-          end
-
-          local function wrap_run_function(original_fn)
-            return function(prompt_bufnr)
-              local action_state = require("telescope.actions.state")
-              local picker = action_state.get_current_picker(prompt_bufnr)
-              local input = picker:_get_prompt()
-              local selection = action_state.get_selected_entry()
-              local cmd = selection and selection.cmd or vim.trim(input or "")
-
-              if is_save_command(cmd) then
-                local orig_notify = vim.notify
-                vim.notify = function(msg, level, opts)
-                  if type(msg) == "string" and (
-                    msg:match('"%S+" %d+L, %d+B written') or
-                    msg:match('written$') or
-                    msg:match('%d+L, %d+B')
-                  ) then
-                    return
-                  end
-                  return orig_notify(msg, level, opts)
-                end
-
-                local result = original_fn(prompt_bufnr)
-
-                vim.notify = orig_notify
-                return result
-              else
-                return original_fn(prompt_bufnr)
+              local function is_save_command(cmd)
+                if not cmd then return false end
+                local trimmed = vim.trim(cmd)
+                return trimmed == "w" or trimmed == "write" or
+                       trimmed:match("^w%s") or trimmed:match("^write%s") or
+                       trimmed:match("^w!") or trimmed:match("^write!")
               end
-            end
-          end
 
-          local function enhance_run_function(original_fn)
-            return function(prompt_bufnr)
-              local action_state = require("telescope.actions.state")
-              local picker = action_state.get_current_picker(prompt_bufnr)
-              local input = picker:_get_prompt()
-              local selection = action_state.get_selected_entry()
-              local cmd = selection and selection.cmd or vim.trim(input or "")
+              local function wrap_run_function(original_fn)
+                return function(prompt_bufnr)
+                  local action_state = require("telescope.actions.state")
+                  local picker = action_state.get_current_picker(prompt_bufnr)
+                  local input = picker:_get_prompt()
+                  local selection = action_state.get_selected_entry()
+                  local cmd = selection and selection.cmd or vim.trim(input or "")
 
-              if is_save_command(cmd) then
-                local orig_notify = vim.notify
-                vim.notify = function(msg, level, opts)
-                  if type(msg) == "string" and (
-                    msg:match('"%S+" %d+L, %d+B written') or
-                    msg:match('written$') or
-                    msg:match('%d+L, %d+B')
-                  ) then
-                    return
-                  end
-                  return orig_notify(msg, level, opts)
-                end
-
-                local result = original_fn(prompt_bufnr)
-                vim.notify = orig_notify
-                return result
-              else
-                local orig_notify = vim.notify
-                vim.notify = function(msg, level, opts)
-                  if type(msg) == "string" and msg ~= "" then
-                    local icon = "⚡"
-                    local enhanced_msg = icon .. " " .. msg
-                    opts = opts or {}
-                    if not opts.title then
-                      opts.title = "Command Output"
+                  if is_save_command(cmd) then
+                    local orig_notify = vim.notify
+                    vim.notify = function(msg, level, opts)
+                      if type(msg) == "string" and (
+                        msg:match('"%S+" %d+L, %d+B written') or
+                        msg:match('written$') or
+                        msg:match('%d+L, %d+B')
+                      ) then
+                        return
+                      end
+                      return orig_notify(msg, level, opts)
                     end
-                    return orig_notify(enhanced_msg, level, opts)
-                  end
-                  return orig_notify(msg, level, opts)
-                end
 
-                local result = original_fn(prompt_bufnr)
-                vim.notify = orig_notify
-                return result
+                    local result = original_fn(prompt_bufnr)
+
+                    vim.notify = orig_notify
+                    return result
+                  else
+                    return original_fn(prompt_bufnr)
+                  end
+                end
               end
+
+              local function enhance_run_function(original_fn)
+                return function(prompt_bufnr)
+                  local action_state = require("telescope.actions.state")
+                  local picker = action_state.get_current_picker(prompt_bufnr)
+                  local input = picker:_get_prompt()
+                  local selection = action_state.get_selected_entry()
+                  local cmd = selection and selection.cmd or vim.trim(input or "")
+
+                  if is_save_command(cmd) then
+                    local orig_notify = vim.notify
+                    vim.notify = function(msg, level, opts)
+                      if type(msg) == "string" and (
+                        msg:match('"%S+" %d+L, %d+B written') or
+                        msg:match('written$') or
+                        msg:match('%d+L, %d+B')
+                      ) then
+                        return
+                      end
+                      return orig_notify(msg, level, opts)
+                    end
+
+                    local result = original_fn(prompt_bufnr)
+                    vim.notify = orig_notify
+                    return result
+                  else
+                    local orig_notify = vim.notify
+                    vim.notify = function(msg, level, opts)
+                      if type(msg) == "string" and msg ~= "" then
+                        local icon = "⚡"
+                        local enhanced_msg = icon .. " " .. msg
+                        opts = opts or {}
+                        if not opts.title then
+                          opts.title = "Command Output"
+                        end
+                        return orig_notify(enhanced_msg, level, opts)
+                      end
+                      return orig_notify(msg, level, opts)
+                    end
+
+                    local result = original_fn(prompt_bufnr)
+                    vim.notify = orig_notify
+                    return result
+                  end
+                end
+              end
+
+              cmdline_actions.run_input = enhance_run_function(original_run)
+              cmdline_actions.run_selection = enhance_run_function(original_run_selection)
             end
           end
-
-          cmdline_actions.run_input = enhance_run_function(original_run)
-          cmdline_actions.run_selection = enhance_run_function(original_run_selection)
-        end
-      '';
+        '';
+      };
     };
 }

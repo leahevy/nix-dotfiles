@@ -95,6 +95,14 @@ args@{
           };
         };
 
+        plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
+          {
+            __unkeyed-1 = "<leader>z";
+            desc = "Toggle zen mode";
+            icon = "🧘";
+          }
+        ];
+
         keymaps = [
           {
             mode = "n";
@@ -106,37 +114,26 @@ args@{
             };
           }
         ];
-      };
 
-      home.file = {
-        ".config/nvim-init/85-zen-mode-backdrop.lua".text = ''
-          vim.api.nvim_set_hl(0, "ZenBg", { bg = "#000000" })
-        '';
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
+          _G.nx_modules["50-zen-mode"] = function()
+            _G.zen_mode_enabled = false
 
-        ".config/nvim-init/50-zen-mode-toggle.lua".text = ''
-          _G.zen_mode_enabled = false
+            function _G.toggle_zen_mode()
+              _G.zen_mode_enabled = not _G.zen_mode_enabled
+              require("zen-mode").toggle()
 
-          function _G.toggle_zen_mode()
-            _G.zen_mode_enabled = not _G.zen_mode_enabled
-            require("zen-mode").toggle()
+              local status = _G.zen_mode_enabled and "enabled" or "disabled"
+              local icon = _G.zen_mode_enabled and "✅" or "❌"
+              vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
+                title = "Zen Mode"
+              })
+            end
 
-            local status = _G.zen_mode_enabled and "enabled" or "disabled"
-            local icon = _G.zen_mode_enabled and "✅" or "❌"
-            vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
-              title = "Zen Mode"
-            })
+            vim.api.nvim_set_hl(0, "ZenBg", { bg = "#000000" })
           end
         '';
       };
-
-      programs.nixvim.plugins.which-key.settings.spec =
-        lib.mkIf (self.isModuleEnabled "nvim-modules.which-key")
-          [
-            {
-              __unkeyed-1 = "<leader>z";
-              desc = "Toggle zen mode";
-              icon = "🧘";
-            }
-          ];
     };
 }

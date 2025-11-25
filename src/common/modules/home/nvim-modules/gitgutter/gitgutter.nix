@@ -78,21 +78,24 @@ args@{
             icon = "󰐕";
           }
         ];
+
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
+          _G.nx_modules["99-gitgutter"] = function()
+            local function set_gitgutter_colors()
+              vim.api.nvim_set_hl(0, "GitGutterAdd", { fg = "#55ff55" })
+              vim.api.nvim_set_hl(0, "GitGutterChange", { fg = "#ffff66" })
+              vim.api.nvim_set_hl(0, "GitGutterDelete", { fg = "#ff0099" })
+              vim.api.nvim_set_hl(0, "GitGutterChangeDelete", { fg = "#00ddff" })
+            end
+
+            vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+              callback = function()
+                vim.defer_fn(set_gitgutter_colors, 100)
+              end,
+            })
+          end
+        '';
       };
-
-      home.file.".config/nvim-init/99-gitgutter.lua".text = ''
-        local function set_gitgutter_colors()
-          vim.api.nvim_set_hl(0, "GitGutterAdd", { fg = "#55ff55" })
-          vim.api.nvim_set_hl(0, "GitGutterChange", { fg = "#ffff66" })
-          vim.api.nvim_set_hl(0, "GitGutterDelete", { fg = "#ff0099" })
-          vim.api.nvim_set_hl(0, "GitGutterChangeDelete", { fg = "#00ddff" })
-        end
-
-        vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
-          callback = function()
-            vim.defer_fn(set_gitgutter_colors, 100)
-          end,
-        })
-      '';
     };
 }

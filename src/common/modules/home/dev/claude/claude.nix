@@ -51,22 +51,6 @@ args@{
             }) allMCPServers;
           in
           {
-            ".config/nvim-init/90-claude-code.lua" = lib.mkIf (self.isModuleEnabled "nvim.nixvim") {
-              text = ''
-                require('claude-code').setup({
-                  window = {
-                    position = "botright",
-                    split_ratio = 0.4,
-                  },
-                })
-
-                vim.keymap.set('n', '<leader>cc', '<cmd>ClaudeCode<CR>', {
-                  desc = 'Toggle Claude Code',
-                  silent = true
-                })
-              '';
-            };
-
             ".config/doom/config/80-claude.el".text =
               if (self.isModuleEnabled "emacs.doom") then
                 ''
@@ -158,7 +142,23 @@ args@{
             icon = "🤖";
           }
         ];
-      };
 
+        extraConfigLua = lib.mkIf (self.isModuleEnabled "nvim.nixvim") ''
+          _G.nx_modules = _G.nx_modules or {}
+          _G.nx_modules["90-claude-code"] = function()
+            require('claude-code').setup({
+              window = {
+                position = "botright",
+                split_ratio = 0.4,
+              },
+            })
+
+            vim.keymap.set('n', '<leader>cc', '<cmd>ClaudeCode<CR>', {
+              desc = 'Toggle Claude Code',
+              silent = true
+            })
+          end
+        '';
+      };
     };
 }
