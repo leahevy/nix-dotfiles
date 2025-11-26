@@ -897,6 +897,14 @@ args@{
         };
       };
 
+      home.file.".local/bin/vim" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          exec ${config.programs.nixvim.build.package}/bin/nvim "$@"
+        '';
+      };
+
       home.file.".local/bin/nvim-run" = {
         executable = true;
         text = ''
