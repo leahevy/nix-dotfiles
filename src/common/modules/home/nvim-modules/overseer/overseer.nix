@@ -31,9 +31,16 @@ args@{
       "hello_test" = {
         name = "Hello Test";
         cmd = "echo 'Hello from Overseer!'";
+        args = [ ];
         cwd = "vim.fn.getcwd()";
         components = [ "default" ];
+        env = { };
+        metadata = { };
         condition = { };
+        extraLuaCode = "";
+        showProgress = false;
+        showResult = false;
+        output = "horizontal";
       };
     };
 
@@ -80,6 +87,20 @@ args@{
     };
   };
 
+  assertions = [
+    {
+      assertion =
+        let
+          allowedTaskAttributes = lib.attrNames (builtins.head (lib.attrValues self.settings.exampleTask));
+          checkTask = taskName: task: lib.subtractLists allowedTaskAttributes (lib.attrNames task) == [ ];
+        in
+        lib.all (taskName: checkTask taskName self.settings.customTasks.${taskName}) (
+          lib.attrNames self.settings.customTasks
+        );
+      message = "Overseer customTasks contain invalid attributes. Check that all task attributes match those in exampleTask.";
+    }
+  ];
+
   configuration =
     context@{ config, options, ... }:
     {
@@ -99,7 +120,7 @@ args@{
         keymaps = [
           {
             mode = "n";
-            key = "<leader><localleader>r";
+            key = "<leader><localleader><localleader>";
             action = "<cmd>OverseerRun<CR>";
             options = {
               desc = "Run overseer task";
@@ -108,7 +129,7 @@ args@{
           }
           {
             mode = "n";
-            key = "<leader><localleader>t";
+            key = "<leader><localleader><leader>";
             action = "<cmd>OverseerToggle<CR>";
             options = {
               desc = "Toggle overseer task list";
@@ -117,7 +138,7 @@ args@{
           }
           {
             mode = "n";
-            key = "<leader><localleader>l";
+            key = "<leader><localleader>r";
             action = "<cmd>OverseerRestartLast<CR>";
             options = {
               desc = "Restart last task";
@@ -133,17 +154,17 @@ args@{
             icon = "⚡";
           }
           {
-            __unkeyed-1 = "<leader><localleader>r";
+            __unkeyed-1 = "<leader><localleader><localleader>";
             desc = "Run overseer task";
             icon = "▶";
           }
           {
-            __unkeyed-1 = "<leader><localleader>t";
+            __unkeyed-1 = "<leader><localleader><leader>";
             desc = "Toggle overseer task list";
             icon = "📋";
           }
           {
-            __unkeyed-1 = "<leader><localleader>l";
+            __unkeyed-1 = "<leader><localleader>r";
             desc = "Restart last task";
             icon = "🔄";
           }
@@ -152,6 +173,7 @@ args@{
 
       programs.nixvim.extraConfigLua = ''
         _G.nx_modules = _G.nx_modules or {}
+        _G.nx_overseer_templates = _G.nx_overseer_templates or {}
         _G.nx_modules["80-overseer"] = function()
           local overseer = require("overseer")
 
@@ -198,6 +220,9 @@ args@{
                         builtins.toJSON value;
                   in
                   toLua;
+                showProgress = baseTaskConfig.showProgress or false;
+                showResult = baseTaskConfig.showResult or true;
+                output = baseTaskConfig.output or (if showProgress then "float" else "dock");
                 taskConfig = lib.recursiveUpdate {
                   args = [ ];
                   cwd = "vim.fn.getcwd()";
@@ -212,9 +237,14 @@ args@{
                     {
                       __unkeyed-1 = "on_complete_dispose";
                       require_view = [
-                        "SUCCESS"
                         "FAILURE"
                       ];
+                      statuses = [
+                        "SUCCESS"
+                        "FAILURE"
+                        "CANCELED"
+                      ];
+                      timeout = 10800;
                     }
                     {
                       __unkeyed-1 = "timeout";
@@ -223,11 +253,13 @@ args@{
                     "unique"
                     {
                       __unkeyed-1 = "open_output";
-                      on_start = "never";
-                      on_complete = "failure";
+                      direction = output;
+                      on_start = if showProgress then "always" else "never";
+                      on_complete = if showResult then "always" else "failure";
+                      focus = if output == "float" then true else false;
                     }
-                    "on_output_quickfix"
-                  ];
+                  ]
+                  ++ lib.optionals (!showProgress) [ "on_output_quickfix" ];
                   env = { };
                   metadata = { };
                   extraLuaCode = "";
@@ -235,7 +267,7 @@ args@{
                 } baseTaskConfig;
               in
               ''
-                overseer.register_template({
+                _G.nx_overseer_templates["${taskName}"] = {
                   name = "${taskConfig.name or taskConfig.cmd}",
                   builder = function(params)
                     ${taskConfig.extraLuaCode}
@@ -251,7 +283,8 @@ args@{
                     }
                   end,
                   condition = ${builtins.toJSON taskConfig.condition},
-                })
+                }
+                overseer.register_template(_G.nx_overseer_templates["${taskName}"])
               ''
             ) (lib.attrNames allTasks)
           }
@@ -262,9 +295,23 @@ args@{
             if #tasks > 0 then
               overseer.run_action(tasks[1], "restart")
             else
-              vim.notify("No tasks to restart", vim.log.levels.WARN)
+              vim.notify("No tasks to restart", vim.log.levels.WARN, { title = "Overseer" })
             end
           end, { desc = "Restart last overseer task" })
+
+          vim.api.nvim_create_autocmd("TermOpen", {
+            pattern = "*",
+            callback = function(args)
+              local win = vim.fn.bufwinid(args.buf)
+              if win ~= -1 then
+                local config = vim.api.nvim_win_get_config(win)
+                if config.relative ~= "" then
+                  vim.api.nvim_buf_set_keymap(args.buf, 'n', 'q', '<cmd>close<CR>', { noremap = true, silent = true })
+                  vim.api.nvim_buf_set_keymap(args.buf, 'n', '<Esc>', '<cmd>close<CR>', { noremap = true, silent = true })
+                end
+              end
+            end,
+          })
         end
       '';
 
