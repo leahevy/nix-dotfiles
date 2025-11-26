@@ -345,7 +345,7 @@ args@{
               ''
                 _G.nx_modules["96-cursor-highlight-override"] = function()
                   local function fix_cursor_highlight()
-                    vim.api.nvim_set_hl(0, "CursorLine", { bg = "${self.settings.overrideCursorHighlightColour}" })
+                    vim.api.nvim_set_hl(0, "CursorLine", { underline = true, sp = "${self.settings.overrideCursorHighlightColour}" })
                     vim.api.nvim_set_hl(0, "CursorColumn", { bg = "${self.settings.overrideCursorHighlightColour}" })
                   end
 
