@@ -34,6 +34,9 @@ args@{
       trace = "✎";
       warn = "";
     };
+    lspsToIgnoreInNotifications = [
+      "GitHub Copilot"
+    ];
   };
 
   configuration =
@@ -179,6 +182,12 @@ args@{
 
             local lsp_state = {}
 
+            local lsps_to_ignore = {
+              ${lib.concatStringsSep ", " (
+                lib.map (name: "\"${name}\"") self.settings.lspsToIgnoreInNotifications
+              )}
+            }
+
             local function handle_lsp_event(client_name, event_type)
               local current_time = vim.loop.now()
               local state = lsp_state[client_name] or {}
@@ -190,9 +199,11 @@ args@{
 
               if state.last_event and current_time - state.last_time < 3000 then
                 if state.last_event ~= event_type then
-                  vim.notify("🔄 " .. client_name .. " reconnected", vim.log.levels.INFO, {
-                    title = "LSP"
-                  })
+                  if not vim.tbl_contains(lsps_to_ignore, client_name) then
+                    vim.notify("🔄 " .. client_name .. " reconnected", vim.log.levels.INFO, {
+                      title = "LSP"
+                    })
+                  end
                   lsp_state[client_name] = nil
                   return
                 end
@@ -203,13 +214,17 @@ args@{
                 last_time = current_time,
                 timer = vim.fn.timer_start(3000, function()
                   if event_type == "attach" then
-                    vim.notify("✅ " .. client_name .. " connected", vim.log.levels.INFO, {
-                      title = "LSP"
-                    })
+                    if not vim.tbl_contains(lsps_to_ignore, client_name) then
+                      vim.notify("✅ " .. client_name .. " connected", vim.log.levels.INFO, {
+                        title = "LSP"
+                      })
+                    end
                   else
-                    vim.notify("❌ " .. client_name .. " disconnected", vim.log.levels.WARN, {
-                      title = "LSP"
-                    })
+                    if not vim.tbl_contains(lsps_to_ignore, client_name) then
+                      vim.notify("❌ " .. client_name .. " disconnected", vim.log.levels.WARN, {
+                        title = "LSP"
+                      })
+                    end
                   end
                   lsp_state[client_name] = nil
                 end)
