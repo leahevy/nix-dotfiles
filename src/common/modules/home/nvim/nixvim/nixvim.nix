@@ -490,6 +490,11 @@ args@{
               icon = "💾";
             }
             {
+              __unkeyed-1 = "<leader>E";
+              desc = "Save current buffer";
+              icon = "💾";
+            }
+            {
               __unkeyed-1 = "<leader>fs";
               desc = "Toggle spell check";
               icon = "📝";
@@ -812,6 +817,15 @@ args@{
             action = "<cmd>wqa<CR>";
             options = {
               desc = "Save all and quit";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>E";
+            action = "<cmd>w<CR>";
+            options = {
+              desc = "Save current buffer";
               silent = true;
             };
           }
