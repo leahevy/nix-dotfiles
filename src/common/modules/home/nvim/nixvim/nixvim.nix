@@ -154,7 +154,7 @@ args@{
           number = true;
           relativenumber = true;
           cursorline = true;
-          cursorcolumn = true;
+          cursorcolumn = false;
 
           termguicolors = true;
           mouse = "a";
