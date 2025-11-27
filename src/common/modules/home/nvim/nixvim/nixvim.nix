@@ -68,6 +68,7 @@ args@{
         cursorline = true;
         trouble = true;
         autosource = true;
+        modicator = true;
       };
     };
   };
