@@ -31,9 +31,9 @@ args@{
             vim.api.nvim_set_hl(0, "SignColumn", { bg = "none" })
             vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "none" })
 
-            vim.api.nvim_set_hl(0, "LineNr", { bg = "none" })
-            vim.api.nvim_set_hl(0, "LineNrAbove", { bg = "none" })
-            vim.api.nvim_set_hl(0, "LineNrBelow", { bg = "none" })
+            vim.api.nvim_set_hl(0, "LineNr", { bg = "none", fg = "#202020" })
+            vim.api.nvim_set_hl(0, "LineNrAbove", { bg = "none", fg = "#202020" })
+            vim.api.nvim_set_hl(0, "LineNrBelow", { bg = "none", fg = "#202020" })
             vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "none" })
 
             vim.api.nvim_set_hl(0, "TabLine", { bg = "none" })
