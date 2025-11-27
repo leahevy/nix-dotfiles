@@ -69,6 +69,7 @@ args@{
         trouble = true;
         autosource = true;
         modicator = true;
+        numbertoggle = true;
       };
     };
   };
