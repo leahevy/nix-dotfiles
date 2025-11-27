@@ -31,6 +31,7 @@ args@{
       programs.ghostty = {
         enable = true;
         package = lib.mkDefault (self.dummyPackage "ghostty");
+        clearDefaultKeybinds = true;
         settings = {
           font-size = lib.mkForce self.settings.fontSize;
           font-thicken = lib.mkForce true;
@@ -44,6 +45,19 @@ args@{
               resolveShader = name: self.file "shaders/${name}.glsl";
             in
             map resolveShader self.settings.shaders;
+
+          keybind = [
+            "ctrl+shift+c=copy_to_clipboard"
+            "ctrl+shift+v=paste_from_clipboard"
+            "ctrl+shift+t=new_tab"
+            "ctrl+shift+w=close_tab:this"
+            "ctrl+shift+n=new_window"
+            "ctrl+shift+q=quit"
+            "ctrl+==increase_font_size:1"
+            "ctrl+-=decrease_font_size:1"
+            "ctrl+0=reset_font_size"
+            "ctrl+shift+,=reload_config"
+          ];
         };
       };
 
