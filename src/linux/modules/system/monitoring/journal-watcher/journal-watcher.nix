@@ -90,6 +90,9 @@ args@{
       "Partitions found on device '/dev/sd[a-z]+' but couldn't read partition table signature.*No such device or address"
     ];
     desktopStringsToIgnore = [
+      "usb.*can't set config.*error -71"
+      "spa\\.alsa:.*error pcm info.*No such device"
+      "spa\\.alsa:.*error iterating devices.*No such device"
       "Failed to associate portal window with parent window"
       "qt\\.multimedia\\.symbolsresolver: Couldn't.*pipewire"
       "qt\\.dbus\\.integration: QDBusConnection: name .* had owner"
