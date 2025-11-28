@@ -70,6 +70,8 @@ args@{
         autosource = true;
         modicator = true;
         numbertoggle = true;
+        tardis = true;
+        dap = true;
       };
     };
   };
