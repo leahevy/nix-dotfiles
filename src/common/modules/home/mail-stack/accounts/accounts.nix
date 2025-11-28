@@ -31,6 +31,13 @@ rec {
     #     default = true;                    # Required: exactly one must be true
     #     ssl = false;                       # Optional: false=STARTTLS(587), true=SSL(465)
     #     port = 587;                        # Optional: port override
+    #     signature = null;                  # Optional: inline signature string
+    #     virtualMailboxes = [               # Optional: account-specific virtual mailboxes
+    #       # { name = "Important"; query = "tag:important"; }
+    #     ];
+    #     filters = [                        # Optional: account-specific filters
+    #       # { query = "from:example.com"; tags = "+work"; message = "Work emails"; }
+    #     ];
     #   };
     # };
     accounts = { };

@@ -25,6 +25,7 @@ args@{
   settings = {
     maxAgeToProcess = 90;
     excludeTags = [ ];
+    dkimFailAsSpam = false;
 
     virtualMailboxes = [
       # Example:
@@ -60,38 +61,6 @@ args@{
       ) (lib.head accountKeys) accountKeys;
 
       primaryAccount = if primaryAccountKey != null then accounts.${primaryAccountKey} else { };
-
-      standardFolders = [
-        "inbox"
-        "sent"
-        "drafts"
-        "trash"
-        "archive"
-        "spam"
-      ];
-
-      capitalizeFolder =
-        folderType: lib.toUpper (lib.substring 0 1 folderType) + lib.substring 1 (-1) folderType;
-
-      globalVirtualMailboxes =
-        (map (folderType: {
-          name = capitalizeFolder folderType;
-          query = "tag:${folderType}";
-          type = "messages";
-        }) standardFolders)
-        ++ (map (accountKey: {
-          name = accountKey;
-          query = "tag:${accountKey}";
-          type = "messages";
-        }) accountKeys)
-        ++ [
-          {
-            name = "All Mails";
-            query = "*";
-            type = "messages";
-          }
-        ]
-        ++ self.settings.virtualMailboxes;
 
       otherEmails = lib.remove (primaryAccount.address or "") (
         lib.mapAttrsToList (_: acc: acc.address) accounts
@@ -141,8 +110,8 @@ args@{
 
         hooks.postNew = ''
           ${pkgs.afew}/bin/afew --tag --new
-          ${pkgs.afew}/bin/afew --move-mails --all -T ${toString self.settings.maxAgeToProcess}
-          ${pkgs.afew}/bin/afew --tag --all -T ${toString self.settings.maxAgeToProcess}
+          ${pkgs.afew}/bin/afew --move-mails --new
+          ${pkgs.afew}/bin/afew --tag --new
         '';
       };
 
@@ -154,7 +123,7 @@ args@{
               enable = true;
               neomutt = {
                 enable = true;
-                virtualMailboxes = globalVirtualMailboxes;
+                virtualMailboxes = lib.mkForce [ ];
               };
             };
           }
@@ -166,7 +135,7 @@ args@{
 
       home.file.".config/afew/config".text =
         let
-          numOfFiltersPerAccount = 9;
+          numOfFiltersPerAccount = 10;
         in
         ''
           [SpamFilter]
@@ -187,7 +156,7 @@ args@{
                       folders = serverConfig.folders;
                     in
                     [
-                      "${accountKey}/INBOX"
+                      "${accountKey}/Inbox"
                       "${accountKey}/${folders.sent}"
                       "${accountKey}/${folders.drafts}"
                       "${accountKey}/${folders.trash}"
@@ -211,7 +180,7 @@ args@{
               archiveContainsAllMail = serverConfig.archiveContainsAllMail;
 
               allFolders = [
-                "${accountKey}/INBOX"
+                "${accountKey}/Inbox"
                 "${accountKey}/${folders.sent}"
                 "${accountKey}/${folders.drafts}"
                 "${accountKey}/${folders.trash}"
@@ -224,8 +193,8 @@ args@{
               let
                 rules = lib.filter (rule: rule != "") [
                   (
-                    if srcFolder != "${accountKey}/INBOX" then
-                      "'tag:inbox AND NOT tag:trash AND NOT tag:spam':'${accountKey}/INBOX'"
+                    if srcFolder != "${accountKey}/Inbox" then
+                      "'tag:inbox AND NOT tag:trash AND NOT tag:spam':'${accountKey}/Inbox'"
                     else
                       ""
                   )
@@ -236,28 +205,28 @@ args@{
                       ""
                   )
                   (
-                    if srcFolder != "${accountKey}/${folders.drafts}" then
+                    if
+                      srcFolder != "${accountKey}/${folders.drafts}" && srcFolder != "${accountKey}/${folders.sent}"
+                    then
                       "'tag:drafts AND NOT tag:trash AND NOT tag:spam':'${accountKey}/${folders.drafts}'"
                     else
                       ""
                   )
                   (
                     if srcFolder != "${accountKey}/${folders.trash}" then
-                      "'tag:deleted OR tag:trash':'${accountKey}/${folders.trash}'"
+                      "'tag:trash':'${accountKey}/${folders.trash}'"
                     else
                       ""
                   )
                   (
-                    if archiveContainsAllMail && srcFolder == "${accountKey}/INBOX" then
-                      "'tag:archive AND NOT tag:inbox AND NOT tag:trash AND NOT tag:spam':'${accountKey}/${folders.archive}'"
-                    else if !archiveContainsAllMail && srcFolder != "${accountKey}/${folders.archive}" then
-                      "'tag:archive AND NOT tag:inbox AND NOT tag:trash AND NOT tag:spam':'${accountKey}/${folders.archive}'"
+                    if srcFolder != "${accountKey}/${folders.archive}" then
+                      "'tag:archive AND NOT tag:inbox AND NOT tag:sent AND NOT tag:drafts AND NOT tag:trash AND NOT tag:spam':'${accountKey}/${folders.archive}'"
                     else
                       ""
                   )
                   (
                     if srcFolder != "${accountKey}/${folders.spam}" then
-                      "'(tag:spam OR tag:dkim-fail) AND NOT tag:trash':'${accountKey}/${folders.spam}'"
+                      "'(tag:spam${lib.optionalString self.settings.dkimFailAsSpam " OR tag:dkim-fail"}) AND NOT tag:trash':'${accountKey}/${folders.spam}'"
                     else
                       ""
                   )
@@ -295,12 +264,12 @@ args@{
               in
               ''
                 [Filter.${toString (baseIndex + 1)}]
-                query = folder:"${accountKey}/**"
+                query = path:"${accountKey}/**"
                 tags = +${accountKey}
                 message = Tag ${accountKey} account
 
                 [Filter.${toString (baseIndex + 2)}]
-                query = folder:"${accountKey}/INBOX"
+                query = folder:"${accountKey}/Inbox"
                 tags = +inbox;-sent;-drafts;-archive;-trash;-spam
                 message = Tag inbox emails
 
@@ -316,11 +285,11 @@ args@{
 
                 [Filter.${toString (baseIndex + 5)}]
                 query = folder:"${accountKey}/${folders.trash}"
-                tags = +trash;+deleted;-inbox;-sent;-drafts;-archive;-spam
+                tags = +trash;-inbox;-sent;-drafts;-archive;-spam
                 message = Tag trash emails
 
                 [Filter.${toString (baseIndex + 6)}]
-                query = folder:"${accountKey}/${folders.archive}"
+                query = folder:"${accountKey}/${folders.archive}" AND NOT folder:"${accountKey}/Inbox"
                 tags = +archive;-inbox;-sent;-drafts;-spam
                 message = Tag archive emails
 
@@ -329,10 +298,17 @@ args@{
                 tags = +spam;-inbox;-sent;-drafts;-archive
                 message = Tag spam emails
 
-                [Filter.${toString (baseIndex + 8)}]
-                query = tag:dkim-fail
-                tags = +spam
-                message = Tag DKIM failed emails as spam
+                ${lib.optionalString self.settings.dkimFailAsSpam ''
+                  [Filter.${toString (baseIndex + 8)}]
+                  query = tag:dkim-fail
+                  tags = +spam
+                  message = Tag DKIM failed emails as spam
+                ''}
+
+                [Filter.${toString (baseIndex + 9)}]
+                query = tag:new
+                tags = -new
+                message = Remove new tag from processed messages
 
                 ${lib.optionalString (!serverConfig.archiveContainsAllMail) ''
                   [Filter.${toString (baseIndex + numOfFiltersPerAccount)}]
@@ -353,11 +329,128 @@ args@{
             '') self.settings.filters
           )}
 
-          [InboxFilter]
+          ${lib.concatStringsSep "\n" (
+            lib.concatLists (
+              lib.imap1 (
+                accountIndex: accountKey:
+                let
+                  account = accounts.${accountKey};
+                  accountFilters = account.filters or [ ];
+                  baseFilterIndex =
+                    (lib.length self.settings.filters) + (lib.length accountKeys * numOfFiltersPerAccount);
+                  accountBaseIndex = baseFilterIndex + ((accountIndex - 1) * 50);
+                in
+                lib.imap1 (filterIndex: filter: ''
+                  [Filter.${toString (accountBaseIndex + filterIndex)}]
+                  query = path:${accountKey}/** AND (${filter.query})
+                  tags = ${filter.tags}
+                  message = ${lib.escapeShellArg "${accountKey}: ${filter.message}"}
+                '') accountFilters
+              ) accountKeys
+            )
+          )}
+
         '';
 
       home.packages = [
         pkgs.afew
       ];
+
+      home.file.".local/bin/scripts/notmuch-process-mails.sh" = {
+        text =
+          let
+            archiveFoldersQuery = lib.concatStringsSep " OR " (
+              lib.mapAttrsToList (
+                accountKey: account:
+                let
+                  serverConfig = buildServerConfig accountKey account;
+                  folders = serverConfig.folders;
+                in
+                "folder:\"${accountKey}/${folders.archive}\""
+              ) accounts
+            );
+          in
+          ''
+            #!/usr/bin/env bash
+            set -euo pipefail
+
+            NO_LOCK_CHECK=false
+            MOVE_FIRST=false
+
+            while [[ $# -gt 0 ]]; do
+              case $1 in
+                --no-lock-check)
+                  NO_LOCK_CHECK=true
+                  shift
+                  ;;
+                --move-first)
+                  MOVE_FIRST=true
+                  shift
+                  ;;
+                *)
+                  echo "Unknown argument: $1"
+                  echo "Usage: $0 [--no-lock-check] [--move-first]"
+                  exit 1
+                  ;;
+              esac
+            done
+
+            BLUE='\033[0;34m'
+            GREEN='\033[0;32m'
+            YELLOW='\033[1;33m'
+            RED='\033[0;31m'
+            RESET='\033[0m'
+
+            if [ "$NO_LOCK_CHECK" = false ]; then
+              RUNTIME_DIR="''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}/runtime-$(id -u)}"
+              LOCKDIR="$RUNTIME_DIR/process-mails.lock"
+
+              mkdir -p "$RUNTIME_DIR"
+
+              if ! mkdir "$LOCKDIR" 2>/dev/null; then
+                echo -e "''${YELLOW}⚠️ Another mail processing instance is already running. Exiting.''${RESET}"
+                exit 2
+              fi
+
+              cleanup() {
+                rmdir "$LOCKDIR" 2>/dev/null || true
+              }
+              trap cleanup EXIT INT TERM
+            fi
+
+            update_database() {
+              echo -e "''${YELLOW}🔍 Updating notmuch database with new/moved files...''${RESET}"
+              ${pkgs.notmuch}/bin/notmuch new
+            }
+
+            retag_mails() {
+              echo -e "''${YELLOW}🏷️  Retagging all mails based on current locations...''${RESET}"
+              ${pkgs.afew}/bin/afew --tag --all -T ${toString self.settings.maxAgeToProcess}
+            }
+
+            move_mails() {
+              echo -e "''${YELLOW}📦 Moving mails from non-archive folders (no date limit)...''${RESET}"
+              ${pkgs.afew}/bin/afew --move-mails 'NOT (${archiveFoldersQuery})'
+
+              echo -e "''${YELLOW}📦 Moving mails from archive folders (date-restricted)...''${RESET}"
+              ${pkgs.afew}/bin/afew --move-mails -T ${toString self.settings.maxAgeToProcess} '${archiveFoldersQuery}'
+            }
+
+            echo -e "''${BLUE}🔄 Processing mail with afew...''${RESET}"
+
+            if [ "$MOVE_FIRST" = true ]; then
+              move_mails
+              update_database
+              retag_mails
+            else
+              update_database
+              retag_mails
+              move_mails
+            fi
+
+            echo -e "''${GREEN}✅ Mail processing complete.''${RESET}"
+          '';
+        executable = true;
+      };
     };
 }

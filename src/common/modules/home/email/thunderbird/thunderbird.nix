@@ -35,14 +35,23 @@ args@{
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
-          binds = with config.lib.niri.actions; {
-            "Mod+Ctrl+Alt+O" = {
-              action = spawn-sh "niri-scratchpad --app-id thunderbird --all-windows --spawn thunderbird";
-              hotkey-overlay.title = "Apps:Mails";
-            };
-          };
+          binds = lib.mkIf (!(self.isModuleEnabled "mail-stack.neomutt")) (
+            with config.lib.niri.actions;
+            {
+              "Mod+Ctrl+Alt+O" = {
+                action = spawn-sh "niri-scratchpad --app-id thunderbird --all-windows --spawn thunderbird";
+                hotkey-overlay.title = "Apps:Mails";
+              };
+            }
+          );
 
           window-rules = [
+            {
+              matches = [ { app-id = "thunderbird"; } ];
+              block-out-from = "screencast";
+            }
+          ]
+          ++ lib.optionals (!(self.isModuleEnabled "mail-stack.neomutt")) [
             {
               matches = [ { app-id = "thunderbird"; } ];
               min-width = 1500;
@@ -60,10 +69,6 @@ args@{
               ];
               open-on-workspace = "nonexistent";
               open-focused = true;
-            }
-            {
-              matches = [ { app-id = "thunderbird"; } ];
-              block-out-from = "screencast";
             }
           ];
         };
