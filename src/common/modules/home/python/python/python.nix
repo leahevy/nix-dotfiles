@@ -23,6 +23,7 @@ args@{
       "requests"
       "python-dotenv"
       "python-lsp-server"
+      "debugpy"
     ];
     additionalPackages = [ ];
   };

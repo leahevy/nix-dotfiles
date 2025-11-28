@@ -176,6 +176,14 @@ args@{
       "nofile"
       "nowrite"
       "yazi"
+      "dapui_scopes"
+      "dapui_breakpoints"
+      "dapui_stacks"
+      "dapui_watches"
+      "dapui-repl"
+      "dapui_console"
+      "dap-repl"
+      "OverseerList"
       ""
     ];
   };
