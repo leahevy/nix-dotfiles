@@ -55,7 +55,7 @@ args@{
             "ctrl+shift+q=quit"
             "ctrl+==increase_font_size:1"
             "ctrl+-=decrease_font_size:1"
-            "ctrl+0=reset_font_size"
+            "ctrl+shift+0=reset_font_size"
             "ctrl+shift+,=reload_config"
           ];
         };
