@@ -83,29 +83,17 @@ args@{
 
             setup_modicator_highlights()
 
-            vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter", "WinEnter"}, {
+            vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter"}, {
               callback = function()
+                local delay = vim.v.vim_did_enter == 1 and 0 or 300
                 vim.defer_fn(function()
-                  local ok, modicator = pcall(require, 'modicator')
-                  if ok and modicator.set_cursor_line_highlight then
-                    local mode = vim.fn.mode()
-                    local mode_map = {
-                      n = 'NormalMode',
-                      i = 'InsertMode',
-                      v = 'VisualMode',
-                      V = 'VisualMode',
-                      ['\22'] = 'VisualMode',
-                      c = 'CommandMode',
-                      R = 'ReplaceMode',
-                      s = 'SelectMode',
-                      S = 'SelectMode',
-                      ['\19'] = 'SelectMode',
-                      t = 'TerminalMode'
-                    }
-                    local hl_name = mode_map[mode] or 'NormalMode'
-                    modicator.set_cursor_line_highlight(hl_name)
+                  local mode = vim.fn.mode()
+                  if mode == 'n' then
+                    vim.api.nvim_exec_autocmds('ModeChanged', {pattern = 'n:n'})
+                  elseif mode == 'i' then
+                    vim.api.nvim_exec_autocmds('ModeChanged', {pattern = 'i:i'})
                   end
-                end, 10)
+                end, delay)
               end,
             })
           end

@@ -29,12 +29,17 @@ args@{
             vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
             vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
             vim.api.nvim_set_hl(0, "SignColumn", { bg = "none" })
-            vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "none" })
+            vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "none", fg = "#181818" })
 
             vim.api.nvim_set_hl(0, "LineNr", { bg = "none", fg = "#202020" })
             vim.api.nvim_set_hl(0, "LineNrAbove", { bg = "none", fg = "#202020" })
             vim.api.nvim_set_hl(0, "LineNrBelow", { bg = "none", fg = "#202020" })
-            vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "none" })
+            local cursor_line_nr = vim.api.nvim_get_hl(0, { name = "CursorLineNr" })
+            if not cursor_line_nr.fg then
+              cursor_line_nr.fg = "#37f499"
+              cursor_line_nr.bold = true
+            end
+            vim.api.nvim_set_hl(0, "CursorLineNr", vim.tbl_extend("force", cursor_line_nr, { bg = "none" }))
 
             vim.api.nvim_set_hl(0, "TabLine", { bg = "none" })
             vim.api.nvim_set_hl(0, "TabLineFill", { bg = "none" })
@@ -54,7 +59,7 @@ args@{
             vim.opt.winblend = 0
           end
 
-          vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+          vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme", "BufNew", "BufNewFile", "BufAdd", "WinNew"}, {
             callback = function()
               vim.defer_fn(set_transparent_bg, 100)
             end,

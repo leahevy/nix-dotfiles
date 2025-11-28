@@ -27,9 +27,9 @@ args@{
           _G.nx_modules = _G.nx_modules or {}
 
           _G.nx_modules["42-numbertoggle-fix"] = function()
-            vim.api.nvim_create_autocmd({"VimEnter"}, {
+            vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter", "FocusGained", "VimEnter"}, {
               callback = function()
-                vim.defer_fn(function()
+                vim.schedule(function()
                   local mode = vim.fn.mode()
                   if mode == 'n' or mode == 'no' then
                     vim.opt_local.relativenumber = true
@@ -38,7 +38,7 @@ args@{
                     vim.opt_local.relativenumber = false
                     vim.opt_local.number = true
                   end
-                end, 50)
+                end)
               end,
             })
           end
