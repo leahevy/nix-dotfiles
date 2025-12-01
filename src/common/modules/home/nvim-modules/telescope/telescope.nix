@@ -70,6 +70,15 @@ args@{
               desc = "Switch buffers";
             };
           }
+          {
+            mode = "n";
+            key = "<leader>J";
+            action = "<cmd>Telescope jumplist<CR>";
+            options = {
+              silent = true;
+              desc = "Jump list";
+            };
+          }
         ];
 
         extraConfigLua = ''
@@ -156,5 +165,15 @@ args@{
         ripgrep
         fd
       ];
+
+      programs.nixvim.plugins.which-key.settings.spec =
+        lib.mkIf (self.isModuleEnabled "nvim-modules.which-key")
+          [
+            {
+              __unkeyed-1 = "<leader>J";
+              desc = "Jump list";
+              icon = "🦘";
+            }
+          ];
     };
 }
