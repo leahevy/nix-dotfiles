@@ -206,6 +206,7 @@ args@{
 
           spelllang = self.settings.dictionaries;
           spellfile = "${config.xdg.configHome}/nvim/spell/custom.utf-8.add";
+          iskeyword = "@,48-57,_,192-255,-";
         };
 
         extraConfigLua = lib.mkOrder 1500 (
