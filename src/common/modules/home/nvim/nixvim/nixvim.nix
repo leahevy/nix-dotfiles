@@ -363,6 +363,32 @@ args@{
                 end
               ''
             ]
+            ++ lib.optionals self.settings.withSocket [
+              ''
+                _G.nx_modules["97-socket-notification"] = function()
+                  vim.api.nvim_create_autocmd("VimEnter", {
+                    once = true,
+                    callback = function()
+                      vim.defer_fn(function()
+                        local socket_name = vim.v.servername
+                        if socket_name and socket_name ~= "" then
+                          if not string.match(socket_name, "^/tmp/") then
+                            local socket_exists = vim.fn.filereadable(socket_name) == 1
+                            if socket_exists then
+                              local absolute_path = vim.fn.fnamemodify(socket_name, ":p")
+                              vim.notify("🖥️ Server started at " .. absolute_path, vim.log.levels.INFO, {
+                                title = "Neovim Server",
+                                timeout = 3000
+                              })
+                            end
+                          end
+                        end
+                      end, 500)
+                    end,
+                  })
+                end
+              ''
+            ]
             ++ [
               ''
                 local init_start_time = vim.loop.hrtime()
