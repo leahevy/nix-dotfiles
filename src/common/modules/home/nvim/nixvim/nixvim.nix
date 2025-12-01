@@ -72,6 +72,7 @@ args@{
         numbertoggle = true;
         tardis = true;
         dap = true;
+        goto-preview = true;
       };
     };
   };
