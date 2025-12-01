@@ -151,11 +151,6 @@ args@{
             icon = "󰓩";
           }
           {
-            __unkeyed-1 = "<leader>wd";
-            desc = "Wiki diary";
-            icon = "󰃭";
-          }
-          {
             __unkeyed-1 = "<leader>w<leader>w";
             desc = "Make today diary note";
             icon = "󰃭";
@@ -226,15 +221,6 @@ args@{
             action = "<cmd>ObsidianSearch<cr>";
             options = {
               desc = "Search wiki";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wd";
-            action = "<cmd>ObsidianToday<cr>";
-            options = {
-              desc = "Wiki diary";
               silent = true;
             };
           }
