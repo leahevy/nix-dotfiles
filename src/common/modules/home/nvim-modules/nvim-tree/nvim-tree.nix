@@ -49,7 +49,15 @@ args@{
         {
           mode = "n";
           key = "<leader>t";
-          action = ":NvimTreeToggle<CR>";
+          action.__raw = ''
+            function()
+              if vim.bo.filetype == "NvimTree" then
+                vim.cmd.NvimTreeClose()
+              else
+                vim.cmd.NvimTreeFocus()
+              end
+            end
+          '';
           options = {
             silent = true;
             desc = "Toggle file tree";
