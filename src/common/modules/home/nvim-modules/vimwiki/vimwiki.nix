@@ -19,6 +19,13 @@ args@{
     wikiPath = "~/.local/share/nvim/wiki/";
   };
 
+  assertions = [
+    {
+      assertion = !(self.isModuleEnabled "nvim-modules.obsidian");
+      message = "vimwiki and obsidian modules are mutually exclusive!";
+    }
+  ];
+
   configuration =
     context@{ config, options, ... }:
     let

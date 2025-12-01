@@ -63,8 +63,8 @@ args@{
 
           file_types = [
             "markdown"
-            "vimwiki"
-          ];
+          ]
+          ++ (lib.optional (self.isModuleEnabled "nvim-modules.vimwiki") "vimwiki");
 
           injections = {
             gitcommit = {
@@ -90,8 +90,8 @@ args@{
           event = [ "FileType" ];
           pattern = [
             "markdown"
-            "vimwiki"
-          ];
+          ]
+          ++ (lib.optional (self.isModuleEnabled "nvim-modules.vimwiki") "vimwiki");
           callback = {
             __raw = ''
               function()

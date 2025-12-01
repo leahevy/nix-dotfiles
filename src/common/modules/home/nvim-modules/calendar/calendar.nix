@@ -15,6 +15,11 @@ args@{
   input = "common";
   namespace = "home";
 
+  settings = {
+    mondayIsFirstWeekday = true;
+    markAlignment = "left-fit";
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
@@ -22,6 +27,14 @@ args@{
         extraPlugins = with pkgs.vimPlugins; [
           mattn-calendar-vim
         ];
+
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
+          _G.nx_modules["10-calendar-config"] = function()
+            ${lib.optionalString self.settings.mondayIsFirstWeekday "vim.g.calendar_monday = 1"}
+            vim.g.calendar_mark = "${self.settings.markAlignment}"
+          end
+        '';
 
         keymaps = [
           {

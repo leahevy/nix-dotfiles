@@ -26,7 +26,6 @@ args@{
       "emoji"
       "spell"
       "git"
-      "vimwiki-tags"
       "nvim_lua"
       "treesitter"
     ];
@@ -72,7 +71,6 @@ args@{
       "nowrite"
       "markdown"
       "text"
-      "vimwiki"
       "dapui_scopes"
       "dapui_breakpoints"
       "dapui_stacks"
@@ -92,7 +90,10 @@ args@{
     let
       mkSource = name: { inherit name; };
 
-      allEnabledSources = self.settings.baseSourcesToEnable ++ self.settings.additionalSourcesToEnable;
+      allEnabledSources =
+        self.settings.baseSourcesToEnable
+        ++ self.settings.additionalSourcesToEnable
+        ++ (lib.optional (self.isModuleEnabled "nvim-modules.vimwiki") "vimwiki-tags");
 
       mkAllSources = map mkSource allEnabledSources;
       mkAutoSources = map mkSource self.settings.autoCompleteSources;
@@ -280,7 +281,10 @@ args@{
             vim.g.cmp_global_enabled = ${if self.settings.globalAutoCompleteEnabled then "true" else "false"}
 
             local excluded_filetypes = {
-              ${lib.concatMapStringsSep ", " (ft: "\"${ft}\"") self.settings.excludeFiletypesFromAutoComplete}
+              ${lib.concatMapStringsSep ", " (ft: "\"${ft}\"") (
+                self.settings.excludeFiletypesFromAutoComplete
+                ++ (lib.optional (self.isModuleEnabled "nvim-modules.vimwiki") "vimwiki")
+              )}
             }
 
             local function should_disable_for_filetype(filetype)

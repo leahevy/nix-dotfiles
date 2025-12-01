@@ -44,7 +44,8 @@ args@{
         yazi = true;
         cmp = true;
         project = true;
-        vimwiki = true;
+        vimwiki = false;
+        obsidian = true;
         tmuxline = false;
         vim-tmux-navigator = true;
         copilot = true;
@@ -170,6 +171,7 @@ args@{
           termguicolors = true;
           mouse = "a";
           wrap = true;
+          conceallevel = 1;
           linebreak = true;
           breakindent = true;
           showbreak = "↪ ";

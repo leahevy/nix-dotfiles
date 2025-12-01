@@ -145,7 +145,6 @@ args@{
     ];
     exclude = [
       "markdown"
-      "vimwiki"
       "help"
       "dashboard"
       "alpha"
@@ -200,7 +199,8 @@ args@{
             context = self.settings.context;
             treesitter = self.settings.useTreesitter;
             expand = self.settings.expand;
-            exclude = self.settings.exclude;
+            exclude =
+              self.settings.exclude ++ (lib.optional (self.isModuleEnabled "nvim-modules.vimwiki") "vimwiki");
           };
         };
 
