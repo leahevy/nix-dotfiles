@@ -114,6 +114,7 @@ args@{
             templates = self.settings.templates;
             actions = self.settings.actions;
             task_list = self.settings.taskList;
+            component_aliases = { };
           };
         };
 

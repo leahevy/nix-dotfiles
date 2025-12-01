@@ -256,6 +256,7 @@ args@{
             enable = true;
             settings = {
               console = "integratedTerminal";
+              justMyCode = true;
             };
           };
 
@@ -457,6 +458,40 @@ args@{
             local debug_servers = ${lib.generators.toLua { } self.settings.debugServers}
             local configurations = ${lib.generators.toLua { } self.settings.configurations}
 
+            _G.nx_find_interpreter = function(base_name)
+              local candidates = {}
+
+              local conda_prefix = os.getenv("CONDA_PREFIX")
+              if conda_prefix then
+                table.insert(candidates, conda_prefix .. "/bin/" .. base_name)
+              end
+
+              local venv_prefix = os.getenv("VIRTUAL_ENV")
+              if venv_prefix then
+                table.insert(candidates, venv_prefix .. "/bin/" .. base_name)
+              end
+
+              local home = os.getenv("HOME")
+              if home then
+                table.insert(candidates, home .. "/.nix-profile/bin/" .. base_name)
+              end
+
+              local user = os.getenv("USER")
+              if user then
+                table.insert(candidates, "/etc/profiles/per-user/" .. user .. "/bin/" .. base_name)
+              end
+
+              table.insert(candidates, base_name)
+
+              for _, candidate in ipairs(candidates) do
+                if vim.fn.executable(candidate) == 1 then
+                  return candidate
+                end
+              end
+
+              return base_name
+            end
+
             for ft, configs in pairs(configurations) do
               local server_config = debug_servers[ft]
               if server_config and configs[1] then
@@ -464,7 +499,8 @@ args@{
                 if server_config.interpreter then
                   local ok, dap_module = pcall(require, 'dap-' .. config_type)
                   if ok and dap_module.setup then
-                    dap_module.setup(server_config.interpreter)
+                    local resolved_interpreter = _G.nx_find_interpreter(server_config.interpreter)
+                    dap_module.setup(resolved_interpreter)
                   end
                 end
               end
@@ -544,41 +580,8 @@ args@{
 
                     local file_path = selection.path or selection.value
 
-                    local function find_interpreter(base_name)
-                      local candidates = {}
 
-                      local conda_prefix = os.getenv("CONDA_PREFIX")
-                      if conda_prefix then
-                        table.insert(candidates, conda_prefix .. "/bin/" .. base_name)
-                      end
-
-                      local venv_prefix = os.getenv("VIRTUAL_ENV")
-                      if venv_prefix then
-                        table.insert(candidates, venv_prefix .. "/bin/" .. base_name)
-                      end
-
-                      local home = os.getenv("HOME")
-                      if home then
-                        table.insert(candidates, home .. "/.nix-profile/bin/" .. base_name)
-                      end
-
-                      local user = os.getenv("USER")
-                      if user then
-                        table.insert(candidates, "/nix/var/nix/profiles/per-user/" .. user .. "/profile/bin/" .. base_name)
-                      end
-
-                      table.insert(candidates, base_name)
-
-                      for _, candidate in ipairs(candidates) do
-                        if vim.fn.executable(candidate) == 1 then
-                          return candidate
-                        end
-                      end
-
-                      return base_name
-                    end
-
-                    local interpreter = find_interpreter(server_config.interpreter)
+                    local interpreter = _G.nx_find_interpreter(server_config.interpreter)
                     local cmd = server_config.commandTemplate
                       :gsub("{interpreter}", interpreter)
                       :gsub("{port}", tostring(server_config.port))

@@ -73,6 +73,7 @@ args@{
         tardis = true;
         dap = true;
         goto-preview = true;
+        neotest = true;
       };
     };
   };
@@ -136,6 +137,11 @@ args@{
               ]
               (lib.mkIf (self.isModuleEnabled "nvim-modules.copilot") [ "copilot.vim" ])
               (lib.mkIf (self.isModuleEnabled "nvim-modules.rest") [ "rest.nvim" ])
+              (lib.mkIf (self.isModuleEnabled "nvim-modules.neotest") [
+                "neotest-python"
+                "neotest-rust"
+                "neotest-jest"
+              ])
             ];
           };
         };

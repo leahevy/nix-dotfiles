@@ -61,6 +61,8 @@ args@{
       "dapui_console"
       "dap-repl"
       "OverseerList"
+      "neotest-output-panel"
+      "neotest-summary"
     ];
   };
 
