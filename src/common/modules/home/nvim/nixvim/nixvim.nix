@@ -508,6 +508,11 @@ args@{
               icon = "▶";
             }
             {
+              __unkeyed-1 = "<leader>B";
+              desc = "Close all other buffers";
+              icon = "🧹";
+            }
+            {
               __unkeyed-1 = "<leader>Q";
               group = "Quit";
               icon = "󰗼";
@@ -846,6 +851,54 @@ args@{
             action = "<cmd>bnext<CR>";
             options = {
               desc = "Next buffer";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>B";
+            action.__raw = ''
+              function()
+                local current_buf = vim.api.nvim_get_current_buf()
+                local bufname = vim.api.nvim_buf_get_name(current_buf)
+
+                if bufname == "" or vim.bo[current_buf].buftype ~= "" then
+                  vim.notify("❌ Current buffer is not a file", vim.log.levels.WARN, {
+                    title = "Close Other Buffers"
+                  })
+                  return
+                end
+
+                local buffers = vim.api.nvim_list_bufs()
+                local closed_count = 0
+
+                for _, buf in ipairs(buffers) do
+                  if buf ~= current_buf and vim.api.nvim_buf_is_valid(buf) then
+                    local buf_modified = vim.bo[buf].modified
+                    local bufname_other = vim.api.nvim_buf_get_name(buf)
+                    local is_listed = vim.bo[buf].buflisted
+
+                    if not buf_modified and is_listed then
+                      vim.api.nvim_buf_delete(buf, { force = false })
+                      closed_count = closed_count + 1
+                    end
+                  end
+                end
+
+                local filename = vim.fn.fnamemodify(bufname, ":t")
+                if closed_count == 0 then
+                  vim.notify("💡 No other buffers to close", vim.log.levels.INFO, {
+                    title = "Close Other Buffers"
+                  })
+                else
+                  vim.notify("🗑️ Closed " .. closed_count .. " buffers, kept: " .. filename, vim.log.levels.INFO, {
+                    title = "Close Other Buffers"
+                  })
+                end
+              end
+            '';
+            options = {
+              desc = "Close all other buffers";
               silent = true;
             };
           }
