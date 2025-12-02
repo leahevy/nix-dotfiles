@@ -171,7 +171,8 @@ args@{
           termguicolors = true;
           mouse = "a";
           wrap = true;
-          conceallevel = 1;
+          conceallevel = 2;
+          concealcursor = "";
           linebreak = true;
           breakindent = true;
           showbreak = "↪ ";
