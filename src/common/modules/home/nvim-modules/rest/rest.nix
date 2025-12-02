@@ -19,6 +19,15 @@ args@{
     context@{ config, options, ... }:
     {
       programs.nixvim = {
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
+
+          _G.nx_modules["30-rest-globals"] = function()
+            _G.is_http_file = function()
+              return vim.bo.filetype == "http"
+            end
+          end
+        '';
         plugins.rest = {
           enable = true;
           enableHttpFiletypeAssociation = true;
@@ -29,51 +38,19 @@ args@{
           pkgs.vimPlugins.nvim-treesitter.builtGrammars.http
         ];
 
-        keymaps = [
+        autoCmd = [
           {
-            mode = "n";
-            key = "<localleader>rr";
-            action = "<cmd>Rest run<CR>";
-            options = {
-              silent = true;
-              desc = "Run request under cursor";
-            };
-          }
-          {
-            mode = "n";
-            key = "<localleader>re";
-            action = "<cmd>Telescope rest select_env<CR>";
-            options = {
-              silent = true;
-              desc = "Select environment";
-            };
-          }
-          {
-            mode = "n";
-            key = "<localleader>rs";
-            action = "<cmd>Rest env show<CR>";
-            options = {
-              silent = true;
-              desc = "Show current environment";
-            };
-          }
-          {
-            mode = "n";
-            key = "<localleader>rc";
-            action = "<cmd>Rest cookies<CR>";
-            options = {
-              silent = true;
-              desc = "Edit cookies";
-            };
-          }
-          {
-            mode = "n";
-            key = "<localleader>rL";
-            action = "<cmd>split | Rest logs<CR>";
-            options = {
-              silent = true;
-              desc = "Show logs in split";
-            };
+            event = [ "FileType" ];
+            pattern = [ "http" ];
+            callback.__raw = ''
+              function()
+                vim.keymap.set("n", "<localleader>rr", "<cmd>Rest run<CR>", { desc = "Run request under cursor", buffer = true, silent = true })
+                vim.keymap.set("n", "<localleader>re", "<cmd>Telescope rest select_env<CR>", { desc = "Select environment", buffer = true, silent = true })
+                vim.keymap.set("n", "<localleader>rs", "<cmd>Rest env show<CR>", { desc = "Show current environment", buffer = true, silent = true })
+                vim.keymap.set("n", "<localleader>rc", "<cmd>Rest cookies<CR>", { desc = "Edit cookies", buffer = true, silent = true })
+                vim.keymap.set("n", "<localleader>rL", "<cmd>split | Rest logs<CR>", { desc = "Show logs in split", buffer = true, silent = true })
+              end
+            '';
           }
         ];
 
@@ -82,31 +59,37 @@ args@{
             __unkeyed-1 = "<localleader>r";
             group = "REST API";
             icon = "🌐";
+            cond.__raw = "function() return _G.is_http_file() end";
           }
           {
             __unkeyed-1 = "<localleader>rr";
             desc = "Run request under cursor";
             icon = "▶️";
+            cond.__raw = "function() return _G.is_http_file() end";
           }
           {
             __unkeyed-1 = "<localleader>re";
             desc = "Select environment";
             icon = "🌍";
+            cond.__raw = "function() return _G.is_http_file() end";
           }
           {
             __unkeyed-1 = "<localleader>rs";
             desc = "Show current environment";
             icon = "📋";
+            cond.__raw = "function() return _G.is_http_file() end";
           }
           {
             __unkeyed-1 = "<localleader>rc";
             desc = "Edit cookies";
             icon = "🍪";
+            cond.__raw = "function() return _G.is_http_file() end";
           }
           {
             __unkeyed-1 = "<localleader>rL";
             desc = "Show logs in split";
             icon = "📄";
+            cond.__raw = "function() return _G.is_http_file() end";
           }
         ];
       };
