@@ -18,6 +18,7 @@ args@{
   settings = {
     wikiPath = "~/.local/share/nvim/wiki/";
     homePage = "index.md";
+    enableUI = false;
   };
 
   assertions = [
@@ -110,7 +111,7 @@ args@{
               };
             };
             ui = {
-              enable = true;
+              enable = self.settings.enableUI;
               checkboxes = {
                 " " = {
                   char = "󰄱";
