@@ -197,6 +197,24 @@ args@{
             desc = "Insert referenced note links";
             icon = "❓";
           }
+          {
+            __unkeyed-1 = "<leader>wr";
+            desc = "Rename note";
+            icon = "✏️";
+            cond.__raw = "function() return _G.is_obsidian_vault_file() end";
+          }
+          {
+            __unkeyed-1 = "<leader>wn";
+            desc = "Go to note";
+            icon = "📄";
+            cond.__raw = "function() return _G.is_obsidian_vault_file() end";
+          }
+          {
+            __unkeyed-1 = "<leader>wc";
+            desc = "Toggle checkbox";
+            icon = "☑️";
+            cond.__raw = "function() return _G.is_obsidian_vault_file() end";
+          }
         ];
 
         keymaps = [
@@ -366,19 +384,14 @@ args@{
             pattern = [ "*.md" ];
             callback.__raw = ''
               function()
-                local file_path = vim.fn.expand('%:p')
-                local vault_path = vim.fn.expand('${normalizedVaultPath}')
-                local is_in_vault = string.find(file_path, vault_path, 1, true) == 1
-
-                if is_in_vault then
+                if _G.is_obsidian_vault_file() then
                   vim.keymap.set("n", "<leader>wr", "<cmd>ObsidianRename<cr>", { desc = "Rename note", buffer = true })
                   vim.keymap.set("n", "<leader>wn", "<cmd>ObsidianNew<cr>", { desc = "Go to note", buffer = true })
-                  vim.keymap.set("n", "<leader>wc", function()
-                    return require("obsidian").util.toggle_checkbox()
-                  end, { expr = true, desc = "Toggle checkbox", buffer = true })
+                  vim.keymap.set("n", "<leader>wc", "<cmd>ObsidianToggleCheckbox<cr>", { desc = "Toggle checkbox", buffer = true })
                   vim.keymap.set("n", "<CR>", function()
                     return require("obsidian").util.gf_passthrough()
                   end, { expr = true, desc = "Follow link", buffer = true })
+
                 end
               end
             '';
@@ -387,6 +400,16 @@ args@{
 
         extraConfigLua = ''
           _G.nx_modules = _G.nx_modules or {}
+
+          _G.nx_modules["40-obsidian-globals"] = function()
+            _G.is_obsidian_vault_file = function()
+              local file_path = vim.fn.expand('%:p')
+              local vault_path = vim.fn.expand('${self.settings.wikiPath}')
+              local normalized_file_path = vim.fn.resolve(file_path)
+              local normalized_vault_path = vim.fn.resolve(vault_path)
+              return string.find(normalized_file_path, normalized_vault_path, 1, true) == 1
+            end
+          end
 
           _G.nx_modules["45-obsidian-unlinked"] = function()
             _G.obsidian_insert_linked_note = function()
