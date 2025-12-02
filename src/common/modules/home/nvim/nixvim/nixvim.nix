@@ -531,9 +531,15 @@ args@{
                     vim.api.nvim_set_hl(0, "Visual", { bg = "#1a4d33", fg = "#37f499" })
                   end
 
-                  vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+                  vim.api.nvim_create_autocmd("VimEnter", {
                     callback = function()
                       vim.defer_fn(fix_black_background, 100)
+                    end,
+                  })
+
+                  vim.api.nvim_create_autocmd("ColorScheme", {
+                    callback = function()
+                      fix_black_background()
                     end,
                   })
 
@@ -558,9 +564,15 @@ args@{
                     vim.api.nvim_set_hl(0, "CursorColumn", { bg = "${self.settings.overrideCursorHighlightColour}" })
                   end
 
-                  vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
+                  vim.api.nvim_create_autocmd("VimEnter", {
                     callback = function()
                       vim.defer_fn(fix_cursor_highlight, 100)
+                    end,
+                  })
+
+                  vim.api.nvim_create_autocmd("ColorScheme", {
+                    callback = function()
+                      fix_cursor_highlight()
                     end,
                   })
                 end
