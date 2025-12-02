@@ -17,6 +17,7 @@ args@{
 
   settings = {
     wikiPath = "~/.local/share/nvim/wiki/";
+    homePage = "index.md";
   };
 
   assertions = [
@@ -141,32 +142,42 @@ args@{
             icon = "󰃭";
           }
           {
-            __unkeyed-1 = "<leader>wt";
-            desc = "Wiki in new tab";
-            icon = "󰓩";
+            __unkeyed-1 = "<leader>wW";
+            desc = "Wiki index (split right)";
+            icon = "󰃭";
           }
           {
-            __unkeyed-1 = "<leader>ws";
+            __unkeyed-1 = "<leader>wh";
+            desc = "Homepage";
+            icon = "🏠";
+          }
+          {
+            __unkeyed-1 = "<leader>wH";
+            desc = "Homepage (split right)";
+            icon = "🏠";
+          }
+          {
+            __unkeyed-1 = "<leader>w<leader>";
             desc = "Search wiki";
             icon = "󰓩";
           }
           {
-            __unkeyed-1 = "<leader>w<leader>w";
+            __unkeyed-1 = "<leader>wdw";
             desc = "Make today diary note";
             icon = "󰃭";
           }
           {
-            __unkeyed-1 = "<leader>w<leader>y";
+            __unkeyed-1 = "<leader>wdy";
             desc = "Make yesterday diary note";
             icon = "󰃭";
           }
           {
-            __unkeyed-1 = "<leader>w<leader>t";
-            desc = "Make today diary note (new tab)";
+            __unkeyed-1 = "<leader>wdt";
+            desc = "Make today diary note (split right)";
             icon = "󰃭";
           }
           {
-            __unkeyed-1 = "<leader>w<leader>m";
+            __unkeyed-1 = "<leader>wdm";
             desc = "Make tomorrow diary note";
             icon = "󰃭";
           }
@@ -208,16 +219,46 @@ args@{
           }
           {
             mode = "n";
-            key = "<leader>wt";
-            action = "<cmd>tabnew | ObsidianQuickSwitch<cr>";
+            key = "<leader>wW";
+            action = "<cmd>vsplit | ObsidianQuickSwitch<cr>";
             options = {
-              desc = "Wiki in new tab";
+              desc = "Wiki index (split right)";
               silent = true;
             };
           }
           {
             mode = "n";
-            key = "<leader>ws";
+            key = "<leader>wh";
+            action.__raw = ''
+              function()
+                local vault_path = vim.fn.expand('${normalizedVaultPath}')
+                local home_page = vault_path .. "/${self.settings.homePage}"
+                vim.cmd("edit " .. home_page)
+              end
+            '';
+            options = {
+              desc = "Homepage";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>wH";
+            action.__raw = ''
+              function()
+                local vault_path = vim.fn.expand('${normalizedVaultPath}')
+                local home_page = vault_path .. "/${self.settings.homePage}"
+                vim.cmd("vsplit " .. home_page)
+              end
+            '';
+            options = {
+              desc = "Homepage (split right)";
+              silent = true;
+            };
+          }
+          {
+            mode = "n";
+            key = "<leader>w<leader>";
             action = "<cmd>ObsidianSearch<cr>";
             options = {
               desc = "Search wiki";
@@ -226,16 +267,16 @@ args@{
           }
           {
             mode = "n";
-            key = "<leader>w<leader>w";
+            key = "<leader>wdw";
             action = "<cmd>ObsidianToday<cr>";
             options = {
-              desc = "Make diary note";
+              desc = "Make today diary note";
               silent = true;
             };
           }
           {
             mode = "n";
-            key = "<leader>w<leader>y";
+            key = "<leader>wdy";
             action = "<cmd>ObsidianYesterday<cr>";
             options = {
               desc = "Make yesterday diary note";
@@ -244,16 +285,16 @@ args@{
           }
           {
             mode = "n";
-            key = "<leader>w<leader>t";
-            action = "<cmd>tabnew | ObsidianToday<cr>";
+            key = "<leader>wdt";
+            action = "<cmd>vsplit | ObsidianToday<cr>";
             options = {
-              desc = "Make diary note (tab)";
+              desc = "Make today diary note (split right)";
               silent = true;
             };
           }
           {
             mode = "n";
-            key = "<leader>w<leader>m";
+            key = "<leader>wdm";
             action = "<cmd>ObsidianTomorrow<cr>";
             options = {
               desc = "Make tomorrow diary note";
