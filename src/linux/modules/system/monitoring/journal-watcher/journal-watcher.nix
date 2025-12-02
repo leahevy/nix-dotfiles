@@ -95,6 +95,7 @@ args@{
       "usb.*failed to get current value for ch [0-9]+ \\(-[0-9]+\\)"
       "usb.*cannot get min/max values for control [0-9]+ \\(id [0-9]+\\)"
       "usb.*couldn't allocate usb_device"
+      "usb.*can't set config #[0-9]+, error -[0-9]+"
     ];
     desktopStringsToIgnore = [
       "usb.*can't set config.*error -71"
