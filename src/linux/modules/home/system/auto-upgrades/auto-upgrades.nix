@@ -58,7 +58,7 @@ args@{
           echo
 
           echo -e "''${GREEN}=== LAST UPGRADE STATUS ===''${NC}"
-          if systemctl is-active --quiet nx-auto-upgrade.service; then
+          if [[ "$(systemctl show nx-auto-upgrade.service -p ActiveState --value)" != "inactive" ]]; then
             echo -e "''${YELLOW}Auto-upgrade currently running...''${NC}"
           else
             systemctl status nx-auto-upgrade.service --no-pager --lines=5 2>/dev/null || true
@@ -69,7 +69,7 @@ args@{
           nx-user-notify-logs recent 2>/dev/null | grep -i "auto-upgrade" || echo "No auto-upgrade logs found"
           echo
 
-          if ! systemctl is-active --quiet nx-auto-upgrade.service && systemctl is-failed --quiet nx-auto-upgrade.service; then
+          if [[ "$(systemctl show nx-auto-upgrade.service -p ActiveState --value)" == "inactive" ]] && systemctl is-failed --quiet nx-auto-upgrade.service; then
             echo -e "''${RED}=== AUTO-UPGRADE SERVICE FAILURE LOGS ===''${NC}"
             journalctl -u nx-auto-upgrade.service --no-pager --lines=15 --reverse 2>/dev/null
             echo
@@ -92,7 +92,7 @@ args@{
             exit 1
           fi
 
-          if systemctl is-active --quiet nx-auto-upgrade.service; then
+          if [[ "$(systemctl show nx-auto-upgrade.service -p ActiveState --value)" != "inactive" ]]; then
             echo "Error: Auto-upgrade is already running!"
             exit 1
           fi

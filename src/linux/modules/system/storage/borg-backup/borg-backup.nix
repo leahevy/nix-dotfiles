@@ -119,8 +119,9 @@ args@{
 
       checkAutoUpgradeRunningScript = ''
         check_auto_upgrade_running() {
-          if ${pkgs.systemd}/bin/systemctl is-active --quiet nx-auto-upgrade.service; then
-            ${logScript "info" "INFO: Auto-upgrade is currently running, skipping backup"}
+          local auto_upgrade_state=$(${pkgs.systemd}/bin/systemctl show nx-auto-upgrade.service -p ActiveState --value)
+          if [[ "$auto_upgrade_state" != "inactive" ]]; then
+            ${logScript "info" "INFO: Auto-upgrade is currently running (state: $auto_upgrade_state), skipping backup"}
             exit 0
           fi
         }
