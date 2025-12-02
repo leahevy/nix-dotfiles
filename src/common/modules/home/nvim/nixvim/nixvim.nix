@@ -79,7 +79,7 @@ args@{
     };
   };
 
-  settings = {
+  settings = rec {
     withInitialTabs = true;
     withSocket = true;
     withData = false;
@@ -110,7 +110,187 @@ args@{
         hash = "sha256-M2n3kWMPTIEAPXMjJd73z2+Pvf60+oUcRyJ8tKdir1Q=";
       };
       setupFunction = "eldritch";
-      settings = { };
+      tintedStyle = "green";
+      settings = {
+        on_colors.__raw = ''
+          function(colors)
+            local tinted_style = "${
+              if foreignTheme.tintedStyle == null then "" else foreignTheme.tintedStyle
+            }"
+            if tinted_style == "green" then
+              colors.none = "NONE"
+              colors.bg_dark = "#000000"
+              colors.bg = "#000000"
+              colors.bg_highlight = "#000000"
+              colors.terminal_black = "#414868"
+              colors.fg = "#F0FFF0"
+              colors.fg_dark = "#B8E8B8"
+              colors.fg_gutter = "#3b4261"
+              colors.fg_gutter_light = "#60C090"
+              colors.dark3 = "#8AB060"
+              colors.comment = "#306640"
+              colors.dark5 = "#5D9B62"
+              colors.bright_cyan = "#5FFFC8"
+              colors.cyan = "#88EEAA"
+              colors.dark_cyan = "#30EEB5"
+              colors.visual = "#3A7B45"
+              colors.bg_visual = "#3A7B45"
+              colors.magenta = "#40C8A0"
+              colors.magenta2 = "#80E8A0"
+              colors.magenta3 = "#2A6530"
+              colors.pink = "#C8E860"
+              colors.purple = "#40BB77"
+              colors.orange = "#D8C040"
+              colors.yellow = "#E4FF67"
+              colors.dark_yellow = "#AFDA50"
+              colors.green = "#20FF88"
+              colors.bright_green = "#00FF55"
+              colors.dark_green = "#22B46C"
+              colors.red = "#E07575"
+              colors.bright_red = "#f0313e"
+              colors.git = {
+                add = "#37f499",
+                change = "#E4FF67",
+                delete = "#E07575"
+              }
+              colors.gitSigns = {
+                add = "#37f499",
+                change = "#E4FF67",
+                delete = "#E07575",
+              }
+            elseif tinted_style == "red" then
+              colors.none = "NONE"
+              colors.bg_dark = "#000000"
+              colors.bg = "#000000"
+              colors.bg_highlight = "#000000"
+              colors.terminal_black = "#414868"
+              colors.fg = "#FFF0F0"
+              colors.fg_dark = "#E8B8B8"
+              colors.fg_gutter = "#3b4261"
+              colors.fg_gutter_light = "#C09060"
+              colors.dark3 = "#B06060"
+              colors.comment = "#664030"
+              colors.dark5 = "#9B5D5D"
+              colors.bright_cyan = "#FFC85F"
+              colors.cyan = "#EE88AA"
+              colors.dark_cyan = "#EE30B5"
+              colors.visual = "#7B3A45"
+              colors.bg_visual = "#7B3A45"
+              colors.magenta = "#C84040"
+              colors.magenta2 = "#E88080"
+              colors.magenta3 = "#652A2A"
+              colors.pink = "#E8C860"
+              colors.purple = "#CC5588"
+              colors.orange = "#E8A040"
+              colors.yellow = "#E4FF67"
+              colors.dark_yellow = "#DA5050"
+              colors.green = "#E07575"
+              colors.bright_green = "#FF5500"
+              colors.dark_green = "#B46C22"
+              colors.red = "#FF2088"
+              colors.bright_red = "#ff3050"
+              colors.git = {
+                add = "#37f499",
+                change = "#E4FF67",
+                delete = "#FF2088"
+              }
+              colors.gitSigns = {
+                add = "#37f499",
+                change = "#E4FF67",
+                delete = "#FF2088",
+              }
+            elseif tinted_style == "blue" then
+              colors.none = "NONE"
+              colors.bg_dark = "#000000"
+              colors.bg = "#000000"
+              colors.bg_highlight = "#000000"
+              colors.terminal_black = "#414868"
+              colors.fg = "#F0F0FF"
+              colors.fg_dark = "#B8B8E8"
+              colors.fg_gutter = "#3b4261"
+              colors.fg_gutter_light = "#6090C0"
+              colors.dark3 = "#6060B0"
+              colors.comment = "#304066"
+              colors.dark5 = "#5D5D9B"
+              colors.bright_cyan = "#5FC8FF"
+              colors.cyan = "#88AAEE"
+              colors.dark_cyan = "#30B5EE"
+              colors.visual = "#3A457B"
+              colors.bg_visual = "#3A457B"
+              colors.magenta = "#4040C8"
+              colors.magenta2 = "#8080E8"
+              colors.magenta3 = "#2A2A65"
+              colors.pink = "#60C8E8"
+              colors.purple = "#5588CC"
+              colors.orange = "#40A0E8"
+              colors.yellow = "#67E4FF"
+              colors.dark_yellow = "#5050DA"
+              colors.green = "#7575E0"
+              colors.bright_green = "#0055FF"
+              colors.dark_green = "#226CB4"
+              colors.red = "#E07575"
+              colors.bright_red = "#5030ff"
+              colors.git = {
+                add = "#37f499",
+                change = "#67E4FF",
+                delete = "#E07575"
+              }
+              colors.gitSigns = {
+                add = "#37f499",
+                change = "#67E4FF",
+                delete = "#E07575",
+              }
+            elseif tinted_style == "yellow" then
+              colors.none = "NONE"
+              colors.bg_dark = "#000000"
+              colors.bg = "#000000"
+              colors.bg_highlight = "#000000"
+              colors.terminal_black = "#414868"
+              colors.fg = "#FFFFF0"
+              colors.fg_dark = "#E8E8B8"
+              colors.fg_gutter = "#3b4261"
+              colors.fg_gutter_light = "#C0C060"
+              colors.dark3 = "#B0B060"
+              colors.comment = "#666640"
+              colors.dark5 = "#9B9B5D"
+              colors.bright_cyan = "#FFFF5F"
+              colors.cyan = "#EEEE88"
+              colors.dark_cyan = "#EEEE30"
+              colors.visual = "#7B7B3A"
+              colors.bg_visual = "#7B7B3A"
+              colors.magenta = "#C8C840"
+              colors.magenta2 = "#E8E880"
+              colors.magenta3 = "#65652A"
+              colors.pink = "#E8E860"
+              colors.purple = "#BBBB55"
+              colors.orange = "#E8D840"
+              colors.yellow = "#FFFF67"
+              colors.dark_yellow = "#DADA50"
+              colors.green = "#E0E075"
+              colors.bright_green = "#FFFF00"
+              colors.dark_green = "#B4B422"
+              colors.red = "#E07575"
+              colors.bright_red = "#ff5030"
+              colors.git = {
+                add = "#37f499",
+                change = "#FFFF67",
+                delete = "#E07575"
+              }
+              colors.gitSigns = {
+                add = "#37f499",
+                change = "#FFFF67",
+                delete = "#E07575",
+              }
+            elseif tinted_style ~= "" then
+              vim.defer_fn(function()
+                vim.notify("⚠️ Invalid tintedStyle '" .. tinted_style .. "'. Using default eldritch theme instead.", vim.log.levels.WARN, {
+                  title = "Eldritch Theme Configuration"
+                })
+              end, 750)
+            end
+          end
+        '';
+      };
     };
   };
 
@@ -231,23 +411,37 @@ args@{
               ''
             ]
             ++ lib.optionals (self.settings.foreignTheme != null || self.settings.overrideThemeName != null) [
-              ''
-                _G.nx_modules["00-colorscheme"] = function()
-                  vim.cmd("colorscheme ${
-                    if self.settings.foreignTheme != null then
-                      self.settings.foreignTheme.name
+              (
+                let
+                  toLua =
+                    value:
+                    if builtins.isAttrs value then
+                      if value ? __raw then
+                        value.__raw
+                      else
+                        let
+                          pairs = lib.mapAttrsToList (k: v: "[${builtins.toJSON k}] = ${toLua v}") value;
+                        in
+                        "{ ${lib.concatStringsSep ", " pairs} }"
+                    else if builtins.isList value then
+                      "{ ${lib.concatMapStringsSep ", " toLua value} }"
                     else
-                      self.settings.overrideThemeName
-                  }")
-                end
-              ''
-            ]
-            ++ lib.optionals (self.settings.foreignTheme != null) [
-              ''
-                _G.nx_modules["01-foreign-theme"] = function()
-                  require("${self.settings.foreignTheme.setupFunction}").setup(${builtins.toJSON self.settings.foreignTheme.settings})
-                end
-              ''
+                      builtins.toJSON value;
+                in
+                ''
+                  _G.nx_modules["00-colorscheme"] = function()
+                    ${lib.optionalString (self.settings.foreignTheme != null) ''
+                      require("${self.settings.foreignTheme.setupFunction}").setup(${toLua self.settings.foreignTheme.settings})
+                    ''}
+                    vim.cmd("colorscheme ${
+                      if self.settings.foreignTheme != null then
+                        self.settings.foreignTheme.name
+                      else
+                        self.settings.overrideThemeName
+                    }")
+                  end
+                ''
+              )
             ]
             ++ [
               ''
