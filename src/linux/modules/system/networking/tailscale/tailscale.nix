@@ -73,5 +73,19 @@ args@{
           "/var/lib/tailscale"
         ];
       };
+
+      systemd.services.tailscaled-autoconnect = {
+        wantedBy = lib.mkForce [ ];
+        after = [ "multi-user.target" ];
+        requires = lib.mkForce [ "tailscaled.service" ];
+      };
+
+      systemd.timers.tailscaled-autoconnect = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "30s";
+          OnUnitInactiveSec = "300s";
+        };
+      };
     };
 }
