@@ -19,10 +19,10 @@ args@{
     colors = {
       normal = "#37f499";
       insert = "#ff6b9d";
-      visual = "#66d9ef";
+      visual = "#c678dd";
       command = "#ffd93d";
       replace = "#ff4444";
-      select = "#c678dd";
+      select = "#66d9ef";
       terminal = "#4ec9b0";
       terminalNormal = "#4ec9b0";
     };
