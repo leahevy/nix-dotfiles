@@ -53,6 +53,18 @@ args@{
           }
         ];
 
+        autoCmd = [
+          {
+            event = "FileType";
+            pattern = "fugitiveblame";
+            callback.__raw = ''
+              function()
+                vim.keymap.set('n', 'q', ':close<CR>', { buffer = true, silent = true })
+              end
+            '';
+          }
+        ];
+
         plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
           {
             __unkeyed-1 = "<leader>gg";

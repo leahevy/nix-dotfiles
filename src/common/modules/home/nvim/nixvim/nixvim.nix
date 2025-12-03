@@ -669,6 +669,39 @@ args@{
               '';
             };
           }
+          {
+            event = [ "FileType" ];
+            pattern = [ "qf" ];
+            callback = {
+              __raw = ''
+                function()
+                  vim.keymap.set('n', 'q', ':close<CR>', { buffer = true, silent = true })
+                end
+              '';
+            };
+          }
+          {
+            event = [ "FileType" ];
+            pattern = [ "help" ];
+            callback = {
+              __raw = ''
+                function()
+                  vim.keymap.set('n', 'q', ':close<CR>', { buffer = true, silent = true })
+                end
+              '';
+            };
+          }
+          {
+            event = [ "FileType" ];
+            pattern = [ "netrw" ];
+            callback = {
+              __raw = ''
+                function()
+                  vim.keymap.set('n', 'q', ':close<CR>', { buffer = true, silent = true })
+                end
+              '';
+            };
+          }
         ];
 
         extraPlugins = lib.mkIf (self.settings.foreignTheme != null) [
