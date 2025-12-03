@@ -255,19 +255,12 @@ args@{
         extraConfigLua = ''
           _G.nx_modules = _G.nx_modules or {}
           _G.nx_modules["50-twilight-toggle"] = function()
-            _G.twilight_enabled = false
-
             function _G.toggle_twilight()
-              _G.twilight_enabled = not _G.twilight_enabled
+              require("twilight").toggle()
 
-              if _G.twilight_enabled then
-                require("twilight").enable()
-              else
-                require("twilight").disable()
-              end
-
-              local status = _G.twilight_enabled and "enabled" or "disabled"
-              local icon = _G.twilight_enabled and "✅" or "❌"
+              local enabled = require("twilight.view").enabled
+              local status = enabled and "enabled" or "disabled"
+              local icon = enabled and "✅" or "❌"
 
               vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
                 title = "Twilight"
