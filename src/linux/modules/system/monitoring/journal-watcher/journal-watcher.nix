@@ -189,6 +189,8 @@ args@{
       "Disabling lock debugging due to kernel taint"
       "NVRM: loading NVIDIA UNIX x86_64 Kernel Module"
       "nvidia_uvm: module uses symbols.*from proprietary module nvidia, inheriting taint"
+      "NVRM: GPU at PCI:.*: GPU-.*"
+      "NVRM: Xid \\(PCI:.*\\):.*"
     ];
     additionalStringsToIgnore = [ ];
 
