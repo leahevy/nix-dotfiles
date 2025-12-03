@@ -43,6 +43,8 @@ args@{
           window-rules = [
             {
               matches = [ { app-id = "Todoist"; } ];
+              max-width = 1000;
+              max-height = 800;
               open-on-workspace = "scratch";
               open-floating = true;
               open-focused = false;
