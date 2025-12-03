@@ -241,9 +241,6 @@ args@{
             "9" = {
               name = "9";
             };
-            "10" = {
-              name = "10";
-            };
             "scratch" = {
               name = "scratch";
             };
@@ -284,10 +281,6 @@ args@{
             };
             "9" = {
               name = "9";
-              open-on-output = main;
-            };
-            "10" = {
-              name = "10";
               open-on-output = main;
             };
             "scratch" = {
@@ -331,10 +324,6 @@ args@{
             };
             "9" = {
               name = "9";
-              open-on-output = secondary;
-            };
-            "10" = {
-              name = "10";
               open-on-output = secondary;
             };
             "scratch" = {
@@ -1178,11 +1167,6 @@ args@{
                   hotkey-overlay.title = "Workspace:Workspace 9";
                 };
 
-                "Mod+0" = {
-                  action = spawn-sh "niri-workspace-action focus-workspace 10";
-                  hotkey-overlay.title = "Workspace:Workspace 10";
-                };
-
                 "Mod+S" = {
                   action = spawn-sh "niri-workspace-action focus-workspace scratch";
                   hotkey-overlay.title = "Workspace:Scratchpad";
@@ -1241,11 +1225,6 @@ args@{
                 "Mod+Shift+9" = {
                   action = spawn-sh "niri-workspace-action move-column-to-workspace 9";
                   hotkey-overlay.title = "Windows:Move to workspace 9";
-                };
-
-                "Mod+Shift+0" = {
-                  action = spawn-sh "niri-workspace-action move-column-to-workspace 10";
-                  hotkey-overlay.title = "Windows:Move to workspace 10";
                 };
 
                 "Mod+Shift+S" = {
