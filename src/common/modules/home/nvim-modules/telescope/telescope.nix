@@ -119,7 +119,7 @@ args@{
               vim.api.nvim_set_hl(0, "TelescopePromptNormal", { bg = "#000000" })
               vim.api.nvim_set_hl(0, "TelescopeResultsNormal", { bg = "#000000" })
               vim.api.nvim_set_hl(0, "TelescopePreviewNormal", { bg = "#000000" })
-              vim.api.nvim_set_hl(0, "TelescopeSelection", { bg = "#111111" })
+              vim.api.nvim_set_hl(0, "TelescopeSelection", { bg = "#242424" })
             end
 
             vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
