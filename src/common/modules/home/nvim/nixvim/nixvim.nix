@@ -123,7 +123,7 @@ args@{
               colors.bg = "#000000"
               colors.bg_highlight = "#000000"
               colors.terminal_black = "#414868"
-              colors.fg = "#F0FFF0"
+              colors.fg = "#ffFF88"
               colors.fg_dark = "#B8E8B8"
               colors.fg_gutter = "#3b4261"
               colors.fg_gutter_light = "#60C090"
@@ -138,24 +138,24 @@ args@{
               colors.magenta = "#40C8A0"
               colors.magenta2 = "#80E8A0"
               colors.magenta3 = "#2A6530"
-              colors.pink = "#C8E860"
+              colors.pink = "#73ff60"
               colors.purple = "#40BB77"
-              colors.orange = "#D8C040"
-              colors.yellow = "#E4FF67"
+              colors.orange = "#88C040"
+              colors.yellow = "#74FF67"
               colors.dark_yellow = "#AFDA50"
               colors.green = "#20FF88"
               colors.bright_green = "#00FF55"
               colors.dark_green = "#22B46C"
-              colors.red = "#E07575"
-              colors.bright_red = "#f0313e"
+              colors.red = "#00e188"
+              colors.bright_red = "#44ee00"
               colors.git = {
                 add = "#37f499",
-                change = "#E4FF67",
+                change = "#FFFF67",
                 delete = "#E07575"
               }
               colors.gitSigns = {
                 add = "#37f499",
-                change = "#E4FF67",
+                change = "#FFFF67",
                 delete = "#E07575",
               }
             elseif tinted_style == "red" then
@@ -164,14 +164,14 @@ args@{
               colors.bg = "#000000"
               colors.bg_highlight = "#000000"
               colors.terminal_black = "#414868"
-              colors.fg = "#FFF0F0"
+              colors.fg = "#FF8888"
               colors.fg_dark = "#E8B8B8"
               colors.fg_gutter = "#3b4261"
               colors.fg_gutter_light = "#C09060"
               colors.dark3 = "#B06060"
               colors.comment = "#664030"
               colors.dark5 = "#9B5D5D"
-              colors.bright_cyan = "#FFC85F"
+              colors.bright_cyan = "#FF685F"
               colors.cyan = "#EE88AA"
               colors.dark_cyan = "#EE30B5"
               colors.visual = "#7B3A45"
@@ -179,25 +179,25 @@ args@{
               colors.magenta = "#C84040"
               colors.magenta2 = "#E88080"
               colors.magenta3 = "#652A2A"
-              colors.pink = "#E8C860"
-              colors.purple = "#CC5588"
-              colors.orange = "#E8A040"
-              colors.yellow = "#E4FF67"
+              colors.pink = "#FF6073"
+              colors.purple = "#BB4077"
+              colors.orange = "#C04088"
+              colors.yellow = "#FF6774"
               colors.dark_yellow = "#DA5050"
-              colors.green = "#E07575"
-              colors.bright_green = "#FF5500"
-              colors.dark_green = "#B46C22"
+              colors.green = "#E18800"
+              colors.bright_green = "#EE0044"
+              colors.dark_green = "#B42222"
               colors.red = "#FF2088"
               colors.bright_red = "#ff3050"
               colors.git = {
                 add = "#37f499",
-                change = "#E4FF67",
-                delete = "#FF2088"
+                change = "#FFFF67",
+                delete = "#E07575"
               }
               colors.gitSigns = {
                 add = "#37f499",
-                change = "#E4FF67",
-                delete = "#FF2088",
+                change = "#FFFF67",
+                delete = "#E07575",
               }
             elseif tinted_style == "blue" then
               colors.none = "NONE"
@@ -205,7 +205,7 @@ args@{
               colors.bg = "#000000"
               colors.bg_highlight = "#000000"
               colors.terminal_black = "#414868"
-              colors.fg = "#F0F0FF"
+              colors.fg = "#8888FF"
               colors.fg_dark = "#B8B8E8"
               colors.fg_gutter = "#3b4261"
               colors.fg_gutter_light = "#6090C0"
@@ -220,24 +220,24 @@ args@{
               colors.magenta = "#4040C8"
               colors.magenta2 = "#8080E8"
               colors.magenta3 = "#2A2A65"
-              colors.pink = "#60C8E8"
-              colors.purple = "#5588CC"
-              colors.orange = "#40A0E8"
-              colors.yellow = "#67E4FF"
+              colors.pink = "#6073FF"
+              colors.purple = "#4077BB"
+              colors.orange = "#4088C0"
+              colors.yellow = "#6774FF"
               colors.dark_yellow = "#5050DA"
-              colors.green = "#7575E0"
-              colors.bright_green = "#0055FF"
-              colors.dark_green = "#226CB4"
-              colors.red = "#E07575"
-              colors.bright_red = "#5030ff"
+              colors.green = "#0088E1"
+              colors.bright_green = "#0044EE"
+              colors.dark_green = "#2222B4"
+              colors.red = "#8800E1"
+              colors.bright_red = "#0044EE"
               colors.git = {
                 add = "#37f499",
-                change = "#67E4FF",
+                change = "#FFFF67",
                 delete = "#E07575"
               }
               colors.gitSigns = {
                 add = "#37f499",
-                change = "#67E4FF",
+                change = "#FFFF67",
                 delete = "#E07575",
               }
             elseif tinted_style == "yellow" then
@@ -246,7 +246,7 @@ args@{
               colors.bg = "#000000"
               colors.bg_highlight = "#000000"
               colors.terminal_black = "#414868"
-              colors.fg = "#FFFFF0"
+              colors.fg = "#FFFF88"
               colors.fg_dark = "#E8E8B8"
               colors.fg_gutter = "#3b4261"
               colors.fg_gutter_light = "#C0C060"
@@ -261,16 +261,16 @@ args@{
               colors.magenta = "#C8C840"
               colors.magenta2 = "#E8E880"
               colors.magenta3 = "#65652A"
-              colors.pink = "#E8E860"
-              colors.purple = "#BBBB55"
-              colors.orange = "#E8D840"
+              colors.pink = "#FFFF60"
+              colors.purple = "#BBBB40"
+              colors.orange = "#C0C088"
               colors.yellow = "#FFFF67"
               colors.dark_yellow = "#DADA50"
-              colors.green = "#E0E075"
-              colors.bright_green = "#FFFF00"
+              colors.green = "#E1E100"
+              colors.bright_green = "#EEEE00"
               colors.dark_green = "#B4B422"
-              colors.red = "#E07575"
-              colors.bright_red = "#ff5030"
+              colors.red = "#E1E100"
+              colors.bright_red = "#EEEE00"
               colors.git = {
                 add = "#37f499",
                 change = "#FFFF67",
