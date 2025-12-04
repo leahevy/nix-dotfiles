@@ -26,8 +26,8 @@ args@{
         template = true;
         highlight-dead-chars = true;
         jk-escape = true;
-        vim-airline = true;
-        lualine = false;
+        vim-airline = false;
+        lualine = true;
         startify = false;
         telescope = true;
         telescope-cmdline = true;
