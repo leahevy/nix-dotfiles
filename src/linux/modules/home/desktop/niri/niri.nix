@@ -143,7 +143,7 @@ args@{
     delayedApplicationsToStart = [ ];
     activeColor = "#88cc66";
     inactiveColor = "#222233";
-    switchBackgroundOnWorkspaceChange = true;
+    switchBackgroundOnWorkspaceChange = false;
     modKey = "Super";
     modKeyNested = "Alt";
     honorXDGActivation = true;
