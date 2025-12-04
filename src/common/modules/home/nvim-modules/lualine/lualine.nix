@@ -20,7 +20,7 @@ args@{
     powerlineSymbols = true;
     themeOverride = true;
     transparentBackground = true;
-    alwaysShowTabline = false;
+    alwaysShowTabline = true;
     iconsEnabled = true;
     alwaysDivideMiddle = true;
     showDateTime = false;
