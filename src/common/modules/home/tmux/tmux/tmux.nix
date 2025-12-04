@@ -19,8 +19,8 @@ args@{
     waylandClipboard = false;
     primaryBg = "#37f499";
     primaryFg = "#1a4d33";
-    prefixFg = "#ffaa00";
-    prefixBg = "#332200";
+    prefixFg = "#ff6b9d";
+    prefixBg = "#4d1a33";
     secondaryBg = "#1a4d33";
     secondaryFg = "#37f499";
     statusBg = "#000000";
