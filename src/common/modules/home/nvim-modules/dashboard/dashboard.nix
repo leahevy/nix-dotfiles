@@ -154,9 +154,9 @@ args@{
             vim.api.nvim_set_hl(0, "DashboardProjectTitle", { fg = "#61afef", bold = true })
             vim.api.nvim_set_hl(0, "DashboardProjectTitleIcon", { fg = "#e06c75" })
             vim.api.nvim_set_hl(0, "DashboardProjectIcon", { fg = "#61afef" })
-            vim.api.nvim_set_hl(0, "DashboardMruTitle", { fg = "#98c379", bold = true })
+            vim.api.nvim_set_hl(0, "DashboardMruTitle", { fg = "#55dd99", bold = true })
             vim.api.nvim_set_hl(0, "DashboardMruIcon", { fg = "#e5c07b" })
-            vim.api.nvim_set_hl(0, "DashboardFiles", { fg = "#abb2bf" })
+            vim.api.nvim_set_hl(0, "DashboardFiles", { fg = "#59ef99" })
             vim.api.nvim_set_hl(0, "DashboardShortCutIcon", { fg = "#c678dd" })
 
             local function clean_project_cache()
