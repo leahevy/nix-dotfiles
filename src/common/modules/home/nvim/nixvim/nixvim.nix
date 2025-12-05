@@ -833,421 +833,424 @@ args@{
           maplocalleader = "\\";
         };
 
-        keymaps = [
-          {
-            key = ":";
-            action = ";";
-          }
-          {
-            mode = "v";
-            key = ";";
-            action = ":";
-          }
-        ]
-        ++ lib.optionals (!(self.isModuleEnabled "nvim-modules.telescope-cmdline")) [
-          {
-            mode = "n";
-            key = ";";
-            action = ":";
-          }
-        ]
-        ++ [
-          {
-            mode = [
-              "n"
-              "v"
-            ];
-            key = "j";
-            action = "gj";
-            options = {
-              desc = "Move down through wrapped lines";
-              silent = true;
-            };
-          }
-          {
-            mode = [
-              "n"
-              "v"
-            ];
-            key = "k";
-            action = "gk";
-            options = {
-              desc = "Move up through wrapped lines";
-              silent = true;
-            };
-          }
-          {
-            mode = [
-              "n"
-              "v"
-            ];
-            key = "0";
-            action = "g0";
-            options = {
-              desc = "Move to beginning of wrapped line";
-              silent = true;
-            };
-          }
-          {
-            mode = [
-              "n"
-              "v"
-            ];
-            key = "$";
-            action = "g$";
-            options = {
-              desc = "Move to end of wrapped line";
-              silent = true;
-            };
-          }
-          {
-            mode = [
-              "n"
-              "v"
-            ];
-            key = "^";
-            action = "g^";
-            options = {
-              desc = "Move to first non-blank character of wrapped line";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<C-D>";
-            action.__raw = ''
-              function()
-                local now = vim.loop.now()
-                if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 50) then
-                  return
-                end
-                _G.scroll_processing = true
-                _G.last_scroll_time = now
+        keymaps =
+          (lib.optionals (!(self.isModuleEnabled "nvim-modules.treesitter-textobjects")) [
+            {
+              key = ":";
+              action = ";";
+            }
+          ])
+          ++ [
+            {
+              mode = "v";
+              key = ";";
+              action = ":";
+            }
+          ]
+          ++ lib.optionals (!(self.isModuleEnabled "nvim-modules.telescope-cmdline")) [
+            {
+              mode = "n";
+              key = ";";
+              action = ":";
+            }
+          ]
+          ++ [
+            {
+              mode = [
+                "n"
+                "v"
+              ];
+              key = "j";
+              action = "gj";
+              options = {
+                desc = "Move down through wrapped lines";
+                silent = true;
+              };
+            }
+            {
+              mode = [
+                "n"
+                "v"
+              ];
+              key = "k";
+              action = "gk";
+              options = {
+                desc = "Move up through wrapped lines";
+                silent = true;
+              };
+            }
+            {
+              mode = [
+                "n"
+                "v"
+              ];
+              key = "0";
+              action = "g0";
+              options = {
+                desc = "Move to beginning of wrapped line";
+                silent = true;
+              };
+            }
+            {
+              mode = [
+                "n"
+                "v"
+              ];
+              key = "$";
+              action = "g$";
+              options = {
+                desc = "Move to end of wrapped line";
+                silent = true;
+              };
+            }
+            {
+              mode = [
+                "n"
+                "v"
+              ];
+              key = "^";
+              action = "g^";
+              options = {
+                desc = "Move to first non-blank character of wrapped line";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<C-D>";
+              action.__raw = ''
+                function()
+                  local now = vim.loop.now()
+                  if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 50) then
+                    return
+                  end
+                  _G.scroll_processing = true
+                  _G.last_scroll_time = now
 
-                local win_height = vim.api.nvim_win_get_height(0)
-                local cursor_line = vim.fn.line('.')
-                local win_top = vim.fn.line('w0')
-                local win_bottom = vim.fn.line('w$')
-                local lines_to_move = math.floor(win_height / 7)
-                local edge_threshold = 10
+                  local win_height = vim.api.nvim_win_get_height(0)
+                  local cursor_line = vim.fn.line('.')
+                  local win_top = vim.fn.line('w0')
+                  local win_bottom = vim.fn.line('w$')
+                  local lines_to_move = math.floor(win_height / 7)
+                  local edge_threshold = 10
 
-                if cursor_line == win_bottom then
-                  vim.cmd('normal! ' .. lines_to_move .. 'j')
-                  vim.cmd('normal! zz')
-                  _G.scroll_processing = false
-                else
-                  vim.cmd('normal! ' .. lines_to_move .. 'j')
-                  _G.scroll_processing = false
+                  if cursor_line == win_bottom then
+                    vim.cmd('normal! ' .. lines_to_move .. 'j')
+                    vim.cmd('normal! zz')
+                    _G.scroll_processing = false
+                  else
+                    vim.cmd('normal! ' .. lines_to_move .. 'j')
+                    _G.scroll_processing = false
+                  end
                 end
-              end
-            '';
-            options = {
-              desc = "Smart scroll down";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<C-U>";
-            action.__raw = ''
-              function()
-                local now = vim.loop.now()
-                if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 50) then
-                  return
-                end
-                _G.scroll_processing = true
-                _G.last_scroll_time = now
+              '';
+              options = {
+                desc = "Smart scroll down";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<C-U>";
+              action.__raw = ''
+                function()
+                  local now = vim.loop.now()
+                  if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 50) then
+                    return
+                  end
+                  _G.scroll_processing = true
+                  _G.last_scroll_time = now
 
-                local win_height = vim.api.nvim_win_get_height(0)
-                local cursor_line = vim.fn.line('.')
-                local win_top = vim.fn.line('w0')
-                local win_bottom = vim.fn.line('w$')
-                local lines_to_move = math.floor(win_height / 7)
-                local edge_threshold = 10
+                  local win_height = vim.api.nvim_win_get_height(0)
+                  local cursor_line = vim.fn.line('.')
+                  local win_top = vim.fn.line('w0')
+                  local win_bottom = vim.fn.line('w$')
+                  local lines_to_move = math.floor(win_height / 7)
+                  local edge_threshold = 10
 
-                if cursor_line == win_top then
-                  vim.cmd('normal! ' .. lines_to_move .. 'k')
-                  vim.cmd('normal! zz')
-                  _G.scroll_processing = false
-                else
-                  vim.cmd('normal! ' .. lines_to_move .. 'k')
-                  _G.scroll_processing = false
+                  if cursor_line == win_top then
+                    vim.cmd('normal! ' .. lines_to_move .. 'k')
+                    vim.cmd('normal! zz')
+                    _G.scroll_processing = false
+                  else
+                    vim.cmd('normal! ' .. lines_to_move .. 'k')
+                    _G.scroll_processing = false
+                  end
                 end
-              end
-            '';
-            options = {
-              desc = "Smart scroll up";
-              silent = true;
-            };
-          }
-          {
-            mode = "v";
-            key = "<C-D>";
-            action.__raw = ''
-              function()
-                local now = vim.loop.now()
-                if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 50) then
-                  return
-                end
-                _G.scroll_processing = true
-                _G.last_scroll_time = now
+              '';
+              options = {
+                desc = "Smart scroll up";
+                silent = true;
+              };
+            }
+            {
+              mode = "v";
+              key = "<C-D>";
+              action.__raw = ''
+                function()
+                  local now = vim.loop.now()
+                  if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 50) then
+                    return
+                  end
+                  _G.scroll_processing = true
+                  _G.last_scroll_time = now
 
-                local win_height = vim.api.nvim_win_get_height(0)
-                local cursor_line = vim.fn.line('.')
-                local win_top = vim.fn.line('w0')
-                local win_bottom = vim.fn.line('w$')
-                local lines_to_move = math.floor(win_height / 7)
-                local edge_threshold = 10
+                  local win_height = vim.api.nvim_win_get_height(0)
+                  local cursor_line = vim.fn.line('.')
+                  local win_top = vim.fn.line('w0')
+                  local win_bottom = vim.fn.line('w$')
+                  local lines_to_move = math.floor(win_height / 7)
+                  local edge_threshold = 10
 
-                if cursor_line == win_bottom then
-                  vim.cmd('normal! ' .. lines_to_move .. 'j')
-                  vim.cmd('normal! zz')
-                  _G.scroll_processing = false
-                else
-                  vim.cmd('normal! ' .. lines_to_move .. 'j')
-                  _G.scroll_processing = false
+                  if cursor_line == win_bottom then
+                    vim.cmd('normal! ' .. lines_to_move .. 'j')
+                    vim.cmd('normal! zz')
+                    _G.scroll_processing = false
+                  else
+                    vim.cmd('normal! ' .. lines_to_move .. 'j')
+                    _G.scroll_processing = false
+                  end
                 end
-              end
-            '';
-            options = {
-              desc = "Smart scroll down";
-              silent = true;
-            };
-          }
-          {
-            mode = "v";
-            key = "<C-U>";
-            action.__raw = ''
-              function()
-                local now = vim.loop.now()
-                if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 50) then
-                  return
-                end
-                _G.scroll_processing = true
-                _G.last_scroll_time = now
+              '';
+              options = {
+                desc = "Smart scroll down";
+                silent = true;
+              };
+            }
+            {
+              mode = "v";
+              key = "<C-U>";
+              action.__raw = ''
+                function()
+                  local now = vim.loop.now()
+                  if _G.scroll_processing or (_G.last_scroll_time and now - _G.last_scroll_time < 50) then
+                    return
+                  end
+                  _G.scroll_processing = true
+                  _G.last_scroll_time = now
 
-                local win_height = vim.api.nvim_win_get_height(0)
-                local cursor_line = vim.fn.line('.')
-                local win_top = vim.fn.line('w0')
-                local win_bottom = vim.fn.line('w$')
-                local lines_to_move = math.floor(win_height / 7)
-                local edge_threshold = 10
+                  local win_height = vim.api.nvim_win_get_height(0)
+                  local cursor_line = vim.fn.line('.')
+                  local win_top = vim.fn.line('w0')
+                  local win_bottom = vim.fn.line('w$')
+                  local lines_to_move = math.floor(win_height / 7)
+                  local edge_threshold = 10
 
-                if cursor_line == win_top then
-                  vim.cmd('normal! ' .. lines_to_move .. 'k')
-                  vim.cmd('normal! zz')
-                  _G.scroll_processing = false
-                else
-                  vim.cmd('normal! ' .. lines_to_move .. 'k')
-                  _G.scroll_processing = false
+                  if cursor_line == win_top then
+                    vim.cmd('normal! ' .. lines_to_move .. 'k')
+                    vim.cmd('normal! zz')
+                    _G.scroll_processing = false
+                  else
+                    vim.cmd('normal! ' .. lines_to_move .. 'k')
+                    _G.scroll_processing = false
+                  end
                 end
-              end
-            '';
-            options = {
-              desc = "Smart scroll up";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>n";
-            action.__raw = ''
-              function()
-                vim.cmd("tabnew | Dashboard")
-                vim.notify("📄 New tab created", vim.log.levels.INFO, {
-                  title = "Tab"
-                })
-              end
-            '';
-            options = {
-              desc = "New tab";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>q";
-            action.__raw = ''
-              function()
-                local tab_count = vim.fn.tabpagenr('$')
-                if tab_count == 1 then
-                  vim.cmd("quit")
-                else
-                  vim.cmd("tabclose")
-                  vim.notify("❌ Tab closed", vim.log.levels.INFO, {
+              '';
+              options = {
+                desc = "Smart scroll up";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>n";
+              action.__raw = ''
+                function()
+                  vim.cmd("tabnew | Dashboard")
+                  vim.notify("📄 New tab created", vim.log.levels.INFO, {
                     title = "Tab"
                   })
                 end
-              end
-            '';
-            options = {
-              desc = "Close tab";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>v";
-            action.__raw = ''
-              function()
-                local filename = vim.fn.expand("%:t")
-                vim.cmd("vsplit")
-                vim.notify("↔️ Split vertically: " .. filename, vim.log.levels.INFO, {
-                  title = "Split"
-                })
-              end
-            '';
-            options = {
-              desc = "Split vertical";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>h";
-            action.__raw = ''
-              function()
-                local filename = vim.fn.expand("%:t")
-                vim.cmd("split")
-                vim.notify("↕️ Split horizontally: " .. filename, vim.log.levels.INFO, {
-                  title = "Split"
-                })
-              end
-            '';
-            options = {
-              desc = "Split horizontal";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>[";
-            action = "<cmd>bprevious<CR>";
-            options = {
-              desc = "Previous buffer";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>]";
-            action = "<cmd>bnext<CR>";
-            options = {
-              desc = "Next buffer";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>B";
-            action.__raw = ''
-              function()
-                local current_buf = vim.api.nvim_get_current_buf()
-                local bufname = vim.api.nvim_buf_get_name(current_buf)
-
-                if bufname == "" or vim.bo[current_buf].buftype ~= "" then
-                  vim.notify("❌ Current buffer is not a file", vim.log.levels.WARN, {
-                    title = "Close Other Buffers"
-                  })
-                  return
-                end
-
-                local buffers = vim.api.nvim_list_bufs()
-                local closed_count = 0
-
-                for _, buf in ipairs(buffers) do
-                  if buf ~= current_buf and vim.api.nvim_buf_is_valid(buf) then
-                    local buf_modified = vim.bo[buf].modified
-                    local bufname_other = vim.api.nvim_buf_get_name(buf)
-                    local is_listed = vim.bo[buf].buflisted
-
-                    if not buf_modified and is_listed then
-                      vim.api.nvim_buf_delete(buf, { force = false })
-                      closed_count = closed_count + 1
-                    end
+              '';
+              options = {
+                desc = "New tab";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>q";
+              action.__raw = ''
+                function()
+                  local tab_count = vim.fn.tabpagenr('$')
+                  if tab_count == 1 then
+                    vim.cmd("quit")
+                  else
+                    vim.cmd("tabclose")
+                    vim.notify("❌ Tab closed", vim.log.levels.INFO, {
+                      title = "Tab"
+                    })
                   end
                 end
-
-                local filename = vim.fn.fnamemodify(bufname, ":t")
-                if closed_count == 0 then
-                  vim.notify("💡 No other buffers to close", vim.log.levels.INFO, {
-                    title = "Close Other Buffers"
-                  })
-                else
-                  vim.notify("🗑️ Closed " .. closed_count .. " buffers, kept: " .. filename, vim.log.levels.INFO, {
-                    title = "Close Other Buffers"
+              '';
+              options = {
+                desc = "Close tab";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>v";
+              action.__raw = ''
+                function()
+                  local filename = vim.fn.expand("%:t")
+                  vim.cmd("vsplit")
+                  vim.notify("↔️ Split vertically: " .. filename, vim.log.levels.INFO, {
+                    title = "Split"
                   })
                 end
-              end
-            '';
-            options = {
-              desc = "Close all other buffers";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>QQ";
-            action = "<cmd>wqa<CR>";
-            options = {
-              desc = "Save all and quit";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>E";
-            action = "<cmd>w<CR>";
-            options = {
-              desc = "Save current buffer";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>QX";
-            action = "<cmd>qa!<CR>";
-            options = {
-              desc = "Quit without saving";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>W";
-            action.__raw = ''
-              function()
-                vim.cmd("wa")
-                local buf_count = #vim.api.nvim_list_bufs()
-                vim.notify("💾 All " .. buf_count .. " buffers saved", vim.log.levels.INFO, {
-                  title = "Save"
-                })
-              end
-            '';
-            options = {
-              desc = "Save all";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>fs";
-            action.__raw = ''
-              function()
-                vim.opt_local.spell = not vim.opt_local.spell:get()
-                local status = vim.opt_local.spell:get() and "enabled" or "disabled"
-                local emoji = vim.opt_local.spell:get() and "✅" or "❌"
-                vim.notify(emoji .. " Spell check " .. status, vim.log.levels.INFO, {
-                  title = "Spell Check"
-                })
-              end
-            '';
-            options = {
-              desc = "Toggle spell check";
-              silent = true;
-            };
-          }
-        ];
+              '';
+              options = {
+                desc = "Split vertical";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>h";
+              action.__raw = ''
+                function()
+                  local filename = vim.fn.expand("%:t")
+                  vim.cmd("split")
+                  vim.notify("↕️ Split horizontally: " .. filename, vim.log.levels.INFO, {
+                    title = "Split"
+                  })
+                end
+              '';
+              options = {
+                desc = "Split horizontal";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>[";
+              action = "<cmd>bprevious<CR>";
+              options = {
+                desc = "Previous buffer";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>]";
+              action = "<cmd>bnext<CR>";
+              options = {
+                desc = "Next buffer";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>B";
+              action.__raw = ''
+                function()
+                  local current_buf = vim.api.nvim_get_current_buf()
+                  local bufname = vim.api.nvim_buf_get_name(current_buf)
+
+                  if bufname == "" or vim.bo[current_buf].buftype ~= "" then
+                    vim.notify("❌ Current buffer is not a file", vim.log.levels.WARN, {
+                      title = "Close Other Buffers"
+                    })
+                    return
+                  end
+
+                  local buffers = vim.api.nvim_list_bufs()
+                  local closed_count = 0
+
+                  for _, buf in ipairs(buffers) do
+                    if buf ~= current_buf and vim.api.nvim_buf_is_valid(buf) then
+                      local buf_modified = vim.bo[buf].modified
+                      local bufname_other = vim.api.nvim_buf_get_name(buf)
+                      local is_listed = vim.bo[buf].buflisted
+
+                      if not buf_modified and is_listed then
+                        vim.api.nvim_buf_delete(buf, { force = false })
+                        closed_count = closed_count + 1
+                      end
+                    end
+                  end
+
+                  local filename = vim.fn.fnamemodify(bufname, ":t")
+                  if closed_count == 0 then
+                    vim.notify("💡 No other buffers to close", vim.log.levels.INFO, {
+                      title = "Close Other Buffers"
+                    })
+                  else
+                    vim.notify("🗑️ Closed " .. closed_count .. " buffers, kept: " .. filename, vim.log.levels.INFO, {
+                      title = "Close Other Buffers"
+                    })
+                  end
+                end
+              '';
+              options = {
+                desc = "Close all other buffers";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>QQ";
+              action = "<cmd>wqa<CR>";
+              options = {
+                desc = "Save all and quit";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>E";
+              action = "<cmd>w<CR>";
+              options = {
+                desc = "Save current buffer";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>QX";
+              action = "<cmd>qa!<CR>";
+              options = {
+                desc = "Quit without saving";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>W";
+              action.__raw = ''
+                function()
+                  vim.cmd("wa")
+                  local buf_count = #vim.api.nvim_list_bufs()
+                  vim.notify("💾 All " .. buf_count .. " buffers saved", vim.log.levels.INFO, {
+                    title = "Save"
+                  })
+                end
+              '';
+              options = {
+                desc = "Save all";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>fs";
+              action.__raw = ''
+                function()
+                  vim.opt_local.spell = not vim.opt_local.spell:get()
+                  local status = vim.opt_local.spell:get() and "enabled" or "disabled"
+                  local emoji = vim.opt_local.spell:get() and "✅" or "❌"
+                  vim.notify(emoji .. " Spell check " .. status, vim.log.levels.INFO, {
+                    title = "Spell Check"
+                  })
+                end
+              '';
+              options = {
+                desc = "Toggle spell check";
+                silent = true;
+              };
+            }
+          ];
       };
 
       programs.neovide = lib.mkIf self.isLinux {
