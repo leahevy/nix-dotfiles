@@ -495,6 +495,52 @@ args@{
               vim.g.calendar_action = "ObsidianCalendarAction"
               vim.g.calendar_sign = "ObsidianCalendarSign"
 
+              _G.obsidian_create_daily_for_date = function(date_str)
+                local ok, obsidian = pcall(require, "obsidian")
+                if not ok then
+                  vim.notify("Plugin not available", vim.log.levels.ERROR, { title = "Obsidian" })
+                  return
+                end
+
+                local year, month, day = date_str:match("(%d+)-(%d+)-(%d+)")
+                if not year or not month or not day then
+                  vim.notify("Invalid date format: " .. date_str, vim.log.levels.ERROR, { title = "Obsidian" })
+                  return
+                end
+
+                local timestamp = os.time({
+                  year = tonumber(year),
+                  month = tonumber(month),
+                  day = tonumber(day),
+                  hour = 0,
+                  min = 0,
+                  sec = 0
+                })
+
+                local client = obsidian.get_client()
+                if not client then
+                  vim.notify("Failed to get client", vim.log.levels.ERROR, { title = "Obsidian" })
+                  return
+                end
+
+                local ok_daily, daily_note = pcall(function()
+                  return client:_daily(timestamp)
+                end)
+
+                if not ok_daily or not daily_note then
+                  vim.notify("Failed to create daily note for " .. date_str, vim.log.levels.ERROR, { title = "Obsidian" })
+                  return
+                end
+
+                local ok_open, _ = pcall(function()
+                  client:open_note(daily_note)
+                end)
+
+                if not ok_open then
+                  vim.notify("Failed to open daily note for " .. date_str, vim.log.levels.ERROR, { title = "Obsidian" })
+                end
+              end
+
               vim.cmd([[
                 function! ObsidianCalendarSign(day, month, year)
                   let diary_dir = expand('${normalizedVaultPath}') . "/diary"
@@ -510,8 +556,6 @@ args@{
 
                 function! ObsidianCalendarAction(day, month, year, week, dir)
                   let date_str = printf("%04d-%02d-%02d", a:year, a:month, a:day)
-                  let diary_dir = expand('${normalizedVaultPath}') . "/diary"
-                  let diary_file = diary_dir . "/" . date_str . ".md"
 
                   if winnr('#') == 0
                     if a:dir ==? 'V'
@@ -526,8 +570,7 @@ args@{
                     endif
                   endif
 
-                  call mkdir(diary_dir, "p")
-                  execute "edit " . diary_file
+                  call luaeval('_G.obsidian_create_daily_for_date(_A)', date_str)
                 endfunction
               ]])
             end
