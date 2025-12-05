@@ -21,9 +21,9 @@ args@{
     overrideBlackBackground = true;
     overrideWhiteForeground = true;
     blackOverrideColour = "#000000";
-    whiteOverrideColourNormal = "#aaddaa";
+    whiteOverrideColourNormal = "#59ef99";
     whiteOverrideColourBright = "#eeeeee";
-    whiteOverrideColourLight = "#cdcdcd";
+    whiteOverrideColourLight = "#cbffa9";
     fonts = {
       serif = {
         path = "dejavu_fonts/DejaVu Serif";
