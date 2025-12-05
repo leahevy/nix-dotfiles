@@ -564,7 +564,11 @@ args@{
                 fi
               ''
             else
-              ""
+              ''
+                if [[ "$CHANGE_WALLPAPER" == "true" && -x "$HOME/.local/bin/swaybg-reset-wallpaper" ]]; then
+                  "$HOME/.local/bin/swaybg-reset-wallpaper"
+                fi
+              ''
           }
         '';
       };

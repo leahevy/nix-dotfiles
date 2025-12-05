@@ -99,6 +99,31 @@ args@{
         '';
       };
 
+      home.file.".local/bin/swaybg-reset-wallpaper" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+
+          LAST_CHANGE_FILE="${self.user.home}/.local/state/swaybg/last-change"
+          CURRENT_TIME=$(${pkgs.coreutils}/bin/date +%s)
+          RATE_LIMIT=1
+
+          ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$LAST_CHANGE_FILE")"
+
+          if [[ ! -f "$LAST_CHANGE_FILE" ]] || [[ $((CURRENT_TIME - $(${pkgs.coreutils}/bin/cat "$LAST_CHANGE_FILE" 2>/dev/null || echo 0))) -gt $RATE_LIMIT ]]; then
+            echo "$CURRENT_TIME" > "$LAST_CHANGE_FILE"
+
+            ${config.home.homeDirectory}/.local/bin/scripts/swaybg-update-wallpaper
+
+            ${lib.optionalString (!self.settings.deactivateTimer) ''
+              systemctl --user restart nx-swaybg-rotate.timer
+            ''}
+
+            systemctl --user restart nx-swaybg.service
+          fi
+        '';
+      };
+
       home.file.".local/bin/swaybg-enable-wallpaper" = {
         executable = true;
         text = ''
