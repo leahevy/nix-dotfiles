@@ -15,6 +15,11 @@ args@{
   input = "common";
   namespace = "home";
 
+  settings = {
+    normalTextColor = "59ef99";
+    paramTextColor = "59ef99";
+  };
+
   submodules = {
     common = {
       shell = {
@@ -50,6 +55,9 @@ args@{
           enable = true;
 
           interactiveShellInit = ''
+            set -g fish_color_normal ${self.settings.normalTextColor}
+            set -g fish_color_param ${self.settings.paramTextColor}
+
             if test -d "${config.xdg.configHome}/fish-init"
               for file in "${config.xdg.configHome}/fish-init/"*.fish
                 source "$file"
