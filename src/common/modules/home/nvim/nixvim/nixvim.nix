@@ -76,6 +76,9 @@ args@{
         dap = true;
         goto-preview = true;
         neotest = true;
+        vim-matchup = true;
+        treesitter-textobjects = true;
+        treesitter-context = true;
       };
     };
   };
