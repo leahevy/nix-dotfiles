@@ -145,9 +145,9 @@ args@{
                       }
                       (lib.mkIf (!self.isModuleEnabled "nvim-modules.copilot") {
                         "<C-n>" =
-                          "cmp.mapping(function(fallback) if cmp.visible() then cmp.select_next_item() else cmp.complete() end end, { 'i', 's' })";
+                          "cmp.mapping(function(fallback) if _G.should_disable_for_filetype(vim.bo.filetype) then if cmp.visible() then cmp.select_next_item() end elseif cmp.visible() then cmp.select_next_item() else cmp.complete() end end, { 'i', 's' })";
                         "<C-p>" =
-                          "cmp.mapping(function(fallback) if cmp.visible() then cmp.select_prev_item() else cmp.complete() end end, { 'i', 's' })";
+                          "cmp.mapping(function(fallback) if _G.should_disable_for_filetype(vim.bo.filetype) then if cmp.visible() then cmp.select_prev_item() end elseif cmp.visible() then cmp.select_prev_item() else cmp.complete() end end, { 'i', 's' })";
                       })
                     ];
 
@@ -287,7 +287,7 @@ args@{
               )}
             }
 
-            local function should_disable_for_filetype(filetype)
+            _G.should_disable_for_filetype = function(filetype)
               for _, excluded_ft in ipairs(excluded_filetypes) do
                 if filetype == excluded_ft then
                   return true
@@ -300,7 +300,7 @@ args@{
               local cmp = require('cmp')
               local filetype = vim.bo.filetype
 
-              if should_disable_for_filetype(filetype) then
+              if _G.should_disable_for_filetype(filetype) then
                 cmp.setup.buffer({ enabled = false })
               else
                 cmp.setup.buffer({ enabled = vim.g.cmp_global_enabled })
@@ -332,6 +332,13 @@ args@{
             local cmp = require("cmp")
 
             vim.keymap.set("i", "<C-n>", function()
+              if _G.should_disable_for_filetype(vim.bo.filetype) then
+                if cmp.visible() then
+                  cmp.select_next_item()
+                end
+                return
+              end
+
               if vim.fn.exists("*copilot#GetDisplayedSuggestion") == 1 and
                  vim.fn["copilot#GetDisplayedSuggestion"]() ~= "" then
                 vim.fn["copilot#Dismiss"]()
@@ -345,6 +352,13 @@ args@{
             end, { desc = "Next completion (dismiss copilot first)" })
 
             vim.keymap.set("i", "<C-p>", function()
+              if _G.should_disable_for_filetype(vim.bo.filetype) then
+                if cmp.visible() then
+                  cmp.select_prev_item()
+                end
+                return
+              end
+
               if vim.fn.exists("*copilot#GetDisplayedSuggestion") == 1 and
                  vim.fn["copilot#GetDisplayedSuggestion"]() ~= "" then
                 vim.fn["copilot#Dismiss"]()
