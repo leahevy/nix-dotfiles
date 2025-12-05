@@ -20,10 +20,10 @@ args@{
     usedShell = "bash";
     darkWallpaper = true;
     niriKeybindings = false;
-    highlightMainColorOnDark = "#ddee99";
-    highlightSecondColorOnDark = "#ddddcc";
+    highlightMainColorOnDark = "#59ef99";
+    highlightSecondColorOnDark = "#cbffa9";
     highlightMainColorOnLight = "#333388";
-    highlightSecondColorOnLigh = "#336699";
+    highlightSecondColorOnLight = "#336699";
     withBorder = true;
     withBackground = true;
   };
