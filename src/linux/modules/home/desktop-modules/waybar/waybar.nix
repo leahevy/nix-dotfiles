@@ -510,7 +510,7 @@ args@{
             }
 
             #window {
-              color: #2299ff;
+              color: #66ff55;
             }
 
             #window.app-id {
