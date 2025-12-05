@@ -167,7 +167,7 @@ args@{
 
         plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
           {
-            __unkeyed-1 = "<leader>A";
+            __unkeyed-1 = "<leader>Xs";
             desc = "Toggle auto-save";
             icon = "🔄";
           }
@@ -176,7 +176,7 @@ args@{
         keymaps = [
           {
             mode = "n";
-            key = "<leader>A";
+            key = "<leader>Xs";
             action.__raw = ''
               function()
                 local old_state = _G.autosave_enabled

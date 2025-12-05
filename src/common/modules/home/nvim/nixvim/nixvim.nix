@@ -819,6 +819,11 @@ args@{
               desc = "Toggle spell check";
               icon = "📝";
             }
+            {
+              __unkeyed-1 = "<leader>X";
+              group = "Features";
+              icon = "⚙️";
+            }
           ];
         };
 

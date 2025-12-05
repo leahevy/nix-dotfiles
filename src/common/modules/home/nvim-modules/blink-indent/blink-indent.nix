@@ -86,7 +86,7 @@ args@{
         keymaps = [
           {
             mode = "n";
-            key = "<leader>i";
+            key = "<leader>Xi";
             action = "<cmd>lua _G.toggle_blink_indent()<CR>";
             options = {
               desc = "Toggle indent guides";
@@ -97,7 +97,7 @@ args@{
 
         plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
           {
-            __unkeyed-1 = "<leader>i";
+            __unkeyed-1 = "<leader>Xi";
             desc = "Toggle indent guides";
             icon = "🪜";
           }

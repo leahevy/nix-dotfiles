@@ -97,7 +97,7 @@ args@{
 
         plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
           {
-            __unkeyed-1 = "<leader>z";
+            __unkeyed-1 = "<leader>Xz";
             desc = "Toggle zen mode";
             icon = "🧘";
           }
@@ -106,7 +106,7 @@ args@{
         keymaps = [
           {
             mode = "n";
-            key = "<leader>z";
+            key = "<leader>Xz";
             action = "<cmd>lua _G.toggle_zen_mode()<cr>";
             options = {
               desc = "Toggle zen mode";

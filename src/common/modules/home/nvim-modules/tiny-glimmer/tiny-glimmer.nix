@@ -220,7 +220,7 @@ args@{
         keymaps = [
           {
             mode = "n";
-            key = "<leader>r";
+            key = "<leader>Xa";
             action = "<cmd>lua _G.toggle_tiny_glimmer()<CR>";
             options = {
               desc = "Toggle animations";
@@ -231,7 +231,7 @@ args@{
 
         plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
           {
-            __unkeyed-1 = "<leader>r";
+            __unkeyed-1 = "<leader>Xa";
             desc = "Toggle animations";
             icon = "✨";
           }

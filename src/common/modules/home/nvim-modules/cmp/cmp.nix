@@ -175,7 +175,7 @@ args@{
           ++ lib.optional (self.isModuleEnabled "nvim-modules.which-key") {
             which-key.settings.spec = [
               {
-                __unkeyed-1 = "<leader>l";
+                __unkeyed-1 = "<leader>Xl";
                 desc = "Toggle auto-completion";
                 icon = "💬";
               }
@@ -250,7 +250,7 @@ args@{
             }
             {
               mode = "n";
-              key = "<leader>l";
+              key = "<leader>Xl";
               action.__raw = ''
                 function()
                   vim.g.cmp_global_enabled = not vim.g.cmp_global_enabled

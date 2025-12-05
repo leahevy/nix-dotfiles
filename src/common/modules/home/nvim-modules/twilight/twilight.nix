@@ -207,7 +207,7 @@ args@{
         keymaps = [
           {
             mode = "n";
-            key = "<leader>k";
+            key = "<leader>Xt";
             action = "<cmd>lua _G.toggle_twilight()<cr>";
             options = {
               desc = "Toggle focus mode";
@@ -274,7 +274,7 @@ args@{
         lib.mkIf (self.isModuleEnabled "nvim-modules.which-key")
           [
             {
-              __unkeyed-1 = "<leader>k";
+              __unkeyed-1 = "<leader>Xt";
               desc = "Toggle focus mode";
               icon = "🎯";
             }

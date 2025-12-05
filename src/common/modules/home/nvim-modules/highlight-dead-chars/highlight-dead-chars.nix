@@ -72,7 +72,7 @@ args@{
         keymaps = [
           {
             mode = "n";
-            key = "<leader>o";
+            key = "<leader>Xo";
             action = "<cmd>lua _G.toggle_eol_fill()<CR>";
             options = {
               desc = "Toggle EOL fill";
@@ -83,7 +83,7 @@ args@{
 
         plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
           {
-            __unkeyed-1 = "<leader>o";
+            __unkeyed-1 = "<leader>Xo";
             desc = "Toggle EOL fill";
             icon = "🔲";
           }
