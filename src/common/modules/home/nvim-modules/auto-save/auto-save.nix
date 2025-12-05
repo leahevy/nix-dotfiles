@@ -17,7 +17,7 @@ args@{
 
   settings = {
     enable = true;
-    debounceDelay = 1500;
+    debounceDelay = 5000;
     onlyInHomeDirectories = true;
     showNotifications = true;
     withData = false;
@@ -77,13 +77,27 @@ args@{
             trigger_events = {
               immediate_save = [
                 "BufLeave"
+                "BufDelete"
+                "BufWipeout"
+                "BufFilePre"
+                "BufFilePost"
+                "BufWinLeave"
+                "BufUnload"
+                "BufHidden"
                 "FocusLost"
+                "TabLeave"
+                "WinLeave"
                 "QuitPre"
                 "VimSuspend"
-              ];
-              defer_save = [
+                "CmdwinEnter"
                 "InsertLeave"
                 "TextChanged"
+                "FileReadPost"
+                "FilterReadPost"
+                "StdinReadPost"
+              ];
+              defer_save = [
+                "TextChangedI"
               ];
               cancel_deferred_save = [ "InsertEnter" ];
             };
