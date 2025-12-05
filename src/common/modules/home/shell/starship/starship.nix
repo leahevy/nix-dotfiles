@@ -75,7 +75,7 @@ args@{
             read_only_style = "bold yellow";
             read_only = "  ";
             format = "[$path]($style)[$read_only]($read_only_style) ";
-            style = "bold red";
+            style = "bold green";
             truncate_to_repo = true;
             use_os_path_sep = false;
             truncation_length = 3;
