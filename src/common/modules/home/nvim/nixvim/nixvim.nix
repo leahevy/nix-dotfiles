@@ -556,6 +556,14 @@ args@{
 
                     vim.api.nvim_set_hl(0, "MsgArea", { bg = "NONE", fg = "#33dd77" })
                     vim.api.nvim_set_hl(0, "Visual", { bg = "#1a4d33", fg = "#37f499" })
+
+                    local float_border_hl = vim.api.nvim_get_hl(0, { name = "FloatBorder" })
+                    if float_border_hl.fg then
+                      vim.api.nvim_set_hl(0, "FloatBorder", {
+                        bg = "#000000",
+                        fg = float_border_hl.fg
+                      })
+                    end
                   end
 
                   vim.api.nvim_create_autocmd("VimEnter", {
