@@ -38,6 +38,8 @@ args@{
     ];
 
     bypassSaveFiletypes = [
+      "diff"
+      "undotree"
       "dashboard"
       "alpha"
       "netrw"

@@ -26,6 +26,8 @@ args@{
     windowBorder = "single";
     screenBounds = "lines";
     excludeFiletypes = [
+      "undotree"
+      "diff"
       "help"
       "dashboard"
       "toggleterm"

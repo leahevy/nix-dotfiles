@@ -39,6 +39,8 @@ args@{
     enableAutoComplete = true;
     globalAutoCompleteEnabled = true;
     excludeFiletypesFromAutoComplete = [
+      "undotree"
+      "diff"
       "help"
       "dashboard"
       "alpha"

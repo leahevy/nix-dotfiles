@@ -37,6 +37,8 @@ args@{
     ];
 
     disabledWinbarFiletypes = [
+      "diff"
+      "undotree"
       "dap-repl"
       "neotest-output-panel"
       "neotest-summary"

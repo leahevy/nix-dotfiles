@@ -19,6 +19,8 @@ args@{
     enableOnStart = true;
 
     excludeFiletypes = [
+      "undotree"
+      "diff"
       "help"
       "dashboard"
       "toggleterm"

@@ -24,6 +24,8 @@ args@{
     dataPath = "/data";
 
     excludedFiletypes = [
+      "diff"
+      "undotree"
       "help"
       "dashboard"
       "toggleterm"

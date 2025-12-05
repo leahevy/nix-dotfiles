@@ -144,6 +144,8 @@ args@{
       "syntax"
     ];
     exclude = [
+      "undotree"
+      "diff"
       "markdown"
       "help"
       "dashboard"

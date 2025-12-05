@@ -24,6 +24,7 @@ args@{
         tiny-glimmer = true;
         auto-create-dirs = true;
         template = true;
+        undotree = true;
         highlight-dead-chars = true;
         jk-escape = true;
         vim-airline = false;

@@ -22,6 +22,8 @@ args@{
     transparencyColor = null;
 
     excludeFiletypes = [
+      "undotree"
+      "diff"
       "dashboard"
       "alpha"
       "toggleterm"

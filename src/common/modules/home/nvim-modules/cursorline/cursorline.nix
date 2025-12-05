@@ -24,6 +24,8 @@ args@{
     cursorwordUnderline = true;
     excludeFiletypes = [
       ""
+      "undotree"
+      "diff"
       "dashboard"
       "alpha"
       "help"

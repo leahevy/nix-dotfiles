@@ -30,6 +30,8 @@ args@{
       highlightCurrentLine = true;
     };
     excludeFiletypes = [
+      "undotree"
+      "diff"
       "help"
       "dashboard"
       "toggleterm"
