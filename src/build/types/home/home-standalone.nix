@@ -123,6 +123,18 @@ with lib;
     settings = mkOption {
       type = types.submodule {
         options = {
+
+          theme = mkOption {
+            type = types.nullOr (
+              types.enum [
+                "red"
+                "green"
+              ]
+            );
+            default = null;
+            description = "Theme to use for the user";
+          };
+
           desktop = mkOption {
             type = types.nullOr (
               types.enum [

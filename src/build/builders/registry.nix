@@ -10,6 +10,7 @@ let
     "linux"
     "darwin"
     "groups"
+    "themes"
     "build"
     "config"
     "profile"

@@ -822,7 +822,8 @@
         "nixvim": "nixvim",
         "profile": "profile",
         "sops-nix": "sops-nix",
-        "stylix": "stylix"
+        "stylix": "stylix",
+        "themes": "themes"
       }
     },
     "rust-overlay": {
@@ -960,6 +961,18 @@
         "repo": "default",
         "type": "github"
       }
+    },
+    "themes": {
+      "flake": false,
+      "locked": {
+        "path": "./src/themes",
+        "type": "path"
+      },
+      "original": {
+        "path": "./src/themes",
+        "type": "path"
+      },
+      "parent": []
     },
     "tinted-foot": {
       "flake": false,

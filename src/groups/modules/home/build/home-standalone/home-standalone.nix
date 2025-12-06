@@ -33,6 +33,9 @@ args@{
       system = {
         dummy-files = true;
       };
+      theme = {
+        theme-home = true;
+      };
     };
   }
   // lib.optionalAttrs self.isDarwin {

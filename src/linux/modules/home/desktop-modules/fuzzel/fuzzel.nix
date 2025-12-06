@@ -82,13 +82,13 @@ args@{
           };
 
           colors = {
-            background = lib.mkForce "0a0a0fee";
-            text = lib.mkForce "ffffffff";
-            match = lib.mkForce "ffffff80";
-            selection = lib.mkForce "ffffff33";
-            selection-text = lib.mkForce "ffffffff";
-            selection-match = lib.mkForce "ffffffff";
-            border = lib.mkForce "ffffff26";
+            background = lib.mkForce "${lib.removePrefix "#" self.theme.colors.main.backgrounds.primary.html}ee";
+            text = lib.mkForce "${lib.removePrefix "#" self.theme.colors.main.foregrounds.strong.html}ff";
+            match = lib.mkForce "${lib.removePrefix "#" self.theme.colors.main.foregrounds.primary.html}80";
+            selection = lib.mkForce "${lib.removePrefix "#" self.theme.colors.terminal.normalBackgrounds.selection.html}33";
+            selection-text = lib.mkForce "${lib.removePrefix "#" self.theme.colors.main.foregrounds.emphasized.html}ff";
+            selection-match = lib.mkForce "${lib.removePrefix "#" self.theme.colors.main.foregrounds.emphasized.html}ff";
+            border = lib.mkForce "${lib.removePrefix "#" self.theme.colors.separators.light.html}26";
           };
 
           border = {

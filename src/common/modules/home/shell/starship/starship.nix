@@ -41,24 +41,24 @@ args@{
             symbol = "🔻";
             disabled = false;
             format = "[$symbol $status]($style) ";
-            style = "bold red";
+            style = "bold ${self.theme.colors.semantic.error.name}";
           };
 
           sudo = {
             disabled = false;
             symbol = "🔑  ";
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
             format = "[$symbol]($style)";
           };
 
           character = {
-            success_symbol = "[⇒ ](bold green)";
-            error_symbol = "[⇒ ](bold purple)";
+            success_symbol = "[⇒ ](bold ${self.theme.colors.semantic.success.name})";
+            error_symbol = "[⇒ ](bold ${self.theme.colors.main.base.purple.name})";
           };
 
           username = {
-            style_user = "bold red";
-            style_root = "bold blue";
+            style_user = "bold ${self.theme.colors.semantic.error.name}";
+            style_root = "bold ${self.theme.colors.main.base.blue.name}";
             format = "[$user]($style) ";
             disabled = false;
             show_always = false;
@@ -66,16 +66,16 @@ args@{
 
           hostname = {
             ssh_only = true;
-            format = "[on ](bright-black)[$hostname](bold yellow) ";
+            format = "[on ](bright-black)[$hostname](bold ${self.theme.colors.semantic.warning.name}) ";
             disabled = false;
           };
 
           directory = {
             home_symbol = "󰋞 ~";
-            read_only_style = "bold yellow";
+            read_only_style = "bold ${self.theme.colors.semantic.warning.name}";
             read_only = "  ";
             format = "[$path]($style)[$read_only]($read_only_style) ";
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
             truncate_to_repo = true;
             use_os_path_sep = false;
             truncation_length = 3;
@@ -90,12 +90,12 @@ args@{
           git_branch = {
             symbol = " ";
             format = "[$symbol $branch]($style) ";
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           git_status = {
             format = "[\($all_status$ahead_behind\)]($style) ";
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
             conflicted = "(c)";
             up_to_date = " ";
             untracked = " ";
@@ -104,14 +104,14 @@ args@{
             behind = "⇣\${count}";
             stashed = "(s) ";
             modified = " ";
-            staged = "[++\($count\)](bold green)";
+            staged = "[++\($count\)](bold ${self.theme.colors.semantic.success.name})";
             renamed = "(r) ";
             deleted = " ";
           };
 
           localip = {
             disabled = false;
-            style = "bold yellow";
+            style = "bold ${self.theme.colors.semantic.warning.name}";
             ssh_only = true;
             format = "[⟶  ](bright-black) [$localipv4]($style) ";
           };
@@ -137,257 +137,257 @@ args@{
           };
 
           aws = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           azure = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           buf = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           bun = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           c = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           cmake = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           cobol = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           crystal = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           daml = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           dart = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           deno = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           dotnet = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           elixir = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           elm = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           erlang = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           fennel = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           fossil_branch = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           gcloud = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           git_commit = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           git_state = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           git_metrics = {
-            added_style = "bold yellow";
-            deleted_style = "purple";
+            added_style = "bold ${self.theme.colors.semantic.warning.name}";
+            deleted_style = "${self.theme.colors.main.base.purple.name}";
           };
 
           gleam = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           golang = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           gradle = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           guix_shell = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           haskell = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           haxe = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           helm = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           hg_branch = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           java = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           julia = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           kotlin = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           kubernetes = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           lua = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           meson = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           nim = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           nix_shell = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           ocaml = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           opa = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           openstack = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           package = {
             format = "[is]($style) [$symbol$version]($style) ";
-            style = "bold blue";
+            style = "bold ${self.theme.colors.main.base.blue.name}";
           };
 
           perl = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           php = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           pijul_channel = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           pulumi = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           purescript = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           quarto = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           raku = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           red = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           rlang = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           ruby = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           rust = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           scala = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           singularity = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           solidity = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           spack = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           swift = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           terraform = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           typst = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           vagrant = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           vlang = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           vcsh = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           zig = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           battery = { };
@@ -401,11 +401,11 @@ args@{
           };
 
           direnv = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           env_var = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           fill = {
@@ -414,45 +414,45 @@ args@{
           };
 
           fossil_metrics = {
-            added_style = "bold yellow";
-            deleted_style = "purple";
+            added_style = "bold ${self.theme.colors.semantic.warning.name}";
+            deleted_style = "${self.theme.colors.main.base.purple.name}";
           };
 
           jobs = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           line_break = {
             disabled = true;
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           memory_usage = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           shlvl = {
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           docker_context = {
             format = "[via]($style) [$symbol$context]($style) ";
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           python = {
             format = "[via]($style) [$symbol$pyenv_prefix($version )(\\($virtualenv\\) )]($style)";
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           nodejs = {
             format = "[via]($style) [$symbol($version )]($style)";
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
 
           conda = {
             format = "[via]($style) [$symbol$environment]($style) ";
-            style = "bold green";
+            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
           };
         };
       };

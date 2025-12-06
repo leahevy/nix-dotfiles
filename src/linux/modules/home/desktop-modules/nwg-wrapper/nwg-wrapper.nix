@@ -18,12 +18,7 @@ args@{
   settings = {
     usedTerminal = "xterm";
     usedShell = "bash";
-    darkWallpaper = true;
     niriKeybindings = false;
-    highlightMainColorOnDark = "#59ef99";
-    highlightSecondColorOnDark = "#cbffa9";
-    highlightMainColorOnLight = "#333388";
-    highlightSecondColorOnLight = "#336699";
     withBorder = true;
     withBackground = true;
   };
@@ -31,16 +26,8 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
-      highlightMainColor =
-        if self.settings.darkWallpaper then
-          self.settings.highlightMainColorOnDark
-        else
-          self.settings.highlightMainColorOnLight;
-      highlightSecondColor =
-        if self.settings.darkWallpaper then
-          self.settings.highlightSecondColorOnDark
-        else
-          self.settings.highlightSecondColorOnLight;
+      highlightMainColor = self.theme.colors.main.foregrounds.primary.html;
+      highlightSecondColor = self.theme.colors.main.foregrounds.emphasized.html;
       mainDisplay = self.host.displays.main or self.user.displays.main or null;
       displayArgs = lib.optionals (mainDisplay != null) [
         "-o"
@@ -268,9 +255,21 @@ args@{
         text = ''
           window {
               background-color: ${
-                if self.settings.withBackground then "rgba(0, 0, 0, 0.4)" else "transparent"
+                if self.settings.withBackground then
+                  let
+                    bgColor = self.theme.colors.main.backgrounds.primary.html;
+                    rgb = lib.removePrefix "#" bgColor;
+                    r = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 0 2 rgb}").x;
+                    g = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 2 2 rgb}").x;
+                    b = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 4 2 rgb}").x;
+                  in
+                  "rgba(${r}, ${g}, ${b}, 0.4)"
+                else
+                  "transparent"
               };
-              border: ${if self.settings.withBorder then "1px solid black" else "none"};
+              border: ${
+                if self.settings.withBorder then "1px solid ${self.theme.colors.separators.normal.html}" else "none"
+              };
           }
 
           label {
@@ -286,9 +285,21 @@ args@{
         text = ''
           window {
               background-color: ${
-                if self.settings.withBackground then "rgba(0, 0, 0, 0.4)" else "transparent"
+                if self.settings.withBackground then
+                  let
+                    bgColor = self.theme.colors.main.backgrounds.primary.html;
+                    rgb = lib.removePrefix "#" bgColor;
+                    r = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 0 2 rgb}").x;
+                    g = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 2 2 rgb}").x;
+                    b = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 4 2 rgb}").x;
+                  in
+                  "rgba(${r}, ${g}, ${b}, 0.4)"
+                else
+                  "transparent"
               };
-              border: ${if self.settings.withBorder then "1px solid black" else "none"};
+              border: ${
+                if self.settings.withBorder then "1px solid ${self.theme.colors.separators.normal.html}" else "none"
+              };
           }
 
           label {

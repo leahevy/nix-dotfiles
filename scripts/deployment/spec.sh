@@ -94,7 +94,12 @@ cmd_switch() {
     exit 1
   fi
   
-  local activate_script="$spec_path/activate"
+  if [[ "$HOME_MODE" = true ]]; then
+    local activate_script="$spec_path/activate"
+  else
+    local activate_script="$spec_path/bin/switch-to-configuration"
+    local nixos_activate_args=("test")
+  fi
   
   if [[ ! -x "$activate_script" ]]; then
     echo -e "${RED}Error: Activate script not found or not executable: ${WHITE}$activate_script${RESET}" >&2
@@ -114,7 +119,7 @@ cmd_switch() {
     echo "Note: Other home-manager specialisations may not be visible until you reset to base config."
     echo "Use '$0 --home reset' to return to base configuration."
   else
-    sudo "$activate_script"
+    sudo "$activate_script" "${nixos_activate_args[@]}"
   fi
 }
 

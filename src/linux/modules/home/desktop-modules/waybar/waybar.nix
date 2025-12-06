@@ -250,11 +250,11 @@ args@{
                 weeks-pos = "left";
                 on-scroll = 1;
                 format = {
-                  months = "<span color='#ffead3'><b>{}</b></span>";
-                  days = "<span color='#ecc6d9'><b>{}</b></span>";
-                  weeks = "<span color='#99ffdd'><b>W{}</b></span>";
-                  weekdays = "<span color='#ffcc66'><b>{}</b></span>";
-                  today = "<span color='#ff6699'><b><u>{}</u></b></span>";
+                  months = "<span color='${self.theme.colors.main.foregrounds.emphasized.html}'><b>{}</b></span>";
+                  days = "<span color='${self.theme.colors.main.foregrounds.secondary.html}'><b>{}</b></span>";
+                  weeks = "<span color='${self.theme.colors.main.base.cyan.html}'><b>W{}</b></span>";
+                  weekdays = "<span color='${self.theme.colors.main.base.yellow.html}'><b>{}</b></span>";
+                  today = "<span color='${self.theme.colors.main.foregrounds.primary.html}'><b><u>{}</u></b></span>";
                 };
               };
             };
@@ -396,7 +396,7 @@ args@{
 
         style =
           let
-            background = "#000000";
+            background = self.theme.colors.main.backgrounds.primary.html;
           in
           ''
             * {
@@ -454,7 +454,7 @@ args@{
             }
 
             #workspaces button.active, #workspaces button.focused, #workspaces button:hover {
-              color: #ffffff;
+              color: ${self.theme.colors.main.foregrounds.strong.html};
             }
 
             #workspaces:hover {
@@ -462,7 +462,7 @@ args@{
             }
 
             #workspaces button:hover {
-              color: #33dd44;
+              color: ${self.theme.colors.main.foregrounds.primary.html};
               background-color: rgba(200, 200, 200, 0.05);
             }
 
@@ -494,7 +494,7 @@ args@{
             }
 
             #systemgroup:hover, #windowgroup:hover, #statusgroup:hover, #timegroup:hover, #traygroup:hover {
-              border: 1px solid #88bb44;
+              border: 1px solid ${self.theme.colors.main.foregrounds.primary.html};
             }
 
             #tray menu {
@@ -510,42 +510,42 @@ args@{
             }
 
             #window {
-              color: #66ff55;
+              color: ${self.theme.colors.main.foregrounds.primary.html};
             }
 
             #window.app-id {
-              color: #88bb44;
+              color: ${self.theme.colors.main.foregrounds.primary.html};
             }
 
             #battery.warning {
-              color: #ffb86c;
+              color: ${self.theme.colors.semantic.warning.html};
             }
 
             #systemd-failed-units.ok {
-              color: #50fa7b;
+              color: ${self.theme.colors.semantic.success.html};
             }
 
             #systemd-failed-units.degraded {
-              color: #ff5555;
+              color: ${self.theme.colors.semantic.error.html};
             }
 
             #systemd-failed-units {
-              color: #ff5555;
+              color: ${self.theme.colors.semantic.error.html};
             }
 
             #battery.critical {
-              color: #ff5555;
+              color: ${self.theme.colors.semantic.error.html};
               animation: blink 1s linear infinite;
             }
 
             #custom-separator {
-              color: #555555;
+              color: ${self.theme.colors.separators.normal.html};
               margin: 0 1px;
               padding: 0 5px;
             }
 
             #custom-arrow {
-              color: #88bb44;
+              color: ${self.theme.colors.main.foregrounds.primary.html};
               margin: 0 1px;
               padding: 0 5px;
               font-size: 24px;
@@ -568,7 +568,7 @@ args@{
 
             #custom-nix:hover {
               background-color: rgba(100, 150, 255, 0.2);
-              border: 1px solid #88bb44;
+              border: 1px solid ${self.theme.colors.main.foregrounds.primary.html};
               opacity: 0.8;
             }
 
@@ -597,18 +597,18 @@ args@{
                 background-image: none;
                 border: none;
                 box-shadow: none;
-                background-color: #339955;
+                background-color: ${self.theme.colors.main.foregrounds.primary.html};
             }
             #pulseaudio-slider trough {
                 min-height: 10px;
                 min-width: 120px;
                 border-radius: 5px;
-                background-color: #336644;
+                background-color: ${self.theme.colors.main.backgrounds.tertiary.html};
             }
             #pulseaudio-slider highlight {
                 min-width: 10px;
                 border-radius: 5px;
-                background-color: #33ff44;
+                background-color: ${self.theme.colors.main.foregrounds.primary.html};
             }
           '';
       };

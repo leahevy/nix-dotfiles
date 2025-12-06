@@ -32,6 +32,11 @@
       flake = false;
     };
 
+    themes = {
+      url = "path:./src/themes";
+      flake = false;
+    };
+
     config = {
       url = "path:./src/nxconfig";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -133,6 +138,7 @@
         lib = inputs.lib;
         config = inputs.config;
         profile = inputs.profile;
+        themes = inputs.themes;
       }
       // configInputs;
 

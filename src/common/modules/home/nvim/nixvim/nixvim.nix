@@ -114,184 +114,49 @@ args@{
         hash = "sha256-M2n3kWMPTIEAPXMjJd73z2+Pvf60+oUcRyJ8tKdir1Q=";
       };
       setupFunction = "eldritch";
-      tintedStyle = "green";
       settings = {
         on_colors.__raw = ''
           function(colors)
-            local tinted_style = "${
-              if foreignTheme.tintedStyle == null then "" else foreignTheme.tintedStyle
-            }"
-            if tinted_style == "green" then
-              colors.none = "NONE"
-              colors.bg_dark = "#000000"
-              colors.bg = "#000000"
-              colors.bg_highlight = "#000000"
-              colors.terminal_black = "#414868"
-              colors.fg = "#ffFF88"
-              colors.fg_dark = "#B8E8B8"
-              colors.fg_gutter = "#3b4261"
-              colors.fg_gutter_light = "#60C090"
-              colors.dark3 = "#8AB060"
-              colors.comment = "#306640"
-              colors.dark5 = "#5D9B62"
-              colors.bright_cyan = "#5FFFC8"
-              colors.cyan = "#88EEAA"
-              colors.dark_cyan = "#30EEB5"
-              colors.visual = "#3A7B45"
-              colors.bg_visual = "#3A7B45"
-              colors.magenta = "#40C8A0"
-              colors.magenta2 = "#80E8A0"
-              colors.magenta3 = "#2A6530"
-              colors.pink = "#73ff60"
-              colors.purple = "#40BB77"
-              colors.orange = "#88C040"
-              colors.yellow = "#74FF67"
-              colors.dark_yellow = "#AFDA50"
-              colors.green = "#20FF88"
-              colors.bright_green = "#00FF55"
-              colors.dark_green = "#22B46C"
-              colors.red = "#00e188"
-              colors.bright_red = "#44ee00"
-              colors.git = {
-                add = "#37f499",
-                change = "#FFFF67",
-                delete = "#E07575"
-              }
-              colors.gitSigns = {
-                add = "#37f499",
-                change = "#FFFF67",
-                delete = "#E07575",
-              }
-            elseif tinted_style == "red" then
-              colors.none = "NONE"
-              colors.bg_dark = "#000000"
-              colors.bg = "#000000"
-              colors.bg_highlight = "#000000"
-              colors.terminal_black = "#414868"
-              colors.fg = "#FF8888"
-              colors.fg_dark = "#E8B8B8"
-              colors.fg_gutter = "#3b4261"
-              colors.fg_gutter_light = "#C09060"
-              colors.dark3 = "#B06060"
-              colors.comment = "#664030"
-              colors.dark5 = "#9B5D5D"
-              colors.bright_cyan = "#FF685F"
-              colors.cyan = "#EE88AA"
-              colors.dark_cyan = "#EE30B5"
-              colors.visual = "#7B3A45"
-              colors.bg_visual = "#7B3A45"
-              colors.magenta = "#C84040"
-              colors.magenta2 = "#E88080"
-              colors.magenta3 = "#652A2A"
-              colors.pink = "#FF6073"
-              colors.purple = "#BB4077"
-              colors.orange = "#C04088"
-              colors.yellow = "#FF6774"
-              colors.dark_yellow = "#DA5050"
-              colors.green = "#E18800"
-              colors.bright_green = "#EE0044"
-              colors.dark_green = "#B42222"
-              colors.red = "#FF2088"
-              colors.bright_red = "#ff3050"
-              colors.git = {
-                add = "#37f499",
-                change = "#FFFF67",
-                delete = "#E07575"
-              }
-              colors.gitSigns = {
-                add = "#37f499",
-                change = "#FFFF67",
-                delete = "#E07575",
-              }
-            elseif tinted_style == "blue" then
-              colors.none = "NONE"
-              colors.bg_dark = "#000000"
-              colors.bg = "#000000"
-              colors.bg_highlight = "#000000"
-              colors.terminal_black = "#414868"
-              colors.fg = "#8888FF"
-              colors.fg_dark = "#B8B8E8"
-              colors.fg_gutter = "#3b4261"
-              colors.fg_gutter_light = "#6090C0"
-              colors.dark3 = "#6060B0"
-              colors.comment = "#304066"
-              colors.dark5 = "#5D5D9B"
-              colors.bright_cyan = "#5FC8FF"
-              colors.cyan = "#88AAEE"
-              colors.dark_cyan = "#30B5EE"
-              colors.visual = "#3A457B"
-              colors.bg_visual = "#3A457B"
-              colors.magenta = "#4040C8"
-              colors.magenta2 = "#8080E8"
-              colors.magenta3 = "#2A2A65"
-              colors.pink = "#6073FF"
-              colors.purple = "#4077BB"
-              colors.orange = "#4088C0"
-              colors.yellow = "#6774FF"
-              colors.dark_yellow = "#5050DA"
-              colors.green = "#0088E1"
-              colors.bright_green = "#0044EE"
-              colors.dark_green = "#2222B4"
-              colors.red = "#8800E1"
-              colors.bright_red = "#0044EE"
-              colors.git = {
-                add = "#37f499",
-                change = "#FFFF67",
-                delete = "#E07575"
-              }
-              colors.gitSigns = {
-                add = "#37f499",
-                change = "#FFFF67",
-                delete = "#E07575",
-              }
-            elseif tinted_style == "yellow" then
-              colors.none = "NONE"
-              colors.bg_dark = "#000000"
-              colors.bg = "#000000"
-              colors.bg_highlight = "#000000"
-              colors.terminal_black = "#414868"
-              colors.fg = "#FFFF88"
-              colors.fg_dark = "#E8E8B8"
-              colors.fg_gutter = "#3b4261"
-              colors.fg_gutter_light = "#C0C060"
-              colors.dark3 = "#B0B060"
-              colors.comment = "#666640"
-              colors.dark5 = "#9B9B5D"
-              colors.bright_cyan = "#FFFF5F"
-              colors.cyan = "#EEEE88"
-              colors.dark_cyan = "#EEEE30"
-              colors.visual = "#7B7B3A"
-              colors.bg_visual = "#7B7B3A"
-              colors.magenta = "#C8C840"
-              colors.magenta2 = "#E8E880"
-              colors.magenta3 = "#65652A"
-              colors.pink = "#FFFF60"
-              colors.purple = "#BBBB40"
-              colors.orange = "#C0C088"
-              colors.yellow = "#FFFF67"
-              colors.dark_yellow = "#DADA50"
-              colors.green = "#E1E100"
-              colors.bright_green = "#EEEE00"
-              colors.dark_green = "#B4B422"
-              colors.red = "#E1E100"
-              colors.bright_red = "#EEEE00"
-              colors.git = {
-                add = "#37f499",
-                change = "#FFFF67",
-                delete = "#E07575"
-              }
-              colors.gitSigns = {
-                add = "#37f499",
-                change = "#FFFF67",
-                delete = "#E07575",
-              }
-            elseif tinted_style ~= "" then
-              vim.defer_fn(function()
-                vim.notify("⚠️ Invalid tintedStyle '" .. tinted_style .. "'. Using default eldritch theme instead.", vim.log.levels.WARN, {
-                  title = "Eldritch Theme Configuration"
-                })
-              end, 750)
-            end
+            colors.none = "NONE"
+            colors.bg_dark = "${self.theme.colors.terminal.normalBackgrounds.primary.html}"
+            colors.bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}"
+            colors.bg_highlight = "${self.theme.colors.terminal.normalBackgrounds.highlight.html}"
+            colors.terminal_black = "${self.theme.colors.terminal.colors.black.html}"
+            colors.fg = "${self.theme.colors.terminal.foregrounds.primary.html}"
+            colors.fg_dark = "${self.theme.colors.terminal.foregrounds.secondary.html}"
+            colors.fg_gutter = "${self.theme.colors.terminal.foregrounds.dim.html}"
+            colors.fg_gutter_light = "${self.theme.colors.terminal.foregrounds.bright.html}"
+            colors.dark3 = "${self.theme.colors.terminal.colors.green.html}"
+            colors.comment = "${self.theme.colors.semantic.hint.html}"
+            colors.dark5 = "${self.theme.colors.terminal.colors.greenDark.html}"
+            colors.bright_cyan = "${self.theme.colors.terminal.colors.cyanBright.html}"
+            colors.cyan = "${self.theme.colors.terminal.colors.cyan.html}"
+            colors.dark_cyan = "${self.theme.colors.terminal.colors.cyanDark.html}"
+            colors.visual = "${self.theme.colors.terminal.normalBackgrounds.selection.html}"
+            colors.bg_visual = "${self.theme.colors.terminal.normalBackgrounds.selection.html}"
+            colors.magenta = "${self.theme.colors.terminal.colors.magenta.html}"
+            colors.magenta2 = "${self.theme.colors.terminal.colors.magentaLight.html}"
+            colors.magenta3 = "${self.theme.colors.terminal.colors.magentaDark.html}"
+            colors.pink = "${self.theme.colors.terminal.colors.pink.html}"
+            colors.purple = "${self.theme.colors.terminal.colors.purple.html}"
+            colors.orange = "${self.theme.colors.terminal.colors.orange.html}"
+            colors.yellow = "${self.theme.colors.terminal.colors.yellow.html}"
+            colors.dark_yellow = "${self.theme.colors.terminal.colors.yellowDark.html}"
+            colors.green = "${self.theme.colors.terminal.colors.green.html}"
+            colors.bright_green = "${self.theme.colors.terminal.colors.greenBright.html}"
+            colors.dark_green = "${self.theme.colors.terminal.colors.greenDark.html}"
+            colors.red = "${self.theme.colors.terminal.colors.green.html}"
+            colors.bright_red = "${self.theme.colors.terminal.colors.greenBright.html}"
+            colors.git = {
+              add = "${self.theme.colors.semantic.success.html}",
+              change = "${self.theme.colors.semantic.warning.html}",
+              delete = "${self.theme.colors.semantic.error.html}"
+            }
+            colors.gitSigns = {
+              add = "${self.theme.colors.semantic.success.html}",
+              change = "${self.theme.colors.semantic.warning.html}",
+              delete = "${self.theme.colors.semantic.error.html}",
+            }
           end
         '';
       };

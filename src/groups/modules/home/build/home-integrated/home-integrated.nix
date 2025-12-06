@@ -33,6 +33,9 @@ args@{
         dummy-files = true;
       }
       // (if self.host.impermanence or false then { impermanence = true; } else { });
+      theme = {
+        theme-home = true;
+      };
     };
   };
 }

@@ -198,6 +198,17 @@ with lib;
       type = types.submodule {
         options = {
 
+          theme = mkOption {
+            type = types.nullOr (
+              types.enum [
+                "red"
+                "green"
+              ]
+            );
+            default = null;
+            description = "Theme to use for the host";
+          };
+
           networking = mkOption {
             type = types.submodule {
               options = {

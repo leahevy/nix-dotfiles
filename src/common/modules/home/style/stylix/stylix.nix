@@ -16,14 +16,6 @@ args@{
   namespace = "home";
 
   settings = {
-    themeName = "atelier-seaside";
-    polarity = "dark";
-    overrideBlackBackground = true;
-    overrideWhiteForeground = true;
-    blackOverrideColour = "#000000";
-    whiteOverrideColourNormal = "#59ef99";
-    whiteOverrideColourBright = "#eeeeee";
-    whiteOverrideColourLight = "#cbffa9";
     fonts = {
       serif = {
         path = "dejavu_fonts/DejaVu Serif";
@@ -55,42 +47,31 @@ args@{
       ...
     }:
     let
-      baseSchemeContent = builtins.readFile "${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml";
+      themeYaml = ''
+        system: "base16"
+        name: "NX Theme"
+        author: "NX User"
+        variant: "${self.theme.variant}"
+        palette:
+          base00: "${self.theme.colors.main.backgrounds.primary.html}"
+          base01: "${self.theme.colors.main.backgrounds.secondary.html}"
+          base02: "${self.theme.colors.main.backgrounds.tertiary.html}"
+          base03: "${self.theme.colors.main.foregrounds.subtle.html}"
+          base04: "${self.theme.colors.main.foregrounds.secondary.html}"
+          base05: "${self.theme.colors.main.foregrounds.primary.html}"
+          base06: "${self.theme.colors.main.foregrounds.emphasized.html}"
+          base07: "${self.theme.colors.main.foregrounds.strong.html}"
+          base08: "${self.theme.colors.main.base.red.html}"
+          base09: "${self.theme.colors.main.base.orange.html}"
+          base0A: "${self.theme.colors.main.base.yellow.html}"
+          base0B: "${self.theme.colors.main.base.green.html}"
+          base0C: "${self.theme.colors.main.base.cyan.html}"
+          base0D: "${self.theme.colors.main.base.blue.html}"
+          base0E: "${self.theme.colors.main.base.purple.html}"
+          base0F: "${self.theme.colors.main.base.pink.html}"
+      '';
 
-      overriddenScheme =
-        let
-          afterBlackOverride =
-            if self.settings.overrideBlackBackground then
-              builtins.replaceStrings
-                [ "base00: " "base01: " ]
-                [
-                  "base00: \"${self.settings.blackOverrideColour}\" #"
-                  "base01: \"${self.settings.blackOverrideColour}\" #"
-                ]
-                baseSchemeContent
-            else
-              baseSchemeContent;
-
-          afterWhiteOverride =
-            if self.settings.overrideWhiteForeground then
-              builtins.replaceStrings
-                [ "base05: " "base06: " "base07: " ]
-                [
-                  "base05: \"${self.settings.whiteOverrideColourNormal}\" #"
-                  "base06: \"${self.settings.whiteOverrideColourLight}\" #"
-                  "base07: \"${self.settings.whiteOverrideColourBright}\" #"
-                ]
-                afterBlackOverride
-            else
-              afterBlackOverride;
-        in
-        afterWhiteOverride;
-
-      customSchemePackage =
-        if self.settings.overrideBlackBackground || self.settings.overrideWhiteForeground then
-          pkgs.writeTextDir "share/themes/${self.settings.themeName}.yaml" overriddenScheme
-        else
-          pkgs.base16-schemes;
+      customSchemePackage = pkgs.writeTextDir "share/themes/nx-theme.yaml" themeYaml;
 
       getPackage =
         fontConfig:
@@ -115,17 +96,12 @@ args@{
       ]
       ++ lib.optionals (self.settings.cursor != null) [
         (getPackage self.settings.cursor.style)
-      ]
-      ++ [ pkgs.base16-schemes ];
+      ];
 
       stylix = {
         enable = true;
 
-        base16Scheme =
-          if self.settings.overrideBlackBackground || self.settings.overrideWhiteForeground then
-            "${customSchemePackage}/share/themes/${self.settings.themeName}.yaml"
-          else
-            "${pkgs.base16-schemes}/share/themes/${self.settings.themeName}.yaml";
+        base16Scheme = "${customSchemePackage}/share/themes/nx-theme.yaml";
 
         targets = {
           kde.enable = false;
@@ -147,7 +123,7 @@ args@{
           else
             self.file "wallpaper.jpg";
 
-        polarity = self.settings.polarity;
+        polarity = self.theme.variant;
 
         cursor = lib.mkIf (self.settings.cursor != null) {
           package = getPackage self.settings.cursor.style;

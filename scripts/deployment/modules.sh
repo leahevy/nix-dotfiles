@@ -323,7 +323,7 @@ subcommand_edit() {
   local group_name="${rest2%%.*}"
   local module_name="${rest2#*.}"
   
-  local core_inputs=("common" "linux" "darwin" "groups" "build" "config" "profile")
+  local core_inputs=("common" "linux" "darwin" "groups" "build" "config" "profile" "themes")
   local input_allowed=false
   for allowed_input in "${core_inputs[@]}"; do
     if [[ "$input_name" == "$allowed_input" ]]; then

@@ -37,6 +37,9 @@ args@{
         programs = true;
       };
       system = { } // (if self.host.impermanence or false then { impermanence = true; } else { });
+      theme = {
+        theme-system = true;
+      };
     };
   };
 }

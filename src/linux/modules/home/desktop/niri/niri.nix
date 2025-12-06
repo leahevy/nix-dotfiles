@@ -141,8 +141,8 @@ args@{
     secondaryDisplayScale = 1.0;
     applicationsToStart = [ ];
     delayedApplicationsToStart = [ ];
-    activeColor = "#88cc66";
-    inactiveColor = "#222233";
+    activeColor = self.theme.colors.main.foregrounds.primary.html;
+    inactiveColor = self.theme.colors.main.backgrounds.secondary.html;
     switchBackgroundOnWorkspaceChange = false;
     modKey = "Super";
     modKeyNested = "Alt";
@@ -747,7 +747,7 @@ args@{
 
           overview = {
             zoom = 0.93;
-            backdrop-color = "#000000";
+            backdrop-color = self.theme.colors.main.backgrounds.primary.html;
           };
 
           clipboard = {
@@ -755,7 +755,7 @@ args@{
           };
 
           layout = {
-            background-color = "#000000";
+            background-color = self.theme.colors.main.backgrounds.primary.html;
             gaps = 18;
             preset-column-widths = [
               { proportion = 0.25; }

@@ -677,8 +677,6 @@ rec {
           inherit fullPath pathParts;
         };
 
-    in
-    {
       # Check if module is enabled
       isModuleEnabled =
         modulePath:
@@ -721,6 +719,53 @@ rec {
           config
         else
           throw "Required module '${inputName}.${modulePath}' is not enabled in ${actualNamespace} namespace";
+
+      availableThemes =
+        let
+          themesDir = moduleContext.inputs.themes + "/modules/home/themes";
+        in
+        builtins.filter (name: name != "base") (builtins.attrNames (builtins.readDir themesDir));
+
+      theme =
+        let
+          activeTheme =
+            if moduleContext.host or null != null && moduleContext.host.settings.theme or null != null then
+              moduleContext.host.settings.theme
+            else if moduleContext.user or null != null && moduleContext.user.settings.theme or null != null then
+              moduleContext.user.settings.theme
+            else
+              moduleContext.variables.defaultTheme;
+
+          themesDir = moduleContext.inputs.themes + "/modules/home/themes";
+          existingThemes = builtins.attrNames (builtins.readDir themesDir);
+
+          themeModulePath =
+            moduleContext.inputs.themes + "/modules/home/themes/${activeTheme}/${activeTheme}.nix";
+
+          themeModule =
+            if builtins.pathExists themeModulePath then
+              import themeModulePath {
+                inherit lib;
+                pkgs = null;
+                pkgs-unstable = null;
+                funcs = null;
+                helpers = null;
+                defs = null;
+                self = null;
+              }
+            else
+              throw "Theme '${activeTheme}' not found at ${themeModulePath}. Available themes: ${builtins.concatStringsSep ", " existingThemes}";
+        in
+        themeModule.settings;
+    in
+    {
+      inherit
+        isModuleEnabled
+        getModuleConfig
+        requireModuleConfig
+        theme
+        availableThemes
+        ;
     };
 
   # Generate same module query functions for specific input, namespace and module path
