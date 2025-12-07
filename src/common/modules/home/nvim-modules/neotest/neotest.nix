@@ -377,12 +377,12 @@ args@{
             vim.api.nvim_create_autocmd("ColorScheme", {
               pattern = "*",
               callback = function()
-                vim.api.nvim_set_hl(0, "NeotestPassed", { fg = "#00ff00" })
-                vim.api.nvim_set_hl(0, "NeotestFailed", { fg = "#ff0000" })
-                vim.api.nvim_set_hl(0, "NeotestRunning", { fg = "#ffff00" })
-                vim.api.nvim_set_hl(0, "NeotestSkipped", { fg = "#888888" })
-                vim.api.nvim_set_hl(0, "NeotestUnknown", { fg = "#666666" })
-                vim.api.nvim_set_hl(0, "NeotestWatching", { fg = "#00ffff" })
+                vim.api.nvim_set_hl(0, "NeotestPassed", { fg = "${self.theme.colors.semantic.success.html}" })
+                vim.api.nvim_set_hl(0, "NeotestFailed", { fg = "${self.theme.colors.semantic.error.html}" })
+                vim.api.nvim_set_hl(0, "NeotestRunning", { fg = "${self.theme.colors.semantic.warning.html}" })
+                vim.api.nvim_set_hl(0, "NeotestSkipped", { fg = "${self.theme.colors.separators.light.html}" })
+                vim.api.nvim_set_hl(0, "NeotestUnknown", { fg = "${self.theme.colors.separators.normal.html}" })
+                vim.api.nvim_set_hl(0, "NeotestWatching", { fg = "${self.theme.colors.semantic.info.html}" })
               end,
             })
           end

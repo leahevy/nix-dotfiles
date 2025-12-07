@@ -71,16 +71,16 @@ args@{
         duration = 500;
         charsForMaxDuration = 10;
         easing = "outQuad";
-        fromColor = "#89b4fa";
-        toColor = "#1e1e2e";
+        fromColor = self.theme.colors.terminal.colors.blue.html;
+        toColor = self.theme.colors.terminal.normalBackgrounds.primary.html;
       };
 
       reverse_fade = {
         duration = 500;
         charsForMaxDuration = 10;
         easing = "outBack";
-        fromColor = "#a6e3a1";
-        toColor = "#1e1e2e";
+        fromColor = self.theme.colors.terminal.colors.green.html;
+        toColor = self.theme.colors.terminal.normalBackgrounds.primary.html;
       };
 
       pulse = {
@@ -88,16 +88,16 @@ args@{
         charsForMaxDuration = 15;
         pulseCount = 2;
         intensity = 1.2;
-        fromColor = "#006600";
-        toColor = "#1e1e2e";
+        fromColor = self.theme.colors.terminal.colors.yellow.html;
+        toColor = self.theme.colors.terminal.normalBackgrounds.primary.html;
       };
 
       bounce = {
         duration = 500;
         charsForMaxDuration = 20;
         oscillationCount = 1;
-        fromColor = "#f38ba8";
-        toColor = "#1e1e2e";
+        fromColor = self.theme.colors.terminal.colors.pink.html;
+        toColor = self.theme.colors.terminal.normalBackgrounds.primary.html;
       };
 
       rainbow = {
@@ -109,8 +109,8 @@ args@{
         duration = 350;
         charsForMaxDuration = 25;
         lingeringTime = 50;
-        fromColor = "#cba6f7";
-        toColor = "#1e1e2e";
+        fromColor = self.theme.colors.terminal.colors.purple.html;
+        toColor = self.theme.colors.terminal.normalBackgrounds.primary.html;
       };
     };
 

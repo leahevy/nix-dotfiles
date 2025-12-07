@@ -16,7 +16,7 @@ args@{
   namespace = "home";
 
   settings = {
-    activeTabColor = "#50fa7b";
+    activeTabColor = self.theme.colors.blocks.primary.foreground.html;
   };
 
   configuration =
@@ -29,14 +29,14 @@ args@{
             vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
             vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
             vim.api.nvim_set_hl(0, "SignColumn", { bg = "none" })
-            vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "none", fg = "#181818" })
+            vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "none", fg = "${self.theme.colors.separators.dark.html}" })
 
-            vim.api.nvim_set_hl(0, "LineNr", { bg = "none", fg = "#202020" })
-            vim.api.nvim_set_hl(0, "LineNrAbove", { bg = "none", fg = "#202020" })
-            vim.api.nvim_set_hl(0, "LineNrBelow", { bg = "none", fg = "#202020" })
+            vim.api.nvim_set_hl(0, "LineNr", { bg = "none", fg = "${self.theme.colors.separators.normal.html}" })
+            vim.api.nvim_set_hl(0, "LineNrAbove", { bg = "none", fg = "${self.theme.colors.separators.normal.html}" })
+            vim.api.nvim_set_hl(0, "LineNrBelow", { bg = "none", fg = "${self.theme.colors.separators.normal.html}" })
             local cursor_line_nr = vim.api.nvim_get_hl(0, { name = "CursorLineNr" })
             if not cursor_line_nr.fg then
-              cursor_line_nr.fg = "#37f499"
+              cursor_line_nr.fg = "${self.theme.colors.blocks.primary.foreground.html}"
               cursor_line_nr.bold = true
             end
             vim.api.nvim_set_hl(0, "CursorLineNr", vim.tbl_extend("force", cursor_line_nr, { bg = "none" }))

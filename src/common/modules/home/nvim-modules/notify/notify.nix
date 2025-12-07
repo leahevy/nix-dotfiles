@@ -21,7 +21,7 @@ args@{
     max_height = 75;
     stages = "fade_in_slide_out";
     render = "wrapped-default";
-    background_colour = "#000000";
+    background_colour = self.theme.colors.terminal.normalBackgrounds.primary.html;
     fps = 30;
     level = "debug";
     minimum_width = 25;
@@ -107,26 +107,26 @@ args@{
 
           local function fix_notify_background()
             vim.api.nvim_set_hl(0, "NotifyBackground", { bg = "${self.settings.background_colour}" })
-            vim.api.nvim_set_hl(0, "NotifyERRORBorder", { fg = "#8A1F1F" })
-            vim.api.nvim_set_hl(0, "NotifyWARNBorder", { fg = "#79491D" })
-            vim.api.nvim_set_hl(0, "NotifyINFOBorder", { fg = "#4F6752" })
-            vim.api.nvim_set_hl(0, "NotifyDEBUGBorder", { fg = "#8B8B8B" })
-            vim.api.nvim_set_hl(0, "NotifyTRACEBorder", { fg = "#4F3552" })
-            vim.api.nvim_set_hl(0, "NotifyERRORIcon", { fg = "#F70067" })
-            vim.api.nvim_set_hl(0, "NotifyWARNIcon", { fg = "#F79000" })
-            vim.api.nvim_set_hl(0, "NotifyINFOIcon", { fg = "#A9FF68" })
-            vim.api.nvim_set_hl(0, "NotifyDEBUGIcon", { fg = "#8B8B8B" })
-            vim.api.nvim_set_hl(0, "NotifyTRACEIcon", { fg = "#D484FF" })
-            vim.api.nvim_set_hl(0, "NotifyERRORTitle", { fg = "#F70067" })
-            vim.api.nvim_set_hl(0, "NotifyWARNTitle", { fg = "#F79000" })
-            vim.api.nvim_set_hl(0, "NotifyINFOTitle", { fg = "#A9FF68" })
-            vim.api.nvim_set_hl(0, "NotifyDEBUGTitle", { fg = "#8B8B8B" })
-            vim.api.nvim_set_hl(0, "NotifyTRACETitle", { fg = "#D484FF" })
-            vim.api.nvim_set_hl(0, "NotifyERRORBody", { fg = "#FFFFFF", bg = "${self.settings.background_colour}" })
-            vim.api.nvim_set_hl(0, "NotifyWARNBody", { fg = "#FFFFFF", bg = "${self.settings.background_colour}" })
-            vim.api.nvim_set_hl(0, "NotifyINFOBody", { fg = "#FFFFFF", bg = "${self.settings.background_colour}" })
-            vim.api.nvim_set_hl(0, "NotifyDEBUGBody", { fg = "#FFFFFF", bg = "${self.settings.background_colour}" })
-            vim.api.nvim_set_hl(0, "NotifyTRACEBody", { fg = "#FFFFFF", bg = "${self.settings.background_colour}" })
+            vim.api.nvim_set_hl(0, "NotifyERRORBorder", { fg = "${self.theme.colors.semantic.removed.html}" })
+            vim.api.nvim_set_hl(0, "NotifyWARNBorder", { fg = "${self.theme.colors.semantic.hint.html}" })
+            vim.api.nvim_set_hl(0, "NotifyINFOBorder", { fg = "${self.theme.colors.separators.normal.html}" })
+            vim.api.nvim_set_hl(0, "NotifyDEBUGBorder", { fg = "${self.theme.colors.separators.light.html}" })
+            vim.api.nvim_set_hl(0, "NotifyTRACEBorder", { fg = "${self.theme.colors.separators.dark.html}" })
+            vim.api.nvim_set_hl(0, "NotifyERRORIcon", { fg = "${self.theme.colors.semantic.error.html}" })
+            vim.api.nvim_set_hl(0, "NotifyWARNIcon", { fg = "${self.theme.colors.semantic.warning.html}" })
+            vim.api.nvim_set_hl(0, "NotifyINFOIcon", { fg = "${self.theme.colors.semantic.info.html}" })
+            vim.api.nvim_set_hl(0, "NotifyDEBUGIcon", { fg = "${self.theme.colors.separators.light.html}" })
+            vim.api.nvim_set_hl(0, "NotifyTRACEIcon", { fg = "${self.theme.colors.terminal.colors.magenta.html}" })
+            vim.api.nvim_set_hl(0, "NotifyERRORTitle", { fg = "${self.theme.colors.semantic.error.html}" })
+            vim.api.nvim_set_hl(0, "NotifyWARNTitle", { fg = "${self.theme.colors.semantic.warning.html}" })
+            vim.api.nvim_set_hl(0, "NotifyINFOTitle", { fg = "${self.theme.colors.semantic.info.html}" })
+            vim.api.nvim_set_hl(0, "NotifyDEBUGTitle", { fg = "${self.theme.colors.separators.light.html}" })
+            vim.api.nvim_set_hl(0, "NotifyTRACETitle", { fg = "${self.theme.colors.terminal.colors.magenta.html}" })
+            vim.api.nvim_set_hl(0, "NotifyERRORBody", { fg = "${self.theme.colors.terminal.foregrounds.primary.html}", bg = "${self.settings.background_colour}" })
+            vim.api.nvim_set_hl(0, "NotifyWARNBody", { fg = "${self.theme.colors.terminal.foregrounds.primary.html}", bg = "${self.settings.background_colour}" })
+            vim.api.nvim_set_hl(0, "NotifyINFOBody", { fg = "${self.theme.colors.terminal.foregrounds.primary.html}", bg = "${self.settings.background_colour}" })
+            vim.api.nvim_set_hl(0, "NotifyDEBUGBody", { fg = "${self.theme.colors.terminal.foregrounds.primary.html}", bg = "${self.settings.background_colour}" })
+            vim.api.nvim_set_hl(0, "NotifyTRACEBody", { fg = "${self.theme.colors.terminal.foregrounds.primary.html}", bg = "${self.settings.background_colour}" })
           end
 
           local startup_time = vim.loop.now()

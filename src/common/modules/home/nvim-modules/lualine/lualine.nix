@@ -209,8 +209,8 @@ args@{
             local original_inactive_color = self.options.buffers_color and self.options.buffers_color.inactive or self:get_hl() .. '_inactive'
 
             modified_highlights = {
-              modified_active = self:create_hl({fg = '#ff6b9d', bg = '#4d1a33', gui = 'bold'}, 'buffer_modified_active'),
-              modified_inactive = self:create_hl({fg = '#4d1a33', bg = 'NONE'}, 'buffer_modified_inactive'),
+              modified_active = self:create_hl({fg = '${self.theme.colors.semantic.warning.html}', bg = '${self.theme.colors.separators.dark.html}', gui = 'bold'}, 'buffer_modified_active'),
+              modified_inactive = self:create_hl({fg = '${self.theme.colors.separators.dark.html}', bg = 'NONE'}, 'buffer_modified_inactive'),
               normal_active = self:create_hl(original_active_color, 'buffer_normal_active'),
               normal_inactive = self:create_hl(original_inactive_color, 'buffer_normal_inactive'),
             }
@@ -245,8 +245,8 @@ args@{
         local custom_fname = require('lualine.components.filename'):extend()
         local highlight = require('lualine.highlight')
         local default_status_colors = {
-          saved = '#37f499',
-          modified = '#ff6b9d'
+          saved = '${self.theme.colors.terminal.foregrounds.primary.html}',
+          modified = '${self.theme.colors.semantic.warning.html}'
         }
 
         function custom_fname:init(options)
@@ -281,9 +281,9 @@ args@{
           custom_fname.init(self, options)
           self.status_colors = {
             saved = highlight.create_component_highlight_group(
-              {fg = '#333333'}, 'filename_winbar_saved', self.options),
+              {fg = '${self.theme.colors.separators.normal.html}'}, 'filename_winbar_saved', self.options),
             modified = highlight.create_component_highlight_group(
-              {fg = '#ff6b9d'}, 'filename_winbar_modified', self.options),
+              {fg = '${self.theme.colors.semantic.warning.html}'}, 'filename_winbar_modified', self.options),
           }
         end
 
@@ -294,9 +294,9 @@ args@{
           custom_fname.init(self, options)
           self.status_colors = {
             saved = highlight.create_component_highlight_group(
-              {fg = '#222222'}, 'filename_winbar_inactive_saved', self.options),
+              {fg = '${self.theme.colors.separators.dark.html}'}, 'filename_winbar_inactive_saved', self.options),
             modified = highlight.create_component_highlight_group(
-              {fg = '#bb6b9d'}, 'filename_winbar_inactive_modified', self.options),
+              {fg = '${self.theme.colors.semantic.warning.html}'}, 'filename_winbar_inactive_modified', self.options),
           }
         end
 
@@ -311,22 +311,22 @@ args@{
         local transparent = ${if self.settings.transparentBackground then "true" else "false"}
 
         local colors = {
-          normal_fg = '#37f499',
-          normal_bg = transparent and nil or '#1a4d33',
-          insert_fg = '#ff6b9d',
-          insert_bg = transparent and nil or '#4d1a33',
-          visual_fg = '#c678dd',
-          visual_bg = transparent and nil or '#3d2644',
-          replace_fg = '#ff4444',
-          replace_bg = transparent and nil or '#4d1a1a',
-          command_fg = '#ffd93d',
-          command_bg = transparent and nil or '#4d4d1a',
-          section_fg = '#cccccc',
-          section_bg = transparent and nil or '#0a0a0a',
-          tertiary_fg = '#888888',
-          tertiary_bg = transparent and nil or '#000000',
-          inactive_fg = '#666666',
-          inactive_bg = transparent and nil or '#000000',
+          normal_fg = '${self.theme.colors.blocks.primary.foreground.html}',
+          normal_bg = transparent and nil or '${self.theme.colors.blocks.primary.background.html}',
+          insert_fg = '${self.theme.colors.blocks.accent.foreground.html}',
+          insert_bg = transparent and nil or '${self.theme.colors.blocks.accent.background.html}',
+          visual_fg = '${self.theme.colors.blocks.highlight.foreground.html}',
+          visual_bg = transparent and nil or '${self.theme.colors.blocks.highlight.background.html}',
+          replace_fg = '${self.theme.colors.blocks.critical.foreground.html}',
+          replace_bg = transparent and nil or '${self.theme.colors.blocks.critical.background.html}',
+          command_fg = '${self.theme.colors.blocks.warning.foreground.html}',
+          command_bg = transparent and nil or '${self.theme.colors.blocks.warning.background.html}',
+          section_fg = '${self.theme.colors.terminal.foregrounds.primary.html}',
+          section_bg = transparent and nil or '${self.theme.colors.terminal.normalBackgrounds.secondary.html}',
+          tertiary_fg = '${self.theme.colors.terminal.foregrounds.dim.html}',
+          tertiary_bg = transparent and nil or '${self.theme.colors.terminal.normalBackgrounds.primary.html}',
+          inactive_fg = '${self.theme.colors.separators.normal.html}',
+          inactive_bg = transparent and nil or '${self.theme.colors.terminal.normalBackgrounds.primary.html}',
         }
 
         local theme = {

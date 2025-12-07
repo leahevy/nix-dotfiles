@@ -58,14 +58,14 @@ args@{
     ];
 
     colors = {
-      static = "#2c2c2c";
-      color1 = "#e06c75";
-      color2 = "#d19a66";
-      color3 = "#e5c07b";
-      color4 = "#98c379";
-      color5 = "#c678dd";
-      color6 = "#56b6c2";
-      color7 = "#61afef";
+      static = self.theme.colors.separators.dark.html;
+      color1 = self.theme.colors.main.base.red.html;
+      color2 = self.theme.colors.main.base.orange.html;
+      color3 = self.theme.colors.main.base.yellow.html;
+      color4 = self.theme.colors.main.base.green.html;
+      color5 = self.theme.colors.main.base.purple.html;
+      color6 = self.theme.colors.main.base.cyan.html;
+      color7 = self.theme.colors.main.base.pink.html;
     };
   };
 

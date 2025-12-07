@@ -131,7 +131,7 @@ args@{
               })
             end
 
-            vim.api.nvim_set_hl(0, "ZenBg", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "ZenBg", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
           end
         '';
       };

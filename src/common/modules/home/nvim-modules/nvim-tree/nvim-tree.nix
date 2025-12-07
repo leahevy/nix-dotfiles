@@ -30,11 +30,11 @@ args@{
           vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {
             callback = function()
               vim.defer_fn(function()
-                vim.api.nvim_set_hl(0, "NvimTreeNormal", { bg = "#000000" })
-                vim.api.nvim_set_hl(0, "NvimTreeNormalNC", { bg = "#000000" })
-                vim.api.nvim_set_hl(0, "NvimTreeEndOfBuffer", { bg = "#000000" })
-                vim.api.nvim_set_hl(0, "NvimTreeWinSeparator", { bg = "#000000", fg = "#000000" })
-                vim.api.nvim_set_hl(0, "NvimTreeVertSplit", { bg = "#000000", fg = "#000000" })
+                vim.api.nvim_set_hl(0, "NvimTreeNormal", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                vim.api.nvim_set_hl(0, "NvimTreeNormalNC", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                vim.api.nvim_set_hl(0, "NvimTreeEndOfBuffer", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                vim.api.nvim_set_hl(0, "NvimTreeWinSeparator", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}", fg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                vim.api.nvim_set_hl(0, "NvimTreeVertSplit", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}", fg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
               end, 100)
             end,
           })

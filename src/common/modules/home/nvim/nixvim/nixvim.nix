@@ -104,7 +104,7 @@ args@{
     };
     overrideThemeSettings = { };
     pureBlackBackground = true;
-    overrideCursorHighlightColour = "#0b0b0b"; # Or null
+    overrideCursorHighlightColour = self.theme.colors.separators.dark.html; # Or null
     foreignTheme = {
       name = "eldritch";
       github = {
@@ -274,8 +274,8 @@ args@{
 
               ''
                 _G.nx_modules["00-early-background"] = function()
-                  vim.api.nvim_set_hl(0, "Normal", { bg = "#000000" })
-                  vim.cmd("highlight Normal guibg=#000000 ctermbg=black")
+                  vim.api.nvim_set_hl(0, "Normal", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                  vim.cmd("highlight Normal guibg=${self.theme.colors.terminal.normalBackgrounds.primary.html} ctermbg=black")
                 end
               ''
             ]
@@ -394,42 +394,42 @@ args@{
               ''
                 _G.nx_modules["95-pure-black-background"] = function()
                   local function fix_black_background()
-                    vim.api.nvim_set_hl(0, "Normal", { bg = "#000000" })
-                    vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#000000" })
-                    vim.api.nvim_set_hl(0, "NormalNC", { bg = "#000000" })
-                    vim.api.nvim_set_hl(0, "NormalSB", { bg = "#000000" })
-                    vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "#000000" })
-                    vim.api.nvim_set_hl(0, "SignColumn", { bg = "#000000" })
-                    vim.api.nvim_set_hl(0, "SignColumnSB", { bg = "#000000" })
-                    vim.api.nvim_set_hl(0, "LineNr", { bg = "#000000" })
-                    vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "Normal", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "NormalFloat", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "NormalNC", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "NormalSB", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "SignColumn", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "SignColumnSB", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "LineNr", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
 
-                    vim.api.nvim_set_hl(0, "WinSeparator", { bg = "#000000", fg = "#000000" })
-                    vim.api.nvim_set_hl(0, "VertSplit", { bg = "#000000", fg = "#000000" })
+                    vim.api.nvim_set_hl(0, "WinSeparator", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}", fg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "VertSplit", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}", fg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
 
-                    vim.api.nvim_set_hl(0, "StatusLine", { bg = "#000000" })
-                    vim.api.nvim_set_hl(0, "StatusLineNC", { bg = "#000000" })
-                    vim.api.nvim_set_hl(0, "TabLine", { bg = "#000000" })
-                    vim.api.nvim_set_hl(0, "TabLineFill", { bg = "#000000" })
+                    vim.api.nvim_set_hl(0, "StatusLine", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "StatusLineNC", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "TabLine", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "TabLineFill", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
 
-                    vim.api.nvim_set_hl(0, "Pmenu", { bg = "#050505" })
-                    vim.api.nvim_set_hl(0, "PmenuSel", { bg = "#04293a" })
-                    vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "#030303" })
-                    vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "#1a1a1a" })
+                    vim.api.nvim_set_hl(0, "Pmenu", { bg = "${self.theme.colors.terminal.normalBackgrounds.secondary.html}" })
+                    vim.api.nvim_set_hl(0, "PmenuSel", { bg = "${self.theme.colors.terminal.normalBackgrounds.highlight.html}" })
+                    vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "${self.theme.colors.terminal.normalBackgrounds.tertiary.html}" })
+                    vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "${self.theme.colors.separators.dark.html}" })
 
-                    vim.api.nvim_set_hl(0, "QuickFixLine", { bg = "#04293a", bold = true })
-                    vim.api.nvim_set_hl(0, "qfText", { fg = "#606080" })
-                    vim.api.nvim_set_hl(0, "qfLineNr", { fg = "#606080" })
-                    vim.api.nvim_set_hl(0, "qfFileName", { fg = "#8080ff" })
-                    vim.api.nvim_set_hl(0, "qfSeparator", { fg = "#404040" })
+                    vim.api.nvim_set_hl(0, "QuickFixLine", { bg = "${self.theme.colors.terminal.normalBackgrounds.highlight.html}", bold = true })
+                    vim.api.nvim_set_hl(0, "qfText", { fg = "${self.theme.colors.separators.normal.html}" })
+                    vim.api.nvim_set_hl(0, "qfLineNr", { fg = "${self.theme.colors.separators.normal.html}" })
+                    vim.api.nvim_set_hl(0, "qfFileName", { fg = "${self.theme.colors.terminal.colors.blue.html}" })
+                    vim.api.nvim_set_hl(0, "qfSeparator", { fg = "${self.theme.colors.separators.normal.html}" })
 
-                    vim.api.nvim_set_hl(0, "MsgArea", { bg = "NONE", fg = "#33dd77" })
-                    vim.api.nvim_set_hl(0, "Visual", { bg = "#1a4d33", fg = "#37f499" })
+                    vim.api.nvim_set_hl(0, "MsgArea", { bg = "NONE", fg = "${self.theme.colors.terminal.colors.green.html}" })
+                    vim.api.nvim_set_hl(0, "Visual", { bg = "${self.theme.colors.blocks.primary.background.html}", fg = "${self.theme.colors.blocks.primary.foreground.html}" })
 
                     local float_border_hl = vim.api.nvim_get_hl(0, { name = "FloatBorder" })
                     if float_border_hl.fg then
                       vim.api.nvim_set_hl(0, "FloatBorder", {
-                        bg = "#000000",
+                        bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}",
                         fg = float_border_hl.fg
                       })
                     end
@@ -448,7 +448,7 @@ args@{
                   })
 
                   local qf_ns = vim.api.nvim_create_namespace("quickfix_highlights")
-                  vim.api.nvim_set_hl(qf_ns, "CursorLine", { bg = "#031313" })
+                  vim.api.nvim_set_hl(qf_ns, "CursorLine", { bg = "${self.theme.colors.terminal.normalBackgrounds.tertiary.html}" })
 
                   vim.api.nvim_create_autocmd("FileType", {
                     pattern = "qf",

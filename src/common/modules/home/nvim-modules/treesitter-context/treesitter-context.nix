@@ -138,14 +138,14 @@ args@{
           _G.nx_modules = _G.nx_modules or {}
           _G.nx_modules["45-treesitter-context"] = function()
             local normal_bg = vim.api.nvim_get_hl(0, { name = "Normal" }).bg
-            local bg_color = normal_bg and string.format("#%06x", normal_bg) or "#000000"
+            local bg_color = normal_bg and string.format("#%06x", normal_bg) or "${self.theme.colors.terminal.normalBackgrounds.primary.html}"
 
             vim.api.nvim_set_hl(0, "TreesitterContext", {
               bg = bg_color
             })
             vim.api.nvim_set_hl(0, "TreesitterContextSeparator", {
               bg = bg_color,
-              fg = "#37f499"
+              fg = "${self.theme.colors.blocks.primary.foreground.html}"
             })
           end
         '';

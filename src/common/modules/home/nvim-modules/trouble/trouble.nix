@@ -189,7 +189,7 @@ args@{
         extraConfigLua = ''
           _G.nx_modules = _G.nx_modules or {}
           _G.nx_modules["85-trouble-colors"] = function()
-            vim.api.nvim_set_hl(0, "TroubleNormal", { bg = "#000000" })
+            vim.api.nvim_set_hl(0, "TroubleNormal", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
           end
         '';
       };

@@ -17,14 +17,14 @@ args@{
 
   settings = {
     colors = {
-      normal = "#37f499";
-      insert = "#ff6b9d";
-      visual = "#c678dd";
-      command = "#ffd93d";
-      replace = "#ff4444";
-      select = "#66d9ef";
-      terminal = "#4ec9b0";
-      terminalNormal = "#4ec9b0";
+      normal = self.theme.colors.blocks.primary.foreground.html;
+      insert = self.theme.colors.blocks.accent.foreground.html;
+      visual = self.theme.colors.blocks.highlight.foreground.html;
+      command = self.theme.colors.blocks.warning.foreground.html;
+      replace = self.theme.colors.blocks.critical.foreground.html;
+      select = self.theme.colors.blocks.neutral.foreground.html;
+      terminal = self.theme.colors.blocks.info.foreground.html;
+      terminalNormal = self.theme.colors.blocks.info.foreground.html;
     };
   };
 

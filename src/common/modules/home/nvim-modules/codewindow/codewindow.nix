@@ -58,10 +58,10 @@ args@{
       ""
     ];
     activeInTerminals = false;
-    borderColor = "#19cd04";
+    borderColor = self.theme.colors.blocks.primary.foreground.html;
     backgroundColor = null;
-    viewportColor = "#19cd04";
-    viewportBGColor = "#113302";
+    viewportColor = self.theme.colors.blocks.primary.foreground.html;
+    viewportBGColor = self.theme.colors.blocks.primary.background.html;
   };
 
   configuration =

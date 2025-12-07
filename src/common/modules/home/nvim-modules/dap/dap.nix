@@ -50,7 +50,7 @@ args@{
       breakpointCondition = "◆";
       breakpointRejected = "◌";
       logPoint = "◉";
-      breakpointColor = "#ff8c00";
+      breakpointColor = self.theme.colors.semantic.warning.html;
     };
 
     ui = {

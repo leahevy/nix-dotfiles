@@ -17,13 +17,13 @@ args@{
   namespace = "home";
 
   settings = {
-    whiteSpaceColor = "#404040";
+    whiteSpaceColor = self.theme.colors.separators.normal.html;
     eolFill = {
       enabledOnStart = true;
       char = "‧";
       currentLineChar = "┄";
-      color = "#1c1c1c";
-      currentLineColor = "#61afef";
+      color = self.theme.colors.separators.dark.html;
+      currentLineColor = self.theme.colors.terminal.colors.blue.html;
       delimiterChars = " ";
       onlyFillIfAllFit = true;
       onlyShowOnCurrentLine = false;
