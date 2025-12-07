@@ -35,6 +35,35 @@ args@{
     context@{ config, options, ... }:
     let
       programsConfig = self.getModuleConfig "desktop-modules.programs";
+
+      themedNixIcon =
+        pkgs.runCommand "themed-nix-snowflake"
+          {
+            nativeBuildInputs = [ pkgs.gnused ];
+          }
+          ''
+            mkdir -p $out/share/icons
+
+            originalIcon="${pkgs.nixos-icons}/share/icons/hicolor/scalable/apps/nix-snowflake.svg"
+
+            if sed "s/#699ad7/${self.theme.colors.main.foregrounds.primary.html}/g; \
+                    s/#7eb1dd/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#7ebae4/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#415e9a/${self.theme.colors.main.foregrounds.primary.html}/g; \
+                    s/#4a6baf/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#5277c3/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#637ddf/${self.theme.colors.main.foregrounds.primary.html}/g; \
+                    s/#649afa/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#719efa/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#7363df/${self.theme.colors.main.foregrounds.primary.html}/g; \
+                    s/#6478fa/${self.theme.colors.main.foregrounds.emphasized.html}/g" \
+               "$originalIcon" > $out/share/icons/themed-nix-snowflake.svg 2>/dev/null; then
+              echo "Themed icon created successfully"
+            else
+              echo "Falling back to original icon"
+              cp "$originalIcon" $out/share/icons/themed-nix-snowflake.svg
+            fi
+          '';
     in
     {
       home.packages =
@@ -557,7 +586,7 @@ args@{
             }
 
             #custom-nix {
-              background-image: url("${pkgs.nixos-icons}/share/icons/hicolor/scalable/apps/nix-snowflake.svg");
+              background-image: url("${themedNixIcon}/share/icons/themed-nix-snowflake.svg");
               background-size: 42px;
               background-repeat: no-repeat;
               background-position: center;
