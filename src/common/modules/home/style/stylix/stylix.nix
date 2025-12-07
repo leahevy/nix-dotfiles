@@ -16,25 +16,8 @@ args@{
   namespace = "home";
 
   settings = {
-    fonts = {
-      serif = {
-        path = "dejavu_fonts/DejaVu Serif";
-        useUnstable = false;
-      };
-      sansSerif = {
-        path = "dejavu_fonts/DejaVu Sans";
-        useUnstable = false;
-      };
-      monospace = {
-        path = "nerd-fonts.fira-code/FiraCode Nerd Font";
-        useUnstable = false;
-      };
-      emoji = {
-        path = "noto-fonts-emoji-blob-bin/Blobmoji";
-        useUnstable = false;
-      };
-    };
-    cursor = null;
+    fonts = self.theme.fonts;
+    cursor = self.theme.cursor;
     wallpaper = {
       # Default will use self.file "wallpaper.jpg"
     };

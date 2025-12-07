@@ -25,6 +25,28 @@ args@{
   settings = {
     name = "green";
     variant = "dark";
+    fonts = {
+      serif = {
+        path = "dejavu_fonts/DejaVu Serif";
+        useUnstable = false;
+      };
+      sansSerif = {
+        path = "dejavu_fonts/DejaVu Sans";
+        useUnstable = false;
+      };
+      monospace = {
+        path = "nerd-fonts.fira-code/FiraCode Nerd Font";
+        useUnstable = false;
+      };
+      emoji = {
+        path = "noto-fonts-emoji-blob-bin/Blobmoji";
+        useUnstable = false;
+      };
+    };
+    cursor = {
+      style = "rose-pine-cursor/BreezeX-RosePine-Linux";
+      size = 40;
+    };
     colors = {
       main = {
         backgrounds = {

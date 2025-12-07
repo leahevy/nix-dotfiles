@@ -16,28 +16,8 @@ args@{
   namespace = "system";
 
   settings = {
-    fonts = {
-      serif = {
-        path = "dejavu_fonts/DejaVu Serif";
-        useUnstable = false;
-      };
-      sansSerif = {
-        path = "dejavu_fonts/DejaVu Sans";
-        useUnstable = false;
-      };
-      monospace = {
-        path = "nerd-fonts.fira-code/FiraCode Nerd Font";
-        useUnstable = false;
-      };
-      emoji = {
-        path = "noto-fonts-emoji-blob-bin/Blobmoji";
-        useUnstable = false;
-      };
-    };
-    cursor = {
-      style = "rose-pine-cursor/BreezeX-RosePine-Linux";
-      size = 40;
-    };
+    fonts = self.theme.fonts;
+    cursor = self.theme.cursor;
     wallpaper = {
       # Default will use self.file "wallpaper.jpg"
     };
