@@ -8,13 +8,6 @@ args@{
   self,
   ...
 }:
-let
-  activeTheme =
-    if (self.host.settings.theme or null) != null then
-      self.host.settings.theme
-    else
-      self.variables.defaultTheme;
-in
 {
   name = "theme-system";
   group = "theme";
@@ -23,8 +16,8 @@ in
 
   submodules = {
     themes = {
-      themes = {
-        ${activeTheme} = true;
+      base = {
+        base = true;
       };
     };
   };
