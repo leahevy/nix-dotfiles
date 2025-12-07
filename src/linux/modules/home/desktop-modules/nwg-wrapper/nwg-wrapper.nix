@@ -263,7 +263,7 @@ args@{
                     g = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 2 2 rgb}").x;
                     b = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 4 2 rgb}").x;
                   in
-                  "rgba(${r}, ${g}, ${b}, 0.4)"
+                  "rgba(${r}, ${g}, ${b}, 0.7)"
                 else
                   "transparent"
               };
@@ -293,7 +293,7 @@ args@{
                     g = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 2 2 rgb}").x;
                     b = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 4 2 rgb}").x;
                   in
-                  "rgba(${r}, ${g}, ${b}, 0.4)"
+                  "rgba(${r}, ${g}, ${b}, 0.7)"
                 else
                   "transparent"
               };
