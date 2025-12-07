@@ -539,7 +539,7 @@ args@{
             }
 
             #window {
-              color: ${self.theme.colors.main.foregrounds.primary.html};
+              color: ${self.theme.colors.main.foregrounds.emphasized.html};
             }
 
             #window.app-id {
