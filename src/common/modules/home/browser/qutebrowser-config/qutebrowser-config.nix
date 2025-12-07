@@ -598,42 +598,42 @@ args@{
             colors = {
               contextmenu = {
                 menu = {
-                  fg = lib.mkForce "#99ee88";
-                  bg = lib.mkForce "#000000";
+                  fg = lib.mkForce self.theme.colors.main.foregrounds.primary.html;
+                  bg = lib.mkForce self.theme.colors.main.backgrounds.primary.html;
                 };
                 selected = {
-                  fg = lib.mkForce "#000000";
-                  bg = lib.mkForce "#ddddff";
+                  fg = lib.mkForce self.theme.colors.blocks.primary.background.html;
+                  bg = lib.mkForce self.theme.colors.blocks.primary.foreground.html;
                 };
                 disabled = {
-                  fg = lib.mkForce "#dddddd";
-                  bg = lib.mkForce "#444444";
+                  fg = lib.mkForce self.theme.colors.main.foregrounds.subtle.html;
+                  bg = lib.mkForce self.theme.colors.main.backgrounds.tertiary.html;
                 };
               };
               hints = {
-                bg = lib.mkForce "#000000";
-                fg = lib.mkForce "#99ee88";
+                bg = lib.mkForce self.theme.colors.blocks.primary.background.html;
+                fg = lib.mkForce self.theme.colors.blocks.primary.foreground.html;
                 match = {
-                  fg = lib.mkForce "#ee9988";
+                  fg = lib.mkForce self.theme.colors.blocks.accent.foreground.html;
                 };
               };
               tabs = {
                 even = {
-                  bg = lib.mkForce "#030303";
-                  fg = lib.mkForce "#116644";
+                  bg = lib.mkForce self.theme.colors.main.backgrounds.secondary.html;
+                  fg = lib.mkForce self.theme.colors.main.foregrounds.subtle.html;
                 };
                 odd = {
-                  bg = lib.mkForce "#030303";
-                  fg = lib.mkForce "#116644";
+                  bg = lib.mkForce self.theme.colors.main.backgrounds.secondary.html;
+                  fg = lib.mkForce self.theme.colors.main.foregrounds.subtle.html;
                 };
                 selected = {
                   even = {
-                    bg = lib.mkForce "#000000";
-                    fg = lib.mkForce "#99ff99";
+                    bg = lib.mkForce self.theme.colors.blocks.primary.background.html;
+                    fg = lib.mkForce self.theme.colors.blocks.primary.foreground.html;
                   };
                   odd = {
-                    bg = lib.mkForce "#000000";
-                    fg = lib.mkForce "#99ff99";
+                    bg = lib.mkForce self.theme.colors.blocks.primary.background.html;
+                    fg = lib.mkForce self.theme.colors.blocks.primary.foreground.html;
                   };
                 };
               };
