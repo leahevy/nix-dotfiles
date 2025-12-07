@@ -234,121 +234,121 @@ args@{
 
     colors = {
       normal = {
-        fg = "#37f499";
+        fg = self.theme.colors.terminal.colors.green.html;
         bg = "default";
       };
       error = {
-        fg = "#cc5860";
+        fg = self.theme.colors.terminal.colors.red.html;
         bg = "default";
       };
       message = {
-        fg = "#04d1f9";
+        fg = self.theme.colors.terminal.colors.cyan.html;
         bg = "default";
       };
       indicator = {
-        fg = "#1a4d33";
-        bg = "#37f499";
+        fg = self.theme.colors.terminal.normalBackgrounds.primary.html;
+        bg = self.theme.colors.terminal.colors.green.html;
       };
       tree = {
-        fg = "#1a4d33";
+        fg = self.theme.colors.terminal.foregrounds.dim.html;
         bg = "default";
       };
 
       index = {
-        fg = "#37f499";
+        fg = self.theme.colors.terminal.colors.green.html;
         bg = "default";
       };
       index_author = {
-        fg = "#04d1f9";
+        fg = self.theme.colors.terminal.colors.cyan.html;
         bg = "default";
       };
       index_subject = {
-        fg = "#37f499";
+        fg = self.theme.colors.terminal.colors.green.html;
         bg = "default";
       };
       index_date = {
-        fg = "#ffaa00";
+        fg = self.theme.colors.terminal.colors.yellow.html;
         bg = "default";
       };
 
       index_new = {
-        fg = "#ffaa00";
+        fg = self.theme.colors.terminal.colors.yellow.html;
         bg = "default";
       };
       index_deleted = {
-        fg = "#cc5860";
+        fg = self.theme.colors.terminal.colors.red.html;
         bg = "default";
       };
       index_tagged = {
-        fg = "#04d1f9";
+        fg = self.theme.colors.terminal.colors.cyan.html;
         bg = "default";
       };
       index_flagged = {
-        fg = "#37f499";
+        fg = self.theme.colors.terminal.colors.green.html;
         bg = "default";
       };
 
       header_from = {
-        fg = "#04d1f9";
+        fg = self.theme.colors.terminal.colors.cyan.html;
         bg = "default";
       };
       header_to = {
-        fg = "#04d1f9";
+        fg = self.theme.colors.terminal.colors.cyan.html;
         bg = "default";
       };
       header_subject = {
-        fg = "#ffaa00";
+        fg = self.theme.colors.terminal.colors.yellow.html;
         bg = "default";
       };
       header_date = {
-        fg = "#ffaa00";
+        fg = self.theme.colors.terminal.colors.yellow.html;
         bg = "default";
       };
 
       quoted = {
-        fg = "#04d1f9";
+        fg = self.theme.colors.terminal.colors.cyan.html;
         bg = "default";
       };
       quoted1 = {
-        fg = "#37f499";
+        fg = self.theme.colors.terminal.colors.green.html;
         bg = "default";
       };
       quoted2 = {
-        fg = "#ffaa00";
+        fg = self.theme.colors.terminal.colors.yellow.html;
         bg = "default";
       };
       signature = {
-        fg = "#1a4d33";
+        fg = self.theme.colors.terminal.foregrounds.dim.html;
         bg = "default";
       };
       bold = {
-        fg = "#37f499";
+        fg = self.theme.colors.terminal.colors.green.html;
         bg = "default";
       };
 
       tilde = {
-        fg = "#1a4d33";
+        fg = self.theme.colors.terminal.foregrounds.dim.html;
         bg = "default";
       };
       markers = {
-        fg = "#ffaa00";
+        fg = self.theme.colors.terminal.colors.yellow.html;
         bg = "default";
       };
       attachment = {
-        fg = "#04d1f9";
+        fg = self.theme.colors.terminal.colors.cyan.html;
         bg = "default";
       };
       search = {
-        fg = "#1a4d33";
-        bg = "#ffaa00";
+        fg = self.theme.colors.terminal.normalBackgrounds.primary.html;
+        bg = self.theme.colors.terminal.colors.yellow.html;
       };
       status = {
-        fg = "#04d1f9";
+        fg = self.theme.colors.terminal.colors.cyan.html;
         bg = "default";
       };
 
       index_tags = {
-        fg = "#ffaa00";
+        fg = self.theme.colors.terminal.colors.yellow.html;
         bg = "default";
       };
 
@@ -357,23 +357,23 @@ args@{
         bg = "default";
       };
       sidebar_indicator = {
-        fg = "#1a4d33";
-        bg = "#37f499";
+        fg = self.theme.colors.terminal.normalBackgrounds.primary.html;
+        bg = self.theme.colors.terminal.colors.green.html;
       };
       sidebar_highlight = {
-        fg = "#37f499";
-        bg = "#1a4d33";
+        fg = self.theme.colors.terminal.colors.green.html;
+        bg = self.theme.colors.terminal.normalBackgrounds.secondary.html;
       };
       sidebar_spool_file = {
-        fg = "#ffaa00";
+        fg = self.theme.colors.terminal.colors.yellow.html;
         bg = "default";
       };
       sidebar_unread = {
-        fg = "#04d1f9";
+        fg = self.theme.colors.terminal.colors.cyan.html;
         bg = "default";
       };
       sidebar_new = {
-        fg = "#37f499";
+        fg = self.theme.colors.terminal.colors.green.html;
         bg = "default";
       };
       sidebar_ordinary = {
@@ -381,11 +381,11 @@ args@{
         bg = "default";
       };
       sidebar_flagged = {
-        fg = "#cc5860";
+        fg = self.theme.colors.terminal.colors.red.html;
         bg = "default";
       };
       sidebar_divider = {
-        fg = "#1a4d33";
+        fg = self.theme.colors.terminal.foregrounds.dim.html;
         bg = "default";
       };
     };
