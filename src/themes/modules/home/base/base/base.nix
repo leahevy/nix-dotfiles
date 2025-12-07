@@ -16,7 +16,7 @@ args@{
 
   configuration =
     context@{ config, options, ... }:
-    {
+    (lib.mkIf self.user.isStandalone {
       home.file = {
         ".config/nx-theme/current-theme".text = self.theme.name;
         ".config/nx-theme/current-theme-config.json".text = builtins.toJSON self.theme;
@@ -30,5 +30,5 @@ args@{
           };
         }) self.availableThemes
       );
-    };
+    });
 }
