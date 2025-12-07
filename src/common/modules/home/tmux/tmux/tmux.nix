@@ -19,8 +19,8 @@ args@{
     waylandClipboard = false;
     primaryBg = self.theme.colors.blocks.primary.background.html;
     primaryFg = self.theme.colors.blocks.primary.foreground.html;
-    prefixFg = self.theme.colors.blocks.accent.foreground.html;
-    prefixBg = self.theme.colors.blocks.accent.background.html;
+    prefixFg = self.theme.colors.blocks.info.foreground.html;
+    prefixBg = self.theme.colors.blocks.info.background.html;
     secondaryBg = self.theme.colors.blocks.primary.foreground.html;
     secondaryFg = self.theme.colors.blocks.primary.background.html;
     statusBg = self.theme.colors.terminal.normalBackgrounds.primary.html;
