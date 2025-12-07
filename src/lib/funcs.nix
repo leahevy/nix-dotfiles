@@ -988,7 +988,7 @@ rec {
                           users = args.users;
                         }
                     );
-                    enhancedModuleContext = moduleFuncs.injectModuleFunctions moduleContext targetNamespace;
+                    enhancedModuleContext = injectModuleFuncs moduleContext targetNamespace;
                     moduleResult = import modulePath {
                       lib = args.lib;
                       pkgs = args.pkgs;
