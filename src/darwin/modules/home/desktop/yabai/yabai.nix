@@ -223,29 +223,29 @@ args@{
           "SF Mono:Bold:${separatorFontSize}";
 
       colors = {
-        background = "0xe01d2021";
+        background = "0xe0" + lib.removePrefix "#" self.theme.colors.main.backgrounds.primary.html;
         transparentBackground = "0x00000000";
-        blackBackground = "0xff000000";
-        border = "0xff88cc66";
-        foreground = "0xe0fbf1c7";
-        accent = "0xe0d65d0e";
-        accentBright = "0xe0fe8019";
-        black = "0xe0282828";
-        red = "0xe0cc241d";
-        green = "0xe098971a";
-        yellow = "0xe0d79921";
-        blue = "0xe0458588";
-        magenta = "0xe0b16286";
-        cyan = "0xe0689d6a";
-        white = "0xe0a89984";
-        blackBright = "0xe0928374";
-        redBright = "0xe0fb4934";
-        greenBright = "0xe0b8bb26";
-        yellowBright = "0xe0fabd2f";
-        blueBright = "0xe083a598";
-        magentaBright = "0xe0d3869b";
-        cyanBright = "0xe08ec07c";
-        whiteBright = "0xe0ebdbb2";
+        blackBackground = "0xff" + lib.removePrefix "#" self.theme.colors.main.backgrounds.primary.html;
+        border = "0xff" + lib.removePrefix "#" self.theme.colors.main.foregrounds.primary.html;
+        foreground = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.emphasized.html;
+        accent = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.secondary.html;
+        accentBright = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.primary.html;
+        black = "0xe0" + lib.removePrefix "#" self.theme.colors.main.backgrounds.tertiary.html;
+        red = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.red.html;
+        green = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.green.html;
+        yellow = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.yellow.html;
+        blue = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.blue.html;
+        magenta = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.purple.html;
+        cyan = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.cyan.html;
+        white = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.subtle.html;
+        blackBright = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.subtle.html;
+        redBright = "0xe0" + lib.removePrefix "#" self.theme.colors.semantic.error.html;
+        greenBright = "0xe0" + lib.removePrefix "#" self.theme.colors.semantic.success.html;
+        yellowBright = "0xe0" + lib.removePrefix "#" self.theme.colors.semantic.warning.html;
+        blueBright = "0xe0" + lib.removePrefix "#" self.theme.colors.semantic.info.html;
+        magentaBright = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.pink.html;
+        cyanBright = "0xe0" + lib.removePrefix "#" self.theme.colors.semantic.added.html;
+        whiteBright = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.strong.html;
       };
 
       icons = {
