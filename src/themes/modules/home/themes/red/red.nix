@@ -61,7 +61,7 @@ args@{
             term = 0;
           };
           tertiary = {
-            html = "#372e5e";
+            html = "#231e5e";
             name = "bright-black";
             term = 59;
           };
@@ -206,28 +206,88 @@ args@{
         };
       };
       blocks = {
-        block1 = {
+        primary = {
           background = {
-            html = "#ef5959";
-            name = "red";
-            term = 203;
-          };
-          foreground = {
             html = "#4d1a1a";
             name = "red";
             term = 52;
           };
+          foreground = {
+            html = "#ef5959";
+            name = "red";
+            term = 203;
+          };
         };
-        block2 = {
+        accent = {
           background = {
-            html = "#4d1a33";
+            html = "#1a4d33";
+            name = "green";
+            term = 22;
+          };
+          foreground = {
+            html = "#37f499";
+            name = "green";
+            term = 46;
+          };
+        };
+        highlight = {
+          background = {
+            html = "#3d2644";
             name = "magenta";
             term = 53;
           };
           foreground = {
-            html = "#ff6b9d";
+            html = "#c678dd";
             name = "magenta";
-            term = 206;
+            term = 5;
+          };
+        };
+        warning = {
+          background = {
+            html = "#4d4d1a";
+            name = "yellow";
+            term = 58;
+          };
+          foreground = {
+            html = "#ffd93d";
+            name = "bright-yellow";
+            term = 11;
+          };
+        };
+        critical = {
+          background = {
+            html = "#4d1a1a";
+            name = "red";
+            term = 52;
+          };
+          foreground = {
+            html = "#ff4444";
+            name = "red";
+            term = 1;
+          };
+        };
+        info = {
+          background = {
+            html = "#0a3344";
+            name = "cyan";
+            term = 23;
+          };
+          foreground = {
+            html = "#1999b3";
+            name = "cyan";
+            term = 6;
+          };
+        };
+        neutral = {
+          background = {
+            html = "#1a2655";
+            name = "blue";
+            term = 18;
+          };
+          foreground = {
+            html = "#3d62f5";
+            name = "blue";
+            term = 4;
           };
         };
       };
@@ -235,15 +295,28 @@ args@{
         normalBackgrounds = {
           primary = {
             html = "#000000";
+            name = "black";
+            term = 0;
           };
           secondary = {
             html = "#111111";
+            name = "bright-black";
+            term = 8;
+          };
+          tertiary = {
+            html = "#0a0a0a";
+            name = "black";
+            term = 0;
           };
           highlight = {
             html = "#000000";
+            name = "black";
+            term = 0;
           };
           selection = {
             html = "#7B3A45";
+            name = "red";
+            term = 1;
           };
         };
         transparencyBackgrounds = normalBackgrounds // {
@@ -252,68 +325,115 @@ args@{
         foregrounds = {
           primary = {
             html = "#FF8888";
+            name = "bright-red";
+            term = 9;
           };
           secondary = {
             html = "#E8B8B8";
+            name = "red";
+            term = 1;
           };
           bright = {
             html = "#C09060";
+            name = "yellow";
+            term = 3;
           };
           dim = {
             html = "#3b4261";
+            name = "bright-black";
+            term = 8;
           };
         };
         colors = {
           black = {
             html = "#414868";
+            name = "bright-black";
+            term = 8;
           };
           cyan = {
             html = "#EE88AA";
+            name = "cyan";
+            term = 6;
           };
           cyanBright = {
             html = "#FF685F";
+            name = "bright-cyan";
+            term = 14;
           };
           cyanDark = {
             html = "#EE30B5";
+            name = "cyan";
+            term = 6;
           };
           green = {
             html = "#E18800";
+            name = "green";
+            term = 2;
           };
           greenBright = {
             html = "#EE0044";
+            name = "bright-green";
+            term = 10;
           };
           greenDark = {
             html = "#B42222";
+            name = "green";
+            term = 2;
           };
           yellow = {
             html = "#FF6774";
+            name = "yellow";
+            term = 3;
           };
           yellowDark = {
             html = "#DA5050";
+            name = "yellow";
+            term = 3;
           };
           magenta = {
             html = "#C84040";
+            name = "magenta";
+            term = 5;
           };
           magentaLight = {
             html = "#E88080";
+            name = "bright-magenta";
+            term = 13;
           };
           magentaDark = {
             html = "#652A2A";
+            name = "magenta";
+            term = 5;
           };
           purple = {
             html = "#BB4077";
+            name = "magenta";
+            term = 5;
           };
           pink = {
             html = "#FF6073";
+            name = "bright-magenta";
+            term = 13;
           };
           orange = {
             html = "#C04088";
+            name = "yellow";
+            term = 3;
           };
           red = {
             html = "#FF2088";
+            name = "red";
+            term = 1;
           };
           redBright = {
             html = "#ff3050";
+            name = "bright-red";
+            term = 9;
+          };
+          blue = {
+            html = "#FF4088";
+            name = "blue";
+            term = 4;
           };
         };
       };

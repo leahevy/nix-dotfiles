@@ -17,16 +17,16 @@ args@{
 
   settings = {
     waylandClipboard = false;
-    primaryBg = self.theme.colors.blocks.block1.background.html;
-    primaryFg = self.theme.colors.blocks.block1.foreground.html;
-    prefixFg = self.theme.colors.blocks.block2.foreground.html;
-    prefixBg = self.theme.colors.blocks.block2.background.html;
-    secondaryBg = self.theme.colors.blocks.block1.foreground.html;
-    secondaryFg = self.theme.colors.blocks.block1.background.html;
+    primaryBg = self.theme.colors.blocks.primary.background.html;
+    primaryFg = self.theme.colors.blocks.primary.foreground.html;
+    prefixFg = self.theme.colors.blocks.accent.foreground.html;
+    prefixBg = self.theme.colors.blocks.accent.background.html;
+    secondaryBg = self.theme.colors.blocks.primary.foreground.html;
+    secondaryFg = self.theme.colors.blocks.primary.background.html;
     statusBg = self.theme.colors.terminal.normalBackgrounds.primary.html;
     statusFg = self.theme.colors.terminal.colors.cyan.html;
-    borderColor = self.theme.colors.blocks.block1.foreground.html;
-    activeBorderColor = self.theme.colors.blocks.block1.background.html;
+    borderColor = self.theme.colors.blocks.primary.foreground.html;
+    activeBorderColor = self.theme.colors.blocks.primary.background.html;
     defaultShell = "fish";
     useTransparency = true;
     tmuxinatorConfigs = { };
