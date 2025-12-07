@@ -139,8 +139,9 @@ jobs:
 
                   all_commits=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
 
-                  regular_commits=$(echo "$all_commits" | grep -v '\[Backport release-\|\[release-.* backport\]' || true)
-                  backport_count=$(echo "$all_commits" | grep -c '\[Backport release-\|\[release-.* backport\]' || echo 0)
+                  regular_commits=$(echo "$all_commits" | grep -v '\[Backport \(release\|staging\)-\|\[\(release\|staging\)-.* backport\]\|^- Merge staging-next-[0-9][0-9]\.[0-9][0-9] into staging-[0-9][0-9]\.[0-9][0-9]\|^- Merge release-[0-9][0-9]\.[0-9][0-9] into staging-next-[0-9][0-9]\.[0-9][0-9]' || true)
+                  backport_count=$(echo "$all_commits" | grep -c '\[Backport \(release\|staging\)-\|\[\(release\|staging\)-.* backport\]' || echo 0)
+                  staging_count=$(echo "$all_commits" | grep -c '^- Merge staging-next-[0-9][0-9]\.[0-9][0-9] into staging-[0-9][0-9]\.[0-9][0-9]\|^- Merge release-[0-9][0-9]\.[0-9][0-9] into staging-next-[0-9][0-9]\.[0-9][0-9]' || echo 0)
 
                   if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_PATTERNS" > /dev/null 2>&1; then
                     requires_reboot="true"
@@ -169,8 +170,17 @@ jobs:
                     if [ "$backport_count" -gt 0 ]; then
                       commit_lists="$commit_lists"$'\n'"- ($backport_count backport commits filtered out)"
                     fi
-                  elif [ "$backport_count" -gt 0 ]; then
-                    commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($backport_count backport commits filtered out)"
+                    if [ "$staging_count" -gt 0 ]; then
+                      commit_lists="$commit_lists"$'\n'"- ($staging_count staging/release merge commits filtered out)"
+                    fi
+                  else
+                    filtered_total=$((backport_count + staging_count))
+                    if [ "$filtered_total" -gt 0 ]; then
+                      commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($backport_count backport commits filtered out)"
+                      if [ "$staging_count" -gt 0 ]; then
+                        commit_lists="$commit_lists"$'\n'"- ($staging_count staging/release merge commits filtered out)"
+                      fi
+                    fi
                   fi
                 else
                   echo "Failed to fetch commits for $input, skipping commit list"
