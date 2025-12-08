@@ -209,8 +209,8 @@ args@{
             local original_inactive_color = self.options.buffers_color and self.options.buffers_color.inactive or self:get_hl() .. '_inactive'
 
             modified_highlights = {
-              modified_active = self:create_hl({fg = '${self.theme.colors.semantic.warning.html}', bg = '${self.theme.colors.separators.dark.html}', gui = 'bold'}, 'buffer_modified_active'),
-              modified_inactive = self:create_hl({fg = '${self.theme.colors.separators.dark.html}', bg = 'NONE'}, 'buffer_modified_inactive'),
+              modified_active = self:create_hl({fg = '${self.theme.colors.blocks.critical.foreground.html}', bg = '${self.theme.colors.blocks.critical.background.html}', gui = 'bold'}, 'buffer_modified_active'),
+              modified_inactive = self:create_hl({fg = '${self.theme.colors.blocks.critical.foreground.html}', bg = 'NONE'}, 'buffer_modified_inactive'),
               normal_active = self:create_hl(original_active_color, 'buffer_normal_active'),
               normal_inactive = self:create_hl(original_inactive_color, 'buffer_normal_inactive'),
             }
@@ -245,8 +245,8 @@ args@{
         local custom_fname = require('lualine.components.filename'):extend()
         local highlight = require('lualine.highlight')
         local default_status_colors = {
-          saved = '${self.theme.colors.terminal.foregrounds.primary.html}',
-          modified = '${self.theme.colors.semantic.warning.html}'
+          saved = '${self.theme.colors.blocks.primary.foreground.html}',
+          modified = '${self.theme.colors.blocks.critical.foreground.html}'
         }
 
         function custom_fname:init(options)
@@ -283,7 +283,7 @@ args@{
             saved = highlight.create_component_highlight_group(
               {fg = '${self.theme.colors.separators.normal.html}'}, 'filename_winbar_saved', self.options),
             modified = highlight.create_component_highlight_group(
-              {fg = '${self.theme.colors.semantic.warning.html}'}, 'filename_winbar_modified', self.options),
+              {fg = '${self.theme.colors.semantic.error.html}'}, 'filename_winbar_modified', self.options),
           }
         end
 
@@ -296,7 +296,7 @@ args@{
             saved = highlight.create_component_highlight_group(
               {fg = '${self.theme.colors.separators.dark.html}'}, 'filename_winbar_inactive_saved', self.options),
             modified = highlight.create_component_highlight_group(
-              {fg = '${self.theme.colors.semantic.warning.html}'}, 'filename_winbar_inactive_modified', self.options),
+              {fg = '${self.theme.colors.semantic.error.html}'}, 'filename_winbar_inactive_modified', self.options),
           }
         end
 
