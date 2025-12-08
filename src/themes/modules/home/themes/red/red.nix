@@ -197,6 +197,16 @@ rec {
           name = "bright-black";
           term = 95;
         };
+        veryDark = {
+          html = "#312734";
+          name = "bright-black";
+          term = 59;
+        };
+        ultraDark = {
+          html = "#211722";
+          name = "bright-black";
+          term = 59;
+        };
       };
       blocks = {
         primary = {
@@ -209,6 +219,18 @@ rec {
             html = "#ef5959";
             name = "red";
             term = 203;
+          };
+        };
+        selection = {
+          background = {
+            html = "#0a3344";
+            name = "cyan";
+            term = 23;
+          };
+          foreground = {
+            html = "#1999b3";
+            name = "cyan";
+            term = 6;
           };
         };
         accent = {
