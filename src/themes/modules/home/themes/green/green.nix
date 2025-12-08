@@ -8,22 +8,15 @@ args@{
   self,
   ...
 }:
-{
+rec {
   name = "green";
+
   group = "themes";
   input = "themes";
   namespace = "home";
 
-  submodules = {
-    themes = {
-      base = {
-        base = true;
-      };
-    };
-  };
-
   settings = {
-    name = "green";
+    inherit name;
     variant = "dark";
     fonts = {
       serif = {

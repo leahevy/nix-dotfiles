@@ -25,6 +25,9 @@ in
 
   submodules = {
     themes = {
+      base = {
+        base = true;
+      };
       themes = {
         ${activeTheme} = true;
       };
