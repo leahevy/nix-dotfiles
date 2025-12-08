@@ -22,7 +22,7 @@ args@{
       enabledOnStart = true;
       char = "‧";
       currentLineChar = "┄";
-      color = self.theme.colors.separators.dark.html;
+      color = self.theme.colors.separators.ultraDark.html;
       currentLineColor = self.theme.colors.terminal.colors.blue.html;
       delimiterChars = " ";
       onlyFillIfAllFit = true;
@@ -200,35 +200,13 @@ args@{
 
                       if line_nr == current_line then
                         ${lib.optionalString (self.isModuleEnabled "nvim-modules.blink-indent") ''
-                          local current_indent = math.floor(vim.fn.indent(line_nr + 1) / vim.bo.shiftwidth)
-                          local effective_indent = current_indent
-
-                          local current_line_content = vim.api.nvim_buf_get_lines(bufnr, line_nr, line_nr + 1, false)[1]
-                          local cursor_col = vim.api.nvim_win_get_cursor(winnr)[2]
-                          local should_look_ahead = vim.trim(current_line_content) ~= "" or cursor_col > 0
-
-                          if should_look_ahead then
-                            local next_line_nr = line_nr + 2
-                            local total_lines = vim.api.nvim_buf_line_count(bufnr)
-                            while next_line_nr <= total_lines do
-                              local next_line = vim.api.nvim_buf_get_lines(bufnr, next_line_nr - 1, next_line_nr, false)[1]
-                              if next_line and vim.trim(next_line) ~= "" then
-                                local next_indent = math.floor(vim.fn.indent(next_line_nr) / vim.bo.shiftwidth)
-                                if next_indent > current_indent then
-                                  effective_indent = next_indent
-                                end
-                                break
-                              end
-                              next_line_nr = next_line_nr + 1
-                            end
-                          end
-
-                          if effective_indent > 0 then
+                          local blink_scope_level = vim.b[bufnr].blink_indent_scope_level
+                          if blink_scope_level and blink_scope_level > 0 then
                             local blink_indent_groups = {
                               "BlinkIndentRed", "BlinkIndentOrange", "BlinkIndentYellow",
                               "BlinkIndentGreen", "BlinkIndentViolet", "BlinkIndentCyan", "BlinkIndentBlue"
                             }
-                            local group_index = ((effective_indent - 1) % #blink_indent_groups) + 1
+                            local group_index = ((blink_scope_level - 1) % #blink_indent_groups) + 1
                             highlight_group = blink_indent_groups[group_index]
                           else
                             highlight_group = "EolFillCurrent"
@@ -258,7 +236,9 @@ args@{
                               "BlinkIndentRed", "BlinkIndentOrange", "BlinkIndentYellow",
                               "BlinkIndentGreen", "BlinkIndentViolet", "BlinkIndentCyan", "BlinkIndentBlue"
                             }
-                            local empty_group_index = (contextual_indent % #blink_groups) + 1
+                            local empty_group_index = contextual_indent > 0
+                              and ((contextual_indent - 1) % #blink_groups) + 1
+                              or 1
                             highlight_group = blink_groups[empty_group_index]
                           ''}
                         end
@@ -293,47 +273,20 @@ args@{
                   if self.settings.eolFill.highlightCurrentLine then "true" else "false"
                 } then
                   ${lib.optionalString (self.isModuleEnabled "nvim-modules.blink-indent") ''
-                    local effective_indent = 0
+                    local blink_scope_level = vim.b[bufnr].blink_indent_scope_level
+                    if blink_scope_level and blink_scope_level > 0 then
+                      local blink_indent_groups = {
+                        "BlinkIndentRed", "BlinkIndentOrange", "BlinkIndentYellow",
+                        "BlinkIndentGreen", "BlinkIndentViolet", "BlinkIndentCyan", "BlinkIndentBlue"
+                      }
+                      local group_index = ((blink_scope_level - 1) % #blink_indent_groups) + 1
+                      local highlight_group = blink_indent_groups[group_index]
 
-                    local prev_line_nr = line_nr
-                    while prev_line_nr > 0 do
-                      local prev_line = vim.api.nvim_buf_get_lines(bufnr, prev_line_nr - 1, prev_line_nr, false)[1]
-                      if prev_line and vim.trim(prev_line) ~= "" then
-                        local prev_indent = math.floor(vim.fn.indent(prev_line_nr) / vim.bo.shiftwidth)
-                        effective_indent = math.max(0, prev_indent - 1)
-                        break
+                      local hl_def = vim.api.nvim_get_hl(0, { name = highlight_group })
+                      if hl_def.fg then
+                        local color_hex = string.format("#%06x", hl_def.fg)
+                        vim.api.nvim_set_hl(0, "CursorLine", { underdotted = true, sp = color_hex })
                       end
-                      prev_line_nr = prev_line_nr - 1
-                    end
-
-                    local cursor_col = vim.api.nvim_win_get_cursor(winnr)[2]
-                    if cursor_col > 0 then
-                      local next_line_nr = line_nr + 2
-                      local total_lines = vim.api.nvim_buf_line_count(bufnr)
-                      while next_line_nr <= total_lines do
-                        local next_line = vim.api.nvim_buf_get_lines(bufnr, next_line_nr - 1, next_line_nr, false)[1]
-                        if next_line and vim.trim(next_line) ~= "" then
-                          local next_indent = math.floor(vim.fn.indent(next_line_nr) / vim.bo.shiftwidth)
-                          if next_indent > effective_indent then
-                            effective_indent = next_indent
-                          end
-                          break
-                        end
-                        next_line_nr = next_line_nr + 1
-                      end
-                    end
-
-                    local blink_indent_groups = {
-                      "BlinkIndentRed", "BlinkIndentOrange", "BlinkIndentYellow",
-                      "BlinkIndentGreen", "BlinkIndentViolet", "BlinkIndentCyan", "BlinkIndentBlue"
-                    }
-                    local group_index = (effective_indent % #blink_indent_groups) + 1
-                    local highlight_group = blink_indent_groups[group_index]
-
-                    local hl_def = vim.api.nvim_get_hl(0, { name = highlight_group })
-                    if hl_def.fg then
-                      local color_hex = string.format("#%06x", hl_def.fg)
-                      vim.api.nvim_set_hl(0, "CursorLine", { underdotted = true, sp = color_hex })
                     end
                   ''}
                   ${lib.optionalString (!self.isModuleEnabled "nvim-modules.blink-indent") ''
@@ -398,7 +351,8 @@ args@{
 
             local status = _G.eol_fill_enabled and "enabled" or "disabled"
             local icon = _G.eol_fill_enabled and "✅" or "❌"
-            vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
+            vim.notify("Feature " .. status, vim.log.levels.INFO, {
+              icon = icon,
               title = "EOL Fill"
             })
           end
