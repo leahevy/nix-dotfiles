@@ -79,6 +79,7 @@ args@{
         vim-matchup = true;
         treesitter-textobjects = true;
         treesitter-context = true;
+        faster = true;
       };
     };
   };
@@ -606,7 +607,67 @@ args@{
               '';
             };
           }
-        ];
+          {
+            event = [
+              "BufWritePre"
+              "InsertLeave"
+            ];
+            desc = "Remove trailing whitespace on save";
+            callback = {
+              __raw = ''
+                function()
+                  ${lib.optionalString (self.isModuleEnabled "nvim-modules.faster") ''
+                    if vim.b.is_bigfile then
+                      return
+                    end
+                  ''}
+                  if not vim.bo.modifiable or vim.bo.readonly then
+                    return
+                  end
+                  if vim.fn.mode() == 'i' or vim.fn.mode() == 'R' then
+                    return
+                  end
+                  local filename = vim.api.nvim_buf_get_name(0)
+                  if filename == "" or not vim.fn.filereadable(filename) == 1 then
+                    return
+                  end
+                  local save_cursor = vim.fn.getpos('.')
+                  vim.cmd([[%s/\s\+$//e]])
+                  vim.fn.setpos('.', save_cursor)
+                end
+              '';
+            };
+          }
+        ]
+        ++ lib.optional (self.isModuleEnabled "nvim-modules.auto-save") {
+          event = [ "User" ];
+          pattern = [ "AutoSaveWritePre" ];
+          desc = "Remove trailing whitespace on auto-save";
+          callback = {
+            __raw = ''
+              function()
+                ${lib.optionalString (self.isModuleEnabled "nvim-modules.faster") ''
+                  if vim.b.is_bigfile then
+                    return
+                  end
+                ''}
+                if not vim.bo.modifiable or vim.bo.readonly or not vim.bo.modified then
+                  return
+                end
+                if vim.fn.mode() == 'i' or vim.fn.mode() == 'R' then
+                  return
+                end
+                local filename = vim.api.nvim_buf_get_name(0)
+                if filename == "" or not vim.fn.filereadable(filename) == 1 then
+                  return
+                end
+                local save_cursor = vim.fn.getpos('.')
+                vim.cmd([[%s/\s\+$//e]])
+                vim.fn.setpos('.', save_cursor)
+              end
+            '';
+          };
+        };
 
         extraPlugins = lib.mkIf (self.settings.foreignTheme != null) [
           (pkgs.vimUtils.buildVimPlugin {
