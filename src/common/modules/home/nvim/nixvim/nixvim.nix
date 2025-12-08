@@ -418,6 +418,9 @@ args@{
                     vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "${self.theme.colors.terminal.normalBackgrounds.tertiary.html}" })
                     vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "${self.theme.colors.separators.dark.html}" })
 
+                    vim.api.nvim_set_hl(0, "WhiteSpace", { fg = "${self.theme.colors.separators.veryDark.html}" })
+                    vim.api.nvim_set_hl(0, "NonText", { fg = "${self.theme.colors.separators.dark.html}" })
+
                     vim.api.nvim_set_hl(0, "QuickFixLine", { bg = "${self.theme.colors.terminal.normalBackgrounds.highlight.html}", bold = true })
                     vim.api.nvim_set_hl(0, "qfText", { fg = "${self.theme.colors.separators.normal.html}" })
                     vim.api.nvim_set_hl(0, "qfLineNr", { fg = "${self.theme.colors.separators.normal.html}" })
