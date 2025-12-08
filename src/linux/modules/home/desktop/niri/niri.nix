@@ -152,6 +152,10 @@ args@{
       "org.nx.scratchpad" = "com.mitchellh.ghostty";
       "org.nx.start-terminal" = "com.mitchellh.ghostty";
     };
+    displayModes = {
+      main = null;
+      secondary = null;
+    };
   };
 
   assertions = [
@@ -790,11 +794,13 @@ args@{
               ${mainDisplay} = {
                 focus-at-startup = true;
                 scale = self.settings.mainDisplayScale;
+                mode = lib.mkIf (self.settings.displayModes.main != null) self.settings.displayModes.main;
               };
             })
             (lib.mkIf (secondaryDisplay != null) {
               ${secondaryDisplay} = {
                 scale = self.settings.secondaryDisplayScale;
+                mode = lib.mkIf (self.settings.displayModes.secondary != null) self.settings.displayModes.secondary;
               };
             })
           ];
