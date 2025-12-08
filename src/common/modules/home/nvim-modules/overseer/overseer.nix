@@ -296,7 +296,10 @@ args@{
             if #tasks > 0 then
               overseer.run_action(tasks[1], "restart")
             else
-              vim.notify("No tasks to restart", vim.log.levels.WARN, { title = "Overseer" })
+              vim.notify("No tasks to restart", vim.log.levels.WARN, {
+                icon = "⚠️",
+                title = "Overseer"
+              })
             end
           end, { desc = "Restart last overseer task" })
 
@@ -325,7 +328,8 @@ args@{
           constructor = function(params)
             return {
               on_start = function(self, task)
-                vim.notify("🚀 " .. (task.name or "Unknown Task"), vim.log.levels.INFO, {
+                vim.notify((task.name or "Unknown Task"), vim.log.levels.INFO, {
+                  icon = "🚀",
                   title = "Task Started"
                 })
               end,
@@ -333,19 +337,23 @@ args@{
                 local task_name = task.name or "Unknown Task"
                 local STATUS = require("overseer").STATUS
                 if status == STATUS.SUCCESS then
-                  vim.notify("✅ " .. task_name, vim.log.levels.INFO, {
+                  vim.notify(task_name, vim.log.levels.INFO, {
+                    icon = "✅",
                     title = "Task Success"
                   })
                 elseif status == STATUS.FAILURE then
-                  vim.notify("❌ " .. task_name, vim.log.levels.ERROR, {
+                  vim.notify(task_name, vim.log.levels.ERROR, {
+                    icon = "❌",
                     title = "Task Failed"
                   })
                 elseif status == STATUS.CANCELED then
-                  vim.notify("🛑 " .. task_name, vim.log.levels.WARN, {
+                  vim.notify(task_name, vim.log.levels.WARN, {
+                    icon = "🛑",
                     title = "Task Canceled"
                   })
                 else
-                  vim.notify("💡 " .. task_name .. " (" .. tostring(status) .. ")", vim.log.levels.INFO, {
+                  vim.notify(task_name .. " (" .. tostring(status) .. ")", vim.log.levels.INFO, {
+                    icon = "💡",
                     title = "Task Status"
                   })
                 end

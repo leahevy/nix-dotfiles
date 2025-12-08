@@ -430,7 +430,8 @@ args@{
                       local file_path = selection.path or selection.value
                       local absolute_path = vim.fn.fnamemodify(file_path, ":p")
 
-                      vim.notify("🚀 Running tests in: " .. vim.fn.fnamemodify(file_path, ":t"), vim.log.levels.INFO, {
+                      vim.notify("Running tests in: " .. vim.fn.fnamemodify(file_path, ":t"), vim.log.levels.INFO, {
+                        icon = "🧪",
                         title = "Neotest"
                       })
 

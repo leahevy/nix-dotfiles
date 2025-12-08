@@ -264,7 +264,8 @@ args@{
               local status = enabled and "enabled" or "disabled"
               local icon = enabled and "✅" or "❌"
 
-              vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
+              vim.notify("Feature " .. status, vim.log.levels.INFO, {
+                icon = icon,
                 title = "Twilight"
               })
             end

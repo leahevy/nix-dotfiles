@@ -41,7 +41,7 @@ args@{
           {
             mode = "n";
             key = "<leader>Ff";
-            action = "<cmd>lua if _G.safe_peek_definition then _G.safe_peek_definition('@function.outer') else vim.notify('LSP textobjects not available', vim.log.levels.WARN, {title = 'Peek Definition'}) end<CR>";
+            action = "<cmd>lua if _G.safe_peek_definition then _G.safe_peek_definition('@function.outer') else vim.notify('LSP textobjects not available', vim.log.levels.WARN, {icon = '⚠️', title = 'Peek Definition'}) end<CR>";
             options = {
               desc = "Peek function definition";
               silent = true;
@@ -50,7 +50,7 @@ args@{
           {
             mode = "n";
             key = "<leader>FF";
-            action = "<cmd>lua if _G.safe_peek_definition then _G.safe_peek_definition('@class.outer') else vim.notify('LSP textobjects not available', vim.log.levels.WARN, {title = 'Peek Definition'}) end<CR>";
+            action = "<cmd>lua if _G.safe_peek_definition then _G.safe_peek_definition('@class.outer') else vim.notify('LSP textobjects not available', vim.log.levels.WARN, {icon = '⚠️', title = 'Peek Definition'}) end<CR>";
             options = {
               desc = "Peek class definition";
               silent = true;

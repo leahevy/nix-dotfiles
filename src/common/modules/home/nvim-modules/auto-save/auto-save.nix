@@ -185,6 +185,7 @@ args@{
                 vim.cmd("ASToggle")
                 local status = old_state and "disabled" or "enabled"
                 vim.notify("Auto-save " .. status, vim.log.levels.INFO, {
+                  icon = old_state and "❌" or "✅",
                   title = "Auto Save"
                 })
               end

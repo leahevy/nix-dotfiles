@@ -259,7 +259,8 @@ args@{
                   require('cmp').setup.buffer { enabled = vim.g.cmp_global_enabled }
                   local icon = vim.g.cmp_global_enabled and "✅" or "❌"
                   local status = vim.g.cmp_global_enabled and "Feature enabled" or "Feature disabled"
-                  vim.notify(icon .. " " .. status, vim.log.levels.INFO, {
+                  vim.notify(status, vim.log.levels.INFO, {
+                    icon = icon,
                     title = "Auto-Completion"
                   })
                 end

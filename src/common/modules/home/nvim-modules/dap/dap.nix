@@ -517,6 +517,7 @@ args@{
                   dap.listeners.before.attach.dapui_config = function()
                     dapui.open()
                     vim.notify('Session started', vim.log.levels.INFO, {
+                      icon = "🐛",
                       title = "Debugger"
                     })
                   end
@@ -524,6 +525,7 @@ args@{
                   dap.listeners.before.launch.dapui_config = function()
                     dapui.open()
                     vim.notify('Session started', vim.log.levels.INFO, {
+                      icon = "🐛",
                       title = "Debugger"
                     })
                   end
@@ -538,6 +540,7 @@ args@{
                   dap.listeners.before.event_terminated.dapui_config = function()
                     dapui.close()
                     vim.notify('Session ended', vim.log.levels.INFO, {
+                      icon = "✅",
                       title = "Debugger"
                     })
                   end
@@ -545,6 +548,7 @@ args@{
                   dap.listeners.before.event_exited.dapui_config = function()
                     dapui.close()
                     vim.notify('Session ended', vim.log.levels.INFO, {
+                      icon = "✅",
                       title = "Debugger"
                     })
                   end
@@ -555,7 +559,10 @@ args@{
 
             local function start_debug_server(filetype)
               if not pcall(require, 'telescope') then
-                vim.notify('Telescope not available', vim.log.levels.ERROR, { title = "Debugger" })
+                vim.notify('Telescope not available', vim.log.levels.ERROR, {
+                  icon = "❌",
+                  title = "Debugger"
+                })
                 return
               end
 
@@ -564,6 +571,7 @@ args@{
               local server_config = debug_servers[filetype]
               if not server_config then
                 vim.notify('Filetype ' .. filetype .. ' is not configured', vim.log.levels.WARN, {
+                  icon = "⚠️",
                   title = "Debugger"
                 })
                 return
@@ -598,11 +606,13 @@ args@{
 
                       task:start()
                       vim.notify('Debug server started as overseer task\nUsing: ' .. interpreter .. '\nCommand: ' .. cmd, vim.log.levels.INFO, {
+                        icon = "🚀",
                         title = "Debugger"
                       })
                     else
                       vim.cmd('terminal ' .. cmd)
                       vim.notify('Debug server started in terminal\nUsing: ' .. interpreter .. '\nCommand: ' .. cmd, vim.log.levels.INFO, {
+                        icon = "🚀",
                         title = "Debugger"
                       })
                     end
@@ -616,6 +626,7 @@ args@{
               require('dap').toggle_breakpoint()
               local line = vim.api.nvim_win_get_cursor(0)[1]
               vim.notify('Breakpoint toggled on line ' .. line, vim.log.levels.INFO, {
+                icon = "●",
                 title = "Debugger"
               })
             end
@@ -625,6 +636,7 @@ args@{
                 dap.continue()
               else
                 vim.notify('Starting new debug session...', vim.log.levels.INFO, {
+                  icon = "▶",
                   title = "Debugger"
                 })
                 dap.continue()
@@ -634,6 +646,7 @@ args@{
             _G.nx_dap_disconnect = function()
               require('dap').disconnect()
               vim.notify('Debug session disconnected', vim.log.levels.INFO, {
+                icon = "⏹",
                 title = "Debugger"
               })
             end
@@ -641,6 +654,7 @@ args@{
             _G.nx_dap_clear_breakpoints = function()
               require('dap').clear_breakpoints()
               vim.notify('All breakpoints cleared', vim.log.levels.INFO, {
+                icon = "×",
                 title = "Debugger"
               })
             end

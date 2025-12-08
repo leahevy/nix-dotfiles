@@ -446,7 +446,10 @@ args@{
                         vim.api.nvim_feedkeys("a", "n", false)
                       end
                     else
-                      vim.notify("Could not extract note name from: " .. text, vim.log.levels.WARN)
+                      vim.notify("Could not extract note name from: " .. text, vim.log.levels.WARN, {
+                        icon = "⚠️",
+                        title = "Obsidian"
+                      })
                     end
                   end)
 
@@ -498,13 +501,19 @@ args@{
               _G.obsidian_create_daily_for_date = function(date_str)
                 local ok, obsidian = pcall(require, "obsidian")
                 if not ok then
-                  vim.notify("Plugin not available", vim.log.levels.ERROR, { title = "Obsidian" })
+                  vim.notify("Plugin not available", vim.log.levels.ERROR, {
+                    icon = "⚠️",
+                    title = "Obsidian"
+                  })
                   return
                 end
 
                 local year, month, day = date_str:match("(%d+)-(%d+)-(%d+)")
                 if not year or not month or not day then
-                  vim.notify("Invalid date format: " .. date_str, vim.log.levels.ERROR, { title = "Obsidian" })
+                  vim.notify("Invalid date format: " .. date_str, vim.log.levels.ERROR, {
+                    icon = "⚠️",
+                    title = "Obsidian"
+                  })
                   return
                 end
 
@@ -519,7 +528,10 @@ args@{
 
                 local client = obsidian.get_client()
                 if not client then
-                  vim.notify("Failed to get client", vim.log.levels.ERROR, { title = "Obsidian" })
+                  vim.notify("Failed to get client", vim.log.levels.ERROR, {
+                    icon = "⚠️",
+                    title = "Obsidian"
+                  })
                   return
                 end
 
@@ -528,7 +540,10 @@ args@{
                 end)
 
                 if not ok_daily or not daily_note then
-                  vim.notify("Failed to create daily note for " .. date_str, vim.log.levels.ERROR, { title = "Obsidian" })
+                  vim.notify("Failed to create daily note for " .. date_str, vim.log.levels.ERROR, {
+                    icon = "⚠️",
+                    title = "Obsidian"
+                  })
                   return
                 end
 
@@ -537,7 +552,10 @@ args@{
                 end)
 
                 if not ok_open then
-                  vim.notify("Failed to open daily note for " .. date_str, vim.log.levels.ERROR, { title = "Obsidian" })
+                  vim.notify("Failed to open daily note for " .. date_str, vim.log.levels.ERROR, {
+                    icon = "⚠️",
+                    title = "Obsidian"
+                  })
                 end
               end
 

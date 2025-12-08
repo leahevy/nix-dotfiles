@@ -272,10 +272,16 @@ args@{
 
               if _G.tiny_glimmer_enabled then
                 tiny_glimmer.enable()
-                vim.notify("Tiny Glimmer animations enabled", vim.log.levels.INFO)
+                vim.notify("Tiny Glimmer animations enabled", vim.log.levels.INFO, {
+                  icon = "✨",
+                  title = "Tiny Glimmer"
+                })
               else
                 tiny_glimmer.disable()
-                vim.notify("Tiny Glimmer animations disabled", vim.log.levels.INFO)
+                vim.notify("Tiny Glimmer animations disabled", vim.log.levels.INFO, {
+                  icon = "✨",
+                  title = "Tiny Glimmer"
+                })
               end
             end
 

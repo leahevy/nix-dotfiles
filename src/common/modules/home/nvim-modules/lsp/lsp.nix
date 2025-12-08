@@ -323,7 +323,8 @@ args@{
                 function()
                   local filename = vim.fn.expand("%:t")
                   vim.cmd([[%s/\s\+$//e]])
-                  vim.notify("🧹 Trailing whitespace removed from " .. filename, vim.log.levels.INFO, {
+                  vim.notify("Trailing whitespace removed from " .. filename, vim.log.levels.INFO, {
+                    icon = "🧹",
                     title = "Cleanup"
                   })
                 end
@@ -338,7 +339,8 @@ args@{
                 function()
                   local filename = vim.fn.expand("%:t")
                   vim.lsp.buf.format()
-                  vim.notify("📝 File " .. filename .. " was formatted", vim.log.levels.INFO, {
+                  vim.notify("File " .. filename .. " was formatted", vim.log.levels.INFO, {
+                    icon = "📝",
                     title = "Formatting"
                   })
                 end

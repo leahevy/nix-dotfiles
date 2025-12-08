@@ -357,7 +357,8 @@ args@{
             function _G.save_session_with_notify()
               local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
               vim.cmd("Autosession save")
-              vim.notify("💾 Session saved for " .. project_name, vim.log.levels.INFO, {
+              vim.notify("Session saved for " .. project_name, vim.log.levels.INFO, {
+                icon = "💾",
                 title = "Session"
               })
             end
@@ -365,7 +366,8 @@ args@{
             function _G.restore_session_with_notify()
               local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
               require('auto-session').RestoreSession(_G.get_canonical_path())
-              vim.notify("📂 Session restored for " .. project_name, vim.log.levels.INFO, {
+              vim.notify("Session restored for " .. project_name, vim.log.levels.INFO, {
+                icon = "📂",
                 title = "Session"
               })
             end

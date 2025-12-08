@@ -84,6 +84,7 @@ args@{
               local rev_info = self.adapter.get_revision_info(revision, self)
               if not rev_info.message or #rev_info.message == 0 then
                 vim.notify('Revision message was empty', vim.log.levels.WARN, {
+                  icon = "⚠️",
                   title = "Tardis"
                 })
                 return
@@ -91,6 +92,7 @@ args@{
 
               local message = table.concat(rev_info.message, '\n')
               vim.notify(message, vim.log.levels.INFO, {
+                icon = "🕰️",
                 title = "Git Revision: " .. revision:sub(1, 7)
               })
             end
@@ -98,6 +100,7 @@ args@{
             Session.next_buffer = function(self)
               if not self:goto_buffer(self.curret_buffer_index + 1) then
                 vim.notify('No earlier revisions of file', vim.log.levels.WARN, {
+                  icon = "⚠️",
                   title = "Tardis"
                 })
               else
@@ -106,6 +109,7 @@ args@{
                   local rev_info = self.adapter.get_revision_info(revision, self)
                   local message = rev_info.message and table.concat(rev_info.message, '\n') or 'No commit message'
                   vim.notify(message, vim.log.levels.INFO, {
+                    icon = "🕰️",
                     title = "Now viewing revision: " .. revision:sub(1, 7)
                   })
                 end
@@ -115,6 +119,7 @@ args@{
             Session.prev_buffer = function(self)
               if not self:goto_buffer(self.curret_buffer_index - 1) then
                 vim.notify('No later revisions of file', vim.log.levels.WARN, {
+                  icon = "⚠️",
                   title = "Tardis"
                 })
               else
@@ -123,6 +128,7 @@ args@{
                   local rev_info = self.adapter.get_revision_info(revision, self)
                   local message = rev_info.message and table.concat(rev_info.message, '\n') or 'No commit message'
                   vim.notify(message, vim.log.levels.INFO, {
+                    icon = "🕰️",
                     title = "Now viewing revision: " .. revision:sub(1, 7)
                   })
                 end
@@ -137,6 +143,7 @@ args@{
                 local rev_info = self.adapter.get_revision_info(revision, self)
                 local message = rev_info.message and table.concat(rev_info.message, '\n') or 'No commit message'
                 vim.notify(message, vim.log.levels.INFO, {
+                  icon = "✅",
                   title = "Committed revision: " .. revision:sub(1, 7)
                 })
               end
@@ -147,6 +154,7 @@ args@{
             SessionManager.on_session_opened = function(self, session)
               self.sessions[session.filename] = session
               vim.notify('Entered Tardis mode for ' .. vim.fn.fnamemodify(session.filename, ':t'), vim.log.levels.INFO, {
+                icon = "🕰️",
                 title = "Tardis"
               })
             end
@@ -154,6 +162,7 @@ args@{
             SessionManager.on_session_closed = function(self, session)
               self.sessions[session.filename] = nil
               vim.notify('Left Tardis mode', vim.log.levels.INFO, {
+                icon = "🚪",
                 title = "Tardis"
               })
             end

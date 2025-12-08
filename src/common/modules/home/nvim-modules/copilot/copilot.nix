@@ -221,7 +221,10 @@ args@{
                         if current_ft == "" then
                           current_ft = "current buffer"
                         end
-                        vim.notify('✅ Auto-enabled for ' .. current_ft, vim.log.levels.INFO, { title = 'Copilot' })
+                        vim.notify('Auto-enabled for ' .. current_ft, vim.log.levels.INFO, {
+                          icon = '✅',
+                          title = 'Copilot'
+                        })
                       end, 200)
                       last_notified_state = true
                     end
@@ -233,7 +236,10 @@ args@{
                         if current_ft == "" then
                           current_ft = "current buffer"
                         end
-                        vim.notify('⚠️  Auto-disabled for ' .. current_ft, vim.log.levels.INFO, { title = 'Copilot' })
+                        vim.notify('Auto-disabled for ' .. current_ft, vim.log.levels.INFO, {
+                          icon = '⚠️',
+                          title = 'Copilot'
+                        })
                       end, 200)
                       last_notified_state = false
                     end
@@ -256,7 +262,10 @@ args@{
               if current_state then
                 vim.cmd('Copilot disable')
                 vim.g.copilot_enabled = false
-                vim.notify('❌ Manually disabled', vim.log.levels.INFO, { title = 'Copilot' })
+                vim.notify('Manually disabled', vim.log.levels.INFO, {
+                  icon = '❌',
+                  title = 'Copilot'
+                })
                 last_notified_state = false
                 vim.b[bufnr].copilot_manual_override = true
                 vim.b[bufnr].copilot_manual_state = false
@@ -264,7 +273,10 @@ args@{
               else
                 vim.cmd('Copilot enable')
                 vim.g.copilot_enabled = true
-                vim.notify('✅ Manually enabled', vim.log.levels.INFO, { title = 'Copilot' })
+                vim.notify('Manually enabled', vim.log.levels.INFO, {
+                  icon = '✅',
+                  title = 'Copilot'
+                })
                 last_notified_state = true
                 vim.b[bufnr].copilot_manual_override = true
                 vim.b[bufnr].copilot_manual_state = true

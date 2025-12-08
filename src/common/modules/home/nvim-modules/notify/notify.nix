@@ -149,12 +149,14 @@ args@{
                 if not write_failed[bufnr] and was_modified[bufnr] then
                   local filename = vim.fn.expand("%:t")
                   if _G.autosave_in_progress then
-                    vim.notify("🔄 Auto-saved: " .. filename, vim.log.levels.INFO, {
+                    vim.notify("Auto-saved: " .. filename, vim.log.levels.INFO, {
+                      icon = "💾",
                       title = "Auto Save",
                       timeout = 1
                     })
                   else
-                    vim.notify("💾 Path: " .. filename, vim.log.levels.INFO, {
+                    vim.notify("Manually saved: " .. filename, vim.log.levels.INFO, {
+                      icon = "💾",
                       title = "File Saved"
                     })
                   end
@@ -172,7 +174,8 @@ args@{
                 if filesize > 5000000 then
                   vim.defer_fn(function()
                     local size_mb = math.floor(filesize / 1024 / 1024 * 100) / 100
-                    vim.notify("⚠️ Large file loaded: " .. size_mb .. "MB", vim.log.levels.WARN, {
+                    vim.notify("Large file loaded: " .. size_mb .. "MB", vim.log.levels.WARN, {
+                      icon = "⚠️",
                       title = "Performance Warning"
                     })
                   end, 100)
@@ -200,7 +203,8 @@ args@{
               if state.last_event and current_time - state.last_time < 3000 then
                 if state.last_event ~= event_type then
                   if not vim.tbl_contains(lsps_to_ignore, client_name) then
-                    vim.notify("🔄 " .. client_name .. " reconnected", vim.log.levels.INFO, {
+                    vim.notify(client_name .. " reconnected", vim.log.levels.INFO, {
+                      icon = "🤖",
                       title = "LSP"
                     })
                   end
@@ -215,13 +219,15 @@ args@{
                 timer = vim.fn.timer_start(3000, function()
                   if event_type == "attach" then
                     if not vim.tbl_contains(lsps_to_ignore, client_name) then
-                      vim.notify("✅ " .. client_name .. " connected", vim.log.levels.INFO, {
+                      vim.notify(client_name .. " connected", vim.log.levels.INFO, {
+                        icon = "🤖",
                         title = "LSP"
                       })
                     end
                   else
                     if not vim.tbl_contains(lsps_to_ignore, client_name) then
-                      vim.notify("❌ " .. client_name .. " disconnected", vim.log.levels.WARN, {
+                      vim.notify(client_name .. " disconnected", vim.log.levels.WARN, {
+                        icon = "🤖",
                         title = "LSP"
                       })
                     end
@@ -262,7 +268,8 @@ args@{
 
                 local new_dir = vim.fn.fnamemodify(event.file, ":t")
                 vim.defer_fn(function()
-                  vim.notify("🏠 New working directory: " .. new_dir, vim.log.levels.INFO, {
+                  vim.notify("New working directory: " .. new_dir, vim.log.levels.INFO, {
+                    icon = "🏠",
                     title = "Directory Changed"
                   })
                 end, 50)
@@ -275,7 +282,8 @@ args@{
 
               if _G.session_was_restored then
                 local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
-                vim.notify("👋 Welcome to " .. project_name, vim.log.levels.INFO, {
+                vim.notify("Welcome to " .. project_name, vim.log.levels.INFO, {
+                  icon = "👋",
                   title = "Session Restored"
                 })
                 session_checked = true
@@ -302,7 +310,8 @@ args@{
 
                 if vim.bo.readonly then
                   write_failed[bufnr] = true
-                  vim.notify("🚫 Cannot save readonly file", vim.log.levels.ERROR, {
+                  vim.notify("Cannot save readonly file", vim.log.levels.ERROR, {
+                    icon = "🚫",
                     title = "Write Error"
                   })
                 else

@@ -195,12 +195,14 @@ args@{
                     vim.notify = function(msg, level, opts)
                       if type(msg) == "string" and msg ~= "" then
                         local icon = "⚡"
-                        local enhanced_msg = icon .. " " .. msg
                         opts = opts or {}
                         if not opts.title then
                           opts.title = "Command Output"
                         end
-                        return orig_notify(enhanced_msg, level, opts)
+                        if not opts.icon then
+                          opts.icon = icon
+                        end
+                        return orig_notify(msg, level, opts)
                       end
                       return orig_notify(msg, level, opts)
                     end

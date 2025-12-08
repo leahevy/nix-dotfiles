@@ -111,7 +111,8 @@ args@{
             vim.keymap.set('n', '<leader>sq', function()
               vim.cmd('SearchBoxClear')
               vim.cmd('nohlsearch')
-              vim.notify('🧹 Search highlights cleared', vim.log.levels.INFO, {
+              vim.notify('Search highlights cleared', vim.log.levels.INFO, {
+                icon = '🧹',
                 title = 'Search'
               })
             end, { desc = 'Clear all highlights', unpack(opts) })

@@ -126,7 +126,8 @@ args@{
 
               local status = _G.zen_mode_enabled and "enabled" or "disabled"
               local icon = _G.zen_mode_enabled and "✅" or "❌"
-              vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
+              vim.notify(" Feature " .. status, vim.log.levels.INFO, {
+                icon = icon,
                 title = "Zen Mode"
               })
             end

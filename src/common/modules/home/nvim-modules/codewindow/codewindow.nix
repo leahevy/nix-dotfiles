@@ -167,7 +167,8 @@ args@{
 
               local status = _G.codewindow_enabled and "enabled" or "disabled"
               local icon = _G.codewindow_enabled and "✅" or "❌"
-              vim.notify(icon .. " Feature " .. status, vim.log.levels.INFO, {
+              vim.notify("Feature " .. status, vim.log.levels.INFO, {
+                icon = icon,
                 title = "Codewindow"
               })
             end

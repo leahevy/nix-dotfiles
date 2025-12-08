@@ -374,7 +374,8 @@ args@{
               local path = opts.args ~= ''' and opts.args or vim.fn.getcwd()
               add_project_to_cache(path)
               local project_name = vim.fn.fnamemodify(path, ':t')
-              vim.notify('✅ Project added: ' .. project_name, vim.log.levels.INFO, {
+              vim.notify('Project added: ' .. project_name, vim.log.levels.INFO, {
+                icon = '✅',
                 title = 'Dashboard'
               })
             end, { nargs = '?', complete = 'dir' })

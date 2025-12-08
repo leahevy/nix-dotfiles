@@ -499,7 +499,8 @@ args@{
                             local socket_exists = vim.fn.filereadable(socket_name) == 1
                             if socket_exists then
                               local absolute_path = vim.fn.fnamemodify(socket_name, ":p")
-                              vim.notify("🖥️ Server started at " .. absolute_path, vim.log.levels.INFO, {
+                              vim.notify("Server started at " .. absolute_path, vim.log.levels.INFO, {
+                                icon = "🖥️",
                                 title = "Neovim Server",
                                 timeout = 3000
                               })
@@ -533,7 +534,11 @@ args@{
                     failed_count = failed_count + 1
                     vim.schedule(function()
                       vim.defer_fn(function()
-                        vim.notify("❌ Module " .. name .. " failed: " .. err, vim.log.levels.ERROR, { title = "Module Loading" })
+                        vim.notify("Module " .. name .. " failed: " .. err, vim.log.levels.ERROR,
+                        {
+                          icon = "❌",
+                          title = "Module Loading"
+                        })
                       end, 200)
                     end)
                   end
@@ -542,7 +547,11 @@ args@{
                 if failed_count > 0 then
                   vim.schedule(function()
                     vim.defer_fn(function()
-                        vim.notify("⚠️ Loaded " .. loaded_count .. "/" .. #sorted_keys .. " modules with " .. failed_count .. " failures", vim.log.levels.WARN, { title = "Neovim" })
+                        vim.notify("Loaded " .. loaded_count .. "/" .. #sorted_keys .. " modules with " .. failed_count .. " failures", vim.log.levels.WARN,
+                        {
+                          icon = "⚠️",
+                          title = "Neovim"
+                        })
                     end, 100)
                   end)
                 else
@@ -989,7 +998,8 @@ args@{
               action.__raw = ''
                 function()
                   vim.cmd("tabnew | Dashboard")
-                  vim.notify("📄 New tab created", vim.log.levels.INFO, {
+                  vim.notify("New tab created", vim.log.levels.INFO, {
+                    icon = "",
                     title = "Tab"
                   })
                 end
@@ -1009,7 +1019,8 @@ args@{
                     vim.cmd("quit")
                   else
                     vim.cmd("tabclose")
-                    vim.notify("❌ Tab closed", vim.log.levels.INFO, {
+                    vim.notify("Tab closed", vim.log.levels.INFO, {
+                      icon = "",
                       title = "Tab"
                     })
                   end
@@ -1027,7 +1038,8 @@ args@{
                 function()
                   local filename = vim.fn.expand("%:t")
                   vim.cmd("vsplit")
-                  vim.notify("↔️ Split vertically: " .. filename, vim.log.levels.INFO, {
+                  vim.notify("Split vertically: " .. filename, vim.log.levels.INFO, {
+                    icon = "↔️",
                     title = "Split"
                   })
                 end
@@ -1044,7 +1056,8 @@ args@{
                 function()
                   local filename = vim.fn.expand("%:t")
                   vim.cmd("split")
-                  vim.notify("↕️ Split horizontally: " .. filename, vim.log.levels.INFO, {
+                  vim.notify("Split horizontally: " .. filename, vim.log.levels.INFO, {
+                    icon = "↕️",
                     title = "Split"
                   })
                 end
@@ -1081,7 +1094,8 @@ args@{
                   local bufname = vim.api.nvim_buf_get_name(current_buf)
 
                   if bufname == "" or vim.bo[current_buf].buftype ~= "" then
-                    vim.notify("❌ Current buffer is not a file", vim.log.levels.WARN, {
+                    vim.notify("Current buffer is not a file", vim.log.levels.WARN, {
+                      icon = "⚠️",
                       title = "Close Other Buffers"
                     })
                     return
@@ -1105,11 +1119,13 @@ args@{
 
                   local filename = vim.fn.fnamemodify(bufname, ":t")
                   if closed_count == 0 then
-                    vim.notify("💡 No other buffers to close", vim.log.levels.INFO, {
+                    vim.notify("No other buffers to close", vim.log.levels.INFO, {
+                      icon = "💡",
                       title = "Close Other Buffers"
                     })
                   else
-                    vim.notify("🗑️ Closed " .. closed_count .. " buffers, kept: " .. filename, vim.log.levels.INFO, {
+                    vim.notify("Closed " .. closed_count .. " buffers, kept: " .. filename, vim.log.levels.INFO, {
+                      icon = "🧹",
                       title = "Close Other Buffers"
                     })
                   end
@@ -1154,7 +1170,8 @@ args@{
                 function()
                   vim.cmd("wa")
                   local buf_count = #vim.api.nvim_list_bufs()
-                  vim.notify("💾 All " .. buf_count .. " buffers saved", vim.log.levels.INFO, {
+                  vim.notify("All " .. buf_count .. " buffers saved", vim.log.levels.INFO, {
+                    icon = "💾",
                     title = "Save"
                   })
                 end
@@ -1172,7 +1189,8 @@ args@{
                   vim.opt_local.spell = not vim.opt_local.spell:get()
                   local status = vim.opt_local.spell:get() and "enabled" or "disabled"
                   local emoji = vim.opt_local.spell:get() and "✅" or "❌"
-                  vim.notify(emoji .. " Spell check " .. status, vim.log.levels.INFO, {
+                  vim.notify("Spell check " .. status, vim.log.levels.INFO, {
+                    icon = emoji,
                     title = "Spell Check"
                   })
                 end
