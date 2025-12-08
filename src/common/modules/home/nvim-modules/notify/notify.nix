@@ -16,7 +16,7 @@ args@{
   namespace = "home";
 
   settings = {
-    timeout = 6000;
+    timeout = 3000;
     max_width = 75;
     max_height = 75;
     stages = "fade_in_slide_out";
@@ -24,7 +24,7 @@ args@{
     background_colour = self.theme.colors.terminal.normalBackgrounds.primary.html;
     fps = 30;
     level = "debug";
-    minimum_width = 25;
+    minimum_width = 15;
     top_down = true;
     addEventNotifications = true;
     icons = {
@@ -200,7 +200,7 @@ args@{
                 state.timer = nil
               end
 
-              if state.last_event and current_time - state.last_time < 3000 then
+              if state.last_event and current_time - state.last_time < 1000 then
                 if state.last_event ~= event_type then
                   if not vim.tbl_contains(lsps_to_ignore, client_name) then
                     vim.notify(client_name .. " reconnected", vim.log.levels.INFO, {
@@ -216,7 +216,7 @@ args@{
               lsp_state[client_name] = {
                 last_event = event_type,
                 last_time = current_time,
-                timer = vim.fn.timer_start(3000, function()
+                timer = vim.fn.timer_start(1000, function()
                   if event_type == "attach" then
                     if not vim.tbl_contains(lsps_to_ignore, client_name) then
                       vim.notify(client_name .. " connected", vim.log.levels.INFO, {
