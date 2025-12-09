@@ -23,6 +23,12 @@ args@{
     };
   };
 
+  settings = {
+    additionalFishPluginsFromPkgs = [ ];
+    additionalFishPluginsCustom = [ ];
+    additionalFishFunctions = { };
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
