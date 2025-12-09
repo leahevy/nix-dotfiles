@@ -121,6 +121,7 @@ args@{
         check_auto_upgrade_running() {
           local auto_upgrade_state=$(${pkgs.systemd}/bin/systemctl show nx-auto-upgrade.service -p ActiveState --value)
           if [[ "$auto_upgrade_state" != "inactive" ]]; then
+            ${pkgs.coreutils}/bin/touch /tmp/nx-backup-no-success
             ${logScript "info" "INFO: Auto-upgrade is currently running (state: $auto_upgrade_state), skipping backup"}
             exit 0
           fi
