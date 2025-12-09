@@ -293,7 +293,7 @@ args@{
             snapshotName = "data";
             snapshotDir = "${self.settings.dataPath}/.snapshots";
           })}
-          ${logScript "info" "INFO: Snapshots created - starting backup..."}
+          ${pkgs.coreutils}/bin/echo "Snapshots created - starting backup..."
         '';
 
         paths = backupPaths;
