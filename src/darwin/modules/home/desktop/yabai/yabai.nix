@@ -458,8 +458,8 @@ args@{
               "mkdir -p ~/Pictures/screenshots && screencapture -iw ~/Pictures/screenshots/$(date +%Y_%m_%d_%H%M%S).png";
             "ctrl + alt - p" = "mkdir -p ~/Pictures/screenshots && open ~/Pictures/screenshots";
 
-            "shift + alt - q" = "restart-yabai";
-            "shift + alt - w" = "restart-skhd";
+            "shift + alt - q" = "yabai-restart";
+            "shift + alt - w" = "yabai-desktop-restart";
             "alt + ctrl - tab" = "open -a \"Mission Control\"";
 
             "ctrl + alt - b" = "pmset sleepnow";
@@ -526,7 +526,7 @@ args@{
         '';
       };
 
-      home.file.".local/bin/restart-yabai" = {
+      home.file.".local/bin/yabai-restart" = {
         executable = true;
         text = ''
           #!/bin/bash
@@ -534,11 +534,75 @@ args@{
         '';
       };
 
-      home.file.".local/bin/restart-skhd" = {
+      home.file.".local/bin/skhd-restart" = {
         executable = true;
         text = ''
           #!/bin/bash
           launchctl kickstart -k gui/$(id -u)/com.koekeishiya.skhd
+        '';
+      };
+
+      home.file.".local/bin/sketchybar-restart" = {
+        executable = true;
+        text = ''
+          #!/bin/bash
+          brew services restart sketchybar
+        '';
+      };
+
+      home.file.".local/bin/borders-restart" = {
+        executable = true;
+        text = ''
+          #!/bin/bash
+          brew services restart borders
+        '';
+      };
+
+      home.file.".local/bin/yabai-desktop-restart" = {
+        executable = true;
+        text = ''
+          #!/bin/bash
+          set -euo pipefail
+
+          EXIT_CODE=0
+          FAILED_COMPONENTS=()
+
+          echo "Restarting borders..."
+          if ! borders-restart; then
+            echo "Error: Failed to restart borders" >&2
+            EXIT_CODE=1
+            FAILED_COMPONENTS+=("borders")
+          fi
+
+          echo "Restarting yabai..."
+          if ! yabai-restart; then
+            echo "Error: Failed to restart yabai" >&2
+            EXIT_CODE=1
+            FAILED_COMPONENTS+=("yabai")
+          fi
+
+          echo "Restarting skhd..."
+          if ! skhd-restart; then
+            echo "Error: Failed to restart skhd" >&2
+            EXIT_CODE=1
+            FAILED_COMPONENTS+=("skhd")
+          fi
+
+          echo "Restarting sketchybar..."
+          if ! sketchybar-restart; then
+            echo "Error: Failed to restart sketchybar" >&2
+            EXIT_CODE=1
+            FAILED_COMPONENTS+=("sketchybar")
+          fi
+
+          echo
+          if [[ $EXIT_CODE -eq 0 ]]; then
+            echo "All components restarted successfully."
+            exit 0
+          else
+            echo "Failed to restart the following components: ''${FAILED_COMPONENTS[*]}" >&2
+            exit $EXIT_CODE
+          fi
         '';
       };
 
