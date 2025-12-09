@@ -17,6 +17,7 @@ args@{
 
   settings = {
     withBlueman = false;
+    releaseSoftBlock = true;
   };
 
   configuration =
@@ -37,5 +38,17 @@ args@{
       };
 
       services.blueman.enable = lib.mkDefault self.settings.withBlueman;
+
+      systemd.services."rfkill-unblock-bluetooth" = lib.mkIf self.settings.releaseSoftBlock {
+        description = "Unblock Bluetooth from rfkill soft block";
+        after = [ "bluetooth.service" ];
+        wants = [ "bluetooth.service" ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          ExecStart = "${pkgs.util-linux}/bin/rfkill unblock bluetooth";
+        };
+      };
     };
 }
