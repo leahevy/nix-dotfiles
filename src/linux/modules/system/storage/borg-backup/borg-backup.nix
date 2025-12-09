@@ -317,7 +317,7 @@ args@{
             canFail = true;
           })}
           if [[ ! -f "/tmp/nx-backup-skipped" ]]; then
-            ${logScript "info" "INFO: All snapshots deleted successfully"}
+            ${pkgs.coreutils}/bin/echo "All snapshots deleted successfully"
           fi
           ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped
         '';
