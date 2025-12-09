@@ -5,6 +5,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
 deployment_script_setup "head"
 parse_git_args "$@"
 
+if command -v difft &> /dev/null; then
+    EXTRA_ARGS+=("--ext-diff")
+fi
+
 if [[ "$ONLY_CONFIG" != true ]]; then
     echo -e "${GREEN}HEAD of main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then

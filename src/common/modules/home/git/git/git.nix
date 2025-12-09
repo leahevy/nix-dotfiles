@@ -28,6 +28,7 @@ args@{
       "github.com"
       "gitlab.com"
     ];
+    useDifftastic = true;
   };
 
   configuration =
@@ -147,7 +148,7 @@ args@{
             rename = "copy";
             wordRegex = ".";
             submodule = "log";
-            tool = "difftastic";
+            tool = lib.mkIf (self.settings.useDifftastic) "difftastic";
             colorMoved = "default";
             context = 15;
           };
@@ -242,9 +243,10 @@ args@{
           };
         };
 
-        difftastic = {
+        difftastic = lib.mkIf self.settings.useDifftastic {
           enable = true;
           display = "inline";
+          color = "always";
           background = "dark";
           enableAsDifftool = true;
         };

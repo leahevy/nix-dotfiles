@@ -68,11 +68,21 @@ args@{
           vi = "vim -p";
           v = "vim -p";
 
+          dotfiles-init-bare = "/usr/bin/env git init --bare $HOME/.dotfiles";
+          dotfiles = "/usr/bin/env git --git-dir=\"$HOME/.dotfiles/\" --work-tree=\"$HOME\"";
+          dotfiles-configure = "/usr/bin/env git --git-dir=\"$HOME/.dotfiles/\" --work-tree=\"$HOME\" config status.showUntrackedFiles no";
+
+          home = "cd $HOME";
+
+          dev-create = "nix flake init --template github:cachix/devenv";
+          nix-search = "nix-env -f '<nixpkgs>' -qaP";
+        }
+        // lib.optionalAttrs (self.isModuleEnabled "git.git") {
           g = "git";
           gm = "g commit -m";
           gct = "g commit";
           gcn = "gct -m";
-          gh = "g head";
+          gh = "g head${if (self.getModuleConfig "git.git").useDifftastic then " --ext-diff" else ""}";
           gl = "g log";
           gg = "g graph";
           gps = "g push";
@@ -84,15 +94,6 @@ args@{
           gall = "g add .";
           gd = "g diff";
           gdc = "g diffc";
-
-          dotfiles-init-bare = "/usr/bin/env git init --bare $HOME/.dotfiles";
-          dotfiles = "/usr/bin/env git --git-dir=\"$HOME/.dotfiles/\" --work-tree=\"$HOME\"";
-          dotfiles-configure = "/usr/bin/env git --git-dir=\"$HOME/.dotfiles/\" --work-tree=\"$HOME\" config status.showUntrackedFiles no";
-
-          home = "cd $HOME";
-
-          dev-create = "nix flake init --template github:cachix/devenv";
-          nix-search = "nix-env -f '<nixpkgs>' -qaP";
         }
         // (self.settings.additionalAliases or { });
 
