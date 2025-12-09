@@ -189,6 +189,21 @@ rec {
       else
         moduleResult;
 
+  validateSettingsOverride =
+    moduleDefaults: userSettings: inputName: groupName: moduleName:
+    let
+      defaultAttrs = builtins.attrNames moduleDefaults;
+      userAttrs = builtins.attrNames userSettings;
+      systemManagedAttrs = [ "nx_unfree" ];
+      allowedAttrs = defaultAttrs ++ systemManagedAttrs;
+      invalidAttrs = builtins.filter (attr: !(builtins.elem attr allowedAttrs)) userAttrs;
+      modulePath = "${inputName}.${groupName}.${moduleName}";
+    in
+    if invalidAttrs != [ ] then
+      throw "Module ${modulePath} settings validation failed: Unknown settings attributes [${builtins.concatStringsSep ", " invalidAttrs}]. Available attributes: [${builtins.concatStringsSep ", " defaultAttrs}]"
+    else
+      userSettings;
+
   mergeModuleDefaults =
     lib: helpers: args: moduleType: inputName: groupName: moduleName: moduleSettings:
     let
@@ -241,8 +256,17 @@ rec {
 
         userSettings = if moduleSettings == true then { } else moduleSettings;
 
+        validatedUserSettings =
+          if userSettings == { } then
+            userSettings
+          else
+            validateSettingsOverride moduleDefaults userSettings inputName groupName moduleName;
+
         settingsWithUnfree =
-          if moduleUnfree != [ ] then userSettings // { unfree = moduleUnfree; } else userSettings;
+          if moduleUnfree != [ ] then
+            validatedUserSettings // { nx_unfree = moduleUnfree; }
+          else
+            validatedUserSettings;
       in
       lib.recursiveUpdate moduleDefaults settingsWithUnfree;
 
@@ -799,7 +823,7 @@ rec {
             inputName: inputGroups:
             lib.mapAttrsToList (
               groupName: groupModules:
-              lib.mapAttrsToList (moduleName: moduleSettings: moduleSettings.unfree or [ ]) groupModules
+              lib.mapAttrsToList (moduleName: moduleSettings: moduleSettings.nx_unfree or [ ]) groupModules
             ) inputGroups
           ) modules
         );

@@ -18,9 +18,15 @@ args@{
   submodules = {
     common = {
       terminal = {
-        ghostty-config = true;
+        ghostty-config = {
+          setEnv = self.settings.setEnv;
+        };
       };
     };
+  };
+
+  settings = {
+    setEnv = true;
   };
 
   configuration =

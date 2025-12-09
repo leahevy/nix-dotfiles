@@ -16,6 +16,7 @@ args@{
   namespace = "system";
 
   settings = {
+    uuid = null;
     fsType = "btrfs";
     fsOptions = [
       "compress=zstd"

@@ -15,10 +15,19 @@ args@{
   input = "linux";
   namespace = "system";
 
+  settings = {
+    package = null;
+    cmdline = null;
+  };
+
   assertions = [
     {
       assertion = self.settings.cmdline != null && self.settings.cmdline != "";
       message = "Setting cmdline must be set, e.g. 'niri-session'";
+    }
+    {
+      assertion = self.settings.package != null && self.settings.package != "";
+      message = "Setting package must be set, e.g. 'pkgs.niri'";
     }
   ];
 

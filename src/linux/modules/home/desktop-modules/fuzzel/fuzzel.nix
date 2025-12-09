@@ -15,6 +15,10 @@ args@{
   input = "linux";
   namespace = "home";
 
+  settings = {
+    terminal = "ghostty";
+  };
+
   configuration =
     context@{ config, options, ... }:
     let

@@ -20,6 +20,8 @@ args@{
     commandline = "swaylock --daemonize";
     auto-lock-on-login = false;
     baseTimeoutSeconds = 600;
+    turnOnMonitorsCommand = "true";
+    turnOffMonitorsCommand = "true";
   };
 
   configuration =

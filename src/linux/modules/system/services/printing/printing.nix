@@ -17,6 +17,8 @@ args@{
 
   settings = {
     configureDefaultPrinter = false;
+    defaultPrinterName = null;
+    defaultPrinterIP = null;
     additionalEnsurePrinters = [ ];
     addMainUserToGroup = true;
     withAvahi = true;
