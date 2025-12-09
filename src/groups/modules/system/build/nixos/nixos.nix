@@ -29,6 +29,7 @@ args@{
         tokens = true;
         sops = true;
         nx-config = true;
+        firmware = true;
       };
       desktop = {
         desktop = true;

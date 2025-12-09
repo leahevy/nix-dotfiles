@@ -353,6 +353,25 @@ with lib;
                   default = null;
                   description = "Active desktop environment (or headless)";
                 };
+
+                firmware = mkOption {
+                  type = types.submodule {
+                    options = {
+                      redistributable = mkOption {
+                        type = types.bool;
+                        default = true;
+                        description = "Whether to enable redistributable firmware";
+                      };
+                      unfree = mkOption {
+                        type = types.bool;
+                        default = false;
+                        description = "Whether to enable unfree firmware";
+                      };
+                    };
+                  };
+                  default = { };
+                  description = "Firmware settings";
+                };
               };
             };
             default = { };

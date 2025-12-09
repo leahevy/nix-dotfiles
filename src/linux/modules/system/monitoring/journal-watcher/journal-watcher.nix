@@ -97,6 +97,12 @@ args@{
       "usb.*couldn't allocate usb_device"
       "usb.*can't set config #[0-9]+, error -[0-9]+"
       "usb.*Cannot enable\\. Maybe the USB cable is bad\\?"
+      "VMSCAPE: SMT on, STIBP is required for full protection"
+      "profiles/audio/bap\\.c:.*BAP requires ISO Socket which is not enabled"
+      "bap: Operation not supported \\([0-9]+\\)"
+      "Failed to set mode: Failed \\(0x[0-9a-fA-F]+\\)"
+      "KD_FONT_OP_GET failed while trying to get the font metadata: Invalid argument"
+      "Fonts will not be copied to remaining consoles"
     ];
     desktopStringsToIgnore = [
       "usb.*can't set config.*error -71"
