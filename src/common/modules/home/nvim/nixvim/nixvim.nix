@@ -629,7 +629,7 @@ args@{
               __raw = ''
                 function()
                   ${lib.optionalString (self.isModuleEnabled "nvim-modules.faster") ''
-                    if vim.b.is_bigfile then
+                    if vim.b.is_bigfile or vim.b.is_macro_execution then
                       return
                     end
                   ''}
@@ -659,7 +659,7 @@ args@{
             __raw = ''
               function()
                 ${lib.optionalString (self.isModuleEnabled "nvim-modules.faster") ''
-                  if vim.b.is_bigfile then
+                  if vim.b.is_bigfile or vim.b.is_macro_execution then
                     return
                   end
                 ''}
