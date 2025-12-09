@@ -345,6 +345,7 @@ args@{
           };
           desktop = {
             yabai = true;
+            better-display = true;
           };
           dev = {
             conda = true;
