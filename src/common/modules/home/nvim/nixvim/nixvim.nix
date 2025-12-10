@@ -33,7 +33,8 @@ args@{
         telescope = true;
         telescope-cmdline = true;
         overseer = true;
-        gitgutter = true;
+        gitgutter = false;
+        gitsigns = true;
         fugitive = true;
         toggleterm = true;
         dashboard = true;

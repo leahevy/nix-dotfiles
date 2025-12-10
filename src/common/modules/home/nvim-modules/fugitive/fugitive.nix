@@ -33,6 +33,8 @@ args@{
               desc = "Git status";
             };
           }
+        ]
+        ++ lib.optionals (!(self.isModuleEnabled "nvim-modules.gitsigns")) [
           {
             mode = "n";
             key = "<leader>gb";
@@ -56,7 +58,10 @@ args@{
         autoCmd = [
           {
             event = "FileType";
-            pattern = "fugitiveblame";
+            pattern = [
+              "fugitiveblame"
+              "fugitive"
+            ];
             callback.__raw = ''
               function()
                 vim.keymap.set('n', 'q', ':close<CR>', { buffer = true, silent = true })
@@ -65,23 +70,27 @@ args@{
           }
         ];
 
-        plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
-          {
-            __unkeyed-1 = "<leader>gg";
-            desc = "Git status";
-            icon = "";
-          }
-          {
-            __unkeyed-1 = "<leader>gb";
-            desc = "Git blame";
-            icon = "";
-          }
-          {
-            __unkeyed-1 = "<leader>gd";
-            desc = "Git diff";
-            icon = "";
-          }
-        ];
+        plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") (
+          [
+            {
+              __unkeyed-1 = "<leader>gg";
+              desc = "Git status";
+              icon = "";
+            }
+          ]
+          ++ lib.optionals (!(self.isModuleEnabled "nvim-modules.gitsigns")) [
+            {
+              __unkeyed-1 = "<leader>gb";
+              desc = "Git blame";
+              icon = "";
+            }
+            {
+              __unkeyed-1 = "<leader>gd";
+              desc = "Git diff";
+              icon = "";
+            }
+          ]
+        );
       };
     };
 }

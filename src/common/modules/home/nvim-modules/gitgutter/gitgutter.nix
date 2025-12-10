@@ -15,6 +15,13 @@ args@{
   input = "common";
   namespace = "home";
 
+  assertions = [
+    {
+      assertion = !(self.isModuleEnabled "nvim-modules.gitsigns");
+      message = "gitgutter and gitsigns cannot be enabled at the same time.";
+    }
+  ];
+
   configuration =
     context@{ config, options, ... }:
     {
