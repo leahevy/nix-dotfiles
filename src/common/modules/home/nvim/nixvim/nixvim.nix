@@ -415,10 +415,10 @@ args@{
                     vim.api.nvim_set_hl(0, "TabLine", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
                     vim.api.nvim_set_hl(0, "TabLineFill", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
 
-                    vim.api.nvim_set_hl(0, "Pmenu", { bg = "${self.theme.colors.terminal.normalBackgrounds.secondary.html}" })
-                    vim.api.nvim_set_hl(0, "PmenuSel", { bg = "${self.theme.colors.terminal.normalBackgrounds.highlight.html}" })
-                    vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "${self.theme.colors.terminal.normalBackgrounds.tertiary.html}" })
-                    vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "${self.theme.colors.separators.dark.html}" })
+                    vim.api.nvim_set_hl(0, "Pmenu", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "PmenuSel", { bg = "${self.theme.colors.blocks.primary.background.html}", fg = "${self.theme.colors.blocks.primary.foreground.html}" })
+                    vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "${self.theme.colors.terminal.foregrounds.primary.html}" })
 
                     vim.api.nvim_set_hl(0, "WhiteSpace", { fg = "${self.theme.colors.separators.veryDark.html}" })
                     vim.api.nvim_set_hl(0, "NonText", { fg = "${self.theme.colors.separators.dark.html}" })
