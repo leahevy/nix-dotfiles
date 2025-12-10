@@ -93,29 +93,29 @@ check_config_directory_optional() {
 
 deployment_script_setup() {
     local script_name="$1"
-    
+
     if [[ -z "${NX_INSTALL_PATH:-}" ]]; then
         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[1]}")" && pwd)"
     else
         SCRIPT_DIR="${NX_INSTALL_PATH}/scripts/deployment"
     fi
     cd "${NXCORE_DIR:-$HOME/.config/nx/nxcore}"
-    
+
     if [[ "$UID" == 0 ]]; then
         echo -e "${RED}Do NOT run as root!${RESET}" >&2
         exit 1
     fi
-    
+
     perm=$(ls -ld "$PWD" | awk '{print $1}')
     owner=$(ls -ld "$PWD" | awk '{print $3}')
-    
+
     if [[ ! -d $PWD || $perm != drwx------* || $owner != "$USER" ]]; then
         echo -e "${RED}Permissions of enclosing configuration directory are too open!${RESET}" >&2
         exit 1
     fi
-    
+
     check_config_directory "$script_name" "deployment"
-    
+
     export SCRIPT_DIR
 }
 
@@ -160,7 +160,7 @@ parse_common_deployment_args() {
 parse_build_deployment_args() {
     PROFILE_PATH="$(retrieve_active_profile_path)"
     EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
-    TIMEOUT=600
+    TIMEOUT=1200
     DRY_RUN=""
     BUILD_DIFF=false
     SKIP_VERIFICATION=false
@@ -172,7 +172,7 @@ parse_build_deployment_args() {
                 shift
                 ;;
             --timeout)
-                TIMEOUT="${2:-3600}"
+                TIMEOUT="${2:-1200}"
                 shift 2
                 ;;
             --dry-run)
@@ -191,7 +191,7 @@ parse_build_deployment_args() {
                 echo "build: Test build configuration without deploying"
                 echo ""
                 echo "Options:"
-                echo "  --timeout <seconds>   Set timeout (default: 600)"
+                echo "  --timeout <seconds>   Set timeout (default: 1200)"
                 echo "  --dry-run            Test build without actual building"
                 echo "  --offline            Build without network access"
                 echo "  --diff               Compare built config with current active system"
@@ -262,27 +262,27 @@ parse_minimal_deployment_args() {
 
 simple_deployment_script_setup() {
     local script_name="$1"
-    
+
     if [[ -z "${NX_INSTALL_PATH:-}" ]]; then
         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[1]}")" && pwd)"
     else
         SCRIPT_DIR="${NX_INSTALL_PATH}/scripts/deployment"
     fi
     cd "${NXCORE_DIR:-$HOME/.config/nx/nxcore}"
-    
+
     if [[ "$UID" == 0 ]]; then
         echo -e "${RED}Do NOT run as root!${RESET}" >&2
         exit 1
     fi
-    
+
     perm=$(ls -ld "$PWD" | awk '{print $1}')
     owner=$(ls -ld "$PWD" | awk '{print $3}')
-    
+
     if [[ ! -d $PWD || $perm != drwx------* || $owner != "$USER" ]]; then
         echo -e "${RED}Permissions of enclosing configuration directory are too open!${RESET}" >&2
         exit 1
     fi
-    
+
     export SCRIPT_DIR
 }
 
@@ -304,33 +304,33 @@ fi
 check_git_worktrees_clean() {
     local main_dirty=false
     local config_dirty=false
-    
+
     if [[ "$(git status --porcelain)" != "" ]]; then
         main_dirty=true
     fi
-    
+
     if [[ -n "${CONFIG_DIR:-}" ]] && [[ -d "$CONFIG_DIR" ]]; then
         if [[ "$(cd "$CONFIG_DIR" && git status --porcelain 2>/dev/null)" != "" ]]; then
             config_dirty=true
         fi
     fi
-    
+
     if [[ "$main_dirty" == true ]] || [[ "$config_dirty" == true ]]; then
         echo -e "${YELLOW}!!! Git worktree(s) are dirty!${RESET}" >&2
         echo >&2
-        
+
         if [[ "$main_dirty" == true ]]; then
             echo -e "${WHITE}Main repository (.config/nx/nxcore):${RESET}" >&2
             git status --porcelain >&2
             echo >&2
         fi
-        
+
         if [[ "$config_dirty" == true ]]; then
             echo -e "${WHITE}Config repository (.config/nx/nxconfig):${RESET}" >&2
             (cd "$CONFIG_DIR" && git status --porcelain) >&2
             echo >&2
         fi
-        
+
         if [[ "${ALLOW_DIRTY_GIT:-false}" == "true" ]]; then
             echo -e "${YELLOW}WARNING: Proceeding with dirty git worktree(s) due to --allow-dirty-git flag${RESET}" >&2
             echo >&2
@@ -490,7 +490,7 @@ parse_git_args() {
     ONLY_CORE=false
     ONLY_CONFIG=false
     EXTRA_ARGS=()
-    
+
     while [[ $# -gt 0 ]]; do
         case "${1:-}" in
             --only-core)
@@ -507,12 +507,12 @@ parse_git_args() {
                 ;;
         esac
     done
-    
+
     if [[ "$ONLY_CORE" == true && "$ONLY_CONFIG" == true ]]; then
         echo -e "${RED}Error: Cannot specify both ${WHITE}--only-core${RED} and ${WHITE}--only-config${RED} at the same time${RESET}" >&2
         exit 1
     fi
-    
+
     export ONLY_CORE ONLY_CONFIG EXTRA_ARGS
 }
 
@@ -546,7 +546,7 @@ export_nixos_label() {
 detect_system_architecture() {
     local uname_system="$(uname -s)"
     local uname_machine="$(uname -m)"
-    
+
     case "$uname_system" in
         Linux)
             case "$uname_machine" in
@@ -602,7 +602,7 @@ retrieve_active_profile() {
             base_profile="$USER"
         fi
     fi
-    
+
     target_profile="$(construct_profile_name "$base_profile")"
     local arch="${target_profile#$base_profile--}"
     echo -e "${GREEN}Selected profile: ${YELLOW}$base_profile ${RED}(${arch})${RESET}\n" >&2
@@ -620,7 +620,7 @@ retrieve_active_profile_path() {
             base_profile="$USER"
         fi
     fi
-    
+
     local profile_path
     if [[ -e /etc/NIXOS ]]; then
         profile_path="$CONFIG_DIR/profiles/nixos/$base_profile"
@@ -636,14 +636,14 @@ copy_config_to_target() {
     local TARGET_HOME="$2"
     local USER_ID="$3"
     local GROUP_ID="$4"
-    
+
     if [[ -z "$CONFIG_DIR" ]]; then
         echo -e "${RED}Error: CONFIG_DIR not set. Call check_config_directory first.${RESET}" >&2
         exit 1
     fi
-    
+
     local TARGET_CONFIG="/mnt$TARGET_HOME/.config/nx/nxconfig"
-    
+
     echo -e "${WHITE}Copying config to target system...${RESET}"
     mkdir -p "/mnt$TARGET_HOME/.config/nx"
     cp -R --verbose -T "$CONFIG_DIR" "$TARGET_CONFIG"
@@ -655,34 +655,34 @@ configure_target_git_remotes() {
     local TARGET_HOME="$1"
     local USER_ID="$2"
     local GROUP_ID="$3"
-    
+
     if [[ -z "$CONFIG_DIR" ]]; then
         echo -e "${RED}Error: CONFIG_DIR not set. Call check_config_directory first.${RESET}" >&2
         exit 1
     fi
-    
+
     local PROFILE_PATH="$(retrieve_active_profile_path)"
-    
+
     local TARGET_CORE="/mnt$TARGET_HOME/.config/nx/nxcore"
     local TARGET_CONFIG="/mnt$TARGET_HOME/.config/nx/nxconfig"
-    
+
     local CORE_INSTALL_URL
     local CONFIG_INSTALL_URL
-    
+
     CORE_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CORE_INSTALL_URL" == "null" || "$CORE_INSTALL_URL" == "\"null\"" ]]; then
         CORE_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
     fi
     CORE_INSTALL_URL="${CORE_INSTALL_URL//\"/}"
-    
+
     CONFIG_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CONFIG_INSTALL_URL" == "null" || "$CONFIG_INSTALL_URL" == "\"null\"" ]]; then
         CONFIG_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.configRepoIsoUrl" 2>/dev/null)"
     fi
     CONFIG_INSTALL_URL="${CONFIG_INSTALL_URL//\"/}"
-    
+
     echo -e "${WHITE}Configuring git remotes for target system...${RESET}"
-    
+
     if [[ -d "$TARGET_CORE/.git" && -n "$CORE_INSTALL_URL" ]]; then
         echo -e "Setting core repository remote to: ${WHITE}$CORE_INSTALL_URL${RESET}"
         cd "$TARGET_CORE"
@@ -693,7 +693,7 @@ configure_target_git_remotes() {
         fi
         chown -R "$USER_ID:$GROUP_ID" "$TARGET_CORE/.git"
     fi
-    
+
     if [[ -d "$TARGET_CONFIG/.git" && -n "$CONFIG_INSTALL_URL" ]]; then
         echo -e "Setting config repository remote to: ${WHITE}$CONFIG_INSTALL_URL${RESET}"
         cd "$TARGET_CONFIG"
@@ -704,7 +704,7 @@ configure_target_git_remotes() {
         fi
         chown -R "$USER_ID:$GROUP_ID" "$TARGET_CONFIG/.git"
     fi
-    
+
     echo -e "${GREEN}Git remotes configured for target system.${RESET}"
 }
 
@@ -713,9 +713,9 @@ setup_log_directory() {
     local real_user="${SUDO_USER:-$USER}"
     local real_uid="${SUDO_UID:-$(id -u)}"
     local real_gid="${SUDO_GID:-$(id -g)}"
-    
+
     mkdir -p "$log_dir"
-    
+
     if [[ "$UID" == 0 && -n "${SUDO_USER:-}" ]]; then
         chown "$real_uid:$real_gid" "$log_dir"
         local parent_dir="$(dirname "$log_dir")"
@@ -731,14 +731,14 @@ setup_log_directory() {
 rotate_logs() {
     local log_dir="$1"
     local max_logs="${2:-10}"
-    
+
     if [[ ! -d "$log_dir" ]]; then
         return 0
     fi
-    
+
     local logs=($(find "$log_dir" -name "*.log" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | cut -d' ' -f2-))
     local log_count=${#logs[@]}
-    
+
     if [[ $log_count -gt $max_logs ]]; then
         local to_remove=$((log_count - max_logs))
         for ((i=0; i<to_remove; i++)); do
