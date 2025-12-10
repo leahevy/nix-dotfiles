@@ -36,6 +36,7 @@ args@{
         gitgutter = false;
         gitsigns = true;
         fugitive = true;
+        luasnip = true;
         toggleterm = true;
         dashboard = true;
         nvim-tree = true;
@@ -189,6 +190,7 @@ args@{
                 "mini.nvim"
               ]
               (lib.mkIf (self.isModuleEnabled "nvim-modules.copilot") [ "copilot.vim" ])
+              (lib.mkIf (self.isModuleEnabled "nvim-modules.luasnip") [ "friendly-snippets" ])
               (lib.mkIf (self.isModuleEnabled "nvim-modules.rest") [ "rest.nvim" ])
               (lib.mkIf (self.isModuleEnabled "nvim-modules.neotest") [
                 "neotest-python"
