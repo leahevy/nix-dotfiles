@@ -93,6 +93,7 @@ args@{
     withNeovide = false;
     terminal = "ghostty";
     manpageViewer = true;
+    numberSignColumns = 4;
     dictionaries = [
       "en"
       "de"
@@ -217,6 +218,7 @@ args@{
           relativenumber = true;
           cursorline = true;
           cursorcolumn = false;
+          signcolumn = "auto:${builtins.toString self.settings.numberSignColumns}";
 
           termguicolors = true;
           mouse = "a";
