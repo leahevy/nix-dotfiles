@@ -180,6 +180,56 @@ rec {
           name = "bright-black";
           term = 59;
         };
+        successDarker = {
+          html = "#1b8544";
+          name = "green";
+          term = 46;
+        };
+        warningDarker = {
+          html = "#b8b820";
+          name = "yellow";
+          term = 226;
+        };
+        errorDarker = {
+          html = "#8a2a2a";
+          name = "red";
+          term = 203;
+        };
+        infoDarker = {
+          html = "#158c70";
+          name = "cyan";
+          term = 87;
+        };
+        hintDarker = {
+          html = "#001a03";
+          name = "green";
+          term = 22;
+        };
+        modifiedDarker = {
+          html = "#2d7054";
+          name = "green";
+          term = 114;
+        };
+        addedDarker = {
+          html = "#4a8810";
+          name = "bright-green";
+          term = 47;
+        };
+        removedDarker = {
+          html = "#0a5500";
+          name = "green";
+          term = 82;
+        };
+        selectedDarker = {
+          html = "#042308";
+          name = "green";
+          term = 65;
+        };
+        inactiveDarker = {
+          html = "#050a30";
+          name = "bright-black";
+          term = 59;
+        };
       };
       separators = {
         light = {
@@ -314,7 +364,7 @@ rec {
             term = 0;
           };
           secondary = {
-            html = "#111111";
+            html = "#0f0f0f";
             name = "bright-black";
             term = 8;
           };
@@ -324,7 +374,7 @@ rec {
             term = 0;
           };
           highlight = {
-            html = "#000000";
+            html = "#111111";
             name = "black";
             term = 0;
           };
