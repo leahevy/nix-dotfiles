@@ -360,7 +360,7 @@ args@{
           }
           {
             mode = "i";
-            key = "<C-k>";
+            key = "<C-h>";
             action.__raw = "function() _G.obsidian_insert_existing_note() end";
             options = {
               desc = "Insert link to existing note";
