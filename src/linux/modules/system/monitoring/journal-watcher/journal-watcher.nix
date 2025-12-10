@@ -103,6 +103,9 @@ args@{
       "Failed to set mode: Failed \\(0x[0-9a-fA-F]+\\)"
       "KD_FONT_OP_GET failed while trying to get the font metadata: Invalid argument"
       "Fonts will not be copied to remaining consoles"
+      "hub.*hub_ext_port_status failed \\(err = -[0-9]+\\)"
+      "usb.*Failed to suspend device, error -[0-9]+"
+      "usb.*clear tt [0-9]+ \\([0-9a-fA-F]+\\) error -[0-9]+"
     ];
     desktopStringsToIgnore = [
       "usb.*can't set config.*error -71"
