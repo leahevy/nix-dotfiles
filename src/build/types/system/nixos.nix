@@ -367,6 +367,25 @@ with lib;
                         default = false;
                         description = "Whether to enable unfree firmware";
                       };
+                      modeSwitchDevices = mkOption {
+                        type = types.listOf (
+                          types.submodule {
+                            options = {
+                              device = mkOption {
+                                type = types.str;
+                                description = "USB device to mode-switch (format: vendor:product)";
+                              };
+                              flags = mkOption {
+                                type = types.str;
+                                default = "-K -Q";
+                                description = "USB mode switch flags";
+                              };
+                            };
+                          }
+                        );
+                        default = [ ];
+                        description = "USB devices requiring mode switching";
+                      };
                     };
                   };
                   default = { };
