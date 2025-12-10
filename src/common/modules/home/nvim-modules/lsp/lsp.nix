@@ -412,6 +412,20 @@ args@{
             icon = "";
           }
         ];
+
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
+          _G.nx_modules["50-lsp-diagnostics"] = function()
+            vim.diagnostic.config({
+              float = {
+                border = "single",
+                source = "always",
+                header = "",
+                prefix = "",
+              },
+            })
+          end
+        '';
       };
 
     };
