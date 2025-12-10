@@ -38,15 +38,18 @@ args@{
         pamtester
       ];
 
-      services.udev.extraRules =
-        lib.mkIf (self.settings.modelId != null && self.settings.lockSessionOnUnplug)
-          ''
-            ACTION=="remove",\
-             SUBSYSTEM=="usb",\
-             ENV{DEVTYPE}=="usb_device",\
-             ENV{PRODUCT}=="1050/${lib.removePrefix "0" self.settings.modelId}/*",\
-             RUN+="${pkgs.systemd}/bin/loginctl lock-sessions"
-          '';
+      services.udev.extraRules = lib.mkIf self.settings.lockSessionOnUnplug ''
+        ACTION=="remove",\
+         SUBSYSTEM=="usb",\
+         ENV{DEVTYPE}=="usb_device",\
+         ENV{PRODUCT}=="${
+           if self.settings.modelId != null then
+             "1050/${lib.removePrefix "0" self.settings.modelId}/*"
+           else
+             "1050/*/*"
+         }",\
+         RUN+="${pkgs.systemd}/bin/loginctl lock-sessions"
+      '';
 
       sops.secrets.yubikey-u2f-keys = lib.mkIf self.settings.enableU2fAuth {
         format = "binary";
