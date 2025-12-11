@@ -77,6 +77,8 @@ args@{
   configuration =
     context@{ config, options, ... }:
     {
+      programs.nixvim.opts.showmode = false;
+
       programs.nixvim.plugins.lualine = {
         enable = true;
         settings = {
