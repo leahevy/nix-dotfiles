@@ -95,7 +95,10 @@ args@{
     withNeovide = false;
     terminal = "ghostty";
     manpageViewer = true;
-    numberSignColumns = 4;
+    numberSignColumns = {
+      min = 1;
+      max = 5;
+    };
     dictionaries = [
       "en"
       "de"
@@ -221,7 +224,27 @@ args@{
           relativenumber = true;
           cursorline = true;
           cursorcolumn = false;
-          signcolumn = "auto:${builtins.toString self.settings.numberSignColumns}";
+
+          signcolumn =
+            let
+              numbers = self.settings.numberSignColumns;
+              min = if numbers.min == null || numbers.min < 0 then 0 else numbers.min;
+              max =
+                if numbers.max == null || numbers.max < min then
+                  min
+                else if numbers.max > 9 then
+                  9
+                else
+                  numbers.max;
+              final =
+                if min == 0 && max == 0 then
+                  ""
+                else if min == max then
+                  ":${builtins.toString min}"
+                else
+                  ":${builtins.toString min}-${builtins.toString max}";
+            in
+            "auto${final}";
 
           termguicolors = true;
           mouse = "a";
