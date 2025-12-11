@@ -101,12 +101,93 @@ args@{
         ]
         ++ lib.optionals (self.isModuleEnabled "nvim-modules.telescope") [
           {
-            mode = "n";
-            key = "<leader>js";
-            action = "<cmd>lua require('telescope').extensions.luasnip.luasnip{}<CR>";
+            mode = "i";
+            key = "<C-T>";
+            action = {
+              __raw = ''
+                function()
+                  local original_buf = vim.api.nvim_get_current_buf()
+                  local original_pos = vim.api.nvim_win_get_cursor(0)
+                  local original_line = vim.api.nvim_get_current_line()
+                  vim.b.disable_trailing_whitespace_removal = true
+
+                  local reset_flag = function()
+                    if vim.api.nvim_buf_is_valid(original_buf) then
+                      vim.api.nvim_buf_set_var(original_buf, 'disable_trailing_whitespace_removal', false)
+                    end
+                  end
+
+                  vim.cmd('stopinsert')
+
+                  vim.schedule(function()
+                    local current_line = vim.api.nvim_get_current_line()
+
+                    if current_line == "" and original_line ~= "" then
+                      vim.api.nvim_set_current_line(original_line)
+                      vim.api.nvim_win_set_cursor(0, original_pos)
+                    end
+
+                    local line_before = vim.api.nvim_get_current_line()
+
+                    local ok, err = pcall(function()
+                      require('telescope').extensions.luasnip.luasnip({
+                        attach_mappings = function(prompt_bufnr, map)
+                          local actions = require('telescope.actions')
+                          local action_state = require('telescope.actions.state')
+
+                          local on_select = function()
+                            local selection = action_state.get_selected_entry()
+                            if selection and selection.value and selection.value.context and selection.value.context.trigger then
+                              local trigger = selection.value.context.trigger
+                              actions.close(prompt_bufnr)
+                              vim.schedule(function()
+                                vim.api.nvim_put({trigger}, 'c', true, true)
+                                vim.cmd('startinsert!')
+                                vim.schedule(function()
+                                  require('luasnip').expand_or_jump()
+                                  reset_flag()
+                                end)
+                              end)
+                            else
+                              actions.close(prompt_bufnr)
+                            end
+                          end
+
+                          local on_abort = function()
+                            actions.close(prompt_bufnr)
+                            vim.schedule(function()
+                              reset_flag()
+                              vim.api.nvim_win_set_cursor(0, original_pos)
+                              if vim.fn.mode() ~= 'i' then
+                                vim.cmd('startinsert!')
+                              end
+                            end)
+                          end
+
+                          map('i', '<CR>', on_select)
+                          map('n', '<CR>', on_select)
+                          map('i', '<Esc>', on_abort)
+                          map('n', '<Esc>', on_abort)
+
+                          return true
+                        end
+                      })
+                    end)
+
+                    if not ok then
+                      reset_flag()
+                      vim.notify('Error opening snippet browser: ' .. tostring(err), vim.log.levels.ERROR, {
+                        title = 'LuaSnip',
+                        icon = '🔧'
+                      })
+                    end
+                  end)
+                end
+              '';
+            };
             options = {
               silent = true;
-              desc = "Browse snippets";
+              desc = "Insert snippet via telescope";
             };
           }
         ];
@@ -152,9 +233,9 @@ args@{
           ]
           ++ lib.optionals (self.isModuleEnabled "nvim-modules.telescope") [
             {
-              __unkeyed-1 = "<leader>js";
-              mode = "n";
-              desc = "Browse snippets";
+              __unkeyed-1 = "<C-T>";
+              mode = "i";
+              desc = "Insert snippet via telescope";
               icon = "📋";
             }
           ]

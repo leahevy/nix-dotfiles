@@ -648,6 +648,19 @@ args@{
             };
           }
           {
+            event = [ "BufEnter" ];
+            desc = "Initialize trailing whitespace removal toggle";
+            callback = {
+              __raw = ''
+                function()
+                  if vim.b.disable_trailing_whitespace_removal == nil then
+                    vim.b.disable_trailing_whitespace_removal = false
+                  end
+                end
+              '';
+            };
+          }
+          {
             event = [
               "BufWritePre"
               "InsertLeave"
@@ -661,6 +674,9 @@ args@{
                       return
                     end
                   ''}
+                  if vim.b.disable_trailing_whitespace_removal then
+                    return
+                  end
                   if not vim.bo.modifiable or vim.bo.readonly then
                     return
                   end
@@ -691,6 +707,9 @@ args@{
                     return
                   end
                 ''}
+                if vim.b.disable_trailing_whitespace_removal then
+                  return
+                end
                 if not vim.bo.modifiable or vim.bo.readonly or not vim.bo.modified then
                   return
                 end
