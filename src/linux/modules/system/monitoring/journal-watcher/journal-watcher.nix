@@ -189,6 +189,7 @@ args@{
       "application: invalid escaped exec argument character:.*"
       "GFileInfo created without standard::.*"
       "file ../gio/gfileinfo\\.c:.*should not be reached"
+      "gtk_.* must be called before gtk_init.*"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
