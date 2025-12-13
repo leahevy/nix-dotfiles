@@ -58,6 +58,11 @@ rec {
             name = "bright-black";
             term = 59;
           };
+          themed = {
+            html = "#182f11";
+            name = "green";
+            term = 22;
+          };
         };
         foregrounds = {
           subtle = {

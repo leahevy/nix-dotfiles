@@ -82,6 +82,8 @@ args@{
         treesitter-textobjects = true;
         treesitter-context = true;
         faster = true;
+        nvim-ufo = true;
+        statuscol = true;
       };
     };
   };
@@ -277,6 +279,8 @@ args@{
           list = true;
           listchars = "space:·,eol:¶,tab:→ ,trail:·";
 
+          fillchars = "eob: ,fold: ,foldopen:,foldsep: ,foldclose:";
+
           clipboard = "unnamedplus";
 
           timeoutlen = 200;
@@ -449,6 +453,9 @@ args@{
 
                     vim.api.nvim_set_hl(0, "WhiteSpace", { fg = "${self.theme.colors.separators.veryDark.html}" })
                     vim.api.nvim_set_hl(0, "NonText", { fg = "${self.theme.colors.separators.dark.html}" })
+
+                    vim.api.nvim_set_hl(0, "Folded", { bg = "${self.theme.colors.blocks.primary.background.html}", fg = "${self.theme.colors.blocks.primary.foreground.html}", italic = true })
+                    vim.api.nvim_set_hl(0, "FoldColumn", { fg = "${self.theme.colors.terminal.foregrounds.primary.html}" })
 
                     vim.api.nvim_set_hl(0, "QuickFixLine", { bg = "${self.theme.colors.terminal.normalBackgrounds.highlight.html}", bold = true })
                     vim.api.nvim_set_hl(0, "qfText", { fg = "${self.theme.colors.separators.normal.html}" })

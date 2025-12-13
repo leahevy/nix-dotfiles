@@ -141,10 +141,12 @@ args@{
         };
       };
 
-      programs.nixvim.opts = lib.mkIf self.settings.enableFolding {
-        foldmethod = "expr";
-        foldexpr = "nvim_treesitter#foldexpr()";
-        foldenable = false;
-      };
+      programs.nixvim.opts =
+        lib.mkIf (self.settings.enableFolding && !(self.isModuleEnabled "nvim-modules.nvim-ufo"))
+          {
+            foldmethod = "expr";
+            foldexpr = "nvim_treesitter#foldexpr()";
+            foldenable = false;
+          };
     };
 }
