@@ -141,7 +141,7 @@ args@{
                 ;;
               -p)
                 shift
-                FUZZEL_ARGS+=("--prompt=$1")
+                FUZZEL_ARGS+=("--placeholder=$1")
                 ;;
               -mesg)
                 shift
@@ -152,6 +152,34 @@ args@{
                 ;;
               *)
                 FUZZEL_ARGS+=("$1")
+                ;;
+            esac
+            shift
+          done
+
+          exec ${fuzzelPackage}/bin/fuzzel "''${FUZZEL_ARGS[@]}"
+        '';
+        executable = true;
+      };
+
+      home.file.".local/bin/dmenu" = {
+        text = ''
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          FUZZEL_ARGS=(--dmenu)
+
+          while [[ $# -gt 0 ]]; do
+            case $1 in
+              -l|-lines)
+                shift
+                FUZZEL_ARGS+=("--lines=$1")
+                ;;
+              -p)
+                shift
+                FUZZEL_ARGS+=("--placeholder=$1")
+                ;;
+              *)
                 ;;
             esac
             shift

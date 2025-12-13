@@ -24,6 +24,7 @@ args@{
     googleDomain = "google.com";
     home = null;
     useThemedUserCSS = true;
+    useDmenuForOpenOnLinux = true;
     bookmarks = { };
     customSettings = { };
     baseBookmarks = {
@@ -497,7 +498,11 @@ args@{
           { };
 
       dmenuKeyBindings =
-        if self.isLinux && self.linux.isModuleEnabled "desktop-modules.fuzzel" then
+        if
+          self.isLinux
+          && self.linux.isModuleEnabled "desktop-modules.fuzzel"
+          && self.settings.useDmenuForOpenOnLinux
+        then
           {
             normal = {
               "o" = "spawn --userscript fuzzel-open";
@@ -654,10 +659,11 @@ args@{
       };
     in
     {
-      home.packages = [
-        themedCSS
-      ]
-      ++ (if dmenuKeyBindings != { } then [ pkgs.sqlite ] else [ ]);
+      home.packages =
+        lib.optionals self.settings.useThemedUserCSS [
+          themedCSS
+        ]
+        ++ lib.optionals (dmenuKeyBindings != { }) [ pkgs.sqlite ];
 
       programs.qutebrowser = {
         enable = true;
