@@ -66,6 +66,7 @@ args@{
           };
           passwords = {
             keepassxc = true;
+            bitwarden = true;
           };
           python = {
             python = true;
@@ -182,6 +183,7 @@ args@{
           };
           passwords = {
             keepassxc = true;
+            bitwarden = true;
           };
           python = {
             python = true;
@@ -298,6 +300,7 @@ args@{
           };
           passwords = {
             keepassxc = true;
+            bitwarden = true;
           };
           python = {
             python = true;
