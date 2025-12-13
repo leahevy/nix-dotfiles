@@ -122,9 +122,9 @@ in
         openFileCommand = "dolphin";
       } { name = "gitg"; };
       officeSuite = define {
-        name = "libreoffice";
-        package = pkgs.libreoffice;
-        desktopFile = "startcenter.desktop";
+        name = "onlyoffice";
+        package = pkgs.onlyoffice-desktopeditors;
+        desktopFile = "onlyoffice-desktopeditors.desktop";
       };
       drawingProgram = define {
         name = "gimp";
@@ -372,8 +372,14 @@ in
           ".config/btop"
           ".cache/ghostwriter"
           ".local/share/ghostwriter"
-          ".config/libreoffice"
           ".config/pulse"
+        ]
+        ++ lib.optionals (self.settings.officeSuite.name == "libreoffice") [
+          ".config/libreoffice"
+        ]
+        ++ lib.optionals (self.settings.officeSuite.name == "onlyoffice") [
+          ".config/onlyoffice"
+          ".local/share/onlyoffice"
         ]
         ++ (
           if isGnome then
