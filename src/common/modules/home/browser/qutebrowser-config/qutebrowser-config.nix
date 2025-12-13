@@ -745,7 +745,7 @@ args@{
                 darkmode = {
                   enabled = self.settings.darkMode;
                 };
-                preferred_color_scheme = if self.settings.darkMode then "dark" else "auto";
+                preferred_color_scheme = lib.mkForce (if self.settings.darkMode then "dark" else "auto");
               };
             };
             content = {
