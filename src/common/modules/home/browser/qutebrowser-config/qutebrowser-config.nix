@@ -496,7 +496,18 @@ args@{
         else
           { };
 
-      mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings) keepassxcKeyBindings;
+      dmenuKeyBindings =
+        if self.isLinux && self.linux.isModuleEnabled "desktop-modules.fuzzel" then
+          {
+            normal = {
+              "o" = "spawn --userscript fuzzel-open";
+              "O" = "spawn --userscript fuzzel-open -t";
+            };
+          }
+        else
+          { };
+
+      mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings) keepassxcKeyBindings) dmenuKeyBindings;
 
       flattenBookmarks =
         let
@@ -645,7 +656,8 @@ args@{
     {
       home.packages = [
         themedCSS
-      ];
+      ]
+      ++ (if dmenuKeyBindings != { } then [ pkgs.sqlite ] else [ ]);
 
       programs.qutebrowser = {
         enable = true;
@@ -1063,6 +1075,20 @@ args@{
 
       home.sessionVariables = {
         BROWSER = "qutebrowser";
+      };
+
+      home.file.".local/share/qutebrowser/userscripts/fuzzel-open" = lib.mkIf (dmenuKeyBindings != { }) {
+        text = ''
+          #!/usr/bin/env bash
+
+          url=$(printf "%s\n%s" "${homeUrl}" "$(${pkgs.sqlite}/bin/sqlite3 -separator ' ' "$QUTE_DATA_DIR/history.sqlite" 'select title, url from CompletionHistory')" | cat "$QUTE_CONFIG_DIR/quickmarks" - | fuzzel --dmenu --prompt="Open URL: " --placeholder="Select a URL or enter a new one" --width=60 --lines=10)
+          url=$(echo "$url" | sed -E 's/[^ ]+ +//g' | grep -E "https?:" || echo "$url")
+
+          [ -z "''${url// }" ] && exit
+
+          echo "open" "$@" "$url" >> "$QUTE_FIFO" || qutebrowser "$url"
+        '';
+        executable = true;
       };
 
       home.file.".local/bin/qutebrowser-install-dicts" = {
