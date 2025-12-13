@@ -23,6 +23,7 @@ args@{
     amazonDomain = "amazon.com";
     googleDomain = "google.com";
     home = null;
+    useThemedUserCSS = true;
     bookmarks = { };
     customSettings = { };
     baseBookmarks = {
@@ -541,8 +542,111 @@ args@{
             throw "Unsupported value type for Python conversion: ${builtins.typeOf val}";
       };
 
+      themedCSS = pkgs.stdenv.mkDerivation rec {
+        pname = "themed-css";
+        version = "0.1";
+
+        src = pkgs.fetchFromGitHub {
+          owner = "alphapapa";
+          repo = "solarized-everything-css";
+          rev = "bea989070bbb1389ca05e67118786beb55321e55";
+          sha256 = "sha256-pwl2B0hYrzGGsSicVs/amu+N0Txd1e3+4+LKyWpyTeI=";
+        };
+
+        buildPhase = ''
+          cat ${
+            pkgs.writeText "patched.css" (
+              builtins.replaceStrings
+                [
+                  "#000"
+                  "#262626"
+                  "#2a2a2a"
+                  "#2e2e2e"
+                  "#323232"
+                  "#363636"
+                  "#2c4125"
+
+                  "#5e6263"
+                  "#797fd4"
+                  "#909396"
+                  "#a6aaab"
+                  "#b8bbbd"
+                  "#c7c9ca"
+                  "#d2d8d9"
+
+                  "#fff"
+                  "#fba"
+                  "#aba"
+
+                  "#2f7bde"
+                  "#639ce6"
+
+                  "#15968d"
+                  "#436237"
+                  "#598249"
+
+                  "#b68800"
+
+                  "#e05f27"
+
+                  "#5e1c19"
+                  "#bd3832"
+                  "#ce4139"
+                  "#a8366b"
+                ]
+                [
+                  self.theme.colors.main.backgrounds.primary.html
+                  self.theme.colors.main.backgrounds.primary.html
+                  self.theme.colors.main.backgrounds.primary.html
+                  self.theme.colors.main.backgrounds.primary.html
+                  self.theme.colors.main.backgrounds.tertiary.html
+                  self.theme.colors.main.backgrounds.tertiary.html
+                  self.theme.colors.main.backgrounds.themed.html
+
+                  self.theme.colors.main.foregrounds.subtle.html
+                  self.theme.colors.main.foregrounds.secondary.html
+                  self.theme.colors.main.foregrounds.subtle.html
+                  self.theme.colors.main.foregrounds.secondary.html
+                  self.theme.colors.main.foregrounds.strong.html
+                  self.theme.colors.main.foregrounds.strong.html
+                  self.theme.colors.main.foregrounds.strong.html
+
+                  self.theme.colors.main.foregrounds.strong.html
+                  self.theme.colors.main.foregrounds.emphasized.html
+                  self.theme.colors.semantic.success.html
+
+                  self.theme.colors.main.base.blue.html
+                  self.theme.colors.main.base.cyan.html
+
+                  self.theme.colors.main.base.green.html
+                  self.theme.colors.semantic.successDarker.html
+                  self.theme.colors.semantic.success.html
+
+                  self.theme.colors.main.base.yellow.html
+
+                  self.theme.colors.main.base.orange.html
+
+                  self.theme.colors.semantic.errorDarker.html
+                  self.theme.colors.semantic.error.html
+                  self.theme.colors.main.foregrounds.primary.html
+                  self.theme.colors.main.base.pink.html
+                ]
+                (builtins.readFile "${src}/css/darculized/darculized-all-sites.css")
+            )
+          } > patched.css
+        '';
+
+        installPhase = ''
+          mkdir -p $out
+          cp patched.css $out/themed-css.css
+        '';
+      };
     in
     {
+      home.packages = [
+        themedCSS
+      ];
+
       programs.qutebrowser = {
         enable = true;
         package = lib.mkDefault pkgs-unstable.qutebrowser;
@@ -686,6 +790,9 @@ args@{
               };
               webgl = true;
               dns_prefetch = false;
+              user_stylesheets = lib.mkIf self.settings.useThemedUserCSS [
+                "${themedCSS}/themed-css.css"
+              ];
             };
             downloads = {
               position = "bottom";
