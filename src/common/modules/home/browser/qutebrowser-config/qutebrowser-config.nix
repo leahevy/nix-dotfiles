@@ -615,7 +615,7 @@ args@{
                   self.theme.colors.main.backgrounds.primary.html
                   self.theme.colors.main.backgrounds.primary.html
                   self.theme.colors.main.backgrounds.primary.html
-                  self.theme.colors.main.backgrounds.tertiary.html
+                  self.theme.colors.main.backgrounds.secondary.html
                   self.theme.colors.main.backgrounds.tertiary.html
                   self.theme.colors.main.backgrounds.themed.html
 
@@ -627,25 +627,25 @@ args@{
                   self.theme.colors.main.foregrounds.strong.html
                   self.theme.colors.main.foregrounds.strong.html
 
-                  self.theme.colors.main.foregrounds.strong.html
+                  self.theme.colors.main.foregrounds.primary.html
                   self.theme.colors.main.foregrounds.emphasized.html
+                  self.theme.colors.main.foregrounds.strong.html
+
+                  self.theme.colors.semantic.modifiedDarker.html
+                  self.theme.colors.semantic.removedDarker.html
+
                   self.theme.colors.semantic.success.html
-
-                  self.theme.colors.main.base.blue.html
-                  self.theme.colors.main.base.cyan.html
-
-                  self.theme.colors.main.base.green.html
                   self.theme.colors.semantic.successDarker.html
                   self.theme.colors.semantic.success.html
 
-                  self.theme.colors.main.base.yellow.html
+                  self.theme.colors.semantic.warning.html
 
-                  self.theme.colors.main.base.orange.html
+                  self.theme.colors.semantic.error.html
 
                   self.theme.colors.semantic.errorDarker.html
-                  self.theme.colors.semantic.error.html
-                  self.theme.colors.main.foregrounds.primary.html
-                  self.theme.colors.main.base.pink.html
+                  self.theme.colors.semantic.info.html
+                  self.theme.colors.semantic.info.html
+                  self.theme.colors.semantic.selected.html
                 ]
                 (builtins.readFile "${src}/css/darculized/darculized-all-sites.css")
             )
