@@ -226,7 +226,7 @@ args@{
           relativenumber = true;
           cursorline = true;
           cursorcolumn = false;
-          cmdheight = 0;
+          cmdheight = 1;
 
           signcolumn =
             let
