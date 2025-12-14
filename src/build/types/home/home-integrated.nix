@@ -28,6 +28,12 @@ with lib;
       description = "The user's main gpg key";
     };
 
+    additionalGPGKeys = mkOption {
+      type = types.listOf types.str;
+      default = [ ];
+      description = "Additional GPG keys for the user";
+    };
+
     home = mkOption {
       type = types.nullOr types.str;
       default = null;

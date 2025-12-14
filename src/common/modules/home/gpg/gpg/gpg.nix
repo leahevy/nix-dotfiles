@@ -48,6 +48,10 @@ in
   input = "common";
   namespace = "home";
 
+  settings = {
+    keyserver = "keys.openpgp.org";
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
@@ -95,6 +99,54 @@ in
       home.file."${config.xdg.configHome}/fish-init/20-gpg-tty.fish".text = ''
         export GPG_TTY=$(tty)
       '';
+
+      home.file.".local/bin/gpg-upload-keys" = {
+        text =
+          let
+            mainKey = if self.user.gpg != null then [ self.user.gpg ] else [ ];
+            additionalKeys = self.user.additionalGPGKeys or [ ];
+            allKeys = mainKey ++ additionalKeys;
+            keyListString = lib.concatStringsSep " " allKeys;
+          in
+          ''
+            #!/usr/bin/env bash
+            set -euo pipefail
+
+            KEYS=(${keyListString})
+            KEYSERVER="${self.settings.keyserver}"
+
+            if [ "''${#KEYS[@]}" -eq 0 ]; then
+                echo "No GPG keys configured to upload"
+                exit 0
+            fi
+
+            echo "Keyserver: $KEYSERVER"
+            echo "Keys to upload:"
+            for key in "''${KEYS[@]}"; do
+                echo "  - $key"
+            done
+            echo ""
+            read -p "Proceed with upload? [y/N]: " -r
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo "Upload cancelled"
+                exit 0
+            fi
+
+            echo "Uploading GPG keys to keyserver: $KEYSERVER"
+
+            for key in "''${KEYS[@]}"; do
+                echo "Uploading key: $key"
+                if gpg --keyserver "$KEYSERVER" --send-keys "$key"; then
+                    echo "✓ Successfully uploaded key: $key"
+                else
+                    echo "✗ Failed to upload key: $key" >&2
+                fi
+            done
+
+            echo "Upload process completed"
+          '';
+        executable = true;
+      };
 
       home.persistence."${self.persist}" = {
         directories = [
