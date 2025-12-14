@@ -84,6 +84,10 @@ in
       programs.gpg = {
         enable = true;
 
+        scdaemonSettings = {
+          disable-ccid = true;
+        };
+
         settings =
           { }
           // (
