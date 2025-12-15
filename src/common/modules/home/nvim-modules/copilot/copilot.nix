@@ -15,6 +15,8 @@ args@{
   input = "common";
   namespace = "home";
 
+  unfree = [ "copilot-language-server" ];
+
   settings = {
     baseFiletypesToEnable = [
       "nix"
@@ -64,6 +66,7 @@ args@{
     {
       home.packages = with pkgs-unstable; [
         nodejs
+        copilot-language-server
       ];
 
       programs.nixvim = {

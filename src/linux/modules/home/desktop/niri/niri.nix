@@ -118,11 +118,6 @@ args@{
       media = {
         vlc = true;
       };
-      emacs = {
-        emacs = {
-          terminal = "ghostty";
-        };
-      };
       nvim = {
         nixvim = {
           terminal = "ghostty";

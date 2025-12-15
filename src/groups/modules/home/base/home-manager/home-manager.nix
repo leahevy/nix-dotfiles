@@ -89,10 +89,6 @@ args@{
           nvim = {
             nixvim = true;
           };
-          emacs = {
-            emacs = true;
-            doom = true;
-          };
           chat = {
             fluffychat = true;
           };
@@ -209,10 +205,6 @@ args@{
           nvim = {
             nixvim = true;
           };
-          emacs = {
-            emacs = true;
-            doom = true;
-          };
           chat = {
             fluffychat = true;
           };
@@ -325,10 +317,6 @@ args@{
           };
           nvim = {
             nixvim = true;
-          };
-          emacs = {
-            emacs = true;
-            doom = true;
           };
           chat = {
             fluffychat = true;

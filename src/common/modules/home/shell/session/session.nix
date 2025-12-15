@@ -26,8 +26,8 @@ args@{
       home = {
         sessionVariables = {
           EDITOR = "vim";
-          VISUAL = "emacs";
-          PAGER = "bat";
+          VISUAL = if self.isModuleEnabled "emacs.emacs" then "emacs" else "vim";
+          PAGER = if self.isModuleEnabled "shell.rust-programs" then "bat" else "less";
           H = self.user.home;
         }
         // (self.settings.additionalEnvironment or { });
