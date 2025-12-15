@@ -15,6 +15,13 @@ args@{
   input = "linux";
   namespace = "system";
 
+  settings = {
+    baseIdsToIgnore = [
+      "1050" # Yubikeys
+    ];
+    additionalIdsToIgnore = [ ];
+  };
+
   assertions = [
     {
       assertion = self.user.isModuleEnabled "desktop-modules.keyd";
@@ -24,12 +31,17 @@ args@{
 
   configuration =
     context@{ config, options, ... }:
+    let
+      allIdsToIgnore = self.settings.baseIdsToIgnore ++ self.settings.additionalIdsToIgnore;
+      ignoreIds = map (id: "-${id}") allIdsToIgnore;
+      keyboardIds = [ "*" ] ++ ignoreIds;
+    in
     {
       services.keyd = {
         enable = true;
 
         keyboards.default = {
-          ids = [ "*" ];
+          ids = keyboardIds;
           settings = {
             main = {
               capslock = "overload(control, esc)";
