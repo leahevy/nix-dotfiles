@@ -18,6 +18,8 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
+      isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+
       customPkgs = self.pkgs {
         overlays = [
           (final: prev: {
@@ -37,6 +39,31 @@ args@{
         pkgs.bitwarden
         customPkgs.bitwarden-cli
       ];
+
+      programs.niri = lib.mkIf isNiriEnabled {
+        settings = {
+          binds = with config.lib.niri.actions; {
+            "Mod+Ctrl+Alt+K" = {
+              action = spawn-sh "niri-scratchpad --app-id Bitwarden --all-windows --spawn bitwarden";
+              hotkey-overlay.title = "Apps:Bitwarden";
+            };
+          };
+
+          window-rules = [
+            {
+              matches = [
+                {
+                  app-id = "Bitwarden";
+                }
+              ];
+              open-on-workspace = "scratch";
+              open-floating = true;
+              open-focused = false;
+              block-out-from = "screencast";
+            }
+          ];
+        };
+      };
 
       home.persistence."${self.persist}" = {
         directories = [
