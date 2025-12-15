@@ -139,6 +139,9 @@ args@{
                     ;;
                 esac
                 ;;
+              -password)
+                FUZZEL_ARGS+=("--password=*")
+                ;;
               -p)
                 shift
                 FUZZEL_ARGS+=("--placeholder=$1")
@@ -149,6 +152,8 @@ args@{
               -l|-lines)
                 shift
                 FUZZEL_ARGS+=("--lines=$1")
+                ;;
+              -*)
                 ;;
               *)
                 FUZZEL_ARGS+=("$1")
