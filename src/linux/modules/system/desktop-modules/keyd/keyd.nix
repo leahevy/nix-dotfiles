@@ -87,5 +87,15 @@ args@{
           '';
         };
       };
+
+      systemd.services.keyd = {
+        unitConfig = {
+          StartLimitIntervalSec = "60s";
+          StartLimitBurst = 5;
+        };
+        serviceConfig = {
+          RestartSec = "5s";
+        };
+      };
     };
 }

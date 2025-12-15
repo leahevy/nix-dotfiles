@@ -339,12 +339,14 @@ args@{
             "graphical-session.target"
             "nx-swaybg.service"
           ];
+          StartLimitIntervalSec = "120s";
+          StartLimitBurst = 5;
         };
 
         Service = {
           ExecStart = "${pkgs.nwg-wrapper}/bin/nwg-wrapper ${lib.escapeShellArgs dateTimeArgs}";
           Restart = "on-failure";
-          RestartSec = "1";
+          RestartSec = "15s";
           Type = "simple";
         };
 
@@ -361,12 +363,14 @@ args@{
             "graphical-session.target"
             "nx-swaybg.service"
           ];
+          StartLimitIntervalSec = "120s";
+          StartLimitBurst = 5;
         };
 
         Service = {
           ExecStart = "${pkgs.nwg-wrapper}/bin/nwg-wrapper ${lib.escapeShellArgs keybindingsLeftArgs}";
           Restart = "on-failure";
-          RestartSec = "1";
+          RestartSec = "15s";
           Type = "simple";
         };
 
@@ -383,12 +387,14 @@ args@{
             "graphical-session.target"
             "nx-swaybg.service"
           ];
+          StartLimitIntervalSec = "120s";
+          StartLimitBurst = 5;
         };
 
         Service = {
           ExecStart = "${pkgs.nwg-wrapper}/bin/nwg-wrapper ${lib.escapeShellArgs keybindingsRightArgs}";
           Restart = "on-failure";
-          RestartSec = "1";
+          RestartSec = "15s";
           Type = "simple";
         };
 

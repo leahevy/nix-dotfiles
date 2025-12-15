@@ -192,6 +192,7 @@ args@{
       "GFileInfo created without standard::.*"
       "file ../gio/gfileinfo\\.c:.*should not be reached"
       "gtk_.* must be called before gtk_init.*"
+      "Process [0-9]+ \\(bongocat\\) of user [0-9]+ dumped core"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"

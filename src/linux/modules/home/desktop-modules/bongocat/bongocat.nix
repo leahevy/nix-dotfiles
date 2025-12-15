@@ -126,7 +126,8 @@ args@{
           PartOf = [ "graphical-session.target" ];
           OnFailure = [ ];
           Requisite = [ ];
-          StartLimitIntervalSec = "30s";
+          StartLimitIntervalSec = "600s";
+          StartLimitBurst = 30;
         };
 
         Service = {
@@ -134,7 +135,6 @@ args@{
           ExecStart = startScript;
           Restart = "on-failure";
           RestartSec = "5s";
-          StartLimitBurst = 3;
           SuccessExitStatus = [
             0
             1
@@ -143,7 +143,7 @@ args@{
             1
             2
           ];
-          TimeoutStartSec = 10;
+          TimeoutStartSec = 15;
         };
 
         Install = {
