@@ -49,6 +49,11 @@ args@{
           )
         );
 
+        enableBitwarden = (
+          self.common.isModuleEnabled "passwords.bitwarden"
+          || (self.common.getModuleConfig "browser.qutebrowser-config").alwaysCreateBitwardenKeybindings
+        );
+
         keepassxcKeybindings =
           if enableKeepassxc then
             '''pw': 'spawn --userscript qute-keepassxc --key ${self.user.gpg}',''
@@ -60,6 +65,12 @@ args@{
             '''<Alt+Shift+u>': 'spawn --userscript qute-keepassxc --key ${self.user.gpg}',''
           else
             "";
+
+        bitwardenKeybindings =
+          if enableBitwarden then '''pb': 'spawn --userscript qute-bitwarden','' else "";
+
+        bitwardenInsertKeybindings =
+          if enableBitwarden then '''<Alt+Shift+i>': 'spawn --userscript qute-bitwarden','' else "";
 
         webAppConfig = ''
           import os
@@ -132,6 +143,7 @@ args@{
                   '<F5>': 'reload',
                   '<Ctrl+F5>': 'reload -f',
                   ${keepassxcKeybindings}
+                  ${bitwardenKeybindings}
               },
               'insert': {
                   '<Escape>': 'mode-leave',
@@ -139,6 +151,7 @@ args@{
                   '<Ctrl+e>': 'edit-text',
                   '<Shift+Ins>': 'insert-text -- {primary}',
                   ${keepassxcInsertKeybindings}
+                  ${bitwardenInsertKeybindings}
               },
               'caret': {
                   '<Escape>': 'mode-leave',

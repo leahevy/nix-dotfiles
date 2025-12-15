@@ -53,6 +53,7 @@ args@{
     additionalSearchEngines = { };
     addHomeToStartPages = true;
     alwaysCreateKeepassxcKeybindings = false;
+    alwaysCreateBitwardenKeybindings = false;
     additionalKeyMappings = { };
     additionalKeyBindings = { };
     basePerDomainSettings = { };
@@ -497,6 +498,19 @@ args@{
         else
           { };
 
+      bitwardenKeyBindings =
+        if self.isModuleEnabled "passwords.bitwarden" || self.settings.alwaysCreateBitwardenKeybindings then
+          {
+            normal = {
+              "pb" = "spawn --userscript qute-bitwarden";
+            };
+            insert = {
+              "<Alt-Shift-i>" = "spawn --userscript qute-bitwarden";
+            };
+          }
+        else
+          { };
+
       dmenuKeyBindings =
         if
           self.isLinux
@@ -512,7 +526,7 @@ args@{
         else
           { };
 
-      mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings) keepassxcKeyBindings) dmenuKeyBindings;
+      mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings) keepassxcKeyBindings) dmenuKeyBindings) bitwardenKeyBindings;
 
       flattenBookmarks =
         let
