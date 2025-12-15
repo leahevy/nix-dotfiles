@@ -1300,6 +1300,7 @@ args@{
 
           ${lib.optionalString self.settings.withSocket ''
             SOCKET_NAME=""
+            SOCKET_TO_CLEANUP=""
             USE_TMP_SOCKET=false
             ${
               if self.isLinux then
@@ -1335,16 +1336,27 @@ args@{
               if [[ "$USE_TMP_SOCKET" != "true" ]]; then
                 rm -f "$SOCKET_NAME"
                 ADDITIONAL_ARGS+=("--listen" "$SOCKET_NAME")
+                SOCKET_TO_CLEANUP="$SOCKET_NAME"
               fi
             else
               ADDITIONAL_ARGS+=("--listen" "$SOCKET_NAME")
+              SOCKET_TO_CLEANUP="$SOCKET_NAME"
+            fi
+
+            if [[ -n "$SOCKET_TO_CLEANUP" ]]; then
+              cleanup_socket() {
+                if [[ -e "$SOCKET_TO_CLEANUP" ]]; then
+                  rm -f "$SOCKET_TO_CLEANUP"
+                fi
+              }
+              trap cleanup_socket EXIT INT TERM
             fi
           ''}
 
           if [ ''${#ADDITIONAL_ARGS[@]} -gt 0 ]; then
-            exec ${config.programs.nixvim.build.package}/bin/nvim "''${ADDITIONAL_ARGS[@]}" "$@"
+            ${config.programs.nixvim.build.package}/bin/nvim "''${ADDITIONAL_ARGS[@]}" "$@"
           else
-            exec ${config.programs.nixvim.build.package}/bin/nvim "$@"
+            ${config.programs.nixvim.build.package}/bin/nvim "$@"
           fi
         '';
       };
