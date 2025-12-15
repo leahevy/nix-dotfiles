@@ -15,6 +15,11 @@ args@{
   input = "common";
   namespace = "home";
 
+  settings = {
+    autoSyncEnabled = true;
+    syncIntervalMinutes = 30;
+  };
+
   configuration =
     context@{ config, options, ... }:
     let
@@ -70,6 +75,54 @@ args@{
           ".config/Bitwarden"
           ".config/Bitwarden-CLI"
         ];
+      };
+
+      systemd.user.services = lib.mkIf self.settings.autoSyncEnabled {
+        bitwarden-sync = {
+          Unit = {
+            Description = "Bitwarden CLI Vault Sync";
+          };
+
+          Service = {
+            Type = "oneshot";
+            ExecStart = "${customPkgs.bitwarden-cli}/bin/bw sync";
+            Environment = [
+              "BITWARDENCLI_APPDATA_DIR=${config.home.homeDirectory}/.config/Bitwarden-CLI"
+            ];
+            ExecCondition = pkgs.writeShellScript "check-bw-status" ''
+              set -euo pipefail
+              [[ -f "${config.home.homeDirectory}/.config/Bitwarden-CLI/data.json" && -r "${config.home.homeDirectory}/.config/Bitwarden-CLI/data.json" ]] || exit 1
+              response=$(${customPkgs.bitwarden-cli}/bin/bw status 2>/dev/null || echo '{}')
+              userId=$(echo "$response" | ${pkgs.jq}/bin/jq -r '.userId // ""')
+              [[ -n "$userId" && "$userId" != "null" ]]
+
+              serverUrl=$(echo "$response" | ${pkgs.jq}/bin/jq -r '.serverUrl // ""')
+              if [[ -n "$serverUrl" && "$serverUrl" != "null" ]]; then
+                serverHost=$(echo "$serverUrl" | ${pkgs.gnused}/bin/sed 's|https\?://||' | ${pkgs.gnused}/bin/sed 's|/.*||')
+                ${pkgs.iputils}/bin/ping -c 1 -W 5 "$serverHost" >/dev/null 2>&1
+              fi
+            '';
+          };
+        };
+      };
+
+      systemd.user.timers = lib.mkIf self.settings.autoSyncEnabled {
+        bitwarden-sync = {
+          Unit = {
+            Description = "Bitwarden CLI Vault Sync Timer";
+            Requires = [ "bitwarden-sync.service" ];
+          };
+
+          Timer = {
+            OnCalendar = "*:0/${toString self.settings.syncIntervalMinutes}";
+            Persistent = true;
+            RandomizedDelaySec = "5min";
+          };
+
+          Install = {
+            WantedBy = [ "timers.target" ];
+          };
+        };
       };
     };
 }
