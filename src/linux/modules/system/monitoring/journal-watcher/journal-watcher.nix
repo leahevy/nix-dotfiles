@@ -106,6 +106,8 @@ args@{
       "hub.*hub_ext_port_status failed \\(err = -[0-9]+\\)"
       "usb.*Failed to suspend device, error -[0-9]+"
       "usb.*clear tt [0-9]+ \\([0-9a-fA-F]+\\) error -[0-9]+"
+      "usbhid.*can't add hid device: -[0-9]+"
+      "usbhid.*probe with driver usbhid failed with error -[0-9]+"
     ];
     desktopStringsToIgnore = [
       "usb.*can't set config.*error -71"
