@@ -31,11 +31,7 @@ args@{
       };
       desktop-modules = {
         bemoji = true;
-        fuzzel = {
-          terminal = "${pkgs.${self.user.settings.terminal}}/bin/${self.user.settings.terminal} -e";
-        };
         waybar = {
-          terminal = "ghostty";
           niri = true;
           output =
             if self.host ? displays && self.host.displays ? main then
@@ -117,14 +113,6 @@ args@{
       };
       media = {
         vlc = true;
-      };
-      nvim = {
-        nixvim = {
-          terminal = "ghostty";
-        };
-      };
-      terminal = {
-        kitty = true; # Fallback terminal
       };
     };
   };

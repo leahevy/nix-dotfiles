@@ -15,10 +15,6 @@ args@{
   input = "linux";
   namespace = "home";
 
-  settings = {
-    terminal = "ghostty";
-  };
-
   assertions = [
     {
       assertion = self.isLinux -> (self.linux.host.isModuleEnabled "system.auto-upgrades");
@@ -144,7 +140,7 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Mod+Ctrl+Alt+G" = {
-              action = spawn-sh "${self.settings.terminal} -e sh -c 'auto-upgrade-status'";
+              action = spawn-sh "${self.user.settings.terminal} -e sh -c 'auto-upgrade-status'";
               hotkey-overlay.title = "System:Auto-upgrade status";
             };
           };

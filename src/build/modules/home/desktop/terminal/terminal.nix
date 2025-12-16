@@ -32,11 +32,9 @@ args@{
         }
       else if !isLinux && terminal == "ghostty" then
         {
-          common = {
+          darwin = {
             terminal = {
-              ghostty-config = {
-                setEnv = true;
-              };
+              ghostty = true;
             };
           };
         }

@@ -19,7 +19,6 @@ args@{
     niri = false;
     output = null;
     addDataDisk = false;
-    terminal = "ghostty";
     useConfiguredGUIPrograms = false;
   };
 
@@ -211,21 +210,21 @@ args@{
               format = "{usage}% 󰍛";
               tooltip = false;
               interval = 2;
-              on-click = "${self.settings.terminal} -e htop";
+              on-click = "${self.user.settings.terminal} -e htop";
             };
 
             memory = {
               format = "{percentage}% 󰾆";
               tooltip-format = "RAM: {used:0.1f}G/{total:0.1f}G";
               interval = 2;
-              on-click = "${self.settings.terminal} -e htop";
+              on-click = "${self.user.settings.terminal} -e htop";
             };
 
             "memory#swap" = {
               format = "{swapPercentage}% 󰓡";
               tooltip-format = "Swap: {swapUsed:0.1f}G/{swapTotal:0.1f}G";
               interval = 2;
-              on-click = "${self.settings.terminal} -e htop";
+              on-click = "${self.user.settings.terminal} -e htop";
             };
 
             disk = {
@@ -233,7 +232,7 @@ args@{
               path = "/";
               tooltip-format = "Used on /: {used} / {total}";
               interval = 30;
-              on-click = "${self.settings.terminal} -e sh -c 'echo && df -h | less'";
+              on-click = "${self.user.settings.terminal} -e sh -c 'echo && df -h | less'";
             };
 
             "disk#2" = {
@@ -241,18 +240,18 @@ args@{
               path = "/data";
               tooltip-format = "Used on /data: {used} / {total}";
               interval = 30;
-              on-click = "${self.settings.terminal} -e sh -c 'echo && df -h | less'";
+              on-click = "${self.user.settings.terminal} -e sh -c 'echo && df -h | less'";
             };
 
             temperature = {
               format = "{temperatureC}°C ";
               thermal-zone = 0;
-              on-click = "${self.settings.terminal} -e sh -c 'echo && sensors | less'";
+              on-click = "${self.user.settings.terminal} -e sh -c 'echo && sensors | less'";
             };
 
             load = {
               format = "{load1} 󰾅";
-              on-click = "${self.settings.terminal} -e htop";
+              on-click = "${self.user.settings.terminal} -e htop";
             };
 
             systemd-failed-units = {
@@ -261,7 +260,7 @@ args@{
               format-ok = "";
               system = true;
               user = true;
-              on-click = "${self.settings.terminal} -e sh -c 'echo && echo -e \"\\033[1;32m=== SYSTEM FAILED UNITS ===\\033[0m\" && echo && systemctl --failed --no-pager && echo && echo && echo && echo && echo -e \"\\033[1;32m=== USER FAILED UNITS ===\\033[0m\" && echo && systemctl --user --failed --no-pager && echo && echo && echo && echo \"Press any key to exit...\" && read -n 1'";
+              on-click = "${self.user.settings.terminal} -e sh -c 'echo && echo -e \"\\033[1;32m=== SYSTEM FAILED UNITS ===\\033[0m\" && echo && systemctl --failed --no-pager && echo && echo && echo && echo && echo -e \"\\033[1;32m=== USER FAILED UNITS ===\\033[0m\" && echo && systemctl --user --failed --no-pager && echo && echo && echo && echo \"Press any key to exit...\" && read -n 1'";
             };
 
             "group/timegroup" = {
@@ -380,7 +379,7 @@ args@{
               format-linked = "󰤨 {ifname} (No IP)";
               format-disconnected = "󰤭 Disconnected";
               tooltip-format-wifi = "SSID: {essid}\nStrength: {signalStrength}%";
-              on-click = "${self.settings.terminal} -e sh -c 'echo && echo -e \"\\033[1;32mip addr\\033[0m\" && echo && ip addr && echo && echo && echo && echo \"Press any key to exit...\" && read -n 1'";
+              on-click = "${self.user.settings.terminal} -e sh -c 'echo && echo -e \"\\033[1;32mip addr\\033[0m\" && echo && ip addr && echo && echo && echo && echo \"Press any key to exit...\" && read -n 1'";
             }
             // lib.optionalAttrs self.settings.useConfiguredGUIPrograms (
               if programsConfig ? installSystemSettings then

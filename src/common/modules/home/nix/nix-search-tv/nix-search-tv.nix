@@ -15,10 +15,6 @@ args@{
   input = "common";
   namespace = "home";
 
-  settings = {
-    terminal = "ghostty";
-  };
-
   configuration =
     context@{ config, options, ... }:
     let
@@ -47,7 +43,7 @@ args@{
       home.file.".local/bin/nstv-term" = {
         text = ''
           #!/usr/bin/env bash
-          exec ${self.settings.terminal} --class=org.nx.nix-search-tv -e nstv
+          exec ${self.user.settings.terminal} --class=org.nx.nix-search-tv -e nstv
         '';
         executable = true;
       };

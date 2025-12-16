@@ -26,7 +26,6 @@ args@{
   };
 
   settings = {
-    terminal = "ghostty";
     unbindDefaultKeys = true;
     dateFormat = "%d.%m.%y %T";
 
@@ -862,7 +861,7 @@ args@{
       home.file.".local/bin/neomutt-term" = {
         text = ''
           #!/usr/bin/env bash
-          exec ${self.settings.terminal} --class=org.nx.neomutt -e neomutt
+          exec ${self.user.settings.terminal} --class=org.nx.neomutt -e neomutt
         '';
         executable = true;
       };

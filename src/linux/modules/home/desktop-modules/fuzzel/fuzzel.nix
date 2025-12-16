@@ -15,10 +15,6 @@ args@{
   input = "linux";
   namespace = "home";
 
-  settings = {
-    terminal = "ghostty";
-  };
-
   configuration =
     context@{ config, options, ... }:
     let
@@ -69,7 +65,7 @@ args@{
         package = fuzzelPackage;
         settings = {
           main = {
-            terminal = self.settings.terminal;
+            terminal = self.user.settings.terminal + " -e";
             layer = "overlay";
             width = 40;
             lines = 15;

@@ -15,10 +15,6 @@ args@{
   input = "linux";
   namespace = "home";
 
-  settings = {
-    terminal = "ghostty";
-  };
-
   assertions = [
     {
       assertion = self.isLinux -> (self.linux.isModuleEnabled "storage.borg-backup");
@@ -288,7 +284,7 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Mod+Ctrl+Alt+B" = {
-              action = spawn-sh "${self.settings.terminal} -e sh -c 'borg-backup-status'";
+              action = spawn-sh "${self.user.settings.terminal} -e sh -c 'borg-backup-status'";
               hotkey-overlay.title = "System:Backup status";
             };
           };

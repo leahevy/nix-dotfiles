@@ -17,7 +17,6 @@ args@{
 
   settings = {
     monitoringEnabled = true;
-    terminal = "ghostty";
   };
 
   configuration =
@@ -243,7 +242,7 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Mod+Ctrl+Alt+L" = {
-              action = spawn-sh "${self.settings.terminal} -e sh -c 'nx-user-notify-logs'";
+              action = spawn-sh "${self.user.settings.terminal} -e sh -c 'nx-user-notify-logs'";
               hotkey-overlay.title = "System:User notification logs";
             };
           };

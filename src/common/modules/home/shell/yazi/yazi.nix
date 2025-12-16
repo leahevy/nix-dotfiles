@@ -46,7 +46,6 @@ args@{
       };
     };
     additionalSettings = { };
-    terminal = "ghostty";
   };
 
   configuration =
@@ -75,7 +74,7 @@ args@{
       home.file.".local/bin/nx-yazi-term" = {
         text = ''
           #!/usr/bin/env bash
-          exec ${self.settings.terminal} --class=org.nx.yazi -e nx-yazi
+          exec ${self.user.settings.terminal} --class=org.nx.yazi -e nx-yazi
         '';
         executable = true;
       };

@@ -434,7 +434,7 @@ args@{
     ];
     whitelistPatterns = [ ];
     editor = [
-      "ghostty"
+      self.user.settings.terminal
       "-e"
       "nvim"
     ];

@@ -95,7 +95,6 @@ args@{
     withPerformanceOptimisations = true;
     dataPath = "/data";
     withNeovide = false;
-    terminal = "ghostty";
     manpageViewer = true;
     numberSignColumns = {
       min = 1;
@@ -1365,7 +1364,7 @@ args@{
         executable = true;
         text = ''
           #!/usr/bin/env bash
-          exec ${self.settings.terminal} -e nvim-run "$@"
+          exec ${self.user.settings.terminal} -e nvim-run "$@"
         '';
       };
 

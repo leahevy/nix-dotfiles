@@ -31,7 +31,6 @@ args@{
     folderBasedMonitoringDeviceSyncInterval = 10;
     folderBasedMonitoringFolderInterval = 30;
     folderBasedMonitoringInitialDelay = 45;
-    terminal = "ghostty";
   };
 
   assertions = [
@@ -812,7 +811,7 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Mod+Ctrl+Alt+S" = {
-              action = spawn-sh "${self.settings.terminal} -e sh -c 'syncthing-status'";
+              action = spawn-sh "${self.user.settings.terminal} -e sh -c 'syncthing-status'";
               hotkey-overlay.title = "System:Syncthing status";
             };
           };

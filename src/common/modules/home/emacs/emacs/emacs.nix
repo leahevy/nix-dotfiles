@@ -15,10 +15,6 @@ args@{
   input = "common";
   namespace = "home";
 
-  settings = {
-    terminal = "ghostty";
-  };
-
   configuration =
     context@{ config, options, ... }:
     let
@@ -119,7 +115,7 @@ args@{
         executable = true;
         text = ''
           #!/usr/bin/env bash
-          exec ${self.settings.terminal} -e emacsclient --server-file="${runtimeDir}/emacs-auth/emacs-server" -c -a false -t "$@"
+          exec ${self.user.settings.terminal} -e emacsclient --server-file="${runtimeDir}/emacs-auth/emacs-server" -c -a false -t "$@"
         '';
       };
 

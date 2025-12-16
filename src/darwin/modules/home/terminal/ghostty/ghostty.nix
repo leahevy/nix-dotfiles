@@ -23,7 +23,9 @@ args@{
     };
     common = {
       terminal = {
-        ghostty-config = true;
+        ghostty-config = {
+          setEnv = true;
+        };
       };
     };
   };
