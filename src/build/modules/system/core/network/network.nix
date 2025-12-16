@@ -25,6 +25,9 @@ in
       networking.wireless.enable = ifSet host.settings.networking.wifi.enabled false;
       networking.useDHCP = !host.settings.networking.useNetworkManager;
       networking.nftables.enable = true;
+      networking.search = lib.mkIf (self.host.homeserverDomain != null) [
+        self.host.homeserverDomain
+      ];
 
       networking.networkmanager = (
         if host.settings.networking.useNetworkManager then
@@ -65,5 +68,13 @@ in
         else
           { }
       );
+
+      services.resolved = {
+        enable = true;
+        extraConfig = lib.mkIf config.services.avahi.enable ''
+          [Resolve]
+          MulticastDNS=no
+        '';
+      };
     };
 }

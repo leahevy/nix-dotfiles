@@ -40,9 +40,9 @@ let
       if [ -e /dev/vgmain/root ]; then
         DEVICE_PATH="/dev/vgmain/root"
       elif [ -e /dev/mapper/cryptroot ]; then
-        DEVICE_PATH="/dev/mapper/cryptroot"  
+        DEVICE_PATH="/dev/mapper/cryptroot"
       fi
-      
+
       if [ -z "$DEVICE_PATH" ]; then
         RETRY_COUNT=$((RETRY_COUNT + 1))
         echo "Waiting for encrypted device... (attempt $RETRY_COUNT/$MAX_RETRIES)"
@@ -55,13 +55,13 @@ let
 
     if [ -n "$DEVICE_PATH" ] && mount -o subvol=@persist "$DEVICE_PATH" /mnt-tmp 2>/dev/null; then
       mkdir -p /mnt-tmp/var/log/nx/impermanence
-      
+
       {
         echo "=== NixOS Impermanence Rollback Started at $(date) ==="
         set -x
-        
+
         echo -n "Starting impermanence rollback process......."
-        
+
         echo "Device detection phase:"
         if [ -e /dev/vgmain/root ]; then
           echo "  - Detected LVM setup: /dev/vgmain/root"
@@ -70,11 +70,11 @@ let
         else
           echo "  - Available /dev/mapper devices:"
           ls -la /dev/mapper/ 2>/dev/null || echo "    (none found)"
-          echo "  - Available /dev/vgmain devices:" 
+          echo "  - Available /dev/vgmain devices:"
           ls -la /dev/vgmain/ 2>/dev/null || echo "    (none found)"
         fi
         echo "  - Selected device: $DEVICE_PATH"
-        
+
         if [ -z "$DEVICE_PATH" ]; then
           echo "ERROR: No recognized encrypted root device found for impermanence rollback"
           echo "RESULT: Boot will be aborted - impermanence requires proper device detection"
@@ -83,11 +83,11 @@ let
           read -n 1 _
           exit 1
         fi
-        
+
         echo "Persistence mount phase:"
         echo "  - Successfully mounted persistence storage from $DEVICE_PATH"
         echo "  - Log directory created at /persist/var/log/nx/impermanence/"
-        
+
         echo "Root filesystem mount phase:"
         mkdir -p /mnt
         if ! mount -o subvolid=5 "$DEVICE_PATH" /mnt; then
@@ -99,7 +99,7 @@ let
           exit 1
         fi
         echo "  - Successfully mounted root btrfs filesystem"
-        
+
         echo "Subvolume verification phase:"
         echo "  - Checking for required @root-empty snapshot..."
         if [ ! -e /mnt/@root-empty ]; then
@@ -116,14 +116,14 @@ let
           exit 1
         fi
         echo "  - Found required @root-empty snapshot"
-        
+
         echo "Root cleanup phase:"
         if [ -e /mnt/@root ]; then
           echo "  - Found existing @root subvolume (dirty state from previous boot)"
-          
+
           echo "  - Unmounting any filesystems in @root..."
           umount -R /mnt/@root 2>/dev/null || true
-          
+
           nested_subvols=$(btrfs subvolume list -o /mnt/@root 2>/dev/null | cut -f9 -d' ' | sort -r || true)
           if [ -n "$nested_subvols" ]; then
             echo "  - Deleting nested subvolumes first..."
@@ -144,7 +144,7 @@ let
               fi
             done
           fi
-          
+
           echo "  - Deleting dirty @root subvolume..."
           if ! btrfs subvolume delete /mnt/@root; then
             echo "ERROR: Failed to delete dirty @root subvolume"
@@ -161,7 +161,7 @@ let
         else
           echo "  - No existing @root subvolume found (clean boot or first boot)"
         fi
-        
+
         echo "Root restoration phase:"
         if ! btrfs subvolume snapshot /mnt/@root-empty /mnt/@root; then
           echo "ERROR: Failed to restore @root from @root-empty snapshot"
@@ -173,10 +173,10 @@ let
           read -n 1 _
           exit 1
         fi
-        
+
         echo "Cleanup phase:"
         umount /mnt 2>/dev/null || true
-        
+
         set +x
         echo "=== Impermanence Rollback Completed Successfully at $(date) ==="
       } > /mnt-tmp/var/log/nx/impermanence/rollback.log 2>&1
@@ -184,7 +184,7 @@ let
 
       chmod 644 /mnt-tmp/var/log/nx/impermanence/rollback.log 2>/dev/null || true
       umount /mnt-tmp 2>/dev/null || echo "WARNING: Failed to unmount persistence storage"
-      
+
       if [ $ROLLBACK_SUCCESS -eq 0 ]; then
         printf "\033[1;32msuccess\033[0m\n"
       else
@@ -249,7 +249,6 @@ in
             "/etc/machine-id"
             "/etc/NIXOS"
             "/etc/IMPERMANENCE"
-            "/etc/resolv.conf"
           ];
         };
 
