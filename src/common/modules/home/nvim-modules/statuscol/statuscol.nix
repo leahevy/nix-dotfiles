@@ -35,7 +35,7 @@ args@{
                 ];
               }
               {
-                text = [ " " ];
+                text = [ "  " ];
                 click = "v:lua.ScFa";
                 condition = [
                   {
