@@ -135,7 +135,7 @@ args@{
             colors.fg_gutter = "${self.theme.colors.terminal.foregrounds.dim.html}"
             colors.fg_gutter_light = "${self.theme.colors.terminal.foregrounds.bright.html}"
             colors.dark3 = "${self.theme.colors.terminal.colors.green.html}"
-            colors.comment = "${self.theme.colors.semantic.hint.html}"
+            colors.comment = "${self.theme.colors.semantic.comment.html}"
             colors.dark5 = "${self.theme.colors.terminal.colors.greenDark.html}"
             colors.bright_cyan = "${self.theme.colors.terminal.colors.cyanBright.html}"
             colors.cyan = "${self.theme.colors.terminal.colors.cyan.html}"

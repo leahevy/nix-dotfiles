@@ -156,6 +156,11 @@ rec {
           term = 203;
         };
         hint = {
+          html = "#11c0ff";
+          name = "blue";
+          term = 18;
+        };
+        comment = {
           html = "#664030";
           name = "red";
           term = 52;
@@ -206,6 +211,11 @@ rec {
           term = 203;
         };
         hintDarker = {
+          html = "#2244aa";
+          name = "blue";
+          term = 18;
+        };
+        commentDarker = {
           html = "#1a0f00";
           name = "red";
           term = 52;
