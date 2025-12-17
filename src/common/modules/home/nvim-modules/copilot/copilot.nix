@@ -41,8 +41,6 @@ args@{
       "css"
       "scss"
       "graphql"
-      "json"
-      "jsonc"
       "bash"
       "fish"
       "powershell"
