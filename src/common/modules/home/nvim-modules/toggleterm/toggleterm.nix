@@ -44,7 +44,7 @@ args@{
             action = "<cmd>ToggleTerm<CR>";
             options = {
               silent = true;
-              desc = " Toggle terminal";
+              desc = "Toggle terminal";
             };
           }
           {
@@ -53,7 +53,7 @@ args@{
             action = "<cmd>ToggleTerm<CR>";
             options = {
               silent = true;
-              desc = " Toggle terminal";
+              desc = "Toggle terminal";
             };
           }
           {
