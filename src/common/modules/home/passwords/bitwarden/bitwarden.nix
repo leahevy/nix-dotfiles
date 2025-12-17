@@ -40,10 +40,13 @@ args@{
       };
     in
     {
-      home.packages = [
-        pkgs.bitwarden
-        customPkgs.bitwarden-cli
-      ];
+      home.packages =
+        lib.optionals self.isLinux [
+          pkgs.bitwarden-desktop
+        ]
+        ++ [
+          customPkgs.bitwarden-cli
+        ];
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
@@ -77,7 +80,7 @@ args@{
         ];
       };
 
-      systemd.user.services = lib.mkIf self.settings.autoSyncEnabled {
+      systemd.user.services = lib.mkIf (self.isLinux && self.settings.autoSyncEnabled) {
         bitwarden-sync = {
           Unit = {
             Description = "Bitwarden CLI Vault Sync";
@@ -106,7 +109,7 @@ args@{
         };
       };
 
-      systemd.user.timers = lib.mkIf self.settings.autoSyncEnabled {
+      systemd.user.timers = lib.mkIf (self.isLinux && self.settings.autoSyncEnabled) {
         bitwarden-sync = {
           Unit = {
             Description = "Bitwarden CLI Vault Sync Timer";
