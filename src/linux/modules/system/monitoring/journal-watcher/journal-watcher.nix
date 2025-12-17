@@ -142,6 +142,7 @@ args@{
       "org\\.kde\\..*: Could not load default global viewproperties"
       "org\\.kde\\..*: Unknown class .* in session saved data"
       "kf\\.kio\\.gui: Cannot read information about filesystem"
+      "kf\\.kio\\.gui: couldn't create thumbnail dir"
       "kf\\.kio\\.core\\.connection: Socket not connected"
       "kf\\.kio\\.core: An error occurred during write"
       "QThreadStorage: entry .* destroyed before end of thread"
