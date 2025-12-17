@@ -34,7 +34,7 @@ args@{
                 text = "+";
               };
               change = {
-                text = "*";
+                text = "!";
               };
               delete = {
                 text = "-";
@@ -43,7 +43,7 @@ args@{
                 text = "-";
               };
               changedelete = {
-                text = "*";
+                text = "!";
               };
               untracked = {
                 text = "┆";
@@ -54,7 +54,7 @@ args@{
                 text = "+";
               };
               change = {
-                text = "*";
+                text = "!";
               };
               delete = {
                 text = "-";
@@ -63,7 +63,7 @@ args@{
                 text = "-";
               };
               changedelete = {
-                text = "*";
+                text = "!";
               };
               untracked = {
                 text = "┆";
