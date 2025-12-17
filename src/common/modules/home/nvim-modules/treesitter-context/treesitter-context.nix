@@ -97,6 +97,11 @@ args@{
 
             on_attach.__raw = ''
               function(buf)
+                ${lib.optionalString (self.isModuleEnabled "nvim-modules.faster") ''
+                  if vim.b[buf].is_bigfile then
+                    return false
+                  end
+                ''}
                 local filetype = vim.api.nvim_buf_get_option(buf, 'filetype')
                 local disabled_filetypes = {
                   ${lib.concatMapStringsSep ", " (ft: "\"${ft}\"") self.settings.disabledFiletypes}

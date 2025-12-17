@@ -125,6 +125,11 @@ args@{
           end
 
           local function add_eol_fill()
+            ${lib.optionalString (self.isModuleEnabled "nvim-modules.faster") ''
+              if vim.b.is_bigfile then
+                return
+              end
+            ''}
             if not _G.eol_fill_enabled or is_excluded_filetype() or vim.bo.buftype ~= "" then
               return
             end

@@ -17,7 +17,7 @@ args@{
 
   settings = {
     bigfile = {
-      filesize = 5;
+      filesize = 3.5;
       additionalExtraPatterns = [ ];
       additionalFeaturesDisabled = [ ];
     };
@@ -41,9 +41,14 @@ args@{
               ++ [
                 "is_bigfile"
                 "vimopts"
+                "syntax"
+                "filetype"
               ]
               ++ lib.optionals (self.isModuleEnabled "nvim-modules.lsp") [ "lsp" ]
-              ++ lib.optionals (self.isModuleEnabled "nvim-modules.treesitter") [ "treesitter" ];
+              ++ lib.optionals (self.isModuleEnabled "nvim-modules.treesitter") [ "treesitter" ]
+              ++ lib.optionals (self.isModuleEnabled "nvim-modules.vim-matchup") [ "vim_matchup_matchparen" ]
+              ++ lib.optionals (self.isModuleEnabled "nvim-modules.statuscol") [ "statuscol" ]
+              ++ lib.optionals (self.isModuleEnabled "nvim-modules.blink-indent") [ "blink_indent" ];
 
             macroFeaturesDisabled =
               self.settings.fastmacro.additionalFeaturesDisabled
@@ -171,6 +176,50 @@ args@{
 
                     disable = function()
                       vim.b.is_macro_execution = true
+                    end,
+                  },
+                  vim_matchup_matchparen = {
+                    on = true,
+                    defer = false,
+
+                    enable = function()
+                      vim.g.matchup_matchparen_enabled = 1
+                    end,
+
+                    disable = function()
+                      vim.defer_fn(function()
+                        vim.g.matchup_matchparen_enabled = 0
+                      end, 50)
+                    end,
+                  },
+                  statuscol = {
+                    on = true,
+                    defer = false,
+
+                    enable = function()
+                      vim.wo.statuscolumn = "%{%v:lua.require('statuscol').get_statuscol_string()%}"
+                      vim.wo.foldcolumn = "1"
+                    end,
+
+                    disable = function()
+                      vim.defer_fn(function()
+                        vim.wo.statuscolumn = ""
+                        vim.wo.foldcolumn = "0"
+                      end, 50)
+                    end,
+                  },
+                  blink_indent = {
+                    on = true,
+                    defer = false,
+
+                    enable = function()
+                      vim.b.indent_guide = true
+                    end,
+
+                    disable = function()
+                      vim.defer_fn(function()
+                        vim.b.indent_guide = false
+                      end, 50)
                     end,
                   },
                 }

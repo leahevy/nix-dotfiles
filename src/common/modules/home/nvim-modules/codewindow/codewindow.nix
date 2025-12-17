@@ -131,6 +131,11 @@ args@{
             end
 
             local function refresh_minimap()
+              ${lib.optionalString (self.isModuleEnabled "nvim-modules.faster") ''
+                if vim.b.is_bigfile then
+                  return
+                end
+              ''}
               if not _G.codewindow_enabled then
                 refresh_treesitter()
                 return
