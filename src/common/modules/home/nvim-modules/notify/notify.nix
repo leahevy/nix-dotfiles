@@ -59,6 +59,20 @@ args@{
         };
       };
 
+      programs.nixvim.autoCmd = [
+        {
+          event = [ "FileType" ];
+          pattern = [ "notify" ];
+          callback = {
+            __raw = ''
+              function()
+                vim.keymap.set('n', 'q', ':close<CR>', { buffer = true, silent = true })
+              end
+            '';
+          };
+        }
+      ];
+
       programs.nixvim.keymaps = [
         {
           mode = "n";
