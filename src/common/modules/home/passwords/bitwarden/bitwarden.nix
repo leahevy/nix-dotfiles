@@ -144,12 +144,46 @@ args@{
           from typing import Dict, List, Optional, Tuple, Any
 
 
+          class Colors:
+              @staticmethod
+              def green(text: str, *args, bold: bool = False, **kwargs) -> str:
+                  color_code = "\033[1;32m" if bold else "\033[0;32m"
+                  return f"{color_code}{text.format(*args, **kwargs)}\033[0m"
+
+              @staticmethod
+              def white(text: str, *args, bold: bool = False, **kwargs) -> str:
+                  color_code = "\033[1;37m" if bold else "\033[0;37m"
+                  return f"{color_code}{text.format(*args, **kwargs)}\033[0m"
+
+              @staticmethod
+              def yellow(text: str, *args, bold: bool = False, **kwargs) -> str:
+                  color_code = "\033[1;33m" if bold else "\033[0;33m"
+                  return f"{color_code}{text.format(*args, **kwargs)}\033[0m"
+
+              @staticmethod
+              def blue(text: str, *args, bold: bool = False, **kwargs) -> str:
+                  color_code = "\033[1;34m" if bold else "\033[0;34m"
+                  return f"{color_code}{text.format(*args, **kwargs)}\033[0m"
+
+              @staticmethod
+              def red(text: str, *args, bold: bool = False, **kwargs) -> str:
+                  color_code = "\033[1;31m" if bold else "\033[0;31m"
+                  return f"{color_code}{text.format(*args, **kwargs)}\033[0m"
+
+              @staticmethod
+              def grey(text: str, *args, bold: bool = False, **kwargs) -> str:
+                  color_code = "\033[1;90m" if bold else "\033[0;90m"
+                  return f"{color_code}{text.format(*args, **kwargs)}\033[0m"
+
+
           class KeePassXCToBitwardenConverter:
-              def __init__(self, debug: bool = False) -> None:
+              def __init__(self, debug: bool = False, quiet: bool = False) -> None:
                   self.folder_map: Dict[str, str] = {}
                   self.folders: List[Dict[str, str]] = []
                   self.items: List[Dict[str, Any]] = []
                   self.debug = debug
+                  self.quiet = quiet
+                  self.notifications: List[str] = []
 
               def generate_uuid4(self) -> str:
                   return str(uuid.uuid4())
@@ -157,14 +191,20 @@ args@{
               def log(self, message: str, exception: Optional[Exception] = None, is_error: bool = False) -> None:
                   if exception or is_error:
                       if exception:
-                          print(f"{message}: {exception}", file=sys.stderr)
+                          print(Colors.red("{}: {}", message, exception), file=sys.stderr)
                       else:
-                          print(message, file=sys.stderr)
+                          print(Colors.red(message), file=sys.stderr)
                   elif self.debug:
-                      print(message, file=sys.stderr)
+                      print(Colors.grey(message), file=sys.stderr)
 
               def error(self, message: str, exception: Optional[Exception] = None) -> None:
                   self.log(message, exception, is_error=True)
+
+              def notify(self, message: str) -> None:
+                  self.notifications.append(message)
+                  if not self.quiet:
+                      formatted_message = Colors.white("*", bold=True) + " " + Colors.green("Note: ") + message
+                      print(formatted_message, file=sys.stderr)
 
               def get_current_iso_timestamp(self) -> str:
                   return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
@@ -222,7 +262,7 @@ args@{
                       fields[key] = (value, is_protected)
                   return fields
 
-              def get_custom_fields_and_notes_additions(self, entry_elem: ET.Element) -> Tuple[List[Dict[str, Any]], List[str]]:
+              def get_custom_fields_and_notes_additions(self, entry_elem: ET.Element, folder_path: str) -> Tuple[List[Dict[str, Any]], List[str]]:
                   standard_keys = {'Title', 'UserName', 'Password', 'URL', 'Notes', 'otp'}
                   custom_fields = []
                   notes_additions = []
@@ -236,6 +276,10 @@ args@{
                               is_protected = value_elem.get('ProtectInMemory') == 'True'
 
                               if '\n' in value:
+                                  title = self.get_entry_title(entry_elem)
+                                  folder_info = f" in folder {Colors.yellow(folder_path, bold=True)}" if folder_path else ""
+                                  message = f"Entry {Colors.yellow(title, bold=True)}{folder_info} has custom field {Colors.blue(key_elem.text, bold=True)} with line breaks merged into notes"
+                                  self.notify(message)
                                   notes_additions.append(f"# {key_elem.text}\n\n{value}")
                               else:
                                   custom_fields.append({
@@ -247,13 +291,40 @@ args@{
 
                   return custom_fields, notes_additions
 
+              def check_attachments(self, entry_elem: ET.Element, folder_path: str) -> None:
+                  binary_elements = entry_elem.findall('Binary')
+                  if binary_elements:
+                      title = self.get_entry_title(entry_elem)
+                      attachment_names = []
+                      for binary_elem in binary_elements:
+                          key_elem = binary_elem.find('Key')
+                          if key_elem is not None and key_elem.text:
+                              attachment_names.append(key_elem.text)
+
+                      if attachment_names:
+                          folder_info = f" in folder {Colors.yellow(folder_path, bold=True)}" if folder_path else ""
+                          attachments_str = ", ".join([Colors.blue(name, bold=True) for name in attachment_names])
+                          message = f"Entry {Colors.yellow(title, bold=True)}{folder_info} has attachments: {attachments_str}"
+                          self.notify(message)
+
+              def get_entry_title(self, entry_elem: ET.Element) -> str:
+                  for string_elem in entry_elem.findall('String'):
+                      key_elem = string_elem.find('Key')
+                      if key_elem is not None and key_elem.text == 'Title':
+                          value_elem = string_elem.find('Value')
+                          if value_elem is not None and value_elem.text:
+                              return value_elem.text
+                  return "Untitled Entry"
+
               def create_bitwarden_item(self, entry_elem: ET.Element, folder_path: str) -> Dict[str, Any]:
                   uuid_elem = entry_elem.find('UUID')
                   entry_uuid = uuid_elem.text if uuid_elem is not None else "unknown"
                   self.log(f"Processing entry UUID: {entry_uuid}")
 
                   standard_fields = self.get_standard_fields(entry_elem)
-                  custom_fields, notes_additions = self.get_custom_fields_and_notes_additions(entry_elem)
+                  custom_fields, notes_additions = self.get_custom_fields_and_notes_additions(entry_elem, folder_path)
+
+                  self.check_attachments(entry_elem, folder_path)
 
                   title = standard_fields['Title'][0] or "Untitled Entry"
                   username = standard_fields['UserName'][0]
@@ -442,8 +513,10 @@ args@{
           def main() -> None:
               parser = argparse.ArgumentParser(description='Convert KeePassXC XML export to Bitwarden JSON format')
               parser.add_argument('input_file', help='Input KeePassXC XML file')
-              parser.add_argument('output_file', help='Output Bitwarden JSON file')
+              parser.add_argument('output_file', nargs='?', help='Output Bitwarden JSON file')
               parser.add_argument('--debug', action='store_true', help='Enable debug output')
+              parser.add_argument('--quiet', action='store_true', help='Suppress notification messages')
+              parser.add_argument('--no-output', action='store_true', help='Do not write output file, only show notifications and errors')
 
               args = parser.parse_args()
 
@@ -451,32 +524,39 @@ args@{
                   print(f"Error: Input file must have .xml extension", file=sys.stderr)
                   sys.exit(1)
 
-              if not args.output_file.endswith('.json'):
-                  print(f"Error: Output file must have .json extension", file=sys.stderr)
-                  sys.exit(1)
+              if not args.no_output:
+                  if not args.output_file:
+                      print("Error: Output file required unless --no-output is used", file=sys.stderr)
+                      sys.exit(1)
+                  if not args.output_file.endswith('.json'):
+                      print(f"Error: Output file must have .json extension", file=sys.stderr)
+                      sys.exit(1)
 
               if not os.path.isfile(args.input_file):
                   print(f"Error: Input file '{args.input_file}' does not exist", file=sys.stderr)
                   sys.exit(1)
 
-              if os.path.exists(args.output_file):
+              if not args.no_output and os.path.exists(args.output_file):
                   response = input(f"Output file '{args.output_file}' already exists. Overwrite? (y/N): ")
                   if response not in ('y', 'Y'):
                       print("Operation cancelled", file=sys.stderr)
                       sys.exit(1)
 
               try:
-                  converter = KeePassXCToBitwardenConverter(debug=args.debug)
+                  converter = KeePassXCToBitwardenConverter(debug=args.debug, quiet=args.quiet)
                   result_json = converter.convert(args.input_file)
 
-                  with open(args.output_file, 'w', encoding='utf-8') as f:
-                      f.write(result_json)
+                  if not args.no_output:
+                      with open(args.output_file, 'w', encoding='utf-8') as f:
+                          f.write(result_json)
 
-                  print(f"Successfully converted '{args.input_file}' to '{args.output_file}'")
-                  print(f"Converted {len(converter.items)} items and {len(converter.folders)} folders")
+                      print(Colors.green("\nSuccessfully converted '{}' to '{}'", args.input_file, args.output_file, bold=True))
+                      print(Colors.green("Converted {} items and {} folders", len(converter.items), len(converter.folders), bold=True))
+                  else:
+                      print(Colors.green("\nAnalyzed '{}' - {} items and {} folders found", args.input_file, len(converter.items), len(converter.folders), bold=True))
 
               except Exception as e:
-                  print(f"Error: {e}", file=sys.stderr)
+                  print(Colors.red("Error: {}", e), file=sys.stderr)
                   sys.exit(1)
 
 
