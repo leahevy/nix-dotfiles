@@ -38,7 +38,9 @@ args@{
           font-family = [ "DejaVuSansM Nerd Font Mono" ];
           background-opacity = lib.mkForce self.settings.opacity;
           background-blur = lib.mkForce true;
-          background = lib.mkForce "000000";
+          background = lib.mkForce (
+            lib.removePrefix "#" (self.theme.colors.terminal.normalBackgrounds.primary.html)
+          );
 
           custom-shader =
             let
