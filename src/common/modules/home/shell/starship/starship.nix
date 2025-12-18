@@ -92,7 +92,7 @@ args@{
             home_symbol = "󰋞 ~";
             read_only_style = "bold fg:${self.theme.colors.semantic.warning.html}";
             read_only = "  ";
-            format = "[](fg:${self.theme.colors.terminal.normalBackgrounds.primary.html} bg:${self.theme.colors.blocks.accent.background.html})[$path](bold fg:${self.theme.colors.blocks.accent.foreground.html} bg:${self.theme.colors.blocks.accent.background.html})[](bg:${self.theme.colors.terminal.normalBackgrounds.primary.html} fg:${self.theme.colors.blocks.accent.background.html})[$read_only]($read_only_style)";
+            format = "[](fg:${self.theme.colors.terminal.normalBackgrounds.primary.html} bg:${self.theme.colors.blocks.primary.background.html})[$path](bold fg:${self.theme.colors.blocks.primary.foreground.html} bg:${self.theme.colors.blocks.primary.background.html})[](bg:${self.theme.colors.terminal.normalBackgrounds.primary.html} fg:${self.theme.colors.blocks.primary.background.html})[$read_only]($read_only_style)";
             style = "";
             truncate_to_repo = true;
             use_os_path_sep = false;
