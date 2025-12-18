@@ -15,11 +15,29 @@ args@{
   input = "common";
   namespace = "home";
 
+  settings = {
+    enableTransience = true;
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
       home.file."${config.xdg.configHome}/fish-init/20-starship.fish".text = ''
-        command -q starship; and starship init fish | source
+        if command -v starship > /dev/null
+          function starship_transient_prompt_func
+            echo
+            starship module directory
+            echo -n " "
+          end
+
+          function starship_transient_rprompt_func
+            starship module time
+          end
+
+          starship init fish | source
+
+          ${if self.settings.enableTransience then "enable_transience" else ""}
+        end
       '';
 
       programs.starship = {
