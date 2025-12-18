@@ -15,19 +15,14 @@ args@{
   input = "linux";
   namespace = "home";
 
-  broken = true;
+  unfree = [
+    "steam"
+    "steam-unwrapped"
+  ];
 
   settings = {
     withWayland = false;
   };
-
-  assertions = [
-    {
-      assertion =
-        (self.user.isStandalone or false) || (self.host.isModuleEnabled or (x: false)) "games.steam";
-      message = "The steam home module requires the steam system module to be enabled when not running standalone";
-    }
-  ];
 
   configuration =
     context@{ config, options, ... }:
@@ -35,6 +30,8 @@ args@{
       isNiriEnabled = self.isLinux && self.linux.isModuleEnabled "desktop.niri";
       isStandalone = self.user.isStandalone or false;
       withWayland = self.settings.withWayland;
+      nixOSSettings = if isStandalone then { } else self.host.getModuleConfig "games.steam";
+      usesDataPath = (nixOSSettings.dataPath or null) != null;
     in
     lib.mkMerge [
       {
@@ -58,7 +55,7 @@ args@{
           };
         };
 
-        home.persistence."${self.persist}" = {
+        home.persistence."${self.persist}" = lib.mkIf (!usesDataPath) {
           directories = [
             ".local/share/Steam"
             ".steam"
@@ -68,19 +65,19 @@ args@{
       (lib.mkIf isStandalone {
         home.packages = with pkgs-unstable; [
           steam
-          steam-run
           mangohud
           protonup
           protontricks
-          lutris
-          bottles
-          heroic
           winetricks
           (if withWayland then wineWowPackages.waylandFull else wineWowPackages.stable)
         ];
 
         home.sessionVariables = {
-          STEAM_EXTRA_COMPAT_TOOLS_PATHS = "$HOME/.steam/root/compatibilitytools.d";
+          STEAM_EXTRA_COMPAT_TOOLS_PATHS =
+            if (!isStandalone && usesDataPath) then
+              "${nixOSSettings.dataPath}/.steam/root/compatibilitytools.d"
+            else
+              "$HOME/.steam/root/compatibilitytools.d";
         }
         // lib.optionalAttrs withWayland {
           STEAM_USE_WAYLAND = "1";

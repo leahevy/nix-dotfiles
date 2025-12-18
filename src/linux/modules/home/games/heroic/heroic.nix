@@ -177,14 +177,8 @@ args@{
         with pkgs-unstable;
         [
           heroic
-          steam-run
-          mangohud
-          protonup
-          protontricks
           lutris
           bottles
-          winetricks
-          (if withWayland then wineWowPackages.waylandFull else wineWowPackages.stable)
         ]
         ++ heroicFirewallScript;
 

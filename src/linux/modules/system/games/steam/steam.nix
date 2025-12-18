@@ -15,28 +15,68 @@ args@{
   input = "linux";
   namespace = "system";
 
-  broken = true;
-
-  assertions = [
-    {
-      assertion = self.user.isModuleEnabled "games.steam";
-      message = "The steam system module requires the steam home module to be enabled";
-    }
-  ];
-
   unfree = [
     "steam"
+    "steam-unwrapped"
   ];
+
+  settings = {
+    dataPath = null;
+  };
 
   configuration =
     context@{ config, options, ... }:
     let
       steamHomeConfig = self.user.getModuleConfig "games.steam";
       withWayland = steamHomeConfig.withWayland or false;
+      dataPath = self.settings.dataPath;
+
+      wrapSteamBinary =
+        pkg: binaryName:
+        if (dataPath != null) then
+          pkg.overrideAttrs (oldAttrs: {
+            nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper ];
+            postInstall = (oldAttrs.postInstall or "") + ''
+              wrapProgram $out/bin/${binaryName} \
+                --set HOME "${dataPath}" \
+                --set XDG_DATA_HOME "${dataPath}/.local/share" \
+                --set XDG_CONFIG_HOME "${dataPath}/.config" \
+                --set XDG_CACHE_HOME "${dataPath}/.cache" \
+                --set XDG_STATE_HOME "${dataPath}/.local/state"
+            '';
+          })
+        else
+          pkg;
+
+      customPkgs =
+        if (dataPath != null) then
+          self.pkgs {
+            overlays = [
+              (final: prev: {
+                protonup = wrapSteamBinary prev.protonup "protonup";
+                protontricks = wrapSteamBinary prev.protontricks "protontricks";
+              })
+            ];
+          }
+        else
+          pkgs-unstable;
     in
     {
       programs.steam = {
         enable = true;
+        package =
+          if (dataPath != null) then
+            pkgs.steam.override {
+              extraEnv = {
+                HOME = dataPath;
+                XDG_DATA_HOME = "${dataPath}/.local/share";
+                XDG_CONFIG_HOME = "${dataPath}/.config";
+                XDG_CACHE_HOME = "${dataPath}/.cache";
+                XDG_STATE_HOME = "${dataPath}/.local/state";
+              };
+            }
+          else
+            pkgs.steam;
 
         remotePlay.openFirewall = true;
         dedicatedServer.openFirewall = true;
@@ -55,20 +95,22 @@ args@{
         group = "root";
       };
 
-      environment.systemPackages = with pkgs; [
-        steam-run
+      environment.systemPackages = [
+        customPkgs.protonup
+        customPkgs.protontricks
+      ]
+      ++ (with pkgs-unstable; [
         mangohud
-        protonup
-        protontricks
-        lutris
-        bottles
-        heroic
         winetricks
         (if withWayland then wineWowPackages.waylandFull else wineWowPackages.stable)
-      ];
+      ]);
 
       environment.sessionVariables = {
-        STEAM_EXTRA_COMPAT_TOOLS_PATHS = "$HOME/.steam/root/compatibilitytools.d";
+        STEAM_EXTRA_COMPAT_TOOLS_PATHS =
+          if (dataPath != null) then
+            "${dataPath}/.steam/root/compatibilitytools.d"
+          else
+            "$HOME/.steam/root/compatibilitytools.d";
       }
       // lib.optionalAttrs withWayland {
         STEAM_USE_WAYLAND = "1";
