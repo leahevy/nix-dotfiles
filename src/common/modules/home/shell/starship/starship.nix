@@ -45,7 +45,7 @@ args@{
 
         settings = {
           add_newline = true;
-          format = "\n[┌─](fg:${self.theme.colors.separators.ultraDark.html})$time$fill $status$os$shell$username$hostname$all$cmd_duration[───┐](fg:${self.theme.colors.separators.ultraDark.html})\n[│](fg:${self.theme.colors.separators.ultraDark.html})\n[└───](fg:${self.theme.colors.separators.ultraDark.html})$directory$character";
+          format = "\n[┌─](fg:${self.theme.colors.separators.ultraDark.html})$time[$fill](fg:${self.theme.colors.separators.ultraDark.html})$status$cmd_duration[───┐](fg:${self.theme.colors.separators.ultraDark.html})\n[│](fg:${self.theme.colors.separators.ultraDark.html}) [$fill](fg:${self.theme.colors.terminal.normalBackgrounds.primary.html})$os$shell$username$hostname$all\n[└───](fg:${self.theme.colors.separators.ultraDark.html})$directory$character";
           right_format = "";
 
           time = {
@@ -58,7 +58,7 @@ args@{
           status = {
             symbol = "🔻";
             disabled = false;
-            format = "[$symbol $status]($style) ";
+            format = "[($symbol $status )]($style)";
             style = "bold fg:${self.theme.colors.semantic.error.html}";
           };
 
@@ -92,7 +92,7 @@ args@{
             home_symbol = "󰋞 ~";
             read_only_style = "bold fg:${self.theme.colors.semantic.warning.html}";
             read_only = "  ";
-            format = "[](fg:${self.theme.colors.terminal.normalBackgrounds.primary.html} bg:${self.theme.colors.blocks.primary.background.html})[$path](bold fg:${self.theme.colors.blocks.primary.foreground.html} bg:${self.theme.colors.blocks.primary.background.html})[](bg:${self.theme.colors.terminal.normalBackgrounds.primary.html} fg:${self.theme.colors.blocks.primary.background.html})[$read_only]($read_only_style)";
+            format = "[](fg:${self.theme.colors.terminal.normalBackgrounds.primary.html} bg:${self.theme.colors.blocks.accent.background.html})[$path](bold fg:${self.theme.colors.blocks.accent.foreground.html} bg:${self.theme.colors.blocks.accent.background.html})[](bg:${self.theme.colors.terminal.normalBackgrounds.primary.html} fg:${self.theme.colors.blocks.accent.background.html})[$read_only]($read_only_style)";
             style = "";
             truncate_to_repo = true;
             use_os_path_sep = false;
@@ -141,7 +141,7 @@ args@{
               Debian = "🐧";
             };
             format = "[$symbol]($style) ";
-            style = "blue";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           shell = {
@@ -150,7 +150,7 @@ args@{
             zsh_indicator = "🟠";
             unknown_indicator = "🔴";
             disabled = true;
-            style = "cyan";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
             format = " [$indicator]($style)  ";
           };
 
@@ -411,7 +411,7 @@ args@{
           battery = { };
 
           cmd_duration = {
-            format = "[]($style)[$duration]($style) ";
+            format = "[]($style)[$duration]($style)";
             style = "fg:${self.theme.colors.separators.ultraDark.html}";
             min_time = 1000;
             show_notifications = true;
@@ -428,7 +428,7 @@ args@{
 
           fill = {
             symbol = "─";
-            style = "fg:${self.theme.colors.separators.ultraDark.html}";
+            style = "fg:none bg:none";
           };
 
           fossil_metrics = {
