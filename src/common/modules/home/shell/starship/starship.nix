@@ -27,13 +27,13 @@ args@{
 
         settings = {
           add_newline = true;
-          format = "\n[┌─](bright-black)$time$fill $status$os$shell$username$hostname$all$cmd_duration[───┐](bright-black)\n[└─>](bright-black) $directory$character";
+          format = "\n[┌─](fg:${self.theme.colors.separators.ultraDark.html})$time$fill $status$os$shell$username$hostname$all$cmd_duration[───┐](fg:${self.theme.colors.separators.ultraDark.html})\n[│](fg:${self.theme.colors.separators.ultraDark.html})\n[└───](fg:${self.theme.colors.separators.ultraDark.html})$directory$character";
           right_format = "";
 
           time = {
             format = "[]($style)[ $time ]($style)";
             disabled = false;
-            style = "bright-black";
+            style = "fg:${self.theme.colors.separators.ultraDark.html}";
             time_format = "%d %b %Y %I:%M:%S %p";
           };
 
@@ -41,24 +41,24 @@ args@{
             symbol = "🔻";
             disabled = false;
             format = "[$symbol $status]($style) ";
-            style = "bold ${self.theme.colors.semantic.error.name}";
+            style = "bold fg:${self.theme.colors.semantic.error.html}";
           };
 
           sudo = {
             disabled = false;
             symbol = "🔑  ";
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
             format = "[$symbol]($style)";
           };
 
           character = {
-            success_symbol = "[⇒ ](bold ${self.theme.colors.semantic.success.name})";
-            error_symbol = "[⇒ ](bold ${self.theme.colors.main.base.purple.name})";
+            success_symbol = "";
+            error_symbol = "[ ✗](bold fg:${self.theme.colors.semantic.error.html})";
           };
 
           username = {
-            style_user = "bold ${self.theme.colors.semantic.error.name}";
-            style_root = "bold ${self.theme.colors.main.base.blue.name}";
+            style_user = "bold fg:${self.theme.colors.semantic.error.html}";
+            style_root = "bold fg:${self.theme.colors.main.base.blue.html}";
             format = "[$user]($style) ";
             disabled = false;
             show_always = false;
@@ -66,16 +66,16 @@ args@{
 
           hostname = {
             ssh_only = true;
-            format = "[on ](bright-black)[$hostname](bold ${self.theme.colors.semantic.warning.name}) ";
+            format = "[on ](fg:${self.theme.colors.separators.ultraDark.html})[$hostname](bold fg:${self.theme.colors.semantic.warning.html}) ";
             disabled = false;
           };
 
           directory = {
             home_symbol = "󰋞 ~";
-            read_only_style = "bold ${self.theme.colors.semantic.warning.name}";
+            read_only_style = "bold fg:${self.theme.colors.semantic.warning.html}";
             read_only = "  ";
-            format = "[$path]($style)[$read_only]($read_only_style) ";
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            format = "[](fg:${self.theme.colors.terminal.normalBackgrounds.primary.html} bg:${self.theme.colors.blocks.primary.background.html})[$path](bold fg:${self.theme.colors.blocks.primary.foreground.html} bg:${self.theme.colors.blocks.primary.background.html})[](bg:${self.theme.colors.terminal.normalBackgrounds.primary.html} fg:${self.theme.colors.blocks.primary.background.html})[$read_only]($read_only_style)";
+            style = "";
             truncate_to_repo = true;
             use_os_path_sep = false;
             truncation_length = 3;
@@ -90,12 +90,12 @@ args@{
           git_branch = {
             symbol = " ";
             format = "[$symbol $branch]($style) ";
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           git_status = {
             format = "[\($all_status$ahead_behind\)]($style) ";
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
             conflicted = "(c)";
             up_to_date = " ";
             untracked = " ";
@@ -104,16 +104,16 @@ args@{
             behind = "⇣\${count}";
             stashed = "(s) ";
             modified = " ";
-            staged = "[++\($count\)](bold ${self.theme.colors.semantic.success.name})";
+            staged = "[++\($count\)](bold fg:${self.theme.colors.semantic.success.html})";
             renamed = "(r) ";
             deleted = " ";
           };
 
           localip = {
             disabled = false;
-            style = "bold ${self.theme.colors.semantic.warning.name}";
+            style = "bold fg:${self.theme.colors.semantic.warning.html}";
             ssh_only = true;
-            format = "[⟶  ](bright-black) [$localipv4]($style) ";
+            format = "[⟶  ](fg:${self.theme.colors.separators.ultraDark.html}) [$localipv4]($style) ";
           };
 
           os = {
@@ -137,322 +137,322 @@ args@{
           };
 
           aws = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           azure = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           buf = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           bun = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           c = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           cmake = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           cobol = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           crystal = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           daml = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           dart = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           deno = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           dotnet = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           elixir = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           elm = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           erlang = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           fennel = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           fossil_branch = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           gcloud = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           git_commit = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           git_state = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           git_metrics = {
-            added_style = "bold ${self.theme.colors.semantic.warning.name}";
-            deleted_style = "${self.theme.colors.main.base.purple.name}";
+            added_style = "bold fg:${self.theme.colors.semantic.warning.html}";
+            deleted_style = "bold fg:${self.theme.colors.main.base.purple.html}";
           };
 
           gleam = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           golang = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           gradle = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           guix_shell = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           haskell = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           haxe = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           helm = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           hg_branch = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           java = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           julia = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           kotlin = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           kubernetes = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           lua = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           meson = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           nim = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           nix_shell = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           ocaml = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           opa = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           openstack = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           package = {
             format = "[is]($style) [$symbol$version]($style) ";
-            style = "bold ${self.theme.colors.main.base.blue.name}";
+            style = "bold fg:${self.theme.colors.main.base.blue.html}";
           };
 
           perl = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           php = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           pijul_channel = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           pulumi = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           purescript = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           quarto = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           raku = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           red = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           rlang = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           ruby = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           rust = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           scala = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           singularity = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           solidity = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           spack = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           swift = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           terraform = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           typst = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           vagrant = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           vlang = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           vcsh = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           zig = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           battery = { };
 
           cmd_duration = {
             format = "[]($style)[$duration]($style) ";
-            style = "bright-black";
+            style = "fg:${self.theme.colors.separators.ultraDark.html}";
             min_time = 1000;
             show_notifications = true;
             min_time_to_notify = 600000;
           };
 
           direnv = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           env_var = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           fill = {
             symbol = "─";
-            style = "bright-black";
+            style = "fg:${self.theme.colors.separators.ultraDark.html}";
           };
 
           fossil_metrics = {
-            added_style = "bold ${self.theme.colors.semantic.warning.name}";
-            deleted_style = "${self.theme.colors.main.base.purple.name}";
+            added_style = "bold fg:${self.theme.colors.semantic.warning.html}";
+            deleted_style = "bold fg:${self.theme.colors.main.base.purple.html}";
           };
 
           jobs = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           line_break = {
             disabled = true;
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           memory_usage = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           shlvl = {
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           docker_context = {
             format = "[via]($style) [$symbol$context]($style) ";
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           python = {
             format = "[via]($style) [$symbol$pyenv_prefix($version )(\\($virtualenv\\) )]($style)";
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           nodejs = {
             format = "[via]($style) [$symbol($version )]($style)";
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
 
           conda = {
             format = "[via]($style) [$symbol$environment]($style) ";
-            style = "bold ${self.theme.colors.main.foregrounds.primary.name}";
+            style = "bold fg:${self.theme.colors.main.foregrounds.primary.html}";
           };
         };
       };
