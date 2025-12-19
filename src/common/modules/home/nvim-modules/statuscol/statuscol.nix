@@ -91,17 +91,31 @@ args@{
               }
               {
                 sign = {
-                  namespace = [
-                    "diagnostic"
-                    "vim.diagnostic"
-                  ];
-                  name = [
-                    "Diagnostic.*"
-                    ".*Error.*"
-                    ".*Warn.*"
-                    ".*Info.*"
-                    ".*Hint.*"
-                  ];
+                  text = [ "" ];
+                  maxwidth = 1;
+                  auto = true;
+                };
+                click = "v:lua.ScSa";
+              }
+              {
+                sign = {
+                  text = [ "" ];
+                  maxwidth = 1;
+                  auto = true;
+                };
+                click = "v:lua.ScSa";
+              }
+              {
+                sign = {
+                  text = [ "" ];
+                  maxwidth = 1;
+                  auto = true;
+                };
+                click = "v:lua.ScSa";
+              }
+              {
+                sign = {
+                  text = [ "󰌵" ];
                   maxwidth = 1;
                   auto = true;
                 };
