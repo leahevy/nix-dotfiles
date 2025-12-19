@@ -122,6 +122,13 @@ args@{
 
             pcall(telescope.load_extension, 'cmdline')
 
+            vim.api.nvim_create_autocmd("FileType", {
+              pattern = "man",
+              callback = function()
+                vim.keymap.set('n', ';', ':', { buffer = true, silent = false, desc = "Command mode (man buffer)" })
+              end,
+            })
+
             local has_cmdline_actions, cmdline_actions = pcall(require, 'cmdline.actions')
             if has_cmdline_actions then
               local original_run = cmdline_actions.run_input
