@@ -15,6 +15,10 @@ args@{
   input = "linux";
   namespace = "system";
 
+  settings = {
+    defaultSink = null;
+  };
+
   configuration =
     context@{ config, options, ... }:
     {
@@ -28,6 +32,17 @@ args@{
         alsa.support32Bit = true;
         jack.enable = true;
         pulse.enable = true;
+
+        extraConfig.pipewire-pulse = lib.mkIf (self.settings.defaultSink != null) {
+          "99-default-sink" = {
+            "context.exec" = [
+              {
+                path = "${pkgs.pulseaudio}/bin/pactl";
+                args = "set-default-sink ${self.settings.defaultSink}";
+              }
+            ];
+          };
+        };
       };
     };
 }

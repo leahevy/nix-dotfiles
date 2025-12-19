@@ -196,6 +196,8 @@ args@{
       "Process [0-9]+ \\(bongocat\\) of user [0-9]+ dumped core"
       "pressure-vessel-wrap\\[[0-9]+\\]: [WD]:.*"
       "mod\\.protocol-pulse: client .* ERROR command:[0-9]+ \\(.*\\) tag:[0-9]+ error:[0-9]+ \\(.*\\)"
+      "pw\\.core: .* leaked proxy .* id:[0-9]+"
+      "Caught PipeWire error: connection error"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
