@@ -21,6 +21,9 @@ args@{
 
   configuration =
     context@{ config, options, ... }:
+    let
+      timeFormat = "%d %b %Y %I:%M:%S %p";
+    in
     {
       home.file."${config.xdg.configHome}/fish-init/20-starship.fish".text = ''
         if command -v starship > /dev/null
@@ -31,7 +34,18 @@ args@{
           end
 
           function starship_transient_rprompt_func
-            starship module time
+            set -l time_output (date +"${timeFormat}")
+
+            set_color --background '${self.theme.colors.terminal.normalBackgrounds.primary.html}' '${self.theme.colors.blocks.primary.background.html}'
+            printf ""
+
+            set_color --background '${self.theme.colors.blocks.primary.background.html}' --bold '${self.theme.colors.blocks.primary.foreground.html}'
+            printf "%s" $time_output
+
+            set_color --background '${self.theme.colors.blocks.primary.background.html}' '${self.theme.colors.terminal.normalBackgrounds.primary.html}'
+            printf ""
+
+            set_color normal
           end
 
           starship init fish | source
@@ -52,7 +66,7 @@ args@{
             format = "[]($style)[ $time ]($style)";
             disabled = false;
             style = "fg:${self.theme.colors.separators.ultraDark.html}";
-            time_format = "%d %b %Y %I:%M:%S %p";
+            time_format = timeFormat;
           };
 
           status = {
