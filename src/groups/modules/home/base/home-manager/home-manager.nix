@@ -355,6 +355,9 @@ args@{
           shell = {
             shell = true;
           };
+          darwin = {
+            settings = true;
+          };
         };
       }
     else

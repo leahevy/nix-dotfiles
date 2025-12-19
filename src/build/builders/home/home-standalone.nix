@@ -73,7 +73,10 @@ let
           }
         ]
         ++ extraUserModule
-        ++ (if helpers.isDarwinArch arch then [ inputs.mac-app-util.homeManagerModules.default ] else [ ]);
+        ++ (if helpers.isDarwinArch arch then [ inputs.mac-app-util.homeManagerModules.default ] else [ ])
+        ++ (
+          if helpers.isDarwinArch arch then [ inputs.nix-plist-manager.homeManagerModules.default ] else [ ]
+        );
       };
     };
 

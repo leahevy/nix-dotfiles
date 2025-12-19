@@ -18,6 +18,7 @@ rec {
   settings = {
     inherit name;
     variant = "dark";
+    tint = "green";
     fonts = {
       serif = {
         path = "dejavu_fonts/DejaVu Serif";
