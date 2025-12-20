@@ -84,7 +84,8 @@ jobs:
 
           REBOOT_PACKAGES=(
             "^linux[-_][0-9]"
-            "^linuxKernel"
+            "^linuxKernel\.kernels\.linux:[[:space:]]"
+            "^linuxKernel\.kernels\.linux[-_][0-9]"
             "^linuxPackages"
             "^kernelPackages"
             "^systemd:"
