@@ -261,7 +261,12 @@ args@{
         self.settings.baseStringsToIgnore
         ++ self.settings.additionalStringsToIgnore
         ++ (lib.optionals isDesktop self.settings.desktopStringsToIgnore)
-        ++ (lib.optionals isNvidia self.settings.nvidiaStringsToIgnore);
+        ++ (lib.optionals isNvidia self.settings.nvidiaStringsToIgnore)
+        ++ (lib.optionals (self.linux.isModuleEnabled "drivers.aic8800") [
+          "aic_bluetooth_mod_init"
+          "AICWFDBG\\(LOGINFO\\)"
+          "RELEASE DATE:"
+        ]);
 
       allStringsToHighlight =
         self.settings.baseStringsToHighlight
