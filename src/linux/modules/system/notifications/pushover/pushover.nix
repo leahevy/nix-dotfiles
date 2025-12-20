@@ -363,17 +363,17 @@ rec {
       sops.secrets."pushover-user" = {
         format = "binary";
         sopsFile = self.config.secretsPath "pushover-user";
-        mode = "0400";
+        mode = if (self.isModuleEnabled "security.letsencrypt") then "0440" else "0400";
         owner = "root";
-        group = "root";
+        group = if (self.isModuleEnabled "security.letsencrypt") then "acme" else "root";
       };
 
       sops.secrets."${hostname}-pushover-token" = {
         format = "binary";
         sopsFile = self.profile.secretsPath "pushover-token";
-        mode = "0400";
+        mode = if (self.isModuleEnabled "security.letsencrypt") then "0440" else "0400";
         owner = "root";
-        group = "root";
+        group = if (self.isModuleEnabled "security.letsencrypt") then "acme" else "root";
       };
 
       sops.secrets."pushover-user-${self.host.mainUser.username}" = {
