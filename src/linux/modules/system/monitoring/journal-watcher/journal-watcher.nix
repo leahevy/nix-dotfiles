@@ -139,6 +139,7 @@ args@{
       "No SubscriptionPrivateValues defined in policy default"
       "CreateProfile failed: org\\.freedesktop\\.DBus\\.Error\\.ServiceUnknown"
       "Notifier for subscription .* went away, retrying"
+      "Raw queues are deprecated and will stop working in a future version of CUPS\\."
       "^cups\\.socket$"
       "org\\.kde\\..*: Could not load default global viewproperties"
       "org\\.kde\\..*: Unknown class .* in session saved data"
