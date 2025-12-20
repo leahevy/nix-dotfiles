@@ -412,7 +412,7 @@ rec {
       hmLib = config: config.lib;
 
       # Create custom nixpkgs import with module-scoped unfree predicate
-      # Usage: self.pkgs { overlays = [...]; }
+      # Usage: self . pkgs { overlays = [...]; }
       pkgs = createPkgsImport moduleContext.inputs.nixpkgs;
 
       # Create a dummy package usable for creating home-manager config without installing the package
@@ -430,7 +430,7 @@ rec {
           '';
 
       # Create custom nixpkgs-unstable import with module-scoped unfree predicate
-      # Usage: self.pkgs-unstable { overlays = [...]; }
+      # Usage: self . pkgs-unstable { overlays = [...]; }
       pkgs-unstable = createPkgsImport moduleContext.inputs.nixpkgs-unstable;
 
       host = (moduleContext.host or { }) // hostFunctions;

@@ -29,7 +29,8 @@ complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update 
 complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update brew dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval package version" -a "modules" -d "Manage and inspect NX modules"
 complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update brew dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval package version package" -a "eval" -d "Evaluate a flake path with config override"
 complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update brew dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval package version package" -a "package" -d "Get store path for package(s)"
-complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update brew dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval package version" -a "version" -d "Show the current NixOS version"
+complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update brew dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval package version dist-upgrade" -a "version" -d "Show the current NixOS version"
+complete -c nx -n "not __fish_seen_subcommand_from profile sync build gc update brew dry test boot rollback news config core format exec log diff diffc status commit pull push add addp stash impermanence spec modules eval package version dist-upgrade" -a "dist-upgrade" -d "Bump NixOS version and migrate packages from unstable to stable"
 
 # Command-specific options
 

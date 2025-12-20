@@ -25,6 +25,7 @@ Commands:
     build           # Test build configuration without deploying.
     gc              # Run the garbage collection.
     update          # Updates the flake in git (without switching).
+    dist-upgrade    # Bump NixOS version.
 
 
   Darwin Only:

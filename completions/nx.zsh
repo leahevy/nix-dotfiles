@@ -42,6 +42,7 @@ _nx() {
                 'eval:Evaluate a flake path with config override'
                 'package:Get store path for package(s)'
                 'version:Show the current NixOS version'
+                'dist-upgrade:Bump NixOS version and migrate packages from unstable to stable'
             )
             _describe 'commands' commands
             ;;

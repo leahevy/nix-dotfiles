@@ -59,7 +59,7 @@ args@{
             ];
           }
         else
-          pkgs-unstable;
+          { };
     in
     {
       programs.steam = {
@@ -96,8 +96,8 @@ args@{
       };
 
       environment.systemPackages = [
-        customPkgs.protonup
-        customPkgs.protontricks
+        customPkgs.protonup or pkgs-unstable.protonup
+        customPkgs.protontricks or pkgs-unstable.protontricks
       ]
       ++ (with pkgs-unstable; [
         mangohud
