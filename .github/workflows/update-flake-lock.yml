@@ -98,6 +98,9 @@ jobs:
             "^nix$"
             "^nixVersions"
             "^nixos:"
+          )
+
+          DESKTOP_REBOOT_PACKAGES=(
             "^niri"
             "^uwsm"
           )
@@ -113,12 +116,25 @@ jobs:
           done
           REBOOT_PATTERNS="${REBOOT_PATTERNS%|}"
 
+          DESKTOP_REBOOT_PATTERNS=""
+          for pattern in "${DESKTOP_REBOOT_PACKAGES[@]}"; do
+            if [[ "$pattern" =~ ^\^ ]]; then
+              DESKTOP_REBOOT_PATTERNS="${DESKTOP_REBOOT_PATTERNS}${pattern}"
+            else
+              DESKTOP_REBOOT_PATTERNS="${DESKTOP_REBOOT_PATTERNS}\\b${pattern}\\b"
+            fi
+            DESKTOP_REBOOT_PATTERNS="${DESKTOP_REBOOT_PATTERNS}|"
+          done
+          DESKTOP_REBOOT_PATTERNS="${DESKTOP_REBOOT_PATTERNS%|}"
+
           IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
 
           commit_lists=""
           reboot_commits=""
           requires_reboot="false"
+          requires_desktop_reboot="false"
           reboot_packages=""
+          desktop_reboot_packages=""
 
           for input in "${inputs[@]}"; do
             input=$(echo "$input" | xargs)
@@ -153,7 +169,20 @@ jobs:
 
                     input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
                     if [ -n "$input_reboot_commits" ]; then
-                      reboot_commits="$reboot_commits"$'\n\n'"#### $input"$'\n'"$input_reboot_commits"
+                      reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
+                    fi
+                  fi
+
+                  if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$DESKTOP_REBOOT_PATTERNS" > /dev/null 2>&1; then
+                    requires_desktop_reboot="true"
+                    found_desktop_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$DESKTOP_REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                    if [ -n "$found_desktop_packages" ]; then
+                      desktop_reboot_packages="$desktop_reboot_packages$found_desktop_packages, "
+                    fi
+
+                    input_desktop_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$DESKTOP_REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                    if [ -n "$input_desktop_reboot_commits" ]; then
+                      reboot_commits="$reboot_commits"$'\n\n'"#### $input (Desktop)"$'\n'"$input_desktop_reboot_commits"
                     fi
                   fi
 
@@ -191,9 +220,18 @@ jobs:
           done
 
           reboot_packages=$(echo "$reboot_packages" | sed 's/, $//')
+          desktop_reboot_packages=$(echo "$desktop_reboot_packages" | sed 's/, $//')
+
+          any_reboot_required="false"
+          if [ "$requires_reboot" = "true" ] || [ "$requires_desktop_reboot" = "true" ]; then
+            any_reboot_required="true"
+          fi
 
           echo "REQUIRES_REBOOT=$requires_reboot" >> $GITHUB_ENV
+          echo "REQUIRES_DESKTOP_REBOOT=$requires_desktop_reboot" >> $GITHUB_ENV
+          echo "ANY_REBOOT_REQUIRED=$any_reboot_required" >> $GITHUB_ENV
           echo "REBOOT_PACKAGES=$reboot_packages" >> $GITHUB_ENV
+          echo "DESKTOP_REBOOT_PACKAGES=$desktop_reboot_packages" >> $GITHUB_ENV
 
           {
             echo "COMMIT_LISTS<<EOF"
@@ -208,8 +246,13 @@ jobs:
           } >> $GITHUB_ENV
 
           if [ "$requires_reboot" = "true" ]; then
-            echo "Creating reboot marker file for auto-upgrade detection"
+            echo "Creating system reboot marker file for auto-upgrade detection"
             sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-reboot-required
+          fi
+
+          if [ "$requires_desktop_reboot" = "true" ]; then
+            echo "Creating desktop reboot marker file for auto-upgrade detection"
+            sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-desktop-reboot-required
           fi
 
       - name: Check if merge day
@@ -238,17 +281,17 @@ jobs:
           body: |
             ## Automated update of flake inputs.
 
-            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.REQUIRES_REBOOT != 'true' && '> [!NOTE]' || '' }}
-            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.REQUIRES_REBOOT != 'true' && '> ✅ **This pull request will be automatically merged**' || '' }}
-            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.REQUIRES_REBOOT != 'true' && '> No reboot detected - auto-merge enabled' || '' }}
+            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> [!NOTE]' || '' }}
+            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> ✅ **This pull request will be automatically merged**' || '' }}
+            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> No reboot detected - auto-merge enabled' || '' }}
 
-            ${{ env.REQUIRES_REBOOT == 'true' && '> [!WARNING]' || '' }}
-            ${{ env.REQUIRES_REBOOT == 'true' && '> ⚠️ **System Reboot Required** ⚠️' || '' }}
-            ${{ env.REQUIRES_REBOOT == 'true' && '> This update requires a reboot!' || '' }}
+            ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> [!WARNING]' || '' }}
+            ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> ⚠️ **Reboot Required** ⚠️' || '' }}
+            ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> This update requires a reboot!' || '' }}
 
-            ${{ env.REQUIRES_REBOOT == 'true' && '### 🔄 Reboot-triggering commits' || '' }}
-            ${{ env.REQUIRES_REBOOT == 'true' && env.REBOOT_COMMITS || '' }}
-            ${{ env.REQUIRES_REBOOT == 'true' && '---' || '' }}
+            ${{ env.ANY_REBOOT_REQUIRED == 'true' && '### 🔄 Reboot-triggering commits' || '' }}
+            ${{ env.ANY_REBOOT_REQUIRED == 'true' && env.REBOOT_COMMITS || '' }}
+            ${{ env.ANY_REBOOT_REQUIRED == 'true' && '---' || '' }}
 
             ### 📦 Updated inputs:
             - ${{ env.UPDATED_INPUTS }}
@@ -266,7 +309,7 @@ jobs:
           PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
         run: |
           set -euo pipefail
-          if [ "${{ env.REQUIRES_REBOOT }}" == "true" ]; then
+          if [ "${{ env.ANY_REBOOT_REQUIRED }}" == "true" ]; then
             PRIORITY="1"
             SOUND="gamelan"
             TTL="604800"
@@ -308,7 +351,7 @@ jobs:
             https://api.pushover.net/1/messages.json
 
       - name: Enable auto-merge
-        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && env.REQUIRES_REBOOT != 'true'
+        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true'
         run: |
           set -euo pipefail
           echo "Enabling auto-merge for PR #${{ steps.cpr.outputs.pull-request-number }}"
@@ -333,6 +376,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Skip auto-merge due to reboot-requiring packages
-        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && env.REQUIRES_REBOOT == 'true'
+        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED == 'true'
         run: |
-          echo "⚠️ Auto-merge skipped: Update requires reboot! (${{ env.REBOOT_PACKAGES }})"
+          echo "⚠️ Auto-merge skipped: Update requires reboot! (System: ${{ env.REBOOT_PACKAGES }} Desktop: ${{ env.DESKTOP_REBOOT_PACKAGES }})"

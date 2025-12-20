@@ -475,18 +475,32 @@ args@{
 
         cd "${nxcoreDir}"
         OLD_REBOOT_MARKER=$(${pkgs.coreutils}/bin/cat .nx-auto-upgrade-reboot-required 2>/dev/null || echo "")
+        OLD_DESKTOP_REBOOT_MARKER=$(${pkgs.coreutils}/bin/cat .nx-auto-upgrade-desktop-reboot-required 2>/dev/null || echo "")
 
         pull_repo "${nxcoreDir}" "nxcore"
         pull_repo "${nxconfigDir}" "nxconfig"
 
         cd "${nxcoreDir}"
         FORCE_REBOOT=false
+        isHeadless=${lib.boolToString ((self.host.settings.system.desktop or null) == null)}
+
         if [[ -f ".nx-auto-upgrade-reboot-required" ]]; then
           NEW_REBOOT_MARKER=$(${pkgs.coreutils}/bin/cat .nx-auto-upgrade-reboot-required 2>/dev/null || echo "")
           if [[ -n "$NEW_REBOOT_MARKER" && "$OLD_REBOOT_MARKER" != "$NEW_REBOOT_MARKER" ]]; then
             CURRENT_FLAKE_HASH=$(${pkgs.coreutils}/bin/sha256sum flake.lock | ${pkgs.coreutils}/bin/cut -d' ' -f1)
             if [[ "$CURRENT_FLAKE_HASH" == "$NEW_REBOOT_MARKER" ]]; then
-              ${logScript "info" "INFO: Remote changes indicate reboot required for current flake.lock state"}
+              ${logScript "info" "INFO: Remote changes indicate system reboot required for current flake.lock state"}
+              FORCE_REBOOT=true
+            fi
+          fi
+        fi
+
+        if [[ "$isHeadless" == "false" && -f ".nx-auto-upgrade-desktop-reboot-required" ]]; then
+          NEW_DESKTOP_REBOOT_MARKER=$(${pkgs.coreutils}/bin/cat .nx-auto-upgrade-desktop-reboot-required 2>/dev/null || echo "")
+          if [[ -n "$NEW_DESKTOP_REBOOT_MARKER" && "$OLD_DESKTOP_REBOOT_MARKER" != "$NEW_DESKTOP_REBOOT_MARKER" ]]; then
+            CURRENT_FLAKE_HASH=$(${pkgs.coreutils}/bin/sha256sum flake.lock | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+            if [[ "$CURRENT_FLAKE_HASH" == "$NEW_DESKTOP_REBOOT_MARKER" ]]; then
+              ${logScript "info" "INFO: Remote changes indicate desktop reboot required for current flake.lock state"}
               FORCE_REBOOT=true
             fi
           fi

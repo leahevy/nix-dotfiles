@@ -26,3 +26,9 @@ else
     echo
     echo -e "${YELLOW}Warning: Config directory does not exist or is no directory.${RESET}"
 fi
+
+echo
+echo -e "Regenerating auto-upgrade reboot marker files..."
+sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-reboot-required
+sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-desktop-reboot-required
+echo -e "Created marker files with hash: $(cat .nx-auto-upgrade-reboot-required)"
