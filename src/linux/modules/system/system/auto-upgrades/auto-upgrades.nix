@@ -356,6 +356,24 @@ args@{
         check_git_clean "${nxconfigDir}" "nxconfig"
       '';
 
+      checkMainBranchScript = ''
+        check_on_main_branch() {
+          local repo_path="$1"
+          local repo_name="$2"
+
+          cd "$repo_path"
+          local current_branch=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git branch --show-current)
+
+          if [[ "$current_branch" != "main" ]]; then
+            ${logScript "err" "WARNING: Repository $repo_name is on branch '$current_branch', not 'main'. Auto-upgrade requires main branch!"}
+            exit 2
+          fi
+        }
+
+        check_on_main_branch "${nxcoreDir}" "nxcore"
+        check_on_main_branch "${nxconfigDir}" "nxconfig"
+      '';
+
       setupRemotesScript = ''
                 setup_nx_auto_upgrade_remote() {
                   local repo_path="$1"
@@ -908,6 +926,7 @@ args@{
             ${checkRepositoriesExistScript}
             ${setupRemotesScript}
             ${checkGitWorktreesScript}
+            ${checkMainBranchScript}
 
             ${signatureVerificationScript}
             ${lib.optionalString self.settings.verifySignatures ''
