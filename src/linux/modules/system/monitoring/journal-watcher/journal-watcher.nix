@@ -459,7 +459,16 @@ args@{
 
         def to_string(value, default=""):
             if isinstance(value, list):
-                return str(value[0]) if value else default
+                if not value:
+                    return default
+
+                if all(isinstance(x, int) and 0 <= x <= 255 for x in value):
+                    try:
+                        return bytes(value).decode('utf-8', errors='replace')
+                    except:
+                        return str(value[0])
+                else:
+                    return str(value[0])
             elif value is None:
                 return default
             else:
