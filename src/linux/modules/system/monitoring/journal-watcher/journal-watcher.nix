@@ -108,6 +108,7 @@ args@{
       "usb.*clear tt [0-9]+ \\([0-9a-fA-F]+\\) error -[0-9]+"
       "usbhid.*can't add hid device: -[0-9]+"
       "usbhid.*probe with driver usbhid failed with error -[0-9]+"
+      "^[^a-zA-Z]*$"
     ];
     desktopStringsToIgnore = [
       "usb.*can't set config.*error -71"
