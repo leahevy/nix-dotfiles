@@ -293,7 +293,7 @@ args@{
           undoreload = 10000;
 
           backup = false;
-          shortmess = "aoOtTIcF";
+          shortmess = "aoOtTIcFWAsSc";
 
           spelllang = self.settings.dictionaries;
           spellfile = "${config.xdg.configHome}/nvim/spell/custom.utf-8.add";
