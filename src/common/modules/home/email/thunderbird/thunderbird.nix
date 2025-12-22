@@ -21,7 +21,7 @@ args@{
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
     in
     {
-      home.packages = with pkgs-unstable; [
+      home.packages = with pkgs; [
         thunderbird
       ];
 

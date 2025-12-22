@@ -26,7 +26,7 @@ args@{
         self.user.displays.main
       else
         null;
-    package = pkgs-unstable.wayland-bongocat;
+    package = pkgs.wayland-bongocat;
     xOffset = -280;
     yOffset = 30;
     catSize = 75;

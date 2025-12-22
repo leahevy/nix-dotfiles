@@ -24,7 +24,7 @@ args@{
     {
       home.packages =
         if self.settings.useLatest then
-          (with pkgs-unstable; [
+          (with pkgs; [
             protobuf
           ])
         else

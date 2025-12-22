@@ -96,10 +96,10 @@ args@{
       };
 
       environment.systemPackages = [
-        customPkgs.protonup or pkgs-unstable.protonup
-        customPkgs.protontricks or pkgs-unstable.protontricks
+        customPkgs.protonup or pkgs.protonup
+        customPkgs.protontricks or pkgs.protontricks
       ]
-      ++ (with pkgs-unstable; [
+      ++ (with pkgs; [
         mangohud
         winetricks
         (if withWayland then wineWowPackages.waylandFull else wineWowPackages.stable)

@@ -62,7 +62,7 @@ args@{
   configuration =
     context@{ config, options, ... }:
     {
-      home.packages = with pkgs-unstable; [
+      home.packages = with pkgs; [
         nodejs
         copilot-language-server
       ];

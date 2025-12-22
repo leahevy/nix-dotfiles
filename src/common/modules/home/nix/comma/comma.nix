@@ -19,7 +19,7 @@ args@{
     context@{ config, options, ... }:
     {
       home = {
-        packages = with pkgs-unstable; [
+        packages = with pkgs; [
           comma
         ];
       };

@@ -661,7 +661,7 @@ args@{
           };
 
       programs.niri = {
-        package = pkgs-unstable.niri;
+        package = pkgs.niri;
         settings = {
           prefer-no-csd = true;
           hotkey-overlay.skip-at-startup = true;

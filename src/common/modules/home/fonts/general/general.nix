@@ -46,7 +46,7 @@ args@{
           unifont
         ])
         ++ lib.optionals self.settings.withUnfreeFonts (
-          with pkgs-unstable;
+          with pkgs;
           [
             corefonts
             symbola

@@ -63,7 +63,7 @@ args@{
         };
       }
       (lib.mkIf isStandalone {
-        home.packages = with pkgs-unstable; [
+        home.packages = with pkgs; [
           steam
           mangohud
           protonup

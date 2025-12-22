@@ -32,6 +32,6 @@ args@{
   configuration =
     context@{ config, options, ... }:
     {
-      programs.ghostty.package = lib.mkForce pkgs-unstable.ghostty;
+      programs.ghostty.package = lib.mkForce pkgs.ghostty;
     };
 }

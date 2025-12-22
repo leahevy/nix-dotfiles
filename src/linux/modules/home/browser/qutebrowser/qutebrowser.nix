@@ -32,7 +32,7 @@ args@{
 
       nvidiaQuirks = (self.common.getModuleConfig "browser.qutebrowser-config").nvidiaQuirks;
 
-      customPkgs = self.pkgs-unstable {
+      customPkgs = self.pkgs {
         overlays = [
           (final: prev: {
             qutebrowser =

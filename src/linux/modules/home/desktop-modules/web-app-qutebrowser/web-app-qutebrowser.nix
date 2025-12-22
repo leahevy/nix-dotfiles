@@ -228,7 +228,7 @@ args@{
             #!/usr/bin/env bash
             set -euo pipefail
 
-            exec ${pkgs-unstable.qutebrowser}/bin/qutebrowser \
+            exec ${pkgs.qutebrowser}/bin/qutebrowser \
               --target window \
               --desktop-file-name "org.qutebrowser.${appName}" \
               --basedir "${config.home.homeDirectory}/${dataDir}" \
