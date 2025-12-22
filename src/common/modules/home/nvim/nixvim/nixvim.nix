@@ -590,16 +590,16 @@ args@{
                     end, 100)
                   end)
                 else
-                  vim.schedule(function()
-                    print("Neovim: Loaded " .. loaded_count .. "/" .. #sorted_keys .. " modules")
-                  end)
+                  vim.defer_fn(function()
+                    vim.api.nvim_echo({{"Loaded " .. loaded_count .. "/" .. #sorted_keys .. " modules", "Normal"}}, true, {})
+                  end, 100)
                 end
 
                 local init_end_time = vim.loop.hrtime()
                 local init_duration_ms = (init_end_time - init_start_time) / 1000000
-                vim.schedule(function()
-                  print(string.format("Neovim: Module initialization took %.2fms", init_duration_ms))
-                end)
+                vim.defer_fn(function()
+                  vim.api.nvim_echo({{string.format("Init: %.2fms", init_duration_ms), "Normal"}}, true, {})
+                end, 150)
 
                 _G.nx_modules = nil
               ''
