@@ -350,6 +350,10 @@ args@{
           passwords = {
             keepassxc = true;
           };
+          terminal = {
+            alacritty = true;
+            ghostty = true;
+          };
         };
         groups = {
           shell = {

@@ -39,6 +39,7 @@ args@{
     additionalTerminalAppsMapping = { };
     bordersSize = 15;
     barHeight = 77;
+    alacrittyAsFloatingTerminal = true;
     iconFontSize = "23.0";
     labelFontSize = "18.0";
     appIconFontSize = "22.0";
@@ -376,7 +377,13 @@ args@{
                 (lib.toInt self.settings.baseConfig.window_gap) + (self.settings.bordersSize * 2)
               );
             };
-          allRules = self.settings.baseRules ++ self.settings.additionalRules;
+          allRules =
+            self.settings.baseRules
+            ++ self.settings.additionalRules
+            ++ lib.optionals self.settings.alacrittyAsFloatingTerminal [
+              ''app="^Alacritty$" manage=off''
+              ''app="^alacritty$" manage=off''
+            ];
         in
         {
           executable = true;
