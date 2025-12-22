@@ -19,6 +19,8 @@ args@{
     wikiPath = "~/.local/share/nvim/wiki/";
     homePage = "index.md";
     enableUI = false;
+    diaryTemplate = null;
+    addLinebreakBeforeTemplate = true;
   };
 
   assertions = [
@@ -287,7 +289,33 @@ args@{
           {
             mode = "n";
             key = "<leader>wdw";
-            action = "<cmd>ObsidianToday<cr>";
+            action.__raw = ''
+              function()
+                ${lib.optionalString (self.settings.diaryTemplate != null) ''
+                  local vault_path = vim.fn.resolve(vim.fn.expand('${normalizedVaultPath}'))
+                  local today = os.date("%Y-%m-%d")
+                  local today_file = vault_path .. "/diary/" .. today .. ".md"
+                  local file_exists_before = vim.fn.filereadable(today_file) == 1
+                ''}
+                vim.cmd("ObsidianToday")
+                ${lib.optionalString (self.settings.diaryTemplate != null) ''
+                  if not file_exists_before then
+                    vim.defer_fn(function()
+                      local buf = vim.api.nvim_get_current_buf()
+                      local template = ${lib.strings.escapeNixString self.settings.diaryTemplate}
+                      local lines = vim.split(template, "\n", { plain = true })
+                      ${lib.optionalString self.settings.addLinebreakBeforeTemplate ''
+                        table.insert(lines, 1, "")
+                      ''}
+                      local line_count = vim.api.nvim_buf_line_count(buf)
+                      vim.api.nvim_buf_set_lines(buf, line_count, line_count, false, lines)
+                      local final_line = line_count + #lines
+                      vim.api.nvim_win_set_cursor(0, {final_line, 0})
+                    end, 1000)
+                  end
+                ''}
+              end
+            '';
             options = {
               desc = "Make today diary note";
               silent = true;
@@ -392,6 +420,80 @@ args@{
                     return require("obsidian").util.gf_passthrough()
                   end, { expr = true, desc = "Follow link", buffer = true })
 
+                end
+              end
+            '';
+          }
+          {
+            event = [ "BufEnter" ];
+            pattern = [ "*.md" ];
+            callback.__raw = ''
+              function()
+                local buf = vim.api.nvim_get_current_buf()
+                if vim.b[buf].obsidian_daily_processed then
+                  return
+                end
+
+                local filepath = vim.fn.resolve(vim.api.nvim_buf_get_name(buf))
+                local vault_path = vim.fn.resolve(vim.fn.expand('${normalizedVaultPath}'))
+                local diary_path = vault_path .. "/diary/"
+
+                if vim.startswith(filepath, diary_path) then
+                  local filename = vim.fn.fnamemodify(filepath, ":t:r")
+                  if filename:match("^%d%d%d%d%-%d%d%-%d%d$") then
+                    local today = os.date("%Y-%m-%d")
+                    local buf_empty = vim.api.nvim_buf_line_count(buf) == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == ""
+                    local file_exists = vim.fn.filereadable(filepath) == 1
+                    local buf_modified = vim.bo[buf].modified
+
+                    if buf_empty and file_exists and not buf_modified then
+                      vim.b[buf].obsidian_daily_processed = true
+                      vim.cmd("edit!")
+                    elseif not file_exists and buf_empty and not buf_modified and filename == today then
+                      vim.b[buf].obsidian_daily_processed = true
+                      ${lib.optionalString (self.settings.diaryTemplate != null) ''
+                        _G.obsidian_dates_needing_template = _G.obsidian_dates_needing_template or {}
+                        _G.obsidian_dates_needing_template[filename] = true
+                      ''}
+                      vim.cmd("ObsidianToday")
+                    end
+                  end
+                end
+              end
+            '';
+          }
+        ]
+        ++ lib.optionals (self.settings.diaryTemplate != null) [
+          {
+            event = [ "BufRead" ];
+            pattern = [ "*.md" ];
+            callback.__raw = ''
+              function()
+                local buf = vim.api.nvim_get_current_buf()
+                local filepath = vim.fn.resolve(vim.api.nvim_buf_get_name(buf))
+                local vault_path = vim.fn.resolve(vim.fn.expand('${normalizedVaultPath}'))
+                local diary_path = vault_path .. "/diary/"
+
+                if vim.startswith(filepath, diary_path) then
+                  local filename = vim.fn.fnamemodify(filepath, ":t:r")
+                  if filename:match("^%d%d%d%d%-%d%d%-%d%d$") then
+                    _G.obsidian_dates_needing_template = _G.obsidian_dates_needing_template or {}
+                    if _G.obsidian_dates_needing_template[filename] then
+                      _G.obsidian_dates_needing_template[filename] = nil
+                      vim.b[buf].obsidian_template_applied = true
+
+                      local template = ${lib.strings.escapeNixString self.settings.diaryTemplate}
+                      local lines = vim.split(template, "\n", { plain = true })
+                      ${lib.optionalString self.settings.addLinebreakBeforeTemplate ''
+                        table.insert(lines, 1, "")
+                      ''}
+                      local line_count = vim.api.nvim_buf_line_count(buf)
+                      vim.api.nvim_buf_set_lines(buf, line_count, line_count, false, lines)
+                      local final_line = line_count + #lines
+                      vim.api.nvim_win_set_cursor(0, {final_line, 0})
+                      vim.cmd("write")
+                    end
+                  end
                 end
               end
             '';
