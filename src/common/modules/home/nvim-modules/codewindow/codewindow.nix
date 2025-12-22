@@ -37,6 +37,7 @@ args@{
       "checkhealth"
       "man"
       "mail"
+      "text"
       "qf"
       "gitcommit"
       "gitrebase"
