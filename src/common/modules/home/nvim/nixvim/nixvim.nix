@@ -530,11 +530,11 @@ args@{
                       vim.defer_fn(function()
                         local socket_name = vim.v.servername
                         if socket_name and socket_name ~= "" then
-                          if not string.match(socket_name, "^/tmp/") then
-                            local socket_exists = vim.fn.filereadable(socket_name) == 1
+                          local absolute_socket = vim.fn.fnamemodify(socket_name, ":p")
+                          if not string.match(absolute_socket, "^/tmp/") and not string.match(absolute_socket, "^/var/") and absolute_socket ~= "${self.user.home}/.nvim.socket" then
+                            local socket_exists = vim.fn.filereadable(absolute_socket) == 1
                             if socket_exists then
-                              local absolute_path = vim.fn.fnamemodify(socket_name, ":p")
-                              vim.notify("Server started at " .. absolute_path, vim.log.levels.INFO, {
+                              vim.notify("Server started at " .. absolute_socket, vim.log.levels.INFO, {
                                 icon = "🖥️",
                                 title = "Neovim Server",
                                 timeout = 3000
