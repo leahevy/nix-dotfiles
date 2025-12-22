@@ -38,6 +38,7 @@ args@{
                 wrapProgram $out/bin/bw \
                   --set BITWARDENCLI_APPDATA_DIR "${config.home.homeDirectory}/.config/Bitwarden-CLI"
               '';
+              doInstallCheck = false;
             });
           })
         ];

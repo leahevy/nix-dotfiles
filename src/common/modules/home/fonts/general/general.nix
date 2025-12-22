@@ -42,7 +42,7 @@ args@{
           inter
           roboto
           open-sans
-          noto-fonts-emoji
+          noto-fonts-color-emoji
           unifont
         ])
         ++ lib.optionals self.settings.withUnfreeFonts (

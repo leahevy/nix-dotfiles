@@ -35,7 +35,7 @@ args@{
         extraPackages =
           with pkgs;
           [
-            vaapiVdpau
+            libva-vdpau-driver
             libvdpau-va-gl
           ]
           ++ lib.optionals self.settings.withIntel [

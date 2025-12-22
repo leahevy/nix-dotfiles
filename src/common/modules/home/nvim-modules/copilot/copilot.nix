@@ -63,7 +63,7 @@ args@{
     context@{ config, options, ... }:
     {
       home.packages = with pkgs; [
-        nodejs
+        (lib.lowPrio nodejs)
         copilot-language-server
       ];
 

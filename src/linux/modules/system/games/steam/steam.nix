@@ -53,7 +53,7 @@ args@{
           self.pkgs {
             overlays = [
               (final: prev: {
-                protonup = wrapSteamBinary prev.protonup "protonup";
+                protonup-ng = wrapSteamBinary prev.protonup-ng "protonup";
                 protontricks = wrapSteamBinary prev.protontricks "protontricks";
               })
             ];
@@ -96,7 +96,7 @@ args@{
       };
 
       environment.systemPackages = [
-        customPkgs.protonup or pkgs.protonup
+        customPkgs.protonup-ng or pkgs.protonup-ng
         customPkgs.protontricks or pkgs.protontricks
       ]
       ++ (with pkgs; [

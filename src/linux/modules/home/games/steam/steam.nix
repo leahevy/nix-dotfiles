@@ -66,7 +66,7 @@ args@{
         home.packages = with pkgs; [
           steam
           mangohud
-          protonup
+          protonup-ng
           protontricks
           winetricks
           (if withWayland then wineWowPackages.waylandFull else wineWowPackages.stable)

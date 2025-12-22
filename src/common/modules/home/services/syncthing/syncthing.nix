@@ -96,7 +96,7 @@ args@{
         guiAddress = "127.0.0.1:${builtins.toString self.settings.guiPort}";
         passwordFile = config.sops.secrets."${self.host.hostname}-syncthing-password".path;
         extraOptions = [ "--no-default-folder" ];
-        tray = self.settings.trayEnabled;
+        tray.enable = self.settings.trayEnabled;
         key = "${config.sops.secrets."${self.host.hostname}-syncthing-key".path}";
         cert = "${config.sops.secrets."${self.host.hostname}-syncthing-cert".path}";
         settings = {

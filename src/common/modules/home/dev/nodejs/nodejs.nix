@@ -28,7 +28,7 @@ args@{
       home.packages =
         with pkgs;
         [
-          nodejs
+          (lib.lowPrio nodejs)
           yarn
         ]
         ++ (map (pkg: pkgs.nodePackages.${pkg}) (
