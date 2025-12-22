@@ -15,6 +15,14 @@ args@{
   input = "common";
   namespace = "home";
 
+  submodules = {
+    common = {
+      fonts = {
+        nerdfonts = true;
+      };
+    };
+  };
+
   settings = {
     fontSize = 12;
     opacity = 0.95;
@@ -23,6 +31,7 @@ args@{
       "cursor_smear"
     ];
     setEnv = false;
+    fontFamily = "DejaVuSansM Nerd Font Mono";
   };
 
   configuration =
@@ -35,7 +44,7 @@ args@{
         settings = {
           font-size = lib.mkForce self.settings.fontSize;
           font-thicken = lib.mkForce true;
-          font-family = [ "DejaVuSansM Nerd Font Mono" ];
+          font-family = [ self.settings.fontFamily ];
           background-opacity = lib.mkForce self.settings.opacity;
           background-blur = lib.mkForce true;
           background = lib.mkForce (
