@@ -7,7 +7,7 @@ check_deployment_conflicts "update"
 
 if [[ $# -eq 0 ]]; then
     echo -e "Updating nixpkgs input of main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
-    nix flake update nixpkgs || true
+    nix flake update nixpkgs home-manager stylix nixvim nix-darwin nixpkgs-unstable || true
 else
     echo -e "Updating flake of main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
     nix flake update "$@" || true
@@ -17,7 +17,7 @@ if [[ -d "$CONFIG_DIR/.git" ]]; then
     echo
     if [[ $# -eq 0 ]]; then
         echo -e "Updating nixpkgs input of config repository ${WHITE}(.config/nx/nxconfig)${RESET}..."
-        (cd "$CONFIG_DIR" && nix flake update nixpkgs || true)
+        (cd "$CONFIG_DIR" && nix flake update nixpkgs nixpkgs-unstable || true)
     else
         echo -e "Updating flake of config repository ${WHITE}(.config/nx/nxconfig)${RESET}..."
         (cd "$CONFIG_DIR" && nix flake update "$@" || true)
