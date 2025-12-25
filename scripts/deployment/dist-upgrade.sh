@@ -72,3 +72,5 @@ echo -e "Created marker files with hash: $(cat .nx-auto-upgrade-reboot-required)
 
 echo
 echo -e "${GREEN}NixOS version bump to $NIXOS_VERSION completed successfully!${RESET}"
+echo
+echo -e "${YELLOW}Next steps: Please read UPGRADE.md for the complete upgrade process${RESET}"
