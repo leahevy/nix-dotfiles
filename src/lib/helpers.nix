@@ -229,6 +229,7 @@ rec {
             "suspend-then-hibernate.target"
             "sysinit.target"
             "systemd-sysusers.service"
+            "systemd-tmpfiles-setup.service"
           ];
 
           userServices =
