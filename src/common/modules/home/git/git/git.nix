@@ -195,6 +195,7 @@ args@{
 
           commit = {
             verbose = true;
+            gpgSign = gpgKey != null;
           };
 
           interactive = {
