@@ -334,13 +334,13 @@ check_git_worktrees_clean() {
         echo >&2
 
         if [[ "$main_dirty" == true ]]; then
-            echo -e "${WHITE}Main repository (.config/nx/nxcore):${RESET}" >&2
+            echo -e "${RED}Main repository (.config/nx/nxcore):${RESET}" >&2
             git status --porcelain >&2
             echo >&2
         fi
 
         if [[ "$config_dirty" == true ]]; then
-            echo -e "${WHITE}Config repository (.config/nx/nxconfig):${RESET}" >&2
+            echo -e "${RED}Config repository (.config/nx/nxconfig):${RESET}" >&2
             (cd "$CONFIG_DIR" && git status --porcelain) >&2
             echo >&2
         fi
