@@ -36,6 +36,7 @@ _nx() {
                 'add:Run git add command'
                 'addp:Run git add command with --patch'
                 'stash:Run git stash command'
+                'switch-branch:Switch git branches with safety checks'
                 'impermanence:Manage ephemeral root filesystems'
                 'spec:Manage specializations'
                 'modules:Manage and inspect NX modules'
@@ -111,12 +112,13 @@ _nx() {
                             ;;
                     esac
                     ;;
-                log|head|diff|diffc|status|commit|pull|push|add|addp|stash)
+                log|head|diff|diffc|status|commit|pull|push|add|addp|stash|switch-branch)
                     case $CURRENT in
                         2)
                             _arguments \
                                 '--only-core[Run only on core repository]' \
-                                '--only-config[Run only on config repository]'
+                                '--only-config[Run only on config repository]' \
+                                '*:branch name:_message "branch name"'
                             ;;
                     esac
                     ;;

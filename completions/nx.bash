@@ -1,7 +1,7 @@
 _complete_nx() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local commands="profile sync build gc update brew dry test boot rollback news config core format exec log head diff diffc status commit pull push add addp stash impermanence spec modules eval package version dist-upgrade"
+    local commands="profile sync build gc update brew dry test boot rollback news config core format exec log head diff diffc status commit pull push add addp stash switch-branch impermanence spec modules eval package version dist-upgrade"
     
     if [[ ${COMP_CWORD} -eq 1 ]]; then
         COMPREPLY=($(compgen -W "${commands} --help --version" -- "${cur}"))
@@ -22,7 +22,7 @@ _complete_nx() {
             rollback)
                 COMPREPLY=($(compgen -W "--allow-dirty-git" -- "${cur}"))
                 ;;
-            log|head|diff|diffc|status|commit|pull|push|add|addp|stash)
+            log|head|diff|diffc|status|commit|pull|push|add|addp|stash|switch-branch)
                 COMPREPLY=($(compgen -W "--only-core --only-config" -- "${cur}"))
                 ;;
             impermanence)
