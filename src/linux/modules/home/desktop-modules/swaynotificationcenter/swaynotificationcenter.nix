@@ -20,6 +20,7 @@ args@{
     {
       home.packages = with pkgs; [
         swaynotificationcenter
+        libnotify
       ];
 
       home.file.".local/bin/scripts/toggle-dnd" = {
