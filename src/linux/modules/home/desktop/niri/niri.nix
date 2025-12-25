@@ -118,6 +118,7 @@ args@{
   };
 
   settings = {
+    disableNewAppSwitcher = true;
     addRestartShortcut = false;
     screenshotBasePictureDir = "screenshots";
     mainDisplayScale = 1.0;
@@ -893,6 +894,14 @@ args@{
               );
 
               actualBindings = {
+                "Alt+Tab" = lib.mkIf self.settings.disableNewAppSwitcher {
+                  action = spawn-sh "nop";
+                };
+
+                "Alt+Shift+Tab" = lib.mkIf self.settings.disableNewAppSwitcher {
+                  action = spawn-sh "nop";
+                };
+
                 "Mod+Return" = {
                   action = spawn-sh self.user.settings.terminal;
                   hotkey-overlay.title = "Apps:Terminal";
