@@ -313,12 +313,18 @@ rec {
       contextFuncs =
         if moduleType == "home" then
           {
-            user = moduleContext.user // (lib.mapAttrs (name: func: func moduleContext) moduleFuncs.userFuncs);
+            user = moduleContext.user;
           }
         else
           {
-            host = moduleContext.host // (lib.mapAttrs (name: func: func moduleContext) moduleFuncs.hostFuncs);
+            host = moduleContext.host;
           };
+
+      directContextFuncs =
+        if moduleType == "home" then
+          lib.mapAttrs (name: func: func moduleContext) moduleFuncs.userFuncs
+        else
+          lib.mapAttrs (name: func: func moduleContext) moduleFuncs.hostFuncs;
 
       hierarchicalFuncs = moduleFuncs.hierarchicalInputFuncs moduleContext moduleContext.moduleBasePath;
 
@@ -332,7 +338,12 @@ rec {
             persist = moduleContext.variables.persist.system;
           };
     in
-    moduleContext // appliedCommonFuncs // contextFuncs // hierarchicalFuncs // persistShortcut;
+    moduleContext
+    // appliedCommonFuncs
+    // contextFuncs
+    // directContextFuncs
+    // hierarchicalFuncs
+    // persistShortcut;
 
   importHomeModule =
     args: moduleSpec: allProcessedModules:

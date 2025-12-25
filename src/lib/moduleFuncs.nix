@@ -303,11 +303,9 @@ rec {
 
   };
 
-  userFuncs = {
-  };
+  userFuncs = { };
 
-  hostFuncs = {
-  };
+  hostFuncs = { };
 
   # Create context-aware function wrapper with error handling
   # Usage: createContextFunctions $INPUTNAME $NAMESPACE $MODULECONTEXT $MODULEBASEPATH
