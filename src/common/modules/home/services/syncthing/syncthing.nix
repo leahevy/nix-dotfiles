@@ -122,7 +122,7 @@ args@{
                 echo "Database migration still in progress... (waited $i seconds)"
               fi
 
-              sleep 1
+              ${pkgs.coreutils}/bin/sleep 1
             done
             echo "ERROR: Syncthing API did not become available within 15 minutes"
             exit 1
