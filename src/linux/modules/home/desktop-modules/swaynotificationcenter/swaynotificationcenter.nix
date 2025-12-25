@@ -201,23 +201,35 @@ args@{
         '';
       };
 
+      systemd.user.services.swaync = lib.mkForce {
+        Install.WantedBy = lib.mkForce [ ];
+      };
+
       systemd.user.services.nx-swaynotificationcenter = {
         Unit = {
           Description = "SwayNotificationCenter notification daemon";
           PartOf = [ "graphical-session.target" ];
           After = [ "graphical-session.target" ];
+          ConditionEnvironment = [ "WAYLAND_DISPLAY" ];
         };
 
         Service = {
           ExecStart = "${pkgs.swaynotificationcenter}/bin/swaync";
           ExecStartPost = "${pkgs.bash}/bin/bash -c 'sleep 2 && ${pkgs.swaynotificationcenter}/bin/swaync-client -df'";
-          ExecReload = "${pkgs.swaynotificationcenter}/bin/swaync-client --reload-config && ${pkgs.swaynotificationcenter}/bin/swaync-client --reload-css";
+          ExecReload = "${pkgs.swaynotificationcenter}/bin/swaync-client --reload-config; ${pkgs.swaynotificationcenter}/bin/swaync-client --reload-css";
           Environment = [
             "GTK_IM_MODULE=wayland"
+            "GSK_RENDERER=gl"
+          ];
+          PassEnvironment = [
+            "XDG_CONFIG_HOME"
+            "XDG_DATA_HOME"
+            "XDG_DATA_DIRS"
           ];
           Restart = "on-failure";
           RestartSec = "1";
-          Type = "simple";
+          Type = "dbus";
+          BusName = "org.freedesktop.Notifications";
         };
 
         Install = {
