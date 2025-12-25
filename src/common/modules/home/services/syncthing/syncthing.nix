@@ -136,13 +136,14 @@ args@{
         overrideFolders = true;
         guiAddress = "127.0.0.1:${builtins.toString self.settings.guiPort}";
         passwordFile = config.sops.secrets."${self.host.hostname}-syncthing-password".path;
-        extraOptions = [ "--no-default-folder" ];
+        extraOptions = [ ];
         tray.enable = self.settings.trayEnabled;
         key = "${config.sops.secrets."${self.host.hostname}-syncthing-key".path}";
         cert = "${config.sops.secrets."${self.host.hostname}-syncthing-cert".path}";
         settings = {
           options.urAccepted = -1;
           options.relaysEnabled = false;
+          options.natEnabled = false;
           options.localAnnounceEnabled = self.settings.announceEnabled;
           devices = {
             "${self.settings.syncName}" = {
@@ -286,6 +287,12 @@ args@{
                               echo "$message_hash" >> "$seen_messages_file"
 
                               case "$message" in
+                                  *"NAT-PMP"*|*"UPnP"*)
+                                      # Ignore NAT-PMP and UPnP messages
+                                      ;;
+                                  *"INF Lost device connection"*|*"INF Connection closed"*)
+                                      # Ignore lost device connection info messages
+                                      ;;
                                   *"ERROR"*|*"error"*|*"Error"*)
                                       notify "critical" "Syncthing Error" "$message"
                                       ;;
