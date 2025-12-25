@@ -222,8 +222,35 @@ args@{
 
           <span font_size="6000" foreground="${highlightMainColor}">$(fastfetch --pipe --structure "NoLogo" | sed 's/\x1b\[[0-9;]*m//g' | sed 's/\x1b\[[0-9]*[A-Za-z]//g')</span>
 
-          <span font_size="9000" foreground="${highlightSecondColor}">$(fastfetch --pipe --logo-type none --terminal-format "${self.settings.usedTerminal}" --shell-format "${self.settings.usedShell}" --localip-show-ipv4 false --localip-show-ipv6 false | tail +3 | sed 's/\x1b\[[0-9;]*m//g' | sed 's/\x1b\[[0-9]*[A-Za-z]//g')</span>
+          <span font_size="9000" foreground="${highlightSecondColor}">$(fastfetch --pipe --logo-type none --config "${self.user.home}/.config/nwg-wrapper/details-config.json" | sed 's/\x1b\[[0-9;]*m//g' | sed 's/\x1b\[[0-9]*[A-Za-z]//g')</span>
           EOF
+        '';
+      };
+
+      home.file.".config/nwg-wrapper/details-config.json" = {
+        text = ''
+          {
+            "modules": [
+              { "type": "os" },
+              { "type": "kernel" },
+              { "type": "uptime" },
+              { "type": "packages" },
+              { "type": "shell", "format": "${self.settings.usedShell}" },
+              { "type": "display" },
+              { "type": "wm" },
+              { "type": "theme" },
+              { "type": "icons" },
+              { "type": "font" },
+              { "type": "cursor" },
+              { "type": "terminal", "format": "${self.settings.usedTerminal}" },
+              { "type": "cpu" },
+              { "type": "gpu" },
+              { "type": "memory" },
+              { "type": "swap" },
+              { "type": "disk" },
+              { "type": "locale" }
+            ]
+          }
         '';
       };
 
