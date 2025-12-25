@@ -24,7 +24,7 @@ args@{
       ];
 
       programs.git = {
-        extraConfig.credential = {
+        settings.credential = {
           helper = "manager";
           credentialStore = "gpg";
         };

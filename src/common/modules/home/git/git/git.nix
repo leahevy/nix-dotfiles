@@ -44,16 +44,18 @@ args@{
       programs.git = {
         enable = true;
 
-        userName = helpers.ifSet (self.settings.name or null) self.user.fullname;
-        userEmail = helpers.ifSet (self.settings.email or null) self.user.email;
+        settings = {
+          user = {
+            name = helpers.ifSet (self.settings.name or null) self.user.fullname;
+            email = helpers.ifSet (self.settings.email or null) self.user.email;
+          };
 
-        signing = {
-          key = gpgKey;
-          signByDefault = gpgKey != null;
-          format = "openpgp";
-        };
+          signing = {
+            key = gpgKey;
+            signByDefault = gpgKey != null;
+            format = "openpgp";
+          };
 
-        extraConfig = {
           init = {
             defaultBranch = "main";
           };
@@ -133,7 +135,6 @@ args@{
             };
 
             ui = "auto";
-
           };
 
           format = {
@@ -241,56 +242,60 @@ args@{
           http = {
             postBuffer = "157286400";
           };
-        };
 
-        difftastic = lib.mkIf self.settings.useDifftastic {
-          enable = true;
-          display = "inline";
-          color = "always";
+          alias = {
+            co = "checkout";
+            br = "branch";
+            ci = "commit";
+            st = "status";
+            addp = "add --patch";
+            clean-all = "clean -fdx";
+            c = "clean -fdX";
+            clean-ignored = "clean -fdX";
+            reset-full = "!f() { git clean -fdx; git checkout .; } ; f";
+            pack-create = "!f() { git bundle create \$1 --all; git bundle verify \$1; } ; f";
+            pack-create-with-stash = "!f() { git bundle create \$1 refs/stash --all; git bundle verify \$1; } ; f";
+            pack-fetch-with-stash = "!f() { git fetch \$1 refs/stash; git stash apply FETCH_HEAD; } ; f";
+            config-grep = "!f() { git config --get-regexp '.*' | grep \"\$1\" | bat; } ; f";
+            aliases = "!git config --get-regexp alias | sed -re 's/alias\\.(\\S*)\\s(.*)$/\\1 = \\2/g'";
+            lg = "log --date=relative --pretty=tformat:'%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%an %ad)%Creset %Cred[%G?]%Creset'";
+            l = "log --date=relative --pretty=tformat:'%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%an %ad)%Creset %Cred[%G?]%Creset'";
+            g = "!f() { git log --graph --pretty=format:'%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset %Cred[%G?]%Creset' --date=relative \$@; } ; f";
+            graph = "!f() { git log --graph --pretty=format:'%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset %Cred[%G?]%Creset' --date=relative \$@; } ; f";
+            push-all = "!f() { git push --follow-tags \$@; } ; f";
+            y = "diff \"@{yesterday}\"";
+            w = "whatchanged";
+            whatadded = "log --diff-filter=A --";
+            dc = "diff --cached";
+            d = "diff";
+            a = "add --patch";
+            diffc = "diff --cached";
+            head = "show HEAD";
+            h = "show HEAD";
+            patch-create = "format-patch -k --stdout";
+            patch-create-head = "format-patch -k --stdout HEAD~1";
+            patch-apply = "am -3 -k";
+            rebase-origin = "rebase -i origin/HEAD";
+            amendfiles = "commit --amend --no-edit";
+            review-local = "!git lg @{push}..";
+            reword = "commit --amend";
+            uncommit = "reset --soft HEAD~1";
+            unstage = "reset";
+            untrack = "rm --cache --";
+            conflicts = "diff --name-only --diff-filter=U";
+          };
+        };
+      };
+
+      programs.difftastic = lib.mkIf self.settings.useDifftastic {
+        enable = true;
+        git = {
+          diffToolMode = true;
+        };
+        options = {
           background = "dark";
-          enableAsDifftool = true;
-        };
-
-        aliases = {
-          co = "checkout";
-          br = "branch";
-          ci = "commit";
-          st = "status";
-          addp = "add --patch";
-          clean-all = "clean -fdx";
-          c = "clean -fdX";
-          clean-ignored = "clean -fdX";
-          reset-full = "!f() { git clean -fdx; git checkout .; } ; f";
-          pack-create = "!f() { git bundle create \$1 --all; git bundle verify \$1; } ; f";
-          pack-create-with-stash = "!f() { git bundle create \$1 refs/stash --all; git bundle verify \$1; } ; f";
-          pack-fetch-with-stash = "!f() { git fetch \$1 refs/stash; git stash apply FETCH_HEAD; } ; f";
-          config-grep = "!f() { git config --get-regexp '.*' | grep \"\$1\" | bat; } ; f";
-          aliases = "!git config --get-regexp alias | sed -re 's/alias\\.(\\S*)\\s(.*)$/\\1 = \\2/g'";
-          lg = "log --date=relative --pretty=tformat:'%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%an %ad)%Creset %Cred[%G?]%Creset'";
-          l = "log --date=relative --pretty=tformat:'%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%an %ad)%Creset %Cred[%G?]%Creset'";
-          g = "!f() { git log --graph --pretty=format:'%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset %Cred[%G?]%Creset' --date=relative \$@; } ; f";
-          graph = "!f() { git log --graph --pretty=format:'%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset %Cred[%G?]%Creset' --date=relative \$@; } ; f";
-          push-all = "!f() { git push --follow-tags \$@; } ; f";
-          y = "diff \"@{yesterday}\"";
-          w = "whatchanged";
-          whatadded = "log --diff-filter=A --";
-          dc = "diff --cached";
-          d = "diff";
-          a = "add --patch";
-          diffc = "diff --cached";
-          head = "show HEAD";
-          h = "show HEAD";
-          patch-create = "format-patch -k --stdout";
-          patch-create-head = "format-patch -k --stdout HEAD~1";
-          patch-apply = "am -3 -k";
-          rebase-origin = "rebase -i origin/HEAD";
-          amendfiles = "commit --amend --no-edit";
-          review-local = "!git lg @{push}..";
-          reword = "commit --amend";
-          uncommit = "reset --soft HEAD~1";
-          unstage = "reset";
-          untrack = "rm --cache --";
-          conflicts = "diff --name-only --diff-filter=U";
+          color = "always";
+          display = "inline";
         };
       };
 
