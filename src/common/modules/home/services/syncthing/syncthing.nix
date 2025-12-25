@@ -31,7 +31,7 @@ args@{
     folderBasedMonitoringDeviceSyncInterval = 10;
     folderBasedMonitoringFolderInterval = 30;
     folderBasedMonitoringInitialDelay = 45;
-    enableHotfixForUpgradeToSyncthing2_0 = true;
+    enableHotfixForUpgradeToSyncthing2_0 = false;
   };
 
   assertions = [
