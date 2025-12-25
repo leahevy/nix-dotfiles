@@ -127,6 +127,154 @@ rec {
     else
       throw "Cannot create symlink for non-local input '${inputName}'";
 
+  # Validate systemd unit references in configuration
+  # Usage: validateSystemdReferences { config, architecture, context, osConfig ? {} }
+  validateSystemdReferences =
+    {
+      config,
+      architecture,
+      context,
+      osConfig ? { },
+    }:
+    let
+      isLinux = isLinuxArch architecture;
+
+      systemdConfig = if context == "system" then config.systemd or { } else config.systemd.user or { };
+
+      osSystemdUserConfig =
+        if context == "user" && osConfig != { } && isLinux then osConfig.systemd.user or { } else { };
+
+      extractSystemdReferences =
+        config:
+        let
+          extractFromAttr =
+            attr:
+            if builtins.isString attr then
+              if lib.hasSuffix ".service" attr then
+                [ attr ]
+              else if lib.hasSuffix ".target" attr then
+                [ attr ]
+              else if lib.hasSuffix ".timer" attr then
+                [ attr ]
+              else
+                [ ]
+            else if builtins.isList attr then
+              lib.flatten (map extractFromAttr attr)
+            else if builtins.isAttrs attr then
+              lib.flatten (lib.mapAttrsToList (_: v: extractFromAttr v) attr)
+            else
+              [ ];
+
+          currentSystemdConfig =
+            if context == "system" then config.systemd or { } else config.systemd.user or { };
+
+          extractFromService =
+            service:
+            if context == "system" then
+              extractFromAttr (service.after or [ ])
+              ++ extractFromAttr (service.requires or [ ])
+              ++ extractFromAttr (service.wants or [ ])
+              ++ extractFromAttr (service.wantedBy or [ ])
+            else
+              extractFromAttr (service.Unit.After or [ ])
+              ++ extractFromAttr (service.Unit.Requires or [ ])
+              ++ extractFromAttr (service.Unit.Wants or [ ])
+              ++ extractFromAttr (service.Install.WantedBy or [ ]);
+
+          extractFromTimer =
+            timer:
+            if context == "system" then
+              extractFromAttr (timer.wantedBy or [ ])
+            else
+              extractFromAttr (timer.Install.WantedBy or [ ]);
+
+          serviceRefs = lib.flatten (
+            lib.mapAttrsToList (_: service: extractFromService service) (currentSystemdConfig.services or { })
+          );
+          timerRefs = lib.flatten (
+            lib.mapAttrsToList (_: timer: extractFromTimer timer) (currentSystemdConfig.timers or { })
+          );
+        in
+        lib.unique (serviceRefs ++ timerRefs);
+
+      validateReferences =
+        references:
+        let
+          genericUnits = [
+            "basic.target"
+            "default.target"
+            "network.target"
+            "paths.target"
+            "shutdown.target"
+            "sockets.target"
+            "timers.target"
+          ];
+
+          userUnits = [
+            "graphical-session.target"
+            "niri.service"
+          ];
+
+          baseSystemUnits = [
+            "bluetooth.target"
+            "graphical.target"
+            "halt.target"
+            "kexec.target"
+            "network-online.target"
+            "network-pre.target"
+            "nss-lookup.target"
+            "nss-user-lookup.target"
+            "poweroff.target"
+            "reboot.target"
+            "suspend-then-hibernate.target"
+            "sysinit.target"
+            "systemd-sysusers.service"
+          ];
+
+          userServices =
+            if context == "system" then
+              map (user: "user@${toString user.uid}.service") (builtins.attrValues (config.users.users or { }))
+            else
+              [ ];
+
+          systemUnits = baseSystemUnits ++ userServices;
+
+          knownUnits = genericUnits ++ (if context == "system" then systemUnits else userUnits);
+
+          isKnownUnit = ref: builtins.elem ref knownUnits;
+          checkReference =
+            ref:
+            if isKnownUnit ref then
+              true
+            else if lib.hasSuffix ".service" ref then
+              let
+                unitName = lib.removeSuffix ".service" ref;
+              in
+              (systemdConfig.services or { }) ? ${unitName} || (osSystemdUserConfig.services or { }) ? ${unitName}
+            else if lib.hasSuffix ".target" ref then
+              let
+                unitName = lib.removeSuffix ".target" ref;
+              in
+              (systemdConfig.targets or { }) ? ${unitName} || (osSystemdUserConfig.targets or { }) ? ${unitName}
+            else if lib.hasSuffix ".timer" ref then
+              let
+                unitName = lib.removeSuffix ".timer" ref;
+              in
+              (systemdConfig.timers or { }) ? ${unitName} || (osSystemdUserConfig.timers or { }) ? ${unitName}
+            else
+              true;
+
+          invalidRefs = builtins.filter (ref: !(checkReference ref)) references;
+        in
+        {
+          assertion = invalidRefs == [ ];
+          message = "SystemD ${context} units referenced but not found: ${builtins.concatStringsSep ", " invalidRefs}";
+        };
+
+      systemdRefs = extractSystemdReferences config;
+    in
+    if isLinux && systemdRefs != [ ] then [ (validateReferences systemdRefs) ] else [ ];
+
   # Create MacOS .app application bundle
   # Usage: createTerminalDarwinApp pkgs { name, terminalApp, execArgs, icon ? null }
   createTerminalDarwinApp =

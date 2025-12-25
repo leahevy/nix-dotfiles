@@ -117,3 +117,4 @@ installed system during the live ISO installation process.
 - `nx add`: Runs the git add command.
 - `nx addp`: Runs the git add command with --patch.
 - `nx stash`: Runs the git stash command.
+- `nx switch-branch`: Switches the git branch.

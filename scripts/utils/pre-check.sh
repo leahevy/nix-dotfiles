@@ -125,6 +125,13 @@ parse_common_deployment_args() {
     ALLOW_DIRTY_GIT=false
     SKIP_VERIFICATION=false
 
+    echo -e "${CYAN}Active branches:${RESET}"
+    echo -e "  ${WHITE}nxcore:${RESET} ${YELLOW}$(git branch --show-current)${RESET}"
+    if [[ -n "${CONFIG_DIR:-}" ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
+        echo -e "  ${WHITE}nxconfig:${RESET} ${YELLOW}$(cd "$CONFIG_DIR" && git branch --show-current)${RESET}"
+    fi
+    echo
+
     while [[ $# -gt 0 ]]; do
         case "${1:-}" in
             --offline)
@@ -164,6 +171,13 @@ parse_build_deployment_args() {
     DRY_RUN=""
     BUILD_DIFF=false
     SKIP_VERIFICATION=false
+
+    echo -e "${CYAN}Active branches:${RESET}"
+    echo -e "  ${WHITE}nxcore:${RESET} ${YELLOW}$(git branch --show-current)${RESET}"
+    if [[ -n "${CONFIG_DIR:-}" ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
+        echo -e "  ${WHITE}nxconfig:${RESET} ${YELLOW}$(cd "$CONFIG_DIR" && git branch --show-current)${RESET}"
+    fi
+    echo
 
     while [[ $# -gt 0 ]]; do
         case "${1:-}" in
@@ -320,13 +334,13 @@ check_git_worktrees_clean() {
         echo >&2
 
         if [[ "$main_dirty" == true ]]; then
-            echo -e "${WHITE}Main repository (.config/nx/nxcore):${RESET}" >&2
+            echo -e "${RED}Main repository (.config/nx/nxcore):${RESET}" >&2
             git status --porcelain >&2
             echo >&2
         fi
 
         if [[ "$config_dirty" == true ]]; then
-            echo -e "${WHITE}Config repository (.config/nx/nxconfig):${RESET}" >&2
+            echo -e "${RED}Config repository (.config/nx/nxconfig):${RESET}" >&2
             (cd "$CONFIG_DIR" && git status --porcelain) >&2
             echo >&2
         fi

@@ -65,6 +65,7 @@ Commands:
     diff            # Runs the git diff command.
     diffc           # Runs the git diff command with --cached.
     status          # Runs the git status command.
+    switch-branch   # Switches the git branch.
     commit          # Runs the git commit command.
     pull            # Runs the git pull command.
     push            # Runs the git push command.

@@ -791,7 +791,16 @@ args@{
                 modulePath = "notifications.pushover";
               }).custom.pushoverSendScript
             ];
-        script = logScript "err" "FAILURE: Auto-upgrade failed!";
+        script = ''
+          if [[ -f "/tmp/nx-auto-upgrade-failure-reason" ]]; then
+            reason=$(${pkgs.coreutils}/bin/cat /tmp/nx-auto-upgrade-failure-reason)
+            ${pkgs.coreutils}/bin/rm -f /tmp/nx-auto-upgrade-failure-reason
+            if [[ "$reason" == "another-deployment-running" ]]; then
+              exit 0
+            fi
+          fi
+          ${logScript "err" "FAILURE: Auto-upgrade failed!"}
+        '';
       };
 
       systemd.services.nx-auto-upgrade-notify = {
@@ -895,6 +904,7 @@ args@{
             cleanup_paths=("$lock_dir")
 
             if [[ -d "$lock_dir" ]]; then
+              ${pkgs.coreutils}/bin/echo "another-deployment-running" > /tmp/nx-auto-upgrade-failure-reason
               ${logScript "err" "FAILURE: Another deployment is already running!"}
               exit 1
             fi
