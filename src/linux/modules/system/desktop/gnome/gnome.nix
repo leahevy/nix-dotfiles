@@ -38,15 +38,15 @@ args@{
   configuration =
     context@{ config, options, ... }:
     {
-      services.xserver.displayManager.gdm.enable = true;
-      services.xserver.desktopManager.gnome.enable = true;
+      services.displayManager.gdm.enable = true;
+      services.desktopManager.gnome.enable = true;
 
-      services.xserver.desktopManager.gnome.extraGSettingsOverrides = ''
+      services.desktopManager.gnome.extraGSettingsOverrides = ''
         [org.gnome.shell]
         welcome-dialog-last-shown-version='999.999'
       '';
 
-      services.xserver.desktopManager.plasma5.excludePackages = with pkgs.libsForQt5; [
+      services.desktopManager.plasma5.excludePackages = with pkgs.libsForQt5; [
         plasma-welcome
       ];
     };
