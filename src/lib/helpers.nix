@@ -215,7 +215,7 @@ rec {
             "niri.service"
           ];
 
-          systemUnits = [
+          baseSystemUnits = [
             "bluetooth.target"
             "graphical.target"
             "halt.target"
@@ -229,8 +229,15 @@ rec {
             "suspend-then-hibernate.target"
             "sysinit.target"
             "systemd-sysusers.service"
-            "user@1000.service"
           ];
+
+          userServices =
+            if context == "system" then
+              map (user: "user@${toString user.uid}.service") (builtins.attrValues (config.users.users or { }))
+            else
+              [ ];
+
+          systemUnits = baseSystemUnits ++ userServices;
 
           knownUnits = genericUnits ++ (if context == "system" then systemUnits else userUnits);
 
