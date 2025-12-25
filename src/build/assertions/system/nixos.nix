@@ -46,5 +46,10 @@ args@{
       };
     in
     map evaluateModuleAssertions systemModuleAssertions
-  );
+  )
+  ++ (helpers.validateSystemdReferences {
+    config = config;
+    architecture = host.architecture;
+    context = "system";
+  });
 }

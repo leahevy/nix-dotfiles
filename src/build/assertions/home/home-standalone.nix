@@ -42,5 +42,10 @@ args@{
       assertion = user.settings.desktop == null || user.settings.terminal != null;
       message = "If desktop environment is configured, terminal must also be configured in user.settings.terminal.";
     }
-  ];
+  ]
+  ++ (helpers.validateSystemdReferences {
+    config = config;
+    architecture = user.architecture;
+    context = "user";
+  });
 }
