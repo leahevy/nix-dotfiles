@@ -59,7 +59,12 @@ args@{
 
         settings = {
           add_newline = true;
-          format = "\n[┌─](fg:${self.theme.colors.separators.ultraDark.html})$time[$fill](fg:${self.theme.colors.separators.ultraDark.html})$status$cmd_duration[───┐](fg:${self.theme.colors.separators.ultraDark.html})\n[│](fg:${self.theme.colors.separators.ultraDark.html}) [$fill](fg:${self.theme.colors.terminal.normalBackgrounds.primary.html})$os$shell$username$hostname$all\n[└───](fg:${self.theme.colors.separators.ultraDark.html})$directory$character";
+          format = lib.concatStringsSep "\n" [
+            ""
+            "[┌─](fg:${self.theme.colors.separators.ultraDark.html})$time[$fill](fg:${self.theme.colors.separators.ultraDark.html})$status$cmd_duration[────](fg:${self.theme.colors.separators.ultraDark.html})"
+            "[│](fg:${self.theme.colors.separators.ultraDark.html}) $os$shell$username$hostname$all"
+            "[└───](fg:${self.theme.colors.separators.ultraDark.html})$directory$character"
+          ];
           right_format = "";
 
           time = {
