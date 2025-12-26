@@ -591,14 +591,12 @@ args@{
           };
         };
 
-        nx-swaynotificationcenter =
-          lib.mkIf (self.isModuleEnabled "desktop-modules.swaynotificationcenter")
-            {
-              Unit = {
-                PartOf = [ "niri.service" ];
-                After = [ "niri.service" ];
-              };
-            };
+        swaync = lib.mkIf (self.isModuleEnabled "desktop-modules.swaynotificationcenter") {
+          Unit = {
+            PartOf = [ "niri.service" ];
+            After = [ "niri.service" ];
+          };
+        };
 
         mako = lib.mkIf (self.isModuleEnabled "desktop-modules.mako") {
           Unit = {
