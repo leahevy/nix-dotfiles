@@ -74,9 +74,9 @@ args@{
             "notification-body-image-width" = 200;
             "notification-inline-replies" = true;
             "ignore-gtk-theme" = false;
-            "timeout" = 60;
-            "timeout-low" = 60;
-            "timeout-critical" = 300;
+            "timeout" = 130;
+            "timeout-low" = 130;
+            "timeout-critical" = 130;
             "notification-window-width" = 500;
             "keyboard-shortcuts" = true;
             "image-visibility" = "when-available";
