@@ -27,6 +27,7 @@
 - [ ] 14. Check impermanence diffs with `nx impermanence diff --home` and `nx impermanence diff --system`
 - [ ] 15. Push the feature branches: `nx push`
 - [ ] 16. Change back to the **main** branch: `nx switch-branch main`
-- [ ] 17. Merge the feature branches into main
-- [ ] 18. Push main branch: `nx push`
-- [ ] 19. Tag with `git tag -a nixos-<TARGET_VERSION> -m "NixOS <TARGET_VERSION>"` and push with `git push --tags`
+- [ ] 17. Tag main branch before the upgrade `git tag -a nixos-<TARGET_VERSION>-pre-upgrade -m "NixOS <OLD_VERSION> before upgrading to <TARGET_VERSION>"` and push with `git push --tags`
+- [ ] 18. Merge the feature branches into main
+- [ ] 19. Push main branch: `nx push`
+- [ ] 20. Tag with `git tag -a nixos-<TARGET_VERSION> -m "NixOS <TARGET_VERSION>"` and push with `git push --tags`
