@@ -162,6 +162,8 @@ args@{
       "Ignoring duplicate name"
       "gtk_widget_"
       "gtk.*: assertion .* failed"
+      "g_object_ref: assertion .* failed"
+      "animated_list_item_get_destroying: assertion .* failed"
       "Realtime error: Could not get pidns for pid [0-9]+: Could not fstatat ns/pid: Not a directory"
       "unhandled exception.*in Json::Value::find.*requires objectValue or nullValue"
       "kf\\.config\\.core: couldn't lock global file"
