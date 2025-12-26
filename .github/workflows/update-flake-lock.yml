@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       UPDATE_INPUTS: "nixpkgs,home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable"
-      EXCLUDE_FROM_REBOOT_CHECK: "nixpkgs-unstable"
+      EXCLUDE_FROM_REBOOT_CHECK: "home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable"
       REPO_nixpkgs: "NixOS/nixpkgs"
       REPO_home_manager: "nix-community/home-manager"
       REPO_stylix: "nix-community/stylix"
