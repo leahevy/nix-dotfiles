@@ -66,7 +66,7 @@ args@{
         enable = true;
         settings = rec {
           initial_session = {
-            command = "${pkgs.uwsm}/bin/uwsm start ${self.settings.package}/bin/${self.settings.cmdline}";
+            command = "${pkgs.systemd}/bin/systemd-cat -t uwsm_start ${pkgs.uwsm}/bin/uwsm start ${self.settings.package}/bin/${self.settings.cmdline}";
             user = self.host.mainUser.username;
           };
           default_session = initial_session;
