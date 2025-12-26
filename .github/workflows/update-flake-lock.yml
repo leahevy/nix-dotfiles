@@ -39,7 +39,7 @@ jobs:
             input_var=$(echo "$input" | tr '-' '_')
             node=$(get_lockfile_node "$input")
             if [ "$node" != "null" ]; then
-              old_commit=$(nix flake metadata --json . | jq -r ".locks.nodes.$node.locked.rev")
+              old_commit=$(nix flake metadata --json . | jq -r --arg node "$node" '.locks.nodes[$node].locked.rev')
               echo "OLD_COMMIT_$input_var=$old_commit" >> $GITHUB_ENV
               echo "Input $input: current commit $old_commit"
             fi
@@ -151,7 +151,7 @@ jobs:
             repo=$(get_repo "$input")
 
             if [ "$node" != "null" ] && [ -n "$repo" ]; then
-              new_commit=$(nix flake metadata --json . | jq -r ".locks.nodes.$node.locked.rev")
+              new_commit=$(nix flake metadata --json . | jq -r --arg node "$node" '.locks.nodes[$node].locked.rev')
               old_commit_var="OLD_COMMIT_$input_var"
               old_commit="${!old_commit_var:-}"
 
