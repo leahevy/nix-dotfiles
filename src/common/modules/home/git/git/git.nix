@@ -291,6 +291,7 @@ args@{
       programs.difftastic = lib.mkIf self.settings.useDifftastic {
         enable = true;
         git = {
+          enable = true;
           diffToolMode = true;
         };
         options = {
