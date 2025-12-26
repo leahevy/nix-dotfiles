@@ -29,3 +29,4 @@
 - [ ] 16. Change back to the **main** branch: `nx switch-branch main`
 - [ ] 17. Merge the feature branches into main
 - [ ] 18. Push main branch: `nx push`
+- [ ] 19. Tag with `nixos-<TARGET_VERSION>` and push tags
