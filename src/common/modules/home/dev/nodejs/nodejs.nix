@@ -24,6 +24,10 @@ args@{
 
   configuration =
     context@{ config, options, ... }:
+    let
+      minPackages = [ "npm" ];
+      combinedPackages = self.settings.basePackages ++ self.settings.additionalPackages;
+    in
     {
       home.packages =
         with pkgs;
@@ -31,9 +35,9 @@ args@{
           (lib.lowPrio nodejs)
           yarn
         ]
-        ++ (map (pkg: pkgs.nodePackages.${pkg}) (
-          self.settings.basePackages ++ self.settings.additionalPackages
-        ));
+        ++ lib.optionals (combinedPackages != minPackages) (
+          map (pkg: pkgs.nodePackages.${pkg}) (combinedPackages)
+        );
 
       home.persistence."${self.persist}" = {
         directories = [
