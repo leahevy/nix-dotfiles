@@ -29,6 +29,7 @@ args@{
         kernelParams = [
           "splash"
           "quiet"
+          "loglevel=3"
           "boot.shell_on_fail"
           "udev.log_priority=3"
           "intremap=on"
