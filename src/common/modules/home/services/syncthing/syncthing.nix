@@ -240,7 +240,7 @@ args@{
               local body="''${3:-No body}"
 
               echo "Sending notification: [$urgency] $summary - $body"
-              $NOTIFY_SEND --urgency="$urgency" --icon=folder-sync "$summary" "$body"
+              $NOTIFY_SEND --urgency="$urgency" --icon=syncthing "$summary" "$body"
           }
 
           check_service_status() {
@@ -473,6 +473,7 @@ args@{
                   local summary="$2"
                   local body="$3"
                   local icon="$4"
+                  icon="syncthing"
 
                   echo "Sending notification: [$urgency] $summary - $body"
                   notify-send --urgency="$urgency" --icon="$icon" "$summary" "$body"
