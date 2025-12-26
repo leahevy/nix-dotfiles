@@ -28,7 +28,7 @@ jobs:
           set -euo pipefail
 
           get_lockfile_node() {
-            nix flake metadata --json . | jq -r ".locks.nodes.root.inputs.$1"
+            nix flake metadata --json . | jq -r --arg input "$1" '.locks.nodes.root.inputs[$input]'
           }
 
           IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
@@ -80,7 +80,7 @@ jobs:
           set -euo pipefail
 
           get_lockfile_node() {
-            nix flake metadata --json . | jq -r ".locks.nodes.root.inputs.$1"
+            nix flake metadata --json . | jq -r --arg input "$1" '.locks.nodes.root.inputs[$input]'
           }
 
           get_repo() {
