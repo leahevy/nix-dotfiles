@@ -45,7 +45,10 @@ args@{
           (final: prev: {
             vimPlugins = prev.vimPlugins // {
               obsidian-nvim = prev.vimPlugins.obsidian-nvim.overrideAttrs (oldAttrs: {
-                nvimSkipModules = (oldAttrs.nvimSkipModules or [ ]) ++ [ "obsidian.pickers._fzf" ];
+                nvimSkipModules = (oldAttrs.nvimSkipModules or [ ]) ++ [
+                  "obsidian.pickers._fzf"
+                  "obsidian.picker._fzf"
+                ];
               });
             };
           })
