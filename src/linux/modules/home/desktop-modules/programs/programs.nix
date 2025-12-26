@@ -131,7 +131,10 @@ in
         package = pkgs.gimp;
         desktopFile = "gimp.desktop";
       };
-      additionalPackages = [ pkgs.xdg-desktop-portal ];
+      additionalPackages = [
+        pkgs.xdg-desktop-portal
+        pkgs.libnotify
+      ];
       additionalKDEPackages = [
         kde.qttools
         kde.xdg-desktop-portal-kde
