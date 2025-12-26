@@ -31,6 +31,7 @@ args@{
     folderBasedMonitoringDeviceSyncInterval = 10;
     folderBasedMonitoringFolderInterval = 30;
     folderBasedMonitoringInitialDelay = 45;
+    enableHotfixForUpgradeToSyncthing2_0 = false;
   };
 
   assertions = [
@@ -89,19 +90,60 @@ args@{
         }
       ];
 
+      # Hotfix for Syncthing v1.x -> v2.0 database migration race condition
+      # Source: https://github.com/NixOS/nixpkgs/issues/465573
+      # Credit: @altano for the original fix
+      systemd.user.services.syncthing-init = lib.mkIf self.settings.enableHotfixForUpgradeToSyncthing2_0 {
+        Service = {
+          ExecStartPre = pkgs.writeShellScript "wait-for-syncthing-api" ''
+            echo "Waiting for Syncthing API to complete database migration..."
+
+            CONFIG_PATH=""
+            if [[ -f "''${XDG_STATE_HOME:-$HOME/.local/state}/syncthing/config.xml" ]]; then
+              CONFIG_PATH="''${XDG_STATE_HOME:-$HOME/.local/state}/syncthing/config.xml"
+            elif [[ -f "$HOME/.config/syncthing/config.xml" ]]; then
+              CONFIG_PATH="$HOME/.config/syncthing/config.xml"
+            else
+              echo "ERROR: Could not find syncthing config.xml"
+              exit 1
+            fi
+
+            API_KEY=$(${pkgs.libxml2}/bin/xmllint --xpath 'string(configuration/gui/apikey)' "$CONFIG_PATH")
+
+            for i in {1..900}; do
+              response=$(${pkgs.curl}/bin/curl -sf -H "X-API-Key: $API_KEY" http://127.0.0.1:${builtins.toString self.settings.guiPort}/rest/system/config 2>&1 || true)
+
+              if echo "$response" | ${pkgs.jq}/bin/jq -e . > /dev/null 2>&1; then
+                echo "Syncthing API is ready (migration complete)"
+                exit 0
+              fi
+
+              if echo "$response" | ${pkgs.gnugrep}/bin/grep -q "Database migration in progress"; then
+                echo "Database migration still in progress... (waited $i seconds)"
+              fi
+
+              ${pkgs.coreutils}/bin/sleep 1
+            done
+            echo "ERROR: Syncthing API did not become available within 15 minutes"
+            exit 1
+          '';
+        };
+      };
+
       services.syncthing = {
         enable = true;
         overrideDevices = true;
         overrideFolders = true;
         guiAddress = "127.0.0.1:${builtins.toString self.settings.guiPort}";
         passwordFile = config.sops.secrets."${self.host.hostname}-syncthing-password".path;
-        extraOptions = [ "--no-default-folder" ];
-        tray = self.settings.trayEnabled;
+        extraOptions = [ ];
+        tray.enable = self.settings.trayEnabled;
         key = "${config.sops.secrets."${self.host.hostname}-syncthing-key".path}";
         cert = "${config.sops.secrets."${self.host.hostname}-syncthing-cert".path}";
         settings = {
           options.urAccepted = -1;
           options.relaysEnabled = false;
+          options.natEnabled = false;
           options.localAnnounceEnabled = self.settings.announceEnabled;
           devices = {
             "${self.settings.syncName}" = {
@@ -198,7 +240,7 @@ args@{
               local body="''${3:-No body}"
 
               echo "Sending notification: [$urgency] $summary - $body"
-              $NOTIFY_SEND --urgency="$urgency" --icon=folder-sync "$summary" "$body"
+              $NOTIFY_SEND --urgency="$urgency" --icon=syncthing "$summary" "$body"
           }
 
           check_service_status() {
@@ -245,6 +287,12 @@ args@{
                               echo "$message_hash" >> "$seen_messages_file"
 
                               case "$message" in
+                                  *"NAT-PMP"*|*"UPnP"*)
+                                      # Ignore NAT-PMP and UPnP messages
+                                      ;;
+                                  *"INF Lost device connection"*|*"INF Connection closed"*)
+                                      # Ignore lost device connection info messages
+                                      ;;
                                   *"ERROR"*|*"error"*|*"Error"*)
                                       notify "critical" "Syncthing Error" "$message"
                                       ;;
@@ -425,6 +473,7 @@ args@{
                   local summary="$2"
                   local body="$3"
                   local icon="$4"
+                  icon="syncthing"
 
                   echo "Sending notification: [$urgency] $summary - $body"
                   notify-send --urgency="$urgency" --icon="$icon" "$summary" "$body"

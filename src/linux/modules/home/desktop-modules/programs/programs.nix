@@ -131,7 +131,10 @@ in
         package = pkgs.gimp;
         desktopFile = "gimp.desktop";
       };
-      additionalPackages = [ pkgs.xdg-desktop-portal ];
+      additionalPackages = [
+        pkgs.xdg-desktop-portal
+        pkgs.libnotify
+      ];
       additionalKDEPackages = [
         kde.qttools
         kde.xdg-desktop-portal-kde
@@ -150,10 +153,6 @@ in
       installSystemSettings = false;
       installOfficeSuite = false;
       additionalIconThemes = [ ];
-      activeIconTheme = {
-        name = "Papirus";
-        package = pkgs.papirus-icon-theme;
-      };
     };
 
   configuration =
@@ -162,6 +161,11 @@ in
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
       getDesktopFileContainingPath = program: "${program.package}/share/applications";
       getDesktopFilePath = program: "${getDesktopFileContainingPath program}/${program.desktopFile}";
+
+      iconThemeString = self.theme.icons;
+      iconThemePackageName = lib.head (lib.splitString "/" iconThemeString);
+      iconThemePackage = lib.getAttr iconThemePackageName pkgs;
+      iconThemeName = lib.head (lib.tail (lib.splitString "/" iconThemeString));
     in
     {
       home.packages =
@@ -215,13 +219,13 @@ in
         ++ self.settings.additionalPackages
         ++ self.settings.additionalPrograms
         ++ self.settings.additionalIconThemes
-        ++ [ self.settings.activeIconTheme.package ]
+        ++ [ iconThemePackage ]
         ++ (if isKDE then self.settings.additionalKDEPackages else [ ])
         ++ (if isGnome then self.settings.additionalGnomePackages else [ ]);
 
       gtk.iconTheme = lib.mkForce {
-        name = self.settings.activeIconTheme.name;
-        package = self.settings.activeIconTheme.package;
+        name = iconThemeName;
+        package = iconThemePackage;
       };
 
       services.gnome-keyring.enable = lib.mkForce isGnome;

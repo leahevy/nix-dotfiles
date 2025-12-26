@@ -681,7 +681,7 @@ args@{
 
       programs.qutebrowser = {
         enable = true;
-        package = lib.mkDefault pkgs-unstable.qutebrowser;
+        package = lib.mkDefault pkgs.qutebrowser;
 
         loadAutoconfig = false;
         enableDefaultBindings = false;

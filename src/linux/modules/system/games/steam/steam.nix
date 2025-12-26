@@ -53,7 +53,7 @@ args@{
           self.pkgs {
             overlays = [
               (final: prev: {
-                protonup = wrapSteamBinary prev.protonup "protonup";
+                protonup-ng = wrapSteamBinary prev.protonup-ng "protonup";
                 protontricks = wrapSteamBinary prev.protontricks "protontricks";
               })
             ];
@@ -96,10 +96,10 @@ args@{
       };
 
       environment.systemPackages = [
-        customPkgs.protonup or pkgs-unstable.protonup
-        customPkgs.protontricks or pkgs-unstable.protontricks
+        customPkgs.protonup-ng or pkgs.protonup-ng
+        customPkgs.protontricks or pkgs.protontricks
       ]
-      ++ (with pkgs-unstable; [
+      ++ (with pkgs; [
         mangohud
         winetricks
         (if withWayland then wineWowPackages.waylandFull else wineWowPackages.stable)

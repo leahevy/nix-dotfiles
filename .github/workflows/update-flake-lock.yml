@@ -8,8 +8,14 @@ jobs:
   update-flake-lock:
     runs-on: ubuntu-latest
     env:
-      UPDATE_INPUTS: "nixpkgs"
+      UPDATE_INPUTS: "nixpkgs,home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable"
+      EXCLUDE_FROM_REBOOT_CHECK: "home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable"
       REPO_nixpkgs: "NixOS/nixpkgs"
+      REPO_home_manager: "nix-community/home-manager"
+      REPO_stylix: "nix-community/stylix"
+      REPO_nixvim: "nix-community/nixvim"
+      REPO_nix_darwin: "nix-darwin/nix-darwin"
+      REPO_nixpkgs_unstable: "NixOS/nixpkgs"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,10 +36,11 @@ jobs:
           declare -A old_commits
           for input in "${inputs[@]}"; do
             input=$(echo "$input" | xargs)
+            input_var=$(echo "$input" | tr '-' '_')
             node=$(get_lockfile_node "$input")
             if [ "$node" != "null" ]; then
               old_commit=$(nix flake metadata --json . | jq -r ".locks.nodes.$node.locked.rev")
-              echo "OLD_COMMIT_$input=$old_commit" >> $GITHUB_ENV
+              echo "OLD_COMMIT_$input_var=$old_commit" >> $GITHUB_ENV
               echo "Input $input: current commit $old_commit"
             fi
           done
@@ -78,7 +85,8 @@ jobs:
 
           get_repo() {
             local input=$1
-            local repo_var="REPO_$input"
+            local input_var=$(echo "$input" | tr '-' '_')
+            local repo_var="REPO_$input_var"
             echo "${!repo_var:-}"
           }
 
@@ -138,12 +146,13 @@ jobs:
 
           for input in "${inputs[@]}"; do
             input=$(echo "$input" | xargs)
+            input_var=$(echo "$input" | tr '-' '_')
             node=$(get_lockfile_node "$input")
             repo=$(get_repo "$input")
 
             if [ "$node" != "null" ] && [ -n "$repo" ]; then
               new_commit=$(nix flake metadata --json . | jq -r ".locks.nodes.$node.locked.rev")
-              old_commit_var="OLD_COMMIT_$input"
+              old_commit_var="OLD_COMMIT_$input_var"
               old_commit="${!old_commit_var:-}"
 
               echo "Input $input: old commit $old_commit, new commit $new_commit"
@@ -160,29 +169,31 @@ jobs:
                   backport_count=$(echo "$all_commits" | grep -c '\[Backport \(release\|staging\)-\|\[\(release\|staging\)-.* backport\]' || echo 0)
                   staging_count=$(echo "$all_commits" | grep -c '^- Merge staging-next-[0-9][0-9]\.[0-9][0-9] into staging-[0-9][0-9]\.[0-9][0-9]\|^- Merge release-[0-9][0-9]\.[0-9][0-9] into staging-next-[0-9][0-9]\.[0-9][0-9]' || echo 0)
 
-                  if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_PATTERNS" > /dev/null 2>&1; then
-                    requires_reboot="true"
-                    found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
-                    if [ -n "$found_packages" ]; then
-                      reboot_packages="$reboot_packages$found_packages, "
+                  if ! echo ",$EXCLUDE_FROM_REBOOT_CHECK," | grep -q ",$input,"; then
+                    if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_PATTERNS" > /dev/null 2>&1; then
+                      requires_reboot="true"
+                      found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                      if [ -n "$found_packages" ]; then
+                        reboot_packages="$reboot_packages$found_packages, "
+                      fi
+
+                      input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                      if [ -n "$input_reboot_commits" ]; then
+                        reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
+                      fi
                     fi
 
-                    input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
-                    if [ -n "$input_reboot_commits" ]; then
-                      reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
-                    fi
-                  fi
+                    if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$DESKTOP_REBOOT_PATTERNS" > /dev/null 2>&1; then
+                      requires_desktop_reboot="true"
+                      found_desktop_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$DESKTOP_REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                      if [ -n "$found_desktop_packages" ]; then
+                        desktop_reboot_packages="$desktop_reboot_packages$found_desktop_packages, "
+                      fi
 
-                  if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$DESKTOP_REBOOT_PATTERNS" > /dev/null 2>&1; then
-                    requires_desktop_reboot="true"
-                    found_desktop_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$DESKTOP_REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
-                    if [ -n "$found_desktop_packages" ]; then
-                      desktop_reboot_packages="$desktop_reboot_packages$found_desktop_packages, "
-                    fi
-
-                    input_desktop_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$DESKTOP_REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
-                    if [ -n "$input_desktop_reboot_commits" ]; then
-                      reboot_commits="$reboot_commits"$'\n\n'"#### $input (Desktop)"$'\n'"$input_desktop_reboot_commits"
+                      input_desktop_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$DESKTOP_REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                      if [ -n "$input_desktop_reboot_commits" ]; then
+                        reboot_commits="$reboot_commits"$'\n\n'"#### $input (Desktop)"$'\n'"$input_desktop_reboot_commits"
+                      fi
                     fi
                   fi
 

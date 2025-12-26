@@ -37,6 +37,7 @@ rec {
         useUnstable = false;
       };
     };
+    icons = "papirus-icon-theme/Papirus";
     cursor = {
       style = "rose-pine-cursor/BreezeX-RosePine-Linux";
       size = 40;

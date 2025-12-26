@@ -174,7 +174,7 @@ args@{
     in
     {
       home.packages =
-        with pkgs-unstable;
+        with pkgs;
         [
           heroic
           lutris

@@ -177,7 +177,7 @@ args@{
       # See https://nix-community.github.io/nixvim/search/ for available options:
       programs.nixvim = {
         enable = true;
-        package = pkgs-unstable.neovim-unwrapped;
+        package = pkgs.neovim-unwrapped;
 
         performance = lib.mkIf self.settings.withPerformanceOptimisations {
           byteCompileLua = {

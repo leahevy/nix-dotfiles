@@ -19,7 +19,7 @@ args@{
     context@{ config, options, ... }:
     {
       environment.systemPackages = with pkgs; [
-        pkgs-unstable.xwayland-satellite
+        pkgs.xwayland-satellite
       ];
     };
 }

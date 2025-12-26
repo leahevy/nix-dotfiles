@@ -118,6 +118,7 @@ args@{
   };
 
   settings = {
+    disableNewAppSwitcher = true;
     addRestartShortcut = false;
     screenshotBasePictureDir = "screenshots";
     mainDisplayScale = 1.0;
@@ -590,14 +591,12 @@ args@{
           };
         };
 
-        nx-swaynotificationcenter =
-          lib.mkIf (self.isModuleEnabled "desktop-modules.swaynotificationcenter")
-            {
-              Unit = {
-                PartOf = [ "niri.service" ];
-                After = [ "niri.service" ];
-              };
-            };
+        swaync = lib.mkIf (self.isModuleEnabled "desktop-modules.swaynotificationcenter") {
+          Unit = {
+            PartOf = [ "niri.service" ];
+            After = [ "niri.service" ];
+          };
+        };
 
         mako = lib.mkIf (self.isModuleEnabled "desktop-modules.mako") {
           Unit = {
@@ -661,7 +660,7 @@ args@{
           };
 
       programs.niri = {
-        package = pkgs-unstable.niri;
+        package = pkgs.niri;
         settings = {
           prefer-no-csd = true;
           hotkey-overlay.skip-at-startup = true;
@@ -893,6 +892,14 @@ args@{
               );
 
               actualBindings = {
+                "Alt+Tab" = lib.mkIf self.settings.disableNewAppSwitcher {
+                  action = spawn-sh "nop";
+                };
+
+                "Alt+Shift+Tab" = lib.mkIf self.settings.disableNewAppSwitcher {
+                  action = spawn-sh "nop";
+                };
+
                 "Mod+Return" = {
                   action = spawn-sh self.user.settings.terminal;
                   hotkey-overlay.title = "Apps:Terminal";

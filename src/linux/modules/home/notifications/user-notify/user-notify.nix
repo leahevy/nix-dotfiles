@@ -24,6 +24,12 @@ args@{
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
       isHeadless = (self.host.settings.system.desktop or null) == null;
+
+      iconThemeString = self.theme.icons;
+      iconThemePackageName = lib.head (lib.splitString "/" iconThemeString);
+      iconThemePackage = lib.getAttr iconThemePackageName pkgs;
+      iconThemeName = lib.head (lib.tail (lib.splitString "/" iconThemeString));
+      iconThemeBasePath = "${iconThemePackage}/share/icons/${iconThemeName}";
     in
     {
       home.file.".local/bin/scripts/nx-user-notify-monitor" =
@@ -36,10 +42,31 @@ args@{
               NOTIFY_SEND="${pkgs.libnotify}/bin/notify-send"
               JOURNALCTL="${pkgs.systemd}/bin/journalctl"
               SERVICE_TAG="nx-user-notify"
+              ICON_THEME_BASE="${iconThemeBasePath}"
 
               CURSOR_FILE="${self.user.home}/.local/state/nx-user-notify-monitor-cursor"
 
               mkdir -p "$(dirname "$CURSOR_FILE")"
+
+              resolve_icon() {
+                  local icon_name="$1"
+
+                  if [[ "$icon_name" == /* ]]; then
+                      echo "$icon_name"
+                      return 0
+                  fi
+
+                  for size in 64x64 48x48; do
+                      for iconfile in "$ICON_THEME_BASE/$size"/*/"$icon_name.svg"; do
+                          if [[ -f "$iconfile" ]]; then
+                              echo "$iconfile"
+                              return 0
+                          fi
+                      done
+                  done
+
+                  return 1
+              }
 
               notify() {
                   local urgency="''${1:-normal}"
@@ -47,7 +74,12 @@ args@{
                   local body="''${3:-No message}"
                   local icon="''${4:-preferences-desktop-notification}"
 
-                  $NOTIFY_SEND --urgency="$urgency" --icon="$icon" "$title" "$body"
+                  local resolved_icon
+                  if resolved_icon=$(resolve_icon "$icon") && [[ -r "$resolved_icon" ]]; then
+                      $NOTIFY_SEND --urgency="$urgency" --icon="$resolved_icon" "$title" "$body"
+                  else
+                      $NOTIFY_SEND --urgency="$urgency" "$title" "$body"
+                  fi
               }
 
               parse_message() {

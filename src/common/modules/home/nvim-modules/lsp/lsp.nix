@@ -50,7 +50,7 @@ args@{
         lsp = {
           servers = {
             "*" = {
-              settings = {
+              config = {
                 root_markers = [
                   ".git"
                   ".project"
@@ -80,7 +80,7 @@ args@{
                   mypy
                 ]
               );
-              settings = {
+              config = {
                 plugins = {
                   autopep8 = {
                     enabled = false;
@@ -140,7 +140,7 @@ args@{
             nixd = lib.mkIf self.settings.enableNix {
               enable = true;
               package = pkgs.nixd;
-              settings = {
+              config = {
                 formatting = {
                   command = [ "treefmt" ];
                 };
@@ -150,7 +150,7 @@ args@{
             rust_analyzer = lib.mkIf self.settings.enableRust {
               enable = true;
               package = pkgs.rust-analyzer;
-              settings = {
+              config = {
                 cargo = {
                   allFeatures = true;
                   loadOutDirsFromCheck = true;
@@ -200,7 +200,7 @@ args@{
             clangd = lib.mkIf (self.settings.enableC || self.settings.enableCpp) {
               enable = true;
               package = pkgs.clang-tools;
-              settings = {
+              config = {
                 cmd = [
                   "clangd"
                   "--background-index"
@@ -226,7 +226,7 @@ args@{
             texlab = lib.mkIf self.settings.enableLaTeX {
               enable = true;
               package = pkgs.texlab;
-              settings = {
+              config = {
                 texlab = {
                   build = {
                     executable = "latexmk";

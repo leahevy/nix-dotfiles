@@ -27,7 +27,7 @@ args@{
         wayland = true;
         xwayland-satellite = true;
         greetd = {
-          package = pkgs-unstable.niri;
+          package = pkgs.niri;
           cmdline = "niri-session";
         };
         programs = true;
@@ -47,7 +47,7 @@ args@{
     {
       programs.niri = {
         enable = true;
-        package = pkgs-unstable.niri;
+        package = pkgs.niri;
       };
 
       services.displayManager.sessionPackages = lib.mkForce [ ];

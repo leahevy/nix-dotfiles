@@ -27,23 +27,23 @@ args@{
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
       beeperWrapped =
         if self.settings.waylandQuirks then
-          (pkgs-unstable.symlinkJoin {
+          (pkgs.symlinkJoin {
             name = "beeper-wrapped";
-            paths = [ pkgs-unstable.beeper ];
-            buildInputs = [ pkgs-unstable.makeWrapper ];
+            paths = [ pkgs.beeper ];
+            buildInputs = [ pkgs.makeWrapper ];
             postBuild = ''
               wrapProgram $out/bin/beeper \
                 --add-flags "--disable-gpu-compositing"
 
               rm -f $out/share/applications/beepertexts.desktop
               mkdir -p $out/share/applications
-              substitute ${pkgs-unstable.beeper}/share/applications/beepertexts.desktop \
+              substitute ${pkgs.beeper}/share/applications/beepertexts.desktop \
                 $out/share/applications/beepertexts.desktop \
                 --replace "Exec=beeper" "Exec=$out/bin/beeper"
             '';
           })
         else
-          pkgs-unstable.beeper;
+          pkgs.beeper;
     in
     {
       home.packages = [

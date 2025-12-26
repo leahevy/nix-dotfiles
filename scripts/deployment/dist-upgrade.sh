@@ -58,6 +58,10 @@ echo
 echo -e "Updating flake inputs for ${WHITE}nxcore${RESET}..."
 nix flake update nixpkgs home-manager stylix nixvim nix-darwin nixpkgs-unstable || true
 
+echo
+echo -e "Updating flake inputs for ${WHITE}src/nxconfig${RESET}..."
+(cd "src/nxconfig" && nix flake update nixpkgs nixpkgs-unstable || true)
+
 if [[ -d "$CONFIG_DIR/.git" ]]; then
     echo
     echo -e "Updating flake inputs for ${WHITE}nxconfig${RESET}..."
@@ -72,3 +76,5 @@ echo -e "Created marker files with hash: $(cat .nx-auto-upgrade-reboot-required)
 
 echo
 echo -e "${GREEN}NixOS version bump to $NIXOS_VERSION completed successfully!${RESET}"
+echo
+echo -e "${YELLOW}Next steps: Please read UPGRADE.md for the complete upgrade process${RESET}"

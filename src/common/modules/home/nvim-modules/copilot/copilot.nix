@@ -62,8 +62,8 @@ args@{
   configuration =
     context@{ config, options, ... }:
     {
-      home.packages = with pkgs-unstable; [
-        nodejs
+      home.packages = with pkgs; [
+        (lib.lowPrio nodejs)
         copilot-language-server
       ];
 

@@ -25,8 +25,8 @@ args@{
   configuration =
     context@{ config, ... }:
     let
-      clipmanPackage = pkgs-unstable.clipman;
-      wlClipboardPackage = pkgs-unstable.wl-clipboard;
+      clipmanPackage = pkgs.clipman;
+      wlClipboardPackage = pkgs.wl-clipboard;
     in
     lib.mkMerge [
       {
