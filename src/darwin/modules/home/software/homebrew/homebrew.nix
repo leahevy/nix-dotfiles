@@ -102,6 +102,10 @@ args@{
             GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew cleanup --prune=all --quiet
             echo
 
+            echo -e "''${WHITE}Upgrading packages...''${RESET}"
+            GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew upgrade -g
+            echo
+
             cp "$BREWFILE" "$BREWFILE.active"
 
             echo -e "''${GREEN}Brew environment synced.''${RESET}"
