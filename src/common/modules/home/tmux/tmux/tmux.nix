@@ -33,6 +33,7 @@ args@{
     tmuxinatorBaseConfigs = {
       main = { };
     };
+    tmuxinatorPackage = pkgs-unstable.tmuxinator;
   };
 
   configuration =
@@ -57,6 +58,8 @@ args@{
           ])
         );
       }) allConfigs;
+
+      tmuxinatorPackage = self.settings.tmuxinatorPackage;
     in
     {
       home.sessionVariables = lib.mkMerge [
@@ -76,8 +79,10 @@ args@{
         with pkgs;
         [
           tmux
-          tmuxinator
           perl
+        ]
+        ++ [
+          tmuxinatorPackage
         ]
         ++ lib.optionals self.isDarwin [
           (helpers.createTerminalDarwinApp pkgs {
@@ -98,9 +103,9 @@ args@{
           text = ''
             #!/usr/bin/env bash
             if [ $# -eq 0 ]; then
-              exec ${pkgs.tmuxinator}/bin/tmuxinator start main
+              exec ${tmuxinatorPackage}/bin/tmuxinator start main
             else
-              exec ${pkgs.tmuxinator}/bin/tmuxinator start "$@"
+              exec ${tmuxinatorPackage}/bin/tmuxinator start "$@"
             fi
           '';
           executable = true;
@@ -110,7 +115,7 @@ args@{
           text = ''
             #!/usr/bin/env bash
             if [ $# -eq 0 ]; then
-              exec ${pkgs.tmuxinator}/bin/tmuxinator start main
+              exec ${tmuxinatorPackage}/bin/tmuxinator start main
             else
               exec ${pkgs.tmux}/bin/tmux "$@"
             fi
@@ -122,9 +127,9 @@ args@{
           text = ''
             #!/usr/bin/env bash
             if [ $# -eq 0 ]; then
-              exec ${pkgs.tmuxinator}/bin/tmuxinator start main
+              exec ${tmuxinatorPackage}/bin/tmuxinator start main
             else
-              exec ${pkgs.tmuxinator}/bin/tmuxinator "$@"
+              exec ${tmuxinatorPackage}/bin/tmuxinator "$@"
             fi
           '';
           executable = true;

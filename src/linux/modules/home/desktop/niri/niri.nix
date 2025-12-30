@@ -400,6 +400,7 @@ args@{
               tmuxConfig = self.common.getModuleConfig "tmux.tmux";
               allConfigs = tmuxConfig.tmuxinatorBaseConfigs // tmuxConfig.tmuxinatorConfigs;
               sessionNames = lib.attrNames allConfigs;
+              tmuxinatorPackage = tmuxConfig.tmuxinatorPackage or pkgs.tmuxinator;
             in
             ''
               current_sessions=()
@@ -446,7 +447,7 @@ args@{
                 exec ${self.user.settings.terminal} -e ${pkgs.tmux}/bin/tmux new-session
               elif [[ "$selection" =~ ^○\ (.+)\ \(start\)$ ]]; then
                 session_name="''${BASH_REMATCH[1]}"
-                exec ${self.user.settings.terminal} -e ${pkgs.tmuxinator}/bin/tmuxinator start "$session_name"
+                exec ${self.user.settings.terminal} -e ${tmuxinatorPackage}/bin/tmuxinator start "$session_name"
               elif [[ "$selection" =~ ^●\ (.+)\ \(running\)$ ]]; then
                 session_name="''${BASH_REMATCH[1]}"
                 exec ${self.user.settings.terminal} -e ${pkgs.tmux}/bin/tmux attach-session -t "$session_name"
