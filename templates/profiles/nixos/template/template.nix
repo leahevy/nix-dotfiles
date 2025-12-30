@@ -47,8 +47,6 @@
 
     specialisations = { };
 
-    defaultSpecialisation = "Base";
-
     settings = {
       networking = {
         wifi = {

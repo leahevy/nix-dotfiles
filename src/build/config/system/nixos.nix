@@ -27,18 +27,12 @@ let
 
   extraModules = moduleResults.modules;
 
-  specialisationConfigs =
-    builtins.mapAttrs (specName: specModules: {
-      configuration = {
-        imports =
-          (funcs.importSystemModules systemArgs (funcs.processModules specModules) allModules).modules;
-      };
-    }) host.specialisations
-    // {
-      Base = {
-        configuration = { };
-      };
+  specialisationConfigs = builtins.mapAttrs (specName: specModules: {
+    configuration = {
+      imports =
+        (funcs.importSystemModules systemArgs (funcs.processModules specModules) allModules).modules;
     };
+  }) host.specialisations;
 
   ifSet = helpers.ifSet;
 
@@ -76,41 +70,26 @@ in
       (import ../../assertions/system/nixos.nix (systemArgs // { processedModules = allModules; }))
     ];
 
-  config = lib.mkMerge [
-    {
-      specialisation = specialisationConfigs;
+  config = {
+    specialisation = specialisationConfigs;
 
-      environment = {
-        systemPackages = host.additionalPackages or [ ];
+    environment = {
+      systemPackages = host.additionalPackages or [ ];
+    };
+
+    system.stateVersion =
+      if host.stateVersion != null then host.stateVersion else variables.state-version;
+
+    nixpkgs.hostPlatform = host.architecture;
+
+    nix = {
+      settings = {
+        experimental-features = variables.experimental-features;
+        trusted-users = [ host.mainUser.username ];
+        http-connections = variables.httpConnections;
+        keep-outputs = true;
+        keep-derivations = true;
       };
-
-      system.stateVersion =
-        if host.stateVersion != null then host.stateVersion else variables.state-version;
-
-      nixpkgs.hostPlatform = host.architecture;
-
-      nix = {
-        settings = {
-          experimental-features = variables.experimental-features;
-          trusted-users = [ host.mainUser.username ];
-          http-connections = variables.httpConnections;
-          keep-outputs = true;
-          keep-derivations = true;
-        };
-      };
-    }
-
-    (lib.mkIf (config.specialisation != { }) (
-      if host.defaultSpecialisation == "Base" then
-        { }
-      else if builtins.hasAttr host.defaultSpecialisation host.specialisations then
-        lib.mkMerge (
-          map (spec: (funcs.importSystemModule systemArgs spec allModules) { inherit config options; }) (
-            funcs.processModules host.specialisations.${host.defaultSpecialisation}
-          )
-        )
-      else
-        throw "defaultSpecialisation '${host.defaultSpecialisation}' does not exist in host.specialisations. Available specialisations: ${builtins.toString (builtins.attrNames host.specialisations)}"
-    ))
-  ];
+    };
+  };
 }

@@ -183,12 +183,6 @@ with lib;
       description = "Named system specialisations with additional system modules to import";
     };
 
-    defaultSpecialisation = mkOption {
-      type = types.str;
-      default = "Base";
-      description = "Default system specialisation to enable or the Base specialisation";
-    };
-
     profileName = mkOption {
       type = types.str;
       description = "The profile directory name";

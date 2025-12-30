@@ -106,7 +106,7 @@ let
   lib = (import <nixpkgs> {}).lib;
   pkgs = import <nixpkgs> {};
   modulesPath = <nixpkgs/nixos/modules>;
-  
+
   dummyConfig = {
     boot = {};
     fileSystems = {};
@@ -114,12 +114,12 @@ let
     networking = {};
     nixpkgs = {};
   };
-  
+
   result = hardware {
     config = dummyConfig;
     inherit lib pkgs modulesPath;
   };
-  
+
 in {
   bootModules = result.boot.initrd.availableKernelModules or [];
   initrdModules = result.boot.initrd.kernelModules or [];
@@ -268,8 +268,6 @@ fi
 
     specialisations = { };
 
-    defaultSpecialisation = "Base";
-
     settings = {
       networking = {
         wifi = {
@@ -335,7 +333,7 @@ EOF
 EOF
 
   chmod 644 "$PROFILE_DIR/$HOSTNAME.nix"
-  
+
   chown -R nixos:users "$PROFILE_DIR"
 
   echo
