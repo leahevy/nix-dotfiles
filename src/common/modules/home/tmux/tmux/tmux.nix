@@ -258,10 +258,17 @@ args@{
             statusBg = if self.settings.useTransparency then "default" else colors.statusBg;
             statusBgInverted = colors.statusBg;
 
-            status-left = "#{?client_prefix,#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #S #[fg=${colors.prefixBg}]#[bg=${statusBg}],#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg},bg=${statusBg}]}";
-            status-right = "#[fg=${colors.borderColor},bg=${statusBg},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.secondaryBg}] %Y-%m-%d  %H:%M #{?client_prefix,#[fg=${colors.prefixBg}]#[bg=${colors.secondaryBg}]#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #h ,#[fg=${colors.primaryBg},bg=${colors.secondaryBg},nobold,nounderscore,noitalics]#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #h }";
-            window-status-format = "#[fg=${colors.statusFg},bg=${statusBg}] #I #[fg=${colors.statusFg},bg=${statusBg}] #W ";
-            window-status-current-format = "#[fg=${statusBgInverted},bg=${colors.borderColor},nobold,nounderscore,noitalics]#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #I #[fg=${colors.secondaryFg},bg=${colors.borderColor}] #W #[fg=${colors.borderColor},bg=${statusBg},nobold,nounderscore,noitalics]";
+            powerlineSymbols = {
+              left = "";
+              right = "";
+              leftThin = "";
+              rightThin = "";
+            };
+
+            status-left = "#{?client_prefix,#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #S #[fg=${colors.prefixBg}]#[bg=${statusBg}]${powerlineSymbols.right},#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg},bg=${statusBg}]${powerlineSymbols.right}}";
+            status-right = "#[fg=${colors.borderColor},bg=${statusBg},nobold,nounderscore,noitalics]${powerlineSymbols.left}#[fg=${colors.secondaryFg},bg=${colors.secondaryBg}] %Y-%m-%d ${powerlineSymbols.leftThin} %H:%M #{?client_prefix,#[fg=${colors.prefixBg}]#[bg=${colors.secondaryBg}]${powerlineSymbols.left}#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #h ,#[fg=${colors.primaryBg},bg=${colors.secondaryBg},nobold,nounderscore,noitalics]${powerlineSymbols.left}#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #h }";
+            window-status-format = "#[fg=${colors.statusFg},bg=${statusBg}] #I ${powerlineSymbols.rightThin}#[fg=${colors.statusFg},bg=${statusBg}] #W ";
+            window-status-current-format = "#[fg=${statusBgInverted},bg=${colors.borderColor},nobold,nounderscore,noitalics]${powerlineSymbols.right}#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #I ${powerlineSymbols.rightThin}#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #W #[fg=${colors.borderColor},bg=${statusBg},nobold,nounderscore,noitalics]${powerlineSymbols.right}";
           in
           ''
             set -g status-justify "centre"
