@@ -25,7 +25,7 @@ args@{
       programs.nh = lib.mkIf self.settings.useNH {
         enable = true;
         clean.enable = true;
-        clean.extraArgs = "--keep-since 4d --keep 3";
+        clean.extraArgs = "--keep-since 21d --keep 10";
       };
 
       nix = lib.mkIf (!self.settings.useNH) {
