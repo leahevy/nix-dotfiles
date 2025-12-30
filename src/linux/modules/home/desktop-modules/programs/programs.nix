@@ -162,10 +162,14 @@ in
       getDesktopFileContainingPath = program: "${program.package}/share/applications";
       getDesktopFilePath = program: "${getDesktopFileContainingPath program}/${program.desktopFile}";
 
-      iconThemeString = self.theme.icons;
+      iconThemeString = self.theme.icons.primary;
       iconThemePackageName = lib.head (lib.splitString "/" iconThemeString);
       iconThemePackage = lib.getAttr iconThemePackageName pkgs;
       iconThemeName = lib.head (lib.tail (lib.splitString "/" iconThemeString));
+
+      fallbackIconThemeString = self.theme.icons.fallback;
+      fallbackIconThemePackageName = lib.head (lib.splitString "/" fallbackIconThemeString);
+      fallbackIconThemePackage = lib.getAttr fallbackIconThemePackageName pkgs;
     in
     {
       home.packages =
@@ -219,7 +223,10 @@ in
         ++ self.settings.additionalPackages
         ++ self.settings.additionalPrograms
         ++ self.settings.additionalIconThemes
-        ++ [ iconThemePackage ]
+        ++ [
+          iconThemePackage
+          fallbackIconThemePackage
+        ]
         ++ (if isKDE then self.settings.additionalKDEPackages else [ ])
         ++ (if isGnome then self.settings.additionalGnomePackages else [ ]);
 

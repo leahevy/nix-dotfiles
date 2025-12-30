@@ -37,7 +37,10 @@ rec {
         useUnstable = false;
       };
     };
-    icons = "papirus-icon-theme/Papirus";
+    icons = {
+      primary = "cosmic-icons/Cosmic";
+      fallback = "papirus-icon-theme/Papirus";
+    };
     cursor = {
       style = "rose-pine-cursor/BreezeX-RosePine-Linux";
       size = 40;

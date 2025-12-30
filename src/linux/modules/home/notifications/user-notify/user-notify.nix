@@ -25,11 +25,17 @@ args@{
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
       isHeadless = (self.host.settings.system.desktop or null) == null;
 
-      iconThemeString = self.theme.icons;
+      iconThemeString = self.theme.icons.primary;
       iconThemePackageName = lib.head (lib.splitString "/" iconThemeString);
       iconThemePackage = lib.getAttr iconThemePackageName pkgs;
       iconThemeName = lib.head (lib.tail (lib.splitString "/" iconThemeString));
       iconThemeBasePath = "${iconThemePackage}/share/icons/${iconThemeName}";
+
+      fallbackIconThemeString = self.theme.icons.fallback;
+      fallbackIconThemePackageName = lib.head (lib.splitString "/" fallbackIconThemeString);
+      fallbackIconThemePackage = lib.getAttr fallbackIconThemePackageName pkgs;
+      fallbackIconThemeName = lib.head (lib.tail (lib.splitString "/" fallbackIconThemeString));
+      fallbackIconThemeBasePath = "${fallbackIconThemePackage}/share/icons/${fallbackIconThemeName}";
     in
     {
       home.file.".local/bin/scripts/nx-user-notify-monitor" =
@@ -43,6 +49,7 @@ args@{
               JOURNALCTL="${pkgs.systemd}/bin/journalctl"
               SERVICE_TAG="nx-user-notify"
               ICON_THEME_BASE="${iconThemeBasePath}"
+              FALLBACK_ICON_THEME_BASE="${fallbackIconThemeBasePath}"
 
               CURSOR_FILE="${self.user.home}/.local/state/nx-user-notify-monitor-cursor"
 
@@ -56,8 +63,14 @@ args@{
                       return 0
                   fi
 
-                  for size in 64x64 48x48; do
+                  for size in scalable 64x64 48x48; do
                       for iconfile in "$ICON_THEME_BASE/$size"/*/"$icon_name.svg"; do
+                          if [[ -f "$iconfile" ]]; then
+                              echo "$iconfile"
+                              return 0
+                          fi
+                      done
+                      for iconfile in "$FALLBACK_ICON_THEME_BASE/$size"/*/"$icon_name.svg"; do
                           if [[ -f "$iconfile" ]]; then
                               echo "$iconfile"
                               return 0

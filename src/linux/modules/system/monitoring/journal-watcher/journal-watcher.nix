@@ -118,6 +118,7 @@ args@{
       "^[^a-zA-Z]*$"
     ];
     desktopStringsToIgnore = [
+      "Theme directory .* of theme .* has no size field"
       "mpris_player.vala:[0-9]+: MPRIS .*album art error"
       "usb.*can't set config.*error -71"
       "spa\\.alsa:.*error pcm info.*No such device"
