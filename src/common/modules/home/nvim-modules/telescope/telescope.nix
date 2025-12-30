@@ -40,6 +40,17 @@ args@{
               options.desc = "Recent files";
             };
           };
+          settings = {
+            defaults = {
+              layout_strategy = "center";
+              layout_config = {
+                anchor = "S";
+                height = 0.20;
+                width = 0.65;
+                preview_cutoff = 1;
+              };
+            };
+          };
         };
 
         keymaps = [
