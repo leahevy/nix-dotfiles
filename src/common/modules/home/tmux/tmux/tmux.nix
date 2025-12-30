@@ -265,10 +265,10 @@ args@{
               rightThin = "";
             };
 
-            status-left = "#{?client_prefix,#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #S #[fg=${colors.prefixBg}]#[bg=${statusBg}]${powerlineSymbols.right},#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg},bg=${statusBg}]${powerlineSymbols.right}}";
-            status-right = "#[fg=${colors.borderColor},bg=${statusBg},nobold,nounderscore,noitalics]${powerlineSymbols.left}#[fg=${colors.secondaryFg},bg=${colors.secondaryBg}] %Y-%m-%d ${powerlineSymbols.leftThin} %H:%M #{?client_prefix,#[fg=${colors.prefixBg}]#[bg=${colors.secondaryBg}]${powerlineSymbols.left}#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #h ,#[fg=${colors.primaryBg},bg=${colors.secondaryBg},nobold,nounderscore,noitalics]${powerlineSymbols.left}#[fg=${colors.primaryFg},bg=${colors.primaryBg}] #h }";
-            window-status-format = "#[fg=${colors.statusFg},bg=${statusBg}] #I ${powerlineSymbols.rightThin}#[fg=${colors.statusFg},bg=${statusBg}] #W ";
-            window-status-current-format = "#[fg=${statusBgInverted},bg=${colors.borderColor},nobold,nounderscore,noitalics]${powerlineSymbols.right}#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #I ${powerlineSymbols.rightThin}#[fg=${colors.secondaryFg},bg=${colors.borderColor}] #W #[fg=${colors.borderColor},bg=${statusBg},nobold,nounderscore,noitalics]${powerlineSymbols.right}";
+            status-left = "#{?client_prefix,#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #S #[fg=${colors.prefixBg}]#[bg=${statusBg}]${powerlineSymbols.right},#[fg=${colors.primaryFg}]#[bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg}]#[bg=${statusBg}]${powerlineSymbols.right}}";
+            status-right = "#[fg=${colors.borderColor}]#[bg=${statusBg}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.left}#[fg=${colors.secondaryFg}]#[bg=${colors.secondaryBg}] %Y-%m-%d ${powerlineSymbols.leftThin} %H:%M #{?client_prefix,#[fg=${colors.prefixBg}]#[bg=${colors.secondaryBg}]${powerlineSymbols.left}#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #h ,#[fg=${colors.primaryBg}]#[bg=${colors.secondaryBg}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.left}#[fg=${colors.primaryFg}]#[bg=${colors.primaryBg}] #h }";
+            window-status-format = "#[fg=${colors.statusFg}]#[bg=${statusBg}] #I ${powerlineSymbols.rightThin}#[fg=${colors.statusFg}]#[bg=${statusBg}] #W ";
+            window-status-current-format = "#[fg=${statusBgInverted}]#[bg=${colors.borderColor}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.right}#[fg=${colors.secondaryFg}]#[bg=${colors.borderColor}] #I ${powerlineSymbols.rightThin}#[fg=${colors.secondaryFg}]#[bg=${colors.borderColor}] #W #[fg=${colors.borderColor}]#[bg=${statusBg}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.right}";
           in
           ''
             set -g status-justify "centre"
