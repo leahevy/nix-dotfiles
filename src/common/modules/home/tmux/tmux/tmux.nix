@@ -33,7 +33,7 @@ args@{
     tmuxinatorBaseConfigs = {
       main = { };
     };
-    tmuxinatorPackage = pkgs-unstable.tmuxinator;
+    tmuxinatorPackage = helpers.requireMinimumPackageVersion args "tmuxinator" "3.3.7";
   };
 
   configuration =

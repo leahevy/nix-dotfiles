@@ -338,4 +338,195 @@ rec {
             ''
         }
       '';
+
+  # Parse semantic version string to list of integers (minimum 3 components)
+  # Usage: parseVersion "3.6a" -> [3 6 0]
+  parseVersion =
+    versionStr:
+    let
+      extractLeadingDigits =
+        str:
+        let
+          chars = lib.stringToCharacters str;
+          isDigit =
+            c:
+            builtins.elem c [
+              "0"
+              "1"
+              "2"
+              "3"
+              "4"
+              "5"
+              "6"
+              "7"
+              "8"
+              "9"
+            ];
+          takeWhileDigit =
+            chars:
+            if chars == [ ] then
+              [ ]
+            else if isDigit (builtins.head chars) then
+              [ (builtins.head chars) ] ++ (takeWhileDigit (builtins.tail chars))
+            else
+              [ ];
+          digitChars = takeWhileDigit chars;
+        in
+        if digitChars == [ ] then "0" else lib.concatStrings digitChars;
+
+      stripPrerelease =
+        str:
+        let
+          dashPos = lib.strings.splitString "-" str;
+          plusPos = lib.strings.splitString "+" (builtins.head dashPos);
+        in
+        builtins.head plusPos;
+
+      coreVersion = stripPrerelease versionStr;
+      parts = lib.splitString "." coreVersion;
+      cleanParts = map (part: lib.toInt (extractLeadingDigits part)) parts;
+      minComponents = 3;
+      paddingNeeded = lib.max 0 (minComponents - (builtins.length cleanParts));
+      padding = lib.genList (_: 0) paddingNeeded;
+    in
+    if versionStr == "" then throw "Cannot parse empty version string" else cleanParts ++ padding;
+
+  # Compare two version lists element by element
+  # Usage: compareVersions [3 3 5] [4 2 2] -> -1 (less), 0 (equal), 1 (greater)
+  compareVersions =
+    v1: v2:
+    let
+      maxLen = lib.max (builtins.length v1) (builtins.length v2);
+      padVersion =
+        v: len:
+        let
+          currentLen = builtins.length v;
+          padding = lib.genList (_: 0) (len - currentLen);
+        in
+        v ++ padding;
+
+      v1Padded = padVersion v1 maxLen;
+      v2Padded = padVersion v2 maxLen;
+
+      compareElements =
+        i:
+        if i >= maxLen then
+          0
+        else
+          let
+            e1 = builtins.elemAt v1Padded i;
+            e2 = builtins.elemAt v2Padded i;
+          in
+          if e1 < e2 then
+            -1
+          else if e1 > e2 then
+            1
+          else
+            compareElements (i + 1);
+    in
+    compareElements 0;
+
+  # Select package from stable or unstable based on version predicate
+  # Usage: usePackageByVersionCheck args "tmuxinator" (version: compareVersions (parseVersion version) (parseVersion "3.3.7") >= 0)
+  usePackageByVersionCheck =
+    args: pkgName: predicate:
+    let
+      unstablePkgs = args.pkgs-unstable or { };
+
+      stablePkg = args.pkgs.${pkgName} or null;
+      unstablePkg = unstablePkgs.${pkgName} or null;
+
+      hasStable = stablePkg != null;
+      hasUnstable = unstablePkg != null;
+      stableHasVersion = hasStable && stablePkg ? version;
+      unstableHasVersion = hasUnstable && unstablePkg ? version;
+
+      evaluatePackage =
+        pkg: hasVersion:
+        if !hasVersion then
+          {
+            acceptable = false;
+            canCompare = false;
+          }
+        else
+          let
+            evalResult = builtins.tryEval (predicate pkg.version);
+          in
+          if evalResult.success then
+            {
+              acceptable = evalResult.value;
+              canCompare = true;
+            }
+          else
+            {
+              acceptable = false;
+              canCompare = false;
+            };
+
+      stableEval = evaluatePackage stablePkg stableHasVersion;
+      unstableEval = evaluatePackage unstablePkg unstableHasVersion;
+
+      result =
+        if !hasStable && !hasUnstable then
+          throw "Package '${pkgName}' not found in stable or unstable"
+        else if !hasUnstable then
+          if !stableEval.canCompare then
+            throw "Package '${pkgName}' version cannot be parsed in stable and unstable is not available"
+          else if stableEval.acceptable then
+            stablePkg
+          else
+            throw "Package '${pkgName}' in stable does not meet version requirement and unstable is not available"
+        else if !hasStable then
+          if !unstableEval.canCompare then
+            unstablePkg
+          else if unstableEval.acceptable then
+            unstablePkg
+          else
+            throw "Package '${pkgName}' in unstable does not meet version requirement"
+        else if !stableEval.canCompare then
+          throw "Package '${pkgName}' version cannot be parsed in stable"
+        else if stableEval.acceptable then
+          stablePkg
+        else if !unstableEval.canCompare then
+          unstablePkg
+        else if unstableEval.acceptable then
+          unstablePkg
+        else
+          throw "Package '${pkgName}' does not meet version requirement in stable or unstable";
+    in
+    result;
+
+  # Select package that meets minimum version requirement
+  # Usage: requireMinimumPackageVersion args "tmuxinator" "3.3.7"
+  requireMinimumPackageVersion =
+    args: pkgName: minVersion:
+    let
+      minVersionParsed = parseVersion minVersion;
+      predicate =
+        version:
+        let
+          currentVersionParsed = parseVersion version;
+          comparison = compareVersions currentVersionParsed minVersionParsed;
+        in
+        comparison >= 0;
+    in
+    usePackageByVersionCheck args pkgName predicate;
+
+  # Select package within version range (min inclusive, max exclusive)
+  # Usage: requirePackageVersionInRange args "tmuxinator" "3.0.0" "4.0.0"
+  requirePackageVersionInRange =
+    args: pkgName: minVersion: maxVersion:
+    let
+      minVersionParsed = parseVersion minVersion;
+      maxVersionParsed = parseVersion maxVersion;
+      predicate =
+        version:
+        let
+          currentVersionParsed = parseVersion version;
+          minComparison = compareVersions currentVersionParsed minVersionParsed;
+          maxComparison = compareVersions currentVersionParsed maxVersionParsed;
+        in
+        minComparison >= 0 && maxComparison < 0;
+    in
+    usePackageByVersionCheck args pkgName predicate;
 }
