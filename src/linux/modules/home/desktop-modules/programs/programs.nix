@@ -91,7 +91,10 @@ in
           pkgs.kwalletcli
         ];
       } { name = "gnome-keyring"; };
-      fileBrowser = defineAll { name = "dolphin"; } { name = "nautilus"; };
+      fileBrowser = defineAll {
+        name = "pcmanfm";
+        package = pkgs.pcmanfm;
+      } { name = "nautilus"; };
       archiver = defineAll { name = "ark"; } { name = "file-roller"; };
       textEditor = defineAll { name = "kate"; } { name = "gedit"; };
       advancedTextEditor = defineAll { name = "ghostwriter"; } { name = "gnome-text-editor"; };
@@ -117,9 +120,8 @@ in
       sudoku = defineAll { name = "ksudoku"; } { name = "gnome-sudoku"; };
       dialog = defineAll { name = "kdialog"; } { name = "zenity"; };
       gitGui = defineAll {
-        name = "dolphin-plugins";
-        openCommand = "dolphin";
-        openFileCommand = "dolphin";
+        name = "gitg";
+        package = pkgs.gitg;
       } { name = "gitg"; };
       officeSuite = define {
         name = "onlyoffice";
@@ -384,6 +386,9 @@ in
           ".cache/ghostwriter"
           ".local/share/ghostwriter"
           ".config/pulse"
+          ".config/libfm"
+          ".config/pcmanfm"
+
         ]
         ++ lib.optionals (self.settings.officeSuite.name == "libreoffice") [
           ".config/libreoffice"
@@ -409,7 +414,6 @@ in
               ".cache/systemsettings"
               ".config/kate"
               ".config/akonadi"
-              ".local/share/dolphin"
               ".local/share/baloo"
               ".local/share/okular"
               ".local/share/ark"
@@ -432,7 +436,6 @@ in
           ".config/systemsettingsrc"
           ".config/kcminputrc"
           ".config/kscreenlockerrc"
-          ".config/dolphinrc"
           ".config/katerc"
           ".config/konsolerc"
           ".config/okularrc"

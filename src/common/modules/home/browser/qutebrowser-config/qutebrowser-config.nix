@@ -447,7 +447,7 @@ args@{
       "$HOME/.nix-profile/bin/nvim"
     ];
     useHomeApplicationsOnDarwin = false;
-    fileManager = [ "dolphin" ];
+    fileManager = [ "pcmanfm" ];
     darwinFileManager = [ "open" ];
   };
 
