@@ -50,6 +50,7 @@ args@{
           background = lib.mkForce (
             lib.removePrefix "#" (self.theme.colors.terminal.normalBackgrounds.primary.html)
           );
+          working-directory = "inherit";
 
           custom-shader =
             let
