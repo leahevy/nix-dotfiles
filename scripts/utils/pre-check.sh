@@ -193,6 +193,10 @@ parse_build_deployment_args() {
                 DRY_RUN="--dry-run"
                 shift
                 ;;
+            --show-trace)
+                EXTRA_ARGS+=("--show-trace")
+                shift
+                ;;
             --diff)
                 BUILD_DIFF=true
                 shift
