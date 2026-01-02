@@ -22,7 +22,7 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
-      desktopPreference = self.user.settings.desktopPreference;
+      desktopPreference = self.desktop.primary.name;
       isKDE = desktopPreference == "kde";
       isGnome = desktopPreference == "gnome";
 

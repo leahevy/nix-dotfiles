@@ -37,6 +37,11 @@
       flake = false;
     };
 
+    desktops = {
+      url = "path:./src/desktops";
+      flake = false;
+    };
+
     config = {
       url = "path:./src/nxconfig";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -144,6 +149,7 @@
         config = inputs.config;
         profile = inputs.profile;
         themes = inputs.themes;
+        desktops = inputs.desktops;
       }
       // configInputs;
 

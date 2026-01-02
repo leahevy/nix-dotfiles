@@ -28,6 +28,8 @@ args@{
       desktop = {
         desktop = true;
         terminal = true;
+        primary = true;
+        secondary = true;
       };
       system = {
         dummy-files = true;

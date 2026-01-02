@@ -34,8 +34,8 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
-      isGnome = self.user.settings.desktopPreference == "gnome";
-      isKDE = self.user.settings.desktopPreference == "kde";
+      isGnome = self.desktop.primary.name == "gnome";
+      isKDE = self.desktop.primary.name == "kde";
     in
     {
       boot.initrd.systemd.enable = lib.mkForce true;

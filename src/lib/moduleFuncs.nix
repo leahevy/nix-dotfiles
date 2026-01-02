@@ -755,6 +755,323 @@ rec {
               throw "Theme '${activeTheme}' not found at ${themeModulePath}. Available themes: ${builtins.concatStringsSep ", " existingThemes}";
         in
         themeModule.settings;
+
+      availablePrimaryDesktops =
+        let
+          desktopsDir = moduleContext.inputs.desktops + "/modules/home/primary";
+        in
+        builtins.filter (name: name != "base") (builtins.attrNames (builtins.readDir desktopsDir));
+
+      availableSecondaryDesktops =
+        let
+          desktopsDir = moduleContext.inputs.desktops + "/modules/home/secondary";
+        in
+        builtins.filter (name: name != "base") (builtins.attrNames (builtins.readDir desktopsDir));
+
+      desktop =
+        let
+          activePrimaryDesktop =
+            if
+              moduleContext.user or null != null && moduleContext.user.settings.desktopPreferences or null != null
+            then
+              moduleContext.user.settings.desktopPreferences.primary
+            else
+              moduleContext.variables.defaultDesktop.primary;
+
+          activePrimaryDesktopOverrides =
+            if
+              moduleContext.user or null != null
+              && moduleContext.user.settings.desktopPreferences or null != null
+              && moduleContext.user.settings.desktopPreferences.overrides or null != null
+            then
+              moduleContext.user.settings.desktopPreferences.overrides.primary
+            else
+              { };
+
+          activeSecondaryDesktopOverrides =
+            if
+              moduleContext.user or null != null
+              && moduleContext.user.settings.desktopPreferences or null != null
+              && moduleContext.user.settings.desktopPreferences.overrides or null != null
+            then
+              moduleContext.user.settings.desktopPreferences.overrides.secondary
+            else
+              { };
+
+          activeSecondaryDesktop =
+            if
+              moduleContext.user or null != null && moduleContext.user.settings.desktopPreferences or null != null
+            then
+              moduleContext.user.settings.desktopPreferences.secondary
+            else
+              moduleContext.variables.defaultDesktop.secondary;
+
+          primaryDesktopsDir = moduleContext.inputs.desktops + "/modules/home/primary";
+          existingPrimaryDesktops = builtins.attrNames (builtins.readDir primaryDesktopsDir);
+
+          secondaryDesktopsDir = moduleContext.inputs.desktops + "/modules/home/primary";
+          existingSecondaryDesktops = builtins.attrNames (builtins.readDir secondaryDesktopsDir);
+
+          primaryDesktopModulePath =
+            moduleContext.inputs.desktops
+            + "/modules/home/primary/${activePrimaryDesktop}/${activePrimaryDesktop}.nix";
+
+          secondaryDesktopModulePath =
+            moduleContext.inputs.desktops
+            + "/modules/home/secondary/${activeSecondaryDesktop}/${activeSecondaryDesktop}.nix";
+
+          primaryDesktopModule =
+            if builtins.pathExists primaryDesktopModulePath then
+              import primaryDesktopModulePath {
+                inherit lib;
+                pkgs = pkgsForResolution;
+                pkgs-unstable = pkgsUnstableForResolution;
+                funcs = null;
+                helpers = null;
+                defs = null;
+                self = null;
+              }
+            else
+              throw "Primary desktop '${activePrimaryDesktop}' not found at ${primaryDesktopModulePath}. Available primary desktops: ${builtins.concatStringsSep ", " existingPrimaryDesktops}";
+
+          secondaryDesktopModule =
+            if builtins.pathExists secondaryDesktopModulePath then
+              import secondaryDesktopModulePath {
+                inherit lib;
+                pkgs = pkgsForResolution;
+                pkgs-unstable = pkgsUnstableForResolution;
+                funcs = null;
+                helpers = null;
+                defs = null;
+                self = null;
+              }
+            else
+              throw "Secondary desktop '${activeSecondaryDesktop}' not found at ${secondaryDesktopModulePath}. Available secondary desktops: ${builtins.concatStringsSep ", " existingSecondaryDesktops}";
+
+          architecture =
+            if moduleContext ? host && moduleContext.host ? architecture then
+              moduleContext.host.architecture
+            else if moduleContext ? user && moduleContext.user ? architecture then
+              moduleContext.user.architecture
+            else
+              throw "No architecture found in moduleContext for desktop pkgs resolution";
+
+          pkgsForResolution = import moduleContext.inputs.nixpkgs {
+            system = architecture;
+            config = {
+              allowUnfree = true;
+            };
+          };
+
+          pkgsUnstableForResolution = import moduleContext.inputs.nixpkgs-unstable {
+            system = architecture;
+            config = {
+              allowUnfree = true;
+            };
+          };
+
+          allowedProgramFields = [
+            "name"
+            "package"
+            "desktopFile"
+            "openCommand"
+            "openFileCommand"
+            "additionalPackages"
+          ];
+
+          validPrimaryPreferences = [
+            "wallet"
+            "systemSettings"
+            "networkSettings"
+            "taskManager"
+            "extraOpts"
+          ];
+
+          validSecondaryPreferences = [
+            "fileBrowser"
+            "archiver"
+            "textEditor"
+            "advancedTextEditor"
+            "terminal"
+            "imageViewer"
+            "imageEditor"
+            "paintingProgram"
+            "pdfViewer"
+            "videoPlayer"
+            "musicPlayer"
+            "emailClient"
+            "calendar"
+            "contacts"
+            "diskUsage"
+            "calculator"
+            "clock"
+            "webBrowser"
+            "dialog"
+            "gitGui"
+            "officeSuite"
+            "drawingProgram"
+            "desktopPortals"
+            "additionalBasePackages"
+            "additionalDesktopPrograms"
+            "gamePackages"
+            "extraOpts"
+          ];
+
+          listFields = [
+            "desktopPortals"
+            "additionalBasePackages"
+            "additionalDesktopPrograms"
+            "gamePackages"
+          ];
+
+          isProgramDefinition =
+            value:
+            builtins.isAttrs value
+            && !builtins.isList value
+            && (
+              value ? name
+              || value ? package
+              || value ? desktopFile
+              || value ? openCommand
+              || value ? openFileCommand
+              || value ? additionalPackages
+            );
+
+          processProgramDef =
+            def:
+            let
+              defFields = builtins.attrNames def;
+              extraFields = lib.filter (field: !builtins.elem field allowedProgramFields) defFields;
+            in
+            if extraFields != [ ] then
+              throw "Desktop program definition has invalid fields: ${builtins.concatStringsSep ", " extraFields}. Allowed fields: ${builtins.concatStringsSep ", " allowedProgramFields}"
+            else
+              let
+                derivedName =
+                  if def ? name then
+                    def.name
+                  else if def ? package then
+                    def.package.pname or def.package.name or "unknown"
+                  else
+                    throw "Desktop program definition must have either 'name' or 'package'";
+
+                derivedPackage =
+                  if def ? package then
+                    def.package
+                  else if def ? name then
+                    let
+                      nameParts = lib.splitString "." def.name;
+                    in
+                    if builtins.length nameParts == 1 then
+                      lib.getAttr def.name pkgsForResolution
+                    else
+                      lib.getAttrFromPath nameParts pkgsForResolution
+                  else
+                    throw "Desktop program definition must have either 'name' or 'package'";
+
+                nameParts = lib.splitString "." derivedName;
+                lastName = lib.last nameParts;
+
+                derivedDesktopFile = def.desktopFile or "${lastName}.desktop";
+                derivedOpenCommand = def.openCommand or lastName;
+                derivedOpenFileCommand = def.openFileCommand or derivedOpenCommand;
+              in
+              {
+                name = derivedName;
+                package = derivedPackage;
+                desktopFile = derivedDesktopFile;
+                openCommand = derivedOpenCommand;
+                openFileCommand = derivedOpenFileCommand;
+              }
+              // (lib.optionalAttrs (def ? additionalPackages) { inherit (def) additionalPackages; });
+
+          postprocessDesktopSettings =
+            desktopType: settings:
+            let
+              validPreferences =
+                if desktopType == "primary" then validPrimaryPreferences else validSecondaryPreferences;
+
+              processedPreferences =
+                if settings ? preferences then
+                  let
+                    prefKeys = builtins.attrNames settings.preferences;
+                    invalidKeys = lib.filter (key: !builtins.elem key validPreferences) prefKeys;
+                  in
+                  if invalidKeys != [ ] then
+                    throw "Desktop ${desktopType} has invalid preference keys: ${builtins.concatStringsSep ", " invalidKeys}. Valid keys: ${builtins.concatStringsSep ", " validPreferences}"
+                  else
+                    lib.mapAttrs (
+                      name: value:
+                      if name == "extraOpts" then
+                        value
+                      else if builtins.elem name listFields then
+                        if !builtins.isList value then
+                          throw "Desktop ${desktopType} preference '${name}' must be a list"
+                        else
+                          value
+                      else if isProgramDefinition value then
+                        processProgramDef value
+                      else
+                        value
+                    ) settings.preferences
+                else
+                  { };
+            in
+            settings
+            // {
+              preferences = processedPreferences;
+            };
+
+          mergePreferences =
+            original: overrides:
+            let
+              allKeys = lib.unique ((builtins.attrNames original) ++ (builtins.attrNames overrides));
+
+              mergeKey =
+                key:
+                let
+                  hasOriginal = original ? ${key};
+                  hasOverride = overrides ? ${key};
+                  originalValue = original.${key} or null;
+                  overrideValue = overrides.${key} or null;
+                in
+                if !hasOverride then
+                  originalValue
+                else if !hasOriginal then
+                  overrideValue
+                else if key == "extraOpts" then
+                  lib.recursiveUpdate originalValue overrideValue
+                else if builtins.elem key listFields then
+                  originalValue ++ overrideValue
+                else
+                  overrideValue;
+            in
+            lib.genAttrs allKeys mergeKey;
+
+          mergedPrimary =
+            let
+              originalPreferences = primaryDesktopModule.settings.preferences or { };
+              mergedPreferences = mergePreferences originalPreferences activePrimaryDesktopOverrides;
+            in
+            primaryDesktopModule.settings
+            // {
+              preferences = mergedPreferences;
+            };
+
+          mergedSecondary =
+            let
+              originalPreferences = secondaryDesktopModule.settings.preferences or { };
+              mergedPreferences = mergePreferences originalPreferences activeSecondaryDesktopOverrides;
+            in
+            secondaryDesktopModule.settings
+            // {
+              preferences = mergedPreferences;
+            };
+        in
+        {
+          primary = postprocessDesktopSettings "primary" mergedPrimary;
+          secondary = postprocessDesktopSettings "secondary" mergedSecondary;
+        };
     in
     {
       inherit
@@ -763,6 +1080,9 @@ rec {
         requireModuleConfig
         theme
         availableThemes
+        availablePrimaryDesktops
+        availableSecondaryDesktops
+        desktop
         ;
     };
 

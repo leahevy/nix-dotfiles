@@ -148,15 +148,46 @@ with lib;
             default = "ghostty";
             description = "Terminal application";
           };
-          desktopPreference = mkOption {
-            type = (
-              types.enum [
-                "gnome"
-                "kde"
-              ]
-            );
-            default = "kde";
-            description = "Preference for desktop tools (gnome or KDE)";
+          desktopPreferences = mkOption {
+            type = types.submodule {
+              options = {
+                primary = mkOption {
+                  type = types.enum [
+                    "gnome"
+                    "kde"
+                  ];
+                  default = "kde";
+                  description = "Primary desktop environment preference";
+                };
+                secondary = mkOption {
+                  type = types.enum [
+                    "gnome"
+                    "kde"
+                  ];
+                  default = "kde";
+                  description = "Secondary desktop environment preference";
+                };
+                overrides = mkOption {
+                  type = types.submodule {
+                    options = {
+                      primary = mkOption {
+                        type = types.attrs;
+                        default = { };
+                        description = "Overrides for primary desktop preferences";
+                      };
+                      secondary = mkOption {
+                        type = types.attrs;
+                        default = { };
+                        description = "Overrides for secondary desktop preferences";
+                      };
+                    };
+                  };
+                  default = { };
+                };
+              };
+            };
+            default = { };
+            description = "Desktop environment preferences";
           };
         };
       };

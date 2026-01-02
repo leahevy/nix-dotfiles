@@ -9,7 +9,7 @@ args@{
   ...
 }:
 let
-  desktopPreference = self.user.settings.desktopPreference;
+  desktopPreference = self.desktop.primary.name;
   isKDE = desktopPreference == "kde";
   isGnome = desktopPreference == "gnome";
 in

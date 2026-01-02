@@ -11,6 +11,7 @@ let
     "darwin"
     "groups"
     "themes"
+    "desktops"
     "build"
     "config"
     "profile"

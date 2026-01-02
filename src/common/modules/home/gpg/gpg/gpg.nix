@@ -14,7 +14,7 @@ let
       pkgs.pinentry_mac
     else if self.isLinux then
       let
-        desktopPreference = self.user.settings.desktopPreference or "none";
+        desktopPreference = self.desktop.primary.name or "none";
       in
       if desktopPreference == "kde" then
         pkgs.pinentry-qt
@@ -30,7 +30,7 @@ let
       "pinentry-mac"
     else if self.isLinux then
       let
-        desktopPreference = self.user.settings.desktopPreference or "none";
+        desktopPreference = self.desktop.primary.name or "none";
       in
       if desktopPreference == "kde" then
         "pinentry-qt"

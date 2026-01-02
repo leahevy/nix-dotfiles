@@ -25,7 +25,7 @@ args@{
         "security find-generic-password -s ${service}-${accountKey} -w"
       else if self.isLinux then
         let
-          desktopPreference = self.user.settings.desktopPreference;
+          desktopPreference = self.desktop.primary.name;
         in
         if desktopPreference == "kde" then
           "kwalletcli -f Passwords -e ${service}-${accountKey}"
@@ -38,7 +38,7 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
-      desktopPreference = self.user.settings.desktopPreference;
+      desktopPreference = self.desktop.primary.name;
       isKDE = desktopPreference == "kde";
 
       accountsConfig =

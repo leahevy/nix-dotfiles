@@ -29,8 +29,8 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
-      isGnome = self.user.settings.desktopPreference == "gnome";
-      isKDE = self.user.settings.desktopPreference == "kde";
+      isGnome = self.desktop.primary.name == "gnome";
+      isKDE = self.desktop.primary.name == "kde";
       uwsmSession = pkgs.runCommand "uwsm-session" { } ''
                 mkdir -p $out/share/wayland-sessions
                 cat > $out/share/wayland-sessions/uwsm-session.desktop << 'EOF'

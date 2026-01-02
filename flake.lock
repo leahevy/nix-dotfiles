@@ -153,6 +153,18 @@
       },
       "parent": []
     },
+    "desktops": {
+      "flake": false,
+      "locked": {
+        "path": "./src/desktops",
+        "type": "path"
+      },
+      "original": {
+        "path": "./src/desktops",
+        "type": "path"
+      },
+      "parent": []
+    },
     "disko": {
       "inputs": {
         "nixpkgs": [
@@ -863,6 +875,7 @@
         "common": "common",
         "config": "config",
         "darwin": "darwin",
+        "desktops": "desktops",
         "disko": "disko",
         "groups": "groups",
         "home-manager": "home-manager",

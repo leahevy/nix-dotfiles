@@ -32,4 +32,9 @@
   };
 
   defaultTheme = "green";
+
+  defaultDesktop = {
+    primary = "kde";
+    secondary = "kde";
+  };
 }
