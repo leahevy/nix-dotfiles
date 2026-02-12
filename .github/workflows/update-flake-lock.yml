@@ -74,6 +74,30 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check existing PR for manual merge requirement
+        id: existing-pr
+        run: |
+          set -euo pipefail
+
+          existing_pr=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:update-flake-inputs&state=open" \
+            | jq -r '.[0] // empty')
+
+          if [ -n "$existing_pr" ] && [ "$existing_pr" != "null" ]; then
+            pr_body=$(echo "$existing_pr" | jq -r '.body // ""')
+
+            if echo "$pr_body" | grep -q "Reboot Required"; then
+              echo "existing_requires_reboot=true" >> $GITHUB_OUTPUT
+              echo "Existing PR already requires manual merge - preserving state"
+            else
+              echo "existing_requires_reboot=false" >> $GITHUB_OUTPUT
+              echo "Existing PR does not require manual merge"
+            fi
+          else
+            echo "existing_requires_reboot=false" >> $GITHUB_OUTPUT
+            echo "No existing PR found"
+          fi
+
       - name: Generate commit lists
         if: steps.changes.outputs.changed == 'true'
         run: |
@@ -143,6 +167,7 @@ jobs:
           requires_desktop_reboot="false"
           reboot_packages=""
           desktop_reboot_packages=""
+          commits_truncated="false"
 
           for input in "${inputs[@]}"; do
             input=$(echo "$input" | xargs)
@@ -162,6 +187,14 @@ jobs:
 
                 if commits_json=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                   "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit"); then
+
+                  total_commits=$(echo "$commits_json" | jq -r '.total_commits // 0')
+                  returned_commits=$(echo "$commits_json" | jq -r '.commits | length')
+
+                  if [ "$total_commits" -gt "$returned_commits" ]; then
+                    echo "WARNING: GitHub API truncation detected for $input: $total_commits total commits but only $returned_commits returned"
+                    commits_truncated="true"
+                  fi
 
                   all_commits=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
 
@@ -243,6 +276,7 @@ jobs:
           echo "ANY_REBOOT_REQUIRED=$any_reboot_required" >> $GITHUB_ENV
           echo "REBOOT_PACKAGES=$reboot_packages" >> $GITHUB_ENV
           echo "DESKTOP_REBOOT_PACKAGES=$desktop_reboot_packages" >> $GITHUB_ENV
+          echo "COMMITS_TRUNCATED=$commits_truncated" >> $GITHUB_ENV
 
           {
             echo "COMMIT_LISTS<<EOF"
@@ -292,13 +326,21 @@ jobs:
           body: |
             ## Automated update of flake inputs.
 
-            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> [!NOTE]' || '' }}
-            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> ✅ **This pull request will be automatically merged**' || '' }}
-            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> No reboot detected - auto-merge enabled' || '' }}
+            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && env.COMMITS_TRUNCATED != 'true' && '> [!NOTE]' || '' }}
+            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && env.COMMITS_TRUNCATED != 'true' && '> ✅ **This pull request will be automatically merged**' || '' }}
+            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && env.COMMITS_TRUNCATED != 'true' && '> No reboot detected - auto-merge enabled' || '' }}
 
             ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> [!WARNING]' || '' }}
             ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> ⚠️ **Reboot Required** ⚠️' || '' }}
             ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> This update requires a reboot!' || '' }}
+
+            ${{ steps.existing-pr.outputs.existing_requires_reboot == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> [!WARNING]' || '' }}
+            ${{ steps.existing-pr.outputs.existing_requires_reboot == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> ⚠️ **Manual Merge Required (Preserved)** ⚠️' || '' }}
+            ${{ steps.existing-pr.outputs.existing_requires_reboot == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> Previous update required reboot - state preserved across updates' || '' }}
+
+            ${{ env.COMMITS_TRUNCATED == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && '> [!WARNING]' || '' }}
+            ${{ env.COMMITS_TRUNCATED == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && '> ⚠️ **Manual Merge Required (Truncation)** ⚠️' || '' }}
+            ${{ env.COMMITS_TRUNCATED == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && '> Too many commits (>250) - cannot verify all commits for reboot requirements' || '' }}
 
             ${{ env.ANY_REBOOT_REQUIRED == 'true' && '### 🔄 Reboot-triggering commits' || '' }}
             ${{ env.ANY_REBOOT_REQUIRED == 'true' && env.REBOOT_COMMITS || '' }}
@@ -327,6 +369,13 @@ jobs:
             CIRCLE_COLOR="🟡"
             STATUS="New PR (Manual Review Required)"
             EXTRA_MESSAGE="⚠️ <b>Reboot Required</b> - Auto-merge disabled"
+          elif [ "${{ env.COMMITS_TRUNCATED }}" == "true" ]; then
+            PRIORITY="1"
+            SOUND="gamelan"
+            TTL="604800"
+            CIRCLE_COLOR="🟡"
+            STATUS="New PR (Manual Review Required)"
+            EXTRA_MESSAGE="⚠️ <b>Commits truncated (&gt;250)</b> - Cannot verify reboot requirements - Auto-merge disabled"
           elif [ "${{ steps.check-day.outputs.its_mergeday }}" == "true" ]; then
             PRIORITY="0"
             SOUND="pianobar"
@@ -362,7 +411,7 @@ jobs:
             https://api.pushover.net/1/messages.json
 
       - name: Enable auto-merge
-        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true'
+        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && env.COMMITS_TRUNCATED != 'true'
         run: |
           set -euo pipefail
           echo "Enabling auto-merge for PR #${{ steps.cpr.outputs.pull-request-number }}"
@@ -387,6 +436,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Skip auto-merge due to reboot-requiring packages
-        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED == 'true'
+        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && (env.ANY_REBOOT_REQUIRED == 'true' || steps.existing-pr.outputs.existing_requires_reboot == 'true' || env.COMMITS_TRUNCATED == 'true')
         run: |
-          echo "⚠️ Auto-merge skipped: Update requires reboot! (System: ${{ env.REBOOT_PACKAGES }} Desktop: ${{ env.DESKTOP_REBOOT_PACKAGES }})"
+          if [ "${{ env.ANY_REBOOT_REQUIRED }}" == "true" ]; then
+            echo "Auto-merge skipped: Update requires reboot (System: ${{ env.REBOOT_PACKAGES }} Desktop: ${{ env.DESKTOP_REBOOT_PACKAGES }})"
+          fi
+          if [ "${{ steps.existing-pr.outputs.existing_requires_reboot }}" == "true" ]; then
+            echo "Auto-merge skipped: Existing PR already required manual merge - state preserved"
+          fi
+          if [ "${{ env.COMMITS_TRUNCATED }}" == "true" ]; then
+            echo "Auto-merge skipped: GitHub API returned truncated commits (>250) - cannot verify all commits for reboot requirements"
+          fi
