@@ -15,6 +15,37 @@
 let
   configInputs = config.configInputs;
 
+  overlaysDir = ../overlays;
+
+  loadOverlaysFromDir =
+    dir:
+    let
+      files = builtins.readDir dir;
+      nixFiles = lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".nix" name) files;
+      loadedModules = lib.mapAttrsToList (
+        name: _:
+        let
+          module = import (dir + "/${name}") { inherit lib; };
+        in
+        module.overlays or { }
+      ) nixFiles;
+    in
+    lib.foldl lib.recursiveUpdate { } loadedModules;
+
+  collectOverlays =
+    system:
+    let
+      isDarwin = lib.hasSuffix "-darwin" system;
+      isLinux = lib.hasSuffix "-linux" system;
+
+      commonOverlays = loadOverlaysFromDir (overlaysDir + "/common");
+      darwinOverlays = if isDarwin then loadOverlaysFromDir (overlaysDir + "/darwin") else { };
+      linuxOverlays = if isLinux then loadOverlaysFromDir (overlaysDir + "/linux") else { };
+
+      allOverlays = lib.recursiveUpdate (lib.recursiveUpdate commonOverlays darwinOverlays) linuxOverlays;
+    in
+    builtins.attrValues allOverlays;
+
   evalConfigModule =
     {
       configPath,
@@ -36,12 +67,14 @@ let
       nixpkgs-unstable ? inputs.nixpkgs-unstable,
     }:
     let
+      overlays = collectOverlays system;
+
       pkgs = import nixpkgs {
-        inherit system;
+        inherit system overlays;
         config.allowUnfreePredicate = pkg: true;
       };
       pkgs-unstable = import nixpkgs-unstable {
-        inherit system;
+        inherit system overlays;
         config.allowUnfreePredicate = pkg: true;
       };
     in
