@@ -25,19 +25,19 @@ rec {
     priorityDefaults = {
       "-2" = {
         sound = "none";
-        ttl = "7200";
+        ttl = "14400";
       };
       "-1" = {
         sound = "none";
-        ttl = "14400";
+        ttl = "28800";
       };
       "0" = {
         sound = "vibrate";
-        ttl = "129600";
+        ttl = "259200";
       };
       "1" = {
         sound = "pushover";
-        ttl = "604800";
+        ttl = "1209600";
       };
       "2" = {
         sound = "tugboat";
@@ -47,31 +47,31 @@ rec {
     typeDefaults = {
       started = {
         sound = "vibrate";
-        ttl = "7200";
+        ttl = "14400";
       };
       stopped = {
         sound = "pushover";
-        ttl = "604800";
+        ttl = "1209600";
       };
       failed = {
         sound = "pushover";
-        ttl = "604800";
+        ttl = "1209600";
       };
       warn = {
         sound = "gamelan";
-        ttl = "604800";
+        ttl = "1209600";
       };
       success = {
         sound = "pianobar";
-        ttl = "129600";
+        ttl = "259200";
       };
       info = {
         sound = "vibrate";
-        ttl = "43200";
+        ttl = "86400";
       };
       debug = {
         sound = "none";
-        ttl = "3600";
+        ttl = "7200";
       };
       emerg = {
         sound = "tugboat";
