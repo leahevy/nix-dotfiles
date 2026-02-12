@@ -550,7 +550,7 @@ args@{
           {
             mode = "n";
             key = "<leader>Tp";
-            action.__raw = ''function() _G.nx_neotest_pick_and_run() end'';
+            action.__raw = "function() _G.nx_neotest_pick_and_run() end";
             options = {
               desc = "Pick test file to run";
               silent = true;

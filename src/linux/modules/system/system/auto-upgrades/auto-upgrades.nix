@@ -585,7 +585,7 @@ args@{
               fi
               ${lib.optionalString (
                 !self.settings.allowReboot
-              ) ''${logScript "info" "SUCCESS: Auto-upgrade completed successfully"}''}
+              ) "${logScript "info" "SUCCESS: Auto-upgrade completed successfully"}"}
             ''
         }
       '';
@@ -652,7 +652,7 @@ args@{
                       if self.settings.dryRun then
                         ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1 --no-wall"''
                       else
-                        ''${pkgs.systemd}/bin/systemd-run --on-active=1m ${config.systemd.package}/bin/shutdown -r now --no-wall''
+                        "${pkgs.systemd}/bin/systemd-run --on-active=1m ${config.systemd.package}/bin/shutdown -r now --no-wall"
                     }
                   fi
                 else
@@ -692,7 +692,7 @@ args@{
                     if self.settings.dryRun then
                       ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1 --no-wall"''
                     else
-                      ''${pkgs.systemd}/bin/systemd-run --on-active=1m ${config.systemd.package}/bin/shutdown -r now --no-wall''
+                      "${pkgs.systemd}/bin/systemd-run --on-active=1m ${config.systemd.package}/bin/shutdown -r now --no-wall"
                   }
                 fi
               ''

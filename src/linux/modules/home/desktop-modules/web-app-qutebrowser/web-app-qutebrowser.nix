@@ -55,22 +55,18 @@ args@{
         );
 
         keepassxcKeybindings =
-          if enableKeepassxc then
-            '''pw': 'spawn --userscript qute-keepassxc --key ${self.user.gpg}',''
-          else
-            "";
+          if enableKeepassxc then "'pw': 'spawn --userscript qute-keepassxc --key ${self.user.gpg}'," else "";
 
         keepassxcInsertKeybindings =
           if enableKeepassxc then
-            '''<Alt+Shift+u>': 'spawn --userscript qute-keepassxc --key ${self.user.gpg}',''
+            "'<Alt+Shift+u>': 'spawn --userscript qute-keepassxc --key ${self.user.gpg}',"
           else
             "";
 
-        bitwardenKeybindings =
-          if enableBitwarden then '''pb': 'spawn --userscript qute-bitwarden','' else "";
+        bitwardenKeybindings = if enableBitwarden then "'pb': 'spawn --userscript qute-bitwarden'," else "";
 
         bitwardenInsertKeybindings =
-          if enableBitwarden then '''<Alt+Shift+i>': 'spawn --userscript qute-bitwarden','' else "";
+          if enableBitwarden then "'<Alt+Shift+i>': 'spawn --userscript qute-bitwarden'," else "";
 
         webAppConfig = ''
           import os
