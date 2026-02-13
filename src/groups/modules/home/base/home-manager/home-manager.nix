@@ -27,6 +27,9 @@ args@{
           text = {
             latex = true;
           };
+          notes = {
+            notesnook = true;
+          };
           utils = {
             archive-tools = true;
           };
@@ -140,6 +143,9 @@ args@{
           text = {
             latex = true;
           };
+          notes = {
+            notesnook = true;
+          };
           utils = {
             archive-tools = true;
           };
@@ -252,6 +258,9 @@ args@{
         common = {
           text = {
             latex = true;
+          };
+          notes = {
+            notesnook = true;
           };
           utils = {
             archive-tools = true;
