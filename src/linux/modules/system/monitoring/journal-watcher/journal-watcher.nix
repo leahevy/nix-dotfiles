@@ -219,6 +219,8 @@ args@{
       "Failed to register with host portal.*Connection already associated with an application ID"
       "The new GL renderer has been renamed to gl\\. Try GSK_RENDERER=help"
       "Autoready failed:.*Unit wayland-wm@.*\\.service not loaded"
+      "Failed to lock file.*hm_kdeglobals\\.lock"
+      "couldn't lock global file"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
