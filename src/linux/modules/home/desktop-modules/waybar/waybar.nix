@@ -65,6 +65,8 @@ args@{
           '';
     in
     {
+      stylix.targets.waybar.addCss = false;
+
       home.packages =
         with pkgs;
         [
@@ -483,6 +485,10 @@ args@{
 
             #workspaces button.active, #workspaces button.focused, #workspaces button:hover {
               color: ${self.theme.colors.main.foregrounds.strong.html};
+            }
+
+            #workspaces button.urgent label {
+              color: ${self.theme.colors.semantic.warning.html};
             }
 
             #workspaces:hover {
