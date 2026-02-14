@@ -193,7 +193,11 @@ jobs:
 
                   if [ "$total_commits" -gt "$returned_commits" ]; then
                     echo "WARNING: GitHub API truncation detected for $input: $total_commits total commits but only $returned_commits returned"
-                    commits_truncated="true"
+                    if ! echo ",$EXCLUDE_FROM_REBOOT_CHECK," | grep -q ",$input,"; then
+                      commits_truncated="true"
+                    else
+                      echo "Input $input is excluded from reboot checks - truncation ignored for auto-merge decision"
+                    fi
                   fi
 
                   all_commits=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
