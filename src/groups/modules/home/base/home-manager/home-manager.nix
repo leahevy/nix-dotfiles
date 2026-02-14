@@ -24,6 +24,9 @@ args@{
     then
       {
         common = {
+          proton = {
+            proton = false;
+          };
           text = {
             latex = true;
           };
@@ -140,6 +143,9 @@ args@{
     then
       {
         common = {
+          proton = {
+            proton = false;
+          };
           text = {
             latex = true;
           };
@@ -256,6 +262,9 @@ args@{
     then
       {
         common = {
+          proton = {
+            proton = false;
+          };
           text = {
             latex = true;
           };
