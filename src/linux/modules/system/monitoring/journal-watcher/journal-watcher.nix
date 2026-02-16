@@ -98,6 +98,7 @@ args@{
       "hub.*config failed, can't get hub status \\(err -[0-9]+\\)"
       "uvcvideo.*Failed to query \\([0-9]+\\) UVC probe control.*\\(exp\\. [0-9]+\\)\\."
       "uvcvideo.*Failed to initialize the device \\(-[0-9]+\\)\\."
+      "usb.*Failed to query.*UVC control.*"
       "usb.*cannot set freq [0-9]+ to ep"
       "usb.*failed to get current value for ch [0-9]+ \\(-[0-9]+\\)"
       "usb.*cannot get min/max values for control [0-9]+ \\(id [0-9]+\\)"
@@ -221,6 +222,7 @@ args@{
       "Autoready failed:.*Unit wayland-wm@.*\\.service not loaded"
       "Failed to lock file.*hm_kdeglobals\\.lock"
       "couldn't lock global file"
+      "spa\\.v4l2:.*Cannot open.*No such file or directory"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
