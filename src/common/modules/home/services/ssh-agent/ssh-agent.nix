@@ -12,7 +12,7 @@ args@{
   name = "ssh-agent";
 
   group = "services";
-  input = "linux";
+  input = "common";
   namespace = "home";
 
   configuration =
@@ -22,7 +22,7 @@ args@{
         ssh-agent.enable = true;
       };
 
-      home.sessionVariables = {
+      home.sessionVariables = lib.mkIf self.isLinux {
         SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/ssh-agent";
       };
 

@@ -51,6 +51,9 @@ args@{
             typescript-lsp = true;
             vscodium = true;
           };
+          services = {
+            ssh-agent = true;
+          };
           fonts = {
             japanese = true;
             general = true;
@@ -117,9 +120,6 @@ args@{
             keyring = true;
             gtk = true;
           };
-          services = {
-            ssh-agent = true;
-          };
           todo = {
             todoist = true;
           };
@@ -169,6 +169,9 @@ args@{
             nodejs = true;
             typescript-lsp = true;
             vscodium = true;
+          };
+          services = {
+            ssh-agent = true;
           };
           fonts = {
             japanese = true;
@@ -236,9 +239,6 @@ args@{
             keyring = true;
             gtk = true;
           };
-          services = {
-            ssh-agent = true;
-          };
           todo = {
             todoist = true;
           };
@@ -288,6 +288,9 @@ args@{
             nodejs = true;
             typescript-lsp = true;
             vscodium = true;
+          };
+          services = {
+            ssh-agent = true;
           };
           fonts = {
             japanese = true;

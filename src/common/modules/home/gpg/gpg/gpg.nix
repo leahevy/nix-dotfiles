@@ -50,6 +50,8 @@ in
 
   settings = {
     keyserver = "keys.openpgp.org";
+    enableSSHAgent = true;
+    relativeSSHAuthSockPath = null;
   };
 
   configuration =
@@ -58,7 +60,7 @@ in
       services = {
         gpg-agent = {
           enable = true;
-          enableSshSupport = true;
+          enableSshSupport = self.settings.enableSSHAgent;
           pinentry = {
             package = getPinentryPackage;
             program = getPinentryProgram;
@@ -75,6 +77,9 @@ in
           getPinentryPackage
           pkgs.gnupg
         ];
+        sessionVariables = lib.mkIf (self.settings.relativeSSHAuthSockPath != null) {
+          SSH_AUTH_SOCK = "${self.user.home}/${self.settings.relativeSSHAuthSockPath}";
+        };
       };
 
       home.file.".gnupg/common.conf" = {
