@@ -317,7 +317,7 @@ jobs:
           # fi
           #
           # Disabled: Every day is merge day but only auto-merge if no reboot is required!
-          echo "its_mergeday=true" >> $GITHUB_OUTPUT
+          echo "its_mergeday=false" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         if: steps.changes.outputs.changed == 'true'
