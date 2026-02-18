@@ -604,15 +604,6 @@ args@{
               vim.g.calendar_sign = "ObsidianCalendarSign"
 
               _G.obsidian_create_daily_for_date = function(date_str)
-                local ok, obsidian = pcall(require, "obsidian")
-                if not ok then
-                  vim.notify("Plugin not available", vim.log.levels.ERROR, {
-                    icon = "⚠️",
-                    title = "Obsidian"
-                  })
-                  return
-                end
-
                 local year, month, day = date_str:match("(%d+)-(%d+)-(%d+)")
                 if not year or not month or not day then
                   vim.notify("Invalid date format: " .. date_str, vim.log.levels.ERROR, {
@@ -622,29 +613,41 @@ args@{
                   return
                 end
 
-                local timestamp = os.time({
+                local target_time = os.time({
                   year = tonumber(year),
                   month = tonumber(month),
                   day = tonumber(day),
-                  hour = 0,
+                  hour = 12,
                   min = 0,
                   sec = 0
                 })
 
-                local client = obsidian.get_client()
-                if not client then
-                  vim.notify("Failed to get client", vim.log.levels.ERROR, {
+                local today = os.date("*t")
+                local today_time = os.time({
+                  year = today.year,
+                  month = today.month,
+                  day = today.day,
+                  hour = 12,
+                  min = 0,
+                  sec = 0
+                })
+
+                local offset_days = math.floor((target_time - today_time) / (24 * 60 * 60))
+
+                local ok, daily = pcall(require, "obsidian.daily")
+                if not ok then
+                  vim.notify("Failed to load obsidian.daily module", vim.log.levels.ERROR, {
                     icon = "⚠️",
                     title = "Obsidian"
                   })
                   return
                 end
 
-                local ok_daily, daily_note = pcall(function()
-                  return client:_daily(timestamp)
+                local ok_note, note = pcall(function()
+                  return daily.daily(offset_days, {})
                 end)
 
-                if not ok_daily or not daily_note then
+                if not ok_note or not note then
                   vim.notify("Failed to create daily note for " .. date_str, vim.log.levels.ERROR, {
                     icon = "⚠️",
                     title = "Obsidian"
@@ -653,7 +656,7 @@ args@{
                 end
 
                 local ok_open, _ = pcall(function()
-                  client:open_note(daily_note)
+                  note:open()
                 end)
 
                 if not ok_open then
