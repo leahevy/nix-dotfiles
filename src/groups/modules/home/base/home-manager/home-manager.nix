@@ -27,6 +27,9 @@ args@{
           proton = {
             proton = true;
           };
+          photos = {
+            ente = true;
+          };
           text = {
             latex = true;
           };
@@ -146,6 +149,9 @@ args@{
           proton = {
             proton = true;
           };
+          photos = {
+            ente = true;
+          };
           text = {
             latex = true;
           };
@@ -264,6 +270,9 @@ args@{
         common = {
           proton = {
             proton = true;
+          };
+          photos = {
+            ente = true;
           };
           text = {
             latex = true;
