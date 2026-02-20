@@ -51,6 +51,7 @@ in
             "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kwallet" ] else [ "gnome-keyring" ];
             "org.freedesktop.impl.portal.ScreenCast" = "gnome";
             "org.freedesktop.impl.portal.Location" = "gtk";
+            "org.freedesktop.impl.portal.FileChooser" = "gtk";
           };
         };
       };
