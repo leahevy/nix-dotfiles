@@ -9,11 +9,17 @@ args@{
   ...
 }:
 {
-  name = "ente";
+  name = "filen";
 
-  group = "photos";
+  group = "drive";
   input = "common";
   namespace = "home";
+
+  settings = {
+    syncedFolders = [
+      "cloud"
+    ];
+  };
 
   configuration =
     context@{ config, options, ... }:
@@ -22,15 +28,15 @@ args@{
     in
     {
       home.packages = with pkgs; [
-        ente-desktop
+        filen-desktop
       ];
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {
-            "Mod+Ctrl+Alt+8" = {
-              action = spawn-sh "niri-scratchpad --app-id ente --all-windows --spawn ente-desktop";
-              hotkey-overlay.title = "Apps:Ente";
+            "Mod+Ctrl+Alt+7" = {
+              action = spawn-sh "niri-scratchpad --app-id Filen --all-windows --spawn filen-desktop";
+              hotkey-overlay.title = "Apps:Filen";
             };
           };
 
@@ -38,7 +44,18 @@ args@{
             {
               matches = [
                 {
-                  app-id = "ente";
+                  app-id = "Filen";
+                }
+              ];
+              open-on-workspace = "scratch";
+              open-floating = true;
+              open-focused = false;
+              block-out-from = "screencast";
+            }
+            {
+              matches = [
+                {
+                  app-id = "@filen/desktop";
                 }
               ];
               open-on-workspace = "scratch";
@@ -52,8 +69,9 @@ args@{
 
       home.persistence."${self.persist}" = {
         directories = [
-          ".config/ente"
-        ];
+          ".config/@filen"
+        ]
+        ++ lib.optionals (self.settings.syncedFolders != [ ]) self.settings.syncedFolders;
       };
     };
 }

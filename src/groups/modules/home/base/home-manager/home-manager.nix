@@ -30,6 +30,9 @@ args@{
           photos = {
             ente = true;
           };
+          drive = {
+            filen = true;
+          };
           text = {
             latex = true;
           };
@@ -152,6 +155,9 @@ args@{
           photos = {
             ente = true;
           };
+          drive = {
+            filen = true;
+          };
           text = {
             latex = true;
           };
@@ -273,6 +279,9 @@ args@{
           };
           photos = {
             ente = true;
+          };
+          drive = {
+            filen = true;
           };
           text = {
             latex = true;
