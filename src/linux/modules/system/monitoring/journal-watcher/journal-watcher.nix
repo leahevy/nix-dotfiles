@@ -230,6 +230,7 @@ args@{
       "spa\\.v4l2:.*Cannot open.*No such file or directory"
       "Failed to open X11 display"
       "No X display connection, ignoring X11 parent"
+      "Unhandled parent window type"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
