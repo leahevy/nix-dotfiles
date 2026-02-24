@@ -61,7 +61,6 @@ args@{
             Unit = {
               Description = "Mount Cryptomator vault: ${name}";
               After = [
-                "graphical-session.target"
                 "sops-nix.service"
               ]
               ++ lib.optional luksDataDriveEnabled "nx-luks-data-drive-ready.service"
