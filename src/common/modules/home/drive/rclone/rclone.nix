@@ -230,6 +230,16 @@ args@{
         (pkgs.writeShellScriptBin "rclone-sync-init" ''
           set -euo pipefail
 
+          echo "WARNING: This will perform a --resync operation which can lead to data loss!"
+          echo "This should only be run for initial setup or to recover from sync conflicts."
+          echo ""
+          read -p "Are you sure you want to continue? [y/N] " -n 1 -r
+          echo
+          if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Aborted."
+            exit 1
+          fi
+
           ${sanityChecks}
 
           RUNTIME_DIR="''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}/runtime-$(${pkgs.coreutils}/bin/id -u)}"
