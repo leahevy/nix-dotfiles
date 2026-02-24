@@ -105,12 +105,11 @@ args@{
 
                 ${pkgs.coreutils}/bin/mkdir -p "${mountPath}"
 
-                ${pkgs.coreutils}/bin/cat "${passwordPath}" | \
-                  ${pkgs-unstable.cryptomator-cli}/bin/cryptomator-cli unlock \
-                    --password:stdin \
-                    --mounter=org.cryptomator.frontend.fuse.mount.LinuxFuseMountProvider \
-                    --mountPoint="${mountPath}" \
-                    "${vaultPath}"
+                ${pkgs-unstable.cryptomator-cli}/bin/cryptomator-cli unlock \
+                  --password:file="${passwordPath}" \
+                  --mounter=org.cryptomator.frontend.fuse.mount.LinuxFuseMountProvider \
+                  --mountPoint="${mountPath}" \
+                  "${vaultPath}"
               '';
               ExecStopPost = "-${pkgs.coreutils}/bin/rmdir ${mountPath}";
             };
