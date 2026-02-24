@@ -227,9 +227,6 @@ args@{
       };
 
       home.packages = [
-        (pkgs.writeShellScriptBin "rclone-sync-now" ''
-          systemctl --user start rclone-bisync.service --wait
-        '')
         (pkgs.writeShellScriptBin "rclone-sync-init" ''
           set -euo pipefail
 
