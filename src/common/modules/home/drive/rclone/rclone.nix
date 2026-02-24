@@ -27,6 +27,11 @@ args@{
       remoteNames = lib.attrNames self.settings.remotes;
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
 
+      iconThemeString = self.theme.icons.primary;
+      iconThemePackage = lib.getAttr (lib.head (lib.splitString "/" iconThemeString)) pkgs;
+      iconThemeName = lib.head (lib.tail (lib.splitString "/" iconThemeString));
+      iconThemeBasePath = "${iconThemePackage}/share/icons/${iconThemeName}";
+
       remoteConfigs = lib.mapAttrs (name: cfg: {
         config = {
           type = cfg.type or "webdav";
@@ -279,15 +284,29 @@ args@{
                 "${pkgs.bash}/bin/bash"
                 "-c"
                 ''
+                  resolve_icon() {
+                    local name="$1"
+                    for size in scalable 64x64 48x48; do
+                      for f in "${iconThemeBasePath}/$size"/*/"$name.svg"; do
+                        [[ -f "$f" ]] && echo "$f" && return 0
+                      done
+                    done
+                    echo "$name"
+                  }
+
                   LOCKDIR="''${XDG_RUNTIME_DIR:-/tmp}/rclone-bisync.lock"
+                  ICON_SYNC=$(resolve_icon emblem-synchronizing)
+                  ICON_OK=$(resolve_icon emblem-ok-symbolic)
+                  ICON_ERROR=$(resolve_icon dialog-error)
+
                   if [[ -d "$LOCKDIR" ]]; then
-                    ${pkgs.libnotify}/bin/notify-send "Rclone" "Sync already running" --icon=folder-sync
+                    ${pkgs.libnotify}/bin/notify-send "Rclone" "Sync already running" --icon="$ICON_SYNC"
                   else
-                    ${pkgs.libnotify}/bin/notify-send "Rclone" "Starting sync..." --icon=folder-sync
+                    ${pkgs.libnotify}/bin/notify-send "Rclone" "Starting sync..." --icon="$ICON_SYNC"
                     if systemctl --user start rclone-bisync.service --wait; then
-                      ${pkgs.libnotify}/bin/notify-send "Rclone" "Sync completed" --icon=folder-sync
+                      ${pkgs.libnotify}/bin/notify-send "Rclone" "Sync completed" --icon="$ICON_OK"
                     else
-                      ${pkgs.libnotify}/bin/notify-send "Rclone" "Sync failed" --icon=dialog-error --urgency=critical
+                      ${pkgs.libnotify}/bin/notify-send "Rclone" "Sync failed" --icon="$ICON_ERROR" --urgency=critical
                     fi
                   fi
                 ''
