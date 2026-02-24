@@ -352,8 +352,12 @@ args@{
         unitConfig = {
           OnFailure = "borg-backup-log-failure.service";
           OnSuccess = "borg-backup-log-success.service";
+          StartLimitBurst = 3;
+          StartLimitIntervalSec = 3600;
         };
         serviceConfig = {
+          Restart = "on-failure";
+          RestartSec = "5m";
           ReadWritePaths = [
             "/persist/.snapshots"
             "/tmp"
