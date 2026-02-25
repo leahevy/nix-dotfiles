@@ -119,6 +119,14 @@ args@{
     lib.mkIf (devicePath != null) {
       home.packages = [ self.settings.package ];
 
+      home.file.".local/bin/bongocat-restart" = {
+        text = ''
+          #!/usr/bin/env bash
+          systemctl --user restart nx-bongocat || true
+        '';
+        executable = true;
+      };
+
       systemd.user.services.nx-bongocat = {
         Unit = {
           Description = "Wayland Bongocat";
