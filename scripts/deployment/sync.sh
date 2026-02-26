@@ -35,6 +35,14 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
       if [[ "$CHECKSUM_NEW" != "$CHECKSUM_ACTIVE" ]]; then
         echo
         echo -e "${YELLOW}Brewfile was updated, you should run: ${GREEN}nx brew${RESET}"
+      else
+        WEEK_AGO=$(date -v-7d +%s)
+        LAST_BREW_RUN=$(stat -f %m "$BREWFILE_ACTIVE")
+        if [[ "$LAST_BREW_RUN" -lt "$WEEK_AGO" ]]; then
+          DAYS_AGO=$(( ($(date +%s) - LAST_BREW_RUN) / 86400 ))
+          echo
+          echo -e "${RED} > It's been ${BLUE}${DAYS_AGO} days${RED} since you last updated Homebrew - you should run ${GREEN}nx brew${RED}${RESET}"
+        fi
       fi
     fi
   fi
