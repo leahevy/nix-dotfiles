@@ -48,6 +48,7 @@ args@{
           dev = {
             conda = true;
             poetry = true;
+            uv = true;
             devenv = true;
             cmake = true;
             utils = true;
@@ -173,6 +174,7 @@ args@{
           dev = {
             conda = true;
             poetry = true;
+            uv = true;
             devenv = true;
             cmake = true;
             utils = true;
@@ -298,6 +300,7 @@ args@{
           dev = {
             conda = true;
             poetry = true;
+            uv = true;
             devenv = true;
             cmake = true;
             utils = true;
