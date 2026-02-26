@@ -30,6 +30,7 @@ args@{
         sops = true;
         nx-config = true;
         firmware = true;
+        sysctl = true;
       };
       desktop = {
         desktop = true;
