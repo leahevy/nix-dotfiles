@@ -373,6 +373,9 @@ args@{
             beeper = true;
             slack = true;
           };
+          dev = {
+            docker-desktop = true;
+          };
           desktop = {
             yabai = true;
             better-display = true;
