@@ -24,7 +24,6 @@ args@{
     let
       hasVaults = self.settings.vaults != { };
       vaultNames = lib.attrNames self.settings.vaults;
-      rcloneEnabled = self.isModuleEnabled "drive.rclone";
       luksDataDriveEnabled = self.isLinux && self.linux.isModuleEnabled "storage.luks-data-drive";
 
       vaultSecrets = lib.foldl' (
@@ -63,8 +62,7 @@ args@{
               After = [
                 "sops-nix.service"
               ]
-              ++ lib.optional luksDataDriveEnabled "nx-luks-data-drive-ready.service"
-              ++ lib.optional (rcloneEnabled && (cfg.afterRclone or true)) "rclone-bisync.service";
+              ++ lib.optional luksDataDriveEnabled "nx-luks-data-drive-ready.service";
               Requires = lib.optional luksDataDriveEnabled "nx-luks-data-drive-ready.service";
               StartLimitIntervalSec = 300;
               StartLimitBurst = 3;
@@ -83,15 +81,18 @@ args@{
                   exit 1
                 fi
 
-                if [[ ! -d "${vaultPath}" ]]; then
-                  echo "ERROR: Vault directory does not exist: ${vaultPath}"
-                  exit 1
-                fi
-
-                if [[ ! -r "${vaultPath}/masterkey.cryptomator" ]]; then
-                  echo "ERROR: Cannot read masterkey.cryptomator in vault: ${vaultPath}"
-                  exit 1
-                fi
+                echo "Waiting for vault to become available: ${vaultPath}"
+                for i in {1..120}; do
+                  if [[ -r "${vaultPath}/masterkey.cryptomator" ]]; then
+                    break
+                  fi
+                  if [[ $i -eq 120 ]]; then
+                    echo "ERROR: Timeout waiting for masterkey.cryptomator in vault: ${vaultPath}"
+                    exit 1
+                  fi
+                  ${pkgs.coreutils}/bin/sleep 5
+                done
+                echo "Vault available, proceeding with mount"
 
                 if [[ ! -r "${passwordPath}" ]]; then
                   echo "ERROR: Password file does not exist or is not readable: ${passwordPath}"

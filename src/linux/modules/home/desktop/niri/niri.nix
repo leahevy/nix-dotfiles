@@ -178,6 +178,19 @@ args@{
       activeColor = self.settings.activeColor;
       inactiveColor = self.settings.inactiveColor;
 
+      rcloneEnabled = self.common.isModuleEnabled "drive.rclone";
+      rcloneConfig = if rcloneEnabled then self.common.getModuleConfig "drive.rclone" else { };
+      rcloneRemoteNames = lib.attrNames (rcloneConfig.remotes or { });
+
+      rcloneLockCheck = lib.optionalString rcloneEnabled ''
+        ${lib.concatMapStringsSep "\n" (name: ''
+          if ! ${pkgs.util-linux}/bin/flock --nonblock --exclusive "''${XDG_RUNTIME_DIR}/rclone-sync-${name}.lock" true 2>/dev/null; then
+              notify-send "Power Menu" "Cannot access power options while rclone sync is running!" --icon=emblem-synchronizing
+              exit 1
+          fi
+        '') rcloneRemoteNames}
+      '';
+
       screenshotPath =
         let
           xdgConfig = self.getModuleConfig "xdg.user-dirs";
@@ -360,6 +373,8 @@ args@{
               notify-send "Power Menu" "Cannot access power options while NX deployment is running!" --icon=dialog-error
               exit 1
           fi
+
+          ${rcloneLockCheck}
 
           action=$(echo -e "Poweroff\nReboot" | fuzzel --dmenu --prompt="Power actions: " --width=25 --lines=2)
 
