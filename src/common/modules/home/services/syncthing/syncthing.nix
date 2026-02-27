@@ -57,7 +57,7 @@ args@{
         map (d: {
           name = d.name;
           value = {
-            addresses = [ "tcp://${d.ipAddress}:${builtins.toString (d.port or 22000)}" ];
+            addresses = [ "${d.protocol or "tcp"}://${d.ipAddress}:${builtins.toString (d.port or 22000)}" ];
             id = d.id;
           }
           // lib.optionalAttrs (d.untrusted or false) {
