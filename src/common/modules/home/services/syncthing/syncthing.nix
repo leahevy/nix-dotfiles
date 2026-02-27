@@ -26,7 +26,6 @@ args@{
     folderBasedMonitoringDeviceSyncInterval = 10;
     folderBasedMonitoringFolderInterval = 30;
     folderBasedMonitoringInitialDelay = 45;
-    enableHotfixForUpgradeToSyncthing2_0 = false;
     devices = [ ];
   };
 
@@ -159,46 +158,6 @@ args@{
           };
         }
       ];
-
-      # Hotfix for Syncthing v1.x -> v2.0 database migration race condition
-      # Source: https://github.com/NixOS/nixpkgs/issues/465573
-      # Credit: @altano for the original fix
-      systemd.user.services.syncthing-init = lib.mkIf self.settings.enableHotfixForUpgradeToSyncthing2_0 {
-        Service = {
-          ExecStartPre = pkgs.writeShellScript "wait-for-syncthing-api" ''
-            echo "Waiting for Syncthing API to complete database migration..."
-
-            CONFIG_PATH=""
-            if [[ -f "''${XDG_STATE_HOME:-$HOME/.local/state}/syncthing/config.xml" ]]; then
-              CONFIG_PATH="''${XDG_STATE_HOME:-$HOME/.local/state}/syncthing/config.xml"
-            elif [[ -f "$HOME/.config/syncthing/config.xml" ]]; then
-              CONFIG_PATH="$HOME/.config/syncthing/config.xml"
-            else
-              echo "ERROR: Could not find syncthing config.xml"
-              exit 1
-            fi
-
-            API_KEY=$(${pkgs.libxml2}/bin/xmllint --xpath 'string(configuration/gui/apikey)' "$CONFIG_PATH")
-
-            for i in {1..900}; do
-              response=$(${pkgs.curl}/bin/curl -sf -H "X-API-Key: $API_KEY" http://127.0.0.1:${builtins.toString self.settings.guiPort}/rest/system/config 2>&1 || true)
-
-              if echo "$response" | ${pkgs.jq}/bin/jq -e . > /dev/null 2>&1; then
-                echo "Syncthing API is ready (migration complete)"
-                exit 0
-              fi
-
-              if echo "$response" | ${pkgs.gnugrep}/bin/grep -q "Database migration in progress"; then
-                echo "Database migration still in progress... (waited $i seconds)"
-              fi
-
-              ${pkgs.coreutils}/bin/sleep 1
-            done
-            echo "ERROR: Syncthing API did not become available within 15 minutes"
-            exit 1
-          '';
-        };
-      };
 
       services.syncthing = {
         enable = true;
