@@ -16,14 +16,9 @@ args@{
   namespace = "home";
 
   settings = {
-    syncName = "";
-    syncID = "";
-    syncIPAddress = "";
-    syncPort = 22000;
     trayEnabled = false;
     guiPort = 8384;
     versioningKeepNumbers = 10;
-    shares = { };
     announceEnabled = false;
     monitoringEnabled = true;
     folderBasedMonitoringEnabled = true;
@@ -32,20 +27,25 @@ args@{
     folderBasedMonitoringFolderInterval = 30;
     folderBasedMonitoringInitialDelay = 45;
     enableHotfixForUpgradeToSyncthing2_0 = false;
+    devices = [ ];
   };
 
   assertions = [
     {
-      assertion = self.settings.syncName != null && self.settings.syncName != "";
-      message = "syncName is not set!";
+      assertion = self.settings.devices != null && self.settings.devices != [ ];
+      message = "devices list is empty! At least one device must be configured.";
     }
     {
-      assertion = self.settings.syncID != null && self.settings.syncID != "";
-      message = "syncID is not set!";
+      assertion = builtins.all (d: d.name != null && d.name != "") self.settings.devices;
+      message = "All devices must have a name set!";
     }
     {
-      assertion = self.settings.syncIPAddress != null && self.settings.syncIPAddress != "";
-      message = "syncIPAddress is not set!";
+      assertion = builtins.all (d: d.id != null && d.id != "") self.settings.devices;
+      message = "All devices must have an id set!";
+    }
+    {
+      assertion = builtins.all (d: d.ipAddress != null && d.ipAddress != "") self.settings.devices;
+      message = "All devices must have an ipAddress set!";
     }
   ];
 
@@ -53,27 +53,97 @@ args@{
     context@{ config, options, ... }:
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+
+      devicesAttr = builtins.listToAttrs (
+        map (d: {
+          name = d.name;
+          value = {
+            addresses = [ "tcp://${d.ipAddress}:${builtins.toString (d.port or 22000)}" ];
+            id = d.id;
+          }
+          // lib.optionalAttrs (d.untrusted or false) {
+            untrusted = true;
+          };
+        }) self.settings.devices
+      );
+
+      allShares = builtins.foldl' (
+        acc: device:
+        builtins.foldl' (
+          innerAcc: folderId:
+          let
+            shareConfig = device.shares.${folderId};
+            localPath = if builtins.isString shareConfig then shareConfig else shareConfig.path;
+            existing = innerAcc.${folderId} or null;
+            isUntrusted = device.untrusted or false;
+            deviceEntry =
+              if isUntrusted then
+                {
+                  name = device.name;
+                  encryptionPasswordFile = config.sops.secrets."syncthing-${device.name}-encryption-password".path;
+                }
+              else
+                device.name;
+          in
+          innerAcc
+          // {
+            ${folderId} =
+              if existing == null then
+                {
+                  path = "${self.user.home}/${localPath}";
+                  devices = [ deviceEntry ];
+                }
+              else
+                {
+                  path = existing.path;
+                  devices = existing.devices ++ [ deviceEntry ];
+                };
+          }
+        ) acc (builtins.attrNames (device.shares or { }))
+      ) { } self.settings.devices;
+
+      foldersAttr = builtins.mapAttrs (folderId: folderData: {
+        path = folderData.path;
+        devices = folderData.devices;
+        versioning = {
+          type = "simple";
+          params.keep = "${builtins.toString self.settings.versioningKeepNumbers}";
+        };
+      }) allShares;
+
+      untrustedDevices = builtins.filter (d: d.untrusted or false) self.settings.devices;
     in
     {
-      sops.secrets."${self.host.hostname}-syncthing-key" = {
-        format = "binary";
-        sopsFile = self.profile.secretsPath "syncthing.key";
-      };
+      sops.secrets = {
+        "${self.host.hostname}-syncthing-key" = {
+          format = "binary";
+          sopsFile = self.profile.secretsPath "syncthing.key";
+        };
 
-      sops.secrets."${self.host.hostname}-syncthing-cert" = {
-        format = "binary";
-        sopsFile = self.profile.secretsPath "syncthing.cert";
-      };
+        "${self.host.hostname}-syncthing-cert" = {
+          format = "binary";
+          sopsFile = self.profile.secretsPath "syncthing.cert";
+        };
 
-      sops.secrets."${self.host.hostname}-syncthing-password" = {
-        format = "binary";
-        sopsFile = self.profile.secretsPath "syncthing.password";
-      };
+        "${self.host.hostname}-syncthing-password" = {
+          format = "binary";
+          sopsFile = self.profile.secretsPath "syncthing.password";
+        };
 
-      sops.secrets."${self.host.hostname}-syncthing-api-key" = {
-        format = "binary";
-        sopsFile = self.profile.secretsPath "syncthing.api-key";
-      };
+        "${self.host.hostname}-syncthing-api-key" = {
+          format = "binary";
+          sopsFile = self.profile.secretsPath "syncthing.api-key";
+        };
+      }
+      // builtins.listToAttrs (
+        map (d: {
+          name = "syncthing-${d.name}-encryption-password";
+          value = {
+            format = "binary";
+            sopsFile = self.profile.secretsPath "syncthing-${d.name}-encryption.password";
+          };
+        }) untrustedDevices
+      );
 
       systemd.user.services.syncthing = lib.mkMerge [
         (lib.mkIf (self.linux.isModuleEnabled "storage.luks-data-drive") {
@@ -145,22 +215,8 @@ args@{
           options.relaysEnabled = false;
           options.natEnabled = false;
           options.localAnnounceEnabled = self.settings.announceEnabled;
-          devices = {
-            "${self.settings.syncName}" = {
-              addresses = [
-                "tcp://${self.settings.syncIPAddress}:${builtins.toString self.settings.syncPort}"
-              ];
-              id = self.settings.syncID;
-            };
-          };
-          folders = builtins.mapAttrs (folderId: localPath: {
-            path = "${self.user.home}/${localPath}";
-            devices = [ self.settings.syncName ];
-            versioning = {
-              type = "simple";
-              params.keep = "${builtins.toString self.settings.versioningKeepNumbers}";
-            };
-          }) self.settings.shares;
+          devices = devicesAttr;
+          folders = foldersAttr;
         };
       };
 
@@ -399,9 +455,12 @@ args@{
               DEVICE_INTERVAL="${builtins.toString self.settings.folderBasedMonitoringDeviceInterval}"
               DEVICE_SYNC_INTERVAL="${builtins.toString self.settings.folderBasedMonitoringDeviceSyncInterval}"
               FOLDER_INTERVAL="${builtins.toString self.settings.folderBasedMonitoringFolderInterval}"
-              SYNC_NAME="${self.settings.syncName}"
-              SYNC_ID="${self.settings.syncID}"
               INITIAL_DELAY="${builtins.toString self.settings.folderBasedMonitoringInitialDelay}"
+
+              declare -A DEVICE_NAMES
+              ${lib.concatStringsSep "\n" (
+                map (d: "DEVICE_NAMES[\"${d.id}\"]=\"${d.name}\"") self.settings.devices
+              )}
 
               STATE_DIR="$HOME/.local/state/syncthing-folder-monitor"
               DEVICE_STATE_FILE="$STATE_DIR/device-states"
@@ -417,8 +476,8 @@ args@{
 
               get_device_display_name() {
                   local device_id="$1"
-                  if [[ "$device_id" == "$SYNC_ID" && -n "$SYNC_NAME" ]]; then
-                      echo "$SYNC_NAME"
+                  if [[ -n "''${DEVICE_NAMES[$device_id]:-}" ]]; then
+                      echo "''${DEVICE_NAMES[$device_id]}"
                   else
                       echo "$device_id"
                   fi
@@ -441,21 +500,33 @@ args@{
                   local syncing_devices=()
                   local device_count=0
 
-                  if [[ -f "$DEVICE_STATE_FILE" ]]; then
-                      while IFS='=' read -r device_id connected; do
-                          [[ -z "$device_id" || "$connected" != "true" ]] && continue
-                          device_count=$((device_count + 1))
-
-                          COMPLETION_FILE="$TEMP_DIR/completion_''${device_id}_''${folder_id}"
-                          if curl -s -H @"$HEADER_FILE" "http://127.0.0.1:$SYNCTHING_GUI_PORT/rest/db/completion?device=$device_id&folder=$folder_id" > "$COMPLETION_FILE"; then
-                              completion=$(jq -r '.completion' "$COMPLETION_FILE" 2>/dev/null || echo "100")
-                              if [[ "$completion" != "100" ]]; then
-                                  device_display_name=$(get_device_display_name "$device_id")
-                                  syncing_devices+=("$device_display_name")
-                              fi
-                          fi
-                      done < "$DEVICE_STATE_FILE"
+                  FOLDER_CONFIG_FILE="$TEMP_DIR/folder_config_$folder_id"
+                  if ! curl -s -H @"$HEADER_FILE" "http://127.0.0.1:$SYNCTHING_GUI_PORT/rest/config/folders/$folder_id" > "$FOLDER_CONFIG_FILE"; then
+                      echo ""
+                      return
                   fi
+
+                  local folder_devices
+                  folder_devices=$(jq -r '.devices[].deviceID' "$FOLDER_CONFIG_FILE" 2>/dev/null)
+
+                  while read -r device_id; do
+                      [[ -z "$device_id" ]] && continue
+
+                      if [[ -f "$DEVICE_STATE_FILE" ]] && ! grep -q "^$device_id=true$" "$DEVICE_STATE_FILE"; then
+                          continue
+                      fi
+
+                      device_count=$((device_count + 1))
+
+                      COMPLETION_FILE="$TEMP_DIR/completion_''${device_id}_''${folder_id}"
+                      if curl -s -H @"$HEADER_FILE" "http://127.0.0.1:$SYNCTHING_GUI_PORT/rest/db/completion?device=$device_id&folder=$folder_id" > "$COMPLETION_FILE"; then
+                          completion=$(jq -r '.completion' "$COMPLETION_FILE" 2>/dev/null || echo "100")
+                          if [[ "$completion" != "100" ]]; then
+                              device_display_name=$(get_device_display_name "$device_id")
+                              syncing_devices+=("$device_display_name")
+                          fi
+                      fi
+                  done <<< "$folder_devices"
 
                   if [[ ''${#syncing_devices[@]} -gt 0 ]]; then
                       if [[ ''${#syncing_devices[@]} -eq 1 ]]; then
