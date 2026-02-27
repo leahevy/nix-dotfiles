@@ -84,6 +84,7 @@ in
             (pkgs.stdenv.mkDerivation {
               name = "nx";
               src = defs.rootPath;
+              dontAuditTmpdir = true;
               installPhase = ''
                                 mkdir -p $out/bin $out/share/nx
                                 cp -r scripts $out/share/nx/
