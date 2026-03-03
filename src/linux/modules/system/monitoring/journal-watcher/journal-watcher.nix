@@ -231,6 +231,7 @@ args@{
       "Failed to open X11 display"
       "No X display connection, ignoring X11 parent"
       "Unhandled parent window type"
+      "Source ID [0-9]+ was not found when attempting to remove it"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
