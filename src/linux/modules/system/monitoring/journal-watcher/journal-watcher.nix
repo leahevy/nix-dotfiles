@@ -134,6 +134,7 @@ args@{
       "QDBusConnection: name .* had owner"
       "QDBusConnection: couldn't handle call to CreateMonitor"
       "Could not find slot.*CreateMonitor"
+      "Could not find any platform plugin"
       "org.kde.kdegraphics.*: .*alignment=.*"
       "Namespace .* is not supported"
       "Choosing gtk\\.portal for .* as a last-resort fallback"
