@@ -35,15 +35,17 @@ args@{
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
-          binds = lib.mkIf (!(self.isModuleEnabled "mail-stack.neomutt")) (
-            with config.lib.niri.actions;
-            {
-              "Mod+Ctrl+Alt+O" = {
-                action = spawn-sh "niri-scratchpad --app-id thunderbird --all-windows --spawn thunderbird";
-                hotkey-overlay.title = "Apps:Mails";
-              };
-            }
-          );
+          binds =
+            lib.mkIf (!(self.isModuleEnabled "mail-stack.neomutt") && !(self.isModuleEnabled "proton.mail"))
+              (
+                with config.lib.niri.actions;
+                {
+                  "Mod+Ctrl+Alt+O" = {
+                    action = spawn-sh "niri-scratchpad --app-id thunderbird --all-windows --spawn thunderbird";
+                    hotkey-overlay.title = "Apps:Mails";
+                  };
+                }
+              );
 
           window-rules = [
             {
@@ -51,26 +53,29 @@ args@{
               block-out-from = "screencast";
             }
           ]
-          ++ lib.optionals (!(self.isModuleEnabled "mail-stack.neomutt")) [
-            {
-              matches = [ { app-id = "thunderbird"; } ];
-              min-width = 1500;
-              min-height = 800;
-              open-on-workspace = "scratch";
-              open-floating = true;
-              open-focused = false;
-            }
-            {
-              matches = [
+          ++
+            lib.optionals
+              (!(self.isModuleEnabled "mail-stack.neomutt") && !(self.isModuleEnabled "proton.mail"))
+              [
                 {
-                  app-id = "thunderbird";
-                  title = ".*(Reminder|Calendar|Event|Task|Address Book|Preferences|Options|Settings).*";
+                  matches = [ { app-id = "thunderbird"; } ];
+                  min-width = 1500;
+                  min-height = 800;
+                  open-on-workspace = "scratch";
+                  open-floating = true;
+                  open-focused = false;
+                }
+                {
+                  matches = [
+                    {
+                      app-id = "thunderbird";
+                      title = ".*(Reminder|Calendar|Event|Task|Address Book|Preferences|Options|Settings).*";
+                    }
+                  ];
+                  open-on-workspace = "nonexistent";
+                  open-focused = true;
                 }
               ];
-              open-on-workspace = "nonexistent";
-              open-focused = true;
-            }
-          ];
         };
       };
     };
