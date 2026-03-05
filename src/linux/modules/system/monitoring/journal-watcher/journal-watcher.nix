@@ -233,6 +233,7 @@ args@{
       "No X display connection, ignoring X11 parent"
       "Unhandled parent window type"
       "Source ID [0-9]+ was not found when attempting to remove it"
+      "No event config could be found for event id .* under notifyrc file"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
