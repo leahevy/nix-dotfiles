@@ -25,7 +25,7 @@ args@{
       {
         common = {
           proton = {
-            proton = true;
+            mail = true;
           };
           photos = {
             ente = true;
@@ -151,7 +151,7 @@ args@{
       {
         common = {
           proton = {
-            proton = true;
+            mail = true;
           };
           photos = {
             ente = true;
@@ -277,7 +277,7 @@ args@{
       {
         common = {
           proton = {
-            proton = true;
+            mail = true;
           };
           photos = {
             ente = true;
