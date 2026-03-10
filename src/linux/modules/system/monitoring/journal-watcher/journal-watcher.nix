@@ -39,6 +39,7 @@ args@{
       "BorgBackup job system"
       "nx-auto-upgrade.service"
       "nx-auto-upgrade-delayed.service"
+      "nx-auto-upgrade-notify.service"
       "NX Auto-Upgrade"
       "USB Audio.*cannot get freq"
       "USB Audio.*cannot set freq"
