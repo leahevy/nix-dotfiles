@@ -132,25 +132,14 @@ args@{
           Description = "Wayland Bongocat";
           After = [ "graphical-session.target" ];
           PartOf = [ "graphical-session.target" ];
-          OnFailure = [ ];
-          Requisite = [ ];
-          StartLimitIntervalSec = "600s";
-          StartLimitBurst = 30;
+          StartLimitIntervalSec = 0;
         };
 
         Service = {
           Type = "exec";
           ExecStart = startScript;
-          Restart = "on-failure";
-          RestartSec = "5s";
-          SuccessExitStatus = [
-            0
-            1
-          ];
-          RestartPreventExitStatus = [
-            1
-            2
-          ];
+          Restart = "always";
+          RestartSec = "30s";
           TimeoutStartSec = 15;
         };
 
