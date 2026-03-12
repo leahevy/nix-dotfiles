@@ -108,6 +108,7 @@ args@{
       "usb.*can't set config #[0-9]+, error -[0-9]+"
       "usb.*Cannot enable\\. Maybe the USB cable is bad\\?"
       "usb.*Not enough bandwidth for new device state"
+      "usb.*disabled by hub \\(EMI\\?\\), re-enabling"
       "VMSCAPE: SMT on, STIBP is required for full protection"
       "profiles/audio/bap\\.c:.*BAP requires ISO Socket which is not enabled"
       "bap: Operation not supported \\([0-9]+\\)"
@@ -253,6 +254,9 @@ args@{
       "Unhandled parent window type"
       "Source ID [0-9]+ was not found when attempting to remove it"
       "No event config could be found for event id .* under notifyrc file"
+      "Unable to replace properties on [0-9]+: Error getting properties for ID"
+      "Children but no menu.*children-display.*property"
+      "GDBus\\.Error:org\\.freedesktop\\.DBus\\.Error\\.ServiceUnknown: The name is not activatable"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
