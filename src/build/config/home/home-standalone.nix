@@ -23,7 +23,7 @@ let
   allOptionsData = funcs.collectAllModuleOptions args;
   optionsModules = funcs.generateOptionsModules allOptionsData;
 
-  initModules = funcs.importAllModuleInits args;
+  initModules = funcs.importAllModuleInits (args // { homeProcessedModules = allModules; });
 
   specialisationConfigs = builtins.mapAttrs (specName: specModules: {
     configuration = {
