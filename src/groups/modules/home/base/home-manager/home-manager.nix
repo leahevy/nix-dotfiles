@@ -34,7 +34,7 @@ args@{
             filen = false;
           };
           text = {
-            latex = true;
+            latex = false;
           };
           notes = {
             notesnook = true;
@@ -160,7 +160,7 @@ args@{
             filen = false;
           };
           text = {
-            latex = true;
+            latex = false;
           };
           notes = {
             notesnook = true;
@@ -286,7 +286,7 @@ args@{
             filen = false;
           };
           text = {
-            latex = true;
+            latex = false;
           };
           notes = {
             notesnook = true;
