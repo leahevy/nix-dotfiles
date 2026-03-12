@@ -83,11 +83,17 @@ let
                             {
                               name = moduleResult.name or moduleName;
                               description = moduleResult.description or "";
+                              options = moduleResult.options or { };
+                              rawOptions = moduleResult.rawOptions or { };
+                              hasInit = moduleResult ? init;
                             }
                           else
                             {
                               name = moduleFunc.name or moduleName;
                               description = moduleFunc.description or "";
+                              options = moduleFunc.options or { };
+                              rawOptions = moduleFunc.rawOptions or { };
+                              hasInit = moduleFunc ? init;
                             }
                         );
                       in
@@ -146,10 +152,33 @@ let
                       if result.success then
                         let
                           moduleMeta = result.value;
+                          excludedAttrs = [
+                            "options"
+                            "rawOptions"
+                            "configuration"
+                            "init"
+                            "assertions"
+                            "custom"
+                          ];
+                          filteredMeta = lib.filterAttrs (
+                            n: v: !builtins.isFunction v && !builtins.elem n excludedAttrs
+                          ) moduleMeta;
                           finalDescription =
                             if moduleMeta.description or "" != "" then moduleMeta.description else baseMeta.description;
+                          hasOptions = (moduleMeta.options or { }) != { };
+                          hasRawOptions = (moduleMeta.rawOptions or { }) != { };
                         in
-                        (baseMeta // moduleMeta // { description = finalDescription; }) // { inherit submodules; }
+                        (
+                          baseMeta
+                          // filteredMeta
+                          // {
+                            description = finalDescription;
+                            inherit hasOptions hasRawOptions;
+                          }
+                        )
+                        // {
+                          inherit submodules;
+                        }
                       else
                         baseMeta // { inherit submodules; }
                     else

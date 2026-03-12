@@ -15,7 +15,7 @@ args@{
   input = "linux";
   namespace = "home";
 
-  configuration =
+  init =
     context@{ config, options, ... }:
     let
       isNiriEnabled = self.isModuleEnabled "desktop.niri";
@@ -59,13 +59,54 @@ args@{
         else
           pkgs.fuzzel;
     in
+    lib.mkIf self.isEnabled {
+      nx.preferences.desktop.programs.appLauncher = {
+        name = "fuzzel";
+        package = fuzzelPackage;
+        openCommand = [ "fuzzel" ];
+        dmenuArgs = [ "-d" ];
+        dmenuCommand =
+          opts:
+          [
+            "fuzzel"
+            "--dmenu"
+          ]
+          ++ lib.optionals (opts.prompt or "" != "") [ "--prompt=${opts.prompt or ""}" ]
+          ++ lib.optionals (opts.width or null != null) [ "--width=${toString (opts.width or 0)}" ]
+          ++ lib.optionals (opts.lines or null != null) [ "--lines=${toString (opts.lines or 0)}" ]
+          ++ lib.optionals (opts.placeholder or null != null) [
+            "--placeholder=${opts.placeholder or ""}"
+          ];
+        dmenuIndexCommand =
+          opts:
+          [
+            "fuzzel"
+            "--dmenu"
+            "--index"
+            "--counter"
+          ]
+          ++ lib.optionals (opts.prompt or "" != "") [ "--prompt=${opts.prompt or ""}" ]
+          ++ lib.optionals (opts.width or null != null) [ "--width=${toString (opts.width or 0)}" ]
+          ++ lib.optionals (opts.lines or null != null) [ "--lines=${toString (opts.lines or 0)}" ]
+          ++ lib.optionals (opts.placeholder or null != null) [
+            "--placeholder=${opts.placeholder or ""}"
+          ];
+        desktopFile = null;
+      };
+    };
+
+  configuration =
+    context@{ config, options, ... }:
+    let
+      fuzzelPackage = config.nx.preferences.desktop.programs.appLauncher.package;
+    in
     {
       programs.fuzzel = {
         enable = true;
         package = fuzzelPackage;
         settings = {
           main = {
-            terminal = self.user.settings.terminal + " -e";
+            terminal = lib.concatStringsSep " " config.nx.preferences.desktop.programs.terminal.openRunPrefix;
             layer = "overlay";
             width = 40;
             lines = 15;
@@ -82,13 +123,13 @@ args@{
           };
 
           colors = {
-            background = lib.mkForce "${lib.removePrefix "#" self.theme.colors.main.backgrounds.primary.html}ee";
-            text = lib.mkForce "${lib.removePrefix "#" self.theme.colors.main.foregrounds.strong.html}ff";
-            match = lib.mkForce "${lib.removePrefix "#" self.theme.colors.main.foregrounds.primary.html}80";
-            selection = lib.mkForce "${lib.removePrefix "#" self.theme.colors.terminal.normalBackgrounds.selection.html}33";
-            selection-text = lib.mkForce "${lib.removePrefix "#" self.theme.colors.main.foregrounds.emphasized.html}ff";
-            selection-match = lib.mkForce "${lib.removePrefix "#" self.theme.colors.main.foregrounds.emphasized.html}ff";
-            border = lib.mkForce "${lib.removePrefix "#" self.theme.colors.separators.light.html}26";
+            background = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.main.backgrounds.primary.html}ee";
+            text = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.strong.html}ff";
+            match = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.primary.html}80";
+            selection = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.terminal.normalBackgrounds.selection.html}33";
+            selection-text = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}ff";
+            selection-match = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}ff";
+            border = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.separators.light.html}26";
           };
 
           border = {

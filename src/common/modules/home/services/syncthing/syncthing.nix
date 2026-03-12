@@ -52,6 +52,8 @@ args@{
     context@{ config, options, ... }:
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+      terminal = config.nx.preferences.desktop.programs.terminal;
+      terminalShellCmd = cmd: lib.escapeShellArgs (terminal.openShellCommand cmd);
 
       devicesAttr = builtins.listToAttrs (
         map (d: {
@@ -890,7 +892,7 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Mod+Ctrl+Alt+S" = {
-              action = spawn-sh "${self.user.settings.terminal} -e sh -c 'syncthing-status'";
+              action = spawn-sh (terminalShellCmd "syncthing-status");
               hotkey-overlay.title = "System:Syncthing status";
             };
           };

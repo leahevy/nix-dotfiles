@@ -20,6 +20,11 @@ let
 
   extraModules = moduleResults.modules;
 
+  allOptionsData = funcs.collectAllModuleOptions args;
+  optionsModules = funcs.generateOptionsModules allOptionsData;
+
+  initModules = funcs.importAllModuleInits args;
+
   specialisationConfigs = builtins.mapAttrs (specName: specModules: {
     configuration = {
       imports = (funcs.importHomeModules args (funcs.processModules specModules) allModules).modules;
@@ -60,12 +65,64 @@ let
           [ ];
     in
     buildModules ++ virtualModule;
+
+  profileInitModules =
+    let
+      hostInit =
+        if host.init or null != null && host.init != (args: context: { }) then
+          let
+            moduleContext = {
+              inputs = inputs;
+              variables = variables;
+              configInputs = args.configInputs or { };
+              moduleBasePath = "profiles/nixos/${host.profileName}";
+              moduleInput = args.configInputs.config or inputs.config;
+              moduleInputName = "config";
+              user = user;
+              host = host;
+              persist = "${variables.persist.home}/${user.username}";
+            };
+            enhancedContext = funcs.injectModuleFuncs moduleContext "home";
+            enhancedArgs = args // {
+              self = enhancedContext;
+            };
+          in
+          [ (host.init enhancedArgs) ]
+        else
+          [ ];
+      userInit =
+        if user.init != (args: context: { }) then
+          let
+            moduleContext = {
+              inputs = inputs;
+              variables = variables;
+              configInputs = args.configInputs or { };
+              moduleBasePath = "profiles/home-integrated/${user.profileName}";
+              moduleInput = args.configInputs.config or inputs.config;
+              moduleInputName = "config";
+              user = user;
+              host = host;
+              persist = "${variables.persist.home}/${user.username}";
+            };
+            enhancedContext = funcs.injectModuleFuncs moduleContext "home";
+            enhancedArgs = args // {
+              self = enhancedContext;
+            };
+          in
+          [ (user.init enhancedArgs) ]
+        else
+          [ ];
+    in
+    hostInit ++ userInit;
 in
 { config, options, ... }:
 
 {
   imports =
-    extraModules
+    optionsModules
+    ++ initModules
+    ++ profileInitModules
+    ++ extraModules
     ++ extraUserModule
     ++ [
       (import ../../assertions/home/home-integrated.nix (args // { processedModules = allModules; }))

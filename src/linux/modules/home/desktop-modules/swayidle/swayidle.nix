@@ -27,6 +27,37 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
+      theme = config.nx.preferences.theme;
+
+      colorReplacements = {
+        "<RING_COLOR>" = "${lib.removePrefix "#" theme.colors.main.backgrounds.primary.html}55";
+        "<INSIDE_WRONG_COLOR>" = lib.removePrefix "#" theme.colors.main.backgrounds.primary.html;
+        "<TEXT_WRONG_COLOR>" = lib.removePrefix "#" theme.colors.semantic.error.html;
+        "<INSIDE_VER_COLOR>" = lib.removePrefix "#" theme.colors.main.backgrounds.primary.html;
+        "<TEXT_VER_COLOR>" = lib.removePrefix "#" theme.colors.semantic.success.html;
+        "<RING_VER_COLOR>" = lib.removePrefix "#" theme.colors.semantic.success.html;
+        "<RING_WRONG_COLOR>" = lib.removePrefix "#" theme.colors.semantic.error.html;
+        "<RING_CLEAR_COLOR>" = lib.removePrefix "#" theme.colors.main.base.blue.html;
+        "<TEXT_CLEAR_COLOR>" = lib.removePrefix "#" theme.colors.main.base.blue.html;
+        "<INSIDE_CLEAR_COLOR>" = lib.removePrefix "#" theme.colors.main.backgrounds.primary.html;
+      };
+
+      replaceColorPlaceholders =
+        str:
+        builtins.foldl' (
+          acc: placeholder: builtins.replaceStrings [ placeholder ] [ colorReplacements.${placeholder} ] acc
+        ) str (builtins.attrNames colorReplacements);
+
+      rawCommandline = self.settings.commandline;
+      commandline = replaceColorPlaceholders rawCommandline;
+
+      unreplacedPlaceholders = builtins.match ".*<[A-Z_]+>.*" commandline;
+      commandlineValidated =
+        if unreplacedPlaceholders != null then
+          throw "swayidle: commandline contains unreplaced placeholders: ${commandline}"
+        else
+          commandline;
+
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
 
       wrapTimeoutCommand =
@@ -122,7 +153,7 @@ args@{
 
       services.swayidle =
         let
-          wrapperCommand = "${self.user.home}/.local/bin/scripts/swaylock-wrapper-daemon ${self.settings.package}/bin/${self.settings.commandline}";
+          wrapperCommand = "${self.user.home}/.local/bin/scripts/swaylock-wrapper-daemon ${self.settings.package}/bin/${commandlineValidated}";
           wrappedLockCommand = toString (wrapTimeoutCommand wrapperCommand);
           wrappedMonitorOffCommand = toString (
             wrapTimeoutCommand (lib.concatStringsSep ";" [ self.settings.turnOffMonitorsCommand ])

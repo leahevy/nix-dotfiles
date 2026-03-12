@@ -34,6 +34,47 @@ args@{
     fontFamily = "DejaVuSansM Nerd Font Mono";
   };
 
+  init =
+    context@{ config, options, ... }:
+    lib.mkIf self.isEnabled {
+      nx.preferences.desktop.programs.terminal = {
+        name = "ghostty";
+        package = null;
+        openCommand = [ "ghostty" ];
+        openDirectoryCommand = path: [
+          "ghostty"
+          "--working-directory=${path}"
+        ];
+        openRunCommand = cmd: [
+          "ghostty"
+          "-e"
+          cmd
+        ];
+        openRunPrefix = [
+          "ghostty"
+          "-e"
+        ];
+        openShellCommand = cmd: [
+          "ghostty"
+          "-e"
+          "sh"
+          "-c"
+          cmd
+        ];
+        openWithClass = class: [
+          "ghostty"
+          "--class=${class}"
+        ];
+        openRunWithClass = class: cmd: [
+          "ghostty"
+          "--class=${class}"
+          "-e"
+          cmd
+        ];
+        desktopFile = "com.mitchellh.ghostty.desktop";
+      };
+    };
+
   configuration =
     context@{ config, options, ... }:
     {
@@ -48,7 +89,7 @@ args@{
           background-opacity = lib.mkForce self.settings.opacity;
           background-blur = lib.mkForce true;
           background = lib.mkForce (
-            lib.removePrefix "#" (self.theme.colors.terminal.normalBackgrounds.primary.html)
+            lib.removePrefix "#" (config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html)
           );
           working-directory = "inherit";
 

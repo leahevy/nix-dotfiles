@@ -32,13 +32,6 @@ args@{
     withVirtualTextDiagnostics = true;
   };
 
-  assertions = [
-    {
-      assertion = !self.settings.enableLaTeX || self.isModuleEnabled "text.latex";
-      message = "LSP LaTeX support requires the text.latex module to be enabled";
-    }
-  ];
-
   configuration =
     context@{ config, options, ... }:
     {
@@ -223,7 +216,7 @@ args@{
               };
             };
 
-            texlab = lib.mkIf self.settings.enableLaTeX {
+            texlab = lib.mkIf (self.settings.enableLaTeX && self.isModuleEnabled "text.latex") {
               enable = true;
               package = pkgs.texlab;
               config = {
@@ -417,20 +410,20 @@ args@{
         extraConfigLua = ''
           _G.nx_modules = _G.nx_modules or {}
           _G.nx_modules["50-lsp-diagnostics"] = function()
-            vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "${self.theme.colors.semantic.error.html}" })
-            vim.api.nvim_set_hl(0, "DiagnosticWarn", { fg = "${self.theme.colors.semantic.warning.html}" })
-            vim.api.nvim_set_hl(0, "DiagnosticInfo", { fg = "${self.theme.colors.semantic.hint.html}" })
-            vim.api.nvim_set_hl(0, "DiagnosticHint", { fg = "${self.theme.colors.semantic.inactive.html}" })
+            vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}" })
+            vim.api.nvim_set_hl(0, "DiagnosticWarn", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}" })
+            vim.api.nvim_set_hl(0, "DiagnosticInfo", { fg = "${config.nx.preferences.theme.colors.semantic.hint.html}" })
+            vim.api.nvim_set_hl(0, "DiagnosticHint", { fg = "${config.nx.preferences.theme.colors.semantic.inactive.html}" })
 
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextError", { fg = "${self.theme.colors.semantic.error.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextWarn", { fg = "${self.theme.colors.semantic.warning.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextInfo", { fg = "${self.theme.colors.semantic.hint.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextHint", { fg = "${self.theme.colors.semantic.inactive.html}", italic = true, underdotted = true })
+            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextError", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}", italic = true, underdotted = true })
+            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextWarn", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}", italic = true, underdotted = true })
+            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextInfo", { fg = "${config.nx.preferences.theme.colors.semantic.hint.html}", italic = true, underdotted = true })
+            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextHint", { fg = "${config.nx.preferences.theme.colors.semantic.inactive.html}", italic = true, underdotted = true })
 
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesError", { fg = "${self.theme.colors.semantic.error.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesWarn", { fg = "${self.theme.colors.semantic.warning.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesInfo", { fg = "${self.theme.colors.semantic.hint.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesHint", { fg = "${self.theme.colors.semantic.inactive.html}", italic = true, underdotted = true })
+            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesError", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}", italic = true, underdotted = true })
+            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesWarn", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}", italic = true, underdotted = true })
+            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesInfo", { fg = "${config.nx.preferences.theme.colors.semantic.hint.html}", italic = true, underdotted = true })
+            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesHint", { fg = "${config.nx.preferences.theme.colors.semantic.inactive.html}", italic = true, underdotted = true })
 
             ${lib.optionalString self.settings.withVirtualTextDiagnostics ''
               local severity_text = {

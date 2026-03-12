@@ -24,6 +24,7 @@ args@{
         tokens = true;
         sops = true;
         path = true;
+        preferences = true;
       };
       desktop = {
         desktop = true;

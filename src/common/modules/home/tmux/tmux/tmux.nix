@@ -17,16 +17,16 @@ args@{
 
   settings = {
     waylandClipboard = false;
-    primaryBg = self.theme.colors.blocks.primary.background.html;
-    primaryFg = self.theme.colors.blocks.primary.foreground.html;
-    prefixFg = self.theme.colors.blocks.selection.foreground.html;
-    prefixBg = self.theme.colors.blocks.selection.background.html;
-    secondaryBg = self.theme.colors.blocks.primary.foreground.html;
-    secondaryFg = self.theme.colors.blocks.primary.background.html;
-    statusBg = self.theme.colors.terminal.normalBackgrounds.primary.html;
-    statusFg = self.theme.colors.terminal.colors.cyan.html;
-    borderColor = self.theme.colors.blocks.primary.foreground.html;
-    activeBorderColor = self.theme.colors.blocks.primary.background.html;
+    primaryBg = null;
+    primaryFg = null;
+    prefixFg = null;
+    prefixBg = null;
+    secondaryBg = null;
+    secondaryFg = null;
+    statusBg = null;
+    statusFg = null;
+    borderColor = null;
+    activeBorderColor = null;
     defaultShell = "fish";
     useTransparency = true;
     tmuxinatorConfigs = { };
@@ -39,7 +39,59 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
-      colors = self.settings;
+      theme = config.nx.preferences.theme;
+      colors = {
+        primaryBg =
+          if self.settings.primaryBg != null then
+            self.settings.primaryBg
+          else
+            theme.colors.blocks.primary.background.html;
+        primaryFg =
+          if self.settings.primaryFg != null then
+            self.settings.primaryFg
+          else
+            theme.colors.blocks.primary.foreground.html;
+        prefixFg =
+          if self.settings.prefixFg != null then
+            self.settings.prefixFg
+          else
+            theme.colors.blocks.selection.foreground.html;
+        prefixBg =
+          if self.settings.prefixBg != null then
+            self.settings.prefixBg
+          else
+            theme.colors.blocks.selection.background.html;
+        secondaryBg =
+          if self.settings.secondaryBg != null then
+            self.settings.secondaryBg
+          else
+            theme.colors.blocks.primary.foreground.html;
+        secondaryFg =
+          if self.settings.secondaryFg != null then
+            self.settings.secondaryFg
+          else
+            theme.colors.blocks.primary.background.html;
+        statusBg =
+          if self.settings.statusBg != null then
+            self.settings.statusBg
+          else
+            theme.colors.terminal.normalBackgrounds.primary.html;
+        statusFg =
+          if self.settings.statusFg != null then
+            self.settings.statusFg
+          else
+            theme.colors.terminal.colors.cyan.html;
+        borderColor =
+          if self.settings.borderColor != null then
+            self.settings.borderColor
+          else
+            theme.colors.blocks.primary.foreground.html;
+        activeBorderColor =
+          if self.settings.activeBorderColor != null then
+            self.settings.activeBorderColor
+          else
+            theme.colors.blocks.primary.background.html;
+      };
       yamlFormat = pkgs.formats.yaml { };
 
       allConfigs = self.settings.tmuxinatorBaseConfigs // self.settings.tmuxinatorConfigs;

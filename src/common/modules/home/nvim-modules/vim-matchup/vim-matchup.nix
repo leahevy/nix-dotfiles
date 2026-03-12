@@ -206,11 +206,11 @@ args@{
             })
 
             local normal_bg = vim.api.nvim_get_hl(0, { name = "Normal" }).bg
-            local bg_color = normal_bg and string.format("#%06x", normal_bg) or "${self.theme.colors.terminal.normalBackgrounds.primary.html}"
+            local bg_color = normal_bg and string.format("#%06x", normal_bg) or "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}"
 
             vim.api.nvim_set_hl(0, "MatchParen", {
               bg = bg_color,
-              fg = "${self.theme.colors.terminal.colors.pink.html}",
+              fg = "${config.nx.preferences.theme.colors.terminal.colors.pink.html}",
               bold = true
             })
             vim.api.nvim_set_hl(0, "MatchWord", {

@@ -262,12 +262,12 @@ args@{
               }
             })
 
-            vim.api.nvim_set_hl(0, "LuasnipInsertNodePassive", { fg = "${self.theme.colors.separators.normal.html}" })
-            vim.api.nvim_set_hl(0, "LuasnipInsertNodeActive", { fg = "${self.theme.colors.semantic.info.html}" })
-            vim.api.nvim_set_hl(0, "LuasnipExitNodePassive", { fg = "${self.theme.colors.separators.normal.html}" })
-            vim.api.nvim_set_hl(0, "LuasnipExitNodeActive", { fg = "${self.theme.colors.semantic.success.html}" })
-            vim.api.nvim_set_hl(0, "LuasnipChoiceNodePassive", { fg = "${self.theme.colors.separators.normal.html}" })
-            vim.api.nvim_set_hl(0, "LuasnipChoiceNodeActive", { fg = "${self.theme.colors.semantic.warning.html}" })
+            vim.api.nvim_set_hl(0, "LuasnipInsertNodePassive", { fg = "${config.nx.preferences.theme.colors.separators.normal.html}" })
+            vim.api.nvim_set_hl(0, "LuasnipInsertNodeActive", { fg = "${config.nx.preferences.theme.colors.semantic.info.html}" })
+            vim.api.nvim_set_hl(0, "LuasnipExitNodePassive", { fg = "${config.nx.preferences.theme.colors.separators.normal.html}" })
+            vim.api.nvim_set_hl(0, "LuasnipExitNodeActive", { fg = "${config.nx.preferences.theme.colors.semantic.success.html}" })
+            vim.api.nvim_set_hl(0, "LuasnipChoiceNodePassive", { fg = "${config.nx.preferences.theme.colors.separators.normal.html}" })
+            vim.api.nvim_set_hl(0, "LuasnipChoiceNodeActive", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}" })
 
             ${lib.optionalString (self.isModuleEnabled "nvim-modules.telescope") ''
               local telescope = require('telescope')

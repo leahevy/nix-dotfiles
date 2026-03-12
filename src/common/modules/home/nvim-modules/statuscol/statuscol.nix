@@ -35,7 +35,7 @@ args@{
               return vim.fn.foldlevel(line) > 0 or vim.fn.foldclosed(line) ~= -1
             end
 
-            vim.api.nvim_set_hl(0, 'StatusColSeparator', { fg = '${self.theme.colors.separators.ultraDark.html}' })
+            vim.api.nvim_set_hl(0, 'StatusColSeparator', { fg = '${config.nx.preferences.theme.colors.separators.ultraDark.html}' })
           end
         '';
 

@@ -18,9 +18,9 @@ args@{
     context@{ config, options, ... }:
     (lib.mkIf self.user.isStandalone {
       home.file = {
-        ".config/nx-theme/current-theme".text = self.theme.name;
-        ".config/nx-theme/current-theme-config.json".text = builtins.toJSON self.theme;
-        ".config/nx-theme/active-${self.theme.name}".text = "";
+        ".config/nx-theme/current-theme".text = config.nx.preferences.theme.name;
+        ".config/nx-theme/current-theme-config.json".text = builtins.toJSON config.nx.preferences.theme;
+        ".config/nx-theme/active-${config.nx.preferences.theme.name}".text = "";
       }
       // builtins.listToAttrs (
         map (name: {

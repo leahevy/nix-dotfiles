@@ -149,15 +149,15 @@ args@{
         extraConfigLua = ''
           _G.nx_modules = _G.nx_modules or {}
           _G.nx_modules["60-dashboard"] = function()
-            vim.api.nvim_set_hl(0, "DashboardHeader", { fg = "${self.theme.colors.terminal.colors.yellow.html}", bold = true })
+            vim.api.nvim_set_hl(0, "DashboardHeader", { fg = "${config.nx.preferences.theme.colors.terminal.colors.yellow.html}", bold = true })
 
-            vim.api.nvim_set_hl(0, "DashboardProjectTitle", { fg = "${self.theme.colors.terminal.colors.blue.html}", bold = true })
-            vim.api.nvim_set_hl(0, "DashboardProjectTitleIcon", { fg = "${self.theme.colors.terminal.colors.red.html}" })
-            vim.api.nvim_set_hl(0, "DashboardProjectIcon", { fg = "${self.theme.colors.terminal.colors.blue.html}" })
-            vim.api.nvim_set_hl(0, "DashboardMruTitle", { fg = "${self.theme.colors.terminal.colors.green.html}", bold = true })
-            vim.api.nvim_set_hl(0, "DashboardMruIcon", { fg = "${self.theme.colors.terminal.colors.yellow.html}" })
-            vim.api.nvim_set_hl(0, "DashboardFiles", { fg = "${self.theme.colors.terminal.colors.green.html}" })
-            vim.api.nvim_set_hl(0, "DashboardShortCutIcon", { fg = "${self.theme.colors.terminal.colors.purple.html}" })
+            vim.api.nvim_set_hl(0, "DashboardProjectTitle", { fg = "${config.nx.preferences.theme.colors.terminal.colors.blue.html}", bold = true })
+            vim.api.nvim_set_hl(0, "DashboardProjectTitleIcon", { fg = "${config.nx.preferences.theme.colors.terminal.colors.red.html}" })
+            vim.api.nvim_set_hl(0, "DashboardProjectIcon", { fg = "${config.nx.preferences.theme.colors.terminal.colors.blue.html}" })
+            vim.api.nvim_set_hl(0, "DashboardMruTitle", { fg = "${config.nx.preferences.theme.colors.terminal.colors.green.html}", bold = true })
+            vim.api.nvim_set_hl(0, "DashboardMruIcon", { fg = "${config.nx.preferences.theme.colors.terminal.colors.yellow.html}" })
+            vim.api.nvim_set_hl(0, "DashboardFiles", { fg = "${config.nx.preferences.theme.colors.terminal.colors.green.html}" })
+            vim.api.nvim_set_hl(0, "DashboardShortCutIcon", { fg = "${config.nx.preferences.theme.colors.terminal.colors.purple.html}" })
 
             local function clean_project_cache()
               local cache_path = vim.fn.stdpath('cache') .. '/dashboard/cache'

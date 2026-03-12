@@ -21,6 +21,8 @@ args@{
       runtimeDir = if self.isDarwin then "$HOME/Library/Caches" else "$XDG_RUNTIME_DIR";
       emacsPackage = if self.isDarwin then pkgs.emacs-macport else pkgs.emacs-gtk;
       sshAgentEnabled = self.isLinux && (config.services.ssh-agent.enable or false);
+      terminal = config.nx.preferences.desktop.programs.terminal;
+      terminalRunPrefix = lib.escapeShellArgs terminal.openRunPrefix;
     in
     {
       home.packages = [ emacsPackage ];
@@ -115,7 +117,7 @@ args@{
         executable = true;
         text = ''
           #!/usr/bin/env bash
-          exec ${self.user.settings.terminal} -e emacsclient --server-file="${runtimeDir}/emacs-auth/emacs-server" -c -a false -t "$@"
+          exec ${terminalRunPrefix} emacsclient --server-file="${runtimeDir}/emacs-auth/emacs-server" -c -a false -t "$@"
         '';
       };
 

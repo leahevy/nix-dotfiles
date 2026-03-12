@@ -71,6 +71,9 @@ rec {
         "warning"
         "error"
         "broken"
+        "options"
+        "rawOptions"
+        "init"
       ];
 
       actualAttrs = builtins.attrNames moduleResult;
@@ -1049,4 +1052,230 @@ rec {
         mergedModules = mergeModulesWithPrecedence modules forcedModuleSpecs;
       in
       mergedModules;
+
+  scanAllModulesForInput =
+    inputName: input: moduleType:
+    let
+      modulesPath = input + "/modules/${moduleType}";
+    in
+    if builtins.pathExists modulesPath then
+      let
+        groups = builtins.readDir modulesPath;
+        scanGroup =
+          groupName: groupType:
+          if groupType == "directory" then
+            let
+              groupPath = modulesPath + "/${groupName}";
+              modules = builtins.readDir groupPath;
+            in
+            lib.mapAttrsToList (
+              moduleName: entryType:
+              if entryType == "directory" then
+                let
+                  modulePath = groupPath + "/${moduleName}/${moduleName}.nix";
+                in
+                if builtins.pathExists modulePath then
+                  {
+                    inherit
+                      inputName
+                      groupName
+                      moduleName
+                      modulePath
+                      moduleType
+                      ;
+                    input = input;
+                  }
+                else
+                  null
+              else
+                null
+            ) modules
+          else
+            [ ];
+      in
+      lib.flatten (lib.mapAttrsToList scanGroup groups)
+    else
+      [ ];
+
+  collectAllModuleOptions =
+    args:
+    let
+      inputsToScan = [
+        "common"
+        "linux"
+        "darwin"
+        "groups"
+        "build"
+        "config"
+        "profile"
+        "themes"
+      ];
+
+      moduleTypes = [
+        "home"
+        "system"
+      ];
+
+      minimalArgs = {
+        inherit lib;
+        pkgs = args.pkgs;
+        pkgs-unstable = args.pkgs-unstable;
+        funcs = { };
+        helpers = helpers;
+        defs = args.defs;
+        self = { };
+      };
+
+      scanInputForType =
+        inputName: moduleType:
+        if additionalInputs ? ${inputName} then
+          let
+            input = additionalInputs.${inputName};
+            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input moduleType);
+          in
+          map (
+            spec:
+            let
+              moduleResult = builtins.tryEval (import spec.modulePath minimalArgs);
+            in
+            if moduleResult.success then
+              {
+                inherit (spec)
+                  inputName
+                  groupName
+                  moduleName
+                  modulePath
+                  ;
+                inherit moduleType;
+                options = moduleResult.value.options or { };
+                rawOptions = moduleResult.value.rawOptions or { };
+              }
+            else
+              {
+                inherit (spec)
+                  inputName
+                  groupName
+                  moduleName
+                  modulePath
+                  ;
+                inherit moduleType;
+                options = { };
+                rawOptions = { };
+              }
+          ) moduleSpecs
+        else
+          [ ];
+
+      allModuleOptions = lib.flatten (
+        lib.concatMap (
+          inputName: map (moduleType: scanInputForType inputName moduleType) moduleTypes
+        ) inputsToScan
+      );
+    in
+    builtins.filter (m: m.options != { } || m.rawOptions != { }) allModuleOptions;
+
+  generateOptionsModules =
+    collectedOptions:
+    let
+      moduleOptionsModules = map (
+        m:
+        if m.options != { } then
+          {
+            options.nx.${m.inputName}.${m.groupName}.${m.moduleName} = lib.mapAttrs (
+              name: spec: if spec._type or null == "option" then spec else lib.mkOption spec
+            ) m.options;
+          }
+        else
+          { }
+      ) collectedOptions;
+
+      rawOptionsModules = map (m: if m.rawOptions != { } then { options = m.rawOptions; } else { }) (
+        builtins.filter (m: m.rawOptions != { }) collectedOptions
+      );
+    in
+    (builtins.filter (m: m != { }) moduleOptionsModules) ++ rawOptionsModules;
+
+  importAllModuleInits =
+    args:
+    let
+      inputsToScan = [
+        "common"
+        "linux"
+        "darwin"
+        "groups"
+        "build"
+        "config"
+        "profile"
+        "themes"
+      ];
+
+      moduleTypes = [
+        "home"
+        "system"
+      ];
+
+      scanInputForType =
+        inputName: moduleType:
+        if additionalInputs ? ${inputName} then
+          let
+            input = additionalInputs.${inputName};
+            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input moduleType);
+          in
+          lib.flatten (
+            map (
+              spec:
+              let
+                moduleDir = "modules/${moduleType}/${spec.groupName}/${spec.moduleName}";
+
+                moduleContext = {
+                  inputs = args.inputs;
+                  variables = args.variables;
+                  configInputs = args.configInputs or { };
+                  moduleBasePath = moduleDir;
+                  moduleInput = spec.input;
+                  moduleInputName = spec.inputName;
+                  settings = { };
+                  host = args.host // {
+                    processedModules = args.systemProcessedModules or { };
+                  };
+                  users = args.users or { };
+                  user =
+                    if args.user or null != null then
+                      args.user
+                      // {
+                        processedModules = args.homeProcessedModules or { };
+                      }
+                    else
+                      null;
+                };
+
+                enhancedModuleContext = injectModuleFuncs moduleContext moduleType;
+
+                contextWithOptions = enhancedModuleContext // {
+                  options = config: config.nx.${spec.inputName}.${spec.groupName}.${spec.moduleName} or { };
+                };
+
+                consolidatedArgs = {
+                  lib = args.lib;
+                  pkgs = args.pkgs;
+                  pkgs-unstable = args.pkgs-unstable;
+                  funcs = args.funcs;
+                  helpers = helpers;
+                  defs = args.defs;
+                  self = contextWithOptions;
+                };
+
+                moduleResult = builtins.tryEval (import spec.modulePath consolidatedArgs);
+              in
+              if moduleResult.success && moduleResult.value ? init then [ (moduleResult.value.init) ] else [ ]
+            ) moduleSpecs
+          )
+        else
+          [ ];
+    in
+    lib.flatten (
+      lib.concatMap (
+        inputName: map (moduleType: scanInputForType inputName moduleType) moduleTypes
+      ) inputsToScan
+    );
 }

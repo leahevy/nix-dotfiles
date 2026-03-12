@@ -529,4 +529,13 @@ rec {
         minComparison >= 0 && maxComparison < 0;
     in
     usePackageByVersionCheck args pkgName predicate;
+
+  # Returns terminal.openRunPrefix if program.needsTerminal is true, else empty list
+  # Usage: (terminalPrefixIf config textEditor) ++ textEditor.openCommand ++ [ "{file}" ]
+  terminalPrefixIf =
+    config: program:
+    if program.needsTerminal or false then
+      config.nx.preferences.desktop.programs.terminal.openRunPrefix
+    else
+      [ ];
 }

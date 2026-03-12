@@ -423,6 +423,12 @@ with lib;
       description = "Additional untyped settings to add to the host configuration";
     };
 
+    init = mkOption {
+      type = types.functionTo (types.functionTo types.attrs);
+      default = args: context: { };
+      description = "Init function that runs in both NixOS and home-manager contexts. Only set config.nx.* options here.";
+    };
+
     configuration = mkOption {
       type = types.functionTo (types.functionTo types.attrs);
       default = args: context: { };

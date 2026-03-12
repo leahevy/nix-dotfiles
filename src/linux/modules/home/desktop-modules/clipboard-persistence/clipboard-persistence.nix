@@ -15,18 +15,13 @@ args@{
   input = "linux";
   namespace = "home";
 
-  assertions = [
-    {
-      assertion = self.isModuleEnabled "desktop-modules.fuzzel";
-      message = "Fuzzel is required for clipboard-persistence";
-    }
-  ];
-
   configuration =
     context@{ config, ... }:
     let
       clipmanPackage = pkgs.clipman;
       wlClipboardPackage = pkgs.wl-clipboard;
+      appLauncher = config.nx.preferences.desktop.programs.appLauncher;
+      appLauncherDmenuSimple = lib.escapeShellArgs (appLauncher.openCommand ++ appLauncher.dmenuArgs);
     in
     lib.mkMerge [
       {
@@ -48,7 +43,7 @@ args@{
 
       (lib.mkIf (self.isModuleEnabled "desktop.niri") {
         programs.niri.settings.binds."Mod+B" = with config.lib.niri.actions; {
-          action = spawn-sh "${clipmanPackage}/bin/clipman pick --tool=CUSTOM --tool-args=\"fuzzel -d\"";
+          action = spawn-sh "${clipmanPackage}/bin/clipman pick --tool=CUSTOM --tool-args=\"${appLauncherDmenuSimple}\"";
           hotkey-overlay.title = "Clipboard:Clipboard manager";
         };
       })

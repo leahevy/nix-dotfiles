@@ -38,7 +38,7 @@ SUBCOMMANDS:
     help                    Show this help message
 
 MODULE FORMAT:
-    INPUT.NAMESPACE.GROUP.MODULENAME   Example: common.home.shell.bash
+    INPUT.GROUP.MODULE.NAMESPACE   Example: common.shell.bash.home
 EOF
 }
 
@@ -162,27 +162,20 @@ subcommand_list() {
       [[ -z "$module_id" ]] && continue
       
       local input_name="${module_id%%.*}"
-      
+      local rest="${module_id#*.}"
+      local group_name="${rest%%.*}"
+      local rest2="${rest#*.}"
+      local module_name="${rest2%%.*}"
+
       local is_active=false
-      
+
       if [[ "$module_type" == "system" && -n "${host_modules:-}" && "$host_modules" != "{}" ]]; then
-        local rest="${module_id#*.}"
-        local namespace_name="${rest%%.*}"
-        local rest2="${rest#*.}"
-        local group_name="${rest2%%.*}"
-        local module_name="${rest2#*.}"
-        
         local module_active="$(echo "$host_modules" | jq -r --arg in "$input_name" --arg grp "$group_name" --arg mod "$module_name" '.[$in][$grp][$mod] // false | if type == "boolean" then . elif type == "object" then true else false end' 2>/dev/null || echo "false")"
         if [[ "$module_active" == "true" ]]; then
           is_active=true
         fi
       elif [[ "$module_type" == "home" && -n "${user_modules:-$active_modules}" ]]; then
         local check_modules="${user_modules:-$active_modules}"
-        local rest="${module_id#*.}"
-        local rest2="${rest#*.}"
-        local group_name="${rest2%%.*}"
-        local module_name="${rest2#*.}"
-        
         local module_active="$(echo "$check_modules" | jq -r --arg in "$input_name" --arg grp "$group_name" --arg mod "$module_name" '.[$in][$grp][$mod] // false | if type == "boolean" then . elif type == "object" then true else false end' 2>/dev/null || echo "false")"
         if [[ "$module_active" == "true" ]]; then
           is_active=true
@@ -222,7 +215,7 @@ subcommand_list() {
       $module.key as $module_name |
       $module.value as $module_data |
       select($module_data.moduleType == $mt) |
-      "\($input_name).\($modtype_name).\($group_name).\($module_name)|\($module_data.description // "No description")"
+      "\($input_name).\($group_name).\($module_name).\($modtype_name)|\($module_data.description // "No description")"
     ')
   done
   
@@ -257,23 +250,23 @@ subcommand_list() {
 subcommand_info() {
   if [[ $# -eq 0 ]]; then
     echo -e "${RED}Error: MODULE argument required${RESET}" >&2
-    echo -e "Usage: ${WHITE}nx modules info INPUT.NAMESPACE.GROUP.MODULENAME${RESET}" >&2
+    echo -e "Usage: ${WHITE}nx modules info INPUT.GROUP.MODULE.NAMESPACE${RESET}" >&2
     exit 1
   fi
-  
+
   local module_id="$1"
   if [[ ! "$module_id" =~ ^[^.]+\.[^.]+\.[^.]+\.[^.]+$ ]]; then
-    echo -e "${RED}Error: Invalid module format. Expected: INPUT.NAMESPACE.GROUP.MODULENAME${RESET}" >&2
+    echo -e "${RED}Error: Invalid module format. Expected: INPUT.GROUP.MODULE.NAMESPACE${RESET}" >&2
     exit 1
   fi
-  
+
   local input_name="${module_id%%.*}"
   local rest="${module_id#*.}"
-  local namespace_name="${rest%%.*}"
+  local group_name="${rest%%.*}"
   local rest2="${rest#*.}"
-  local group_name="${rest2%%.*}"
-  local module_name="${rest2#*.}"
-  
+  local module_name="${rest2%%.*}"
+  local namespace_name="${rest2#*.}"
+
   echo -e "${YELLOW}Fetching module information...${RESET}"
   echo
   local module_info
@@ -294,34 +287,50 @@ subcommand_info() {
   local input=$(echo "$module_info" | jq -r '.input // "unknown"')
   local moduleType=$(echo "$module_info" | jq -r '.moduleType // "unknown"')
   local path=$(echo "$module_info" | jq -r '.path // "unknown"')
-  
+  local hasInit=$(echo "$module_info" | jq -r '.hasInit // false')
+  local hasOptions=$(echo "$module_info" | jq -r '.hasOptions // false')
+  local hasRawOptions=$(echo "$module_info" | jq -r '.hasRawOptions // false')
+
   echo -e "  ${GREEN}name:${RESET} ${RED}\"$name\"${RESET}"
   echo -e "  ${GREEN}description:${RESET} ${RED}\"$description\"${RESET}"
   echo -e "  ${GREEN}group:${RESET} ${RED}\"$group\"${RESET}"
   echo -e "  ${GREEN}input:${RESET} ${RED}\"$input\"${RESET}"
   echo -e "  ${GREEN}moduleType:${RESET} ${RED}\"$moduleType\"${RESET}"
   echo -e "  ${GREEN}path:${RESET} ${RED}\"$path\"${RESET}"
+  echo -e "  ${GREEN}hasInit:${RESET} ${YELLOW}$hasInit${RESET}"
+  echo -e "  ${GREEN}hasOptions:${RESET} ${YELLOW}$hasOptions${RESET}"
+  echo -e "  ${GREEN}hasRawOptions:${RESET} ${YELLOW}$hasRawOptions${RESET}"
+
+  if [[ "$hasOptions" == "true" ]]; then
+    echo
+    echo -e "  ${GREEN}options:${RESET} (typed options at config.nx.$input.$group.$name.*)"
+  fi
+
+  if [[ "$hasRawOptions" == "true" ]]; then
+    echo
+    echo -e "  ${GREEN}rawOptions:${RESET} (root-level options declared)"
+  fi
 }
 
 subcommand_edit() {
   if [[ $# -eq 0 ]]; then
     echo -e "${RED}Error: MODULE argument required${RESET}" >&2
-    echo -e "Usage: ${WHITE}nx modules edit INPUT.NAMESPACE.GROUP.MODULENAME${RESET}" >&2
+    echo -e "Usage: ${WHITE}nx modules edit INPUT.GROUP.MODULE.NAMESPACE${RESET}" >&2
     exit 1
   fi
-  
+
   local module_id="$1"
   if [[ ! "$module_id" =~ ^[^.]+\.[^.]+\.[^.]+\.[^.]+$ ]]; then
-    echo -e "${RED}Error: Invalid module format. Expected: INPUT.NAMESPACE.GROUP.MODULENAME${RESET}" >&2
+    echo -e "${RED}Error: Invalid module format. Expected: INPUT.GROUP.MODULE.NAMESPACE${RESET}" >&2
     exit 1
   fi
-  
+
   local input_name="${module_id%%.*}"
   local rest="${module_id#*.}"
-  local namespace_name="${rest%%.*}"
+  local group_name="${rest%%.*}"
   local rest2="${rest#*.}"
-  local group_name="${rest2%%.*}"
-  local module_name="${rest2#*.}"
+  local module_name="${rest2%%.*}"
+  local namespace_name="${rest2#*.}"
   
   local core_inputs=("common" "linux" "darwin" "groups" "build" "config" "profile" "themes")
   local input_allowed=false

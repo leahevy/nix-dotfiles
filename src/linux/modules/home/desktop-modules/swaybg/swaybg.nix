@@ -28,6 +28,9 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
+      appLauncher = config.nx.preferences.desktop.programs.appLauncher;
+      appLauncherDmenu = opts: lib.escapeShellArgs (appLauncher.dmenuCommand opts);
+
       getStylixWallpaper =
         let
           stylixConfig =
@@ -328,7 +331,7 @@ args@{
             FUZZEL_INPUT+="$DISPLAY_NAME"
           done
 
-          SELECTED=$(echo -en "$FUZZEL_INPUT" | fuzzel --dmenu --prompt="Select wallpaper: ")
+          SELECTED=$(echo -en "$FUZZEL_INPUT" | ${appLauncherDmenu { prompt = "Select wallpaper: "; }})
 
           if [[ -n "$SELECTED" ]]; then
             SELECTED_BASENAME="''${SELECTED#● }"

@@ -16,7 +16,6 @@ args@{
   namespace = "home";
 
   settings = {
-    usedTerminal = "xterm";
     usedShell = "bash";
     niriKeybindings = false;
     withBorder = true;
@@ -26,8 +25,9 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
-      highlightMainColor = self.theme.colors.main.foregrounds.primary.html;
-      highlightSecondColor = self.theme.colors.main.foregrounds.emphasized.html;
+      terminal = config.nx.preferences.desktop.programs.terminal;
+      highlightMainColor = config.nx.preferences.theme.colors.main.foregrounds.primary.html;
+      highlightSecondColor = config.nx.preferences.theme.colors.main.foregrounds.emphasized.html;
       mainDisplay = self.host.displays.main or self.user.displays.main or null;
       displayArgs = lib.optionals (mainDisplay != null) [
         "-o"
@@ -242,7 +242,7 @@ args@{
               { "type": "icons" },
               { "type": "font" },
               { "type": "cursor" },
-              { "type": "terminal", "format": "${self.settings.usedTerminal}" },
+              { "type": "terminal", "format": "${terminal.name}" },
               { "type": "cpu" },
               { "type": "gpu" },
               { "type": "memory" },
@@ -284,7 +284,7 @@ args@{
               background-color: ${
                 if self.settings.withBackground then
                   let
-                    bgColor = self.theme.colors.main.backgrounds.primary.html;
+                    bgColor = config.nx.preferences.theme.colors.main.backgrounds.primary.html;
                     rgb = lib.removePrefix "#" bgColor;
                     r = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 0 2 rgb}").x;
                     g = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 2 2 rgb}").x;
@@ -295,7 +295,10 @@ args@{
                   "transparent"
               };
               border: ${
-                if self.settings.withBorder then "1px solid ${self.theme.colors.separators.normal.html}" else "none"
+                if self.settings.withBorder then
+                  "1px solid ${config.nx.preferences.theme.colors.separators.normal.html}"
+                else
+                  "none"
               };
           }
 
@@ -314,7 +317,7 @@ args@{
               background-color: ${
                 if self.settings.withBackground then
                   let
-                    bgColor = self.theme.colors.main.backgrounds.primary.html;
+                    bgColor = config.nx.preferences.theme.colors.main.backgrounds.primary.html;
                     rgb = lib.removePrefix "#" bgColor;
                     r = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 0 2 rgb}").x;
                     g = builtins.toString (builtins.fromTOML "x = 0x${builtins.substring 2 2 rgb}").x;
@@ -325,7 +328,10 @@ args@{
                   "transparent"
               };
               border: ${
-                if self.settings.withBorder then "1px solid ${self.theme.colors.separators.normal.html}" else "none"
+                if self.settings.withBorder then
+                  "1px solid ${config.nx.preferences.theme.colors.separators.normal.html}"
+                else
+                  "none"
               };
           }
 

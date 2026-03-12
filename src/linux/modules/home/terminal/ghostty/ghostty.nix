@@ -29,6 +29,12 @@ args@{
     setEnv = true;
   };
 
+  init =
+    context@{ config, options, ... }:
+    lib.mkIf self.isEnabled {
+      nx.preferences.desktop.programs.terminal.package = lib.mkDefault pkgs.ghostty;
+    };
+
   configuration =
     context@{ config, options, ... }:
     {

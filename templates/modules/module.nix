@@ -24,6 +24,18 @@ args@{
   # Can be overwritten from the profile.
   settings = { };
 
+  # Typed options at config.nx.INPUT.GROUP.MODULE.* (both contexts).
+  # Access via: (self.options config).OPTION_NAME
+  # Example: someOption = lib.mkOption { type = lib.types.bool; default = false; };
+  options = { };
+
+  # Root-level options in the NixOS/HM options tree.
+  rawOptions = { };
+
+  # Runs for ALL modules in BOTH contexts. Only set config.nx.* options here.
+  # Example: context@{ config, ... }: lib.mkIf self.isEnabled { nx.input.group.someOption = true; };
+  init = context@{ config, options, ... }: { };
+
   # List of strings with unfree package names to allow in the build.
   unfree = [ ];
 

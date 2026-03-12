@@ -36,19 +36,19 @@ args@{
             systemSettings = {
               appearance = {
                 accentColor =
-                  if self.theme.tint == "green" then
+                  if config.nx.preferences.theme.tint == "green" then
                     "Green"
-                  else if self.theme.tint == "blue" then
+                  else if config.nx.preferences.theme.tint == "blue" then
                     "Blue"
-                  else if self.theme.tint == "purple" then
+                  else if config.nx.preferences.theme.tint == "purple" then
                     "Purple"
-                  else if self.theme.tint == "pink" then
+                  else if config.nx.preferences.theme.tint == "pink" then
                     "Pink"
-                  else if self.theme.tint == "red" then
+                  else if config.nx.preferences.theme.tint == "red" then
                     "Red"
-                  else if self.theme.tint == "orange" then
+                  else if config.nx.preferences.theme.tint == "orange" then
                     "Orange"
-                  else if self.theme.tint == "yellow" then
+                  else if config.nx.preferences.theme.tint == "yellow" then
                     "Yellow"
                   else
                     "Graphite";
@@ -56,9 +56,9 @@ args@{
                 allowWallpaperTintingInWindows = true;
 
                 appearance =
-                  if self.theme.variant == "dark" then
+                  if config.nx.preferences.theme.variant == "dark" then
                     "Dark"
-                  else if self.theme.variant == "light" then
+                  else if config.nx.preferences.theme.variant == "light" then
                     "Light"
                   else
                     "Auto";

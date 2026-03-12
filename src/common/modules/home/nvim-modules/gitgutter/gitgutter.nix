@@ -90,10 +90,10 @@ args@{
           _G.nx_modules = _G.nx_modules or {}
           _G.nx_modules["99-gitgutter"] = function()
             local function set_gitgutter_colors()
-              vim.api.nvim_set_hl(0, "GitGutterAdd", { fg = "${self.theme.colors.semantic.success.html}" })
-              vim.api.nvim_set_hl(0, "GitGutterChange", { fg = "${self.theme.colors.semantic.warning.html}" })
-              vim.api.nvim_set_hl(0, "GitGutterDelete", { fg = "${self.theme.colors.semantic.error.html}" })
-              vim.api.nvim_set_hl(0, "GitGutterChangeDelete", { fg = "${self.theme.colors.semantic.info.html}" })
+              vim.api.nvim_set_hl(0, "GitGutterAdd", { fg = "${config.nx.preferences.theme.colors.semantic.success.html}" })
+              vim.api.nvim_set_hl(0, "GitGutterChange", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}" })
+              vim.api.nvim_set_hl(0, "GitGutterDelete", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}" })
+              vim.api.nvim_set_hl(0, "GitGutterChangeDelete", { fg = "${config.nx.preferences.theme.colors.semantic.info.html}" })
             end
 
             vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {

@@ -30,6 +30,7 @@ args@{
         common = true;
       };
       desktop-modules = {
+        fuzzel = true;
         bemoji = true;
         waybar = {
           niri = true;
@@ -47,61 +48,22 @@ args@{
           turnOffMonitorsCommand = "${pkgs.niri}/bin/niri msg action power-off-monitors";
           turnOnMonitorsCommand = "${pkgs.niri}/bin/niri msg action power-on-monitors";
           package = pkgs.swaylock-effects;
-          commandline = "swaylock --daemonize --clock --indicator --indicator-idle-visible --grace-no-mouse --effect-blur 8x2 --ring-color ${lib.removePrefix "#" self.theme.colors.main.backgrounds.primary.html}55 --indicator-radius 110 --effect-greyscale --submit-on-touch --screenshots --inside-wrong-color ${lib.removePrefix "#" self.theme.colors.main.backgrounds.primary.html} --text-wrong-color ${lib.removePrefix "#" self.theme.colors.semantic.error.html} --inside-ver-color ${lib.removePrefix "#" self.theme.colors.main.backgrounds.primary.html} --text-ver-color ${lib.removePrefix "#" self.theme.colors.semantic.success.html} --ring-ver-color ${lib.removePrefix "#" self.theme.colors.semantic.success.html} --ring-wrong-color ${lib.removePrefix "#" self.theme.colors.semantic.error.html} --ring-clear-color ${lib.removePrefix "#" self.theme.colors.main.base.blue.html} --text-clear-color ${lib.removePrefix "#" self.theme.colors.main.base.blue.html} --inside-clear-color ${lib.removePrefix "#" self.theme.colors.main.backgrounds.primary.html} --line-uses-inside --line-uses-ring";
+          commandline = "swaylock --daemonize --clock --indicator --indicator-idle-visible --grace-no-mouse --effect-blur 8x2 --ring-color <RING_COLOR> --indicator-radius 110 --effect-greyscale --submit-on-touch --screenshots --inside-wrong-color <INSIDE_WRONG_COLOR> --text-wrong-color <TEXT_WRONG_COLOR> --inside-ver-color <INSIDE_VER_COLOR> --text-ver-color <TEXT_VER_COLOR> --ring-ver-color <RING_VER_COLOR> --ring-wrong-color <RING_WRONG_COLOR> --ring-clear-color <RING_CLEAR_COLOR> --text-clear-color <TEXT_CLEAR_COLOR> --inside-clear-color <INSIDE_CLEAR_COLOR> --line-uses-inside --line-uses-ring";
         };
         swaylock = {
           useEffects = true;
         };
         swaybg = true;
         nwg-wrapper = {
-          usedTerminal = self.user.settings.terminal;
           niriKeybindings = true;
         };
         wlsunset = true;
         bongocat = true;
         programs = {
-          terminal = {
-            name = self.user.settings.terminal;
-            package = null;
-            openCommand = self.user.settings.terminal;
-            openFileCommand = self.user.settings.terminal + " -e";
-            desktopFile = "com.mitchellh.ghostty.desktop";
-          };
-          webBrowser = {
-            name = "qutebrowser";
-            package = null;
-            openCommand = "qutebrowser";
-            openFileCommand = "qutebrowser";
-            desktopFile = "org.qutebrowser.qutebrowser.desktop";
-          };
-          videoPlayer = {
-            name = "vlc";
-            package = null;
-            openCommand = "vlc";
-            openFileCommand = "vlc";
-            desktopFile = "vlc.desktop";
-          };
-          emailClient = {
-            name = "thunderbird";
-            package = null;
-            openCommand = "thunderbird";
-            openFileCommand = "thunderbird";
-            desktopFile = "thunderbird.desktop";
-          };
-          calendar = {
-            name = "thunderbird";
-            package = null;
-            openCommand = "thunderbird";
-            openFileCommand = "thunderbird";
-            desktopFile = "thunderbird.desktop";
-          };
           installOfficeSuite = true;
           installSystemSettings = true;
         };
         clipboard-persistence = true;
-      };
-      terminal = {
-        "${self.user.settings.terminal}" = true;
       };
     };
     common = {
@@ -125,8 +87,8 @@ args@{
     secondaryDisplayScale = 1.0;
     applicationsToStart = [ ];
     delayedApplicationsToStart = [ ];
-    activeColor = self.theme.colors.main.foregrounds.primary.html;
-    inactiveColor = self.theme.colors.main.backgrounds.secondary.html;
+    activeColor = null;
+    inactiveColor = null;
     switchBackgroundOnWorkspaceChange = false;
     modKey = "Super";
     modKeyNested = "Alt";
@@ -164,10 +126,35 @@ args@{
       isStandalone = self.user.isStandalone;
       mainDisplay = self.host.displays.main or self.user.displays.main or null;
       secondaryDisplay = self.host.displays.secondary or self.user.displays.secondary or null;
-      programsConfig = self.getModuleConfig "desktop-modules.programs";
+      programsConfig = config.nx.preferences.desktop.programs;
+      terminal = programsConfig.terminal;
+      terminalCmd = lib.escapeShellArgs terminal.openCommand;
+      terminalRunCmd = cmd: lib.escapeShellArgs (terminal.openRunCommand cmd);
+      terminalShellCmd = cmd: lib.escapeShellArgs (terminal.openShellCommand cmd);
+      terminalWithClass =
+        class:
+        let
+          result = terminal.openWithClass class;
+        in
+        lib.escapeShellArgs result;
+      terminalRunWithClass =
+        class: cmd:
+        let
+          result = (terminal.openRunWithClass class) cmd;
+        in
+        lib.escapeShellArgs result;
+
+      appLauncher =
+        if programsConfig.appLauncher == null then
+          throw "niri requires an application launcher (e.g., enable linux.desktop-modules.fuzzel)"
+        else
+          programsConfig.appLauncher;
+      appLauncherCmd = lib.escapeShellArgs appLauncher.openCommand;
+      appLauncherDmenu = opts: lib.escapeShellArgs (appLauncher.dmenuCommand opts);
+      appLauncherDmenuIndex = opts: lib.escapeShellArgs (appLauncher.dmenuIndexCommand opts);
       requiredApps = [
-        "${self.user.settings.terminal} --class=org.nx.start-terminal -e tx"
-        "${self.user.settings.terminal} --class=org.nx.scratchpad"
+        (terminalRunWithClass "org.nx.start-terminal" "tx")
+        (terminalWithClass "org.nx.scratchpad")
       ];
       delayedRequiredApps = [ ];
       stylixConfig =
@@ -175,8 +162,17 @@ args@{
           self.common.getModuleConfig "style.stylix"
         else
           self.common.host.getModuleConfig "style.stylix";
-      activeColor = self.settings.activeColor;
-      inactiveColor = self.settings.inactiveColor;
+      theme = config.nx.preferences.theme;
+      activeColor =
+        if self.settings.activeColor != null then
+          self.settings.activeColor
+        else
+          theme.colors.main.foregrounds.primary.html;
+      inactiveColor =
+        if self.settings.inactiveColor != null then
+          self.settings.inactiveColor
+        else
+          theme.colors.main.backgrounds.secondary.html;
 
       rcloneEnabled = self.common.isModuleEnabled "drive.rclone";
       rcloneConfig = if rcloneEnabled then self.common.getModuleConfig "drive.rclone" else { };
@@ -346,7 +342,13 @@ args@{
         text = ''
           #!/usr/bin/env bash
 
-          choice=$(echo -e "Yes\nNo" | fuzzel --dmenu --prompt "Restart Niri session? " --width=25 --lines=2)
+          choice=$(echo -e "Yes\nNo" | ${
+            appLauncherDmenu {
+              prompt = "Restart Niri session? ";
+              width = 25;
+              lines = 2;
+            }
+          })
 
           case "$choice" in
             "Yes")
@@ -364,7 +366,7 @@ args@{
         text = ''
           #!/usr/bin/env bash
 
-          # Power menu using fuzzel
+          # Power menu using app launcher
           # Usage: power-menu.sh
 
           set -euo pipefail
@@ -376,7 +378,13 @@ args@{
 
           ${rcloneLockCheck}
 
-          action=$(echo -e "Poweroff\nReboot" | fuzzel --dmenu --prompt="Power actions: " --width=25 --lines=2)
+          action=$(echo -e "Poweroff\nReboot" | ${
+            appLauncherDmenu {
+              prompt = "Power actions: ";
+              width = 25;
+              lines = 2;
+            }
+          })
 
           if [[ -z "$action" ]]; then
               exit 0
@@ -387,7 +395,13 @@ args@{
               ["Reboot"]="systemctl reboot"
           )
 
-          confirm=$(echo -e "Yes\nNo" | fuzzel --dmenu --prompt="$action? " --width=20 --lines=2)
+          confirm=$(echo -e "Yes\nNo" | ${
+            appLauncherDmenu {
+              prompt = "$action? ";
+              width = 20;
+              lines = 2;
+            }
+          })
 
           if [[ "$confirm" == "Yes" ]]; then
               ''${commands[$action]}
@@ -399,7 +413,7 @@ args@{
         executable = true;
         text = ''
           #!/usr/bin/env bash
-          exec ${self.user.settings.terminal} --class=org.nx.scratchpad
+          exec ${terminalWithClass "org.nx.scratchpad"}
         '';
       };
 
@@ -452,20 +466,25 @@ args@{
                 session_list=$(echo "$session_list" | head -c -1)
               fi
 
-              selection=$(echo -e "$session_list" | fuzzel --dmenu --prompt="Tmux sessions: " --width=35)
+              selection=$(echo -e "$session_list" | ${
+                appLauncherDmenu {
+                  prompt = "Tmux sessions: ";
+                  width = 35;
+                }
+              })
 
               if [[ -z "$selection" ]]; then
                 exit 0
               fi
 
               if [[ "$selection" == "+ New session" ]]; then
-                exec ${self.user.settings.terminal} -e ${pkgs.tmux}/bin/tmux new-session
+                exec ${terminalShellCmd "${pkgs.tmux}/bin/tmux new-session"}
               elif [[ "$selection" =~ ^○\ (.+)\ \(start\)$ ]]; then
                 session_name="''${BASH_REMATCH[1]}"
-                exec ${self.user.settings.terminal} -e ${tmuxinatorPackage}/bin/tmuxinator start "$session_name"
+                exec ${terminalShellCmd "${tmuxinatorPackage}/bin/tmuxinator start \"$session_name\""}
               elif [[ "$selection" =~ ^●\ (.+)\ \(running\)$ ]]; then
                 session_name="''${BASH_REMATCH[1]}"
-                exec ${self.user.settings.terminal} -e ${pkgs.tmux}/bin/tmux attach-session -t "$session_name"
+                exec ${terminalShellCmd "${pkgs.tmux}/bin/tmux attach-session -t \"$session_name\""}
               fi
             ''
           }
@@ -523,7 +542,7 @@ args@{
             window_titles+=("$title\0icon\x1f$icon_name")
           done < <(niri msg --json windows | jq -r '.[] | [.id, .app_id, .title] | @tsv')
 
-          result=$(printf "%b\n" "''${window_titles[@]}" | fuzzel --counter --dmenu --index)
+          result=$(printf "%b\n" "''${window_titles[@]}" | ${appLauncherDmenuIndex { }})
 
           if [[ -n "$result" ]] && [[ "$result" != -1 ]]; then
             niri msg action focus-window --id "''${window_ids[$result]}"
@@ -749,7 +768,7 @@ args@{
 
           overview = {
             zoom = 0.93;
-            backdrop-color = self.theme.colors.main.backgrounds.primary.html;
+            backdrop-color = config.nx.preferences.theme.colors.main.backgrounds.primary.html;
           };
 
           clipboard = {
@@ -757,7 +776,7 @@ args@{
           };
 
           layout = {
-            background-color = self.theme.colors.main.backgrounds.primary.html;
+            background-color = config.nx.preferences.theme.colors.main.backgrounds.primary.html;
             gaps = 18;
             preset-column-widths = [
               { proportion = 0.25; }
@@ -917,7 +936,7 @@ args@{
                 };
 
                 "Mod+Return" = {
-                  action = spawn-sh self.user.settings.terminal;
+                  action = spawn-sh terminalCmd;
                   hotkey-overlay.title = "Apps:Terminal";
                 };
 
@@ -926,15 +945,13 @@ args@{
                     withSessionManager = self.common.isModuleEnabled "tmux.tmux";
                   in
                   {
-                    action = spawn-sh "${
-                      if withSessionManager then "tmux-session-manager" else "${self.user.settings.terminal} -e tx"
-                    }";
+                    action = spawn-sh (if withSessionManager then "tmux-session-manager" else terminalRunCmd "tx");
                     hotkey-overlay.title =
                       if withSessionManager then "Apps:Tmux Session Manager" else "Apps:Tmux Main Session";
                   };
 
                 "Mod+Space" = {
-                  action = spawn-sh "fuzzel";
+                  action = spawn-sh appLauncherCmd;
                   hotkey-overlay.title = "Apps:App launcher";
                 };
 
@@ -1009,7 +1026,12 @@ args@{
                 };
 
                 "Mod+Ctrl+P" = {
-                  action = spawn-sh "${programsConfig.fileBrowser.openFileCommand} '${screenshotDir}'";
+                  action = spawn-sh (
+                    lib.escapeShellArgs (
+                      (helpers.terminalPrefixIf config programsConfig.fileBrowser)
+                      ++ (programsConfig.fileBrowser.openFileCommand screenshotDir)
+                    )
+                  );
                   hotkey-overlay.title = "Screenshot:Open screenshots folder";
                 };
 

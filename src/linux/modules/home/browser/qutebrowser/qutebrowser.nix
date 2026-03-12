@@ -96,5 +96,7 @@ args@{
       programs.qutebrowser = {
         package = lib.mkForce customPkgs.qutebrowser;
       };
+
+      nx.preferences.desktop.programs.webBrowser.package = lib.mkForce customPkgs.qutebrowser;
     };
 }

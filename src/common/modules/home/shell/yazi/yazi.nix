@@ -52,6 +52,8 @@ args@{
     context@{ config, options, ... }:
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+      terminal = config.nx.preferences.desktop.programs.terminal;
+      terminalRunWithClass = class: cmd: lib.escapeShellArgs ((terminal.openRunWithClass class) cmd);
     in
     {
       programs.yazi = {
@@ -74,7 +76,7 @@ args@{
       home.file.".local/bin/nx-yazi-term" = {
         text = ''
           #!/usr/bin/env bash
-          exec ${self.user.settings.terminal} --class=org.nx.yazi -e nx-yazi
+          exec ${terminalRunWithClass "org.nx.yazi" "nx-yazi"}
         '';
         executable = true;
       };

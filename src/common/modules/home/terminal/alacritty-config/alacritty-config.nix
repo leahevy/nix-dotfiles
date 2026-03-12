@@ -79,7 +79,7 @@ args@{
 
           colors = {
             primary = {
-              background = lib.mkForce self.theme.colors.terminal.normalBackgrounds.primary.html;
+              background = lib.mkForce config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html;
             };
           };
 

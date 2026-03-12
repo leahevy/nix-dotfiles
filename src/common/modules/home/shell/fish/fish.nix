@@ -57,10 +57,10 @@ args@{
 
           interactiveShellInit = ''
             set -g fish_color_normal ${
-              builtins.substring 1 6 self.theme.colors.terminal.foregrounds.primary.html
+              builtins.substring 1 6 config.nx.preferences.theme.colors.terminal.foregrounds.primary.html
             }
             set -g fish_color_param ${
-              builtins.substring 1 6 self.theme.colors.terminal.foregrounds.primary.html
+              builtins.substring 1 6 config.nx.preferences.theme.colors.terminal.foregrounds.primary.html
             }
 
             if test -d "${config.xdg.configHome}/fish-init"

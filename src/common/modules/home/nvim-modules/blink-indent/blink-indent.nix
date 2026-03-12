@@ -60,19 +60,64 @@ args@{
     ];
 
     colors = {
-      static = self.theme.colors.separators.veryDark.html;
-      color1 = self.theme.colors.main.base.green.html;
-      color2 = self.theme.colors.main.base.orange.html;
-      color3 = self.theme.colors.main.base.yellow.html;
-      color4 = self.theme.colors.main.base.cyan.html;
-      color5 = self.theme.colors.main.base.purple.html;
-      color6 = self.theme.colors.main.base.pink.html;
-      color7 = self.theme.colors.main.base.red.html;
+      static = null;
+      color1 = null;
+      color2 = null;
+      color3 = null;
+      color4 = null;
+      color5 = null;
+      color6 = null;
+      color7 = null;
     };
   };
 
   configuration =
     context@{ config, options, ... }:
+    let
+      theme = config.nx.preferences.theme;
+      colors = {
+        static =
+          if self.settings.colors.static != null then
+            self.settings.colors.static
+          else
+            theme.colors.separators.veryDark.html;
+        color1 =
+          if self.settings.colors.color1 != null then
+            self.settings.colors.color1
+          else
+            theme.colors.main.base.green.html;
+        color2 =
+          if self.settings.colors.color2 != null then
+            self.settings.colors.color2
+          else
+            theme.colors.main.base.orange.html;
+        color3 =
+          if self.settings.colors.color3 != null then
+            self.settings.colors.color3
+          else
+            theme.colors.main.base.yellow.html;
+        color4 =
+          if self.settings.colors.color4 != null then
+            self.settings.colors.color4
+          else
+            theme.colors.main.base.cyan.html;
+        color5 =
+          if self.settings.colors.color5 != null then
+            self.settings.colors.color5
+          else
+            theme.colors.main.base.purple.html;
+        color6 =
+          if self.settings.colors.color6 != null then
+            self.settings.colors.color6
+          else
+            theme.colors.main.base.pink.html;
+        color7 =
+          if self.settings.colors.color7 != null then
+            self.settings.colors.color7
+          else
+            theme.colors.main.base.red.html;
+      };
+    in
     {
       programs.nixvim = {
         extraPlugins = [
@@ -135,24 +180,24 @@ args@{
               },
             })
 
-            vim.api.nvim_set_hl(0, "BlinkIndent", { fg = "${self.settings.colors.static}" })
-            vim.api.nvim_set_hl(0, "BlinkIndentScope", { fg = "${self.settings.colors.color7}" })
+            vim.api.nvim_set_hl(0, "BlinkIndent", { fg = "${colors.static}" })
+            vim.api.nvim_set_hl(0, "BlinkIndentScope", { fg = "${colors.color7}" })
 
-            vim.api.nvim_set_hl(0, "BlinkIndentRed", { fg = "${self.settings.colors.color1}" })
-            vim.api.nvim_set_hl(0, "BlinkIndentOrange", { fg = "${self.settings.colors.color2}" })
-            vim.api.nvim_set_hl(0, "BlinkIndentYellow", { fg = "${self.settings.colors.color3}" })
-            vim.api.nvim_set_hl(0, "BlinkIndentGreen", { fg = "${self.settings.colors.color4}" })
-            vim.api.nvim_set_hl(0, "BlinkIndentViolet", { fg = "${self.settings.colors.color5}" })
-            vim.api.nvim_set_hl(0, "BlinkIndentCyan", { fg = "${self.settings.colors.color6}" })
-            vim.api.nvim_set_hl(0, "BlinkIndentBlue", { fg = "${self.settings.colors.color7}" })
+            vim.api.nvim_set_hl(0, "BlinkIndentRed", { fg = "${colors.color1}" })
+            vim.api.nvim_set_hl(0, "BlinkIndentOrange", { fg = "${colors.color2}" })
+            vim.api.nvim_set_hl(0, "BlinkIndentYellow", { fg = "${colors.color3}" })
+            vim.api.nvim_set_hl(0, "BlinkIndentGreen", { fg = "${colors.color4}" })
+            vim.api.nvim_set_hl(0, "BlinkIndentViolet", { fg = "${colors.color5}" })
+            vim.api.nvim_set_hl(0, "BlinkIndentCyan", { fg = "${colors.color6}" })
+            vim.api.nvim_set_hl(0, "BlinkIndentBlue", { fg = "${colors.color7}" })
 
-            vim.api.nvim_set_hl(0, "BlinkIndentRedUnderline", { fg = "${self.settings.colors.color1}", underline = true })
-            vim.api.nvim_set_hl(0, "BlinkIndentOrangeUnderline", { fg = "${self.settings.colors.color2}", underline = true })
-            vim.api.nvim_set_hl(0, "BlinkIndentYellowUnderline", { fg = "${self.settings.colors.color3}", underline = true })
-            vim.api.nvim_set_hl(0, "BlinkIndentGreenUnderline", { fg = "${self.settings.colors.color4}", underline = true })
-            vim.api.nvim_set_hl(0, "BlinkIndentVioletUnderline", { fg = "${self.settings.colors.color5}", underline = true })
-            vim.api.nvim_set_hl(0, "BlinkIndentCyanUnderline", { fg = "${self.settings.colors.color6}", underline = true })
-            vim.api.nvim_set_hl(0, "BlinkIndentBlueUnderline", { fg = "${self.settings.colors.color7}", underline = true })
+            vim.api.nvim_set_hl(0, "BlinkIndentRedUnderline", { fg = "${colors.color1}", underline = true })
+            vim.api.nvim_set_hl(0, "BlinkIndentOrangeUnderline", { fg = "${colors.color2}", underline = true })
+            vim.api.nvim_set_hl(0, "BlinkIndentYellowUnderline", { fg = "${colors.color3}", underline = true })
+            vim.api.nvim_set_hl(0, "BlinkIndentGreenUnderline", { fg = "${colors.color4}", underline = true })
+            vim.api.nvim_set_hl(0, "BlinkIndentVioletUnderline", { fg = "${colors.color5}", underline = true })
+            vim.api.nvim_set_hl(0, "BlinkIndentCyanUnderline", { fg = "${colors.color6}", underline = true })
+            vim.api.nvim_set_hl(0, "BlinkIndentBlueUnderline", { fg = "${colors.color7}", underline = true })
 
             vim.g.indent_guide = ${if self.settings.enableOnStart then "true" else "false"}
 

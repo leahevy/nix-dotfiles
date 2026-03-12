@@ -19,6 +19,8 @@ args@{
     context@{ config, options, ... }:
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+      terminal = config.nx.preferences.desktop.programs.terminal;
+      terminalRunWithClass = class: cmd: lib.escapeShellArgs ((terminal.openRunWithClass class) cmd);
     in
     {
       home.persistence."${self.persist}" = {
@@ -43,7 +45,7 @@ args@{
       home.file.".local/bin/nstv-term" = {
         text = ''
           #!/usr/bin/env bash
-          exec ${self.user.settings.terminal} --class=org.nx.nix-search-tv -e nstv
+          exec ${terminalRunWithClass "org.nx.nix-search-tv" "nstv"}
         '';
         executable = true;
       };

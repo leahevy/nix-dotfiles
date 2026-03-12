@@ -224,29 +224,42 @@ args@{
           "SF Mono:Bold:${separatorFontSize}";
 
       colors = {
-        background = "0xe0" + lib.removePrefix "#" self.theme.colors.main.backgrounds.primary.html;
+        background =
+          "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.backgrounds.primary.html;
         transparentBackground = "0x00000000";
-        blackBackground = "0xff" + lib.removePrefix "#" self.theme.colors.main.backgrounds.primary.html;
-        border = "0xff" + lib.removePrefix "#" self.theme.colors.main.foregrounds.primary.html;
-        foreground = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.emphasized.html;
-        accent = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.secondary.html;
-        accentBright = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.primary.html;
-        black = "0xe0" + lib.removePrefix "#" self.theme.colors.main.backgrounds.tertiary.html;
-        red = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.red.html;
-        green = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.green.html;
-        yellow = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.yellow.html;
-        blue = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.blue.html;
-        magenta = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.purple.html;
-        cyan = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.cyan.html;
-        white = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.subtle.html;
-        blackBright = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.subtle.html;
-        redBright = "0xe0" + lib.removePrefix "#" self.theme.colors.semantic.error.html;
-        greenBright = "0xe0" + lib.removePrefix "#" self.theme.colors.semantic.success.html;
-        yellowBright = "0xe0" + lib.removePrefix "#" self.theme.colors.semantic.warning.html;
-        blueBright = "0xe0" + lib.removePrefix "#" self.theme.colors.semantic.info.html;
-        magentaBright = "0xe0" + lib.removePrefix "#" self.theme.colors.main.base.pink.html;
-        cyanBright = "0xe0" + lib.removePrefix "#" self.theme.colors.semantic.added.html;
-        whiteBright = "0xe0" + lib.removePrefix "#" self.theme.colors.main.foregrounds.strong.html;
+        blackBackground =
+          "0xff" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.backgrounds.primary.html;
+        border =
+          "0xff" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.primary.html;
+        foreground =
+          "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.emphasized.html;
+        accent =
+          "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.secondary.html;
+        accentBright =
+          "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.primary.html;
+        black =
+          "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.backgrounds.tertiary.html;
+        red = "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.base.red.html;
+        green = "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.base.green.html;
+        yellow = "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.base.yellow.html;
+        blue = "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.base.blue.html;
+        magenta = "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.base.purple.html;
+        cyan = "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.base.cyan.html;
+        white =
+          "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
+        blackBright =
+          "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
+        redBright = "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.semantic.error.html;
+        greenBright =
+          "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.semantic.success.html;
+        yellowBright =
+          "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.semantic.warning.html;
+        blueBright = "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.semantic.info.html;
+        magentaBright =
+          "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.base.pink.html;
+        cyanBright = "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.semantic.added.html;
+        whiteBright =
+          "0xe0" + lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.strong.html;
       };
 
       icons = {

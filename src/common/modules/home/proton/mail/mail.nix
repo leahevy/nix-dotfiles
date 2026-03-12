@@ -20,6 +20,15 @@ args@{
     isolateConfig = true;
   };
 
+  init =
+    context@{ config, options, ... }:
+    lib.mkIf self.isEnabled {
+      nx.preferences.desktop.programs.emailClient.name = lib.mkForce "proton-mail";
+      nx.preferences.desktop.programs.emailClient.openCommand = lib.mkForce "proton-mail";
+      nx.preferences.desktop.programs.emailClient.openFileCommand = lib.mkForce "proton-mail";
+      nx.preferences.desktop.programs.emailClient.desktopFile = lib.mkForce "proton-mail.desktop";
+    };
+
   configuration =
     context@{ config, options, ... }:
     let
@@ -50,9 +59,7 @@ args@{
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
     in
     {
-      home.packages = [
-        protonmailWrapped
-      ];
+      nx.preferences.desktop.programs.emailClient.package = lib.mkForce protonmailWrapped;
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {

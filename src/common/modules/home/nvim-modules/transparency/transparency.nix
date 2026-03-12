@@ -16,11 +16,19 @@ args@{
   namespace = "home";
 
   settings = {
-    activeTabColor = self.theme.colors.blocks.primary.foreground.html;
+    activeTabColor = null;
   };
 
   configuration =
     context@{ config, options, ... }:
+    let
+      theme = config.nx.preferences.theme;
+      activeTabColor =
+        if self.settings.activeTabColor != null then
+          self.settings.activeTabColor
+        else
+          theme.colors.blocks.primary.foreground.html;
+    in
     {
       programs.nixvim.extraConfigLua = ''
         _G.nx_modules = _G.nx_modules or {}
@@ -29,21 +37,21 @@ args@{
             vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
             vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
             vim.api.nvim_set_hl(0, "SignColumn", { bg = "none" })
-            vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "none", fg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+            vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "none", fg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
 
-            vim.api.nvim_set_hl(0, "LineNr", { bg = "none", fg = "${self.theme.colors.separators.normal.html}" })
-            vim.api.nvim_set_hl(0, "LineNrAbove", { bg = "none", fg = "${self.theme.colors.separators.normal.html}" })
-            vim.api.nvim_set_hl(0, "LineNrBelow", { bg = "none", fg = "${self.theme.colors.separators.normal.html}" })
+            vim.api.nvim_set_hl(0, "LineNr", { bg = "none", fg = "${config.nx.preferences.theme.colors.separators.normal.html}" })
+            vim.api.nvim_set_hl(0, "LineNrAbove", { bg = "none", fg = "${config.nx.preferences.theme.colors.separators.normal.html}" })
+            vim.api.nvim_set_hl(0, "LineNrBelow", { bg = "none", fg = "${config.nx.preferences.theme.colors.separators.normal.html}" })
             local cursor_line_nr = vim.api.nvim_get_hl(0, { name = "CursorLineNr" })
             if not cursor_line_nr.fg then
-              cursor_line_nr.fg = "${self.theme.colors.blocks.primary.foreground.html}"
+              cursor_line_nr.fg = "${config.nx.preferences.theme.colors.blocks.primary.foreground.html}"
               cursor_line_nr.bold = true
             end
             vim.api.nvim_set_hl(0, "CursorLineNr", vim.tbl_extend("force", cursor_line_nr, { bg = "none" }))
 
             vim.api.nvim_set_hl(0, "TabLine", { bg = "none" })
             vim.api.nvim_set_hl(0, "TabLineFill", { bg = "none" })
-            vim.api.nvim_set_hl(0, "TabLineSel", { bg = "none", fg = "${self.settings.activeTabColor}", bold = true })
+            vim.api.nvim_set_hl(0, "TabLineSel", { bg = "none", fg = "${activeTabColor}", bold = true })
 
             ${lib.optionalString (self.isModuleEnabled "nvim-modules.gitgutter") ''
               local gitgutter_add = vim.api.nvim_get_hl(0, { name = "GitGutterAdd" })

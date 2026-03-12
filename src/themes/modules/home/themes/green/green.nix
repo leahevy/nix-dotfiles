@@ -8,15 +8,9 @@ args@{
   self,
   ...
 }:
-rec {
-  name = "green";
-
-  group = "themes";
-  input = "themes";
-  namespace = "home";
-
-  settings = {
-    inherit name;
+let
+  themeData = {
+    name = "green";
     variant = "dark";
     tint = "green";
     fonts = {
@@ -524,4 +518,17 @@ rec {
       };
     };
   };
+in
+{
+  name = "green";
+
+  group = "themes";
+  input = "themes";
+  namespace = "home";
+
+  init =
+    context@{ config, options, ... }:
+    lib.mkIf self.isEnabled {
+      nx.preferences.theme = themeData;
+    };
 }

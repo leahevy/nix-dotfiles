@@ -15,24 +15,18 @@ args@{
   input = "linux";
   namespace = "home";
 
-  submodules = {
-    linux = {
-      desktop-modules = {
-        fuzzel = true;
-      };
-    };
-  };
-
   configuration =
     context@{ config, options, ... }:
     let
       isNiriEnabled = self.isModuleEnabled "desktop.niri";
+      appLauncher = config.nx.preferences.desktop.programs.appLauncher;
+      appLauncherDmenuSimple = lib.escapeShellArgs (appLauncher.openCommand ++ appLauncher.dmenuArgs);
     in
     {
       home.packages = [ pkgs.bemoji ];
 
       home.sessionVariables = {
-        BEMOJI_PICKER_CMD = "fuzzel -d";
+        BEMOJI_PICKER_CMD = appLauncherDmenuSimple;
       };
 
       home.persistence."${self.persist}" = {

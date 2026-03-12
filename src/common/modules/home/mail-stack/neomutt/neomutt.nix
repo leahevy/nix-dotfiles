@@ -231,169 +231,170 @@ args@{
       };
     };
 
-    colors = {
-      normal = {
-        fg = self.theme.colors.terminal.colors.green.html;
-        bg = "default";
-      };
-      error = {
-        fg = self.theme.colors.terminal.colors.red.html;
-        bg = "default";
-      };
-      message = {
-        fg = self.theme.colors.terminal.colors.cyan.html;
-        bg = "default";
-      };
-      indicator = {
-        fg = self.theme.colors.terminal.normalBackgrounds.primary.html;
-        bg = self.theme.colors.terminal.colors.green.html;
-      };
-      tree = {
-        fg = self.theme.colors.terminal.foregrounds.dim.html;
-        bg = "default";
-      };
-
-      index = {
-        fg = self.theme.colors.terminal.colors.green.html;
-        bg = "default";
-      };
-      index_author = {
-        fg = self.theme.colors.terminal.colors.cyan.html;
-        bg = "default";
-      };
-      index_subject = {
-        fg = self.theme.colors.terminal.colors.green.html;
-        bg = "default";
-      };
-      index_date = {
-        fg = self.theme.colors.terminal.colors.yellow.html;
-        bg = "default";
-      };
-
-      index_new = {
-        fg = self.theme.colors.terminal.colors.yellow.html;
-        bg = "default";
-      };
-      index_deleted = {
-        fg = self.theme.colors.terminal.colors.red.html;
-        bg = "default";
-      };
-      index_tagged = {
-        fg = self.theme.colors.terminal.colors.cyan.html;
-        bg = "default";
-      };
-      index_flagged = {
-        fg = self.theme.colors.terminal.colors.green.html;
-        bg = "default";
-      };
-
-      header_from = {
-        fg = self.theme.colors.terminal.colors.cyan.html;
-        bg = "default";
-      };
-      header_to = {
-        fg = self.theme.colors.terminal.colors.cyan.html;
-        bg = "default";
-      };
-      header_subject = {
-        fg = self.theme.colors.terminal.colors.yellow.html;
-        bg = "default";
-      };
-      header_date = {
-        fg = self.theme.colors.terminal.colors.yellow.html;
-        bg = "default";
-      };
-
-      quoted = {
-        fg = self.theme.colors.terminal.colors.cyan.html;
-        bg = "default";
-      };
-      quoted1 = {
-        fg = self.theme.colors.terminal.colors.green.html;
-        bg = "default";
-      };
-      quoted2 = {
-        fg = self.theme.colors.terminal.colors.yellow.html;
-        bg = "default";
-      };
-      signature = {
-        fg = self.theme.colors.terminal.foregrounds.dim.html;
-        bg = "default";
-      };
-      bold = {
-        fg = self.theme.colors.terminal.colors.green.html;
-        bg = "default";
-      };
-
-      tilde = {
-        fg = self.theme.colors.terminal.foregrounds.dim.html;
-        bg = "default";
-      };
-      markers = {
-        fg = self.theme.colors.terminal.colors.yellow.html;
-        bg = "default";
-      };
-      attachment = {
-        fg = self.theme.colors.terminal.colors.cyan.html;
-        bg = "default";
-      };
-      search = {
-        fg = self.theme.colors.terminal.normalBackgrounds.primary.html;
-        bg = self.theme.colors.terminal.colors.yellow.html;
-      };
-      status = {
-        fg = self.theme.colors.terminal.colors.cyan.html;
-        bg = "default";
-      };
-
-      index_tags = {
-        fg = self.theme.colors.terminal.colors.yellow.html;
-        bg = "default";
-      };
-
-      sidebar_background = {
-        fg = "default";
-        bg = "default";
-      };
-      sidebar_indicator = {
-        fg = self.theme.colors.terminal.normalBackgrounds.primary.html;
-        bg = self.theme.colors.terminal.colors.green.html;
-      };
-      sidebar_highlight = {
-        fg = self.theme.colors.terminal.colors.green.html;
-        bg = self.theme.colors.terminal.normalBackgrounds.secondary.html;
-      };
-      sidebar_spool_file = {
-        fg = self.theme.colors.terminal.colors.yellow.html;
-        bg = "default";
-      };
-      sidebar_unread = {
-        fg = self.theme.colors.terminal.colors.cyan.html;
-        bg = "default";
-      };
-      sidebar_new = {
-        fg = self.theme.colors.terminal.colors.green.html;
-        bg = "default";
-      };
-      sidebar_ordinary = {
-        fg = "default";
-        bg = "default";
-      };
-      sidebar_flagged = {
-        fg = self.theme.colors.terminal.colors.red.html;
-        bg = "default";
-      };
-      sidebar_divider = {
-        fg = self.theme.colors.terminal.foregrounds.dim.html;
-        bg = "default";
-      };
-    };
+    colors = null;
   };
 
   configuration =
     context@{ config, options, ... }:
     let
+      theme = config.nx.preferences.theme;
+      terminal = config.nx.preferences.desktop.programs.terminal;
+      terminalRunWithClass = class: cmd: lib.escapeShellArgs ((terminal.openRunWithClass class) cmd);
+      defaultColors = {
+        normal = {
+          fg = theme.colors.terminal.colors.green.html;
+          bg = "default";
+        };
+        error = {
+          fg = theme.colors.terminal.colors.red.html;
+          bg = "default";
+        };
+        message = {
+          fg = theme.colors.terminal.colors.cyan.html;
+          bg = "default";
+        };
+        indicator = {
+          fg = theme.colors.terminal.normalBackgrounds.primary.html;
+          bg = theme.colors.terminal.colors.green.html;
+        };
+        tree = {
+          fg = theme.colors.terminal.foregrounds.dim.html;
+          bg = "default";
+        };
+        index = {
+          fg = theme.colors.terminal.colors.green.html;
+          bg = "default";
+        };
+        index_author = {
+          fg = theme.colors.terminal.colors.cyan.html;
+          bg = "default";
+        };
+        index_subject = {
+          fg = theme.colors.terminal.colors.green.html;
+          bg = "default";
+        };
+        index_date = {
+          fg = theme.colors.terminal.colors.yellow.html;
+          bg = "default";
+        };
+        index_new = {
+          fg = theme.colors.terminal.colors.yellow.html;
+          bg = "default";
+        };
+        index_deleted = {
+          fg = theme.colors.terminal.colors.red.html;
+          bg = "default";
+        };
+        index_tagged = {
+          fg = theme.colors.terminal.colors.cyan.html;
+          bg = "default";
+        };
+        index_flagged = {
+          fg = theme.colors.terminal.colors.green.html;
+          bg = "default";
+        };
+        header_from = {
+          fg = theme.colors.terminal.colors.cyan.html;
+          bg = "default";
+        };
+        header_to = {
+          fg = theme.colors.terminal.colors.cyan.html;
+          bg = "default";
+        };
+        header_subject = {
+          fg = theme.colors.terminal.colors.yellow.html;
+          bg = "default";
+        };
+        header_date = {
+          fg = theme.colors.terminal.colors.yellow.html;
+          bg = "default";
+        };
+        quoted = {
+          fg = theme.colors.terminal.colors.cyan.html;
+          bg = "default";
+        };
+        quoted1 = {
+          fg = theme.colors.terminal.colors.green.html;
+          bg = "default";
+        };
+        quoted2 = {
+          fg = theme.colors.terminal.colors.yellow.html;
+          bg = "default";
+        };
+        signature = {
+          fg = theme.colors.terminal.foregrounds.dim.html;
+          bg = "default";
+        };
+        bold = {
+          fg = theme.colors.terminal.colors.green.html;
+          bg = "default";
+        };
+        tilde = {
+          fg = theme.colors.terminal.foregrounds.dim.html;
+          bg = "default";
+        };
+        markers = {
+          fg = theme.colors.terminal.colors.yellow.html;
+          bg = "default";
+        };
+        attachment = {
+          fg = theme.colors.terminal.colors.cyan.html;
+          bg = "default";
+        };
+        search = {
+          fg = theme.colors.terminal.normalBackgrounds.primary.html;
+          bg = theme.colors.terminal.colors.yellow.html;
+        };
+        status = {
+          fg = theme.colors.terminal.colors.cyan.html;
+          bg = "default";
+        };
+        index_tags = {
+          fg = theme.colors.terminal.colors.yellow.html;
+          bg = "default";
+        };
+        sidebar_background = {
+          fg = "default";
+          bg = "default";
+        };
+        sidebar_indicator = {
+          fg = theme.colors.terminal.normalBackgrounds.primary.html;
+          bg = theme.colors.terminal.colors.green.html;
+        };
+        sidebar_highlight = {
+          fg = theme.colors.terminal.colors.green.html;
+          bg = theme.colors.terminal.normalBackgrounds.secondary.html;
+        };
+        sidebar_spool_file = {
+          fg = theme.colors.terminal.colors.yellow.html;
+          bg = "default";
+        };
+        sidebar_unread = {
+          fg = theme.colors.terminal.colors.cyan.html;
+          bg = "default";
+        };
+        sidebar_new = {
+          fg = theme.colors.terminal.colors.green.html;
+          bg = "default";
+        };
+        sidebar_ordinary = {
+          fg = "default";
+          bg = "default";
+        };
+        sidebar_flagged = {
+          fg = theme.colors.terminal.colors.red.html;
+          bg = "default";
+        };
+        sidebar_divider = {
+          fg = theme.colors.terminal.foregrounds.dim.html;
+          bg = "default";
+        };
+      };
+      colors = if self.settings.colors != null then self.settings.colors else defaultColors;
+
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+      appLauncher = config.nx.preferences.desktop.programs.appLauncher;
+      hasAppLauncher = appLauncher != null;
 
       accountsConfig = self.getModuleConfig "mail-stack.accounts";
       accounts = accountsConfig.accounts;
@@ -718,7 +719,7 @@ args@{
             ''
           ) accountKeys}
 
-          ${generateColors self.settings.colors}
+          ${generateColors colors}
         '';
       };
 
@@ -733,12 +734,6 @@ args@{
 
       home.file.".mailcap".text =
         let
-          programsConfig =
-            if self.isLinux && (self.linux.isModuleEnabled "desktop-modules.programs") then
-              self.linux.getModuleConfig "desktop-modules.programs"
-            else
-              null;
-
           guiTest = "test -n \"$DISPLAY\" -o -n \"$WAYLAND_DISPLAY\"";
 
           generateMailcap =
@@ -794,7 +789,15 @@ args@{
           set -euo pipefail
 
           ${
-            if isNiriEnabled then
+            if isNiriEnabled && hasAppLauncher then
+              let
+                launcherCmd = lib.escapeShellArgs (
+                  appLauncher.dmenuCommand {
+                    prompt = "Select URL: ";
+                    width = 80;
+                  }
+                );
+              in
               ''
                 if [ -z "''${WAYLAND_DISPLAY:-}" ] && [ -z "''${DISPLAY:-}" ]; then
                   exec urlscan "$@"
@@ -813,7 +816,7 @@ args@{
                   URL="$URLS"
                   xdg-open "$URL" &
                 else
-                  URL=$(echo "$URLS" | fuzzel --dmenu --prompt="Select URL: " --width=80)
+                  URL=$(echo "$URLS" | ${launcherCmd})
                   if [ -n "$URL" ]; then
                     xdg-open "$URL" &
                   fi
@@ -861,7 +864,7 @@ args@{
       home.file.".local/bin/neomutt-term" = {
         text = ''
           #!/usr/bin/env bash
-          exec ${self.user.settings.terminal} --class=org.nx.neomutt -e neomutt
+          exec ${terminalRunWithClass "org.nx.neomutt" "neomutt"}
         '';
         executable = true;
       };

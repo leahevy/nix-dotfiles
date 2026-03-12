@@ -433,28 +433,30 @@ args@{
       "en-GB"
     ];
     whitelistPatterns = [ ];
-    editor = [
-      self.user.settings.terminal
-      "-e"
-      "nvim"
-    ];
-    darwinEditor = [
-      "open"
-      "-nWa"
-      "/Applications/Ghostty.app"
-      "--args"
-      "-e"
-      "$HOME/.nix-profile/bin/nvim"
-    ];
-    useHomeApplicationsOnDarwin = false;
     fileManager = [ "pcmanfm" ];
     darwinFileManager = [ "open" ];
   };
+
+  init =
+    context@{ config, options, ... }:
+    lib.mkIf self.isEnabled {
+      nx.preferences.desktop.programs.webBrowser = {
+        name = "qutebrowser";
+        package = null;
+        openCommand = "qutebrowser";
+        openFileCommand = "qutebrowser";
+        desktopFile = "org.qutebrowser.qutebrowser.desktop";
+      };
+    };
 
   configuration =
     context@{ config, options, ... }:
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+      terminal = config.nx.preferences.desktop.programs.terminal;
+      textEditor = config.nx.preferences.desktop.programs.textEditor;
+      appLauncher = config.nx.preferences.desktop.programs.appLauncher;
+      hasAppLauncher = appLauncher != null;
 
       defaultSearch =
         if self.settings.privacySearch then
@@ -512,15 +514,11 @@ args@{
           { };
 
       dmenuKeyBindings =
-        if
-          self.isLinux
-          && self.linux.isModuleEnabled "desktop-modules.fuzzel"
-          && self.settings.useDmenuForOpenOnLinux
-        then
+        if self.isLinux && hasAppLauncher && self.settings.useDmenuForOpenOnLinux then
           {
             normal = {
-              "o" = "spawn --userscript fuzzel-open";
-              "O" = "spawn --userscript fuzzel-open -t";
+              "o" = "spawn --userscript launcher-open";
+              "O" = "spawn --userscript launcher-open -t";
             };
           }
         else
@@ -625,41 +623,41 @@ args@{
                   "#a8366b"
                 ]
                 [
-                  self.theme.colors.main.backgrounds.primary.html
-                  self.theme.colors.main.backgrounds.primary.html
-                  self.theme.colors.main.backgrounds.primary.html
-                  self.theme.colors.main.backgrounds.primary.html
-                  self.theme.colors.main.backgrounds.secondary.html
-                  self.theme.colors.main.backgrounds.tertiary.html
-                  self.theme.colors.main.backgrounds.themed.html
+                  config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                  config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                  config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                  config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                  config.nx.preferences.theme.colors.main.backgrounds.secondary.html
+                  config.nx.preferences.theme.colors.main.backgrounds.tertiary.html
+                  config.nx.preferences.theme.colors.main.backgrounds.themed.html
 
-                  self.theme.colors.main.foregrounds.subtle.html
-                  self.theme.colors.main.foregrounds.secondary.html
-                  self.theme.colors.main.foregrounds.subtle.html
-                  self.theme.colors.main.foregrounds.secondary.html
-                  self.theme.colors.main.foregrounds.strong.html
-                  self.theme.colors.main.foregrounds.strong.html
-                  self.theme.colors.main.foregrounds.strong.html
+                  config.nx.preferences.theme.colors.main.foregrounds.subtle.html
+                  config.nx.preferences.theme.colors.main.foregrounds.secondary.html
+                  config.nx.preferences.theme.colors.main.foregrounds.subtle.html
+                  config.nx.preferences.theme.colors.main.foregrounds.secondary.html
+                  config.nx.preferences.theme.colors.main.foregrounds.strong.html
+                  config.nx.preferences.theme.colors.main.foregrounds.strong.html
+                  config.nx.preferences.theme.colors.main.foregrounds.strong.html
 
-                  self.theme.colors.main.foregrounds.primary.html
-                  self.theme.colors.main.foregrounds.emphasized.html
-                  self.theme.colors.main.foregrounds.strong.html
+                  config.nx.preferences.theme.colors.main.foregrounds.primary.html
+                  config.nx.preferences.theme.colors.main.foregrounds.emphasized.html
+                  config.nx.preferences.theme.colors.main.foregrounds.strong.html
 
-                  self.theme.colors.semantic.modifiedDarker.html
-                  self.theme.colors.semantic.removedDarker.html
+                  config.nx.preferences.theme.colors.semantic.modifiedDarker.html
+                  config.nx.preferences.theme.colors.semantic.removedDarker.html
 
-                  self.theme.colors.semantic.success.html
-                  self.theme.colors.semantic.successDarker.html
-                  self.theme.colors.semantic.success.html
+                  config.nx.preferences.theme.colors.semantic.success.html
+                  config.nx.preferences.theme.colors.semantic.successDarker.html
+                  config.nx.preferences.theme.colors.semantic.success.html
 
-                  self.theme.colors.semantic.warning.html
+                  config.nx.preferences.theme.colors.semantic.warning.html
 
-                  self.theme.colors.semantic.error.html
+                  config.nx.preferences.theme.colors.semantic.error.html
 
-                  self.theme.colors.semantic.errorDarker.html
-                  self.theme.colors.semantic.info.html
-                  self.theme.colors.semantic.info.html
-                  self.theme.colors.semantic.selected.html
+                  config.nx.preferences.theme.colors.semantic.errorDarker.html
+                  config.nx.preferences.theme.colors.semantic.info.html
+                  config.nx.preferences.theme.colors.semantic.info.html
+                  config.nx.preferences.theme.colors.semantic.selected.html
                 ]
                 (builtins.readFile "${src}/css/darculized/darculized-all-sites.css")
             )
@@ -734,42 +732,42 @@ args@{
             colors = {
               contextmenu = {
                 menu = {
-                  fg = lib.mkForce self.theme.colors.main.foregrounds.primary.html;
-                  bg = lib.mkForce self.theme.colors.main.backgrounds.primary.html;
+                  fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.primary.html;
+                  bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.primary.html;
                 };
                 selected = {
-                  fg = lib.mkForce self.theme.colors.blocks.primary.background.html;
-                  bg = lib.mkForce self.theme.colors.blocks.primary.foreground.html;
+                  fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
+                  bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
                 };
                 disabled = {
-                  fg = lib.mkForce self.theme.colors.main.foregrounds.subtle.html;
-                  bg = lib.mkForce self.theme.colors.main.backgrounds.tertiary.html;
+                  fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
+                  bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.tertiary.html;
                 };
               };
               hints = {
-                bg = lib.mkForce self.theme.colors.blocks.primary.background.html;
-                fg = lib.mkForce self.theme.colors.blocks.primary.foreground.html;
+                bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
+                fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
                 match = {
-                  fg = lib.mkForce self.theme.colors.blocks.accent.foreground.html;
+                  fg = lib.mkForce config.nx.preferences.theme.colors.blocks.accent.foreground.html;
                 };
               };
               tabs = {
                 even = {
-                  bg = lib.mkForce self.theme.colors.main.backgrounds.secondary.html;
-                  fg = lib.mkForce self.theme.colors.main.foregrounds.subtle.html;
+                  bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.secondary.html;
+                  fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
                 };
                 odd = {
-                  bg = lib.mkForce self.theme.colors.main.backgrounds.secondary.html;
-                  fg = lib.mkForce self.theme.colors.main.foregrounds.subtle.html;
+                  bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.secondary.html;
+                  fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
                 };
                 selected = {
                   even = {
-                    bg = lib.mkForce self.theme.colors.blocks.primary.background.html;
-                    fg = lib.mkForce self.theme.colors.blocks.primary.foreground.html;
+                    bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
+                    fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
                   };
                   odd = {
-                    bg = lib.mkForce self.theme.colors.blocks.primary.background.html;
-                    fg = lib.mkForce self.theme.colors.blocks.primary.foreground.html;
+                    bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
+                    fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
                   };
                 };
               };
@@ -862,25 +860,8 @@ args@{
             spellcheck = {
               languages = self.settings.dictLanguages;
             };
-            editor =
-              let
-                editorCommandLine = if self.isDarwin then self.settings.darwinEditor else self.settings.editor;
-                processedCommandLine = map (
-                  arg:
-                  let
-                    homeReplaced = builtins.replaceStrings [ "$HOME" ] [ self.user.home ] arg;
-                  in
-                  if self.isDarwin && self.settings.useHomeApplicationsOnDarwin then
-                    builtins.replaceStrings [ "/Applications" ] [ "${self.user.home}/Applications" ] homeReplaced
-                  else
-                    homeReplaced
-                ) editorCommandLine;
-              in
-              {
-                command = processedCommandLine ++ [
-                  "{file}"
-                ];
-              };
+            editor.command =
+              (helpers.terminalPrefixIf config textEditor) ++ textEditor.openCommand ++ [ "{file}" ];
             fileselect =
               let
                 fileManagerCommand =
@@ -1097,19 +1078,32 @@ args@{
         BROWSER = "qutebrowser";
       };
 
-      home.file.".local/share/qutebrowser/userscripts/fuzzel-open" = lib.mkIf (dmenuKeyBindings != { }) {
-        text = ''
-          #!/usr/bin/env bash
+      home.file.".local/share/qutebrowser/userscripts/launcher-open" =
+        lib.mkIf (dmenuKeyBindings != { })
+          {
+            text =
+              let
+                launcherCmd = lib.escapeShellArgs (
+                  appLauncher.dmenuCommand {
+                    prompt = "Open URL: ";
+                    placeholder = "Select a URL or enter a new one";
+                    width = 60;
+                    lines = 10;
+                  }
+                );
+              in
+              ''
+                #!/usr/bin/env bash
 
-          url=$(printf "%s\n%s" "${homeUrl}" "$(${pkgs.sqlite}/bin/sqlite3 -separator ' ' "$QUTE_DATA_DIR/history.sqlite" 'select title, url from CompletionHistory')" | cat "$QUTE_CONFIG_DIR/quickmarks" - | fuzzel --dmenu --prompt="Open URL: " --placeholder="Select a URL or enter a new one" --width=60 --lines=10)
-          url=$(echo "$url" | sed -E 's/[^ ]+ +//g' | grep -E "https?:" || echo "$url")
+                url=$(printf "%s\n%s" "${homeUrl}" "$(${pkgs.sqlite}/bin/sqlite3 -separator ' ' "$QUTE_DATA_DIR/history.sqlite" 'select title, url from CompletionHistory')" | cat "$QUTE_CONFIG_DIR/quickmarks" - | ${launcherCmd})
+                url=$(echo "$url" | sed -E 's/[^ ]+ +//g' | grep -E "https?:" || echo "$url")
 
-          [ -z "''${url// }" ] && exit
+                [ -z "''${url// }" ] && exit
 
-          echo "open" "$@" "$url" >> "$QUTE_FIFO" || qutebrowser "$url"
-        '';
-        executable = true;
-      };
+                echo "open" "$@" "$url" >> "$QUTE_FIFO" || qutebrowser "$url"
+              '';
+            executable = true;
+          };
 
       home.file.".local/bin/qutebrowser-install-dicts" = {
         text = ''
@@ -1200,21 +1194,36 @@ args@{
 
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
-          binds = with config.lib.niri.actions; {
-            "Mod+Ctrl+Alt+N" = {
-              action = spawn-sh "qutebrowser";
-              hotkey-overlay.title = "Apps:Browser";
+          binds =
+            with config.lib.niri.actions;
+            {
+              "Mod+Ctrl+Alt+N" = {
+                action = spawn-sh "qutebrowser";
+                hotkey-overlay.title = "Apps:Browser";
+              };
+            }
+            // lib.optionalAttrs hasAppLauncher {
+              "Mod+Alt+Space" =
+                let
+                  searchLauncherCmd = lib.escapeShellArgs (
+                    appLauncher.dmenuCommand {
+                      prompt = "Web Search: ";
+                      placeholder = "Enter search query";
+                      width = 60;
+                      lines = 0;
+                    }
+                  );
+                in
+                {
+                  action = spawn-sh ''
+                    query=$(echo "" | ${searchLauncherCmd})
+                    if [ -n "$query" ]; then
+                      qutebrowser --desktop-file-name "org.qutebrowser.websearch" --target window "${defaultSearch}$query"
+                    fi
+                  '';
+                  hotkey-overlay.title = "Apps:Web Search";
+                };
             };
-            "Mod+Alt+Space" = {
-              action = spawn-sh ''
-                query=$(echo "" | fuzzel --dmenu --prompt="Web Search: " --placeholder="Enter search query"  --width=60 --lines=0)
-                if [ -n "$query" ]; then
-                  qutebrowser --desktop-file-name "org.qutebrowser.websearch" --target window "${defaultSearch}$query"
-                fi
-              '';
-              hotkey-overlay.title = "Apps:Web Search";
-            };
-          };
 
           window-rules = [
             {

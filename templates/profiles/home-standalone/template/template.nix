@@ -33,6 +33,8 @@
 
     extraSettings = { };
 
+    init = args@{ lib, self, ... }: context@{ config, options, ... }: { };
+
     configuration =
       args@{
         lib,

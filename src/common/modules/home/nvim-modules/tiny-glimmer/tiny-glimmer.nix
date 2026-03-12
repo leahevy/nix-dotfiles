@@ -71,16 +71,16 @@ args@{
         duration = 500;
         charsForMaxDuration = 10;
         easing = "outQuad";
-        fromColor = self.theme.colors.terminal.colors.blue.html;
-        toColor = self.theme.colors.terminal.normalBackgrounds.primary.html;
+        fromColor = null;
+        toColor = null;
       };
 
       reverse_fade = {
         duration = 500;
         charsForMaxDuration = 10;
         easing = "outBack";
-        fromColor = self.theme.colors.terminal.colors.green.html;
-        toColor = self.theme.colors.terminal.normalBackgrounds.primary.html;
+        fromColor = null;
+        toColor = null;
       };
 
       pulse = {
@@ -88,16 +88,16 @@ args@{
         charsForMaxDuration = 15;
         pulseCount = 2;
         intensity = 1.2;
-        fromColor = self.theme.colors.terminal.colors.yellow.html;
-        toColor = self.theme.colors.terminal.normalBackgrounds.primary.html;
+        fromColor = null;
+        toColor = null;
       };
 
       bounce = {
         duration = 500;
         charsForMaxDuration = 20;
         oscillationCount = 1;
-        fromColor = self.theme.colors.terminal.colors.pink.html;
-        toColor = self.theme.colors.terminal.normalBackgrounds.primary.html;
+        fromColor = null;
+        toColor = null;
       };
 
       rainbow = {
@@ -109,8 +109,8 @@ args@{
         duration = 350;
         charsForMaxDuration = 25;
         lingeringTime = 50;
-        fromColor = self.theme.colors.terminal.colors.purple.html;
-        toColor = self.theme.colors.terminal.normalBackgrounds.primary.html;
+        fromColor = null;
+        toColor = null;
       };
     };
 
@@ -145,6 +145,71 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
+      theme = config.nx.preferences.theme;
+      bgColor = theme.colors.terminal.normalBackgrounds.primary.html;
+      resolvedAnimations = {
+        fade = self.settings.animations.fade // {
+          fromColor =
+            if self.settings.animations.fade.fromColor != null then
+              self.settings.animations.fade.fromColor
+            else
+              theme.colors.terminal.colors.blue.html;
+          toColor =
+            if self.settings.animations.fade.toColor != null then
+              self.settings.animations.fade.toColor
+            else
+              bgColor;
+        };
+        reverse_fade = self.settings.animations.reverse_fade // {
+          fromColor =
+            if self.settings.animations.reverse_fade.fromColor != null then
+              self.settings.animations.reverse_fade.fromColor
+            else
+              theme.colors.terminal.colors.green.html;
+          toColor =
+            if self.settings.animations.reverse_fade.toColor != null then
+              self.settings.animations.reverse_fade.toColor
+            else
+              bgColor;
+        };
+        pulse = self.settings.animations.pulse // {
+          fromColor =
+            if self.settings.animations.pulse.fromColor != null then
+              self.settings.animations.pulse.fromColor
+            else
+              theme.colors.terminal.colors.yellow.html;
+          toColor =
+            if self.settings.animations.pulse.toColor != null then
+              self.settings.animations.pulse.toColor
+            else
+              bgColor;
+        };
+        bounce = self.settings.animations.bounce // {
+          fromColor =
+            if self.settings.animations.bounce.fromColor != null then
+              self.settings.animations.bounce.fromColor
+            else
+              theme.colors.terminal.colors.pink.html;
+          toColor =
+            if self.settings.animations.bounce.toColor != null then
+              self.settings.animations.bounce.toColor
+            else
+              bgColor;
+        };
+        rainbow = self.settings.animations.rainbow;
+        left_to_right = self.settings.animations.left_to_right // {
+          fromColor =
+            if self.settings.animations.left_to_right.fromColor != null then
+              self.settings.animations.left_to_right.fromColor
+            else
+              theme.colors.terminal.colors.purple.html;
+          toColor =
+            if self.settings.animations.left_to_right.toColor != null then
+              self.settings.animations.left_to_right.toColor
+            else
+              bgColor;
+        };
+      };
       configToLuaProps =
         config:
         let
@@ -199,10 +264,10 @@ args@{
                   }'';
 
       allAnimations = lib.concatStringsSep ",\n            " (
-        lib.mapAttrsToList generateAnimation self.settings.animations
+        lib.mapAttrsToList generateAnimation resolvedAnimations
       );
 
-      pulsarAnimConfig = self.settings.animations.${self.settings.pulsar.animation};
+      pulsarAnimConfig = resolvedAnimations.${self.settings.pulsar.animation};
       pulsarSettings = configToLuaProps pulsarAnimConfig;
     in
     {

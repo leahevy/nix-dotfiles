@@ -309,21 +309,21 @@ args@{
           _G.nx_modules = _G.nx_modules or {}
           _G.nx_modules["50-gitsigns"] = function()
             local function set_gitsigns_colors()
-              vim.api.nvim_set_hl(0, "GitSignsAdd", { fg = "${self.theme.colors.semantic.success.html}" })
-              vim.api.nvim_set_hl(0, "GitSignsChange", { fg = "${self.theme.colors.semantic.warning.html}" })
-              vim.api.nvim_set_hl(0, "GitSignsDelete", { fg = "${self.theme.colors.semantic.error.html}" })
-              vim.api.nvim_set_hl(0, "GitSignsTopdelete", { fg = "${self.theme.colors.semantic.error.html}" })
-              vim.api.nvim_set_hl(0, "GitSignsChangedelete", { fg = "${self.theme.colors.semantic.info.html}" })
-              vim.api.nvim_set_hl(0, "GitSignsUntracked", { fg = "${self.theme.colors.separators.normal.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsAdd", { fg = "${config.nx.preferences.theme.colors.semantic.success.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsChange", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsDelete", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsTopdelete", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsChangedelete", { fg = "${config.nx.preferences.theme.colors.semantic.info.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsUntracked", { fg = "${config.nx.preferences.theme.colors.separators.normal.html}" })
 
-              vim.api.nvim_set_hl(0, "GitSignsStagedAdd", { fg = "${self.theme.colors.semantic.successDarker.html}" })
-              vim.api.nvim_set_hl(0, "GitSignsStagedChange", { fg = "${self.theme.colors.semantic.warningDarker.html}" })
-              vim.api.nvim_set_hl(0, "GitSignsStagedDelete", { fg = "${self.theme.colors.semantic.errorDarker.html}" })
-              vim.api.nvim_set_hl(0, "GitSignsStagedTopdelete", { fg = "${self.theme.colors.semantic.errorDarker.html}" })
-              vim.api.nvim_set_hl(0, "GitSignsStagedChangedelete", { fg = "${self.theme.colors.semantic.infoDarker.html}" })
-              vim.api.nvim_set_hl(0, "GitSignsStagedUntracked", { fg = "${self.theme.colors.separators.normal.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsStagedAdd", { fg = "${config.nx.preferences.theme.colors.semantic.successDarker.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsStagedChange", { fg = "${config.nx.preferences.theme.colors.semantic.warningDarker.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsStagedDelete", { fg = "${config.nx.preferences.theme.colors.semantic.errorDarker.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsStagedTopdelete", { fg = "${config.nx.preferences.theme.colors.semantic.errorDarker.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsStagedChangedelete", { fg = "${config.nx.preferences.theme.colors.semantic.infoDarker.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsStagedUntracked", { fg = "${config.nx.preferences.theme.colors.separators.normal.html}" })
 
-              vim.api.nvim_set_hl(0, "GitSignsCurrentLineBlame", { fg = "${self.theme.colors.separators.ultraDark.html}", underline = false, sp = "${self.theme.colors.separators.ultraDark.html}" })
+              vim.api.nvim_set_hl(0, "GitSignsCurrentLineBlame", { fg = "${config.nx.preferences.theme.colors.separators.ultraDark.html}", underline = false, sp = "${config.nx.preferences.theme.colors.separators.ultraDark.html}" })
             end
 
             vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {

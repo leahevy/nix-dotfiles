@@ -29,7 +29,7 @@ args@{
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
       luksDataDriveEnabled = self.isLinux && self.linux.isModuleEnabled "storage.luks-data-drive";
 
-      iconThemeString = self.theme.icons.primary;
+      iconThemeString = config.nx.preferences.theme.icons.primary;
       iconThemePackage = lib.getAttr (lib.head (lib.splitString "/" iconThemeString)) pkgs;
       iconThemeName = lib.head (lib.tail (lib.splitString "/" iconThemeString));
       iconThemeBasePath = "${iconThemePackage}/share/icons/${iconThemeName}";

@@ -18,9 +18,9 @@ args@{
     context@{ config, options, ... }:
     {
       environment.etc = {
-        "nx-theme/current-theme".text = self.theme.name;
-        "nx-theme/current-theme-config.json".text = builtins.toJSON self.theme;
-        "nx-theme/active-${self.theme.name}".text = "";
+        "nx-theme/current-theme".text = config.nx.preferences.theme.name;
+        "nx-theme/current-theme-config.json".text = builtins.toJSON config.nx.preferences.theme;
+        "nx-theme/active-${config.nx.preferences.theme.name}".text = "";
       }
       // builtins.listToAttrs (
         map (name: {

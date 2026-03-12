@@ -50,7 +50,7 @@ args@{
       breakpointCondition = "◆";
       breakpointRejected = "◌";
       logPoint = "◉";
-      breakpointColor = self.theme.colors.semantic.warning.html;
+      breakpointColor = null;
     };
 
     ui = {
@@ -62,6 +62,13 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
+      theme = config.nx.preferences.theme;
+      breakpointColor =
+        if self.settings.signs.breakpointColor != null then
+          self.settings.signs.breakpointColor
+        else
+          theme.colors.semantic.warning.html;
+
       capitalize =
         str:
         let
@@ -451,7 +458,7 @@ args@{
         extraConfigLua = ''
           _G.nx_modules = _G.nx_modules or {}
           _G.nx_modules["50-dap"] = function()
-            vim.api.nvim_set_hl(0, "DapBreakpoint", { fg = "${self.settings.signs.breakpointColor}" })
+            vim.api.nvim_set_hl(0, "DapBreakpoint", { fg = "${breakpointColor}" })
             local dap = require('dap')
             local dapui = require('dapui')
 

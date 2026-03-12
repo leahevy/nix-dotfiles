@@ -88,6 +88,31 @@ args@{
     };
   };
 
+  init =
+    context@{ config, options, ... }:
+    lib.mkIf self.isEnabled {
+      nx.preferences.desktop.programs.textEditor = {
+        name = "nvim";
+        openCommand = [ "nvim" ];
+        openFileCommand = path: [
+          "nvim"
+          path
+        ];
+        desktopFile = "nvim.desktop";
+        needsTerminal = true;
+      };
+      nx.preferences.desktop.programs.advancedTextEditor = {
+        name = "nvim";
+        openCommand = [ "nvim" ];
+        openFileCommand = path: [
+          "nvim"
+          path
+        ];
+        desktopFile = "nvim.desktop";
+        needsTerminal = true;
+      };
+    };
+
   settings = rec {
     withInitialTabs = true;
     withSocket = true;
@@ -112,7 +137,7 @@ args@{
     };
     overrideThemeSettings = { };
     pureBlackBackground = true;
-    overrideCursorHighlightColour = self.theme.colors.separators.dark.html; # Or null
+    overrideCursorHighlightColour = null; # Or set to a specific color
     foreignTheme = {
       name = "eldritch";
       github = {
@@ -122,58 +147,76 @@ args@{
         hash = "sha256-M2n3kWMPTIEAPXMjJd73z2+Pvf60+oUcRyJ8tKdir1Q=";
       };
       setupFunction = "eldritch";
-      settings = {
-        on_colors.__raw = ''
-          function(colors)
-            colors.none = "NONE"
-            colors.bg_dark = "${self.theme.colors.terminal.normalBackgrounds.primary.html}"
-            colors.bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}"
-            colors.bg_highlight = "${self.theme.colors.terminal.normalBackgrounds.highlight.html}"
-            colors.terminal_black = "${self.theme.colors.terminal.colors.black.html}"
-            colors.fg = "${self.theme.colors.terminal.foregrounds.primary.html}"
-            colors.fg_dark = "${self.theme.colors.terminal.foregrounds.secondary.html}"
-            colors.fg_gutter = "${self.theme.colors.terminal.foregrounds.dim.html}"
-            colors.fg_gutter_light = "${self.theme.colors.terminal.foregrounds.bright.html}"
-            colors.dark3 = "${self.theme.colors.terminal.colors.green.html}"
-            colors.comment = "${self.theme.colors.semantic.comment.html}"
-            colors.dark5 = "${self.theme.colors.terminal.colors.greenDark.html}"
-            colors.bright_cyan = "${self.theme.colors.terminal.colors.cyanBright.html}"
-            colors.cyan = "${self.theme.colors.terminal.colors.cyan.html}"
-            colors.dark_cyan = "${self.theme.colors.terminal.colors.cyanDark.html}"
-            colors.visual = "${self.theme.colors.terminal.normalBackgrounds.selection.html}"
-            colors.bg_visual = "${self.theme.colors.terminal.normalBackgrounds.selection.html}"
-            colors.magenta = "${self.theme.colors.terminal.colors.magenta.html}"
-            colors.magenta2 = "${self.theme.colors.terminal.colors.magentaLight.html}"
-            colors.magenta3 = "${self.theme.colors.terminal.colors.magentaDark.html}"
-            colors.pink = "${self.theme.colors.terminal.colors.pink.html}"
-            colors.purple = "${self.theme.colors.terminal.colors.purple.html}"
-            colors.orange = "${self.theme.colors.terminal.colors.orange.html}"
-            colors.yellow = "${self.theme.colors.terminal.colors.yellow.html}"
-            colors.dark_yellow = "${self.theme.colors.terminal.colors.yellowDark.html}"
-            colors.green = "${self.theme.colors.terminal.colors.green.html}"
-            colors.bright_green = "${self.theme.colors.terminal.colors.greenBright.html}"
-            colors.dark_green = "${self.theme.colors.terminal.colors.greenDark.html}"
-            colors.red = "${self.theme.colors.terminal.colors.green.html}"
-            colors.bright_red = "${self.theme.colors.terminal.colors.greenBright.html}"
-            colors.git = {
-              add = "${self.theme.colors.semantic.success.html}",
-              change = "${self.theme.colors.semantic.warning.html}",
-              delete = "${self.theme.colors.semantic.error.html}"
-            }
-            colors.gitSigns = {
-              add = "${self.theme.colors.semantic.success.html}",
-              change = "${self.theme.colors.semantic.warning.html}",
-              delete = "${self.theme.colors.semantic.error.html}",
-            }
-          end
-        '';
-      };
+      settings = null;
     };
   };
 
   configuration =
     context@{ config, options, ... }:
+    let
+      theme = config.nx.preferences.theme;
+      terminal = config.nx.preferences.desktop.programs.terminal;
+      terminalRunPrefix = lib.escapeShellArgs terminal.openRunPrefix;
+      overrideCursorHighlightColour =
+        if self.settings.overrideCursorHighlightColour != null then
+          self.settings.overrideCursorHighlightColour
+        else
+          theme.colors.separators.dark.html;
+      foreignThemeSettings =
+        if self.settings.foreignTheme.settings != null then
+          self.settings.foreignTheme.settings
+        else
+          {
+            on_colors.__raw = ''
+              function(colors)
+                colors.none = "NONE"
+                colors.bg_dark = "${theme.colors.terminal.normalBackgrounds.primary.html}"
+                colors.bg = "${theme.colors.terminal.normalBackgrounds.primary.html}"
+                colors.bg_highlight = "${theme.colors.terminal.normalBackgrounds.highlight.html}"
+                colors.terminal_black = "${theme.colors.terminal.colors.black.html}"
+                colors.fg = "${theme.colors.terminal.foregrounds.primary.html}"
+                colors.fg_dark = "${theme.colors.terminal.foregrounds.secondary.html}"
+                colors.fg_gutter = "${theme.colors.terminal.foregrounds.dim.html}"
+                colors.fg_gutter_light = "${theme.colors.terminal.foregrounds.bright.html}"
+                colors.dark3 = "${theme.colors.terminal.colors.green.html}"
+                colors.comment = "${theme.colors.semantic.comment.html}"
+                colors.dark5 = "${theme.colors.terminal.colors.greenDark.html}"
+                colors.bright_cyan = "${theme.colors.terminal.colors.cyanBright.html}"
+                colors.cyan = "${theme.colors.terminal.colors.cyan.html}"
+                colors.dark_cyan = "${theme.colors.terminal.colors.cyanDark.html}"
+                colors.visual = "${theme.colors.terminal.normalBackgrounds.selection.html}"
+                colors.bg_visual = "${theme.colors.terminal.normalBackgrounds.selection.html}"
+                colors.magenta = "${theme.colors.terminal.colors.magenta.html}"
+                colors.magenta2 = "${theme.colors.terminal.colors.magentaLight.html}"
+                colors.magenta3 = "${theme.colors.terminal.colors.magentaDark.html}"
+                colors.pink = "${theme.colors.terminal.colors.pink.html}"
+                colors.purple = "${theme.colors.terminal.colors.purple.html}"
+                colors.orange = "${theme.colors.terminal.colors.orange.html}"
+                colors.yellow = "${theme.colors.terminal.colors.yellow.html}"
+                colors.dark_yellow = "${theme.colors.terminal.colors.yellowDark.html}"
+                colors.green = "${theme.colors.terminal.colors.green.html}"
+                colors.bright_green = "${theme.colors.terminal.colors.greenBright.html}"
+                colors.dark_green = "${theme.colors.terminal.colors.greenDark.html}"
+                colors.red = "${theme.colors.terminal.colors.green.html}"
+                colors.bright_red = "${theme.colors.terminal.colors.greenBright.html}"
+                colors.git = {
+                  add = "${theme.colors.semantic.success.html}",
+                  change = "${theme.colors.semantic.warning.html}",
+                  delete = "${theme.colors.semantic.error.html}"
+                }
+                colors.gitSigns = {
+                  add = "${theme.colors.semantic.success.html}",
+                  change = "${theme.colors.semantic.warning.html}",
+                  delete = "${theme.colors.semantic.error.html}",
+                }
+              end
+            '';
+          };
+    in
     {
+      nx.preferences.desktop.programs.textEditor.package = config.programs.nixvim.build.package;
+      nx.preferences.desktop.programs.advancedTextEditor.package = config.programs.nixvim.build.package;
+
       # See https://nix-community.github.io/nixvim/search/ for available options:
       programs.nixvim = {
         enable = true;
@@ -307,8 +350,8 @@ args@{
 
               ''
                 _G.nx_modules["00-early-background"] = function()
-                  vim.api.nvim_set_hl(0, "Normal", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                  vim.cmd("highlight Normal guibg=${self.theme.colors.terminal.normalBackgrounds.primary.html} ctermbg=black")
+                  vim.api.nvim_set_hl(0, "Normal", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                  vim.cmd("highlight Normal guibg=${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html} ctermbg=black")
                 end
               ''
             ]
@@ -333,7 +376,7 @@ args@{
                 ''
                   _G.nx_modules["00-colorscheme"] = function()
                     ${lib.optionalString (self.settings.foreignTheme != null) ''
-                      require("${self.settings.foreignTheme.setupFunction}").setup(${toLua self.settings.foreignTheme.settings})
+                      require("${self.settings.foreignTheme.setupFunction}").setup(${toLua foreignThemeSettings})
                     ''}
                     vim.cmd("colorscheme ${
                       if self.settings.foreignTheme != null then
@@ -427,48 +470,48 @@ args@{
               ''
                 _G.nx_modules["95-pure-black-background"] = function()
                   local function fix_black_background()
-                    vim.api.nvim_set_hl(0, "Normal", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "NormalFloat", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "NormalNC", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "NormalSB", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "SignColumn", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "SignColumnSB", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "LineNr", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "Normal", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "NormalFloat", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "NormalNC", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "NormalSB", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "SignColumn", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "SignColumnSB", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "LineNr", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
 
-                    vim.api.nvim_set_hl(0, "WinSeparator", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}", fg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "VertSplit", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}", fg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "WinSeparator", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}", fg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "VertSplit", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}", fg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
 
-                    vim.api.nvim_set_hl(0, "StatusLine", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "StatusLineNC", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "TabLine", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "TabLineFill", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "StatusLine", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "StatusLineNC", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "TabLine", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "TabLineFill", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
 
-                    vim.api.nvim_set_hl(0, "Pmenu", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "PmenuSel", { bg = "${self.theme.colors.blocks.primary.background.html}", fg = "${self.theme.colors.blocks.primary.foreground.html}" })
-                    vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-                    vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "${self.theme.colors.terminal.foregrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "Pmenu", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "PmenuSel", { bg = "${config.nx.preferences.theme.colors.blocks.primary.background.html}", fg = "${config.nx.preferences.theme.colors.blocks.primary.foreground.html}" })
+                    vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "${config.nx.preferences.theme.colors.terminal.foregrounds.primary.html}" })
 
-                    vim.api.nvim_set_hl(0, "WhiteSpace", { fg = "${self.theme.colors.separators.veryDark.html}" })
-                    vim.api.nvim_set_hl(0, "NonText", { fg = "${self.theme.colors.separators.dark.html}" })
+                    vim.api.nvim_set_hl(0, "WhiteSpace", { fg = "${config.nx.preferences.theme.colors.separators.veryDark.html}" })
+                    vim.api.nvim_set_hl(0, "NonText", { fg = "${config.nx.preferences.theme.colors.separators.dark.html}" })
 
-                    vim.api.nvim_set_hl(0, "Folded", { bg = "${self.theme.colors.blocks.primary.background.html}", fg = "${self.theme.colors.blocks.primary.foreground.html}", italic = true })
-                    vim.api.nvim_set_hl(0, "FoldColumn", { fg = "${self.theme.colors.terminal.foregrounds.primary.html}" })
+                    vim.api.nvim_set_hl(0, "Folded", { bg = "${config.nx.preferences.theme.colors.blocks.primary.background.html}", fg = "${config.nx.preferences.theme.colors.blocks.primary.foreground.html}", italic = true })
+                    vim.api.nvim_set_hl(0, "FoldColumn", { fg = "${config.nx.preferences.theme.colors.terminal.foregrounds.primary.html}" })
 
-                    vim.api.nvim_set_hl(0, "QuickFixLine", { bg = "${self.theme.colors.terminal.normalBackgrounds.highlight.html}", bold = true })
-                    vim.api.nvim_set_hl(0, "qfText", { fg = "${self.theme.colors.separators.normal.html}" })
-                    vim.api.nvim_set_hl(0, "qfLineNr", { fg = "${self.theme.colors.separators.normal.html}" })
-                    vim.api.nvim_set_hl(0, "qfFileName", { fg = "${self.theme.colors.terminal.colors.blue.html}" })
-                    vim.api.nvim_set_hl(0, "qfSeparator", { fg = "${self.theme.colors.separators.normal.html}" })
+                    vim.api.nvim_set_hl(0, "QuickFixLine", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.highlight.html}", bold = true })
+                    vim.api.nvim_set_hl(0, "qfText", { fg = "${config.nx.preferences.theme.colors.separators.normal.html}" })
+                    vim.api.nvim_set_hl(0, "qfLineNr", { fg = "${config.nx.preferences.theme.colors.separators.normal.html}" })
+                    vim.api.nvim_set_hl(0, "qfFileName", { fg = "${config.nx.preferences.theme.colors.terminal.colors.blue.html}" })
+                    vim.api.nvim_set_hl(0, "qfSeparator", { fg = "${config.nx.preferences.theme.colors.separators.normal.html}" })
 
-                    vim.api.nvim_set_hl(0, "MsgArea", { bg = "NONE", fg = "${self.theme.colors.terminal.colors.green.html}" })
-                    vim.api.nvim_set_hl(0, "Visual", { bg = "${self.theme.colors.blocks.primary.background.html}", fg = "${self.theme.colors.blocks.primary.foreground.html}" })
+                    vim.api.nvim_set_hl(0, "MsgArea", { bg = "NONE", fg = "${config.nx.preferences.theme.colors.terminal.colors.green.html}" })
+                    vim.api.nvim_set_hl(0, "Visual", { bg = "${config.nx.preferences.theme.colors.blocks.primary.background.html}", fg = "${config.nx.preferences.theme.colors.blocks.primary.foreground.html}" })
 
                     local float_border_hl = vim.api.nvim_get_hl(0, { name = "FloatBorder" })
                     if float_border_hl.fg then
                       vim.api.nvim_set_hl(0, "FloatBorder", {
-                        bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}",
+                        bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}",
                         fg = float_border_hl.fg
                       })
                     end
@@ -487,7 +530,7 @@ args@{
                   })
 
                   local qf_ns = vim.api.nvim_create_namespace("quickfix_highlights")
-                  vim.api.nvim_set_hl(qf_ns, "CursorLine", { bg = "${self.theme.colors.terminal.normalBackgrounds.tertiary.html}" })
+                  vim.api.nvim_set_hl(qf_ns, "CursorLine", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.tertiary.html}" })
 
                   vim.api.nvim_create_autocmd("FileType", {
                     pattern = "qf",
@@ -499,12 +542,12 @@ args@{
                 end
               ''
             ]
-            ++ lib.optionals (self.settings.overrideCursorHighlightColour != null) [
+            ++ [
               ''
                 _G.nx_modules["96-cursor-highlight-override"] = function()
                   local function fix_cursor_highlight()
-                    vim.api.nvim_set_hl(0, "CursorLine", { underline = true, sp = "${self.settings.overrideCursorHighlightColour}" })
-                    vim.api.nvim_set_hl(0, "CursorColumn", { bg = "${self.settings.overrideCursorHighlightColour}" })
+                    vim.api.nvim_set_hl(0, "CursorLine", { underline = true, sp = "${overrideCursorHighlightColour}" })
+                    vim.api.nvim_set_hl(0, "CursorColumn", { bg = "${overrideCursorHighlightColour}" })
                   end
 
                   vim.api.nvim_create_autocmd("VimEnter", {
@@ -1364,7 +1407,7 @@ args@{
         executable = true;
         text = ''
           #!/usr/bin/env bash
-          exec ${self.user.settings.terminal} -e nvim-run "$@"
+          exec ${terminalRunPrefix} nvim-run "$@"
         '';
       };
 

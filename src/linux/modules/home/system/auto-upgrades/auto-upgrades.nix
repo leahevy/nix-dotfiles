@@ -27,6 +27,8 @@ args@{
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
       isHeadless = (self.host.settings.system.desktop or null) == null;
+      terminal = config.nx.preferences.desktop.programs.terminal;
+      terminalShellCmd = cmd: lib.escapeShellArgs (terminal.openShellCommand cmd);
     in
     {
       home.file.".local/bin/auto-upgrade-status" = {
@@ -140,7 +142,7 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Mod+Ctrl+Alt+G" = {
-              action = spawn-sh "${self.user.settings.terminal} -e sh -c 'auto-upgrade-status'";
+              action = spawn-sh (terminalShellCmd "auto-upgrade-status");
               hotkey-overlay.title = "System:Auto-upgrade status";
             };
           };

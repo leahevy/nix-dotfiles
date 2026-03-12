@@ -15,6 +15,25 @@ args@{
   input = "common";
   namespace = "home";
 
+  init =
+    context@{ config, options, ... }:
+    lib.mkIf self.isEnabled {
+      nx.preferences.desktop.programs.emailClient = {
+        name = "thunderbird";
+        package = pkgs.thunderbird;
+        openCommand = "thunderbird";
+        openFileCommand = "thunderbird";
+        desktopFile = "thunderbird.desktop";
+      };
+      nx.preferences.desktop.programs.calendar = {
+        name = "thunderbird";
+        package = null;
+        openCommand = "thunderbird";
+        openFileCommand = "thunderbird";
+        desktopFile = "thunderbird.desktop";
+      };
+    };
+
   configuration =
     context@{ config, options, ... }:
     let

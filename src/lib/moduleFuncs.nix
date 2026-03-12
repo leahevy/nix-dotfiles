@@ -351,6 +351,10 @@ rec {
       currentInputName = moduleContext.moduleInputName;
       isStandalone = moduleContext.user.isStandalone or false;
 
+      pathParts = lib.splitString "/" moduleBasePath;
+      moduleGroupName = if builtins.length pathParts >= 3 then builtins.elemAt pathParts 2 else null;
+      moduleModuleName = if builtins.length pathParts >= 4 then builtins.elemAt pathParts 3 else null;
+
       contextDefaults =
         createContextFunctions currentInputName currentNamespace moduleContext
           moduleBasePath;
@@ -488,6 +492,25 @@ rec {
             variables
             configInputs
             ;
+
+          options =
+            config:
+            if moduleGroupName != null && moduleModuleName != null then
+              config.nx.${currentInputName}.${moduleGroupName}.${moduleModuleName} or { }
+            else
+              { };
+
+          isEnabled =
+            let
+              processedModules =
+                if currentNamespace == "home" || currentNamespace == "standalone" then
+                  moduleContext.user.processedModules or moduleContext.user.modules or { }
+                else
+                  moduleContext.host.processedModules or { };
+            in
+            moduleGroupName != null
+            && moduleModuleName != null
+            && lib.hasAttrByPath [ currentInputName moduleGroupName moduleModuleName ] processedModules;
         };
     }
     .finalContext;
@@ -723,45 +746,12 @@ rec {
           themesDir = moduleContext.inputs.themes + "/modules/home/themes";
         in
         builtins.filter (name: name != "base") (builtins.attrNames (builtins.readDir themesDir));
-
-      theme =
-        let
-          activeTheme =
-            if moduleContext.host or null != null && moduleContext.host.settings.theme or null != null then
-              moduleContext.host.settings.theme
-            else if moduleContext.user or null != null && moduleContext.user.settings.theme or null != null then
-              moduleContext.user.settings.theme
-            else
-              moduleContext.variables.defaultTheme;
-
-          themesDir = moduleContext.inputs.themes + "/modules/home/themes";
-          existingThemes = builtins.attrNames (builtins.readDir themesDir);
-
-          themeModulePath =
-            moduleContext.inputs.themes + "/modules/home/themes/${activeTheme}/${activeTheme}.nix";
-
-          themeModule =
-            if builtins.pathExists themeModulePath then
-              import themeModulePath {
-                inherit lib;
-                pkgs = null;
-                pkgs-unstable = null;
-                funcs = null;
-                helpers = null;
-                defs = null;
-                self = null;
-              }
-            else
-              throw "Theme '${activeTheme}' not found at ${themeModulePath}. Available themes: ${builtins.concatStringsSep ", " existingThemes}";
-        in
-        themeModule.settings;
     in
     {
       inherit
         isModuleEnabled
         getModuleConfig
         requireModuleConfig
-        theme
         availableThemes
         ;
     };

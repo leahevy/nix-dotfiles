@@ -126,11 +126,11 @@ args@{
 
           _G.nx_modules["99-telescope-highlight"] = function()
             local function fix_telescope_background()
-              vim.api.nvim_set_hl(0, "TelescopeNormal", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-              vim.api.nvim_set_hl(0, "TelescopePromptNormal", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-              vim.api.nvim_set_hl(0, "TelescopeResultsNormal", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-              vim.api.nvim_set_hl(0, "TelescopePreviewNormal", { bg = "${self.theme.colors.terminal.normalBackgrounds.primary.html}" })
-              vim.api.nvim_set_hl(0, "TelescopeSelection", { bg = "${self.theme.colors.terminal.normalBackgrounds.selection.html}" })
+              vim.api.nvim_set_hl(0, "TelescopeNormal", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+              vim.api.nvim_set_hl(0, "TelescopePromptNormal", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+              vim.api.nvim_set_hl(0, "TelescopeResultsNormal", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+              vim.api.nvim_set_hl(0, "TelescopePreviewNormal", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}" })
+              vim.api.nvim_set_hl(0, "TelescopeSelection", { bg = "${config.nx.preferences.theme.colors.terminal.normalBackgrounds.selection.html}" })
             end
 
             vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {

@@ -17,19 +17,64 @@ args@{
 
   settings = {
     colors = {
-      normal = self.theme.colors.blocks.primary.foreground.html;
-      insert = self.theme.colors.blocks.accent.foreground.html;
-      visual = self.theme.colors.blocks.highlight.foreground.html;
-      command = self.theme.colors.blocks.warning.foreground.html;
-      replace = self.theme.colors.blocks.critical.foreground.html;
-      select = self.theme.colors.blocks.neutral.foreground.html;
-      terminal = self.theme.colors.blocks.info.foreground.html;
-      terminalNormal = self.theme.colors.blocks.info.foreground.html;
+      normal = null;
+      insert = null;
+      visual = null;
+      command = null;
+      replace = null;
+      select = null;
+      terminal = null;
+      terminalNormal = null;
     };
   };
 
   configuration =
     context@{ config, options, ... }:
+    let
+      theme = config.nx.preferences.theme;
+      colors = {
+        normal =
+          if self.settings.colors.normal != null then
+            self.settings.colors.normal
+          else
+            theme.colors.blocks.primary.foreground.html;
+        insert =
+          if self.settings.colors.insert != null then
+            self.settings.colors.insert
+          else
+            theme.colors.blocks.accent.foreground.html;
+        visual =
+          if self.settings.colors.visual != null then
+            self.settings.colors.visual
+          else
+            theme.colors.blocks.highlight.foreground.html;
+        command =
+          if self.settings.colors.command != null then
+            self.settings.colors.command
+          else
+            theme.colors.blocks.warning.foreground.html;
+        replace =
+          if self.settings.colors.replace != null then
+            self.settings.colors.replace
+          else
+            theme.colors.blocks.critical.foreground.html;
+        select =
+          if self.settings.colors.select != null then
+            self.settings.colors.select
+          else
+            theme.colors.blocks.neutral.foreground.html;
+        terminal =
+          if self.settings.colors.terminal != null then
+            self.settings.colors.terminal
+          else
+            theme.colors.blocks.info.foreground.html;
+        terminalNormal =
+          if self.settings.colors.terminalNormal != null then
+            self.settings.colors.terminalNormal
+          else
+            theme.colors.blocks.info.foreground.html;
+      };
+    in
     {
       programs.nixvim = {
         plugins.modicator = {
@@ -65,14 +110,14 @@ args@{
             vim.o.number = true
 
             local function setup_modicator_highlights()
-              vim.api.nvim_set_hl(0, "NormalMode", { fg = "${self.settings.colors.normal}", bold = true })
-              vim.api.nvim_set_hl(0, "InsertMode", { fg = "${self.settings.colors.insert}", bold = true })
-              vim.api.nvim_set_hl(0, "VisualMode", { fg = "${self.settings.colors.visual}", bold = true })
-              vim.api.nvim_set_hl(0, "CommandMode", { fg = "${self.settings.colors.command}", bold = true })
-              vim.api.nvim_set_hl(0, "ReplaceMode", { fg = "${self.settings.colors.replace}", bold = true })
-              vim.api.nvim_set_hl(0, "SelectMode", { fg = "${self.settings.colors.select}", bold = true })
-              vim.api.nvim_set_hl(0, "TerminalMode", { fg = "${self.settings.colors.terminal}", bold = true })
-              vim.api.nvim_set_hl(0, "TerminalNormalMode", { fg = "${self.settings.colors.terminalNormal}", bold = false })
+              vim.api.nvim_set_hl(0, "NormalMode", { fg = "${colors.normal}", bold = true })
+              vim.api.nvim_set_hl(0, "InsertMode", { fg = "${colors.insert}", bold = true })
+              vim.api.nvim_set_hl(0, "VisualMode", { fg = "${colors.visual}", bold = true })
+              vim.api.nvim_set_hl(0, "CommandMode", { fg = "${colors.command}", bold = true })
+              vim.api.nvim_set_hl(0, "ReplaceMode", { fg = "${colors.replace}", bold = true })
+              vim.api.nvim_set_hl(0, "SelectMode", { fg = "${colors.select}", bold = true })
+              vim.api.nvim_set_hl(0, "TerminalMode", { fg = "${colors.terminal}", bold = true })
+              vim.api.nvim_set_hl(0, "TerminalNormalMode", { fg = "${colors.terminalNormal}", bold = false })
             end
 
             vim.api.nvim_create_autocmd({"VimEnter", "ColorScheme"}, {

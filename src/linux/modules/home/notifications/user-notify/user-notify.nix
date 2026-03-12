@@ -24,14 +24,16 @@ args@{
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
       isHeadless = (self.host.settings.system.desktop or null) == null;
+      terminal = config.nx.preferences.desktop.programs.terminal;
+      terminalShellCmd = cmd: lib.escapeShellArgs (terminal.openShellCommand cmd);
 
-      iconThemeString = self.theme.icons.primary;
+      iconThemeString = config.nx.preferences.theme.icons.primary;
       iconThemePackageName = lib.head (lib.splitString "/" iconThemeString);
       iconThemePackage = lib.getAttr iconThemePackageName pkgs;
       iconThemeName = lib.head (lib.tail (lib.splitString "/" iconThemeString));
       iconThemeBasePath = "${iconThemePackage}/share/icons/${iconThemeName}";
 
-      fallbackIconThemeString = self.theme.icons.fallback;
+      fallbackIconThemeString = config.nx.preferences.theme.icons.fallback;
       fallbackIconThemePackageName = lib.head (lib.splitString "/" fallbackIconThemeString);
       fallbackIconThemePackage = lib.getAttr fallbackIconThemePackageName pkgs;
       fallbackIconThemeName = lib.head (lib.tail (lib.splitString "/" fallbackIconThemeString));
@@ -287,7 +289,7 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Mod+Ctrl+Alt+L" = {
-              action = spawn-sh "${self.user.settings.terminal} -e sh -c 'nx-user-notify-logs'";
+              action = spawn-sh (terminalShellCmd "nx-user-notify-logs");
               hotkey-overlay.title = "System:User notification logs";
             };
           };

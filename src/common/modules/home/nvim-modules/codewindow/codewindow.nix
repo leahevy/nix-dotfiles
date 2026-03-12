@@ -59,14 +59,32 @@ args@{
       ""
     ];
     activeInTerminals = false;
-    borderColor = self.theme.colors.blocks.primary.foreground.html;
+    borderColor = null;
     backgroundColor = null;
-    viewportColor = self.theme.colors.blocks.primary.foreground.html;
-    viewportBGColor = self.theme.colors.blocks.primary.background.html;
+    viewportColor = null;
+    viewportBGColor = null;
   };
 
   configuration =
     context@{ config, options, ... }:
+    let
+      theme = config.nx.preferences.theme;
+      borderColor =
+        if self.settings.borderColor != null then
+          self.settings.borderColor
+        else
+          theme.colors.blocks.primary.foreground.html;
+      viewportColor =
+        if self.settings.viewportColor != null then
+          self.settings.viewportColor
+        else
+          theme.colors.blocks.primary.foreground.html;
+      viewportBGColor =
+        if self.settings.viewportBGColor != null then
+          self.settings.viewportBGColor
+        else
+          theme.colors.blocks.primary.background.html;
+    in
     {
       programs.nixvim = {
         extraPlugins = with pkgs.vimPlugins; [
@@ -210,9 +228,9 @@ args@{
               end
             })
 
-            vim.api.nvim_set_hl(0, "CodewindowBorder", { fg = "${self.settings.borderColor}" })
-            vim.api.nvim_set_hl(0, "CodewindowBoundsBackground", { bg = "${self.settings.viewportColor}", fg = "${self.settings.viewportColor}" })
-            vim.api.nvim_set_hl(0, "CodewindowUnderline", { bg = "${self.settings.viewportBGColor}", fg = "${self.settings.viewportBGColor}", sp = "${self.settings.viewportColor}", underline = true })${
+            vim.api.nvim_set_hl(0, "CodewindowBorder", { fg = "${borderColor}" })
+            vim.api.nvim_set_hl(0, "CodewindowBoundsBackground", { bg = "${viewportColor}", fg = "${viewportColor}" })
+            vim.api.nvim_set_hl(0, "CodewindowUnderline", { bg = "${viewportBGColor}", fg = "${viewportBGColor}", sp = "${viewportColor}", underline = true })${
               lib.optionalString (self.settings.backgroundColor != null)
                 "\n        vim.api.nvim_set_hl(0, \"CodewindowBackground\", { bg = \"${self.settings.backgroundColor}\" })"
             }

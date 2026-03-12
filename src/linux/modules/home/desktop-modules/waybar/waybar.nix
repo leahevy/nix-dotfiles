@@ -20,20 +20,16 @@ args@{
     output = null;
     addDataDisk = false;
     useConfiguredGUIPrograms = false;
-  };
-
-  submodules = {
-    linux = {
-      desktop-modules = {
-        fuzzel = true;
-      };
-    };
+    showBattery = false;
   };
 
   configuration =
     context@{ config, options, ... }:
     let
-      programsConfig = self.getModuleConfig "desktop-modules.programs";
+      programsConfig = config.nx.preferences.desktop.programs;
+      terminalRunCmd = cmd: lib.escapeShellArgs (programsConfig.terminal.openRunCommand cmd);
+      terminalShellCmd = cmd: lib.escapeShellArgs (programsConfig.terminal.openShellCommand cmd);
+      appLauncherCmd = lib.escapeShellArgs programsConfig.appLauncher.openCommand;
 
       themedNixIcon =
         pkgs.runCommand "themed-nix-snowflake"
@@ -45,17 +41,17 @@ args@{
 
             originalIcon="${pkgs.nixos-icons}/share/icons/hicolor/scalable/apps/nix-snowflake.svg"
 
-            if sed "s/#699ad7/${self.theme.colors.main.foregrounds.primary.html}/g; \
-                    s/#7eb1dd/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
-                    s/#7ebae4/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
-                    s/#415e9a/${self.theme.colors.main.foregrounds.primary.html}/g; \
-                    s/#4a6baf/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
-                    s/#5277c3/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
-                    s/#637ddf/${self.theme.colors.main.foregrounds.primary.html}/g; \
-                    s/#649afa/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
-                    s/#719efa/${self.theme.colors.main.foregrounds.emphasized.html}/g; \
-                    s/#7363df/${self.theme.colors.main.foregrounds.primary.html}/g; \
-                    s/#6478fa/${self.theme.colors.main.foregrounds.emphasized.html}/g" \
+            if sed "s/#699ad7/${config.nx.preferences.theme.colors.main.foregrounds.primary.html}/g; \
+                    s/#7eb1dd/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#7ebae4/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#415e9a/${config.nx.preferences.theme.colors.main.foregrounds.primary.html}/g; \
+                    s/#4a6baf/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#5277c3/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#637ddf/${config.nx.preferences.theme.colors.main.foregrounds.primary.html}/g; \
+                    s/#649afa/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#719efa/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
+                    s/#7363df/${config.nx.preferences.theme.colors.main.foregrounds.primary.html}/g; \
+                    s/#6478fa/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g" \
                "$originalIcon" > $out/share/icons/themed-nix-snowflake.svg 2>/dev/null; then
               echo "Themed icon created successfully"
             else
@@ -162,7 +158,7 @@ args@{
               interval = "once";
               tooltip = false;
               class = "nix";
-              on-click = "fuzzel";
+              on-click = appLauncherCmd;
             };
 
             "custom/separator" = {
@@ -212,21 +208,21 @@ args@{
               format = "{usage}% 󰍛";
               tooltip = false;
               interval = 2;
-              on-click = "${self.user.settings.terminal} -e htop";
+              on-click = terminalRunCmd "htop";
             };
 
             memory = {
               format = "{percentage}% 󰾆";
               tooltip-format = "RAM: {used:0.1f}G/{total:0.1f}G";
               interval = 2;
-              on-click = "${self.user.settings.terminal} -e htop";
+              on-click = terminalRunCmd "htop";
             };
 
             "memory#swap" = {
               format = "{swapPercentage}% 󰓡";
               tooltip-format = "Swap: {swapUsed:0.1f}G/{swapTotal:0.1f}G";
               interval = 2;
-              on-click = "${self.user.settings.terminal} -e htop";
+              on-click = terminalRunCmd "htop";
             };
 
             disk = {
@@ -234,7 +230,7 @@ args@{
               path = "/";
               tooltip-format = "Used on /: {used} / {total}";
               interval = 30;
-              on-click = "${self.user.settings.terminal} -e sh -c 'echo && df -h | less'";
+              on-click = terminalShellCmd "echo && df -h | less";
             };
 
             "disk#2" = {
@@ -242,18 +238,18 @@ args@{
               path = "/data";
               tooltip-format = "Used on /data: {used} / {total}";
               interval = 30;
-              on-click = "${self.user.settings.terminal} -e sh -c 'echo && df -h | less'";
+              on-click = terminalShellCmd "echo && df -h | less";
             };
 
             temperature = {
               format = "{temperatureC}°C ";
               thermal-zone = 0;
-              on-click = "${self.user.settings.terminal} -e sh -c 'echo && sensors | less'";
+              on-click = terminalShellCmd "echo && sensors | less";
             };
 
             load = {
               format = "{load1} 󰾅";
-              on-click = "${self.user.settings.terminal} -e htop";
+              on-click = terminalRunCmd "htop";
             };
 
             systemd-failed-units = {
@@ -262,7 +258,7 @@ args@{
               format-ok = "";
               system = true;
               user = true;
-              on-click = "${self.user.settings.terminal} -e sh -c 'echo && echo -e \"\\033[1;32m=== SYSTEM FAILED UNITS ===\\033[0m\" && echo && systemctl --failed --no-pager && echo && echo && echo && echo && echo -e \"\\033[1;32m=== USER FAILED UNITS ===\\033[0m\" && echo && systemctl --user --failed --no-pager && echo && echo && echo && echo \"Press any key to exit...\" && read -n 1'";
+              on-click = terminalShellCmd ''echo && echo -e "\033[1;32m=== SYSTEM FAILED UNITS ===\033[0m" && echo && systemctl --failed --no-pager && echo && echo && echo && echo && echo -e "\033[1;32m=== USER FAILED UNITS ===\033[0m" && echo && systemctl --user --failed --no-pager && echo && echo && echo && echo "Press any key to exit..." && read -n 1'';
             };
 
             "group/timegroup" = {
@@ -280,11 +276,11 @@ args@{
                 weeks-pos = "left";
                 on-scroll = 1;
                 format = {
-                  months = "<span color='${self.theme.colors.main.foregrounds.emphasized.html}'><b>{}</b></span>";
-                  days = "<span color='${self.theme.colors.main.foregrounds.secondary.html}'><b>{}</b></span>";
-                  weeks = "<span color='${self.theme.colors.main.base.cyan.html}'><b>W{}</b></span>";
-                  weekdays = "<span color='${self.theme.colors.main.base.yellow.html}'><b>{}</b></span>";
-                  today = "<span color='${self.theme.colors.main.foregrounds.primary.html}'><b><u>{}</u></b></span>";
+                  months = "<span color='${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}'><b>{}</b></span>";
+                  days = "<span color='${config.nx.preferences.theme.colors.main.foregrounds.secondary.html}'><b>{}</b></span>";
+                  weeks = "<span color='${config.nx.preferences.theme.colors.main.base.cyan.html}'><b>W{}</b></span>";
+                  weekdays = "<span color='${config.nx.preferences.theme.colors.main.base.yellow.html}'><b>{}</b></span>";
+                  today = "<span color='${config.nx.preferences.theme.colors.main.foregrounds.primary.html}'><b><u>{}</u></b></span>";
                 };
               };
             };
@@ -306,8 +302,11 @@ args@{
                 "custom/separator"
                 "network"
                 "custom/separator"
+              ]
+              ++ (lib.optionals self.settings.showBattery [
                 "battery"
-              ];
+                "custom/separator"
+              ]);
             };
 
             privacy = {
@@ -381,7 +380,7 @@ args@{
               format-linked = "󰤨 {ifname} (No IP)";
               format-disconnected = "󰤭 Disconnected";
               tooltip-format-wifi = "SSID: {essid}\nStrength: {signalStrength}%";
-              on-click = "${self.user.settings.terminal} -e sh -c 'echo && echo -e \"\\033[1;32mip addr\\033[0m\" && echo && ip addr && echo && echo && echo && echo \"Press any key to exit...\" && read -n 1'";
+              on-click = terminalShellCmd ''echo && echo -e "\033[1;32mip addr\033[0m" && echo && ip addr && echo && echo && echo && echo "Press any key to exit..." && read -n 1'';
             }
             // lib.optionalAttrs self.settings.useConfiguredGUIPrograms (
               if programsConfig ? installSystemSettings then
@@ -392,6 +391,14 @@ args@{
                 { }
             );
 
+            tray = {
+              icon-size = 23;
+              show-passive-items = true;
+              reverse-direction = true;
+              spacing = 10;
+            };
+          }
+          // lib.optionalAttrs self.settings.showBattery {
             battery = {
               states = {
                 warning = 30;
@@ -414,19 +421,12 @@ args@{
                 "󰁹"
               ];
             };
-
-            tray = {
-              icon-size = 23;
-              show-passive-items = true;
-              reverse-direction = true;
-              spacing = 10;
-            };
           };
         };
 
         style =
           let
-            background = self.theme.colors.main.backgrounds.primary.html;
+            background = config.nx.preferences.theme.colors.main.backgrounds.primary.html;
           in
           ''
             * {
@@ -484,11 +484,11 @@ args@{
             }
 
             #workspaces button.active, #workspaces button.focused, #workspaces button:hover {
-              color: ${self.theme.colors.main.foregrounds.strong.html};
+              color: ${config.nx.preferences.theme.colors.main.foregrounds.strong.html};
             }
 
             #workspaces button.urgent label {
-              color: ${self.theme.colors.semantic.warning.html};
+              color: ${config.nx.preferences.theme.colors.semantic.warning.html};
             }
 
             #workspaces:hover {
@@ -496,7 +496,7 @@ args@{
             }
 
             #workspaces button:hover {
-              color: ${self.theme.colors.main.foregrounds.primary.html};
+              color: ${config.nx.preferences.theme.colors.main.foregrounds.primary.html};
               background-color: rgba(200, 200, 200, 0.05);
             }
 
@@ -528,7 +528,7 @@ args@{
             }
 
             #systemgroup:hover, #windowgroup:hover, #statusgroup:hover, #timegroup:hover, #traygroup:hover {
-              border: 1px solid ${self.theme.colors.main.foregrounds.primary.html};
+              border: 1px solid ${config.nx.preferences.theme.colors.main.foregrounds.primary.html};
             }
 
             #tray menu {
@@ -544,42 +544,42 @@ args@{
             }
 
             #window {
-              color: ${self.theme.colors.main.foregrounds.emphasized.html};
+              color: ${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html};
             }
 
             #window.app-id {
-              color: ${self.theme.colors.main.foregrounds.primary.html};
+              color: ${config.nx.preferences.theme.colors.main.foregrounds.primary.html};
             }
 
             #battery.warning {
-              color: ${self.theme.colors.semantic.warning.html};
+              color: ${config.nx.preferences.theme.colors.semantic.warning.html};
             }
 
             #systemd-failed-units.ok {
-              color: ${self.theme.colors.semantic.success.html};
+              color: ${config.nx.preferences.theme.colors.semantic.success.html};
             }
 
             #systemd-failed-units.degraded {
-              color: ${self.theme.colors.semantic.error.html};
+              color: ${config.nx.preferences.theme.colors.semantic.error.html};
             }
 
             #systemd-failed-units {
-              color: ${self.theme.colors.semantic.error.html};
+              color: ${config.nx.preferences.theme.colors.semantic.error.html};
             }
 
             #battery.critical {
-              color: ${self.theme.colors.semantic.error.html};
+              color: ${config.nx.preferences.theme.colors.semantic.error.html};
               animation: blink 1s linear infinite;
             }
 
             #custom-separator {
-              color: ${self.theme.colors.separators.normal.html};
+              color: ${config.nx.preferences.theme.colors.separators.normal.html};
               margin: 0 1px;
               padding: 0 5px;
             }
 
             #custom-arrow {
-              color: ${self.theme.colors.main.foregrounds.primary.html};
+              color: ${config.nx.preferences.theme.colors.main.foregrounds.primary.html};
               margin: 0 1px;
               padding: 0 5px;
               font-size: 24px;
@@ -602,7 +602,7 @@ args@{
 
             #custom-nix:hover {
               background-color: rgba(100, 150, 255, 0.2);
-              border: 1px solid ${self.theme.colors.main.foregrounds.primary.html};
+              border: 1px solid ${config.nx.preferences.theme.colors.main.foregrounds.primary.html};
               opacity: 0.8;
             }
 
@@ -631,18 +631,18 @@ args@{
                 background-image: none;
                 border: none;
                 box-shadow: none;
-                background-color: ${self.theme.colors.main.foregrounds.primary.html};
+                background-color: ${config.nx.preferences.theme.colors.main.foregrounds.primary.html};
             }
             #pulseaudio-slider trough {
                 min-height: 10px;
                 min-width: 120px;
                 border-radius: 5px;
-                background-color: ${self.theme.colors.main.backgrounds.tertiary.html};
+                background-color: ${config.nx.preferences.theme.colors.main.backgrounds.tertiary.html};
             }
             #pulseaudio-slider highlight {
                 min-width: 10px;
                 border-radius: 5px;
-                background-color: ${self.theme.colors.main.foregrounds.primary.html};
+                background-color: ${config.nx.preferences.theme.colors.main.foregrounds.primary.html};
             }
           '';
       };

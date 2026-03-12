@@ -17,13 +17,13 @@ args@{
   namespace = "home";
 
   settings = {
-    whiteSpaceColor = self.theme.colors.separators.normal.html;
+    whiteSpaceColor = null;
     eolFill = {
       enabledOnStart = true;
       char = "‧";
       currentLineChar = "┄";
-      color = self.theme.colors.separators.ultraDark.html;
-      currentLineColor = self.theme.colors.terminal.colors.blue.html;
+      color = null;
+      currentLineColor = null;
       delimiterChars = " ";
       onlyFillIfAllFit = true;
       onlyShowOnCurrentLine = false;
@@ -69,6 +69,24 @@ args@{
 
   configuration =
     context@{ config, options, ... }:
+    let
+      theme = config.nx.preferences.theme;
+      whiteSpaceColor =
+        if self.settings.whiteSpaceColor != null then
+          self.settings.whiteSpaceColor
+        else
+          theme.colors.separators.normal.html;
+      eolFillColor =
+        if self.settings.eolFill.color != null then
+          self.settings.eolFill.color
+        else
+          theme.colors.separators.ultraDark.html;
+      eolFillCurrentLineColor =
+        if self.settings.eolFill.currentLineColor != null then
+          self.settings.eolFill.currentLineColor
+        else
+          theme.colors.terminal.colors.blue.html;
+    in
     {
       programs.nixvim = {
         keymaps = [
@@ -95,10 +113,10 @@ args@{
       programs.nixvim.extraConfigLua = ''
         _G.nx_modules = _G.nx_modules or {}
         _G.nx_modules["50-highlight-dead-chars"] = function()
-          vim.api.nvim_set_hl(0, "Whitespace", { fg = "${self.settings.whiteSpaceColor}" })
-          vim.api.nvim_set_hl(0, "NonText", { fg = "${self.settings.whiteSpaceColor}" })
-          vim.api.nvim_set_hl(0, "EolFill", { fg = "${self.settings.eolFill.color}" })
-          vim.api.nvim_set_hl(0, "EolFillCurrent", { fg = "${self.settings.eolFill.currentLineColor}" })
+          vim.api.nvim_set_hl(0, "Whitespace", { fg = "${whiteSpaceColor}" })
+          vim.api.nvim_set_hl(0, "NonText", { fg = "${whiteSpaceColor}" })
+          vim.api.nvim_set_hl(0, "EolFill", { fg = "${eolFillColor}" })
+          vim.api.nvim_set_hl(0, "EolFillCurrent", { fg = "${eolFillCurrentLineColor}" })
 
           _G.eol_fill_enabled = ${if self.settings.eolFill.enabledOnStart then "true" else "false"}
           local ns = vim.api.nvim_create_namespace('eol_fill')
@@ -295,7 +313,7 @@ args@{
                     end
                   ''}
                   ${lib.optionalString (!self.isModuleEnabled "nvim-modules.blink-indent") ''
-                    vim.api.nvim_set_hl(0, "CursorLine", { underdotted = true, sp = "${self.settings.eolFill.currentLineColor}" })
+                    vim.api.nvim_set_hl(0, "CursorLine", { underdotted = true, sp = "${eolFillCurrentLineColor}" })
                   ''}
                 end
               end
