@@ -157,11 +157,6 @@ args@{
         (terminalWithClass "org.nx.scratchpad")
       ];
       delayedRequiredApps = [ ];
-      stylixConfig =
-        if isStandalone then
-          self.common.getModuleConfig "style.stylix"
-        else
-          self.common.host.getModuleConfig "style.stylix";
       theme = config.nx.preferences.theme;
       activeColor =
         if self.settings.activeColor != null then
@@ -757,10 +752,10 @@ args@{
             hide-when-typing = true;
           }
           // (
-            if stylixConfig.cursor != null then
+            if theme.cursor or null != null then
               {
-                theme = lib.last (lib.splitString "/" stylixConfig.cursor.style);
-                size = stylixConfig.cursor.size;
+                theme = lib.last (lib.splitString "/" theme.cursor.style);
+                size = theme.cursor.size;
               }
             else
               { }

@@ -156,11 +156,8 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
-      stylixConfig =
-        if self.common.isModuleEnabled "style.stylix" then
-          self.common.getModuleConfig "style.stylix"
-        else
-          null;
+      theme = config.nx.preferences.theme;
+      hasThemeFonts = theme.fonts or null != null;
 
       iconFontSize = self.settings.iconFontSize;
       labelFontSize = self.settings.labelFontSize;
@@ -168,56 +165,36 @@ args@{
       separatorFontSize = self.settings.separatorFontSize;
 
       iconFont =
-        if stylixConfig != null then
+        if hasThemeFonts then
           let
-            monoPath =
-              if builtins.isString stylixConfig.fonts.monospace then
-                stylixConfig.fonts.monospace
-              else
-                stylixConfig.fonts.monospace.path;
-            monoName = lib.last (lib.splitString "/" monoPath);
+            monoName = lib.last (lib.splitString "/" theme.fonts.monospace.path);
           in
           "${monoName}:Bold:${iconFontSize}"
         else
           "SF Mono:Bold:${iconFontSize}";
 
       labelFont =
-        if stylixConfig != null then
+        if hasThemeFonts then
           let
-            sansPath =
-              if builtins.isString stylixConfig.fonts.sansSerif then
-                stylixConfig.fonts.sansSerif
-              else
-                stylixConfig.fonts.sansSerif.path;
-            sansName = lib.last (lib.splitString "/" sansPath);
+            sansName = lib.last (lib.splitString "/" theme.fonts.sansSerif.path);
           in
           "${sansName}:Bold:${labelFontSize}"
         else
           "SF Pro Display:Bold:${labelFontSize}";
 
       appIconFont =
-        if stylixConfig != null then
+        if hasThemeFonts then
           let
-            monoPath =
-              if builtins.isString stylixConfig.fonts.monospace then
-                stylixConfig.fonts.monospace
-              else
-                stylixConfig.fonts.monospace.path;
-            monoName = lib.last (lib.splitString "/" monoPath);
+            monoName = lib.last (lib.splitString "/" theme.fonts.monospace.path);
           in
           "${monoName}:Regular:${appIconFontSize}"
         else
           "SF Mono:Regular:${appIconFontSize}";
 
       separatorFont =
-        if stylixConfig != null then
+        if hasThemeFonts then
           let
-            monoPath =
-              if builtins.isString stylixConfig.fonts.monospace then
-                stylixConfig.fonts.monospace
-              else
-                stylixConfig.fonts.monospace.path;
-            monoName = lib.last (lib.splitString "/" monoPath);
+            monoName = lib.last (lib.splitString "/" theme.fonts.monospace.path);
           in
           "${monoName}:Bold:${separatorFontSize}"
         else
