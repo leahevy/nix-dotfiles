@@ -151,6 +151,7 @@ args@{
           programsConfig.appLauncher;
       appLauncherCmd = lib.escapeShellArgs appLauncher.openCommand;
       appLauncherDmenu = opts: lib.escapeShellArgs (appLauncher.dmenuCommand opts);
+      appLauncherDmenuRaw = opts: lib.concatStringsSep " " (appLauncher.dmenuCommand opts);
       appLauncherDmenuIndex = opts: lib.escapeShellArgs (appLauncher.dmenuIndexCommand opts);
       requiredApps = [
         (terminalRunWithClass "org.nx.start-terminal" "tx")
@@ -391,7 +392,7 @@ args@{
           )
 
           confirm=$(echo -e "Yes\nNo" | ${
-            appLauncherDmenu {
+            appLauncherDmenuRaw {
               prompt = "$action? ";
               width = 20;
               lines = 2;
