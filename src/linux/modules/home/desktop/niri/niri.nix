@@ -96,7 +96,6 @@ args@{
     deactivateUnfocusedWindows = true;
     appIdMapping = {
       "org.nx.scratchpad" = "com.mitchellh.ghostty";
-      "org.nx.start-terminal" = "com.mitchellh.ghostty";
     };
     displayModes = {
       main = null;
@@ -154,8 +153,7 @@ args@{
       appLauncherDmenuRaw = opts: lib.concatStringsSep " " (appLauncher.dmenuCommand opts);
       appLauncherDmenuIndex = opts: lib.escapeShellArgs (appLauncher.dmenuIndexCommand opts);
       requiredApps = [
-        (terminalRunWithClass "org.nx.start-terminal" "tx")
-        (terminalWithClass "org.nx.scratchpad")
+        (terminalRunWithClass "org.nx.scratchpad" "tx")
       ];
       delayedRequiredApps = [ ];
       theme = config.nx.preferences.theme;
@@ -409,7 +407,7 @@ args@{
         executable = true;
         text = ''
           #!/usr/bin/env bash
-          exec ${terminalWithClass "org.nx.scratchpad"}
+          exec ${terminalRunWithClass "org.nx.scratchpad" "tx"}
         '';
       };
 
@@ -1458,20 +1456,12 @@ args@{
               };
             }
             {
-              matches = [ { app-id = "org.nx.start-terminal"; } ];
-              default-column-width = {
-                proportion = 0.47;
-              };
-              open-on-workspace = "1";
-              open-focused = true;
-            }
-            {
               matches = [ { app-id = "org.nx.scratchpad"; } ];
               default-column-width = {
-                proportion = 0.40;
+                proportion = 0.52;
               };
               default-window-height = {
-                fixed = 500;
+                proportion = 0.9;
               };
               open-on-workspace = "scratch";
               open-floating = true;
