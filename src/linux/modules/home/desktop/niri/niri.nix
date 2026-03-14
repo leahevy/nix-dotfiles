@@ -15,6 +15,14 @@ args@{
   input = "linux";
   namespace = "home";
 
+  options = {
+    autostartPrograms = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Programs to autostart when niri starts.";
+    };
+  };
+
   submodules = {
     linux = {
       browser = {
@@ -199,7 +207,9 @@ args@{
       generateDelayedStartupCommands = apps: map (app: { sh = "sleep 6 && uwsm app -- ${app}"; }) apps;
 
       startupApps = requiredApps ++ self.settings.applicationsToStart;
-      delayedStartupApps = delayedRequiredApps ++ self.settings.delayedApplicationsToStart;
+      autostartPrograms = (self.options config).autostartPrograms;
+      delayedStartupApps =
+        delayedRequiredApps ++ self.settings.delayedApplicationsToStart ++ autostartPrograms;
 
       generateWorkspaces =
         main: secondary:
@@ -322,9 +332,12 @@ args@{
               open-on-output = main;
             };
           };
+      autostartDummies = map (
+        prog: pkgs.runCommand "niri-autostart-${lib.strings.sanitizeDerivationName prog}" { } "mkdir $out"
+      ) (startupApps ++ delayedStartupApps);
     in
     {
-      home.packages = [ pkgs.jq ];
+      home.packages = [ pkgs.jq ] ++ autostartDummies;
 
       home.file.".local/bin/niri-scratchpad" = {
         source = self.file "niri-scratchpad/niri-scratchpad.sh";
