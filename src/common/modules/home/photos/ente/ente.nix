@@ -25,6 +25,8 @@ args@{
         ente-desktop
       ];
 
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "ente-desktop" ];
+
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {

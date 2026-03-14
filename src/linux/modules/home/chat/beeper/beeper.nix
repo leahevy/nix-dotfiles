@@ -54,6 +54,8 @@ args@{
         directories = [ ".config/BeeperTexts" ];
       };
 
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "beeper" ];
+
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {

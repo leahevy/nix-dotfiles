@@ -103,6 +103,8 @@ args@{
           pkgs.jq
         ];
 
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "bitwarden" ];
+
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {

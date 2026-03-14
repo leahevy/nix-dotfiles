@@ -50,6 +50,8 @@ args@{
         executable = true;
       };
 
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "nstv-term" ];
+
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {

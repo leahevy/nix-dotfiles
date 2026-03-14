@@ -31,6 +31,8 @@ args@{
         directories = [ ".config/Todoist" ];
       };
 
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "todoist-electron" ];
+
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = with config.lib.niri.actions; {

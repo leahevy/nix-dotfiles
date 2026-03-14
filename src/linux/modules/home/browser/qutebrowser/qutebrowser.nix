@@ -97,6 +97,8 @@ args@{
         package = lib.mkForce customPkgs.qutebrowser;
       };
 
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "qutebrowser" ];
+
       nx.preferences.desktop.programs.webBrowser.package = lib.mkForce customPkgs.qutebrowser;
     };
 }

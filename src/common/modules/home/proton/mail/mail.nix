@@ -61,6 +61,8 @@ args@{
     {
       nx.preferences.desktop.programs.emailClient.package = lib.mkForce protonmailWrapped;
 
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "proton-mail" ];
+
       programs.niri = lib.mkIf isNiriEnabled {
         settings = {
           binds = lib.mkIf (!(self.isModuleEnabled "mail-stack.neomutt")) (
