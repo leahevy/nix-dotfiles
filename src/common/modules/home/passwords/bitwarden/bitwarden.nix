@@ -22,6 +22,7 @@ args@{
     syncIntervalMinutes = 30;
     serverURL = "https://vault.bitwarden.eu";
     withSecretManager = true;
+    enableSSHAgent = true;
   };
 
   configuration =
@@ -84,6 +85,10 @@ args@{
           fi
         '';
         executable = true;
+      };
+
+      home.sessionVariables = lib.mkIf self.settings.enableSSHAgent {
+        SSH_AUTH_SOCK = lib.mkForce "${config.home.homeDirectory}/.bitwarden-ssh-agent.sock";
       };
 
       home.packages =

@@ -60,7 +60,12 @@ in
       services = {
         gpg-agent = {
           enable = true;
-          enableSshSupport = self.settings.enableSSHAgent;
+          enableSshSupport =
+            self.settings.enableSSHAgent
+            && !(
+              (self.isModuleEnabled "passwords.bitwarden")
+              && (self.getModuleConfig "passwords.bitwarden").enableSSHAgent
+            );
           pinentry = {
             package = getPinentryPackage;
             program = getPinentryProgram;
