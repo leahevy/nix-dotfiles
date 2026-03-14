@@ -75,24 +75,28 @@ args@{
             o = macro(C-S-u 00f6 enter)
             u = macro(C-S-u 00fc enter)
             e = macro(C-S-u 20ac enter)
+            - = macro(C-S-u 2014 enter)
             shift = layer(umlauts_upper)
 
             [umlauts_upper]
             a = macro(C-S-u 00c4 enter)
             o = macro(C-S-u 00d6 enter)
             u = macro(C-S-u 00dc enter)
+            - = macro(C-S-u 2013 enter)
 
             [umlauts_direct]
             a = ä
             o = ö
             u = ü
             e = €
+            - = —
             shift = layer(umlauts_direct_upper)
 
             [umlauts_direct_upper]
             a = Ä
             o = Ö
             u = Ü
+            - = –
 
             [diacritics_shift]
             s = ß
