@@ -17,6 +17,13 @@ args@{
 
   unfree = [ "copilot-language-server" ];
 
+  assertions = [
+    {
+      assertion = !(self.isModuleEnabled "nvim-modules.minuet");
+      message = "copilot and minuet modules are mutually exclusive!";
+    }
+  ];
+
   settings = {
     baseFiletypesToEnable = [
       "nix"

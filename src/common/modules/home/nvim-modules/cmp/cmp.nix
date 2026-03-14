@@ -145,12 +145,15 @@ args@{
                         "<PageUp>" = "cmp.mapping.select_prev_item({ count = 10 })";
                         "<PageDown>" = "cmp.mapping.select_next_item({ count = 10 })";
                       }
-                      (lib.mkIf (!self.isModuleEnabled "nvim-modules.copilot") {
-                        "<C-n>" =
-                          "cmp.mapping(function(fallback) if _G.should_disable_for_filetype(vim.bo.filetype) then if cmp.visible() then cmp.select_next_item() end elseif cmp.visible() then cmp.select_next_item() else cmp.complete() end end, { 'i', 's' })";
-                        "<C-p>" =
-                          "cmp.mapping(function(fallback) if _G.should_disable_for_filetype(vim.bo.filetype) then if cmp.visible() then cmp.select_prev_item() end elseif cmp.visible() then cmp.select_prev_item() else cmp.complete() end end, { 'i', 's' })";
-                      })
+                      (lib.mkIf
+                        (!(self.isModuleEnabled "nvim-modules.copilot") && !(self.isModuleEnabled "nvim-modules.minuet"))
+                        {
+                          "<C-n>" =
+                            "cmp.mapping(function(fallback) if _G.should_disable_for_filetype(vim.bo.filetype) then if cmp.visible() then cmp.select_next_item() end elseif cmp.visible() then cmp.select_next_item() else cmp.complete() end end, { 'i', 's' })";
+                          "<C-p>" =
+                            "cmp.mapping(function(fallback) if _G.should_disable_for_filetype(vim.bo.filetype) then if cmp.visible() then cmp.select_prev_item() end elseif cmp.visible() then cmp.select_prev_item() else cmp.complete() end end, { 'i', 's' })";
+                        }
+                      )
                     ];
 
                     sources = if self.settings.enableAutoComplete then mkAutoSources else mkAllSources;
@@ -306,9 +309,25 @@ args@{
               if _G.should_disable_for_filetype(filetype) then
                 cmp.setup.buffer({ enabled = false })
               else
-                cmp.setup.buffer({ enabled = vim.g.cmp_global_enabled })
+                local autocomplete_triggers = vim.g.cmp_global_enabled and { require('cmp.types').cmp.TriggerEvent.TextChanged } or false
+                ${
+                  if self.isModuleEnabled "nvim-modules.minuet" then
+                    ''
+                      if vim.g.minuet_enabled then
+                        autocomplete_triggers = false
+                      end
+                    ''
+                  else
+                    ""
+                }
+                cmp.setup.buffer({
+                  enabled = vim.g.cmp_global_enabled,
+                  completion = { autocomplete = autocomplete_triggers }
+                })
               end
             end
+
+            _G.refresh_cmp_autocomplete = apply_cmp_to_buffer
 
             vim.api.nvim_create_augroup('CmpGlobalToggle', { clear = true })
             vim.api.nvim_create_autocmd({ 'BufEnter', 'BufNew', 'FileType' }, {
@@ -375,6 +394,81 @@ args@{
             end, { desc = "Previous completion (dismiss copilot first)" })
           end
           ${if !(self.isModuleEnabled "nvim-modules.copilot") then "]]" else ""}
+
+          ${if !(self.isModuleEnabled "nvim-modules.minuet") then "--[[" else ""}
+          _G.nx_modules["39-cmp-minuet"] = function()
+            local cmp = require("cmp")
+
+            vim.keymap.set("i", "<C-n>", function()
+              if _G.should_disable_for_filetype(vim.bo.filetype) then
+                if cmp.visible() then
+                  cmp.select_next_item()
+                end
+                return
+              end
+
+              local ok, vt = pcall(require, "minuet.virtualtext")
+              if ok and vt.action and vt.action.is_visible() then
+                vt.action.dismiss()
+              end
+
+              if cmp.visible() then
+                cmp.select_next_item()
+              else
+                cmp.complete()
+              end
+            end, { desc = "Next completion (dismiss minuet first)" })
+
+            vim.keymap.set("i", "<C-p>", function()
+              if _G.should_disable_for_filetype(vim.bo.filetype) then
+                if cmp.visible() then
+                  cmp.select_prev_item()
+                end
+                return
+              end
+
+              local ok, vt = pcall(require, "minuet.virtualtext")
+              if ok and vt.action and vt.action.is_visible() then
+                vt.action.dismiss()
+              end
+
+              if cmp.visible() then
+                cmp.select_prev_item()
+              else
+                cmp.complete()
+              end
+            end, { desc = "Previous completion (dismiss minuet first)" })
+
+            local cmp_just_confirmed = false
+
+            cmp.event:on('confirm_done', function()
+              cmp_just_confirmed = true
+              if vim.g.minuet_enabled then
+                vim.defer_fn(function()
+                  local ok, vt = pcall(require, 'minuet.virtualtext')
+                  if ok and vt.action then
+                    vt.action.next()
+                  end
+                end, 50)
+              end
+            end)
+
+            cmp.event:on('menu_closed', function()
+              if cmp_just_confirmed then
+                cmp_just_confirmed = false
+                return
+              end
+              if vim.g.minuet_enabled then
+                vim.defer_fn(function()
+                  local ok, vt = pcall(require, 'minuet.virtualtext')
+                  if ok and vt.action then
+                    vt.action.next()
+                  end
+                end, 50)
+              end
+            end)
+          end
+          ${if !(self.isModuleEnabled "nvim-modules.minuet") then "]]" else ""}
 
           ${if !(self.settings.enableCmdline) then "--[[" else ""}
           _G.nx_modules["40-cmp-cmdline"] = function()

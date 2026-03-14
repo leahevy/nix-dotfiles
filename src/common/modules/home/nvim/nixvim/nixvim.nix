@@ -51,7 +51,8 @@ args@{
         obsidian = true;
         tmuxline = false;
         vim-tmux-navigator = true;
-        copilot = true;
+        copilot = false;
+        minuet = true;
         arrow = true;
         searchbox = true;
         grug-far = true;

@@ -59,6 +59,7 @@ args@{
             vscodium = true;
           };
           services = {
+            ollama = true;
             ssh-agent = true;
           };
           fonts = {
@@ -185,6 +186,7 @@ args@{
             vscodium = true;
           };
           services = {
+            ollama = true;
             ssh-agent = true;
           };
           fonts = {
@@ -311,6 +313,7 @@ args@{
             vscodium = true;
           };
           services = {
+            ollama = true;
             ssh-agent = true;
           };
           fonts = {
