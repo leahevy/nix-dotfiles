@@ -37,7 +37,7 @@ args@{
             latex = false;
           };
           notes = {
-            notesnook = true;
+            notesnook = false;
           };
           utils = {
             archive-tools = true;
@@ -128,6 +128,9 @@ args@{
             keyring = true;
             gtk = true;
           };
+          organising = {
+            logseq = true;
+          };
           todo = {
             todoist = true;
           };
@@ -164,7 +167,7 @@ args@{
             latex = false;
           };
           notes = {
-            notesnook = true;
+            notesnook = false;
           };
           utils = {
             archive-tools = true;
@@ -255,6 +258,9 @@ args@{
             keyring = true;
             gtk = true;
           };
+          organising = {
+            logseq = true;
+          };
           todo = {
             todoist = true;
           };
@@ -291,7 +297,7 @@ args@{
             latex = false;
           };
           notes = {
-            notesnook = true;
+            notesnook = false;
           };
           utils = {
             archive-tools = true;
