@@ -70,12 +70,19 @@ args@{
             end
           ''
           + (
-            if self.user.isStandalone then
-              ''
-                fenv source $HOME/.nix-profile/etc/profile.d/hm-session-vars.sh
-              ''
-            else
-              ""
+            let
+              sessionVarsPath =
+                if self.user.isStandalone then
+                  "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
+                else
+                  "/etc/profiles/per-user/${self.user.username}/etc/profile.d/hm-session-vars.sh";
+            in
+            ''
+              if type -q fenv; and test -f ${sessionVarsPath}
+                set -e __HM_SESS_VARS_SOURCED
+                fenv source ${sessionVarsPath} 2>/dev/null; or true
+              end
+            ''
           );
 
           functions = {
