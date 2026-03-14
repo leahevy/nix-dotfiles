@@ -25,7 +25,7 @@ args@{
         notesnook
       ];
 
-      programs.niri = lib.mkIf isNiriEnabled {
+      programs.niri = lib.mkIf (isNiriEnabled && !(self.linux.isModuleEnabled "organising.logseq")) {
         settings = {
           binds = with config.lib.niri.actions; {
             "Mod+Ctrl+Alt+J" = {
