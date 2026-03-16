@@ -28,6 +28,8 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
+      pushover = config.nx.linux.notifications.pushover;
+
       smartdNotifyScript = pkgs.writeShellScriptBin "smartd-notify" ''
         set -euo pipefail
 
@@ -54,12 +56,7 @@ args@{
           if self.user.isModuleEnabled "notifications.user-notify" then "true" else "false"
         }
 
-        PUSHOVER_ENABLED=${
-          if (self.isModuleEnabled "notifications.pushover") && self.settings.pushoverNotifications then
-            "true"
-          else
-            "false"
-        }
+        PUSHOVER_ENABLED=${if self.settings.pushoverNotifications then "true" else "false"}
 
         USER_NOTIFY_MESSAGE=""
         PUSHOVER_MESSAGE=""
@@ -83,15 +80,11 @@ args@{
         fi
 
         if [ "$PUSHOVER_ENABLED" = "true" ]; then
-          ${
-            (self.importFileFromOtherModuleSameInput {
-              inherit args self;
-              modulePath = "notifications.pushover";
-            }).custom.pushoverSendScript
-          }/bin/pushover-send \
-            --title "SMART Disk Monitor" \
-            --message "''${PUSHOVER_MESSAGE}" \
-            --type "''${NOTIFY_TYPE}" || true
+          ${pushover.send {
+            title = "SMART Disk Monitor";
+            message = "\${PUSHOVER_MESSAGE}";
+            type = "\${NOTIFY_TYPE}";
+          }}
         fi
 
         echo "SMART ''${FAILURE_TYPE}: ''${DEVICE} - ''${MESSAGE}" >&2
@@ -141,12 +134,7 @@ args@{
             util-linux
             curl
           ]
-          ++
-            lib.optional (self.isModuleEnabled "notifications.pushover")
-              (self.importFileFromOtherModuleSameInput {
-                inherit args self;
-                modulePath = "notifications.pushover";
-              }).custom.pushoverSendScript;
+          ++ lib.optionals (pushover.script != null) [ pushover.script ];
       };
 
       environment.persistence."${self.persist}" = {

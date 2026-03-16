@@ -36,6 +36,7 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
+      pushover = config.nx.linux.notifications.pushover;
       nxcoreDir = "${self.host.mainUser.home}/.config/nx/nxcore";
       nxconfigDir = "${self.host.mainUser.home}/.config/nx/nxconfig";
 
@@ -52,8 +53,7 @@ args@{
         level: message:
         let
           userNotifyEnabled = (self.user.isModuleEnabled "notifications.user-notify");
-          pushoverEnabled =
-            (self.isModuleEnabled "notifications.pushover") && self.settings.pushoverNotifications;
+          pushoverEnabled = self.settings.pushoverNotifications;
 
           userNotifyMessage =
             if userNotifyEnabled then
@@ -147,12 +147,14 @@ args@{
         in
         ''
           ${lib.optionalString shouldSendUserNotify ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
-          ${lib.optionalString shouldSendPushover ''pushover-send --title "Auto-Upgrade" --message "${pushoverMessage}" --type ${pushoverType} ${
-            if pushoverPriorityOverride != null then
-              "--priority ${builtins.toString pushoverPriorityOverride}"
-            else
-              ""
-          } || true''}
+          ${lib.optionalString shouldSendPushover (
+            pushover.send {
+              title = "Auto-Upgrade";
+              message = pushoverMessage;
+              type = pushoverType;
+              priority = pushoverPriorityOverride;
+            }
+          )}
           echo "${message}" ${if level == "err" then ">&2" else ""}
         '';
 
@@ -783,14 +785,7 @@ args@{
           Type = "oneshot";
           User = "root";
         };
-        path =
-          lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
-            [
-              (self.importFileFromOtherModuleSameInput {
-                inherit args self;
-                modulePath = "notifications.pushover";
-              }).custom.pushoverSendScript
-            ];
+        path = lib.optionals (pushover.script != null) [ pushover.script ];
         script = ''
           if [[ -f "/tmp/nx-auto-upgrade-failure-reason" ]]; then
             reason=$(${pkgs.coreutils}/bin/cat /tmp/nx-auto-upgrade-failure-reason)
@@ -814,14 +809,7 @@ args@{
           OnSuccess = "nx-auto-upgrade-delayed.service";
         };
 
-        path =
-          lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
-            [
-              (self.importFileFromOtherModuleSameInput {
-                inherit args self;
-                modulePath = "notifications.pushover";
-              }).custom.pushoverSendScript
-            ];
+        path = lib.optionals (pushover.script != null) [ pushover.script ];
 
         script = ''
           ${logScript "info" "DEBUG: Auto-upgrade notify service starting, waiting 30s to avoid race conditions"}
@@ -886,14 +874,7 @@ args@{
           ++ lib.optionals self.settings.verifySignatures [
             gnupg
           ]
-          ++
-            lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
-              [
-                (self.importFileFromOtherModuleSameInput {
-                  inherit args self;
-                  modulePath = "notifications.pushover";
-                }).custom.pushoverSendScript
-              ];
+          ++ lib.optionals (pushover.script != null) [ pushover.script ];
 
         script =
           "exec ${pkgs.systemd}/bin/systemd-inhibit --who=\"nx-auto-upgrade\" --what=\"idle:sleep:shutdown\" --why=\"System upgrade in progress\" "
@@ -994,14 +975,7 @@ args@{
             util-linux
             config.systemd.package
           ]
-          ++
-            lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
-              [
-                (self.importFileFromOtherModuleSameInput {
-                  inherit args self;
-                  modulePath = "notifications.pushover";
-                }).custom.pushoverSendScript
-              ];
+          ++ lib.optionals (pushover.script != null) [ pushover.script ];
 
         script = delayedRebootScript;
         after = [ "multi-user.target" ];
@@ -1032,14 +1006,7 @@ args@{
             iputils
             util-linux
           ]
-          ++
-            lib.optionals (self.isModuleEnabled "notifications.pushover" && self.settings.pushoverNotifications)
-              [
-                (self.importFileFromOtherModuleSameInput {
-                  inherit args self;
-                  modulePath = "notifications.pushover";
-                }).custom.pushoverSendScript
-              ];
+          ++ lib.optionals (pushover.script != null) [ pushover.script ];
 
         script = ''
           marker_file="/var/lib/nx-auto-upgrade/last-reboot"

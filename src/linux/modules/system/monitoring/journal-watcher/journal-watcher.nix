@@ -290,6 +290,7 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
+      pushover = config.nx.linux.notifications.pushover;
       serviceName = "nx-journal-watcher";
 
       isDesktop = (self.host.settings.system.desktop or null) != null;
@@ -358,10 +359,7 @@ args@{
           if (self.user.isModuleEnabled "notifications.user-notify") then "True" else "False"
         }
         PUSHOVER_ENABLED = ${
-          if self.settings.pushoverEnabled && (self.isModuleEnabled "notifications.pushover") then
-            "True"
-          else
-            "False"
+          if self.settings.pushoverEnabled && pushover.script != null then "True" else "False"
         }
         IGNORE_USER_SERVICES_FOR_PUSHOVER = ${
           if self.settings.ignoreUserServicesForPushover then "True" else "False"
@@ -652,17 +650,13 @@ args@{
 
                     if should_send_pushover and check_rate_limit(unit):
                         try:
-                            subprocess.run([
-                                "${
-                                  (self.importFileFromOtherModuleSameInput {
-                                    inherit args self;
-                                    modulePath = "notifications.pushover";
-                                  }).custom.pushoverSendScript
-                                }/bin/pushover-send",
-                                "--title", title_text_pushover,
-                                "--message", message_text_pushover,
-                                "--type", notify_type
-                            ], check=False, timeout=30)
+                            subprocess.run(${
+                              pushover.sendAsPythonList {
+                                title = "{title_text_pushover}";
+                                message = "{message_text_pushover}";
+                                type = "{notify_type}";
+                              }
+                            }, check=False, timeout=30)
                         except (subprocess.TimeoutExpired, OSError) as e:
                             print(f"Failed to send pushover notification: {e}", file=sys.stderr, flush=True)
             except Exception as e:
@@ -740,14 +734,7 @@ args@{
             systemd
             util-linux
           ]
-          ++
-            lib.optionals (self.settings.pushoverEnabled && (self.isModuleEnabled "notifications.pushover"))
-              [
-                (self.importFileFromOtherModuleSameInput {
-                  inherit args self;
-                  modulePath = "notifications.pushover";
-                }).custom.pushoverSendScript
-              ];
+          ++ lib.optionals (pushover.script != null) [ pushover.script ];
       };
 
       environment.persistence."${self.persist}" = {

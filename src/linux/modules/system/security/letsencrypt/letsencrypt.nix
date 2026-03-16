@@ -26,12 +26,12 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
+      pushover = config.nx.linux.notifications.pushover;
       logScript =
         level: message:
         let
           userNotifyEnabled = (self.user.isModuleEnabled "notifications.user-notify");
-          pushoverEnabled =
-            (self.isModuleEnabled "notifications.pushover") && self.settings.pushoverNotifications;
+          pushoverEnabled = self.settings.pushoverNotifications;
 
           userNotifyMessage =
             if userNotifyEnabled then
@@ -70,12 +70,13 @@ args@{
         in
         ''
           ${lib.optionalString userNotifyEnabled ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
-          ${lib.optionalString shouldSendPushover ''${
-            (self.importFileFromOtherModuleSameInput {
-              inherit args self;
-              modulePath = "notifications.pushover";
-            }).custom.pushoverSendScript
-          }/bin/pushover-send --title "Let's Encrypt" --message "${pushoverMessage}" --type ${pushoverType} || true''}
+          ${lib.optionalString shouldSendPushover (
+            pushover.send {
+              title = "Let's Encrypt";
+              message = pushoverMessage;
+              type = pushoverType;
+            }
+          )}
           echo "${message}" ${if level == "err" then ">&2" else ""}
         '';
     in
