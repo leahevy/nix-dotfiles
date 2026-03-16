@@ -202,11 +202,12 @@ args@{
         config = {
           ProgramArguments = [ "${pullModelsScript}" ];
           RunAtLoad = true;
-          LaunchOnlyOnce = true;
           StandardOutPath = "/tmp/ollama-pull-models.log";
           StandardErrorPath = "/tmp/ollama-pull-models.err";
         };
       };
+
+      launchd.agents.ollama.config.RunAtLoad = lib.mkIf self.isDarwin true;
 
       home.persistence."${self.persist}" = {
         directories = [ ".ollama" ];
