@@ -42,6 +42,8 @@ args@{
       pullModelsScript = pkgs.writeShellScript "ollama-pull-models-worker" ''
         set -euo pipefail
 
+        echo "=== Ollama pull-models started at $(date) ==="
+
         OLLAMA_HOST="${ollamaHost}"
         OLLAMA_PORT="${toString ollamaPort}"
         OLLAMA_URL="http://$OLLAMA_HOST:$OLLAMA_PORT"
@@ -50,16 +52,19 @@ args@{
         MODEL_PULL_RETRY_INTERVAL=10
 
         notify_user() {
+          local level="$1"
+          local icon="$2"
+          local message="$3"
           ${lib.optionalString self.isLinux ''
-            local level="$1"
-            local message="$2"
             if [ "$level" = "error" ]; then
-              ${pkgs.util-linux}/bin/logger -p user.err -t nx-user-notify "$message"
+              ${pkgs.util-linux}/bin/logger -p user.err -t nx-user-notify "Ollama|$icon: $message"
             else
-              ${pkgs.util-linux}/bin/logger -t nx-user-notify "$message"
+              ${pkgs.util-linux}/bin/logger -t nx-user-notify "Ollama|$icon: $message"
             fi
           ''}
-          :
+          ${lib.optionalString self.isDarwin ''
+            /usr/bin/osascript -e "display notification \"$message\" with title \"Ollama\""
+          ''}
         }
 
         echo "Waiting for Ollama to be ready at $OLLAMA_URL..."
@@ -114,7 +119,7 @@ args@{
           if [ "$success" = false ]; then
             echo "ERROR: Failed to pull model $model after $MODEL_PULL_RETRIES attempts."
             FAILED_MODELS+=("$model")
-            notify_user "error" "Ollama|dialog-error: Failed to pull model $model"
+            notify_user "error" "dialog-error" "Failed to pull model $model"
           fi
         done
 
@@ -123,12 +128,12 @@ args@{
 
         if [ $FAILED_COUNT -gt 0 ]; then
           echo "WARNING: Failed to pull the following models: ''${FAILED_MODELS[*]}"
-          notify_user "error" "Ollama|dialog-warning: $SUCCESS_COUNT models ready, $FAILED_COUNT failed"
+          notify_user "error" "dialog-warning" "$SUCCESS_COUNT models ready, $FAILED_COUNT failed"
           exit 1
         fi
 
         echo "All models pulled successfully."
-        notify_user "info" "Ollama|chat-symbolic: All $TOTAL_MODELS models ready"
+        notify_user "info" "chat-symbolic" "All $TOTAL_MODELS models ready"
       '';
 
       triggerScript = pkgs.writeShellScriptBin "ollama-pull-models" (
