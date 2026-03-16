@@ -19,6 +19,7 @@ args@{
     host = "127.0.0.1";
     port = 11434;
     allowGPU = true;
+    keepAlive = "1h";
     environmentVariables = { };
     codingModel = "qwen2.5-coder:7b";
     additionalModels = [ ];
@@ -161,7 +162,10 @@ args@{
         };
         host = ollamaHost;
         port = ollamaPort;
-        environmentVariables = self.settings.environmentVariables;
+        environmentVariables = {
+          OLLAMA_KEEP_ALIVE = self.settings.keepAlive;
+        }
+        // self.settings.environmentVariables;
       };
 
       home.packages = [ triggerScript ];
