@@ -153,6 +153,7 @@ args@{
               message = pushoverMessage;
               type = pushoverType;
               priority = pushoverPriorityOverride;
+              shellVars = true;
             }
           )}
           echo "${message}" ${if level == "err" then ">&2" else ""}

@@ -119,6 +119,7 @@ rec {
           html ? false,
           path ? null,
           extraArgs ? [ ],
+          shellVars ? false,
         }:
         let
           script = config.nx.linux.notifications.pushover.script;
@@ -168,8 +169,43 @@ rec {
         args:
         let
           cmdList = sendListFn args;
+          shellVars = args.shellVars or false;
+          escapeDoubleQuotes = s: builtins.replaceStrings [ "\\" "\"" ] [ "\\\\" "\\\"" ] s;
+          doubleQuote = s: "\"${escapeDoubleQuotes s}\"";
+          buildDoubleQuotedCmd = lib.concatStringsSep " " (
+            [
+              (builtins.head cmdList)
+              "--title"
+              (doubleQuote args.title)
+              "--message"
+              (doubleQuote args.message)
+            ]
+            ++ lib.optionals (args.type or null != null) [
+              "--type"
+              (doubleQuote args.type)
+            ]
+            ++ lib.optionals (args.priority or null != null) [
+              "--priority"
+              (toString args.priority)
+            ]
+            ++ lib.optionals (args.url or null != null) [
+              "--url"
+              (doubleQuote args.url)
+            ]
+            ++ lib.optionals (args.urlTitle or null != null) [
+              "--url-title"
+              (doubleQuote args.urlTitle)
+            ]
+            ++ lib.optionals (args.html or false) [ "--html" ]
+            ++ (args.extraArgs or [ ])
+          );
         in
-        if cmdList == [ ] then ":" else "${lib.escapeShellArgs cmdList} || true";
+        if cmdList == [ ] then
+          ":"
+        else if shellVars then
+          "${buildDoubleQuotedCmd} || true"
+        else
+          "${lib.escapeShellArgs cmdList} || true";
 
       nx.linux.notifications.pushover.sendAsPythonList =
         args:

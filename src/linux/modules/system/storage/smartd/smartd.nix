@@ -84,6 +84,7 @@ args@{
             title = "SMART Disk Monitor";
             message = "\${PUSHOVER_MESSAGE}";
             type = "\${NOTIFY_TYPE}";
+            shellVars = true;
           }}
         fi
 
