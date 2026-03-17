@@ -1,5 +1,7 @@
 { lib, ... }:
 {
+  cudaArchitectures = [ ];
+
   latestLinux = "linux_6_16";
   ltsLinux = "linux_6_12";
   hardenedLinux = "linux_6_12_hardened";

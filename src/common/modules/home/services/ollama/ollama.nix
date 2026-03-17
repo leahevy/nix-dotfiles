@@ -158,15 +158,20 @@ args@{
     {
       services.ollama = {
         enable = true;
-        package = pkgs.ollama.override {
-          acceleration =
-            if !self.settings.allowGPU then
-              false
-            else if self.isLinux then
-              "vulkan"
-            else
-              null;
-        };
+        package = pkgs.ollama.override (
+          {
+            acceleration =
+              if !self.settings.allowGPU then
+                false
+              else if self.isLinux then
+                if self.linux.isModuleEnabled "graphics.nvidia-setup" then "cuda" else "vulkan"
+              else
+                null;
+          }
+          // lib.optionalAttrs (self.variables.cudaArchitectures != [ ]) {
+            cudaArches = self.variables.cudaArchitectures;
+          }
+        );
         host = ollamaHost;
         port = ollamaPort;
         environmentVariables = {
