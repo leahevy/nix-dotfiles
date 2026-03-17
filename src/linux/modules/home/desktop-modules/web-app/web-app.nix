@@ -15,6 +15,17 @@ args@{
   input = "linux";
   namespace = "home";
 
+  options = {
+    buildWebApp = lib.mkOption {
+      type = lib.types.nullOr (lib.types.functionTo (lib.types.functionTo lib.types.attrs));
+      default = null;
+      description = ''
+        Function to build a web app. Takes webAppSettings, returns context -> { homeFiles, desktopEntries }.
+        Set by the active backend (qutebrowser or chromium).
+      '';
+    };
+  };
+
   assertions = [
     {
       assertion =
@@ -31,20 +42,4 @@ args@{
       message = "Only one web-app backend (chromium or qutebrowser) can be enabled at a time";
     }
   ];
-
-  custom = rec {
-    webAppModule =
-      if self.linux.isModuleEnabled "desktop-modules.web-app-qutebrowser" then
-        self.importFileFromOtherModuleSameInput {
-          inherit args self;
-          modulePath = "desktop-modules.web-app-qutebrowser";
-        }
-      else
-        self.importFileFromOtherModuleSameInput {
-          inherit args self;
-          modulePath = "desktop-modules.web-app-chromium";
-        };
-
-    buildWebApp = webAppModule.custom.buildWebApp;
-  };
 }

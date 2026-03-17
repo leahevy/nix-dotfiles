@@ -8,7 +8,7 @@ args@{
   self,
   ...
 }:
-rec {
+{
   name = "immich";
 
   group = "web-apps";
@@ -48,12 +48,11 @@ rec {
     }
   ];
 
-  custom = {
-    webAppModule = self.importFileFromOtherModuleSameInput {
-      inherit args self;
-      modulePath = "desktop-modules.web-app";
+  configuration =
+    context@{ config, options, ... }:
+    {
+      home.file = (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings context).homeFiles;
+      xdg.desktopEntries =
+        (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings context).desktopEntries;
     };
-  };
-
-  configuration = custom.webAppModule.custom.buildWebApp self.settings;
 }

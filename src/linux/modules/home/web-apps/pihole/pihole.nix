@@ -8,7 +8,7 @@ args@{
   self,
   ...
 }:
-rec {
+{
   name = "pihole";
 
   group = "web-apps";
@@ -69,32 +69,34 @@ rec {
     }
   ];
 
-  custom = {
-    webAppModule = self.importFileFromOtherModuleSameInput {
-      inherit args self;
-      modulePath = "desktop-modules.web-app";
-    };
-  };
-
   configuration =
     context@{ config, options, ... }:
     let
       mainSettings = lib.filterAttrs (name: value: name != "additionalPiholes") self.settings;
 
-      mainWebApp = custom.webAppModule.custom.buildWebApp mainSettings;
-
-      additionalWebApps = lib.mapAttrsToList (
+      allSettings = [
+        mainSettings
+      ]
+      ++ lib.mapAttrsToList (
         name: configOverrides:
-        custom.webAppModule.custom.buildWebApp (
-          mainSettings
-          // configOverrides
-          // {
-            name = "Pihole (${name})";
-            webapp = "pihole-${name}";
-          }
-        )
+        mainSettings
+        // configOverrides
+        // {
+          name = "Pihole (${name})";
+          webapp = "pihole-${name}";
+        }
       ) self.settings.additionalPiholes;
-
     in
-    lib.mkMerge ([ (mainWebApp context) ] ++ (map (webApp: webApp context) additionalWebApps));
+    {
+      home.file = lib.mkMerge (
+        map (
+          settings: (config.nx.linux.desktop-modules.web-app.buildWebApp settings context).homeFiles
+        ) allSettings
+      );
+      xdg.desktopEntries = lib.mkMerge (
+        map (
+          settings: (config.nx.linux.desktop-modules.web-app.buildWebApp settings context).desktopEntries
+        ) allSettings
+      );
+    };
 }
