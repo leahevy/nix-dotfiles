@@ -20,6 +20,7 @@ args@{
     port = 11434;
     allowGPU = true;
     keepAlive = "1h";
+    gpuOverheadGB = 4;
     environmentVariables = { };
     codingModel = "qwen2.5-coder:7b";
     additionalModels = [ ];
@@ -152,6 +153,7 @@ args@{
             systemctl --user restart ollama-pull-models.service
           ''
       );
+      gpuOverheadBytes = builtins.floor (self.settings.gpuOverheadGB * 1073741824);
     in
     {
       services.ollama = {
@@ -169,6 +171,9 @@ args@{
         port = ollamaPort;
         environmentVariables = {
           OLLAMA_KEEP_ALIVE = self.settings.keepAlive;
+        }
+        // lib.optionalAttrs (self.settings.allowGPU && self.settings.gpuOverheadGB > 0) {
+          OLLAMA_GPU_OVERHEAD = toString gpuOverheadBytes;
         }
         // self.settings.environmentVariables;
       };
