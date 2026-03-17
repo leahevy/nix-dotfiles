@@ -183,10 +183,15 @@ args@{
           {
             mode = "i";
             key = "<M-Tab>";
-            action = "<cmd>lua vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Tab>', true, false, true), 'n', false)<CR>";
+            action.__raw = ''
+              function()
+                vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Tab>', true, false, true), 'n', false)
+              end
+            '';
             options = {
               desc = "Insert tab (fallback)";
               silent = true;
+              expr = false;
             };
           }
           {
