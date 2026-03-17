@@ -194,7 +194,6 @@ args@{
         Service = {
           Type = "oneshot";
           ExecStart = "${pullModelsScript}";
-          RemainAfterExit = true;
         };
       };
 
