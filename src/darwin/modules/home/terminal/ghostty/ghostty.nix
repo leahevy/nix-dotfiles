@@ -34,6 +34,8 @@ args@{
     context@{ config, options, ... }:
     lib.mkIf self.isEnabled {
       nx.preferences.desktop.programs.terminal = {
+        name = lib.mkForce "Ghostty";
+        commandIsAbsolute = lib.mkForce true;
         openCommand = lib.mkForce [
           "open"
           "-nWa"
@@ -87,6 +89,8 @@ args@{
           ]
         );
       };
+      nx.preferences.desktop.programs.additionalTerminal =
+        lib.mkDefault config.nx.preferences.desktop.programs.terminal;
     };
 
   configuration =
@@ -96,4 +100,5 @@ args@{
         cask 'ghostty'
       '';
     };
+
 }

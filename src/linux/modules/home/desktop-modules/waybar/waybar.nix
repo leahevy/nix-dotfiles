@@ -27,9 +27,16 @@ args@{
     context@{ config, options, ... }:
     let
       programsConfig = config.nx.preferences.desktop.programs;
-      terminalRunCmd = cmd: lib.escapeShellArgs (programsConfig.terminal.openRunCommand cmd);
-      terminalShellCmd = cmd: lib.escapeShellArgs (programsConfig.terminal.openShellCommand cmd);
-      appLauncherCmd = lib.escapeShellArgs programsConfig.appLauncher.openCommand;
+      terminal = programsConfig.additionalTerminal;
+      appLauncher = programsConfig.appLauncher;
+      terminalRunCmd =
+        cmd: lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openRunCommand cmd);
+      terminalShellCmd =
+        cmd:
+        lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
+      appLauncherCmd = lib.escapeShellArgs (
+        helpers.runWithAbsolutePath config appLauncher appLauncher.openCommand [ ]
+      );
 
       themedNixIcon =
         pkgs.runCommand "themed-nix-snowflake"

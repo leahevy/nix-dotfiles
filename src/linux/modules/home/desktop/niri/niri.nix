@@ -130,38 +130,53 @@ args@{
   configuration =
     context@{ config, options, ... }:
     let
-      isStandalone = self.user.isStandalone;
       mainDisplay = self.host.displays.main or self.user.displays.main or null;
       secondaryDisplay = self.host.displays.secondary or self.user.displays.secondary or null;
       programsConfig = config.nx.preferences.desktop.programs;
       terminal = programsConfig.terminal;
-      terminalCmd = lib.escapeShellArgs terminal.openCommand;
-      terminalRunCmd = cmd: lib.escapeShellArgs (terminal.openRunCommand cmd);
-      terminalShellCmd = cmd: lib.escapeShellArgs (terminal.openShellCommand cmd);
-      terminalWithClass =
-        class:
-        let
-          result = terminal.openWithClass class;
-        in
-        lib.escapeShellArgs result;
-      terminalRunWithClass =
+      additionalTerminal = programsConfig.additionalTerminal;
+      scratchpadRunWithClass =
         class: cmd:
-        let
-          result = (terminal.openRunWithClass class) cmd;
-        in
-        lib.escapeShellArgs result;
+        lib.escapeShellArgs (
+          helpers.runWithAbsolutePath config terminal (terminal.openRunWithClass class) cmd
+        );
+      terminalCmd = lib.escapeShellArgs (
+        helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openCommand [ ]
+      );
+      terminalRunCmd =
+        cmd:
+        lib.escapeShellArgs (
+          helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openRunCommand cmd
+        );
+      terminalShellCmd =
+        cmd:
+        lib.escapeShellArgs (
+          helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openShellCommand cmd
+        );
 
       appLauncher =
         if programsConfig.appLauncher == null then
           throw "niri requires an application launcher (e.g., enable linux.desktop-modules.fuzzel)"
         else
           programsConfig.appLauncher;
-      appLauncherCmd = lib.escapeShellArgs appLauncher.openCommand;
-      appLauncherDmenu = opts: lib.escapeShellArgs (appLauncher.dmenuCommand opts);
-      appLauncherDmenuRaw = opts: lib.concatStringsSep " " (appLauncher.dmenuCommand opts);
-      appLauncherDmenuIndex = opts: lib.escapeShellArgs (appLauncher.dmenuIndexCommand opts);
+      appLauncherCmd = lib.escapeShellArgs (
+        helpers.runWithAbsolutePath config appLauncher appLauncher.openCommand [ ]
+      );
+      appLauncherDmenu =
+        opts:
+        lib.escapeShellArgs (helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts);
+      appLauncherDmenuRaw =
+        opts:
+        lib.concatStringsSep " " (
+          helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts
+        );
+      appLauncherDmenuIndex =
+        opts:
+        lib.escapeShellArgs (
+          helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuIndexCommand opts
+        );
       requiredApps = [
-        (terminalRunWithClass "org.nx.scratchpad" "tx")
+        (scratchpadRunWithClass "org.nx.scratchpad" "tx")
       ];
       delayedRequiredApps = [ ];
       theme = config.nx.preferences.theme;
@@ -333,7 +348,12 @@ args@{
             };
           };
       autostartDummies = map (
-        prog: pkgs.runCommand "niri-autostart-${lib.strings.sanitizeDerivationName prog}" { } "mkdir $out"
+        prog:
+        let
+          firstWord = builtins.head (lib.splitString " " prog);
+          baseName = lib.last (lib.splitString "/" firstWord);
+        in
+        pkgs.runCommand "niri-autostart-${lib.strings.sanitizeDerivationName baseName}" { } "mkdir $out"
       ) (startupApps ++ delayedStartupApps);
     in
     {
@@ -420,7 +440,7 @@ args@{
         executable = true;
         text = ''
           #!/usr/bin/env bash
-          exec ${terminalRunWithClass "org.nx.scratchpad" "tx"}
+          exec ${scratchpadRunWithClass "org.nx.scratchpad" "tx"}
         '';
       };
 

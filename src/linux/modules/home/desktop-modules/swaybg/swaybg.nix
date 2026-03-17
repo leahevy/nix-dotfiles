@@ -29,7 +29,9 @@ args@{
     context@{ config, options, ... }:
     let
       appLauncher = config.nx.preferences.desktop.programs.appLauncher;
-      appLauncherDmenu = opts: lib.escapeShellArgs (appLauncher.dmenuCommand opts);
+      appLauncherDmenu =
+        opts:
+        lib.escapeShellArgs (helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts);
 
       getStylixWallpaper =
         let

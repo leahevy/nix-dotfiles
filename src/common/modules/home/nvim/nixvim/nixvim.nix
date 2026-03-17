@@ -156,8 +156,10 @@ args@{
     context@{ config, options, ... }:
     let
       theme = config.nx.preferences.theme;
-      terminal = config.nx.preferences.desktop.programs.terminal;
-      terminalRunPrefix = lib.escapeShellArgs terminal.openRunPrefix;
+      terminal = config.nx.preferences.desktop.programs.additionalTerminal;
+      terminalRunPrefix = lib.escapeShellArgs (
+        helpers.runWithAbsolutePath config terminal terminal.openRunPrefix [ ]
+      );
       overrideCursorHighlightColour =
         if self.settings.overrideCursorHighlightColour != null then
           self.settings.overrideCursorHighlightColour

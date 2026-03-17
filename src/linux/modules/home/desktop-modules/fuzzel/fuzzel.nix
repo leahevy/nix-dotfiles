@@ -106,7 +106,13 @@ args@{
         package = fuzzelPackage;
         settings = {
           main = {
-            terminal = lib.concatStringsSep " " config.nx.preferences.desktop.programs.terminal.openRunPrefix;
+            terminal =
+              let
+                additionalTerminal = config.nx.preferences.desktop.programs.additionalTerminal;
+              in
+              lib.concatStringsSep " " (
+                helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openRunPrefix [ ]
+              );
             layer = "overlay";
             width = 40;
             lines = 15;

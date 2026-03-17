@@ -79,6 +79,16 @@ let
         default = false;
         description = "Whether this program needs to be run inside a terminal";
       };
+      localBin = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether this programs absolute path resides in the user's .local/bin";
+      };
+      commandIsAbsolute = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether command paths are already absolute (e.g., macOS 'open' commands)";
+      };
     };
   };
 
@@ -147,6 +157,16 @@ let
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Files to persist for this terminal";
+      };
+      localBin = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether this programs absolute path resides in the user's .local/bin";
+      };
+      commandIsAbsolute = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether command paths are already absolute (e.g., macOS 'open' commands)";
       };
     };
   };
@@ -218,6 +238,16 @@ let
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Desktop file name";
+      };
+      localBin = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether this programs absolute path resides in the user's .local/bin";
+      };
+      commandIsAbsolute = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether command paths are already absolute (e.g., macOS 'open' commands)";
       };
     };
   };
@@ -457,7 +487,12 @@ in
               terminal = lib.mkOption {
                 type = lib.types.nullOr terminalType;
                 default = null;
-                description = "Preferred terminal emulator";
+                description = "Preferred terminal emulator for the main terminal window";
+              };
+              additionalTerminal = lib.mkOption {
+                type = lib.types.nullOr terminalType;
+                default = null;
+                description = "Preferred terminal emulator for additional terminal windows (scratchpad and pop-ups)";
               };
               systemSettings = lib.mkOption {
                 type = lib.types.nullOr programType;

@@ -238,8 +238,12 @@ args@{
     context@{ config, options, ... }:
     let
       theme = config.nx.preferences.theme;
-      terminal = config.nx.preferences.desktop.programs.terminal;
-      terminalRunWithClass = class: cmd: lib.escapeShellArgs ((terminal.openRunWithClass class) cmd);
+      terminal = config.nx.preferences.desktop.programs.additionalTerminal;
+      terminalRunWithClass =
+        class: cmd:
+        lib.escapeShellArgs (
+          helpers.runWithAbsolutePath config terminal (terminal.openRunWithClass class) cmd
+        );
       defaultColors = {
         normal = {
           fg = theme.colors.terminal.colors.green.html;
@@ -792,7 +796,7 @@ args@{
             if isNiriEnabled && hasAppLauncher then
               let
                 launcherCmd = lib.escapeShellArgs (
-                  appLauncher.dmenuCommand {
+                  helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
                     prompt = "Select URL: ";
                     width = 80;
                   }

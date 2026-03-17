@@ -52,8 +52,10 @@ args@{
     context@{ config, options, ... }:
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
-      terminal = config.nx.preferences.desktop.programs.terminal;
-      terminalShellCmd = cmd: lib.escapeShellArgs (terminal.openShellCommand cmd);
+      terminal = config.nx.preferences.desktop.programs.additionalTerminal;
+      terminalShellCmd =
+        cmd:
+        lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
 
       devicesAttr = builtins.listToAttrs (
         map (d: {

@@ -21,8 +21,10 @@ args@{
       runtimeDir = if self.isDarwin then "$HOME/Library/Caches" else "$XDG_RUNTIME_DIR";
       emacsPackage = if self.isDarwin then pkgs.emacs-macport else pkgs.emacs-gtk;
       sshAgentEnabled = self.isLinux && (config.services.ssh-agent.enable or false);
-      terminal = config.nx.preferences.desktop.programs.terminal;
-      terminalRunPrefix = lib.escapeShellArgs terminal.openRunPrefix;
+      terminal = config.nx.preferences.desktop.programs.additionalTerminal;
+      terminalRunPrefix = lib.escapeShellArgs (
+        helpers.runWithAbsolutePath config terminal terminal.openRunPrefix [ ]
+      );
     in
     {
       home.packages = [ emacsPackage ];

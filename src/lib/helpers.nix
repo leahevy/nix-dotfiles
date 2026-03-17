@@ -530,12 +530,54 @@ rec {
     in
     usePackageByVersionCheck args pkgName predicate;
 
-  # Returns terminal.openRunPrefix if program.needsTerminal is true, else empty list
+  # Prepend absolute path to binary in command list or function result
+  # Respects commandIsAbsolute flag (returns unchanged if true)
+  # Usage: runWithAbsolutePath config textEditor textEditor.openCommand []
+  # Usage: runWithAbsolutePath config textEditor textEditor.openFileCommand file
+  runWithAbsolutePath =
+    config: program: function: args:
+    let
+      isCallable = builtins.isFunction function || (builtins.isAttrs function && function ? __functor);
+      result = if isCallable then function args else function;
+    in
+    if program.commandIsAbsolute or false then
+      result
+    else
+      let
+        basePath =
+          if program.localBin or false then
+            config.home.homeDirectory + "/.local/bin/"
+          else if program.package == null then
+            throw "program ${program.name} must have a package or commandIsAbsolute set!"
+          else
+            program.package + "/bin/";
+      in
+      if builtins.isList result then
+        [ (basePath + (builtins.head result)) ] ++ (builtins.tail result)
+      else
+        basePath + result;
+
+  # Returns terminal.openRunPrefix with absolute path if program.needsTerminal is true, else empty list
   # Usage: (terminalPrefixIf config textEditor) ++ textEditor.openCommand ++ [ "{file}" ]
   terminalPrefixIf =
     config: program:
     if program.needsTerminal or false then
-      config.nx.preferences.desktop.programs.terminal.openRunPrefix
+      let
+        terminal = config.nx.preferences.desktop.programs.terminal;
+      in
+      runWithAbsolutePath config terminal terminal.openRunPrefix [ ]
+    else
+      [ ];
+
+  # Returns additionalTerminal.openRunPrefix with absolute path if program.needsTerminal is true, else empty list
+  # Usage: (additionalTerminalPrefixIf config textEditor) ++ textEditor.openCommand ++ [ "{file}" ]
+  additionalTerminalPrefixIf =
+    config: program:
+    if program.needsTerminal or false then
+      let
+        terminal = config.nx.preferences.desktop.programs.additionalTerminal;
+      in
+      runWithAbsolutePath config terminal terminal.openRunPrefix [ ]
     else
       [ ];
 }

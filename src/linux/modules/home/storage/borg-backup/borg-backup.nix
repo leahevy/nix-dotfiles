@@ -27,8 +27,10 @@ args@{
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
       isHeadless = (self.host.settings.system.desktop or null) == null;
-      terminal = config.nx.preferences.desktop.programs.terminal;
-      terminalShellCmd = cmd: lib.escapeShellArgs (terminal.openShellCommand cmd);
+      terminal = config.nx.preferences.desktop.programs.additionalTerminal;
+      terminalShellCmd =
+        cmd:
+        lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
       systemBorgConfig = self.host.getModuleConfig "storage.borg-backup";
       repoUrl = "ssh://${systemBorgConfig.repository.user}@${systemBorgConfig.repository.server}:${toString systemBorgConfig.repository.port}${systemBorgConfig.repository.path}";
       hostname = self.host.hostname;

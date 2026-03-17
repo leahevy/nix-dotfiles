@@ -331,6 +331,10 @@ let
       name = "konsole";
       filesToPersist = [ ".config/konsolerc" ];
     };
+    additionalTerminal = mkKdeTerminal {
+      name = "konsole";
+      filesToPersist = [ ".config/konsolerc" ];
+    };
     systemSettings = mkKdeProgram {
       name = "systemsettings";
       dirsToPersist = [ ".cache/systemsettings" ];
@@ -406,6 +410,7 @@ let
     textEditor = mkGnomeProgram { name = "gedit"; };
     advancedTextEditor = mkGnomeProgram { name = "gnome-text-editor"; };
     terminal = mkGnomeTerminal { name = "gnome-terminal"; };
+    additionalTerminal = mkGnomeTerminal { name = "gnome-terminal"; };
     systemSettings = mkGnomeProgram { name = "gnome-control-center"; };
     networkSettings = mkGnomeProgram { name = "gnome-control-center"; };
     imageViewer = mkGnomeProgram { name = "eog"; };
@@ -543,6 +548,7 @@ in
         textEditor = lib.mkDefault selectedPrograms.textEditor;
         advancedTextEditor = lib.mkDefault selectedPrograms.advancedTextEditor;
         terminal = lib.mkDefault selectedPrograms.terminal;
+        additionalTerminal = lib.mkDefault selectedPrograms.additionalTerminal;
         systemSettings = lib.mkDefault selectedPrograms.systemSettings;
         networkSettings = lib.mkDefault selectedPrograms.networkSettings;
         imageViewer = lib.mkDefault selectedPrograms.imageViewer;
@@ -603,6 +609,7 @@ in
         ++ (getProgramPackages prefs.textEditor)
         ++ (getProgramPackages prefs.advancedTextEditor)
         ++ (getProgramPackages prefs.terminal)
+        ++ (getProgramPackages prefs.additionalTerminal)
         ++ (lib.optionals self.settings.installSystemSettings (getProgramPackages prefs.systemSettings))
         ++ (lib.optionals self.settings.installSystemSettings (getProgramPackages prefs.networkSettings))
         ++ (getProgramPackages prefs.imageViewer)
@@ -750,8 +757,12 @@ in
       // lib.optionalAttrs isKDE {
         "kdeglobals".text = ''
           [General]
-          TerminalApplication=${lib.concatStringsSep " " prefs.terminal.openCommand}
-          TerminalService=${prefs.terminal.desktopFile}
+          TerminalApplication=${
+            lib.concatStringsSep " " (
+              helpers.runWithAbsolutePath config prefs.additionalTerminal prefs.additionalTerminal.openCommand [ ]
+            )
+          }
+          TerminalService=${prefs.additionalTerminal.desktopFile}
         '';
       };
 
@@ -787,6 +798,7 @@ in
             ++ (getProgramDirs prefs.textEditor)
             ++ (getProgramDirs prefs.advancedTextEditor)
             ++ (getProgramDirs prefs.terminal)
+            ++ (getProgramDirs prefs.additionalTerminal)
             ++ (lib.optionals self.settings.installSystemSettings (getProgramDirs prefs.systemSettings))
             ++ (getProgramDirs prefs.imageViewer)
             ++ (getProgramDirs prefs.imageEditor)
@@ -813,6 +825,7 @@ in
             ++ (getProgramFiles prefs.textEditor)
             ++ (getProgramFiles prefs.advancedTextEditor)
             ++ (getProgramFiles prefs.terminal)
+            ++ (getProgramFiles prefs.additionalTerminal)
             ++ (lib.optionals self.settings.installSystemSettings (getProgramFiles prefs.systemSettings))
             ++ (getProgramFiles prefs.imageViewer)
             ++ (getProgramFiles prefs.imageEditor)

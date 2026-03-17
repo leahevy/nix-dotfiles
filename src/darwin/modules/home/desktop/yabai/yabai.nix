@@ -39,7 +39,7 @@ args@{
     additionalTerminalAppsMapping = { };
     bordersSize = 15;
     barHeight = 77;
-    alacrittyAsFloatingTerminal = true;
+    additionalTerminalAsFloatingTerminal = true;
     iconFontSize = "23.0";
     labelFontSize = "18.0";
     appIconFontSize = "22.0";
@@ -58,12 +58,11 @@ args@{
       git = [ "lazygit" ];
       note = [ "bat" ];
     };
+    useAdditionalTerminalForReturn = true;
     baseApplicationMapping = {
       term = [
         "Terminal"
         "iTerm2"
-        "Ghostty"
-        "Kitty"
       ];
       file = [ "Finder" ];
       weather = [ "Weather" ];
@@ -370,9 +369,9 @@ args@{
           allRules =
             self.settings.baseRules
             ++ self.settings.additionalRules
-            ++ lib.optionals self.settings.alacrittyAsFloatingTerminal [
-              ''app="^Alacritty$" manage=off''
-              ''app="^alacritty$" manage=off''
+            ++ lib.optionals self.settings.additionalTerminalAsFloatingTerminal [
+              ''app="^${config.nx.preferences.desktop.programs.additionalTerminal.name}$" manage=off''
+              ''app="^${lib.strings.toLower config.nx.preferences.desktop.programs.additionalTerminal.name}$" manage=off''
             ];
         in
         {
@@ -446,7 +445,19 @@ args@{
 
             "alt - a" = "yabai -m window --toggle split";
 
-            "alt - return" = "open -na Ghostty";
+            "alt - return" =
+              let
+                terminal = config.nx.preferences.desktop.programs.terminal;
+                additionalTerminal = config.nx.preferences.desktop.programs.additionalTerminal;
+              in
+              if self.settings.useAdditionalTerminalForReturn then
+                lib.escapeShellArgs (
+                  helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openCommand [ ]
+                )
+
+              else
+                lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openCommand [ ]);
+
             "shift + alt - return" = "open -na Tmux";
 
             "alt - p" =
@@ -1085,7 +1096,10 @@ args@{
             ) allTerminalAppsMapping
           );
 
-          terminalApps = allApplicationMapping.term or [ ];
+          terminalApps = (allApplicationMapping.term or [ ]) ++ [
+            config.nx.preferences.desktop.programs.terminal.name
+            config.nx.preferences.desktop.programs.additionalTerminal.name
+          ];
           terminalPattern = lib.concatStringsSep " | " (map (app: ''"${app}"'') terminalApps);
         in
         {

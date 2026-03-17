@@ -453,7 +453,6 @@ args@{
     context@{ config, options, ... }:
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
-      terminal = config.nx.preferences.desktop.programs.terminal;
       textEditor = config.nx.preferences.desktop.programs.textEditor;
       appLauncher = config.nx.preferences.desktop.programs.appLauncher;
       hasAppLauncher = appLauncher != null;
@@ -861,7 +860,9 @@ args@{
               languages = self.settings.dictLanguages;
             };
             editor.command =
-              (helpers.terminalPrefixIf config textEditor) ++ textEditor.openCommand ++ [ "{file}" ];
+              (helpers.additionalTerminalPrefixIf config textEditor)
+              ++ (helpers.runWithAbsolutePath config textEditor textEditor.openCommand [ ])
+              ++ [ "{file}" ];
             fileselect =
               let
                 fileManagerCommand =
@@ -1084,7 +1085,7 @@ args@{
             text =
               let
                 launcherCmd = lib.escapeShellArgs (
-                  appLauncher.dmenuCommand {
+                  helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
                     prompt = "Open URL: ";
                     placeholder = "Select a URL or enter a new one";
                     width = 60;
@@ -1206,7 +1207,7 @@ args@{
               "Mod+Alt+Space" =
                 let
                   searchLauncherCmd = lib.escapeShellArgs (
-                    appLauncher.dmenuCommand {
+                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
                       prompt = "Web Search: ";
                       placeholder = "Enter search query";
                       width = 60;

@@ -20,7 +20,10 @@ args@{
     let
       isNiriEnabled = self.isModuleEnabled "desktop.niri";
       appLauncher = config.nx.preferences.desktop.programs.appLauncher;
-      appLauncherDmenuSimple = lib.escapeShellArgs (appLauncher.openCommand ++ appLauncher.dmenuArgs);
+      appLauncherDmenuSimple = lib.escapeShellArgs (
+        (helpers.runWithAbsolutePath config appLauncher appLauncher.openCommand [ ])
+        ++ appLauncher.dmenuArgs
+      );
     in
     {
       home.packages = [ pkgs.bemoji ];

@@ -33,11 +33,13 @@ args@{
     context@{ config, options, ... }:
     lib.mkIf self.isEnabled {
       nx.preferences.desktop.programs.terminal.package = lib.mkDefault pkgs.ghostty;
+      nx.preferences.desktop.programs.additionalTerminal.package = lib.mkDefault pkgs.ghostty;
     };
 
   configuration =
     context@{ config, options, ... }:
     {
       programs.ghostty.package = lib.mkForce pkgs.ghostty;
+      nx.preferences.desktop.programs.terminal.package = lib.mkForce pkgs.ghostty;
     };
 }

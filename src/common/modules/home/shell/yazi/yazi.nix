@@ -52,8 +52,12 @@ args@{
     context@{ config, options, ... }:
     let
       isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
-      terminal = config.nx.preferences.desktop.programs.terminal;
-      terminalRunWithClass = class: cmd: lib.escapeShellArgs ((terminal.openRunWithClass class) cmd);
+      terminal = config.nx.preferences.desktop.programs.additionalTerminal;
+      terminalRunWithClass =
+        class: cmd:
+        lib.escapeShellArgs (
+          helpers.runWithAbsolutePath config terminal (terminal.openRunWithClass class) cmd
+        );
     in
     {
       programs.yazi = {

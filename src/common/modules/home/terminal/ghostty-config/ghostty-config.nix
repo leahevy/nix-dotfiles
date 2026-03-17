@@ -73,6 +73,8 @@ args@{
         ];
         desktopFile = "com.mitchellh.ghostty.desktop";
       };
+      nx.preferences.desktop.programs.additionalTerminal =
+        lib.mkIf self.isLinux config.nx.preferences.desktop.programs.terminal;
     };
 
   configuration =
