@@ -19,6 +19,7 @@ args@{
     provider = "openai_fim_compatible";
     model = "qwen2.5-coder:7b";
     endpoint = "http://localhost:11434/v1/completions";
+    cpuOptimised = false;
     n_completions = 1;
     context_window = 1024;
     context_ratio = 0.5;
@@ -104,6 +105,18 @@ args@{
           "http://${ollamaConfig.host}:${toString ollamaConfig.port}/v1/completions"
         else
           self.settings.endpoint;
+
+      cpuMultiplier =
+        attr: multiplier:
+        if self.settings.cpuOptimised then
+          builtins.floor (self.settings.${attr} * multiplier)
+        else
+          self.settings.${attr};
+
+      effectiveContextWindow = cpuMultiplier "context_window" 0.5;
+      effectiveMaxTokens = cpuMultiplier "max_tokens" 0.6;
+      effectiveDebounce = cpuMultiplier "debounce" 5;
+      effectiveThrottle = cpuMultiplier "throttle" 3;
     in
     {
       programs.nixvim = {
@@ -112,11 +125,11 @@ args@{
           settings = {
             provider = self.settings.provider;
             n_completions = self.settings.n_completions;
-            context_window = self.settings.context_window;
+            context_window = effectiveContextWindow;
             context_ratio = self.settings.context_ratio;
             request_timeout = self.settings.request_timeout;
-            debounce = self.settings.debounce;
-            throttle = self.settings.throttle;
+            debounce = effectiveDebounce;
+            throttle = effectiveThrottle;
             virtualtext = {
               auto_trigger_ft = allFiletypes;
               keymap = {
@@ -135,7 +148,7 @@ args@{
                 end_point = effectiveEndpoint;
                 model = effectiveModel;
                 optional = {
-                  max_tokens = self.settings.max_tokens;
+                  max_tokens = effectiveMaxTokens;
                   temperature = self.settings.temperature;
                   top_p = self.settings.top_p;
                 }
