@@ -167,7 +167,7 @@ parse_common_deployment_args() {
 parse_build_deployment_args() {
     PROFILE_PATH="$(retrieve_active_profile_path)"
     EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
-    TIMEOUT=2400
+    TIMEOUT=7200
     DRY_RUN=""
     BUILD_DIFF=false
     SKIP_VERIFICATION=false
@@ -186,7 +186,7 @@ parse_build_deployment_args() {
                 shift
                 ;;
             --timeout)
-                TIMEOUT="${2:-2400}"
+                TIMEOUT="${2:-7200}"
                 shift 2
                 ;;
             --dry-run)
@@ -209,7 +209,7 @@ parse_build_deployment_args() {
                 echo "build: Test build configuration without deploying"
                 echo ""
                 echo "Options:"
-                echo "  --timeout <seconds>   Set timeout (default: 2400)"
+                echo "  --timeout <seconds>   Set timeout (default: 7200)"
                 echo "  --dry-run            Test build without actual building"
                 echo "  --offline            Build without network access"
                 echo "  --diff               Compare built config with current active system"
