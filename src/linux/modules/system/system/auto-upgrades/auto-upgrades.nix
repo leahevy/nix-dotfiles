@@ -385,22 +385,24 @@ args@{
 
                   cd "$repo_path"
 
-                  if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git remote get-url nx-auto-upgrade >/dev/null 2>&1; then
-                    ${logScript "info" "INFO: Adding nx-auto-upgrade remote for $repo_name"}
+                  if ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git remote get-url nx-auto-upgrade >/dev/null 2>&1; then
+                    ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git remote remove nx-auto-upgrade
+                  fi
 
-                    local token=$(cat ${config.sops.secrets.nx-github-access-token.path})
-                    local auth_url="https://token:$token@''${iso_url#https://}"
+                  ${logScript "info" "INFO: Configuring nx-auto-upgrade remote for $repo_name"}
 
-                    ${pkgs.coreutils}/bin/cat >> .git/config << EOF
+                  local token=$(cat ${config.sops.secrets.nx-github-access-token.path})
+                  local auth_url="https://token:$token@''${iso_url#https://}"
+
+                  ${pkgs.coreutils}/bin/cat >> .git/config << EOF
 
         [remote "nx-auto-upgrade"]
         	url = $auth_url
         	fetch = +refs/heads/*:refs/remotes/nx-auto-upgrade/*
         EOF
-                    ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username}:${
-                      config.users.users.${self.host.mainUser.username}.group
-                    } .git/config
-                  fi
+                  ${pkgs.coreutils}/bin/chown ${self.host.mainUser.username}:${
+                    config.users.users.${self.host.mainUser.username}.group
+                  } .git/config
                 }
 
                 setup_nx_auto_upgrade_remote "${nxcoreDir}" "nxcore" "${self.variables.coreRepoIsoUrl}"
