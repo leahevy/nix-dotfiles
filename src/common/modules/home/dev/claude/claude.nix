@@ -18,15 +18,33 @@ args@{
   unfree = [ "claude-code" ];
 
   settings = {
+    package = pkgs-unstable.claude-code;
+    blockSSH = true;
     additionalMCPServers = { };
   };
 
   configuration =
     context@{ config, options, ... }:
+    let
+      fake-ssh = pkgs.writeShellScriptBin "ssh" "exit 1";
+      claude-code-wrapped = pkgs.symlinkJoin {
+        name = "claude-code-wrapped";
+        paths = [ self.settings.package ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/claude \
+            --prefix PATH : ${fake-ssh}/bin \
+            --set GIT_CONFIG_COUNT 1 \
+            --set GIT_CONFIG_KEY_0 "url.https://github.com/.insteadOf" \
+            --set GIT_CONFIG_VALUE_0 "git@github.com:"
+        '';
+      };
+      claude-package = if self.settings.blockSSH then claude-code-wrapped else self.settings.package;
+    in
     {
       home = {
-        packages = with pkgs; [
-          claude-code
+        packages = [
+          claude-package
         ];
 
         file =
