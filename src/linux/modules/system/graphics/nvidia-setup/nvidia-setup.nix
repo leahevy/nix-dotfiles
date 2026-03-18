@@ -23,6 +23,8 @@ args@{
 
   settings = {
     withPowerManagement = true;
+    disableGspFirmware = false;
+    disableDisplayAudio = true;
   };
 
   assertions = [
@@ -48,5 +50,13 @@ args@{
           nvidia-vaapi-driver
         ];
       };
+
+      boot.kernelParams = lib.optionals self.settings.disableGspFirmware [
+        "nvidia.NVreg_EnableGpuFirmware=0"
+      ];
+
+      services.udev.extraRules = lib.optionalString self.settings.disableDisplayAudio ''
+        ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x040300", ATTR{remove}="1"
+      '';
     };
 }
