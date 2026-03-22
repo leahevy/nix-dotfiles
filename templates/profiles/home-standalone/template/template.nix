@@ -33,20 +33,29 @@
 
     extraSettings = { };
 
-    init = args@{ lib, self, ... }: context@{ config, options, ... }: { };
+    on = {
+      # Overlays — applied unconditionally BEFORE pkgs is created. Cannot reference pkgs.
+      # Each value is a list of (final: prev: { }) functions.
+      # overlays = [ (final: prev: { ... }) ];
 
-    configuration =
-      args@{
-        lib,
-        pkgs,
-        pkgs-unstable,
-        funcs,
-        helpers,
-        defs,
-        self,
-        ...
-      }:
-      context@{ config, options, ... }:
-      { };
+      # Runs for ALL modules (even disabled) in BOTH contexts.
+      # Only set config.nx.* options here.
+      # init = args@{ lib, self, ... }: context@{ config, options, ... }: { };
+
+      # Runs in home context (both standalone and integrated)
+      # home = args@{ lib, pkgs, self, ... }: context@{ config, options, ... }: { };
+
+      # Platform-specific overrides
+      # linux = {
+      #   overlays = [ (final: prev: { ... }) ];
+      #   init = args@{ lib, self, ... }: context@{ config, options, ... }: { };
+      #   home = args@{ lib, pkgs, self, ... }: context@{ config, options, ... }: { };
+      # };
+      # darwin = {
+      #   overlays = [ (final: prev: { ... }) ];
+      #   init = args@{ lib, self, ... }: context@{ config, options, ... }: { };
+      #   home = args@{ lib, pkgs, self, ... }: context@{ config, options, ... }: { };
+      # };
+    };
   };
 }

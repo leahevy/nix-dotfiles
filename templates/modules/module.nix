@@ -14,46 +14,29 @@ args@{
 
   group = "{{_lua:extract_group()_}}";
   input = "{{_lua:extract_input()_}}";
-  namespace = "{{_lua:extract_namespace()_}}";
 
-  # Submodules to import, same syntax as in profiles:
-  #   INPUT = { GROUP = { MODULE = true or CONFIG_ATTRIBUTESET, ...}; };
+  # INPUT = { GROUP = { MODULE = true or { ... }; }; };
   submodules = { };
 
-  # Variables which will be set as default in self.settings inside the module.
-  # Can be overwritten from the profile.
+  # Defaults for self.settings, overridable from profile
   settings = { };
 
-  # Typed options at config.nx.INPUT.GROUP.MODULE.* (both contexts).
-  # Access via: (self.options config).OPTION_NAME
-  # Example: someOption = lib.mkOption { type = lib.types.bool; default = false; };
+  # Typed options at config.nx.INPUT.GROUP.MODULE.*, access via (self.options config).NAME
   options = { };
 
-  # Root-level options in the NixOS/HM options tree.
+  # Root-level NixOS/HM options
   rawOptions = { };
 
-  # Runs for ALL modules in BOTH contexts. Only set config.nx.* options here.
-  # Example: context@{ config, ... }: lib.mkIf self.isEnabled { nx.input.group.someOption = true; };
-  init = context@{ config, options, ... }: { };
-
-  # List of strings with unfree package names to allow in the build.
+  # Unfree package names to allow
   unfree = [ ];
 
-  # Custom attributes which can have any value and may be used when the module
-  # file is imported via: (self.importFileCustom args FILENAME)
+  # Arbitrary data, accessed via self.importFileCustom
   custom = { };
 
-  # Optional warning message to display during build evaluation
   # warning = "This module is work in progress.";
-
-  # Optional error message to throw and prevent build
   # error = "This module is currently broken!";
-
-  # Optional boolean to mark module as broken (prevents build)
   # broken = true;
 
-  # Assertions to check in a build for this module.
-  # Should be used to validate self.settings before the build config is evaluated.
   assertions = [
     {
       assertion = true;
@@ -61,20 +44,44 @@ args@{
     }
   ];
 
-  # The actual build configuration of the module.
-  configuration =
-    context@{ config, options, ... }:
-    {
-      # For system modules
-      environment.persistence."${self.persist}" = {
-        directories = [ ];
-        files = [ ];
-      };
+  on = {
+    # All modules, both contexts, only config.nx.*, no self.settings
+    # init = config: lib.mkIf self.isEnabled { };
 
-      # For home-manager modules
-      home.persistence."${self.persist}" = {
+    # Enabled only, both contexts
+    # enabled = config: { };
+
+    # Enabled, home context
+    home = config: {
+      home.persistence."${self.persist.home}" = {
         directories = [ ];
         files = [ ];
       };
     };
+
+    # Enabled, system context
+    # system = config: {
+    #   environment.persistence."${self.persist.system}" = {
+    #     directories = [ ];
+    #     files = [ ];
+    #   };
+    # };
+
+    # standalone = config: { };
+    # integrated = config: { };
+
+    # Before pkgs creation, no pkgs access
+    # overlays = [ (final: prev: { ... }) ];
+
+    # linux = {
+    #   overlays = [ (final: prev: { ... }) ];
+    #   init = config: { };
+    #   enabled = config: { };
+    #   home = config: { };
+    #   system = config: { };
+    #   standalone = config: { };
+    #   integrated = config: { };
+    # };
+    # darwin = { ... };
+  };
 }
