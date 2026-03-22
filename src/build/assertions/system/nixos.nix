@@ -38,11 +38,9 @@ args@{
   ]
   ++ (
     let
-      systemModuleAssertions = funcs.collectModuleAssertions args processedModules "system";
-      homeProcessedModules = args.homeProcessedModules or { };
-      evaluateModuleAssertions = funcs.evaluateModuleAssertions args "system" {
-        systemModules = processedModules;
-        homeModules = homeProcessedModules;
+      systemModuleAssertions = funcs.collectModuleAssertions args processedModules;
+      evaluateModuleAssertions = funcs.evaluateModuleAssertions args {
+        processedModules = processedModules;
       };
     in
     map evaluateModuleAssertions systemModuleAssertions
@@ -51,5 +49,18 @@ args@{
     config = config;
     architecture = host.architecture;
     context = "system";
-  });
+  })
+  ++ (
+    let
+      allowedSystemPersistPath = variables.persist.system;
+      persistKeys = builtins.attrNames (config.environment.persistence or { });
+      invalidKeys = builtins.filter (key: key != allowedSystemPersistPath) persistKeys;
+    in
+    [
+      {
+        assertion = invalidKeys == [ ];
+        message = "environment.persistence contains invalid mount points: ${builtins.concatStringsSep ", " invalidKeys}. Only '${allowedSystemPersistPath}' is allowed (use self.persist.system).";
+      }
+    ]
+  );
 }
