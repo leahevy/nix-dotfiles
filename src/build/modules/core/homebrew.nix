@@ -225,8 +225,8 @@ in
               echo
 
               if [[ "''${1:-}" != "-y" ]]; then
-                read -rp "$(echo -e "''${WHITE}Proceed? [Y/n] ''${RESET}")" confirm
-                if [[ "$confirm" =~ ^[Nn] ]]; then
+                read -rp "$(echo -e "''${WHITE}Proceed? [y/N] ''${RESET}")" confirm
+                if [[ ! "$confirm" =~ ^[Yy](es)?$ ]]; then
                   echo -e "''${RED}Aborted.''${RESET}"
                   exit 0
                 fi
