@@ -818,6 +818,18 @@
         "type": "github"
       }
     },
+    "overlays": {
+      "flake": false,
+      "locked": {
+        "path": "./src/overlays",
+        "type": "path"
+      },
+      "original": {
+        "path": "./src/overlays",
+        "type": "path"
+      },
+      "parent": []
+    },
     "pre-commit-hooks-nix": {
       "inputs": {
         "flake-compat": [
@@ -878,6 +890,7 @@
         "nixpkgs": "nixpkgs_3",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",
+        "overlays": "overlays",
         "profile": "profile",
         "sops-nix": "sops-nix",
         "stylix": "stylix",
