@@ -17,7 +17,6 @@ let
     evalConfigModule
     setupPackages
     buildSpecialArgs
-    getExtraModulePath
     getHardwareModule
     getDiskoModule
     processHostProfile
@@ -124,22 +123,18 @@ in
     )
   );
 
-  extractHosts = builtins.listToAttrs (
-    lib.flatten (
-      map (
-        profileName:
-        map (
-          arch:
-          let
-            processResult = processHostProfile { inherit profileName arch; };
-            hostInfo = processResult.hostConfig;
-          in
-          {
-            name = "${hostInfo.hostname}--${arch}";
-            value = hostInfo;
-          }
-        ) nixosArchitectures
-      ) host-files
-    )
-  );
+  extractHosts =
+    lib.genAttrs
+      (lib.flatten (
+        map (profileName: map (arch: "${profileName}--${arch}") nixosArchitectures) host-files
+      ))
+      (
+        key:
+        let
+          parts = lib.splitString "--" key;
+          profileName = builtins.head parts;
+          arch = lib.last parts;
+        in
+        (processHostProfile { inherit profileName arch; }).hostConfig
+      );
 }

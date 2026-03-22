@@ -10,12 +10,12 @@
 </p>
 
 <div align="center">
-    <i><u>dotfiles for NixOS and Home-Manager</u></i>
+    <i><u>dotfiles for NixOS, macOS, and Home-Manager</u></i>
 </div>
 
 ## About
 
-My personal NixOS and Home-Manager configuration using a dual-repository setup. See the template for the private repository layout in `src/nxconfig/`.
+My personal NixOS, macOS, and Home-Manager configuration using a dual-repository setup. See the template for the private repository layout in `src/nxconfig/`.
 
 <div align="center">
     <img src="assets/desktop-screenshot.jpg" alt="Desktop" width="100%" />
@@ -23,11 +23,11 @@ My personal NixOS and Home-Manager configuration using a dual-repository setup. 
 
 ## Features
 
-- Platform-independent configuration with platform-specific modules for NixOS and Home-Manager.
+- Platform-independent configuration with platform-specific modules for NixOS, macOS, and Home-Manager.
 - Personal configuration flake which is not part of the main repository and is injected in all builds.
 - Various local flake inputs for clear separation included in a custom module system.
 - Very modular approach that allows activating configurations per profile.
-- Custom module format designed for this flake. The `configuration` function inside modules uses standard NixOS/Home-Manager syntax and can be adapted for other flakes.
+- Custom module format following the dendritic pattern with `on.*` event functions for context-specific NixOS/Home-Manager configuration.
 - Script and flake output to create a bootable ISO which contains the `nxcore` and personal `nxconfig` directory on the live
   disk.
 - Bootstrap scripts to initially setup a new system, either standalone (home-manager) or NixOS.
@@ -86,6 +86,11 @@ installed system during the live ISO installation process.
 - `nx boot`: Add the configuration to the bootloader without switching right yet.
 - `nx rollback`: Rollback to the previous configuration.
 - `nx impermanence`: Manage ephemeral root filesystems.
+
+### Module Management:
+
+- `nx modules`: Manage and inspect NX modules.
+- `nx spec`: Show configuration specification.
 
 ### Evaluation:
 

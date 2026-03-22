@@ -9,14 +9,14 @@ args@{
   helpers,
   defs,
   variables,
-  homeProcessedModules,
+  processedModules,
   ...
 }:
 let
-  allModules = homeProcessedModules;
+  allModules = processedModules;
 
   moduleSpecs = funcs.processModules allModules;
-  moduleResults = funcs.importHomeModules args moduleSpecs allModules;
+  moduleResults = funcs.importModules args moduleSpecs allModules "home-integrated";
 
   extraModules = moduleResults.modules;
 
@@ -27,93 +27,37 @@ let
 
   specialisationConfigs = builtins.mapAttrs (specName: specModules: {
     configuration = {
-      imports = (funcs.importHomeModules args (funcs.processModules specModules) allModules).modules;
+      imports =
+        (funcs.importModules args (funcs.processModules specModules) allModules "home-integrated").modules;
     };
   }) (user.specialisations or { });
 
   extraUserModule =
-    let
-      buildModules =
-        if (user.extraModulePath or null) != null && builtins.pathExists user.extraModulePath then
-          [ (import user.extraModulePath args) ]
-        else
-          [ ];
+    if (user.extraModulePath or null) != null && builtins.pathExists user.extraModulePath then
+      [ (import user.extraModulePath args) ]
+    else
+      [ ];
 
-      virtualModule =
-        if user.configuration != (args: context: { }) then
-          let
-            moduleContext = {
-              inputs = inputs;
-              variables = variables;
-              configInputs = args.configInputs or { };
-              moduleBasePath = "profiles/home-integrated/${user.profileName}";
-              moduleInput = args.configInputs.config or inputs.config;
-              moduleInputName = "config";
-              user = user;
-              host = host;
-              persist = "${variables.persist.home}/${user.username}";
-            };
+  hostProfileOn = funcs.processProfileOn {
+    profile = host;
+    profileType = "nixos";
+    profileName = host.profileName;
+    args = args;
+    processedModules = allModules;
+    buildContext = "home-integrated";
+  };
 
-            enhancedContext = funcs.injectModuleFuncs moduleContext "home";
+  userProfileOn = funcs.processProfileOn {
+    profile = user;
+    profileType = "home-integrated";
+    profileName = user.profileName;
+    args = args;
+    processedModules = allModules;
+    buildContext = "home-integrated";
+  };
 
-            enhancedArgs = args // {
-              self = enhancedContext;
-            };
-          in
-          [ (user.configuration enhancedArgs) ]
-        else
-          [ ];
-    in
-    buildModules ++ virtualModule;
-
-  profileInitModules =
-    let
-      hostInit =
-        if host.init or null != null && host.init != (args: context: { }) then
-          let
-            moduleContext = {
-              inputs = inputs;
-              variables = variables;
-              configInputs = args.configInputs or { };
-              moduleBasePath = "profiles/nixos/${host.profileName}";
-              moduleInput = args.configInputs.config or inputs.config;
-              moduleInputName = "config";
-              user = user;
-              host = host;
-              persist = "${variables.persist.home}/${user.username}";
-            };
-            enhancedContext = funcs.injectModuleFuncs moduleContext "home";
-            enhancedArgs = args // {
-              self = enhancedContext;
-            };
-          in
-          [ (host.init enhancedArgs) ]
-        else
-          [ ];
-      userInit =
-        if user.init != (args: context: { }) then
-          let
-            moduleContext = {
-              inputs = inputs;
-              variables = variables;
-              configInputs = args.configInputs or { };
-              moduleBasePath = "profiles/home-integrated/${user.profileName}";
-              moduleInput = args.configInputs.config or inputs.config;
-              moduleInputName = "config";
-              user = user;
-              host = host;
-              persist = "${variables.persist.home}/${user.username}";
-            };
-            enhancedContext = funcs.injectModuleFuncs moduleContext "home";
-            enhancedArgs = args // {
-              self = enhancedContext;
-            };
-          in
-          [ (user.init enhancedArgs) ]
-        else
-          [ ];
-    in
-    hostInit ++ userInit;
+  profileInitModules = hostProfileOn.initModules ++ userProfileOn.initModules;
+  profileContextModules = hostProfileOn.contextModules ++ userProfileOn.contextModules;
 in
 { config, options, ... }:
 
@@ -124,6 +68,7 @@ in
     ++ profileInitModules
     ++ extraModules
     ++ extraUserModule
+    ++ profileContextModules
     ++ [
       (import ../../assertions/home/home-integrated.nix (args // { processedModules = allModules; }))
     ];

@@ -29,11 +29,9 @@ args@{
   ]
   ++ (
     let
-      homeModuleAssertions = funcs.collectModuleAssertions args processedModules "home";
-      systemProcessedModules = args.systemProcessedModules or { };
-      evaluateModuleAssertions = funcs.evaluateModuleAssertions args "home" {
-        systemModules = systemProcessedModules;
-        homeModules = processedModules;
+      homeModuleAssertions = funcs.collectModuleAssertions args processedModules;
+      evaluateModuleAssertions = funcs.evaluateModuleAssertions args {
+        processedModules = processedModules;
       };
     in
     map evaluateModuleAssertions homeModuleAssertions
@@ -49,5 +47,18 @@ args@{
     architecture = user.architecture;
     context = "user";
     osConfig = osConfig;
-  });
+  })
+  ++ (
+    let
+      allowedHomePersistPath = "${variables.persist.home}/${user.username}";
+      persistKeys = builtins.attrNames (config.home.persistence or { });
+      invalidKeys = builtins.filter (key: key != allowedHomePersistPath) persistKeys;
+    in
+    [
+      {
+        assertion = invalidKeys == [ ];
+        message = "home.persistence contains invalid mount points: ${builtins.concatStringsSep ", " invalidKeys}. Only '${allowedHomePersistPath}' is allowed (use self.persist.home).";
+      }
+    ]
+  );
 }

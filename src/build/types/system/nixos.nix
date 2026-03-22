@@ -423,16 +423,10 @@ with lib;
       description = "Additional untyped settings to add to the host configuration";
     };
 
-    init = mkOption {
-      type = types.functionTo (types.functionTo types.attrs);
-      default = args: context: { };
-      description = "Init function that runs in both NixOS and home-manager contexts. Only set config.nx.* options here.";
-    };
-
-    configuration = mkOption {
-      type = types.functionTo (types.functionTo types.attrs);
-      default = args: context: { };
-      description = "Virtual module configuration function with signature: args@{ ... }: context@{ config, options, ... }: { ... }";
+    on = mkOption {
+      type = types.attrs;
+      default = { };
+      description = "Event functions (init, enabled, home, system, standalone, integrated + linux/darwin variants). Signature: args -> config -> { }";
     };
   };
 }

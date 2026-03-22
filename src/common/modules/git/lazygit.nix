@@ -1,0 +1,24 @@
+args@{
+  lib,
+  pkgs,
+  pkgs-unstable,
+  funcs,
+  helpers,
+  defs,
+  self,
+  ...
+}:
+{
+  name = "lazygit";
+
+  group = "git";
+  input = "common";
+
+  on = {
+    home = config: {
+      programs.lazygit = {
+        enable = true;
+      };
+    };
+  };
+}

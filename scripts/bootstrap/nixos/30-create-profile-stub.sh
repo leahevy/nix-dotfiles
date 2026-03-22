@@ -310,23 +310,25 @@ fi
 
     extraSettings = { };
 
-    configuration = args@{
-      lib,
-      pkgs,
-      pkgs-unstable,
-      funcs,
-      helpers,
-      defs,
-      self,
-      ...
-    }: context@{ config, options, ... }: {
+    on = {
+      system = args@{
+        lib,
+        pkgs,
+        pkgs-unstable,
+        funcs,
+        helpers,
+        defs,
+        self,
+        ...
+      }: context@{ config, options, ... }: {
 EOF
 
   if [[ -n "$HARDWARE_SETTINGS" ]]; then
-    echo -e "$HARDWARE_SETTINGS" | sed 's/^/      /' >> "$PROFILE_DIR/$HOSTNAME.nix"
+    echo -e "$HARDWARE_SETTINGS" | sed 's/^/        /' >> "$PROFILE_DIR/$HOSTNAME.nix"
   fi
 
   cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
+      };
     };
   };
 }

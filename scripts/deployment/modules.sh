@@ -38,7 +38,7 @@ SUBCOMMANDS:
     help                    Show this help message
 
 MODULE FORMAT:
-    INPUT.GROUP.MODULE.NAMESPACE   Example: common.shell.bash.home
+    INPUT.GROUP.MODULE   Example: common.shell.bash
 EOF
 }
 
@@ -46,7 +46,7 @@ subcommand_list() {
   local show_active_only=false
   local show_inactive_only=false
   local override_profile=""
-  
+
   while [[ $# -gt 0 ]]; do
     case $1 in
       --active)
@@ -80,32 +80,32 @@ subcommand_list() {
         ;;
     esac
   done
-  
+
   if [[ "$show_active_only" == "true" && "$show_inactive_only" == "true" ]]; then
     echo -e "${RED}Error: --active and --inactive cannot be used together${RESET}" >&2
     exit 1
   fi
-  
+
   if [[ "${force_nixos:-false}" == "true" && "${force_standalone:-false}" == "true" ]]; then
     echo -e "${RED}Error: --nixos and --standalone cannot be used together${RESET}" >&2
     exit 1
   fi
-  
+
   echo -e "${YELLOW}Fetching module registry...${RESET}"
   echo
   local registry_json
   registry_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#modules")"
-  
+
   if [[ $? -ne 0 || -z "$registry_json" || "$registry_json" == "null" ]]; then
     echo -e "${RED}Error: Failed to fetch module registry${RESET}" >&2
     exit 1
   fi
-  
+
   local profile
   if [[ -n "$override_profile" ]]; then
     profile="$override_profile"
     local base_profile="${profile%--*}"
-    
+
     if [[ "${force_standalone:-false}" == "true" ]]; then
       local full_profile="$(construct_profile_name "$base_profile")"
       local user_exists="$(nix eval --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users" --apply "users: builtins.hasAttr \"$full_profile\" users" 2>/dev/null || echo "false")"
@@ -132,116 +132,75 @@ subcommand_list() {
     profile="$(retrieve_active_profile)"
   fi
   local base_profile="${profile%--*}"
-  
+
   local active_modules=""
-  local host_modules=""
-  local user_modules=""
-  
+
   if [[ -n "$override_profile" ]]; then
     local full_profile="$(construct_profile_name "$base_profile")"
   else
     local full_profile="$profile"
   fi
-  
+
   if [[ "${force_standalone:-false}" == "true" ]]; then
     active_modules="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>/dev/null || echo '{}')"
-    user_modules="$active_modules"
   elif [[ -e /etc/NIXOS ]] || [[ "${force_nixos:-false}" == "true" ]]; then
-    host_modules="$(timeout 30s nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.modules" 2>/dev/null || echo '{}')"
-    user_modules="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.modules" 2>/dev/null || echo '{}')"
+    active_modules="$(timeout 30s nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.modules" 2>/dev/null || echo '{}')"
   else
     active_modules="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>/dev/null || echo '{}')"
-    user_modules="$active_modules"
   fi
-  
-  local system_modules=()
-  local home_modules=()
-  
-  for module_type in "system" "home"; do
-    while IFS='|' read -r module_id description; do
-      [[ -z "$module_id" ]] && continue
-      
-      local input_name="${module_id%%.*}"
-      local rest="${module_id#*.}"
-      local group_name="${rest%%.*}"
-      local rest2="${rest#*.}"
-      local module_name="${rest2%%.*}"
 
-      local is_active=false
+  local all_modules=()
 
-      if [[ "$module_type" == "system" && -n "${host_modules:-}" && "$host_modules" != "{}" ]]; then
-        local module_active="$(echo "$host_modules" | jq -r --arg in "$input_name" --arg grp "$group_name" --arg mod "$module_name" '.[$in][$grp][$mod] // false | if type == "boolean" then . elif type == "object" then true else false end' 2>/dev/null || echo "false")"
-        if [[ "$module_active" == "true" ]]; then
-          is_active=true
-        fi
-      elif [[ "$module_type" == "home" && -n "${user_modules:-$active_modules}" ]]; then
-        local check_modules="${user_modules:-$active_modules}"
-        local module_active="$(echo "$check_modules" | jq -r --arg in "$input_name" --arg grp "$group_name" --arg mod "$module_name" '.[$in][$grp][$mod] // false | if type == "boolean" then . elif type == "object" then true else false end' 2>/dev/null || echo "false")"
-        if [[ "$module_active" == "true" ]]; then
-          is_active=true
-        fi
+  while IFS='|' read -r module_id description; do
+    [[ -z "$module_id" ]] && continue
+
+    local input_name="${module_id%%.*}"
+    local rest="${module_id#*.}"
+    local group_name="${rest%%.*}"
+    local module_name="${rest#*.}"
+
+    local is_active=false
+
+    if [[ -n "${active_modules:-}" && "$active_modules" != "{}" ]]; then
+      local module_active="$(echo "$active_modules" | jq -r --arg in "$input_name" --arg grp "$group_name" --arg mod "$module_name" '.[$in][$grp][$mod] // false | if type == "boolean" then . elif type == "object" then true else false end' 2>/dev/null || echo "false")"
+      if [[ "$module_active" == "true" ]]; then
+        is_active=true
       fi
-      
-      if [[ "$show_active_only" == "true" && "$is_active" != "true" ]]; then
-        continue
-      fi
-      if [[ "$show_inactive_only" == "true" && "$is_active" == "true" ]]; then
-        continue
-      fi
-      
-      local status_indicator=""
-      if [[ -n "${host_modules:-}${user_modules:-$active_modules}" ]]; then
-        if [[ "$is_active" == "true" ]]; then
-          status_indicator="\033[1;32m●\033[0m "
-        else
-          status_indicator="\033[1;31m○\033[0m "
-        fi
-      fi
-      
-      local formatted_line="$(printf "  %b\033[1;37m%-40s\033[0m %s" "$status_indicator" "$module_id" "$description")"
-      if [[ "$module_type" == "system" ]]; then
-        system_modules+=("$formatted_line")
+    fi
+
+    if [[ "$show_active_only" == "true" && "$is_active" != "true" ]]; then
+      continue
+    fi
+    if [[ "$show_inactive_only" == "true" && "$is_active" == "true" ]]; then
+      continue
+    fi
+
+    local status_indicator=""
+    if [[ -n "${active_modules:-}" ]]; then
+      if [[ "$is_active" == "true" ]]; then
+        status_indicator="\033[1;32m●\033[0m "
       else
-        home_modules+=("$formatted_line")
+        status_indicator="\033[1;31m○\033[0m "
       fi
-    done < <(echo "$registry_json" | jq -r --arg mt "$module_type" '
-      to_entries[] as $input |
-      $input.key as $input_name |
-      $input.value | to_entries[] as $modtype |
-      $modtype.key as $modtype_name |
-      $modtype.value | to_entries[] as $group |
-      $group.key as $group_name |
-      $group.value | to_entries[] as $module |
-      $module.key as $module_name |
-      $module.value as $module_data |
-      select($module_data.moduleType == $mt) |
-      "\($input_name).\($group_name).\($module_name).\($modtype_name)|\($module_data.description // "No description")"
-    ')
-  done
-  
-  if [[ ${#system_modules[@]} -gt 0 ]]; then
-    local show_system_modules=false
-    if [[ "${force_nixos:-false}" == "true" ]]; then
-      show_system_modules=true
-    elif [[ -e /etc/NIXOS ]]; then
-      show_system_modules=true
     fi
-    
-    if [[ "$show_system_modules" == "true" ]]; then
-      echo -e "${RED}System Modules:${RESET}"
-      printf "%s\n" "${system_modules[@]}"
-    fi
-  fi
-  
-  if [[ ${#home_modules[@]} -gt 0 ]]; then
-    if [[ ${#system_modules[@]} -gt 0 ]]; then
-      echo
-    fi
-    echo -e "${RED}Home Modules:${RESET}"
-    printf "%s\n" "${home_modules[@]}"
-  fi
-  
-  if [[ ${#system_modules[@]} -eq 0 && ${#home_modules[@]} -eq 0 ]]; then
+
+    local formatted_line="$(printf "  %b\033[1;37m%-40s\033[0m %s" "$status_indicator" "$module_id" "$description")"
+    all_modules+=("$formatted_line")
+  done < <(echo "$registry_json" | jq -r '
+    to_entries[] as $input |
+    $input.key as $input_name |
+    $input.value | to_entries[] as $group |
+    $group.key as $group_name |
+    $group.value | to_entries[] as $module |
+    $module.key as $module_name |
+    $module.value as $module_data |
+    "\($input_name).\($group_name).\($module_name)|\($module_data.description // "No description")"
+  ')
+
+  if [[ ${#all_modules[@]} -gt 0 ]]; then
+    echo -e "${RED}Modules:${RESET}"
+    printf "%s\n" "${all_modules[@]}"
+  else
     echo -e "${RED}Error: No modules found matching the specified criteria${RESET}" >&2
     exit 1
   fi
@@ -250,42 +209,39 @@ subcommand_list() {
 subcommand_info() {
   if [[ $# -eq 0 ]]; then
     echo -e "${RED}Error: MODULE argument required${RESET}" >&2
-    echo -e "Usage: ${WHITE}nx modules info INPUT.GROUP.MODULE.NAMESPACE${RESET}" >&2
+    echo -e "Usage: ${WHITE}nx modules info INPUT.GROUP.MODULE${RESET}" >&2
     exit 1
   fi
 
   local module_id="$1"
-  if [[ ! "$module_id" =~ ^[^.]+\.[^.]+\.[^.]+\.[^.]+$ ]]; then
-    echo -e "${RED}Error: Invalid module format. Expected: INPUT.GROUP.MODULE.NAMESPACE${RESET}" >&2
+  if [[ ! "$module_id" =~ ^[^.]+\.[^.]+\.[^.]+$ ]]; then
+    echo -e "${RED}Error: Invalid module format. Expected: INPUT.GROUP.MODULE${RESET}" >&2
     exit 1
   fi
 
   local input_name="${module_id%%.*}"
   local rest="${module_id#*.}"
   local group_name="${rest%%.*}"
-  local rest2="${rest#*.}"
-  local module_name="${rest2%%.*}"
-  local namespace_name="${rest2#*.}"
+  local module_name="${rest#*.}"
 
   echo -e "${YELLOW}Fetching module information...${RESET}"
   echo
   local module_info
-  module_info="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#modules.$input_name.$namespace_name.$group_name.$module_name" 2>/dev/null || echo "null")"
-  
+  module_info="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#modules.$input_name.$group_name.$module_name" 2>/dev/null || echo "null")"
+
   if [[ "$module_info" == "null" ]]; then
     echo -e "${RED}Error: Module not found: ${WHITE}$module_id${RESET}" >&2
     exit 1
   fi
-  
+
   echo
   echo -e "${GREEN}Module Information: ${WHITE}$module_id${RESET}"
   echo
-  
+
   local name=$(echo "$module_info" | jq -r '.name // "unknown"')
   local description=$(echo "$module_info" | jq -r '.description // "No description"')
   local group=$(echo "$module_info" | jq -r '.group // "unknown"')
   local input=$(echo "$module_info" | jq -r '.input // "unknown"')
-  local moduleType=$(echo "$module_info" | jq -r '.moduleType // "unknown"')
   local path=$(echo "$module_info" | jq -r '.path // "unknown"')
   local hasInit=$(echo "$module_info" | jq -r '.hasInit // false')
   local hasOptions=$(echo "$module_info" | jq -r '.hasOptions // false')
@@ -295,7 +251,6 @@ subcommand_info() {
   echo -e "  ${GREEN}description:${RESET} ${RED}\"$description\"${RESET}"
   echo -e "  ${GREEN}group:${RESET} ${RED}\"$group\"${RESET}"
   echo -e "  ${GREEN}input:${RESET} ${RED}\"$input\"${RESET}"
-  echo -e "  ${GREEN}moduleType:${RESET} ${RED}\"$moduleType\"${RESET}"
   echo -e "  ${GREEN}path:${RESET} ${RED}\"$path\"${RESET}"
   echo -e "  ${GREEN}hasInit:${RESET} ${YELLOW}$hasInit${RESET}"
   echo -e "  ${GREEN}hasOptions:${RESET} ${YELLOW}$hasOptions${RESET}"
@@ -315,24 +270,22 @@ subcommand_info() {
 subcommand_edit() {
   if [[ $# -eq 0 ]]; then
     echo -e "${RED}Error: MODULE argument required${RESET}" >&2
-    echo -e "Usage: ${WHITE}nx modules edit INPUT.GROUP.MODULE.NAMESPACE${RESET}" >&2
+    echo -e "Usage: ${WHITE}nx modules edit INPUT.GROUP.MODULE${RESET}" >&2
     exit 1
   fi
 
   local module_id="$1"
-  if [[ ! "$module_id" =~ ^[^.]+\.[^.]+\.[^.]+\.[^.]+$ ]]; then
-    echo -e "${RED}Error: Invalid module format. Expected: INPUT.GROUP.MODULE.NAMESPACE${RESET}" >&2
+  if [[ ! "$module_id" =~ ^[^.]+\.[^.]+\.[^.]+$ ]]; then
+    echo -e "${RED}Error: Invalid module format. Expected: INPUT.GROUP.MODULE${RESET}" >&2
     exit 1
   fi
 
   local input_name="${module_id%%.*}"
   local rest="${module_id#*.}"
   local group_name="${rest%%.*}"
-  local rest2="${rest#*.}"
-  local module_name="${rest2%%.*}"
-  local namespace_name="${rest2#*.}"
-  
-  local core_inputs=("common" "linux" "darwin" "groups" "build" "config" "profile" "themes")
+  local module_name="${rest#*.}"
+
+  local core_inputs=("common" "linux" "darwin" "groups" "build" "config" "profile" "themes" "overlays")
   local input_allowed=false
   for allowed_input in "${core_inputs[@]}"; do
     if [[ "$input_name" == "$allowed_input" ]]; then
@@ -340,12 +293,12 @@ subcommand_edit() {
       break
     fi
   done
-  
+
   if [[ "$input_allowed" != "true" ]]; then
     echo -e "${RED}Error: Module editing only allowed for core inputs: ${WHITE}${core_inputs[*]}${RESET}" >&2
     exit 1
   fi
-  
+
   local base_path
   if [[ "$input_name" == "config" ]]; then
     base_path="$CONFIG_DIR"
@@ -354,9 +307,9 @@ subcommand_edit() {
   else
     base_path="$PWD/src/$input_name"
   fi
-  
-  local target_file="$base_path/modules/$namespace_name/$group_name/$module_name/$module_name.nix"
-  
+
+  local target_file="$base_path/modules/$group_name/$module_name.nix"
+
   local editor="${EDITOR:-nano}"
   echo -e "Opening ${WHITE}$target_file${RESET} with ${WHITE}$editor${RESET}..."
   "$editor" "$target_file"
@@ -365,7 +318,7 @@ subcommand_edit() {
 subcommand_config() {
   local override_profile=""
   local override_arch=""
-  
+
   while [[ $# -gt 0 ]]; do
     case $1 in
       --profile)
@@ -399,12 +352,12 @@ subcommand_config() {
         ;;
     esac
   done
-  
+
   if [[ "${force_nixos:-false}" == "true" && "${force_standalone:-false}" == "true" ]]; then
     echo -e "${RED}Error: --nixos and --standalone cannot be used together${RESET}" >&2
     exit 1
   fi
-  
+
   local profile
   if [[ -n "$override_profile" ]]; then
     profile="$override_profile"
@@ -412,7 +365,7 @@ subcommand_config() {
     profile="$(retrieve_active_profile)"
   fi
   local base_profile="${profile%--*}"
-  
+
   local arch
   if [[ -n "$override_arch" ]]; then
     arch="$override_arch"
@@ -441,14 +394,14 @@ subcommand_config() {
       fi
     fi
   fi
-  
+
   echo -e "${YELLOW}Fetching configuration for profile ${WHITE}$base_profile${YELLOW} on ${WHITE}$arch${RESET}"
   echo
-  
+
   format_config_yaml() {
     local config_json="$1"
     local title="$2"
-    
+
     echo -e "${RED}$title:${RESET}"
     echo "$config_json" | jq -r \
       --arg yellow "$(echo -e "$YELLOW")" \
@@ -466,7 +419,6 @@ subcommand_config() {
         elif v == null then $gray + "null" + $reset
         elif (v | type) == "string" then
           if (v | test("^/nix/store/[a-z0-9]+-")) then
-            # Handle Nix store paths - show as /nix/store/NAME
             (v | gsub("^/nix/store/[a-z0-9]+-"; "") | gsub("-[0-9]+.*$"; "") as $pkg |
              $gray + "/nix/store/" + $cyan + $pkg + $reset)
           else
@@ -479,10 +431,10 @@ subcommand_config() {
           end
         else $white + (v | tostring) + $reset
         end;
-      
+
       def format_nested_object(obj; depth):
         if depth > 5 then
-          $white + "{...}" + $reset  # Too deep, show ellipsis
+          $white + "{...}" + $reset
         else
           obj | to_entries[] |
           if (.value | type) == "object" then
@@ -496,7 +448,7 @@ subcommand_config() {
             (("  " * depth) + $green + .key + ":" + $reset + " " + format_leaf_value(.value))
           end
         end;
-      
+
       def walk_inputs(obj):
         [obj | to_entries[] as $input |
         $input.key as $input_name |
@@ -525,12 +477,12 @@ subcommand_config() {
         else
           .value
         end;
-      
+
       walk_inputs(.)'
   }
-  
+
   local full_profile="${base_profile}--${arch}"
-  
+
   if [[ "${force_standalone:-false}" == "true" ]]; then
     if ! nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" >/dev/null 2>&1; then
       local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>&1)"
@@ -539,25 +491,16 @@ subcommand_config() {
       return 1
     fi
     local config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>/dev/null)"
-    format_config_yaml "$config_json" "Standalone User Modules"
+    format_config_yaml "$config_json" "Modules"
   elif [[ -e /etc/NIXOS ]] || [[ "${force_nixos:-false}" == "true" ]]; then
     if ! nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.modules" >/dev/null 2>&1; then
       local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.modules" 2>&1)"
-      echo -e "${RED}Error: Failed to evaluate host system modules configuration${RESET}" >&2
+      echo -e "${RED}Error: Failed to evaluate modules configuration${RESET}" >&2
       echo -e "${WHITE}Details: $error_output${RESET}" >&2
       return 1
     fi
-    local host_config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.modules" 2>/dev/null)"
-    format_config_yaml "$host_config_json" "Host System Modules"
-    echo
-    if ! nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.modules" >/dev/null 2>&1; then
-      local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.modules" 2>&1)"
-      echo -e "${RED}Error: Failed to evaluate main user modules configuration${RESET}" >&2
-      echo -e "${WHITE}Details: $error_output${RESET}" >&2
-      return 1
-    fi
-    local user_config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.modules" 2>/dev/null)"
-    format_config_yaml "$user_config_json" "Main User Modules"
+    local config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.modules" 2>/dev/null)"
+    format_config_yaml "$config_json" "Modules"
   else
     if ! nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" >/dev/null 2>&1; then
       local error_output="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>&1)"
@@ -566,7 +509,7 @@ subcommand_config() {
       return 1
     fi
     local config_json="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#users.$full_profile.modules" 2>/dev/null)"
-    format_config_yaml "$config_json" "Standalone User Modules"
+    format_config_yaml "$config_json" "Modules"
   fi
 }
 

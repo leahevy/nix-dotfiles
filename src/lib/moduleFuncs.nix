@@ -97,7 +97,11 @@ rec {
       self: args: subpath:
       let
         filePath =
-          helpers.resolveInputFromInput self.moduleInputName + "/" + self.moduleBasePath + "/" + subpath;
+          helpers.resolveInputFromInput self.moduleInputName
+          + "/"
+          + self.moduleBasePath
+          + ".nix.d/"
+          + subpath;
         importArgs = args // {
           self = self;
         };
@@ -118,19 +122,23 @@ rec {
       in
       fileData.custom or { };
 
-    # Import nix file from same module and apply context to configuration function
-    # Usage: self.importFile args context "file.nix"
+    # Import nix file from same module and return its on.* functions
+    # Usage: self.importFile args "file.nix"
     importFile =
-      self: args: context: subpath:
+      self: args: subpath:
       let
         filePath =
-          helpers.resolveInputFromInput self.moduleInputName + "/" + self.moduleBasePath + "/" + subpath;
+          helpers.resolveInputFromInput self.moduleInputName
+          + "/"
+          + self.moduleBasePath
+          + ".nix.d/"
+          + subpath;
         importArgs = args // {
           self = self;
         };
         imported = import filePath importArgs;
       in
-      if imported ? configuration then imported.configuration context else { };
+      if imported ? on then imported.on else { };
 
     # Import module structure from same input
     # Usage: self.importFileFromOtherModuleSameInput { inherit args; modulePath = "desktop-modules.web-app"; subpath = "file.nix"; }
@@ -143,45 +151,19 @@ rec {
         subpath ? null,
       }:
       let
-        currentNamespace =
-          if self.moduleBasePath != null then
-            let
-              pathParts = lib.splitString "/" self.moduleBasePath;
-              namespaceIndex = lib.findFirst (i: (lib.elemAt pathParts i) == "modules") null (
-                lib.range 0 ((lib.length pathParts) - 1)
-              );
-            in
-            if namespaceIndex != null && (namespaceIndex + 1) < lib.length pathParts then
-              let
-                detected = lib.elemAt pathParts (namespaceIndex + 1);
-              in
-              if detected == "home" || detected == "system" then
-                detected
-              else
-                throw "Invalid module namespace '${detected}' in path: ${self.moduleBasePath}. Expected 'home' or 'system'"
-            else
-              throw "Cannot determine module namespace from path: ${self.moduleBasePath}. Expected '.../modules/{home|system}/...'"
-          else
-            throw "Module basePath is null - cannot determine namespace for importFileFromOtherModuleSameInput";
-
-        moduleType = currentNamespace;
         inputPath = helpers.resolveInputFromInput self.moduleInputName;
 
         modulePathParts = lib.splitString "." modulePath;
         groupName = lib.head modulePathParts;
         moduleName = lib.last modulePathParts;
 
-        fileName = if subpath == null then "${moduleName}.nix" else subpath;
         filePath =
-          inputPath
-          + "/modules/"
-          + moduleType
-          + "/"
-          + (lib.concatStringsSep "/" modulePathParts)
-          + "/"
-          + fileName;
+          if subpath == null then
+            inputPath + "/modules/${groupName}/${moduleName}.nix"
+          else
+            inputPath + "/modules/${groupName}/${moduleName}.nix.d/${subpath}";
 
-        moduleDir = "modules/${moduleType}/" + (lib.concatStringsSep "/" modulePathParts);
+        moduleDir = "modules/${groupName}/${moduleName}";
         baseModuleContext = {
           inputs = self.inputs;
           variables = self.variables;
@@ -190,19 +172,11 @@ rec {
           moduleInput = inputPath;
           moduleInputName = self.moduleInputName;
           settings = { };
-        }
-        // (
-          if moduleType == "home" then
-            {
-              host = self.host;
-              user = self.user;
-            }
-          else
-            {
-              host = self.host;
-              users = self.users;
-            }
-        );
+          host = self.host or { };
+          user = self.user or null;
+          users = self.users or { };
+          processedModules = self.processedModules or { };
+        };
 
         enhancedContext = buildHierarchicalFunctions baseModuleContext moduleDir;
         moduleSettings = self.getModuleConfig modulePath;
@@ -228,45 +202,19 @@ rec {
         subpath ? null,
       }:
       let
-        currentNamespace =
-          if self.moduleBasePath != null then
-            let
-              pathParts = lib.splitString "/" self.moduleBasePath;
-              namespaceIndex = lib.findFirst (i: (lib.elemAt pathParts i) == "modules") null (
-                lib.range 0 ((lib.length pathParts) - 1)
-              );
-            in
-            if namespaceIndex != null && (namespaceIndex + 1) < lib.length pathParts then
-              let
-                detected = lib.elemAt pathParts (namespaceIndex + 1);
-              in
-              if detected == "home" || detected == "system" then
-                detected
-              else
-                throw "Invalid module namespace '${detected}' in path: ${self.moduleBasePath}. Expected 'home' or 'system'"
-            else
-              throw "Cannot determine module namespace from path: ${self.moduleBasePath}. Expected '.../modules/{home|system}/...'"
-          else
-            throw "Module basePath is null - cannot determine namespace for importFileFromOtherModuleOtherInput";
-
-        moduleType = currentNamespace;
         inputPath = helpers.resolveInputFromInput inputName;
 
         modulePathParts = lib.splitString "." modulePath;
         groupName = lib.head modulePathParts;
         moduleName = lib.last modulePathParts;
 
-        fileName = if subpath == null then "${moduleName}.nix" else subpath;
         filePath =
-          inputPath
-          + "/modules/"
-          + moduleType
-          + "/"
-          + (lib.concatStringsSep "/" modulePathParts)
-          + "/"
-          + fileName;
+          if subpath == null then
+            inputPath + "/modules/${groupName}/${moduleName}.nix"
+          else
+            inputPath + "/modules/${groupName}/${moduleName}.nix.d/${subpath}";
 
-        moduleDir = "modules/${moduleType}/" + (lib.concatStringsSep "/" modulePathParts);
+        moduleDir = "modules/${groupName}/${moduleName}";
         baseModuleContext = {
           inputs = self.inputs;
           variables = self.variables;
@@ -275,19 +223,11 @@ rec {
           moduleInput = inputPath;
           moduleInputName = inputName;
           settings = { };
-        }
-        // (
-          if moduleType == "home" then
-            {
-              host = self.host;
-              user = self.user;
-            }
-          else
-            {
-              host = self.host;
-              users = self.users;
-            }
-        );
+          host = self.host or { };
+          user = self.user or null;
+          users = self.users or { };
+          processedModules = self.processedModules or { };
+        };
 
         enhancedContext = buildHierarchicalFunctions baseModuleContext moduleDir;
         moduleSettings = self.${inputName}.getModuleConfig modulePath;
@@ -303,22 +243,14 @@ rec {
 
   };
 
-  userFuncs = { };
-
-  hostFuncs = { };
-
   # Create context-aware function wrapper with error handling
-  # Usage: createContextFunctions $INPUTNAME $NAMESPACE $MODULECONTEXT $MODULEBASEPATH
+  # Usage: createContextFunctions $INPUTNAME $MODULECONTEXT $MODULEBASEPATH
   createContextFunctions =
-    inputName: namespace: moduleContext: moduleBasePath:
+    inputName: moduleContext: moduleBasePath:
     let
-      currentNamespace = namespace;
-      isStandalone = moduleContext.user.isStandalone or false;
-
       fileFunctions = generateFileFunctions inputName moduleBasePath;
-      moduleFunctions = generateModuleFunctions inputName namespace moduleContext;
-      sameModuleFunctions = generateSameModuleFunctions inputName namespace moduleContext moduleBasePath;
-
+      moduleFunctions = generateModuleFunctions inputName moduleContext;
+      sameModuleFunctions = generateSameModuleFunctions inputName moduleContext moduleBasePath;
     in
     fileFunctions // moduleFunctions // sameModuleFunctions;
 
@@ -327,55 +259,17 @@ rec {
   buildHierarchicalFunctions =
     moduleContext: moduleBasePath:
     let
-      currentNamespace =
-        if moduleBasePath != null then
-          let
-            pathParts = lib.splitString "/" moduleBasePath;
-            namespaceIndex = lib.findFirst (i: (lib.elemAt pathParts i) == "modules") null (
-              lib.range 0 ((lib.length pathParts) - 1)
-            );
-          in
-          if namespaceIndex != null && (namespaceIndex + 1) < lib.length pathParts then
-            let
-              detected = lib.elemAt pathParts (namespaceIndex + 1);
-            in
-            if detected == "home" || detected == "system" then
-              detected
-            else
-              throw "Invalid module namespace '${detected}' in path: ${moduleBasePath}. Expected 'home' or 'system'"
-          else
-            throw "Cannot determine module namespace from path: ${moduleBasePath}. Expected '.../modules/{home|system}/...'"
-        else
-          throw "Module basePath is null - cannot determine namespace";
-
       currentInputName = moduleContext.moduleInputName;
       isStandalone = moduleContext.user.isStandalone or false;
 
       pathParts = lib.splitString "/" moduleBasePath;
-      moduleGroupName = if builtins.length pathParts >= 3 then builtins.elemAt pathParts 2 else null;
-      moduleModuleName = if builtins.length pathParts >= 4 then builtins.elemAt pathParts 3 else null;
+      moduleGroupName = if builtins.length pathParts >= 2 then builtins.elemAt pathParts 1 else null;
+      moduleModuleName = if builtins.length pathParts >= 3 then builtins.elemAt pathParts 2 else null;
 
-      contextDefaults =
-        createContextFunctions currentInputName currentNamespace moduleContext
-          moduleBasePath;
-
-      hostFunctions = createContextFunctions currentInputName "host" moduleContext moduleBasePath;
-      userFunctions = createContextFunctions currentInputName "user" moduleContext moduleBasePath;
+      contextDefaults = createContextFunctions currentInputName moduleContext moduleBasePath;
 
       inputSpecificFunctions = lib.mapAttrs (
-        inputName: _: createContextFunctions inputName currentNamespace moduleContext moduleBasePath
-      ) additionalInputs;
-
-      inputNamespaceFunctions = lib.mapAttrs (
-        inputName: _:
-        let
-          inputSpecificFuncs = inputSpecificFunctions.${inputName} or { };
-          namespaceFuncs = {
-            host = createContextFunctions inputName "host" moduleContext moduleBasePath;
-            user = createContextFunctions inputName "user" moduleContext moduleBasePath;
-          };
-        in
-        inputSpecificFuncs // namespaceFuncs
+        inputName: _: createContextFunctions inputName moduleContext moduleBasePath
       ) additionalInputs;
 
     in
@@ -435,8 +329,8 @@ rec {
       # Usage: self . pkgs-unstable { overlays = [...]; }
       pkgs-unstable = createPkgsImport moduleContext.inputs.nixpkgs-unstable;
 
-      host = (moduleContext.host or { }) // hostFunctions;
-      user = (moduleContext.user or { }) // userFunctions;
+      host = if moduleContext ? host && moduleContext.host != null then moduleContext.host else { };
+      user = if moduleContext ? user && moduleContext.user != null then moduleContext.user else { };
 
       importFileData =
         args: subpath:
@@ -445,7 +339,7 @@ rec {
             helpers.resolveInputFromInput moduleContext.moduleInputName
             + "/"
             + moduleContext.moduleBasePath
-            + "/"
+            + ".nix.d/"
             + subpath;
           importArgs = args // {
             self = finalContext;
@@ -481,7 +375,7 @@ rec {
             importFileCustom
             ;
         })
-        // inputNamespaceFunctions
+        // inputSpecificFunctions
         // {
           inherit (moduleContext)
             settings
@@ -502,11 +396,7 @@ rec {
 
           isEnabled =
             let
-              processedModules =
-                if currentNamespace == "home" || currentNamespace == "standalone" then
-                  moduleContext.user.processedModules or moduleContext.user.modules or { }
-                else
-                  moduleContext.host.processedModules or { };
+              processedModules = moduleContext.processedModules or { };
             in
             moduleGroupName != null
             && moduleModuleName != null
@@ -520,37 +410,6 @@ rec {
   hierarchicalInputFuncs =
     moduleContext: moduleBasePath: buildHierarchicalFunctions moduleContext moduleBasePath;
 
-  # Validate module context access patterns
-  # Usage: validateContext $MODULECONTEXT $TARGETNAMESPACE
-  validateContext =
-    moduleContext: targetNamespace:
-    let
-      currentNamespace = if moduleContext ? user then "home" else "system";
-      isStandalone = moduleContext.user.isStandalone or false;
-    in
-    {
-      canAccessNamespace = true;
-      shouldReturnSafeDefaults = isStandalone;
-
-      resolveActualNamespace =
-        if isStandalone then
-          "standalone"
-        else if targetNamespace == "host" && currentNamespace == "system" then
-          "system"
-        else if targetNamespace == "user" && currentNamespace == "home" then
-          "home"
-        else if targetNamespace == "host" then
-          "system"
-        else if targetNamespace == "user" then
-          "home"
-        else if targetNamespace == "system" then
-          "system"
-        else if targetNamespace == "home" then
-          "home"
-        else
-          currentNamespace;
-    };
-
   # Generate file access functions for specific input and module path
   # Usage: generateFileFunctions $INPUTNAME $MODULEBASEPATH
   generateFileFunctions = inputName: moduleBasePath: {
@@ -558,7 +417,7 @@ rec {
       subPath:
       let
         relativePath =
-          if moduleBasePath != null then "${moduleBasePath}/files/${subPath}" else "files/${subPath}";
+          if moduleBasePath != null then "${moduleBasePath}.nix.d/${subPath}" else "files/${subPath}";
         fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
       in
       if builtins.pathExists fullPath then
@@ -566,12 +425,14 @@ rec {
       else
         throw "File not found: ${inputName}/${relativePath}";
 
-    # Get absolute path to secret file in input (module-relative when moduleBasePath provided)
     secret =
       subPath:
       let
         relativePath =
-          if moduleBasePath != null then "${moduleBasePath}/secrets/${subPath}" else "secrets/${subPath}";
+          if moduleBasePath != null then
+            "${moduleBasePath}.nix.d/secrets/${subPath}"
+          else
+            "secrets/${subPath}";
         fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
       in
       if builtins.pathExists fullPath then
@@ -579,7 +440,6 @@ rec {
       else
         throw "Secret file not found: ${inputName}/${relativePath}";
 
-    # Get absolute path to file in input root files/ directory
     filesPath =
       subPath:
       let
@@ -590,7 +450,6 @@ rec {
       else
         throw "Root file not found: ${inputName}/files/${subPath}";
 
-    # Get absolute path to secret in input root secrets/ directory
     secretsPath =
       subPath:
       let
@@ -601,7 +460,6 @@ rec {
       else
         throw "Root secret not found: ${inputName}/secrets/${subPath}";
 
-    # Get relative path to file in input
     fileRel =
       subPath:
       let
@@ -612,7 +470,6 @@ rec {
       else
         throw "File not found: ${inputName}/files/${subPath}";
 
-    # Get relative path to secret file in input
     secretRel =
       subPath:
       let
@@ -623,12 +480,11 @@ rec {
       else
         throw "Secret file not found: ${inputName}/secrets/${subPath}";
 
-    # Create symlink to file in input (module-relative when moduleBasePath provided)
     symlinkFile =
       config: subPath:
       let
         relativePath =
-          if moduleBasePath != null then "${moduleBasePath}/files/${subPath}" else "files/${subPath}";
+          if moduleBasePath != null then "${moduleBasePath}.nix.d/${subPath}" else "files/${subPath}";
         fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
       in
       if builtins.pathExists fullPath then
@@ -639,12 +495,14 @@ rec {
       else
         throw "File not found: ${inputName}/${relativePath}";
 
-    # Create symlink to secret file in input (module-relative when moduleBasePath provided)
     symlinkSecret =
       config: subPath:
       let
         relativePath =
-          if moduleBasePath != null then "${moduleBasePath}/secrets/${subPath}" else "secrets/${subPath}";
+          if moduleBasePath != null then
+            "${moduleBasePath}.nix.d/secrets/${subPath}"
+          else
+            "secrets/${subPath}";
         fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
       in
       if builtins.pathExists fullPath then
@@ -659,34 +517,9 @@ rec {
   # Generate module query functions for specific input and namespace
   # Usage: generateModuleFunctions $INPUTNAME $REQUESTEDNAMESPACE $MODULECONTEXT
   generateModuleFunctions =
-    inputName: requestedNamespace: moduleContext:
+    inputName: moduleContext:
     let
-      validation = validateContext moduleContext requestedNamespace;
-      actualNamespace = validation.resolveActualNamespace;
-
-      getModulesForNamespace =
-        ns:
-        if ns == "standalone" then
-          if moduleContext ? user && moduleContext.user != null then
-            moduleContext.user.processedModules or moduleContext.user.modules or { }
-          else
-            { }
-        else if ns == "home" then
-          if moduleContext ? user && moduleContext.user != null then
-            moduleContext.user.processedModules or moduleContext.user.modules or { }
-          else if moduleContext ? host && moduleContext.host ? mainUser then
-            moduleContext.host.mainUser.processedModules or moduleContext.host.mainUser.modules or { }
-          else
-            { }
-        else if ns == "system" then
-          if moduleContext ? host then
-            moduleContext.host.processedModules or moduleContext.host.modules or { }
-          else
-            { }
-        else
-          throw "Invalid namespace: ${ns}";
-
-      modules = getModulesForNamespace actualNamespace;
+      processedModules = moduleContext.processedModules or { };
 
       resolveModulePath =
         modulePath:
@@ -698,54 +531,43 @@ rec {
           inherit fullPath pathParts;
         };
 
-      # Check if module is enabled
       isModuleEnabled =
         modulePath:
         let
           resolved = resolveModulePath modulePath;
-          completeModules =
-            if actualNamespace == "system" && moduleContext ? host && moduleContext.host ? processedModules then
-              moduleContext.host.processedModules
-            else
-              getModulesForNamespace actualNamespace;
         in
-        lib.hasAttrByPath resolved.fullPath completeModules;
+        lib.hasAttrByPath resolved.fullPath processedModules;
 
-      # Get module config
       getModuleConfig =
         modulePath:
         let
           resolved = resolveModulePath modulePath;
-          completeModules =
-            if actualNamespace == "system" && moduleContext ? host && moduleContext.host ? processedModules then
-              moduleContext.host.processedModules
-            else
-              getModulesForNamespace actualNamespace;
         in
-        lib.attrByPath resolved.fullPath { } completeModules;
+        lib.attrByPath resolved.fullPath { } processedModules;
 
-      # Require module config
       requireModuleConfig =
         modulePath:
         let
           resolved = resolveModulePath modulePath;
-          completeModules =
-            if actualNamespace == "system" && moduleContext ? host && moduleContext.host ? processedModules then
-              moduleContext.host.processedModules
-            else
-              getModulesForNamespace actualNamespace;
-          config = lib.attrByPath resolved.fullPath { } completeModules;
+          config = lib.attrByPath resolved.fullPath { } processedModules;
         in
         if config != { } then
           config
         else
-          throw "Required module '${inputName}.${modulePath}' is not enabled in ${actualNamespace} namespace";
+          throw "Required module '${inputName}.${modulePath}' is not enabled";
 
       availableThemes =
         let
-          themesDir = moduleContext.inputs.themes + "/modules/home/themes";
+          themesDir = moduleContext.inputs.themes + "/modules/themes";
         in
-        builtins.filter (name: name != "base") (builtins.attrNames (builtins.readDir themesDir));
+        if builtins.pathExists themesDir then
+          builtins.filter (name: name != "base") (
+            map (lib.removeSuffix ".nix") (
+              builtins.filter (lib.hasSuffix ".nix") (builtins.attrNames (builtins.readDir themesDir))
+            )
+          )
+        else
+          [ ];
     in
     {
       inherit
@@ -759,63 +581,34 @@ rec {
   # Generate same module query functions for specific input, namespace and module path
   # Usage: generateSameModuleFunctions $INPUTNAME $REQUESTEDNAMESPACE $MODULECONTEXT $MODULEBASEPATH
   generateSameModuleFunctions =
-    inputName: requestedNamespace: moduleContext: moduleBasePath:
+    inputName: moduleContext: moduleBasePath:
     let
-      validation = validateContext moduleContext requestedNamespace;
-      actualNamespace = validation.resolveActualNamespace;
+      processedModules = moduleContext.processedModules or { };
 
       getModuleNameFromPath =
         basePath:
         let
           parts = lib.splitString "/" basePath;
-          moduleParts = lib.drop 2 parts;
+          moduleParts = lib.drop 1 parts;
         in
         lib.concatStringsSep "." moduleParts;
 
       moduleName = getModuleNameFromPath moduleBasePath;
-
-      getModulesForNamespace =
-        ns:
-        if ns == "standalone" then
-          if moduleContext ? user then
-            moduleContext.user.processedModules or moduleContext.user.modules or { }
-          else
-            { }
-        else if ns == "home" then
-          if moduleContext ? user then
-            moduleContext.user.processedModules or moduleContext.user.modules or { }
-          else if moduleContext ? host && moduleContext.host ? mainUser then
-            moduleContext.host.mainUser.modules or { }
-          else
-            { }
-        else if ns == "system" then
-          if moduleContext ? host then
-            moduleContext.host.processedModules or moduleContext.host.modules or { }
-          else
-            { }
-        else
-          throw "Invalid namespace: ${ns}";
-
-      modules = getModulesForNamespace actualNamespace;
       pathParts = lib.splitString "." moduleName;
       fullPath = [ inputName ] ++ pathParts;
-
     in
     {
-      # Check if same module is enabled in target namespace
-      isSameModuleEnabled = lib.hasAttrByPath fullPath modules;
+      isSameModuleEnabled = lib.hasAttrByPath fullPath processedModules;
 
-      # Get same module config from target namespace
-      getSameModuleConfig = lib.attrByPath fullPath { } modules;
+      getSameModuleConfig = lib.attrByPath fullPath { } processedModules;
 
-      # Require same module config from target namespace
       requireSameModuleConfig =
         let
-          config = lib.attrByPath fullPath { } modules;
+          config = lib.attrByPath fullPath { } processedModules;
         in
         if config != { } then
           config
         else
-          throw "Required same module '${inputName}.${moduleName}' is not enabled in ${actualNamespace} namespace";
+          throw "Required same module '${inputName}.${moduleName}' is not enabled";
     };
 }

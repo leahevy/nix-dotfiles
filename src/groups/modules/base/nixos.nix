@@ -1,0 +1,55 @@
+args@{
+  lib,
+  pkgs,
+  pkgs-unstable,
+  funcs,
+  helpers,
+  defs,
+  self,
+  ...
+}:
+
+{
+  name = "nixos";
+  description = "NixOS base group module";
+
+  group = "base";
+  input = "groups";
+
+  submodules =
+    if self ? isLinux && self.isLinux then
+      {
+        common = {
+          style = {
+            stylix = true;
+          };
+        };
+        linux = {
+          memory = {
+            zram = true;
+          };
+          storage = {
+            smartd = true;
+          };
+          system = {
+            gc = true;
+            auto-upgrades = true;
+            timesyncd = true;
+            tmp = true;
+          };
+          services = {
+            sshd = true;
+            printing = true;
+            scanning = true;
+          };
+          networking = {
+            firewall = true;
+          };
+          boot = {
+            plymouth = true;
+          };
+        };
+      }
+    else
+      { };
+}

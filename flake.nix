@@ -37,6 +37,11 @@
       flake = false;
     };
 
+    overlays = {
+      url = "path:./src/overlays";
+      flake = false;
+    };
+
     config = {
       url = "path:./src/nxconfig";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -144,6 +149,7 @@
         config = inputs.config;
         profile = inputs.profile;
         themes = inputs.themes;
+        overlays = inputs.overlays;
       }
       // configInputs;
 
@@ -270,7 +276,7 @@
       };
 
       registryBuilder = import (inputs.build + "/builders/registry.nix") {
-        inherit lib inputs;
+        inherit lib inputs defs;
       };
 
       hosts = nixosBuilder.extractHosts;

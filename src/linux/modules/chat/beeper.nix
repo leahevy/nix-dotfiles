@@ -1,0 +1,88 @@
+args@{
+  lib,
+  pkgs,
+  pkgs-unstable,
+  funcs,
+  helpers,
+  defs,
+  self,
+  ...
+}:
+{
+  name = "beeper";
+
+  group = "chat";
+  input = "linux";
+
+  unfree = [ "beeper" ];
+
+  settings = {
+    waylandQuirks = false;
+  };
+
+  on = {
+    home =
+      config:
+      let
+        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+        beeperWrapped =
+          if self.settings.waylandQuirks then
+            (pkgs.symlinkJoin {
+              name = "beeper-wrapped";
+              paths = [ pkgs.beeper ];
+              buildInputs = [ pkgs.makeWrapper ];
+              postBuild = ''
+                wrapProgram $out/bin/beeper \
+                  --add-flags "--disable-gpu-compositing"
+
+                rm -f $out/share/applications/beepertexts.desktop
+                mkdir -p $out/share/applications
+                substitute ${pkgs.beeper}/share/applications/beepertexts.desktop \
+                  $out/share/applications/beepertexts.desktop \
+                  --replace "Exec=beeper" "Exec=$out/bin/beeper"
+              '';
+            })
+          else
+            pkgs.beeper;
+      in
+      {
+        home.packages = [
+          beeperWrapped
+        ];
+
+        home.persistence."${self.persist.home}" = {
+          directories = [ ".config/BeeperTexts" ];
+        };
+
+        nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "beeper" ];
+
+        programs.niri = lib.mkIf isNiriEnabled {
+          settings = {
+            binds = with config.lib.niri.actions; {
+              "Mod+Ctrl+Alt+I" = {
+                action = spawn-sh "niri-scratchpad --app-id BeeperTexts --all-windows --spawn beeper";
+                hotkey-overlay.title = "Apps:Chat app";
+              };
+            };
+
+            window-rules = [
+              {
+                matches = [
+                  {
+                    app-id = "BeeperTexts";
+                    title = "Beeper";
+                  }
+                ];
+                min-width = 1500;
+                min-height = 800;
+                open-on-workspace = "scratch";
+                open-floating = true;
+                open-focused = false;
+                block-out-from = "screencast";
+              }
+            ];
+          };
+        };
+      };
+  };
+}

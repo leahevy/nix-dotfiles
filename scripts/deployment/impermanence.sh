@@ -22,22 +22,7 @@ check_impermanence() {
   fi
 }
 
-get_main_username() {
-  local hostname="$(hostname)"
-  local full_profile="$(construct_profile_name "$hostname")"
-  
-  if [[ -d "$CONFIG_DIR" ]]; then
-    local username
-    username="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
-    if [[ -n "$username" && "$username" != "null" && "$username" != "\"null\"" ]]; then
-      echo "${username//\"/}"
-      return 0
-    fi
-  fi
-  
-  echo -e "${RED}Error: could not determine main user name!${RESET}" >&2
-  exit 1
-}
+
 
 show_help() {
   cat << 'EOF'
@@ -72,23 +57,23 @@ setup_impermanence_logging() {
   local check_type="$1"
   local real_user="${SUDO_USER:-$USER}"
   local real_home
-  
+
   if [[ -n "${SUDO_USER:-}" ]]; then
     real_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
   else
     real_home="$HOME"
   fi
-  
+
   local base_log_dir="$real_home/.local/logs/nx/impermanence"
   local log_dir="$base_log_dir/$check_type"
-  
+
   setup_log_directory "$log_dir"
   rotate_logs "$log_dir" 30
-  
+
   local log_file
   log_file="$(create_log_filename "$log_dir" "check")"
   create_log_file "$log_file"
-  
+
   echo "$log_file"
 }
 
@@ -96,7 +81,7 @@ subcommand_check() {
   local show_home_only=false
   local show_system_only=false
   local filters=()
-  
+
   while [[ $# -gt 0 ]]; do
     case $1 in
       --home)
@@ -122,12 +107,12 @@ subcommand_check() {
         ;;
     esac
   done
-  
+
   if [[ "$show_home_only" == "true" && "$show_system_only" == "true" ]]; then
     echo -e "${RED}Error: --home and --system cannot be used together${RESET}" >&2
     exit 1
   fi
-  
+
   local check_type="all"
   if [[ "$show_home_only" == "true" ]]; then
     check_type="home"
@@ -138,11 +123,11 @@ subcommand_check() {
   local log_file
   log_file="$(setup_impermanence_logging "$check_type")"
   local real_user="${SUDO_USER:-$USER}"
-  
+
   log_and_display() {
     echo "$@" | tee -a "$log_file"
   }
-  
+
   local sudo=""
   log_and_display "=== $(date) ==="
   log_and_display "Check: $check_type"
@@ -150,7 +135,7 @@ subcommand_check() {
     log_and_display "Filters: ${filters[*]}"
   fi
   log_and_display ""
-  
+
   log_and_display "Checking for ephemeral files/directories..."
   if [[ "$show_home_only" == "true" ]]; then
     log_and_display "(filtering: /home paths only)"
@@ -236,7 +221,7 @@ subcommand_check() {
   username="$(get_main_username)"
   local persist_system="/persist"
   local persist_user_full="/persist/home/$username"
-  
+
   local user_home="/home/$username"
   if [[ -d "$CONFIG_DIR" ]]; then
     full_profile="$(construct_profile_name "$hostname")"
@@ -246,7 +231,7 @@ subcommand_check() {
       user_home="${home_path//\"/}"
     fi
   fi
-  
+
   local system_dirs=""
   local system_files=""
   local user_dirs=""
@@ -259,33 +244,33 @@ subcommand_check() {
     echo -e "Mount command output appears invalid or empty" >&2
     exit 1
   fi
-  
+
   if [[ -d "$CONFIG_DIR" ]]; then
     local full_profile="$(construct_profile_name "$hostname")"
-    
+
     system_dirs="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".directories" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
-      
+
     system_files="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".files" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
-      
+
     user_dirs="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".directories" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
-      
+
     user_files="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".files" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
   fi
-  
+
   local ephemeral_items=()
   local search_path="/"
   if [[ "$show_home_only" == "true" ]]; then
     search_path="$user_home"
   fi
-  
+
   while IFS= read -r item; do
     local item_path="${item#/}"
     local full_path="/$item_path"
@@ -408,23 +393,23 @@ subcommand_check() {
 
   if [[ ${#ephemeral_items[@]} -gt 0 ]]; then
     log_and_display "⚠️  Ephemeral files/directories (will be lost on reboot):"
-    
+
     local dirs=()
     local files=()
-    
+
     for item in "${ephemeral_items[@]}"; do
       local display_item="$item"
       if [[ "$show_home_only" == "true" && "$item" =~ ^$user_home/ ]]; then
         display_item="${item#$user_home/}"
       fi
-      
+
       if [[ -d "$item" ]]; then
         dirs+=("$display_item/")
       else
         files+=("$display_item")
       fi
     done
-    
+
     local dir_printed=0
     for dir in "${dirs[@]}"; do
       log_and_display "  Dir  -> $dir"
@@ -438,15 +423,15 @@ subcommand_check() {
     for file in "${files[@]}"; do
       log_and_display "  File -> $file"
     done
-    
+
     log_and_display ""
     log_and_display "Add missing files and folders to /persist:"
     log_and_display ""
     log_and_display " For home modules:"
-    log_and_display '  home.persistence."${self.persist}" = { directories = [...], files = [...] };'
+    log_and_display '  home.persistence."${self.persist.home}" = { directories = [...], files = [...] };'
     log_and_display ""
     log_and_display " For system modules:"
-    log_and_display '  environment.persistence."${self.persist}" = { directories = [...], files = [...] };'
+    log_and_display '  environment.persistence."${self.persist.system}" = { directories = [...], files = [...] };'
     log_and_display ""
     log_and_display " Note: Files may not work depending on the program."
     log_and_display "       Specifying directories for bind mounts is generally"
@@ -456,10 +441,10 @@ subcommand_check() {
   else
     log_and_display "All files are properly persisted!"
   fi
-  
+
   log_and_display ""
   log_and_display "=== Check completed at $(date) ==="
-  
+
   echo -e "${GRAY}Log saved to: ${WHITE}$log_file${RESET}" >&2
 }
 
@@ -467,7 +452,7 @@ subcommand_diff() {
   local range=1
   local show_home_only=false
   local show_system_only=false
-  
+
   while [[ $# -gt 0 ]]; do
     case $1 in
       --range)
@@ -497,70 +482,70 @@ subcommand_diff() {
         ;;
     esac
   done
-  
+
   if [[ "$show_home_only" == "true" && "$show_system_only" == "true" ]]; then
     echo -e "${RED}Error: --home and --system cannot be used together${RESET}" >&2
     exit 1
   fi
-  
+
   local check_type="all"
   if [[ "$show_home_only" == "true" ]]; then
     check_type="home"
   elif [[ "$show_system_only" == "true" ]]; then
     check_type="system"
   fi
-  
+
   local real_user="${SUDO_USER:-$USER}"
   local real_home
-  
+
   if [[ -n "${SUDO_USER:-}" ]]; then
     real_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
   else
     real_home="$HOME"
   fi
-  
+
   local log_dir="$real_home/.local/logs/nx/impermanence/$check_type"
-  
+
   if [[ ! -d "$log_dir" ]]; then
     echo -e "${RED}Error: No logs found for check type '${WHITE}$check_type${RED}'${RESET}" >&2
     echo -e "Directory not found: ${WHITE}$log_dir${RESET}" >&2
     exit 1
   fi
-  
+
   local log_files
   readarray -t log_files < <(ls -1t "$log_dir"/check_*.log 2>/dev/null || true)
-  
+
   if [[ ${#log_files[@]} -eq 0 ]]; then
     echo -e "${RED}Error: No check log files found in ${WHITE}$log_dir${RESET}" >&2
     exit 1
   fi
-  
+
   local required_files=$((range + 1))
   if [[ ${#log_files[@]} -lt $required_files ]]; then
     echo -e "${RED}Error: Not enough log files for range ${WHITE}$range${RED}${RESET}" >&2
     echo -e "Available log files: ${WHITE}${#log_files[@]}${RESET}, need at least $required_files" >&2
     exit 1
   fi
-  
+
   local newer_file="${log_files[0]}"
   local older_file="${log_files[$range]}"
-  
+
   echo -e "${GRAY}Comparing impermanence check logs (${WHITE}$check_type${GRAY})${RESET}"
   echo -e "${GRAY}Newer: ${WHITE}$(basename "$newer_file")${RESET}"
   echo -e "${GRAY}Older: ${WHITE}$(basename "$older_file")${RESET}"
   echo ""
-  
+
   diff "$older_file" "$newer_file"
 }
 
 subcommand_logs() {
   local log_file="/var/log/nx/impermanence/rollback.log"
-  
+
   if [[ ! -f "$log_file" ]]; then
     echo -e "${RED}No rollback logs found at ${WHITE}$log_file${RESET}" >&2
     exit 1
   fi
-  
+
   local pager="${PAGER:-less}"
   "$pager" "$log_file"
 }
@@ -568,7 +553,7 @@ subcommand_logs() {
 main() {
   check_nixos
   check_impermanence
-  
+
   case "${1:-help}" in
     check)
       shift

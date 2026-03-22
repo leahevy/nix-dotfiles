@@ -15,10 +15,10 @@ if [[ -e /etc/NIXOS ]]; then
   if [[ "${BUILD_DIFF:-false}" == "true" ]]; then
     echo -e "${CYAN}Comparing new build with current active system...${RESET}"
     echo
-    echo -e "${GREEN}=== Closure Diff ===${RESET}"
-    nix store diff-closures /run/current-system "$NEW_SYSTEM"
+    echo -e "${GREEN}=== Store Path Diff ===${RESET}"
+    diff_store_paths /run/current-system "$NEW_SYSTEM" || echo -e "${YELLOW}Store path diff failed${RESET}"
     echo
-    echo -e "${GREEN}=== nvd Diff ===${RESET}"
+    echo -e "${GREEN}=== Package Diff ===${RESET}"
     nvd --color=always --version-highlight=xmas diff /run/current-system "$NEW_SYSTEM"
   fi
 else
@@ -28,10 +28,10 @@ else
     echo -e "${CYAN}Comparing new build with current active home configuration...${RESET}"
     CURRENT_HOME=$(readlink -f ~/.local/state/nix/profiles/home-manager)
     echo
-    echo -e "${GREEN}=== Closure Diff ===${RESET}"
-    nix store diff-closures "$CURRENT_HOME" "$NEW_HOME"
+    echo -e "${GREEN}=== Store Path Diff ===${RESET}"
+    diff_store_paths "$CURRENT_HOME" "$NEW_HOME" || echo -e "${YELLOW}Store path diff failed${RESET}"
     echo
-    echo -e "${GREEN}=== nvd Diff ===${RESET}"
+    echo -e "${GREEN}=== Package Diff ===${RESET}"
     nvd --color=always --version-highlight=xmas diff "$CURRENT_HOME" "$NEW_HOME"
   fi
 fi

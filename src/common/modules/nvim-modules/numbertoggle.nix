@@ -1,0 +1,47 @@
+args@{
+  lib,
+  pkgs,
+  pkgs-unstable,
+  funcs,
+  helpers,
+  defs,
+  self,
+  ...
+}:
+{
+  name = "numbertoggle";
+
+  group = "nvim-modules";
+  input = "common";
+
+  on = {
+    home = config: {
+      programs.nixvim = {
+        plugins.numbertoggle = {
+          enable = true;
+        };
+
+        extraConfigLua = ''
+          _G.nx_modules = _G.nx_modules or {}
+
+          _G.nx_modules["42-numbertoggle-fix"] = function()
+            vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter", "FocusGained", "VimEnter"}, {
+              callback = function()
+                vim.schedule(function()
+                  local mode = vim.fn.mode()
+                  if mode == 'n' or mode == 'no' then
+                    vim.opt_local.relativenumber = true
+                    vim.opt_local.number = true
+                  elseif mode == 'i' or mode == 'ic' or mode == 'ix' then
+                    vim.opt_local.relativenumber = false
+                    vim.opt_local.number = true
+                  end
+                end)
+              end,
+            })
+          end
+        '';
+      };
+    };
+  };
+}

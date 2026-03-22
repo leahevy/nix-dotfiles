@@ -13,21 +13,25 @@ args@{
 }:
 let
   initialModules = user.modules or { };
-  allModules = funcs.collectAllModulesWithSettings args initialModules "home";
+  buildModules = {
+    groups.build.home-standalone = true;
+  };
+  allModules = funcs.collectAllModulesWithSettings args initialModules buildModules;
 
   moduleSpecs = funcs.processModules allModules;
-  moduleResults = funcs.importHomeModules args moduleSpecs allModules;
+  moduleResults = funcs.importModules args moduleSpecs allModules "home-standalone";
 
   extraModules = moduleResults.modules;
 
   allOptionsData = funcs.collectAllModuleOptions args;
   optionsModules = funcs.generateOptionsModules allOptionsData;
 
-  initModules = funcs.importAllModuleInits (args // { homeProcessedModules = allModules; });
+  initModules = funcs.importAllModuleInits (args // { processedModules = allModules; });
 
   specialisationConfigs = builtins.mapAttrs (specName: specModules: {
     configuration = {
-      imports = (funcs.importHomeModules args (funcs.processModules specModules) allModules).modules;
+      imports =
+        (funcs.importModules args (funcs.processModules specModules) allModules "home-standalone").modules;
     };
   }) (user.specialisations or { });
 
@@ -37,28 +41,17 @@ let
     else
       [ ];
 
-  profileInitModules =
-    if user.init != (args: context: { }) then
-      let
-        moduleContext = {
-          inputs = inputs;
-          variables = variables;
-          configInputs = args.configInputs or { };
-          moduleBasePath = "profiles/home-standalone/${user.profileName}";
-          moduleInput = args.configInputs.config or inputs.config;
-          moduleInputName = "config";
-          user = user;
-          host = host;
-          persist = "${variables.persist.home}/${user.username}";
-        };
-        enhancedContext = funcs.injectModuleFuncs moduleContext "home";
-        enhancedArgs = args // {
-          self = enhancedContext;
-        };
-      in
-      [ (user.init enhancedArgs) ]
-    else
-      [ ];
+  userProfileOn = funcs.processProfileOn {
+    profile = user;
+    profileType = "home-standalone";
+    profileName = user.profileName;
+    args = args;
+    processedModules = allModules;
+    buildContext = "home-standalone";
+  };
+
+  profileInitModules = userProfileOn.initModules;
+  profileContextModules = userProfileOn.contextModules;
 in
 { config, options, ... }:
 
@@ -69,6 +62,7 @@ in
     ++ profileInitModules
     ++ extraModules
     ++ extraUserModule
+    ++ profileContextModules
     ++ [
       (import ../../assertions/home/home-standalone.nix (args // { processedModules = allModules; }))
     ];

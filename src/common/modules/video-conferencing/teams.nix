@@ -1,0 +1,30 @@
+args@{
+  lib,
+  pkgs,
+  pkgs-unstable,
+  funcs,
+  helpers,
+  defs,
+  self,
+  ...
+}:
+{
+  name = "teams";
+
+  group = "video-conferencing";
+  input = "common";
+
+  on = {
+    home = config: {
+      home.packages = with pkgs; [
+        teams-for-linux
+      ];
+
+      home.persistence."${self.persist.home}" = {
+        directories = [
+          ".config/teams-for-linux"
+        ];
+      };
+    };
+  };
+}

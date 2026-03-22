@@ -44,20 +44,28 @@
 
     extraSettings = { };
 
-    init = args@{ lib, self, ... }: context@{ config, options, ... }: { };
+    on = {
+      # Runs for ALL modules (even disabled) in BOTH contexts.
+      # Only set config.nx.* options here.
+      # init = args@{ lib, self, ... }: context@{ config, options, ... }: { };
 
-    configuration =
-      args@{
-        lib,
-        pkgs,
-        pkgs-unstable,
-        funcs,
-        helpers,
-        defs,
-        self,
-        ...
-      }:
-      context@{ config, options, ... }:
-      { };
+      # Runs in home context (both standalone and integrated)
+      # home = args@{ lib, pkgs, self, ... }: context@{ config, options, ... }: { };
+
+      # Runs in system context
+      # system = args@{ lib, pkgs, self, ... }: context@{ config, options, ... }: { };
+
+      # Platform-specific overrides
+      # linux = {
+      #   init = args@{ lib, self, ... }: context@{ config, options, ... }: { };
+      #   home = args@{ lib, pkgs, self, ... }: context@{ config, options, ... }: { };
+      #   system = args@{ lib, pkgs, self, ... }: context@{ config, options, ... }: { };
+      # };
+      # darwin = {
+      #   init = args@{ lib, self, ... }: context@{ config, options, ... }: { };
+      #   home = args@{ lib, pkgs, self, ... }: context@{ config, options, ... }: { };
+      #   system = args@{ lib, pkgs, self, ... }: context@{ config, options, ... }: { };
+      # };
+    };
   };
 }
