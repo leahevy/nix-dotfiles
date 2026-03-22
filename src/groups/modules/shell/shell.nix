@@ -14,7 +14,6 @@ args@{
 
   group = "shell";
   input = "groups";
-  namespace = "home";
 
   submodules = {
     common = {

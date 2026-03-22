@@ -14,7 +14,6 @@ args@{
 
   group = "base";
   input = "groups";
-  namespace = "home";
 
   submodules =
     # NixOS Integrated

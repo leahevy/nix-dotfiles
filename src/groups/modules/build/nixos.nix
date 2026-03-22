@@ -14,7 +14,6 @@ args@{
 
   group = "build";
   input = "groups";
-  namespace = "system";
 
   submodules = {
     build = {
@@ -31,6 +30,7 @@ args@{
         nx-config = true;
         firmware = true;
         sysctl = true;
+        homebrew = true;
       };
       desktop = {
         desktop = true;

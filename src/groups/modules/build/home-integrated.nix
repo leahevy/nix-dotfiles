@@ -14,7 +14,6 @@ args@{
 
   group = "build";
   input = "groups";
-  namespace = "home";
 
   submodules = {
     build = {
@@ -25,6 +24,7 @@ args@{
         sops = true;
         path = true;
         preferences = true;
+        homebrew = true;
       };
       desktop = {
         desktop = true;

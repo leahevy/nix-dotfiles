@@ -15,7 +15,6 @@ args@{
 
   group = "base";
   input = "groups";
-  namespace = "system";
 
   submodules =
     if self ? isLinux && self.isLinux then

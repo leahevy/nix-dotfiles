@@ -13,7 +13,6 @@ args@{
 
   group = "darwin";
   input = "groups";
-  namespace = "home";
 
   submodules = {
     darwin = {

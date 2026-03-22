@@ -14,7 +14,6 @@ args@{
 
   group = "build";
   input = "groups";
-  namespace = "home";
 
   submodules = {
     build = {
@@ -25,7 +24,8 @@ args@{
         sops = true;
         path = true;
         preferences = true;
-        nx-config-standalone = true;
+        nx-config = true;
+        homebrew = true;
       };
       desktop = {
         desktop = true;
@@ -36,13 +36,6 @@ args@{
       };
       theme = {
         theme-home = true;
-      };
-    };
-  }
-  // lib.optionalAttrs self.isDarwin {
-    darwin = {
-      software = {
-        homebrew = true;
       };
     };
   };
