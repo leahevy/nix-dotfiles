@@ -524,11 +524,12 @@ in
 
   group = "themes";
   input = "themes";
-  namespace = "home";
 
-  init =
-    context@{ config, options, ... }:
-    lib.mkIf self.isEnabled {
-      nx.preferences.theme = themeData;
-    };
+  on = {
+    init =
+      config:
+      lib.mkIf self.isEnabled {
+        nx.preferences.theme = themeData;
+      };
+  };
 }
