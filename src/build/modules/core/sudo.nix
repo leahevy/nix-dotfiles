@@ -12,15 +12,13 @@ args@{
   name = "sudo";
   group = "core";
   input = "build";
-  namespace = "system";
 
   settings = {
     mailNotifications = true;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    system = config: {
       security.sudo.extraConfig = ''
         Defaults lecture = never
         ${lib.optionalString self.settings.mailNotifications ''
@@ -34,4 +32,5 @@ args@{
         ''}
       '';
     };
+  };
 }

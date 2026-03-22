@@ -21,7 +21,6 @@ in
   name = "theme-home";
   group = "theme";
   input = "build";
-  namespace = "home";
 
   submodules = {
     themes = {

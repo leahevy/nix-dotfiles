@@ -284,7 +284,6 @@ in
 
   group = "core";
   input = "build";
-  namespace = "home";
 
   rawOptions = {
     nx.preferences = {

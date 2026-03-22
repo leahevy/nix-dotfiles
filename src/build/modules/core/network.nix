@@ -16,11 +16,9 @@ in
   name = "network";
   group = "core";
   input = "build";
-  namespace = "system";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    system = config: {
       networking.hostName = host.hostname;
       networking.wireless.enable = ifSet host.settings.networking.wifi.enabled false;
       networking.useDHCP = !host.settings.networking.useNetworkManager;
@@ -77,4 +75,5 @@ in
         '';
       };
     };
+  };
 }

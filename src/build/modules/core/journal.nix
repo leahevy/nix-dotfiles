@@ -13,13 +13,12 @@ args@{
 
   group = "core";
   input = "build";
-  namespace = "system";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    system = config: {
       services.journald.extraConfig = ''
         ForwardToWall=no
       '';
     };
+  };
 }

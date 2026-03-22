@@ -12,13 +12,12 @@ args@{
   name = "dummy-files";
   group = "system";
   input = "build";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.file.".config/gnome-initial-setup-done".text = "yes";
       home.file.".hushlogin".text = "";
       home.file.".sudo_as_admin_successful".text = "";
     };
+  };
 }

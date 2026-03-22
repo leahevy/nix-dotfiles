@@ -13,7 +13,6 @@ args@{
 
   group = "core";
   input = "build";
-  namespace = "system";
 
   settings = {
     inotify = {
@@ -22,12 +21,12 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    system = config: {
       boot.kernel.sysctl = {
         "fs.inotify.max_user_watches" = self.settings.inotify.maxUserWatches;
         "fs.inotify.max_queued_events" = self.settings.inotify.maxQueuedEvents;
       };
     };
+  };
 }

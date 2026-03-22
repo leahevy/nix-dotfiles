@@ -15,11 +15,9 @@ in
   name = "boot";
   group = "core";
   input = "build";
-  namespace = "system";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    system = config: {
       boot = {
         kernelModules = host.kernel.nixModules or [ ];
         extraModulePackages = host.kernel.extraModulePackages or [ ];
@@ -49,4 +47,5 @@ in
         };
       };
     };
+  };
 }

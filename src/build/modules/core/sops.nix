@@ -12,11 +12,9 @@ args@{
   name = "sops";
   group = "core";
   input = "build";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       sops = {
         defaultSopsFile =
           if self.user.isStandalone then
@@ -51,4 +49,12 @@ args@{
         };
       };
     };
+
+    system = config: {
+      sops = {
+        defaultSopsFile = self.config.secretsPath "host-secrets.yaml";
+        age.keyFile = "${self.variables.persist.system}/etc/sops/age/keys.txt";
+      };
+    };
+  };
 }

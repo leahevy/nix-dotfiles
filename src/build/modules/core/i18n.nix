@@ -15,11 +15,9 @@ in
   name = "i18n";
   group = "core";
   input = "build";
-  namespace = "system";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    system = config: {
       time.timeZone = host.settings.system.timezone;
       i18n.defaultLocale = host.settings.system.locale.main;
 
@@ -35,4 +33,5 @@ in
         LC_TIME = host.settings.system.locale.extra;
       };
     };
+  };
 }

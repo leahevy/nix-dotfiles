@@ -12,7 +12,6 @@ args@{
   name = "theme-system";
   group = "theme";
   input = "build";
-  namespace = "system";
 
   submodules = {
     themes = {

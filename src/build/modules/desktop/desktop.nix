@@ -17,7 +17,6 @@ in
   name = "desktop";
   group = "desktop";
   input = "build";
-  namespace = "home";
 
   assertions = lib.optionals (desktopSetting != null) [
     {

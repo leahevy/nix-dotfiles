@@ -12,11 +12,9 @@ args@{
   name = "programs";
   group = "programs";
   input = "build";
-  namespace = "system";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    system = config: {
       environment.systemPackages =
         with pkgs;
         [
@@ -59,4 +57,5 @@ args@{
         };
       };
     };
+  };
 }

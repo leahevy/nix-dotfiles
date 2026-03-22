@@ -12,11 +12,15 @@ args@{
   name = "nx-config";
   group = "core";
   input = "build";
-  namespace = "system";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    standalone = config: {
+      home.file.".config/nx/config.json" = {
+        text = builtins.toJSON self.variables.nx.config;
+      };
+    };
+
+    system = config: {
       environment.etc."nx/config.json" = {
         text = builtins.toJSON self.variables.nx.config;
         mode = "0444";
@@ -24,4 +28,5 @@ args@{
         group = "root";
       };
     };
+  };
 }

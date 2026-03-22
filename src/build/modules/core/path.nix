@@ -12,13 +12,12 @@ args@{
   name = "path";
   group = "core";
   input = "build";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.sessionPath = [
         "${self.user.home}/.local/bin"
       ];
     };
+  };
 }

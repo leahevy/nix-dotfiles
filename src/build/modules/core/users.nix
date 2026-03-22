@@ -21,11 +21,9 @@ in
   name = "users";
   group = "core";
   input = "build";
-  namespace = "system";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    system = config: {
       sops = {
         secrets = {
           userPasswordHash = {
@@ -38,8 +36,6 @@ in
       users.mutableUsers = false;
       users.users =
         let
-          allUsers = builtins.attrValues users;
-
           normalUsers = lib.filterAttrs (_: user: !(ifSet user.system.isSystemUser false)) users;
           nonNormalUsers = lib.filterAttrs (_: user: (ifSet user.system.isSystemUser false)) users;
 
@@ -93,19 +89,16 @@ in
             else
               throw "Shell is unknown: ${user.system.shell} for user: ${user.username}";
           linger = ifSet user.system.systemdSessionAtBoot false;
-          packages =
-            with pkgs;
-            [ ]
-            ++ (
-              if (ifSet user.system.shell "bash") == "bash" then
-                [ pkgs.bash ]
-              else if (ifSet user.system.shell "bash") == "zsh" then
-                [ pkgs.zsh ]
-              else if (ifSet user.system.shell "bash") == "fish" then
-                [ pkgs.fish ]
-              else
-                throw "Shell is unknown: ${user.system.shell} for user: ${user.username}"
-            );
+          packages = (
+            if (ifSet user.system.shell "bash") == "bash" then
+              [ pkgs.bash ]
+            else if (ifSet user.system.shell "bash") == "zsh" then
+              [ pkgs.zsh ]
+            else if (ifSet user.system.shell "bash") == "fish" then
+              [ pkgs.fish ]
+            else
+              throw "Shell is unknown: ${user.system.shell} for user: ${user.username}"
+          );
         }) mergedUsers)
         // {
           root = {
@@ -137,4 +130,5 @@ in
         "Z /root 0750 root root - -"
       ];
     };
+  };
 }

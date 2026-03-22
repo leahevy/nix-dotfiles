@@ -12,11 +12,9 @@ args@{
   name = "utils";
   group = "core";
   input = "build";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages = with pkgs; [
         coreutils
         nettools
@@ -31,6 +29,9 @@ args@{
         colordiff
         wget
         killall
+        jd-diff-patch
+        nix-diff
       ];
     };
+  };
 }

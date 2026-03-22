@@ -12,7 +12,6 @@ args@{
   name = "terminal";
   group = "desktop";
   input = "build";
-  namespace = "home";
 
   submodules =
     let
