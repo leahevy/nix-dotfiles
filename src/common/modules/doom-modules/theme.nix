@@ -16,7 +16,7 @@ args@{
 
   on = {
     home = config: {
-      home.file.".config/doom/themes/doom-coastal-theme.el".source = ./doom-coastal-theme.el;
+      home.file.".config/doom/themes/doom-coastal-theme.el".source = self.file "doom-coastal-theme.el";
 
       home.file.".config/doom/config/10-load-themes.el".text = ''
         (add-to-list 'custom-theme-load-path (expand-file-name "themes" doom-private-dir))
