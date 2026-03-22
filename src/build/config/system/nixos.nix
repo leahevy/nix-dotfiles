@@ -9,21 +9,19 @@ args@{
   helpers,
   defs,
   variables,
-  systemProcessedModules,
-  homeProcessedModules,
+  processedModules,
   ...
 }:
 
 let
-  allModules = systemProcessedModules;
-  mainUserModules = homeProcessedModules;
+  allModules = processedModules;
 
   moduleSpecs = funcs.processModules allModules;
   systemArgs = args // {
     user = host.mainUser;
-    homeProcessedModules = mainUserModules;
+    processedModules = allModules;
   };
-  moduleResults = funcs.importSystemModules systemArgs moduleSpecs allModules;
+  moduleResults = funcs.importModules systemArgs moduleSpecs allModules "system";
 
   extraModules = moduleResults.modules;
 
@@ -35,85 +33,32 @@ let
   specialisationConfigs = builtins.mapAttrs (specName: specModules: {
     configuration = {
       imports =
-        (funcs.importSystemModules systemArgs (funcs.processModules specModules) allModules).modules;
+        (funcs.importModules systemArgs (funcs.processModules specModules) allModules "system").modules;
     };
   }) host.specialisations;
 
   ifSet = helpers.ifSet;
 
-  virtualModule =
-    if host.configuration != (args: context: { }) then
-      let
-        moduleContext = {
-          inputs = inputs;
-          variables = variables;
-          configInputs = args.configInputs or { };
-          moduleBasePath = "profiles/nixos/${host.profileName}";
-          moduleInput = args.configInputs.config or inputs.config;
-          moduleInputName = "config";
-          host = host;
-          users = users;
-          persist = variables.persist.system;
-        };
+  hostProfileOn = funcs.processProfileOn {
+    profile = host;
+    profileType = "nixos";
+    profileName = host.profileName;
+    args = systemArgs;
+    processedModules = allModules;
+    buildContext = "system";
+  };
 
-        enhancedContext = funcs.injectModuleFuncs moduleContext "system";
+  userProfileOn = funcs.processProfileOn {
+    profile = host.mainUser;
+    profileType = "home-integrated";
+    profileName = host.mainUser.profileName;
+    args = systemArgs;
+    processedModules = allModules;
+    buildContext = "system";
+  };
 
-        enhancedArgs = args // {
-          self = enhancedContext;
-        };
-      in
-      [ (host.configuration enhancedArgs) ]
-    else
-      [ ];
-
-  profileInitModules =
-    let
-      hostInit =
-        if host.init != (args: context: { }) then
-          let
-            moduleContext = {
-              inputs = inputs;
-              variables = variables;
-              configInputs = args.configInputs or { };
-              moduleBasePath = "profiles/nixos/${host.profileName}";
-              moduleInput = args.configInputs.config or inputs.config;
-              moduleInputName = "config";
-              host = host;
-              users = users;
-              persist = variables.persist.system;
-            };
-            enhancedContext = funcs.injectModuleFuncs moduleContext "system";
-            enhancedArgs = args // {
-              self = enhancedContext;
-            };
-          in
-          [ (host.init enhancedArgs) ]
-        else
-          [ ];
-      userInit =
-        if host.mainUser.init != (args: context: { }) then
-          let
-            moduleContext = {
-              inputs = inputs;
-              variables = variables;
-              configInputs = args.configInputs or { };
-              moduleBasePath = "profiles/home-integrated/${host.mainUser.profileName}";
-              moduleInput = args.configInputs.config or inputs.config;
-              moduleInputName = "config";
-              user = host.mainUser;
-              host = host;
-              persist = "${variables.persist.home}/${host.mainUser.username}";
-            };
-            enhancedContext = funcs.injectModuleFuncs moduleContext "home";
-            enhancedArgs = args // {
-              self = enhancedContext;
-            };
-          in
-          [ (host.mainUser.init enhancedArgs) ]
-        else
-          [ ];
-    in
-    hostInit ++ userInit;
+  profileInitModules = hostProfileOn.initModules ++ userProfileOn.initModules;
+  profileContextModules = hostProfileOn.contextModules ++ userProfileOn.contextModules;
 in
 { config, options, ... }:
 {
@@ -122,7 +67,7 @@ in
     ++ initModules
     ++ profileInitModules
     ++ extraModules
-    ++ virtualModule
+    ++ profileContextModules
     ++ [
       (import ../../assertions/system/nixos.nix (systemArgs // { processedModules = allModules; }))
     ];

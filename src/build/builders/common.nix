@@ -15,37 +15,6 @@
 let
   configInputs = config.configInputs;
 
-  overlaysDir = ../overlays;
-
-  loadOverlaysFromDir =
-    dir:
-    let
-      files = builtins.readDir dir;
-      nixFiles = lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".nix" name) files;
-      loadedModules = lib.mapAttrsToList (
-        name: _:
-        let
-          module = import (dir + "/${name}") { inherit lib; };
-        in
-        module.overlays or { }
-      ) nixFiles;
-    in
-    lib.foldl lib.recursiveUpdate { } loadedModules;
-
-  collectOverlays =
-    system:
-    let
-      isDarwin = lib.hasSuffix "-darwin" system;
-      isLinux = lib.hasSuffix "-linux" system;
-
-      commonOverlays = loadOverlaysFromDir (overlaysDir + "/common");
-      darwinOverlays = if isDarwin then loadOverlaysFromDir (overlaysDir + "/darwin") else { };
-      linuxOverlays = if isLinux then loadOverlaysFromDir (overlaysDir + "/linux") else { };
-
-      allOverlays = lib.recursiveUpdate (lib.recursiveUpdate commonOverlays darwinOverlays) linuxOverlays;
-    in
-    builtins.attrValues allOverlays;
-
   evalConfigModule =
     {
       configPath,
@@ -63,11 +32,13 @@ let
   setupPackages =
     {
       system,
+      extraOverlays ? [ ],
       nixpkgs ? inputs.nixpkgs,
       nixpkgs-unstable ? inputs.nixpkgs-unstable,
     }:
     let
-      overlays = collectOverlays system;
+      moduleOverlays = funcs.collectModuleOverlays system;
+      overlays = moduleOverlays ++ extraOverlays;
 
       pkgs = import nixpkgs {
         inherit system overlays;
@@ -101,6 +72,18 @@ let
       ]
     else
       [ ];
+
+  resolveHomePath =
+    { user, arch }:
+    if (user.home or null) == null then
+      if helpers.isLinuxArch arch then
+        "/home/${user.username}"
+      else if helpers.isDarwinArch arch then
+        "/Users/${user.username}"
+      else
+        user.home
+    else
+      user.home;
 
   buildSpecialArgs =
     {
@@ -166,7 +149,34 @@ in
       hostConfigPath = config + "/profiles/nixos/${profileName}/${profileName}.nix";
 
       system = arch;
-      inherit (setupPackages { inherit system; }) pkgs pkgs-unstable;
+
+      preEval = evalConfigModule {
+        optionsPath = build + "/types/system/nixos.nix";
+        configPath = hostConfigPath;
+        specialArgs = {
+          inherit
+            lib
+            variables
+            helpers
+            defs
+            ;
+          pkgs = { };
+          pkgs-unstable = { };
+        };
+      };
+      profileOverlays = funcs.extractOverlaysFromOn {
+        on = preEval.config.host.on or { };
+        inherit system;
+      };
+
+      inherit
+        (setupPackages {
+          inherit system;
+          extraOverlays = profileOverlays;
+        })
+        pkgs
+        pkgs-unstable
+        ;
 
       hostEval = evalConfigModule {
         optionsPath = build + "/types/system/nixos.nix";
@@ -183,27 +193,13 @@ in
         };
       };
 
-      host-data = funcs.applyNixOSHooks {
-        inherit
-          lib
-          helpers
-          defs
-          funcs
-          pkgs
-          pkgs-unstable
-          inputs
-          variables
-          ;
-        host = hostEval.config.host // {
-          architecture = arch;
-          isNixOS = true;
-          isDarwin = false;
-        };
+      rawHost = hostEval.config.host // {
+        architecture = arch;
+        isNixOS = true;
+        isDarwin = false;
       };
 
-      allUserProfiles = [ host-data.mainUser ] ++ host-data.additionalUsers;
-
-      processIntegratedUser =
+      evalIntegratedUser =
         userProfileName:
         let
           userConfigPath = config + "/profiles/home-integrated/${userProfileName}/${userProfileName}.nix";
@@ -222,114 +218,88 @@ in
                 ;
             };
           };
-
-          user = userEval.config.user // {
-            profileName = userProfileName;
-            isStandalone = false;
-            isIntegrated = true;
-            isMainUser = userProfileName == host-data.mainUser;
-            architecture = arch;
-          };
-
-          userConfig = funcs.applyIntegratedUserHooks {
-            inherit
-              lib
-              helpers
-              defs
-              funcs
-              pkgs
-              pkgs-unstable
-              inputs
-              variables
-              ;
-            user = user;
-            host = host-data;
-            configInputs = config.configInputs or { };
-            isMainUser = userProfileName == host-data.mainUser;
-          };
         in
-        {
-          name = userConfig.username;
-          value = userConfig;
+        userEval.config.user
+        // {
+          profileName = userProfileName;
+          isStandalone = false;
+          isIntegrated = true;
+          isMainUser = userProfileName == rawHost.mainUser;
+          architecture = arch;
+          home = resolveHomePath {
+            user = userEval.config.user;
+            inherit arch;
+          };
         };
 
-      userAttrSet = builtins.listToAttrs (map processIntegratedUser allUserProfiles);
+      allUserProfiles = [ rawHost.mainUser ] ++ (rawHost.additionalUsers or [ ]);
+      userAttrSet = builtins.listToAttrs (
+        map (
+          userProfileName:
+          let
+            user = evalIntegratedUser userProfileName;
+          in
+          {
+            name = user.username;
+            value = user;
+          }
+        ) allUserProfiles
+      );
 
       mainUser =
         userAttrSet.${
-          (builtins.head (builtins.filter (user: user.isMainUser) (builtins.attrValues userAttrSet))).username
+          (builtins.head (builtins.filter (u: u.isMainUser) (builtins.attrValues userAttrSet))).username
         };
-      additionalUsers = builtins.filter (user: !user.isMainUser) (builtins.attrValues userAttrSet);
+      additionalUsers = builtins.filter (u: !u.isMainUser) (builtins.attrValues userAttrSet);
 
-      systemArgs = {
-        inherit
-          lib
-          pkgs
-          pkgs-unstable
-          inputs
-          variables
-          helpers
-          defs
-          funcs
-          ;
-        host = host-data // {
-          inherit profileName;
-          mainUser = mainUser;
-          additionalUsers = additionalUsers;
-        };
-        users = userAttrSet;
+      resolvedHost = rawHost // {
+        inherit profileName;
+        mainUser = mainUser;
+        additionalUsers = additionalUsers;
       };
 
-      homeArgs = {
-        inherit
-          lib
-          pkgs
-          pkgs-unstable
-          inputs
-          variables
-          helpers
-          defs
-          funcs
-          ;
-        host = host-data // {
-          inherit profileName;
-          mainUser = mainUser;
-          additionalUsers = additionalUsers;
-        };
-        user = mainUser;
-      };
-
-      preliminarySystemModules = funcs.collectAllModulesWithSettings systemArgs (helpers.ifSet
-        host-data.modules
-        { }
-      ) "system";
-      preliminaryHomeModules = funcs.collectAllModulesWithSettings homeArgs (lib.foldl lib.recursiveUpdate
-        { }
-        [
+      mergedModules = funcs.mergeModulesWithPrecedence (helpers.ifSet (rawHost.modules or { }) { }) (
+        lib.foldl lib.recursiveUpdate { } [
           (mainUser.modules or { })
-          (host-data.userDefaults.modules or { })
+          (rawHost.userDefaults.modules or { })
         ]
-      ) "home";
+      );
 
-      systemProcessedModules =
-        funcs.addCrossNamespaceModules preliminarySystemModules preliminaryHomeModules "system"
-          systemArgs;
-      homeProcessedModules =
-        funcs.addCrossNamespaceModules preliminaryHomeModules preliminarySystemModules "home"
-          homeArgs;
+      buildModules = {
+        groups.build.nixos = true;
+        groups.build.home-integrated = true;
+      };
+
+      unifiedArgs = {
+        inherit
+          lib
+          pkgs
+          pkgs-unstable
+          inputs
+          variables
+          helpers
+          defs
+          funcs
+          ;
+        host = resolvedHost;
+        user = mainUser;
+        users = userAttrSet;
+        configInputs = config.configInputs or { };
+      };
+
+      processedModules = funcs.collectAllModulesWithSettings unifiedArgs mergedModules buildModules;
 
       hostConfig = {
         inherit profileName;
-        host = host-data // {
-          inherit profileName;
-          modules = systemProcessedModules;
+        host = resolvedHost // {
+          modules = processedModules;
+          configuredModules = mergedModules;
           mainUser = mainUser // {
-            modules = homeProcessedModules;
+            modules = processedModules;
           };
-          additionalUsers = additionalUsers;
         };
-        name = host-data.hostname;
-        hostname = host-data.hostname;
+        name = resolvedHost.hostname;
+        hostname = resolvedHost.hostname;
         users = userAttrSet;
         architecture = arch;
       };
@@ -349,8 +319,8 @@ in
           inherit
             pkgs
             pkgs-unstable
-            configInputs
             ;
+          configInputs = config.configInputs or { };
           host = hostConfig.host;
           users = hostConfig.users;
         };
@@ -367,8 +337,7 @@ in
             ;
           host = hostConfig.host;
           users = hostConfig.users;
-          systemProcessedModules = systemProcessedModules;
-          homeProcessedModules = homeProcessedModules;
+          processedModules = processedModules;
           configInputs = config.configInputs or { };
         };
         diskoModule = getDiskoModule { inherit profileName; };
@@ -386,7 +355,34 @@ in
       userConfigPath = config + "/profiles/home-standalone/${profileName}/${profileName}.nix";
 
       system = arch;
-      inherit (setupPackages { inherit system; }) pkgs pkgs-unstable;
+
+      preEval = evalConfigModule {
+        optionsPath = build + "/types/home/home-standalone.nix";
+        configPath = userConfigPath;
+        specialArgs = {
+          inherit
+            lib
+            variables
+            helpers
+            defs
+            ;
+          pkgs = { };
+          pkgs-unstable = { };
+        };
+      };
+      profileOverlays = funcs.extractOverlaysFromOn {
+        on = preEval.config.user.on or { };
+        inherit system;
+      };
+
+      inherit
+        (setupPackages {
+          inherit system;
+          extraOverlays = profileOverlays;
+        })
+        pkgs
+        pkgs-unstable
+        ;
 
       userEval = evalConfigModule {
         optionsPath = build + "/types/home/home-standalone.nix";
@@ -403,30 +399,45 @@ in
         };
       };
 
-      user = userEval.config.user // {
+      resolvedUser = userEval.config.user // {
+        inherit profileName;
         architecture = arch;
         isStandalone = true;
         isIntegrated = false;
         isMainUser = true;
+        home = resolveHomePath {
+          user = userEval.config.user;
+          inherit arch;
+        };
       };
 
-      userConfig = funcs.applyStandaloneUserHooks {
+      buildModules = {
+        groups.build.home-standalone = true;
+      };
+
+      unifiedArgs = {
         inherit
           lib
-          helpers
-          defs
-          funcs
           pkgs
           pkgs-unstable
           inputs
+          funcs
+          helpers
+          defs
           variables
           ;
-        user = user;
+        user = resolvedUser;
+        host = { };
         configInputs = config.configInputs or { };
+        isMainUser = true;
       };
 
-      finalUserConfig = userConfig // {
-        inherit profileName;
+      processedModules = funcs.collectAllModulesWithSettings unifiedArgs (resolvedUser.modules or { }
+      ) buildModules;
+
+      finalUserConfig = resolvedUser // {
+        modules = processedModules;
+        configuredModules = resolvedUser.modules or { };
       };
 
       buildContext = {
@@ -442,8 +453,8 @@ in
           inherit
             pkgs
             pkgs-unstable
-            configInputs
             ;
+          configInputs = config.configInputs or { };
           user = finalUserConfig;
         };
         buildArgs = {
@@ -462,33 +473,7 @@ in
           configInputs = config.configInputs or { };
           isMainUser = true;
         };
-        extraUserModule =
-          let
-            virtualModule =
-              if userEval.config.user.configuration != (args: context: { }) then
-                let
-                  moduleContext = {
-                    inputs = inputs;
-                    variables = variables;
-                    configInputs = config.configInputs or { };
-                    moduleBasePath = "profiles/home-standalone/${profileName}";
-                    moduleInput = config;
-                    moduleInputName = "config";
-                    user = finalUserConfig;
-                    persist = "${variables.persist.home}/${finalUserConfig.username}";
-                  };
-
-                  enhancedContext = funcs.injectModuleFuncs moduleContext "home";
-
-                  enhancedArgs = buildContext.buildArgs // {
-                    self = enhancedContext;
-                  };
-                in
-                [ (userEval.config.user.configuration enhancedArgs) ]
-              else
-                [ ];
-          in
-          virtualModule;
+        extraUserModule = [ ];
       };
     in
     {

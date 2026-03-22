@@ -1,20 +1,12 @@
 {
   lib,
   inputs,
+  defs,
   ...
 }:
 
 let
-  coreInputs = [
-    "common"
-    "linux"
-    "darwin"
-    "groups"
-    "themes"
-    "build"
-    "config"
-    "profile"
-  ];
+  coreInputs = defs.moduleInputsToScan;
 
   configInputs = inputs.config.configInputs or { };
 
@@ -32,142 +24,131 @@ let
       scanInput =
         inputName: input:
         let
-          scanModuleType =
-            moduleType:
-            let
-              modulesPath = input + "/modules/${moduleType}";
-            in
-            if builtins.pathExists modulesPath then
+          modulesPath = input + "/modules";
+        in
+        if builtins.pathExists modulesPath then
+          let
+            groups = builtins.readDir modulesPath;
+
+            scanGroup =
+              groupName: groupType:
               let
-                groups = builtins.readDir modulesPath;
-
-                scanGroup =
-                  groupName: groupType:
+                groupPath = modulesPath + "/${groupName}";
+                entries =
+                  if builtins.pathExists groupPath && groupType == "directory" then
+                    builtins.readDir groupPath
+                  else
+                    { };
+              in
+              lib.filterAttrs (_: v: v != null) (
+                lib.mapAttrs' (
+                  fileName: entryType:
                   let
-                    groupPath = modulesPath + "/${groupName}";
-                    modules =
-                      if builtins.pathExists groupPath && groupType == "directory" then
-                        builtins.readDir groupPath
-                      else
-                        { };
+                    moduleName = lib.removeSuffix ".nix" fileName;
                   in
-                  lib.mapAttrs (
-                    moduleName: _:
+                  if entryType == "regular" && lib.hasSuffix ".nix" fileName then
                     let
-                      modulePath = groupPath + "/${moduleName}/${moduleName}.nix";
-                    in
-                    if builtins.pathExists modulePath then
-                      let
-                        moduleFunc = import modulePath;
+                      modulePath = groupPath + "/${fileName}";
+                      moduleFunc = import modulePath;
 
-                        minimalArgs = {
-                          lib = lib;
-                          pkgs = { };
-                          pkgs-unstable = { };
-                          funcs = { };
-                          helpers = { };
-                          defs = { };
-                          self = { };
-                        };
+                      minimalArgs = {
+                        lib = lib;
+                        pkgs = { };
+                        pkgs-unstable = { };
+                        funcs = { };
+                        helpers = { };
+                        defs = { };
+                        self = { };
+                      };
 
-                        minimalContext = {
-                          config = { };
-                          options = { };
-                        };
-
-                        result = builtins.tryEval (
-                          if builtins.isFunction moduleFunc then
-                            let
-                              moduleResult = moduleFunc minimalArgs;
-                            in
-                            {
-                              name = moduleResult.name or moduleName;
-                              description = moduleResult.description or "";
-                              options = moduleResult.options or { };
-                              rawOptions = moduleResult.rawOptions or { };
-                              hasInit = moduleResult ? init;
-                            }
-                          else
-                            {
-                              name = moduleFunc.name or moduleName;
-                              description = moduleFunc.description or "";
-                              options = moduleFunc.options or { };
-                              rawOptions = moduleFunc.rawOptions or { };
-                              hasInit = moduleFunc ? init;
-                            }
-                        );
-                      in
-                      let
-                        baseMeta = {
-                          name = moduleName;
-                          description = lib.strings.concatStrings [
-                            (lib.strings.toUpper (lib.strings.substring 0 1 moduleName))
-                            (lib.strings.substring 1 (-1) moduleName)
-                            " Configuration"
-                          ];
-                          group = groupName;
-                          input = inputName;
-                          moduleType = moduleType;
-                          path = "modules/${moduleType}/${groupName}/${moduleName}/${moduleName}.nix";
-                        };
-
-                        moduleDir = groupPath + "/${moduleName}";
-
-                        findSubmodules =
-                          dir:
+                      result = builtins.tryEval (
+                        if builtins.isFunction moduleFunc then
                           let
-                            contents = if builtins.pathExists dir then builtins.readDir dir else { };
-                            files = lib.filterAttrs (
-                              name: type: type == "regular" && lib.hasSuffix ".nix" name && name != "${moduleName}.nix"
-                            ) contents;
-                            subdirs = lib.filterAttrs (name: type: type == "directory") contents;
-                            subFiles = lib.concatMap (
-                              subdir: map (file: "${subdir}/${file}") (findSubmodules (dir + "/" + subdir))
-                            ) (builtins.attrNames subdirs);
+                            moduleResult = moduleFunc minimalArgs;
                           in
-                          (builtins.attrNames files) ++ subFiles;
+                          {
+                            name = moduleResult.name or moduleName;
+                            description = moduleResult.description or "";
+                            options = moduleResult.options or { };
+                            rawOptions = moduleResult.rawOptions or { };
+                            hasInit = (moduleResult.on or { }) ? init;
+                          }
+                        else
+                          {
+                            name = moduleFunc.name or moduleName;
+                            description = moduleFunc.description or "";
+                            options = moduleFunc.options or { };
+                            rawOptions = moduleFunc.rawOptions or { };
+                            hasInit = (moduleFunc.on or { }) ? init;
+                          }
+                      );
 
-                        submoduleFiles = lib.listToAttrs (
-                          map (
-                            filePath:
-                            let
-                              fileName = baseNameOf filePath;
-                              submoduleName = lib.removeSuffix ".nix" fileName;
-                            in
-                            {
-                              name = filePath;
-                              value = submoduleName;
-                            }
-                          ) (findSubmodules moduleDir)
-                        );
+                      baseMeta = {
+                        name = moduleName;
+                        description = lib.strings.concatStrings [
+                          (lib.strings.toUpper (lib.strings.substring 0 1 moduleName))
+                          (lib.strings.substring 1 (-1) moduleName)
+                          " Configuration"
+                        ];
+                        group = groupName;
+                        input = inputName;
+                        path = "modules/${groupName}/${moduleName}.nix";
+                      };
 
-                        extractSubmoduleMeta = filePath: submoduleName: {
-                          name = submoduleName;
-                          description = "";
-                          path = filePath;
-                        };
+                      nixDDir = groupPath + "/${moduleName}.nix.d";
 
-                        submodules = builtins.attrValues (builtins.mapAttrs extractSubmoduleMeta submoduleFiles);
-                      in
-                      if result.success then
+                      findSubmodules =
+                        dir:
                         let
-                          moduleMeta = result.value;
-                          excludedAttrs = [
-                            "options"
-                            "rawOptions"
-                            "configuration"
-                            "init"
-                            "assertions"
-                            "custom"
-                          ];
-                          filteredMeta = lib.filterAttrs (
-                            n: v: !builtins.isFunction v && !builtins.elem n excludedAttrs
-                          ) moduleMeta;
-                          finalDescription =
-                            if moduleMeta.description or "" != "" then moduleMeta.description else baseMeta.description;
-                          hasOptions = (moduleMeta.options or { }) != { };
-                          hasRawOptions = (moduleMeta.rawOptions or { }) != { };
+                          contents = if builtins.pathExists dir then builtins.readDir dir else { };
+                          files = lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".nix" name) contents;
+                          subdirs = lib.filterAttrs (name: type: type == "directory") contents;
+                          subFiles = lib.concatMap (
+                            subdir: map (file: "${subdir}/${file}") (findSubmodules (dir + "/" + subdir))
+                          ) (builtins.attrNames subdirs);
                         in
+                        (builtins.attrNames files) ++ subFiles;
+
+                      submoduleFiles = lib.listToAttrs (
+                        map (
+                          filePath:
+                          let
+                            submoduleName = lib.removeSuffix ".nix" (baseNameOf filePath);
+                          in
+                          {
+                            name = filePath;
+                            value = submoduleName;
+                          }
+                        ) (findSubmodules nixDDir)
+                      );
+
+                      extractSubmoduleMeta = filePath: submoduleName: {
+                        name = submoduleName;
+                        description = "";
+                        path = filePath;
+                      };
+
+                      submodules = builtins.attrValues (builtins.mapAttrs extractSubmoduleMeta submoduleFiles);
+                    in
+                    if result.success then
+                      let
+                        moduleMeta = result.value;
+                        excludedAttrs = [
+                          "options"
+                          "rawOptions"
+                          "on"
+                          "assertions"
+                          "custom"
+                        ];
+                        filteredMeta = lib.filterAttrs (
+                          n: v: !builtins.isFunction v && !builtins.elem n excludedAttrs
+                        ) moduleMeta;
+                        finalDescription =
+                          if moduleMeta.description or "" != "" then moduleMeta.description else baseMeta.description;
+                        hasOptions = (moduleMeta.options or { }) != { };
+                        hasRawOptions = (moduleMeta.rawOptions or { }) != { };
+                      in
+                      lib.nameValuePair moduleName (
                         (
                           baseMeta
                           // filteredMeta
@@ -179,30 +160,17 @@ let
                         // {
                           inherit submodules;
                         }
-                      else
-                        baseMeta // { inherit submodules; }
+                      )
                     else
-                      {
-                        name = moduleName;
-                        description = lib.strings.concatStrings [
-                          (lib.strings.toUpper (lib.strings.substring 0 1 moduleName))
-                          (lib.strings.substring 1 (-1) moduleName)
-                          " Configuration"
-                        ];
-                        group = groupName;
-                        input = inputName;
-                        moduleType = moduleType;
-                      }
-                  ) modules;
-              in
-              builtins.mapAttrs scanGroup groups
-            else
-              { };
-        in
-        lib.filterAttrs (_: v: v != { }) {
-          home = scanModuleType "home";
-          system = scanModuleType "system";
-        };
+                      lib.nameValuePair moduleName (baseMeta // { inherit submodules; })
+                  else
+                    lib.nameValuePair moduleName null
+                ) entries
+              );
+          in
+          lib.filterAttrs (_: v: v != { }) (builtins.mapAttrs scanGroup groups)
+        else
+          { };
     in
     builtins.mapAttrs scanInput inputsWithModules;
 in

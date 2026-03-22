@@ -17,9 +17,8 @@ let
       input,
       group,
       name,
-      moduleType,
     }:
-    input + "/modules/${moduleType}/${group}/${name}/${name}.nix";
+    input + "/modules/${group}/${name}.nix";
 in
 rec {
   inherit moduleFuncs;
@@ -38,18 +37,15 @@ rec {
         lib.range 0 (builtins.length parts - 1)
       );
     in
-    if moduleIndex == null || moduleIndex + 3 >= builtins.length parts then
+    if moduleIndex == null || moduleIndex + 2 >= builtins.length parts then
       null
     else
       let
-        namespace = builtins.elemAt parts (moduleIndex + 1);
-        group = builtins.elemAt parts (moduleIndex + 2);
-        module = builtins.elemAt parts (moduleIndex + 3);
-
-        expectedFilename = "${module}.nix";
+        group = builtins.elemAt parts (moduleIndex + 1);
         actualFilename = builtins.baseNameOf pathStr;
+        module = lib.removeSuffix ".nix" actualFilename;
       in
-      if actualFilename == expectedFilename then { inherit namespace group module; } else null;
+      if lib.hasSuffix ".nix" actualFilename then { inherit group module; } else null;
 
   validateModule =
     moduleResult: filePath: moduleContext:
@@ -61,19 +57,17 @@ rec {
         "description"
         "group"
         "input"
-        "namespace"
         "submodules"
         "settings"
         "assertions"
         "custom"
-        "configuration"
+        "on"
         "unfree"
         "warning"
         "error"
         "broken"
         "options"
         "rawOptions"
-        "init"
       ];
 
       actualAttrs = builtins.attrNames moduleResult;
@@ -96,7 +90,7 @@ rec {
       pathValidationErrors =
         if pathComponents == null then
           [
-            "Could not extract path components from module path. Ensure module is in correct location: modules/NAMESPACE/GROUP/MODULE/MODULE.nix"
+            "Could not extract path components from module path. Ensure module is in correct location: modules/GROUP/MODULE.nix"
           ]
         else
           let
@@ -105,14 +99,6 @@ rec {
                 "Module missing required 'input' field"
               else if moduleResult.input != moduleContext.inputName then
                 "Module input '${moduleResult.input}' does not match expected '${moduleContext.inputName}'"
-              else
-                null;
-
-            namespaceError =
-              if !(moduleResult ? namespace) then
-                "Module missing required 'namespace' field"
-              else if moduleResult.namespace != pathComponents.namespace then
-                "Module namespace '${moduleResult.namespace}' does not match path '${pathComponents.namespace}'"
               else
                 null;
 
@@ -126,7 +112,6 @@ rec {
           in
           builtins.filter (x: x != null) [
             inputError
-            namespaceError
             groupError
           ];
       topLevelErrorMessage = ''
@@ -174,10 +159,10 @@ rec {
               lib.range 0 (builtins.length parts - 1)
             );
           in
-          if moduleIndex != null && moduleIndex + 3 < builtins.length parts then
+          if moduleIndex != null && moduleIndex + 2 < builtins.length parts then
             let
-              group = builtins.elemAt parts (moduleIndex + 2);
-              module = builtins.elemAt parts (moduleIndex + 3);
+              group = builtins.elemAt parts (moduleIndex + 1);
+              module = lib.removeSuffix ".nix" (builtins.elemAt parts (moduleIndex + 2));
             in
             "${group}.${module}"
           else
@@ -208,17 +193,15 @@ rec {
       userSettings;
 
   mergeModuleDefaults =
-    lib: helpers: args: moduleType: inputName: groupName: moduleName: moduleSettings:
+    lib: helpers: args: inputName: groupName: moduleName: moduleSettings:
     let
-      modulePath =
-        helpers.resolveInputFromInput inputName
-        + "/modules/${moduleType}/${groupName}/${moduleName}/${moduleName}.nix";
+      modulePath = helpers.resolveInputFromInput inputName + "/modules/${groupName}/${moduleName}.nix";
     in
     if !builtins.pathExists modulePath then
       if moduleSettings == true then { } else moduleSettings
     else
       let
-        moduleDir = "modules/${moduleType}/${groupName}/${moduleName}";
+        moduleDir = "modules/${groupName}/${moduleName}";
 
         moduleContext = {
           inputs = args.inputs;
@@ -228,21 +211,13 @@ rec {
           moduleInput = helpers.resolveInputFromInput inputName;
           moduleInputName = inputName;
           settings = { };
-        }
-        // (
-          if moduleType == "home" then
-            {
-              host = args.host;
-              user = args.user;
-            }
-          else
-            {
-              host = args.host;
-              users = args.users;
-            }
-        );
+          host = args.host;
+          user = args.user or (if args ? host && args.host ? mainUser then args.host.mainUser else null);
+          users = args.users or { };
+          processedModules = args.processedModules or { };
+        };
 
-        enhancedModuleContext = injectModuleFuncs moduleContext moduleType;
+        enhancedModuleContext = injectModuleFuncs moduleContext;
 
         moduleResult = import modulePath {
           lib = args.lib;
@@ -309,138 +284,195 @@ rec {
     );
 
   injectModuleFuncs =
-    moduleContext: moduleType:
+    moduleContext:
     let
       appliedCommonFuncs = lib.mapAttrs (name: func: func moduleContext) moduleFuncs.commonFuncs;
 
-      contextFuncs =
-        if moduleType == "home" then
-          {
-            user = moduleContext.user;
-          }
-        else
-          {
-            host = moduleContext.host;
-          };
-
-      directContextFuncs =
-        if moduleType == "home" then
-          lib.mapAttrs (name: func: func moduleContext) moduleFuncs.userFuncs
-        else
-          lib.mapAttrs (name: func: func moduleContext) moduleFuncs.hostFuncs;
+      contextFuncs = {
+        host = moduleContext.host or { };
+        user = moduleContext.user or null;
+      };
 
       hierarchicalFuncs = moduleFuncs.hierarchicalInputFuncs moduleContext moduleContext.moduleBasePath;
 
-      persistShortcut =
-        if moduleType == "home" then
-          {
-            persist = "${moduleContext.variables.persist.home}/${moduleContext.user.username}";
-          }
+      persistShortcut = {
+        persist = {
+          home =
+            if moduleContext.user or null != null then
+              "${moduleContext.variables.persist.home}/${moduleContext.user.username}"
+            else
+              throw "Cannot access persist.home: no user context available";
+          system = moduleContext.variables.persist.system;
+        };
+      };
+    in
+    moduleContext // appliedCommonFuncs // contextFuncs // hierarchicalFuncs // persistShortcut;
+
+  resolveArchitecture =
+    args:
+    if args ? host && args.host ? architecture then
+      args.host.architecture
+    else if args ? user && args.user != null && args.user ? architecture then
+      args.user.architecture
+    else
+      throw "No architecture found in args - cannot determine platform";
+
+  validateOn =
+    modulePath: on:
+    let
+      allowedTopLevel = [
+        "init"
+        "enabled"
+        "home"
+        "system"
+        "standalone"
+        "integrated"
+        "linux"
+        "darwin"
+        "overlays"
+      ];
+
+      allowedNested = [
+        "init"
+        "enabled"
+        "home"
+        "system"
+        "standalone"
+        "integrated"
+        "overlays"
+      ];
+
+      topLevelAttrs = builtins.attrNames on;
+      invalidTopLevel = builtins.filter (attr: !(builtins.elem attr allowedTopLevel)) topLevelAttrs;
+
+      validateFn =
+        path: name: value:
+        if !(builtins.isFunction value) then
+          [ "on.${path}${name} must be a function (config: { ... }), got ${builtins.typeOf value}" ]
         else
-          {
-            persist = moduleContext.variables.persist.system;
-          };
-    in
-    moduleContext
-    // appliedCommonFuncs
-    // contextFuncs
-    // directContextFuncs
-    // hierarchicalFuncs
-    // persistShortcut;
+          [ ];
 
-  importHomeModule =
-    args: moduleSpec: allProcessedModules:
-    let
-      modulePath = buildModulePath {
-        input = moduleSpec.input;
-        group = moduleSpec.group;
-        name = moduleSpec.name;
-        moduleType = "home";
-      };
-      moduleDir = "modules/home/${moduleSpec.group}/${moduleSpec.name}";
+      validatePlatform =
+        platformName: platformOn:
+        let
+          attrs = builtins.attrNames platformOn;
+          invalidAttrs = builtins.filter (attr: !(builtins.elem attr allowedNested)) attrs;
+          invalidAttrErrors =
+            if invalidAttrs != [ ] then
+              [
+                "on.${platformName} contains invalid attributes: ${builtins.concatStringsSep ", " invalidAttrs}. Allowed: ${builtins.concatStringsSep ", " allowedNested}"
+              ]
+            else
+              [ ];
+          fnAttrsNested = builtins.filter (attr: attr != "overlays") attrs;
+          fnErrors = lib.concatMap (
+            name: validateFn "${platformName}." name platformOn.${name}
+          ) fnAttrsNested;
+        in
+        invalidAttrErrors ++ fnErrors;
 
-      basicModuleResult = import modulePath {
-        lib = args.lib;
-        pkgs = args.pkgs;
-        pkgs-unstable = args.pkgs-unstable;
-        funcs = args.funcs;
-        helpers = helpers;
-        defs = args.defs;
-        self = { };
-      };
+      topLevelErrors =
+        if invalidTopLevel != [ ] then
+          [
+            "on contains invalid attributes: ${builtins.concatStringsSep ", " invalidTopLevel}. Allowed: ${builtins.concatStringsSep ", " allowedTopLevel}"
+          ]
+        else
+          [ ];
 
-      moduleContext = {
-        inputs = args.inputs;
-        host = args.host // {
-          processedModules = args.systemProcessedModules or { };
-        };
-        user = args.user // {
-          processedModules = allProcessedModules;
-        };
-        variables = args.variables;
-        configInputs = args.configInputs or { };
-        moduleBasePath = moduleDir;
-        moduleInput = moduleSpec.input;
-        moduleInputName = moduleSpec.inputName;
-        settings = moduleSpec.settings or { };
-        unfree = basicModuleResult.unfree or [ ];
-      };
+      fnAttrs = builtins.filter (
+        attr: attr != "linux" && attr != "darwin" && attr != "overlays"
+      ) topLevelAttrs;
 
-      enhancedModuleContext = injectModuleFuncs moduleContext "home";
+      fnErrors = lib.concatMap (name: validateFn "" name on.${name}) fnAttrs;
 
-      consolidatedArgs = {
-        lib = args.lib;
-        pkgs = args.pkgs;
-        pkgs-unstable = args.pkgs-unstable;
-        funcs = args.funcs;
-        helpers = helpers;
-        defs = args.defs;
-        self = enhancedModuleContext;
-      };
-    in
-    let
-      moduleResult = validateModule (import modulePath consolidatedArgs) modulePath {
-        inputName = moduleSpec.inputName;
-      };
-
-    in
-    {
-      configuration = if moduleResult ? configuration then moduleResult.configuration else (context: { });
-      submodules = moduleResult.submodules or { };
-    };
-
-  importSystemModule =
-    args: moduleSpec: allProcessedModules:
-    let
-      modulePath = buildModulePath {
-        input = moduleSpec.input;
-        group = moduleSpec.group;
-        name = moduleSpec.name;
-        moduleType = "system";
-      };
-      moduleDir = "modules/system/${moduleSpec.group}/${moduleSpec.name}";
-
-      basicModuleResult = import modulePath {
-        lib = args.lib;
-        pkgs = args.pkgs;
-        pkgs-unstable = args.pkgs-unstable;
-        funcs = args.funcs;
-        helpers = helpers;
-        defs = args.defs;
-        self = { };
-      };
-
-      moduleContext = {
-        inputs = args.inputs;
-        host = args.host // {
-          processedModules = allProcessedModules;
-        };
-        users = args.users;
-        user =
-          if args.user or null != null then
-            args.user // { processedModules = args.homeProcessedModules or { }; }
+      platformErrors =
+        (
+          if on ? linux && builtins.isAttrs on.linux then
+            validatePlatform "linux" on.linux
+          else if on ? linux then
+            [ "on.linux must be an attribute set, got ${builtins.typeOf on.linux}" ]
           else
-            null;
+            [ ]
+        )
+        ++ (
+          if on ? darwin && builtins.isAttrs on.darwin then
+            validatePlatform "darwin" on.darwin
+          else if on ? darwin then
+            [ "on.darwin must be an attribute set, got ${builtins.typeOf on.darwin}" ]
+          else
+            [ ]
+        );
+
+      allErrors = topLevelErrors ++ fnErrors ++ platformErrors;
+    in
+    if allErrors != [ ] then
+      throw "Module ${modulePath} has invalid 'on' configuration:\n  ${builtins.concatStringsSep "\n  " allErrors}"
+    else
+      on;
+
+  selectApplicableOnFns =
+    {
+      on,
+      buildContext,
+      architecture,
+      includeInit ? false,
+    }:
+    let
+      isLinux = helpers.isLinuxArch architecture;
+      isDarwin = helpers.isDarwinArch architecture;
+      platformOn =
+        if isLinux then
+          on.linux or { }
+        else if isDarwin then
+          on.darwin or { }
+        else
+          { };
+
+      isHome = buildContext == "home-standalone" || buildContext == "home-integrated";
+      isStandalone = buildContext == "home-standalone";
+      isIntegrated = buildContext == "home-integrated";
+    in
+    lib.optional (includeInit && on ? init) on.init
+    ++ lib.optional (includeInit && platformOn ? init) platformOn.init
+    ++ lib.optional (on ? enabled) on.enabled
+    ++ lib.optional (platformOn ? enabled) platformOn.enabled
+    ++ lib.optional (isHome && on ? home) on.home
+    ++ lib.optional (isHome && platformOn ? home) platformOn.home
+    ++ lib.optional (isHome && isStandalone && on ? standalone) on.standalone
+    ++ lib.optional (isHome && isStandalone && platformOn ? standalone) platformOn.standalone
+    ++ lib.optional (isHome && isIntegrated && on ? integrated) on.integrated
+    ++ lib.optional (isHome && isIntegrated && platformOn ? integrated) platformOn.integrated
+    ++ lib.optional (!isHome && on ? system) on.system
+    ++ lib.optional (!isHome && platformOn ? system) platformOn.system;
+
+  mergeOnFunctions =
+    fns: if fns == [ ] then { } else { config, ... }: lib.mkMerge (map (fn: fn config) fns);
+
+  importModule =
+    args: moduleSpec: allProcessedModules: buildContext:
+    let
+      modulePath = buildModulePath {
+        input = moduleSpec.input;
+        group = moduleSpec.group;
+        name = moduleSpec.name;
+      };
+      moduleDir = "modules/${moduleSpec.group}/${moduleSpec.name}";
+
+      basicModuleResult = import modulePath {
+        lib = args.lib;
+        pkgs = args.pkgs;
+        pkgs-unstable = args.pkgs-unstable;
+        funcs = args.funcs;
+        helpers = helpers;
+        defs = args.defs;
+        self = { };
+      };
+
+      moduleContext = {
+        inputs = args.inputs;
+        host = args.host or { };
+        user = args.user or null;
+        users = args.users or { };
         variables = args.variables;
         configInputs = args.configInputs or { };
         moduleBasePath = moduleDir;
@@ -448,9 +480,10 @@ rec {
         moduleInputName = moduleSpec.inputName;
         settings = moduleSpec.settings or { };
         unfree = basicModuleResult.unfree or [ ];
+        processedModules = allProcessedModules;
       };
 
-      enhancedModuleContext = injectModuleFuncs moduleContext "system";
+      enhancedModuleContext = injectModuleFuncs moduleContext;
 
       consolidatedArgs = {
         lib = args.lib;
@@ -461,39 +494,101 @@ rec {
         defs = args.defs;
         self = enhancedModuleContext;
       };
-    in
-    let
+
       moduleResult = validateModule (import modulePath consolidatedArgs) modulePath {
         inputName = moduleSpec.inputName;
       };
+
+      on = validateOn modulePath (moduleResult.on or { });
+      architecture = resolveArchitecture args;
+
+      applicableFns = selectApplicableOnFns {
+        inherit on buildContext architecture;
+      };
+
+      configFn = mergeOnFunctions applicableFns;
     in
     {
-      configuration = if moduleResult ? configuration then moduleResult.configuration else (context: { });
+      configuration = configFn;
       submodules = moduleResult.submodules or { };
     };
 
-  importHomeModules =
-    args: moduleSpecs: allProcessedModules:
+  importModules =
+    args: moduleSpecs: allProcessedModules: buildContext:
     let
-      moduleResults = map (spec: importHomeModule args spec allProcessedModules) moduleSpecs;
+      moduleResults = map (spec: importModule args spec allProcessedModules buildContext) moduleSpecs;
     in
     {
       modules = map (result: result.configuration) moduleResults;
       submodules = lib.foldl lib.recursiveUpdate { } (map (result: result.submodules) moduleResults);
     };
 
-  importSystemModules =
-    args: moduleSpecs: allProcessedModules:
+  processProfileOn =
+    {
+      profile,
+      profileType,
+      profileName,
+      args,
+      processedModules,
+      buildContext,
+    }:
     let
-      moduleResults = map (spec: importSystemModule args spec allProcessedModules) moduleSpecs;
+      on = validateOn "profile:${profileType}/${profileName}" (profile.on or { });
+      architecture = resolveArchitecture args;
+
+      moduleContext = {
+        inputs = args.inputs;
+        variables = args.variables;
+        configInputs = args.configInputs or { };
+        moduleBasePath = "profiles/${profileType}/${profileName}";
+        moduleInput = args.configInputs.config or args.inputs.config;
+        moduleInputName = "config";
+        host = args.host or { };
+        user = args.user or null;
+        users = args.users or { };
+        processedModules = processedModules;
+      };
+
+      enhancedContext = injectModuleFuncs moduleContext;
+
+      enhancedArgs = args // {
+        self = enhancedContext;
+      };
+
+      isLinux = helpers.isLinuxArch architecture;
+      isDarwin = helpers.isDarwinArch architecture;
+      platformOn =
+        if isLinux then
+          on.linux or { }
+        else if isDarwin then
+          on.darwin or { }
+        else
+          { };
+
+      initFns = lib.optional (on ? init) on.init ++ lib.optional (platformOn ? init) platformOn.init;
+
+      contextFns = selectApplicableOnFns {
+        inherit on buildContext architecture;
+      };
+
+      applyArgs = fn: config: fn enhancedArgs config;
     in
     {
-      modules = map (result: result.configuration) moduleResults;
-      submodules = lib.foldl lib.recursiveUpdate { } (map (result: result.submodules) moduleResults);
+      initModules =
+        let
+          applied = map applyArgs initFns;
+        in
+        if applied == [ ] then [ ] else [ (mergeOnFunctions applied) ];
+
+      contextModules =
+        let
+          applied = map applyArgs contextFns;
+        in
+        if applied == [ ] then [ ] else [ (mergeOnFunctions applied) ];
     };
 
   collectModuleAssertions =
-    args: processedModules: moduleType:
+    args: processedModules:
     let
       collectFromModules =
         modules:
@@ -516,7 +611,6 @@ rec {
                     input = moduleSpec.input;
                     group = moduleSpec.group;
                     name = moduleSpec.name;
-                    moduleType = moduleType;
                   };
                   moduleResult = import modulePath {
                     lib = args.lib;
@@ -534,7 +628,6 @@ rec {
                   // {
                     moduleSpec = moduleSpec;
                     modulePath = modulePath;
-                    moduleType = moduleType;
                   }
                 ) (moduleResult.assertions or [ ])
               ) groupModules
@@ -545,30 +638,29 @@ rec {
     collectFromModules processedModules;
 
   evaluateModuleAssertions =
-    args: moduleType: moduleContext: assertion:
+    args: moduleContext: assertion:
     let
       fullModuleContext = {
         inputs = args.inputs;
-        host = args.host // {
-          processedModules = moduleContext.systemModules;
-        };
+        host = args.host or { };
         user =
           if args ? user then
-            args.user // { processedModules = moduleContext.homeModules; }
+            args.user
           else if args ? host && args.host ? mainUser then
-            args.host.mainUser // { processedModules = moduleContext.homeModules; }
+            args.host.mainUser
           else
             null;
-        users = args.users or null;
+        users = args.users or { };
         variables = args.variables;
         configInputs = args.configInputs or { };
-        moduleBasePath = "modules/${assertion.moduleType}/${assertion.moduleSpec.group}/${assertion.moduleSpec.name}";
+        moduleBasePath = "modules/${assertion.moduleSpec.group}/${assertion.moduleSpec.name}";
         moduleInput = assertion.moduleSpec.input;
         moduleInputName = assertion.moduleSpec.inputName;
         settings = assertion.moduleSpec.settings;
+        processedModules = moduleContext.processedModules or { };
       };
 
-      enhancedContext = injectModuleFuncs fullModuleContext assertion.moduleType;
+      enhancedContext = injectModuleFuncs fullModuleContext;
 
       consolidatedArgs = {
         lib = args.lib;
@@ -588,11 +680,11 @@ rec {
     in
     {
       assertion = targetAssertion.assertion;
-      message = "Module ${assertion.moduleSpec.inputName}.${assertion.moduleSpec.group}.${assertion.moduleSpec.name} (namespace: ${moduleType}) assertion failed: ${targetAssertion.message}";
+      message = "Module ${assertion.moduleSpec.inputName}.${assertion.moduleSpec.group}.${assertion.moduleSpec.name} assertion failed: ${targetAssertion.message}";
     };
 
   collectSubModules =
-    args: moduleSpecs: moduleType:
+    args: moduleSpecs:
     let
       moduleResults = map (
         moduleSpec:
@@ -601,9 +693,8 @@ rec {
             input = moduleSpec.input;
             group = moduleSpec.group;
             name = moduleSpec.name;
-            moduleType = moduleType;
           };
-          moduleDir = "modules/${moduleType}/${moduleSpec.group}/${moduleSpec.name}";
+          moduleDir = "modules/${moduleSpec.group}/${moduleSpec.name}";
 
           moduleContext = {
             inputs = args.inputs or args.self.inputs;
@@ -613,21 +704,13 @@ rec {
             moduleInput = moduleSpec.input;
             moduleInputName = moduleSpec.inputName;
             settings = moduleSpec.settings or { };
-          }
-          // (
-            if moduleType == "home" then
-              {
-                host = args.host or args.self.host;
-                user = args.user or args.self.user;
-              }
-            else
-              {
-                host = args.host or args.self.host;
-                users = args.users or args.self.users;
-              }
-          );
+            host = args.host or args.self.host or { };
+            user = args.user or args.self.user or null;
+            users = args.users or args.self.users or { };
+            processedModules = args.processedModules or { };
+          };
 
-          enhancedModuleContext = injectModuleFuncs moduleContext moduleType;
+          enhancedModuleContext = injectModuleFuncs moduleContext;
 
           consolidatedArgs = {
             lib = args.lib;
@@ -691,26 +774,35 @@ rec {
     else
       normalB;
 
-  mergeModulesWithPrecedence =
-    modules1: modules2:
+  zipWithMerge =
+    mergeFn: a: b:
     lib.zipAttrsWith
       (
-        path: values:
+        _: values:
         if builtins.length values == 1 then
-          let
-            value = builtins.head values;
-          in
-          if value == true then { } else value
+          builtins.head values
         else
-          builtins.foldl' mergeModuleValue (builtins.head values) (builtins.tail values)
+          mergeFn (builtins.elemAt values 0) (builtins.elemAt values 1)
       )
       [
-        modules1
-        modules2
+        a
+        b
       ];
 
+  mergeModulesWithPrecedence =
+    modules1: modules2:
+    let
+      normalizeInput = v: if v == true then { } else v;
+    in
+    zipWithMerge (
+      inputA: inputB:
+      zipWithMerge (
+        groupA: groupB: zipWithMerge mergeModuleValue (normalizeInput groupA) (normalizeInput groupB)
+      ) (normalizeInput inputA) (normalizeInput inputB)
+    ) modules1 modules2;
+
   collectAllModulesWithSettings =
-    args: initialModules: moduleType:
+    args: initialModules: buildModules:
     let
       filterFalseValues =
         modules:
@@ -742,39 +834,10 @@ rec {
             groupName: groupModules:
             lib.mapAttrs (
               moduleName: moduleSettings:
-              mergeModuleDefaults lib helpers args moduleType inputName groupName moduleName moduleSettings
+              mergeModuleDefaults lib helpers args inputName groupName moduleName moduleSettings
             ) groupModules
           ) inputGroups
         ) modules;
-
-      buildModules =
-        if moduleType == "system" then
-          {
-            groups = {
-              build = {
-                nixos = true;
-              };
-            };
-          }
-        else if moduleType == "home" then
-          if (args ? user && args.user.isStandalone or false) then
-            {
-              groups = {
-                build = {
-                  home-standalone = true;
-                };
-              };
-            }
-          else
-            {
-              groups = {
-                build = {
-                  home-integrated = true;
-                };
-              };
-            }
-        else
-          { };
 
       modulesWithBuild = lib.recursiveUpdate initialModules buildModules;
 
@@ -785,7 +848,7 @@ rec {
         processedModules: currentModules: iteration:
         let
           moduleSpecs = processModules currentModules;
-          collectedSubmodules = collectSubModules args moduleSpecs moduleType;
+          collectedSubmodules = collectSubModules args moduleSpecs;
           filteredSubmodules = filterFalseValues collectedSubmodules;
           normalizedSubmodules = normalizeModules filteredSubmodules;
           collectedSubmodulesWithDefaults = applyDefaultsToModules normalizedSubmodules;
@@ -911,152 +974,10 @@ rec {
       '';
     };
 
-  applyNixOSHooks = args: import (additionalInputs.build + "/hooks/system/nixos.nix") args;
-
-  applyIntegratedUserHooks =
-    args: import (additionalInputs.build + "/hooks/home/home-integrated.nix") args;
-
-  applyStandaloneUserHooks =
-    args: import (additionalInputs.build + "/hooks/home/home-standalone.nix") args;
-
-  findCorrespondingModules =
-    sourceModules: targetNamespace: args:
-    let
-      getAvailableModules =
-        modules:
-        lib.flatten (
-          lib.mapAttrsToList (
-            inputName: inputGroups:
-            lib.mapAttrsToList (
-              groupName: groupModules:
-              lib.mapAttrsToList (
-                moduleName: _:
-                let
-                  moduleType = if targetNamespace == "home" then "home" else "system";
-                  modulePath = buildModulePath {
-                    input = helpers.resolveInputFromInput inputName;
-                    group = groupName;
-                    name = moduleName;
-                    moduleType = moduleType;
-                  };
-                in
-                if builtins.pathExists modulePath then
-                  {
-                    inherit inputName groupName moduleName;
-                  }
-                else
-                  null
-              ) groupModules
-            ) inputGroups
-          ) modules
-        );
-
-      availableTargetModules = builtins.filter (x: x != null) (getAvailableModules sourceModules);
-
-      correspondingModules = builtins.filter (
-        targetModule:
-        let
-          sourceModulePath = buildModulePath {
-            input = helpers.resolveInputFromInput targetModule.inputName;
-            group = targetModule.groupName;
-            name = targetModule.moduleName;
-            moduleType = if targetNamespace == "home" then "system" else "home";
-          };
-        in
-        builtins.pathExists sourceModulePath
-      ) availableTargetModules;
-    in
-    correspondingModules;
-
-  addCrossNamespaceModules =
-    modules: otherNamespaceModules: moduleType: args:
-    let
-      shouldApplyForcing = if moduleType == "home" then !(args.user.isStandalone or false) else true;
-
-      targetNamespace = if moduleType == "home" then "home" else "system";
-    in
-    if !shouldApplyForcing then
-      modules
-    else
-      let
-        correspondingModules = findCorrespondingModules otherNamespaceModules targetNamespace args;
-
-        forcedModuleSpecs = lib.foldl lib.recursiveUpdate { } (
-          map (
-            moduleInfo:
-            let
-              inputName = moduleInfo.inputName;
-              groupName = moduleInfo.groupName;
-              moduleName = moduleInfo.moduleName;
-              moduleAlreadyExists =
-                modules ? ${inputName}
-                && modules.${inputName} ? ${groupName}
-                && modules.${inputName}.${groupName} ? ${moduleName};
-            in
-            if moduleAlreadyExists then
-              { }
-            else
-              let
-                moduleDefaults =
-                  let
-                    modulePath = buildModulePath {
-                      input = helpers.resolveInputFromInput inputName;
-                      group = groupName;
-                      name = moduleName;
-                      moduleType = targetNamespace;
-                    };
-                    moduleDir = "modules/${targetNamespace}/${groupName}/${moduleName}";
-                    moduleContext = {
-                      inputs = args.inputs;
-                      variables = args.variables;
-                      configInputs = args.configInputs or { };
-                      moduleBasePath = moduleDir;
-                      moduleInput = helpers.resolveInputFromInput inputName;
-                      moduleInputName = inputName;
-                    }
-                    // (
-                      if targetNamespace == "home" then
-                        {
-                          user = args.user;
-                          users = args.users;
-                        }
-                      else
-                        {
-                          host = args.host;
-                          users = args.users;
-                        }
-                    );
-                    enhancedModuleContext = injectModuleFuncs moduleContext targetNamespace;
-                    moduleResult = import modulePath {
-                      lib = args.lib;
-                      pkgs = args.pkgs;
-                      pkgs-unstable = args.pkgs-unstable;
-                      funcs = args.funcs;
-                      helpers = helpers;
-                      defs = args.defs;
-                      self = enhancedModuleContext;
-                    };
-                  in
-                  moduleResult.settings or { };
-              in
-              {
-                ${inputName} = {
-                  ${groupName} = {
-                    ${moduleName} = moduleDefaults;
-                  };
-                };
-              }
-          ) correspondingModules
-        );
-
-        mergedModules = mergeModulesWithPrecedence modules forcedModuleSpecs;
-      in
-      mergedModules;
-
   scanAllModulesForInput =
-    inputName: input: moduleType:
+    inputName: input:
     let
-      modulesPath = input + "/modules/${moduleType}";
+      modulesPath = input + "/modules";
     in
     if builtins.pathExists modulesPath then
       let
@@ -1066,30 +987,27 @@ rec {
           if groupType == "directory" then
             let
               groupPath = modulesPath + "/${groupName}";
-              modules = builtins.readDir groupPath;
+              entries = builtins.readDir groupPath;
             in
             lib.mapAttrsToList (
-              moduleName: entryType:
-              if entryType == "directory" then
+              fileName: entryType:
+              if entryType == "regular" && lib.hasSuffix ".nix" fileName then
                 let
-                  modulePath = groupPath + "/${moduleName}/${moduleName}.nix";
+                  moduleName = lib.removeSuffix ".nix" fileName;
+                  modulePath = groupPath + "/${fileName}";
                 in
-                if builtins.pathExists modulePath then
-                  {
-                    inherit
-                      inputName
-                      groupName
-                      moduleName
-                      modulePath
-                      moduleType
-                      ;
-                    input = input;
-                  }
-                else
-                  null
+                {
+                  inherit
+                    inputName
+                    groupName
+                    moduleName
+                    modulePath
+                    ;
+                  input = input;
+                }
               else
                 null
-            ) modules
+            ) entries
           else
             [ ];
       in
@@ -1097,24 +1015,62 @@ rec {
     else
       [ ];
 
+  extractOverlaysFromOn =
+    { on, system }:
+    let
+      isLinux = helpers.isLinuxArch system;
+      isDarwin = helpers.isDarwinArch system;
+      platformOn =
+        if isLinux then
+          on.linux or { }
+        else if isDarwin then
+          on.darwin or { }
+        else
+          { };
+    in
+    (on.overlays or [ ]) ++ (platformOn.overlays or [ ]);
+
+  collectModuleOverlays =
+    system:
+    let
+      minimalArgs = {
+        inherit lib;
+        pkgs = { };
+        pkgs-unstable = { };
+        funcs = { };
+        helpers = helpers;
+        defs = defs;
+        self = { };
+      };
+
+      scanInput =
+        inputName:
+        if additionalInputs ? ${inputName} then
+          let
+            input = additionalInputs.${inputName};
+            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input);
+          in
+          lib.concatMap (
+            spec:
+            let
+              moduleResult = builtins.tryEval (import spec.modulePath minimalArgs);
+            in
+            if moduleResult.success then
+              extractOverlaysFromOn {
+                on = moduleResult.value.on or { };
+                inherit system;
+              }
+            else
+              [ ]
+          ) moduleSpecs
+        else
+          [ ];
+    in
+    lib.concatMap scanInput defs.moduleInputsToScan;
+
   collectAllModuleOptions =
     args:
     let
-      inputsToScan = [
-        "common"
-        "linux"
-        "darwin"
-        "groups"
-        "build"
-        "config"
-        "profile"
-        "themes"
-      ];
-
-      moduleTypes = [
-        "home"
-        "system"
-      ];
 
       minimalArgs = {
         inherit lib;
@@ -1126,12 +1082,12 @@ rec {
         self = { };
       };
 
-      scanInputForType =
-        inputName: moduleType:
+      scanInput =
+        inputName:
         if additionalInputs ? ${inputName} then
           let
             input = additionalInputs.${inputName};
-            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input moduleType);
+            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input);
           in
           map (
             spec:
@@ -1146,7 +1102,6 @@ rec {
                   moduleName
                   modulePath
                   ;
-                inherit moduleType;
                 options = moduleResult.value.options or { };
                 rawOptions = moduleResult.value.rawOptions or { };
               }
@@ -1158,7 +1113,6 @@ rec {
                   moduleName
                   modulePath
                   ;
-                inherit moduleType;
                 options = { };
                 rawOptions = { };
               }
@@ -1166,11 +1120,7 @@ rec {
         else
           [ ];
 
-      allModuleOptions = lib.flatten (
-        lib.concatMap (
-          inputName: map (moduleType: scanInputForType inputName moduleType) moduleTypes
-        ) inputsToScan
-      );
+      allModuleOptions = lib.flatten (map scanInput defs.moduleInputsToScan);
     in
     builtins.filter (m: m.options != { } || m.rawOptions != { }) allModuleOptions;
 
@@ -1198,34 +1148,22 @@ rec {
   importAllModuleInits =
     args:
     let
-      inputsToScan = [
-        "common"
-        "linux"
-        "darwin"
-        "groups"
-        "build"
-        "config"
-        "profile"
-        "themes"
-      ];
+      architecture = resolveArchitecture args;
+      isLinux = helpers.isLinuxArch architecture;
+      isDarwin = helpers.isDarwinArch architecture;
 
-      moduleTypes = [
-        "home"
-        "system"
-      ];
-
-      scanInputForType =
-        inputName: moduleType:
+      scanInput =
+        inputName:
         if additionalInputs ? ${inputName} then
           let
             input = additionalInputs.${inputName};
-            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input moduleType);
+            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input);
           in
           lib.flatten (
             map (
               spec:
               let
-                moduleDir = "modules/${moduleType}/${spec.groupName}/${spec.moduleName}";
+                moduleDir = "modules/${spec.groupName}/${spec.moduleName}";
 
                 moduleContext = {
                   inputs = args.inputs;
@@ -1235,21 +1173,13 @@ rec {
                   moduleInput = spec.input;
                   moduleInputName = spec.inputName;
                   settings = { };
-                  host = args.host // {
-                    processedModules = args.systemProcessedModules or { };
-                  };
+                  host = args.host or { };
                   users = args.users or { };
-                  user =
-                    if args.user or null != null then
-                      args.user
-                      // {
-                        processedModules = args.homeProcessedModules or { };
-                      }
-                    else
-                      null;
+                  user = args.user or null;
+                  processedModules = args.processedModules or { };
                 };
 
-                enhancedModuleContext = injectModuleFuncs moduleContext moduleType;
+                enhancedModuleContext = injectModuleFuncs moduleContext;
 
                 contextWithOptions = enhancedModuleContext // {
                   options = config: config.nx.${spec.inputName}.${spec.groupName}.${spec.moduleName} or { };
@@ -1266,16 +1196,27 @@ rec {
                 };
 
                 moduleResult = builtins.tryEval (import spec.modulePath consolidatedArgs);
+
+                on = if moduleResult.success then moduleResult.value.on or { } else { };
+                platformOn =
+                  if isLinux then
+                    on.linux or { }
+                  else if isDarwin then
+                    on.darwin or { }
+                  else
+                    { };
+
+                wrapInit = initFn: { config, ... }: initFn config;
+
+                initFns =
+                  (if on ? init then [ (wrapInit on.init) ] else [ ])
+                  ++ (if platformOn ? init then [ (wrapInit platformOn.init) ] else [ ]);
               in
-              if moduleResult.success && moduleResult.value ? init then [ (moduleResult.value.init) ] else [ ]
+              initFns
             ) moduleSpecs
           )
         else
           [ ];
     in
-    lib.flatten (
-      lib.concatMap (
-        inputName: map (moduleType: scanInputForType inputName moduleType) moduleTypes
-      ) inputsToScan
-    );
+    lib.flatten (map scanInput defs.moduleInputsToScan);
 }
