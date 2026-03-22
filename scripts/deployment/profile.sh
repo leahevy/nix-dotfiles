@@ -41,7 +41,7 @@ resolve_active_profile_base() {
 resolve_active_profile_dir() {
     local base_profile
     base_profile="$(resolve_active_profile_base)"
-    
+
     if [[ -e /etc/NIXOS ]]; then
         echo "$CONFIG_DIR/profiles/nixos/$base_profile"
     else
@@ -56,12 +56,12 @@ resolve_user_profile_dir() {
     full_profile="$(retrieve_active_profile 2>/dev/null | tail -1)"
     username="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
     username="${username//\"/}"
-    
+
     if [[ "$username" == "null" || -z "$username" ]]; then
         echo -e "${RED}Error: Could not resolve mainUser.username for profile ${WHITE}$full_profile${RESET}" >&2
         exit 1
     fi
-    
+
     echo "$CONFIG_DIR/profiles/home-integrated/$username"
 }
 
@@ -86,12 +86,12 @@ resolve_user_config_file() {
 
 open_shell_in_dir() {
     local target_dir="$1"
-    
+
     if [[ ! -d "$target_dir" ]]; then
         echo -e "${RED}Error: Directory not found: ${WHITE}$target_dir${RESET}" >&2
         exit 1
     fi
-    
+
     if [[ -x "$HOME/.nix-profile/bin/fish" ]] && [[ -f "$HOME/.config/fish/config.fish" ]]; then
         CURRENT_SHELL="fish"
     elif [[ -x "$HOME/.nix-profile/bin/zsh" ]] && [[ -f "$HOME/.config/zsh/.zshrc" ]]; then
@@ -99,7 +99,7 @@ open_shell_in_dir() {
     else
         CURRENT_SHELL="$(basename "$SHELL")"
     fi
-    
+
     case "$CURRENT_SHELL" in
         bash)
             (cd "$target_dir" && exec "$SHELL" --rcfile <(echo "cd \"$target_dir\"") -i)
@@ -118,12 +118,12 @@ open_shell_in_dir() {
 
 edit_file() {
     local file_path="$1"
-    
+
     if [[ ! -f "$file_path" ]]; then
         echo -e "${RED}Error: File not found: ${WHITE}$file_path${RESET}" >&2
         exit 1
     fi
-    
+
     exec "${EDITOR:-vim}" "$file_path"
 }
 
@@ -157,18 +157,18 @@ subcommand_user_edit() {
 
 subcommand_select() {
     local profile_name="${1:-}"
-    
+
     if [[ "$profile_name" =~ ^- ]]; then
         echo -e "${RED}Unknown option: ${WHITE}$profile_name${RESET}" >&2
         echo -e "${RED}Expected: ${WHITE}<PROFILE_NAME>${RESET}" >&2
         exit 1
     fi
-    
+
     if [[ "$profile_name" = "" ]]; then
         echo -e "${RED}Expected: ${WHITE}<PROFILE_NAME>${RESET}" >&2
         exit 1
     fi
-    
+
     echo -n "$profile_name" > .nx-profile.conf
     echo -e "${GREEN}Profile set to: ${WHITE}$profile_name${RESET}"
 }

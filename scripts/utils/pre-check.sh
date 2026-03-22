@@ -649,6 +649,24 @@ retrieve_active_profile_path() {
     echo "$profile_path"
 }
 
+get_main_username() {
+    local hostname="$(hostname)"
+    local full_profile="$(construct_profile_name "$hostname")"
+    local profile_path="$(retrieve_active_profile_path 2>/dev/null | tail -1)"
+
+    if [[ -d "$CONFIG_DIR" ]]; then
+        local username
+        username="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$profile_path" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+        if [[ -n "$username" && "$username" != "null" && "$username" != "\"null\"" ]]; then
+            echo "${username//\"/}"
+            return 0
+        fi
+    fi
+
+    echo -e "${RED}Error: could not determine main user name!${RESET}" >&2
+    exit 1
+}
+
 copy_config_to_target() {
     local USERNAME="$1"
     local TARGET_HOME="$2"
@@ -957,5 +975,78 @@ check_deployment_conflicts() {
 
     if [[ "$command_name" == "brew" ]]; then
         check_brew_activity
+    fi
+}
+
+diff_store_paths() {
+    local old="$1" new="$2"
+
+    declare -A old_hashes new_hashes
+    local stripped hash name
+
+    while IFS= read -r path; do
+        stripped="${path#/nix/store/}"
+        hash="${stripped:0:32}"
+        name="${stripped:33}"
+        if [[ -v "old_hashes[$name]" ]]; then
+            old_hashes["$name"]+=" $hash"
+        else
+            old_hashes["$name"]="$hash"
+        fi
+    done < <(nix path-info -r "$old" 2>/dev/null)
+
+    while IFS= read -r path; do
+        stripped="${path#/nix/store/}"
+        hash="${stripped:0:32}"
+        name="${stripped:33}"
+        if [[ -v "new_hashes[$name]" ]]; then
+            new_hashes["$name"]+=" $hash"
+        else
+            new_hashes["$name"]="$hash"
+        fi
+    done < <(nix path-info -r "$new" 2>/dev/null)
+
+    local output=""
+
+    for name in "${!new_hashes[@]}"; do
+        if [[ -v "old_hashes[$name]" ]]; then
+            local old_sorted new_sorted
+            old_sorted="$(echo "${old_hashes[$name]}" | tr ' ' '\n' | sort | tr '\n' ' ')"
+            new_sorted="$(echo "${new_hashes[$name]}" | tr ' ' '\n' | sort | tr '\n' ' ')"
+            if [[ "$old_sorted" != "$new_sorted" ]]; then
+                local old_first new_first
+                old_first="${old_hashes[$name]%% *}"
+                new_first="${new_hashes[$name]%% *}"
+                output+="!	${name}	${old_first}	${new_first}"$'\n'
+            fi
+        else
+            output+="+	${name}	${new_hashes[$name]%% *}"$'\n'
+        fi
+    done
+
+    for name in "${!old_hashes[@]}"; do
+        if [[ ! -v "new_hashes[$name]" ]]; then
+            output+="-	${name}	${old_hashes[$name]%% *}"$'\n'
+        fi
+    done
+
+    if [[ -z "$output" ]]; then
+        echo -e "${GREEN}Store closures are identical.${RESET}"
+    else
+        echo "$output" | sort -t$'\t' -k2 | while IFS=$'\t' read -r kind name hash1 hash2; do
+            [[ -z "$kind" ]] && continue
+            case "$kind" in
+                "!")
+                    echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
+                    echo -e "    ${GRAY}/nix/store/${hash1}-${name}${RESET} ${GRAY}/nix/store/${hash2}-${name}${RESET}"
+                    ;;
+                "+")
+                    echo -e "${GREEN}[A]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash1}-${name}${RESET}"
+                    ;;
+                "-")
+                    echo -e "${RED}[R]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash1}-${name}${RESET}"
+                    ;;
+            esac
+        done
     fi
 }

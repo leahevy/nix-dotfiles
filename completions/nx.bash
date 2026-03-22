@@ -34,6 +34,9 @@ _complete_nx() {
             modules)
                 COMPREPLY=($(compgen -W "list config info edit help" -- "${cur}"))
                 ;;
+            eval)
+                COMPREPLY=($(compgen -W "--home" -- "${cur}"))
+                ;;
             package)
                 COMPREPLY=($(compgen -W "--unstable" -- "${cur}"))
                 ;;

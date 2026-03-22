@@ -149,6 +149,9 @@ complete -c nx -n "__fish_seen_subcommand_from package" -f
 complete -c nx -n "__fish_seen_subcommand_from rollback" -n "test (count (commandline -opc)) = 2" -f
 complete -c nx -n "__fish_seen_subcommand_from rollback" -n "test (count (commandline -opc)) = 2" -l allow-dirty-git -d "Allow proceeding with uncommitted changes"
 
+# 'nx eval'
+complete -c nx -n "__fish_seen_subcommand_from eval" -l home -d "Evaluate in home-manager context"
+
 # Other commands
 complete -c nx -n "__fish_seen_subcommand_from gc news config core update eval version" -f
 complete -c nx -n "__fish_seen_subcommand_from commit" -f

@@ -201,6 +201,11 @@ _nx() {
                             ;;
                     esac
                     ;;
+                eval)
+                    _arguments \
+                        '--home[Evaluate in home-manager context]' \
+                        '*:eval path:_message "eval path"'
+                    ;;
                 package)
                     _arguments \
                         '--unstable[Use nixpkgs-unstable instead of nixpkgs]' \
