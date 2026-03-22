@@ -13,15 +13,6 @@ args@{
 
   group = "dev";
   input = "darwin";
-  namespace = "home";
-
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
-    };
-  };
 
   assertions = [
     {
@@ -30,12 +21,9 @@ args@{
     }
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/ollama.brew".text = ''
-        brew 'ollama'
-      '';
+  on = {
+    darwin.home = config: {
+      nx.homebrew.brews = [ "ollama" ];
     };
-
+  };
 }

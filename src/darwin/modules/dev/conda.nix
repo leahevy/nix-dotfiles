@@ -13,14 +13,8 @@ args@{
 
   group = "dev";
   input = "darwin";
-  namespace = "home";
 
   submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
-    };
     common = {
       dev = {
         conda = true;
@@ -28,11 +22,9 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/miniconda.brew".text = ''
-        cask 'miniconda'
-      '';
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "miniconda" ];
     };
+  };
 }

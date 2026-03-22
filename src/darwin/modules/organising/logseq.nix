@@ -13,21 +13,10 @@ args@{
 
   group = "organising";
   input = "darwin";
-  namespace = "home";
 
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "logseq" ];
     };
   };
-
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/logseq.brew".text = ''
-        cask 'logseq'
-      '';
-    };
 }

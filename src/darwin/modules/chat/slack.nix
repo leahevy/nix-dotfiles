@@ -13,21 +13,10 @@ args@{
 
   group = "chat";
   input = "darwin";
-  namespace = "home";
 
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "slack" ];
     };
   };
-
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/slack.brew".text = ''
-        cask 'slack'
-      '';
-    };
 }

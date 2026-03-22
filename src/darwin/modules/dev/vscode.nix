@@ -13,21 +13,10 @@ args@{
 
   group = "dev";
   input = "darwin";
-  namespace = "home";
 
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "visual-studio-code" ];
     };
   };
-
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/vscode.brew".text = ''
-        cask 'visual-studio-code'
-      '';
-    };
 }

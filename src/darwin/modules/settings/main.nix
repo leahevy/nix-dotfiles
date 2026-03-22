@@ -13,13 +13,12 @@ args@{
 
   group = "settings";
   input = "darwin";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    darwin.home = config: {
       programs.nix-plist-manager = {
         enable = true;
       };
     };
+  };
 }

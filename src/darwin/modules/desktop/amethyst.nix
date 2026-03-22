@@ -13,13 +13,9 @@ args@{
 
   group = "desktop";
   input = "darwin";
-  namespace = "home";
 
   submodules = {
     darwin = {
-      software = {
-        homebrew = true;
-      };
       desktop = {
         keyboard-cowboy = true;
       };
@@ -33,11 +29,9 @@ args@{
     }
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/amethyst.brew".text = ''
-        cask 'amethyst'
-      '';
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "amethyst" ];
     };
+  };
 }

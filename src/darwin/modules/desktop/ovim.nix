@@ -13,25 +13,11 @@ args@{
 
   group = "desktop";
   input = "darwin";
-  namespace = "home";
 
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
+  on = {
+    darwin.home = config: {
+      nx.homebrew.taps = [ "tonisives/tap" ];
+      nx.homebrew.casks = [ "ovim" ];
     };
   };
-
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/ovim.tap".text = ''
-        tap 'tonisives/tap'
-      '';
-
-      home.file.".config/homebrew/ovim.brew".text = ''
-        cask 'ovim'
-      '';
-    };
 }

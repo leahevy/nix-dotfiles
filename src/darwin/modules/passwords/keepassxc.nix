@@ -13,14 +13,8 @@ args@{
 
   group = "passwords";
   input = "darwin";
-  namespace = "home";
 
   submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
-    };
     common = {
       passwords = {
         keepassxc = true;
@@ -28,11 +22,9 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/keepassxc.brew".text = ''
-        cask 'keepassxc'
-      '';
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "keepassxc" ];
     };
+  };
 }

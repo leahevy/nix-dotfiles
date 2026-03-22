@@ -13,7 +13,6 @@ args@{
 
   group = "settings";
   input = "darwin";
-  namespace = "home";
 
   submodules = {
     darwin = {
@@ -29,9 +28,8 @@ args@{
     use24HourTime = false;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    darwin.home = config: {
       programs.nix-plist-manager = {
         options = {
           applications = {
@@ -46,4 +44,5 @@ args@{
         };
       };
     };
+  };
 }

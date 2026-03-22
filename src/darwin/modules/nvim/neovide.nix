@@ -13,21 +13,10 @@ args@{
 
   group = "nvim";
   input = "darwin";
-  namespace = "home";
 
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
+  on = {
+    darwin.home = config: {
+      nx.homebrew.brews = [ "neovide" ];
     };
   };
-
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/neovide.brew".text = ''
-        brew 'neovide'
-      '';
-    };
 }

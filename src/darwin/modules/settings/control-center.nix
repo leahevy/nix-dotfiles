@@ -13,7 +13,6 @@ args@{
 
   group = "settings";
   input = "darwin";
-  namespace = "home";
 
   submodules = {
     darwin = {
@@ -23,9 +22,8 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    darwin.home = config: {
       programs.nix-plist-manager = {
         options = {
           applications = {
@@ -71,4 +69,5 @@ args@{
         };
       };
     };
+  };
 }

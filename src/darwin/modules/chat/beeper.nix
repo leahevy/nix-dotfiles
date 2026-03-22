@@ -13,21 +13,10 @@ args@{
 
   group = "chat";
   input = "darwin";
-  namespace = "home";
 
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "beeper" ];
     };
   };
-
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/beeper.brew".text = ''
-        cask 'beeper'
-      '';
-    };
 }

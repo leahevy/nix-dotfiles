@@ -13,21 +13,10 @@ args@{
 
   group = "desktop";
   input = "darwin";
-  namespace = "home";
 
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "betterdisplay" ];
     };
   };
-
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/better-display.brew".text = ''
-        cask 'betterdisplay'
-      '';
-    };
 }

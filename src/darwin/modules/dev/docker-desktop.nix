@@ -13,21 +13,10 @@ args@{
 
   group = "dev";
   input = "darwin";
-  namespace = "home";
 
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "docker-desktop" ];
     };
   };
-
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/docker-desktop.brew".text = ''
-        cask 'docker-desktop'
-      '';
-    };
 }

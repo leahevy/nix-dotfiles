@@ -13,21 +13,10 @@ args@{
 
   group = "music";
   input = "darwin";
-  namespace = "home";
 
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "spotify" ];
     };
   };
-
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/spotify.brew".text = ''
-        cask 'spotify'
-      '';
-    };
 }

@@ -13,15 +13,6 @@ args@{
 
   group = "desktop";
   input = "darwin";
-  namespace = "home";
-
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
-    };
-  };
 
   assertions = [
     {
@@ -30,11 +21,9 @@ args@{
     }
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/keyboard-cowboy.brew".text = ''
-        cask 'keyboard-cowboy'
-      '';
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "keyboard-cowboy" ];
     };
+  };
 }

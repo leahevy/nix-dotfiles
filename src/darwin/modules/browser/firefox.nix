@@ -13,21 +13,10 @@ args@{
 
   group = "browser";
   input = "darwin";
-  namespace = "home";
 
-  submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "firefox" ];
     };
   };
-
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/firefox.brew".text = ''
-        cask 'firefox'
-      '';
-    };
 }

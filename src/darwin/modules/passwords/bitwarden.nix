@@ -13,14 +13,8 @@ args@{
 
   group = "passwords";
   input = "darwin";
-  namespace = "home";
 
   submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
-    };
     common = {
       passwords = {
         bitwarden = true;
@@ -28,11 +22,9 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/bitwarden.brew".text = ''
-        cask 'bitwarden'
-      '';
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "bitwarden" ];
     };
+  };
 }

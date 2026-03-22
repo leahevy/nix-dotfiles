@@ -13,14 +13,8 @@ args@{
 
   group = "browser";
   input = "darwin";
-  namespace = "home";
 
   submodules = {
-    darwin = {
-      software = {
-        homebrew = true;
-      };
-    };
     common = {
       browser = {
         qutebrowser-config = true;
@@ -28,11 +22,9 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file.".config/homebrew/qutebrowser.brew".text = ''
-        cask 'qutebrowser'
-      '';
+  on = {
+    darwin.home = config: {
+      nx.homebrew.casks = [ "qutebrowser" ];
     };
+  };
 }
