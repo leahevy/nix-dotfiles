@@ -13,11 +13,9 @@ args@{
 
   group = "services";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       services = {
         ssh-agent.enable = true;
       };
@@ -26,10 +24,11 @@ args@{
         SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/ssh-agent";
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".ssh"
         ];
       };
     };
+  };
 }

@@ -13,11 +13,9 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         extraPlugins = lib.optionals (self.isModuleEnabled "nvim-modules.telescope") [
           (pkgs.vimUtils.buildVimPlugin {
@@ -277,4 +275,5 @@ args@{
         '';
       };
     };
+  };
 }

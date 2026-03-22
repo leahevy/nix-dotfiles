@@ -46,7 +46,6 @@ in
 
   group = "gpg";
   input = "common";
-  namespace = "home";
 
   settings = {
     keyserver = "keys.openpgp.org";
@@ -54,9 +53,8 @@ in
     relativeSSHAuthSockPath = null;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       services = {
         gpg-agent = {
           enable = true;
@@ -162,10 +160,11 @@ in
         executable = true;
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".gnupg"
         ];
       };
     };
+  };
 }

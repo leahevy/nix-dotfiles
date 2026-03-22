@@ -13,13 +13,12 @@ args@{
 
   group = "git";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.lazygit = {
         enable = true;
       };
     };
+  };
 }

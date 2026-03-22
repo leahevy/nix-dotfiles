@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -29,9 +28,8 @@ args@{
     includeSurroundingWhitespace = true;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.treesitter-textobjects = {
           enable = true;
@@ -272,4 +270,5 @@ args@{
         '';
       };
     };
+  };
 }

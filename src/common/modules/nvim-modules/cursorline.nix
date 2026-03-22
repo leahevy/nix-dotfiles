@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     enableCursorline = false;
@@ -65,9 +64,8 @@ args@{
     ];
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       # Modified version of nvim-cursorline with filetype exclusions
       #  Original: https://github.com/ya2s/nvim-cursorline
       #  License: MIT
@@ -225,4 +223,5 @@ args@{
         end
       '';
     };
+  };
 }

@@ -13,13 +13,11 @@ args@{
 
   group = "doom-modules";
   input = "common";
-  namespace = "home";
 
   unfree = [ "copilot-language-server" ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages = with pkgs; [
         copilot-language-server
       ];
@@ -53,4 +51,5 @@ args@{
           :recipe (:host github :repo "copilot-emacs/copilot.el" :files ("*.el")))
       '';
     };
+  };
 }

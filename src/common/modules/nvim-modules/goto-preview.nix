@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     width = 120;
@@ -50,9 +49,8 @@ args@{
     vim_ui_input = true;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.goto-preview = {
           enable = true;
@@ -175,4 +173,5 @@ args@{
         ];
       };
     };
+  };
 }

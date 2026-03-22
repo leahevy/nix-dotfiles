@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     windowWidth = 120;
@@ -22,9 +21,8 @@ args@{
     enableTwilight = true;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.zen-mode = {
           enable = true;
@@ -137,4 +135,5 @@ args@{
         '';
       };
     };
+  };
 }

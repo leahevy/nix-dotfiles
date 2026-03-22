@@ -13,11 +13,9 @@ args@{
 
   group = "doom-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.file.".config/doom/config/10-shell.el".text = ''
         (setq shell-file-name (executable-find "bash"))
 
@@ -29,4 +27,5 @@ args@{
         (setq-default explicit-shell-file-name (getenv "SHELL"))
       '';
     };
+  };
 }

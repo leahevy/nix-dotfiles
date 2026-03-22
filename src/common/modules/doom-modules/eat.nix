@@ -13,17 +13,15 @@ args@{
 
   group = "doom-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.file.".config/doom/config/40-eat.el".text = ''
         (use-package! eat
           :config
           (add-hook 'eshell-load-hook #'eat-eshell-mode)
           (setq eat-shell (getenv "SHELL"))
-          
+
           (defun shell-other-window-right-of ()
             "Open a `shell' in a new window."
             (interactive)
@@ -54,4 +52,5 @@ args@{
                        (:exclude ".dir-locals.el" "*-tests.el"))))
       '';
     };
+  };
 }

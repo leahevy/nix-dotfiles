@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     enablePython = true;
@@ -30,11 +29,15 @@ args@{
     enableGlobalFormatting = true;
     enableInlayHints = true;
     withVirtualTextDiagnostics = true;
+    suppressDiagnostics = {
+      nixd = [
+        "sema-unused-def-lambda"
+      ];
+    };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.lspconfig = {
           enable = true;
@@ -407,63 +410,125 @@ args@{
           }
         ];
 
-        extraConfigLua = ''
-          _G.nx_modules = _G.nx_modules or {}
-          _G.nx_modules["50-lsp-diagnostics"] = function()
-            vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}" })
-            vim.api.nvim_set_hl(0, "DiagnosticWarn", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}" })
-            vim.api.nvim_set_hl(0, "DiagnosticInfo", { fg = "${config.nx.preferences.theme.colors.semantic.hint.html}" })
-            vim.api.nvim_set_hl(0, "DiagnosticHint", { fg = "${config.nx.preferences.theme.colors.semantic.inactive.html}" })
-
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextError", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextWarn", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextInfo", { fg = "${config.nx.preferences.theme.colors.semantic.hint.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualTextHint", { fg = "${config.nx.preferences.theme.colors.semantic.inactive.html}", italic = true, underdotted = true })
-
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesError", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesWarn", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesInfo", { fg = "${config.nx.preferences.theme.colors.semantic.hint.html}", italic = true, underdotted = true })
-            vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesHint", { fg = "${config.nx.preferences.theme.colors.semantic.inactive.html}", italic = true, underdotted = true })
-
-            ${lib.optionalString self.settings.withVirtualTextDiagnostics ''
-              local severity_text = {
-                [vim.diagnostic.severity.ERROR] = "error",
-                [vim.diagnostic.severity.WARN] = "warn",
-                [vim.diagnostic.severity.INFO] = "info",
-                [vim.diagnostic.severity.HINT] = "hint",
-              }''}
-
-            vim.diagnostic.config({
-              signs = {
-                text = {
-                  [vim.diagnostic.severity.ERROR] = "",
-                  [vim.diagnostic.severity.WARN] = "",
-                  [vim.diagnostic.severity.INFO] = "",
-                  [vim.diagnostic.severity.HINT] = "󰌵",
-                }
-              },
-            ${lib.optionalString self.settings.withVirtualTextDiagnostics ''
-              virtual_text = false,
-              virtual_lines = {
-                only_current_line = false,
-                format = function(diagnostic)
-                  if diagnostic.severity == vim.diagnostic.severity.INFO then
-                    return nil
+        extraConfigLua =
+          let
+            escapeLuaPattern =
+              s:
+              builtins.replaceStrings
+                [
+                  "%"
+                  "^"
+                  "$"
+                  "("
+                  ")"
+                  "."
+                  "["
+                  "]"
+                  "*"
+                  "+"
+                  "-"
+                  "?"
+                ]
+                [
+                  "%%"
+                  "%^"
+                  "%$"
+                  "%("
+                  "%)"
+                  "%."
+                  "%["
+                  "%]"
+                  "%*"
+                  "%+"
+                  "%-"
+                  "%?"
+                ]
+                s;
+            suppressCfg = self.settings.suppressDiagnostics;
+            suppressedClients = lib.attrNames suppressCfg;
+            generateClientCheck =
+              clientName:
+              let
+                patterns = map escapeLuaPattern (suppressCfg.${clientName});
+                luaPatterns = map (p: ''(diagnostic.code and diagnostic.code:match("^${p}"))'') patterns;
+              in
+              ''
+                if client.name == "${clientName}" then
+                  result.diagnostics = vim.tbl_filter(function(diagnostic)
+                    return not (${lib.concatStringsSep " or " luaPatterns})
+                  end, result.diagnostics)
+                end
+              '';
+          in
+          ''
+            _G.nx_modules = _G.nx_modules or {}
+            ${lib.optionalString (suppressedClients != [ ]) ''
+              _G.nx_modules["40-lsp-suppress"] = function()
+                local orig = vim.lsp.handlers["textDocument/publishDiagnostics"]
+                vim.lsp.handlers["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
+                  local client = vim.lsp.get_client_by_id(ctx.client_id)
+                  if client and result and result.diagnostics then
+              ${lib.concatStrings (map generateClientCheck suppressedClients)}
                   end
-                  local severity = severity_text[diagnostic.severity] or severity_text[vim.diagnostic.severity.hint]
-                  return ('%s [%s::%s] (%s)'):format(diagnostic.message, diagnostic.source, diagnostic.code, severity)
-                end,
-              },''}
-              float = {
-                border = "single",
-                source = "always",
-                header = "",
-                prefix = "",
-              },
-            })
-          end
-        '';
-      };
+                  return orig(err, result, ctx, config)
+                end
+              end
+            ''}
+            _G.nx_modules["50-lsp-diagnostics"] = function()
+              vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}" })
+              vim.api.nvim_set_hl(0, "DiagnosticWarn", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}" })
+              vim.api.nvim_set_hl(0, "DiagnosticInfo", { fg = "${config.nx.preferences.theme.colors.semantic.hint.html}" })
+              vim.api.nvim_set_hl(0, "DiagnosticHint", { fg = "${config.nx.preferences.theme.colors.semantic.inactive.html}" })
 
+              vim.api.nvim_set_hl(0, "DiagnosticVirtualTextError", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}", italic = true, underdotted = true })
+              vim.api.nvim_set_hl(0, "DiagnosticVirtualTextWarn", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}", italic = true, underdotted = true })
+              vim.api.nvim_set_hl(0, "DiagnosticVirtualTextInfo", { fg = "${config.nx.preferences.theme.colors.semantic.hint.html}", italic = true, underdotted = true })
+              vim.api.nvim_set_hl(0, "DiagnosticVirtualTextHint", { fg = "${config.nx.preferences.theme.colors.semantic.inactive.html}", italic = true, underdotted = true })
+
+              vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesError", { fg = "${config.nx.preferences.theme.colors.semantic.error.html}", italic = true, underdotted = true })
+              vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesWarn", { fg = "${config.nx.preferences.theme.colors.semantic.warning.html}", italic = true, underdotted = true })
+              vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesInfo", { fg = "${config.nx.preferences.theme.colors.semantic.hint.html}", italic = true, underdotted = true })
+              vim.api.nvim_set_hl(0, "DiagnosticVirtualLinesHint", { fg = "${config.nx.preferences.theme.colors.semantic.inactive.html}", italic = true, underdotted = true })
+
+              ${lib.optionalString self.settings.withVirtualTextDiagnostics ''
+                local severity_text = {
+                  [vim.diagnostic.severity.ERROR] = "error",
+                  [vim.diagnostic.severity.WARN] = "warn",
+                  [vim.diagnostic.severity.INFO] = "info",
+                  [vim.diagnostic.severity.HINT] = "hint",
+                }''}
+
+              vim.diagnostic.config({
+                signs = {
+                  text = {
+                    [vim.diagnostic.severity.ERROR] = "",
+                    [vim.diagnostic.severity.WARN] = "",
+                    [vim.diagnostic.severity.INFO] = "",
+                    [vim.diagnostic.severity.HINT] = "󰌵",
+                  }
+                },
+              ${lib.optionalString self.settings.withVirtualTextDiagnostics ''
+                virtual_text = false,
+                virtual_lines = {
+                  only_current_line = false,
+                  format = function(diagnostic)
+                    if diagnostic.severity == vim.diagnostic.severity.INFO then
+                      return nil
+                    end
+                    local severity = severity_text[diagnostic.severity] or severity_text[vim.diagnostic.severity.hint]
+                    return ('%s [%s::%s] (%s)'):format(diagnostic.message, diagnostic.source, diagnostic.code, severity)
+                  end,
+                },''}
+                float = {
+                  border = "single",
+                  source = "always",
+                  header = "",
+                  prefix = "",
+                },
+              })
+            end
+          '';
+      };
     };
+  };
 }

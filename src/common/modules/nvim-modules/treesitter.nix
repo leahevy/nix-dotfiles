@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     enableHighlighting = true;
@@ -112,9 +111,8 @@ args@{
     extraGrammars = [ ];
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim.plugins.treesitter = {
         enable = true;
 
@@ -149,4 +147,5 @@ args@{
             foldenable = false;
           };
     };
+  };
 }

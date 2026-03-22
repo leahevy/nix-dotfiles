@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     enable = true;
@@ -32,9 +31,8 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         extraPlugins = [
           (pkgs.vimUtils.buildVimPlugin {
@@ -228,4 +226,5 @@ args@{
         '';
       };
     };
+  };
 }

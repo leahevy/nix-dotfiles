@@ -13,7 +13,6 @@ args@{
 
   group = "emacs";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -299,121 +298,123 @@ args@{
     ];
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      generateModuleEntry =
-        module:
-        if builtins.isString module then
-          module
-        else if module ? condition then
-          "(:if ${module.condition} ${module.name})"
-        else if module ? flags then
-          "(${module.name} ${lib.concatStringsSep " " module.flags})"
-        else
-          module.name;
-
-      generateCategorySection =
-        category: modules:
-        let
-          enabledModules = builtins.filter (m: m != null) modules;
-          moduleEntries = map generateModuleEntry enabledModules;
-        in
-        if enabledModules == [ ] then
-          ""
-        else
-          "       :${category}\n"
-          + (lib.concatMapStringsSep "\n" (entry: "       ${entry}") moduleEntries)
-          + "\n";
-
-      generateInitEl =
-        modules:
-        let
-          categoryOrder = [
-            "input"
-            "completion"
-            "ui"
-            "editor"
-            "emacs"
-            "term"
-            "checkers"
-            "tools"
-            "os"
-            "lang"
-            "email"
-            "app"
-            "config"
-          ];
-
-          orderedSections = map (
-            category: if modules ? ${category} then generateCategorySection category modules.${category} else ""
-          ) categoryOrder;
-
-          nonEmptySections = builtins.filter (s: s != "") orderedSections;
-        in
-        "(doom!" + (lib.concatStringsSep "\n" nonEmptySections) + ")";
-
-      doomInstallScript = pkgs.writeShellScriptBin "doom-install" ''
-        DOOM_CONFIG_DIR="$HOME/.config/emacs"
-
-        if [[ -d "$DOOM_CONFIG_DIR" && "$(ls -A "$DOOM_CONFIG_DIR")" ]]; then
-          echo "Doom Emacs directory exists and is not empty"
-          read -p "Clean and reinstall? [y/N]: " response
-          if [[ "$response" =~ ^[Yy]$ ]]; then
-            echo "Cleaning existing installation..."
-            rm -rf "$DOOM_CONFIG_DIR"/* "$DOOM_CONFIG_DIR"/.* 2>/dev/null || true
+  on = {
+    home =
+      config:
+      let
+        generateModuleEntry =
+          module:
+          if builtins.isString module then
+            module
+          else if module ? condition then
+            "(:if ${module.condition} ${module.name})"
+          else if module ? flags then
+            "(${module.name} ${lib.concatStringsSep " " module.flags})"
           else
-            echo "Aborted"
-            exit 0
+            module.name;
+
+        generateCategorySection =
+          category: modules:
+          let
+            enabledModules = builtins.filter (m: m != null) modules;
+            moduleEntries = map generateModuleEntry enabledModules;
+          in
+          if enabledModules == [ ] then
+            ""
+          else
+            "       :${category}\n"
+            + (lib.concatMapStringsSep "\n" (entry: "       ${entry}") moduleEntries)
+            + "\n";
+
+        generateInitEl =
+          modules:
+          let
+            categoryOrder = [
+              "input"
+              "completion"
+              "ui"
+              "editor"
+              "emacs"
+              "term"
+              "checkers"
+              "tools"
+              "os"
+              "lang"
+              "email"
+              "app"
+              "config"
+            ];
+
+            orderedSections = map (
+              category: if modules ? ${category} then generateCategorySection category modules.${category} else ""
+            ) categoryOrder;
+
+            nonEmptySections = builtins.filter (s: s != "") orderedSections;
+          in
+          "(doom!" + (lib.concatStringsSep "\n" nonEmptySections) + ")";
+
+        doomInstallScript = pkgs.writeShellScriptBin "doom-install" ''
+          DOOM_CONFIG_DIR="$HOME/.config/emacs"
+
+          if [[ -d "$DOOM_CONFIG_DIR" && "$(ls -A "$DOOM_CONFIG_DIR")" ]]; then
+            echo "Doom Emacs directory exists and is not empty"
+            read -p "Clean and reinstall? [y/N]: " response
+            if [[ "$response" =~ ^[Yy]$ ]]; then
+              echo "Cleaning existing installation..."
+              rm -rf "$DOOM_CONFIG_DIR"/* "$DOOM_CONFIG_DIR"/.* 2>/dev/null || true
+            else
+              echo "Aborted"
+              exit 0
+            fi
           fi
-        fi
 
-        echo "Installing Doom Emacs"
-        if git clone --depth 1 https://github.com/doomemacs/doomemacs.git "$DOOM_CONFIG_DIR"; then
-          echo "Running doom install..."
-          if "$DOOM_CONFIG_DIR/bin/doom" install --force; then
-            echo "Doom Emacs installed successfully"
+          echo "Installing Doom Emacs"
+          if git clone --depth 1 https://github.com/doomemacs/doomemacs.git "$DOOM_CONFIG_DIR"; then
+            echo "Running doom install..."
+            if "$DOOM_CONFIG_DIR/bin/doom" install --force; then
+              echo "Doom Emacs installed successfully"
+            else
+              echo "Doom install failed, cleaning up"
+              rm -rf "$DOOM_CONFIG_DIR"/* "$DOOM_CONFIG_DIR"/.* 2>/dev/null || true
+              exit 1
+            fi
           else
-            echo "Doom install failed, cleaning up"
-            rm -rf "$DOOM_CONFIG_DIR"/* "$DOOM_CONFIG_DIR"/.* 2>/dev/null || true
+            echo "Failed to clone Doom Emacs repository"
             exit 1
           fi
-        else
-          echo "Failed to clone Doom Emacs repository"
-          exit 1
-        fi
-      '';
-    in
-    {
-      home.packages = with pkgs; [
-        git
-        gnumake
-        ripgrep
-        findutils
-        coreutils
-        doomInstallScript
-      ];
-
-      home.file = {
-        ".config/doom/init.el".text = generateInitEl self.settings;
-        ".config/doom/config.el".source = self.file "doom/config.el";
-        ".config/doom/packages.el".source = self.file "doom/packages.el";
-        ".config/doom/custom.el".source = self.file "doom/custom.el";
-        ".config/doom/config/00-default.el".source = self.file "doom/config/00-default.el";
-        ".config/doom/packages/00-default.el".source = self.file "doom/packages/00-default.el";
-        ".config/doom/custom/00-default.el".source = self.file "doom/custom/00-default.el";
-      };
-
-      home.sessionPath = [ "$HOME/.config/emacs/bin" ];
-
-      home.shellAliases = {
-        doom = "$HOME/.config/emacs/bin/doom";
-      };
-
-      home.persistence."${self.persist}" = {
-        directories = [
-          ".config/doom"
+        '';
+      in
+      {
+        home.packages = with pkgs; [
+          git
+          gnumake
+          ripgrep
+          findutils
+          coreutils
+          doomInstallScript
         ];
+
+        home.file = {
+          ".config/doom/init.el".text = generateInitEl self.settings;
+          ".config/doom/config.el".source = self.file "doom/config.el";
+          ".config/doom/packages.el".source = self.file "doom/packages.el";
+          ".config/doom/custom.el".source = self.file "doom/custom.el";
+          ".config/doom/config/00-default.el".source = self.file "doom/config/00-default.el";
+          ".config/doom/packages/00-default.el".source = self.file "doom/packages/00-default.el";
+          ".config/doom/custom/00-default.el".source = self.file "doom/custom/00-default.el";
+        };
+
+        home.sessionPath = [ "$HOME/.config/emacs/bin" ];
+
+        home.shellAliases = {
+          doom = "$HOME/.config/emacs/bin/doom";
+        };
+
+        home.persistence."${self.persist.home}" = {
+          directories = [
+            ".config/doom"
+          ];
+        };
       };
-    };
+  };
 }

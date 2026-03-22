@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     promptForChangedFile = true;
@@ -21,9 +20,8 @@ args@{
     approveOnSave = false;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.autosource = {
           enable = true;
@@ -76,10 +74,11 @@ args@{
         '';
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".autosource_hashes"
         ];
       };
     };
+  };
 }

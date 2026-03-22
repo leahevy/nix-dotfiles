@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     autoDetectProjects = true;
@@ -22,9 +21,8 @@ args@{
     changeDirGlobally = true;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.project-nvim = {
           enable = true;
@@ -78,4 +76,5 @@ args@{
         ];
       };
     };
+  };
 }

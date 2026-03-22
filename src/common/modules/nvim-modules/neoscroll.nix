@@ -13,11 +13,9 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.neoscroll = {
           enable = true;
@@ -73,4 +71,5 @@ args@{
         ];
       };
     };
+  };
 }

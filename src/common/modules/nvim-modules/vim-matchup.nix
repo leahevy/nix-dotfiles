@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     enableTransmute = true;
@@ -27,9 +26,8 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.vim-matchup = {
           enable = true;
@@ -229,4 +227,5 @@ args@{
         '';
       };
     };
+  };
 }

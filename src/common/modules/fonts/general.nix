@@ -13,7 +13,6 @@ args@{
 
   group = "fonts";
   input = "common";
-  namespace = "home";
 
   settings = {
     withUnfreeFonts = false;
@@ -32,9 +31,8 @@ args@{
     "symbola"
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages =
         (with pkgs; [
           dejavu_fonts
@@ -53,4 +51,5 @@ args@{
           ]
         );
     };
+  };
 }

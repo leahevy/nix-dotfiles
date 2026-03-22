@@ -12,7 +12,6 @@ args@{
   name = "msmtp";
   group = "mail-stack";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -26,23 +25,25 @@ args@{
     service = "mail-stack";
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      accountsConfig = self.getModuleConfig "mail-stack.accounts";
-      accounts = accountsConfig.accounts;
-    in
-    lib.mkIf (accounts != { }) {
-      accounts.email.accounts = lib.mapAttrs (accountKey: account: {
-        msmtp = {
-          enable = true;
-          extraConfig = {
-            auth = "on";
-            from = account.address;
+  on = {
+    home =
+      config:
+      let
+        accountsConfig = self.getModuleConfig "mail-stack.accounts";
+        accounts = accountsConfig.accounts;
+      in
+      lib.mkIf (accounts != { }) {
+        accounts.email.accounts = lib.mapAttrs (accountKey: account: {
+          msmtp = {
+            enable = true;
+            extraConfig = {
+              auth = "on";
+              from = account.address;
+            };
           };
-        };
-      }) accounts;
+        }) accounts;
 
-      programs.msmtp.enable = true;
-    };
+        programs.msmtp.enable = true;
+      };
+  };
 }

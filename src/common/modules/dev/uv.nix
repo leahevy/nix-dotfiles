@@ -13,13 +13,12 @@ args@{
 
   group = "dev";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages = with pkgs; [
         uv
       ];
     };
+  };
 }

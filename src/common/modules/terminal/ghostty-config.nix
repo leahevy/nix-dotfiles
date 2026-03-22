@@ -13,7 +13,6 @@ args@{
 
   group = "terminal";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -34,52 +33,51 @@ args@{
     fontFamily = "DejaVuSansM Nerd Font Mono";
   };
 
-  init =
-    context@{ config, options, ... }:
-    lib.mkIf self.isEnabled {
-      nx.preferences.desktop.programs.terminal = {
-        name = "ghostty";
-        package = null;
-        openCommand = [ "ghostty" ];
-        openDirectoryCommand = path: [
-          "ghostty"
-          "--working-directory=${path}"
-        ];
-        openRunCommand = cmd: [
-          "ghostty"
-          "-e"
-          cmd
-        ];
-        openRunPrefix = [
-          "ghostty"
-          "-e"
-        ];
-        openShellCommand = cmd: [
-          "ghostty"
-          "-e"
-          "sh"
-          "-c"
-          cmd
-        ];
-        openWithClass = class: [
-          "ghostty"
-          "--class=${class}"
-        ];
-        openRunWithClass = class: cmd: [
-          "ghostty"
-          "--class=${class}"
-          "-e"
-          cmd
-        ];
-        desktopFile = "com.mitchellh.ghostty.desktop";
+  on = {
+    init =
+      config:
+      lib.mkIf self.isEnabled {
+        nx.preferences.desktop.programs.terminal = {
+          name = "ghostty";
+          package = null;
+          openCommand = [ "ghostty" ];
+          openDirectoryCommand = path: [
+            "ghostty"
+            "--working-directory=${path}"
+          ];
+          openRunCommand = cmd: [
+            "ghostty"
+            "-e"
+            cmd
+          ];
+          openRunPrefix = [
+            "ghostty"
+            "-e"
+          ];
+          openShellCommand = cmd: [
+            "ghostty"
+            "-e"
+            "sh"
+            "-c"
+            cmd
+          ];
+          openWithClass = class: [
+            "ghostty"
+            "--class=${class}"
+          ];
+          openRunWithClass = class: cmd: [
+            "ghostty"
+            "--class=${class}"
+            "-e"
+            cmd
+          ];
+          desktopFile = "com.mitchellh.ghostty.desktop";
+        };
+        nx.preferences.desktop.programs.additionalTerminal =
+          lib.mkIf self.isLinux config.nx.preferences.desktop.programs.terminal;
       };
-      nx.preferences.desktop.programs.additionalTerminal =
-        lib.mkIf self.isLinux config.nx.preferences.desktop.programs.terminal;
-    };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+    home = config: {
       programs.ghostty = {
         enable = true;
         package = lib.mkDefault (self.dummyPackage "ghostty");
@@ -120,4 +118,5 @@ args@{
         TERMINAL = "ghostty";
       };
     };
+  };
 }

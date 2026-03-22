@@ -13,11 +13,9 @@ args@{
 
   group = "shell";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs = {
         nix-index.enableZshIntegration = true;
         zsh = {
@@ -37,7 +35,7 @@ args@{
 
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         files = [
           ".zsh_history"
         ];
@@ -46,4 +44,5 @@ args@{
         ];
       };
     };
+  };
 }

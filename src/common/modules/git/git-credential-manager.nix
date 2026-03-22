@@ -13,11 +13,9 @@ args@{
 
   group = "git";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages = with pkgs; [
         git-credential-manager
         pass
@@ -42,10 +40,11 @@ args@{
           ""
       );
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".password-store"
         ];
       };
     };
+  };
 }

@@ -13,11 +13,9 @@ args@{
 
   group = "shell";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.file.".local/bin/x" = {
         text = ''
           #!/usr/bin/env bash
@@ -117,4 +115,5 @@ args@{
         executable = true;
       };
     };
+  };
 }

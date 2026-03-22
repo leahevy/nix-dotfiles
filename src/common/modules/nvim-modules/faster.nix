@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     bigfile = {
@@ -26,9 +25,8 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         extraPlugins = [
           pkgs.vimPlugins.faster-nvim
@@ -244,4 +242,5 @@ args@{
         ];
       };
     };
+  };
 }

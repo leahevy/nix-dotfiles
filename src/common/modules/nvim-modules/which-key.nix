@@ -39,7 +39,6 @@ in
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     delay = 400;
@@ -47,9 +46,8 @@ in
     showKeys = true;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim.plugins.which-key = {
         enable = true;
         settings = {
@@ -227,4 +225,5 @@ in
         }
       ];
     };
+  };
 }

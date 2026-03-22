@@ -13,7 +13,6 @@ args@{
 
   group = "shell";
   input = "common";
-  namespace = "home";
 
   settings = {
     baseSettings = {
@@ -48,69 +47,71 @@ args@{
     additionalSettings = { };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
-      terminal = config.nx.preferences.desktop.programs.additionalTerminal;
-      terminalRunWithClass =
-        class: cmd:
-        lib.escapeShellArgs (
-          helpers.runWithAbsolutePath config terminal (terminal.openRunWithClass class) cmd
-        );
-    in
-    {
-      programs.yazi = {
-        enable = true;
-        enableBashIntegration = true;
-        enableFishIntegration = true;
-        enableZshIntegration = true;
+  on = {
+    home =
+      config:
+      let
+        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+        terminal = config.nx.preferences.desktop.programs.additionalTerminal;
+        terminalRunWithClass =
+          class: cmd:
+          lib.escapeShellArgs (
+            helpers.runWithAbsolutePath config terminal (terminal.openRunWithClass class) cmd
+          );
+      in
+      {
+        programs.yazi = {
+          enable = true;
+          enableBashIntegration = true;
+          enableFishIntegration = true;
+          enableZshIntegration = true;
 
-        settings = lib.recursiveUpdate self.settings.baseSettings self.settings.additionalSettings;
-      };
+          settings = lib.recursiveUpdate self.settings.baseSettings self.settings.additionalSettings;
+        };
 
-      home.file.".local/bin/nx-yazi" = {
-        text = ''
-          #!/usr/bin/env bash
-          yazi
-        '';
-        executable = true;
-      };
+        home.file.".local/bin/nx-yazi" = {
+          text = ''
+            #!/usr/bin/env bash
+            yazi
+          '';
+          executable = true;
+        };
 
-      home.file.".local/bin/nx-yazi-term" = {
-        text = ''
-          #!/usr/bin/env bash
-          exec ${terminalRunWithClass "org.nx.yazi" "nx-yazi"}
-        '';
-        executable = true;
-      };
+        home.file.".local/bin/nx-yazi-term" = {
+          text = ''
+            #!/usr/bin/env bash
+            exec ${terminalRunWithClass "org.nx.yazi" "nx-yazi"}
+          '';
+          executable = true;
+        };
 
-      programs.niri = lib.mkIf isNiriEnabled {
-        settings = {
-          binds = with config.lib.niri.actions; {
-            "Mod+Ctrl+Alt+M" = {
-              action = spawn-sh "niri-scratchpad --app-id org.nx.yazi --all-windows --spawn nx-yazi-term";
-              hotkey-overlay.title = "Apps:File manager";
+        programs.niri = lib.mkIf isNiriEnabled {
+          settings = {
+            binds = with config.lib.niri.actions; {
+              "Mod+Ctrl+Alt+M" = {
+                action = spawn-sh "niri-scratchpad --app-id org.nx.yazi --all-windows --spawn nx-yazi-term";
+                hotkey-overlay.title = "Apps:File manager";
+              };
             };
-          };
 
-          window-rules = [
-            {
-              matches = [ { app-id = "org.nx.yazi"; } ];
-              min-width = 1200;
-              min-height = 800;
-              open-on-workspace = "scratch";
-              open-floating = true;
-              open-focused = false;
-            }
+            window-rules = [
+              {
+                matches = [ { app-id = "org.nx.yazi"; } ];
+                min-width = 1200;
+                min-height = 800;
+                open-on-workspace = "scratch";
+                open-floating = true;
+                open-focused = false;
+              }
+            ];
+          };
+        };
+
+        home.persistence."${self.persist.home}" = {
+          directories = [
+            ".local/state/yazi"
           ];
         };
       };
-
-      home.persistence."${self.persist}" = {
-        directories = [
-          ".local/state/yazi"
-        ];
-      };
-    };
+  };
 }

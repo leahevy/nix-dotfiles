@@ -13,11 +13,9 @@ args@{
 
   group = "doom-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.file.".config/doom/config/20-doom-dashboard.el".text = ''
         (defun my/goto-doom-dashboard ()
           "Switch to the Doom dashboard buffer and ensure we're in normal mode."
@@ -38,4 +36,5 @@ args@{
               "d" #'my/goto-doom-dashboard)
       '';
     };
+  };
 }

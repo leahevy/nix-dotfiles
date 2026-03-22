@@ -13,16 +13,14 @@ args@{
 
   group = "dev";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages = with pkgs; [
         vscodium
       ];
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".config/VSCodium"
           ".vscode-oss"
@@ -30,4 +28,5 @@ args@{
         ];
       };
     };
+  };
 }

@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     wikiPath = "~/.local/share/nvim/wiki/";
@@ -30,519 +29,558 @@ args@{
     }
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      normalizedVaultPath =
-        let
-          path = self.settings.wikiPath;
-          homePrefix = "$HOME";
-        in
-        if lib.hasPrefix homePrefix path then "~" + lib.removePrefix homePrefix path else path;
+  on = {
+    home =
+      config:
+      let
+        normalizedVaultPath =
+          let
+            path = self.settings.wikiPath;
+            homePrefix = "$HOME";
+          in
+          if lib.hasPrefix homePrefix path then "~" + lib.removePrefix homePrefix path else path;
 
-      customPkgs = self.pkgs {
-        overlays = [
-          (final: prev: {
-            vimPlugins = prev.vimPlugins // {
-              obsidian-nvim = prev.vimPlugins.obsidian-nvim.overrideAttrs (oldAttrs: {
-                nvimSkipModules = (oldAttrs.nvimSkipModules or [ ]) ++ [
-                  "obsidian.pickers._fzf"
-                  "obsidian.picker._fzf"
-                ];
-              });
-            };
-          })
-        ];
-      };
-    in
-    {
-      programs.nixvim = {
-        plugins.obsidian = {
-          enable = true;
-          package = customPkgs.vimPlugins.obsidian-nvim;
-          settings = {
-            workspaces = [
-              {
-                name = "default";
-                path = normalizedVaultPath;
-              }
-            ];
-            new_notes_location = "current_dir";
-            preferred_link_style = "wiki";
-            wiki_link_func = "use_alias_only";
-            note_id_func.__raw = ''
-              function(title)
-                local suffix = ""
-                if title ~= nil then
-                  suffix = title:gsub(" ", "_"):gsub("[^A-Za-z0-9_-]", ""):lower()
-                else
-                  suffix = tostring(os.time())
+        customPkgs = self.pkgs {
+          overlays = [
+            (final: prev: {
+              vimPlugins = prev.vimPlugins // {
+                obsidian-nvim = prev.vimPlugins.obsidian-nvim.overrideAttrs (oldAttrs: {
+                  nvimSkipModules = (oldAttrs.nvimSkipModules or [ ]) ++ [
+                    "obsidian.pickers._fzf"
+                    "obsidian.picker._fzf"
+                  ];
+                });
+              };
+            })
+          ];
+        };
+      in
+      {
+        programs.nixvim = {
+          plugins.obsidian = {
+            enable = true;
+            package = customPkgs.vimPlugins.obsidian-nvim;
+            settings = {
+              workspaces = [
+                {
+                  name = "default";
+                  path = normalizedVaultPath;
+                }
+              ];
+              new_notes_location = "current_dir";
+              preferred_link_style = "wiki";
+              wiki_link_func = "use_alias_only";
+              note_id_func.__raw = ''
+                function(title)
+                  local suffix = ""
+                  if title ~= nil then
+                    suffix = title:gsub(" ", "_"):gsub("[^A-Za-z0-9_-]", ""):lower()
+                  else
+                    suffix = tostring(os.time())
+                  end
+                  return suffix
                 end
-                return suffix
-              end
-            '';
-            frontmatter = {
-              enabled = true;
-            };
-            attachments = {
-              img_folder = "attachments";
-              confirm_img_paste = true;
-            };
-            search = {
-              sort_by = "modified";
-              sort_reversed = true;
-              max_lines = 200;
-            };
-            completion = {
-              nvim_cmp = true;
-              min_chars = 2;
-              create_new = true;
-            };
-            daily_notes = {
-              folder = "diary";
-              date_format = "%Y-%m-%d";
-              alias_format = "%B %-d, %Y";
-              template = null;
-            };
-            picker = {
-              name = "telescope.nvim";
-              note_mappings = {
-                new = "<C-x>";
-                insert_link = "<C-l>";
+              '';
+              frontmatter = {
+                enabled = true;
               };
-              tag_mappings = {
-                tag_note = "<C-x>";
-                insert_tag = "<C-l>";
+              attachments = {
+                img_folder = "attachments";
+                confirm_img_paste = true;
               };
-            };
-            ui = {
-              enable = self.settings.enableUI;
-              checkboxes = {
-                " " = {
-                  char = "󰄱";
-                  hl_group = "ObsidianTodo";
+              search = {
+                sort_by = "modified";
+                sort_reversed = true;
+                max_lines = 200;
+              };
+              completion = {
+                nvim_cmp = true;
+                min_chars = 2;
+                create_new = true;
+              };
+              daily_notes = {
+                folder = "diary";
+                date_format = "%Y-%m-%d";
+                alias_format = "%B %-d, %Y";
+                template = null;
+              };
+              picker = {
+                name = "telescope.nvim";
+                note_mappings = {
+                  new = "<C-x>";
+                  insert_link = "<C-l>";
                 };
-                "x" = {
-                  char = "✓";
-                  hl_group = "ObsidianDone";
+                tag_mappings = {
+                  tag_note = "<C-x>";
+                  insert_tag = "<C-l>";
+                };
+              };
+              ui = {
+                enable = self.settings.enableUI;
+                checkboxes = {
+                  " " = {
+                    char = "󰄱";
+                    hl_group = "ObsidianTodo";
+                  };
+                  "x" = {
+                    char = "✓";
+                    hl_group = "ObsidianDone";
+                  };
                 };
               };
             };
           };
-        };
 
-        plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
-          {
-            __unkeyed-1 = "<leader>w";
-            group = "wiki";
-            icon = "󰖬";
-          }
-          {
-            __unkeyed-1 = "<leader>ww";
-            desc = "Wiki index";
-            icon = "󰃭";
-          }
-          {
-            __unkeyed-1 = "<leader>wi";
-            desc = "Diary index";
-            icon = "󰃭";
-          }
-          {
-            __unkeyed-1 = "<leader>wW";
-            desc = "Wiki index (split right)";
-            icon = "󰃭";
-          }
-          {
-            __unkeyed-1 = "<leader>wh";
-            desc = "Homepage";
-            icon = "🏠";
-          }
-          {
-            __unkeyed-1 = "<leader>wH";
-            desc = "Homepage (split right)";
-            icon = "🏠";
-          }
-          {
-            __unkeyed-1 = "<leader>w<leader>";
-            desc = "Search wiki";
-            icon = "󰓩";
-          }
-          {
-            __unkeyed-1 = "<leader>wdw";
-            desc = "Make today diary note";
-            icon = "󰃭";
-          }
-          {
-            __unkeyed-1 = "<leader>wdy";
-            desc = "Make yesterday diary note";
-            icon = "󰃭";
-          }
-          {
-            __unkeyed-1 = "<leader>wdt";
-            desc = "Make today diary note (split right)";
-            icon = "󰃭";
-          }
-          {
-            __unkeyed-1 = "<leader>wdm";
-            desc = "Make tomorrow diary note";
-            icon = "󰃭";
-          }
-          {
-            __unkeyed-1 = "<leader>wD";
-            desc = "Search diary";
-            icon = "🔍";
-          }
-          {
-            __unkeyed-1 = "<leader>wT";
-            desc = "Browse tags";
-            icon = "🏷️";
-          }
-          {
-            __unkeyed-1 = "<leader>wu";
-            desc = "Insert referenced note links";
-            icon = "❓";
-          }
-          {
-            __unkeyed-1 = "<leader>wr";
-            desc = "Rename note";
-            icon = "✏️";
-            cond.__raw = "function() return _G.is_obsidian_vault_file() end";
-          }
-          {
-            __unkeyed-1 = "<leader>wn";
-            desc = "Go to note";
-            icon = "📄";
-            cond.__raw = "function() return _G.is_obsidian_vault_file() end";
-          }
-          {
-            __unkeyed-1 = "<leader>wc";
-            desc = "Toggle checkbox";
-            icon = "☑️";
-            cond.__raw = "function() return _G.is_obsidian_vault_file() end";
-          }
-        ];
-
-        keymaps = [
-          {
-            mode = "n";
-            key = "<leader>ww";
-            action = "<cmd>ObsidianQuickSwitch<cr>";
-            options = {
+          plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
+            {
+              __unkeyed-1 = "<leader>w";
+              group = "wiki";
+              icon = "󰖬";
+            }
+            {
+              __unkeyed-1 = "<leader>ww";
               desc = "Wiki index";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wi";
-            action = "<cmd>ObsidianDailies -365<cr>";
-            options = {
+              icon = "󰃭";
+            }
+            {
+              __unkeyed-1 = "<leader>wi";
               desc = "Diary index";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wW";
-            action = "<cmd>vsplit | ObsidianQuickSwitch<cr>";
-            options = {
+              icon = "󰃭";
+            }
+            {
+              __unkeyed-1 = "<leader>wW";
               desc = "Wiki index (split right)";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wh";
-            action.__raw = ''
-              function()
-                local vault_path = vim.fn.expand('${normalizedVaultPath}')
-                local home_page = vault_path .. "/${self.settings.homePage}"
-                vim.cmd("edit " .. home_page)
-              end
-            '';
-            options = {
+              icon = "󰃭";
+            }
+            {
+              __unkeyed-1 = "<leader>wh";
               desc = "Homepage";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wH";
-            action.__raw = ''
-              function()
-                local vault_path = vim.fn.expand('${normalizedVaultPath}')
-                local home_page = vault_path .. "/${self.settings.homePage}"
-                vim.cmd("vsplit " .. home_page)
-              end
-            '';
-            options = {
+              icon = "🏠";
+            }
+            {
+              __unkeyed-1 = "<leader>wH";
               desc = "Homepage (split right)";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>w<leader>";
-            action = "<cmd>ObsidianSearch<cr>";
-            options = {
+              icon = "🏠";
+            }
+            {
+              __unkeyed-1 = "<leader>w<leader>";
               desc = "Search wiki";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wdw";
-            action.__raw = ''
-              function()
-                ${lib.optionalString (self.settings.diaryTemplate != null) ''
-                  local vault_path = vim.fn.resolve(vim.fn.expand('${normalizedVaultPath}'))
-                  local today = os.date("%Y-%m-%d")
-                  local today_file = vault_path .. "/diary/" .. today .. ".md"
-                  local file_exists_before = vim.fn.filereadable(today_file) == 1
-                ''}
-                vim.cmd("ObsidianToday")
-                ${lib.optionalString (self.settings.diaryTemplate != null) ''
-                  if not file_exists_before then
-                    vim.defer_fn(function()
-                      local buf = vim.api.nvim_get_current_buf()
-                      local template = ${lib.strings.escapeNixString self.settings.diaryTemplate}
-                      local lines = vim.split(template, "\n", { plain = true })
-                      ${lib.optionalString self.settings.addLinebreakBeforeTemplate ''
-                        table.insert(lines, 1, "")
-                      ''}
-                      local line_count = vim.api.nvim_buf_line_count(buf)
-                      vim.api.nvim_buf_set_lines(buf, line_count, line_count, false, lines)
-                      local final_line = line_count + #lines
-                      vim.api.nvim_win_set_cursor(0, {final_line, 0})
-                    end, 1000)
-                  end
-                ''}
-              end
-            '';
-            options = {
+              icon = "󰓩";
+            }
+            {
+              __unkeyed-1 = "<leader>wdw";
               desc = "Make today diary note";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wdy";
-            action = "<cmd>ObsidianYesterday<cr>";
-            options = {
+              icon = "󰃭";
+            }
+            {
+              __unkeyed-1 = "<leader>wdy";
               desc = "Make yesterday diary note";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wdt";
-            action = "<cmd>vsplit | ObsidianToday<cr>";
-            options = {
+              icon = "󰃭";
+            }
+            {
+              __unkeyed-1 = "<leader>wdt";
               desc = "Make today diary note (split right)";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wdm";
-            action = "<cmd>ObsidianTomorrow<cr>";
-            options = {
+              icon = "󰃭";
+            }
+            {
+              __unkeyed-1 = "<leader>wdm";
               desc = "Make tomorrow diary note";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wD";
-            action.__raw = ''
-              function()
-                local diary_dir = vim.fn.expand('${normalizedVaultPath}') .. "/diary"
-                require('telescope.builtin').live_grep({
-                  prompt_title = "Search Diary",
-                  search_dirs = { diary_dir },
+              icon = "󰃭";
+            }
+            {
+              __unkeyed-1 = "<leader>wD";
+              desc = "Search diary";
+              icon = "🔍";
+            }
+            {
+              __unkeyed-1 = "<leader>wT";
+              desc = "Browse tags";
+              icon = "🏷️";
+            }
+            {
+              __unkeyed-1 = "<leader>wu";
+              desc = "Insert referenced note links";
+              icon = "❓";
+            }
+            {
+              __unkeyed-1 = "<leader>wr";
+              desc = "Rename note";
+              icon = "✏️";
+              cond.__raw = "function() return _G.is_obsidian_vault_file() end";
+            }
+            {
+              __unkeyed-1 = "<leader>wn";
+              desc = "Go to note";
+              icon = "📄";
+              cond.__raw = "function() return _G.is_obsidian_vault_file() end";
+            }
+            {
+              __unkeyed-1 = "<leader>wc";
+              desc = "Toggle checkbox";
+              icon = "☑️";
+              cond.__raw = "function() return _G.is_obsidian_vault_file() end";
+            }
+          ];
+
+          keymaps = [
+            {
+              mode = "n";
+              key = "<leader>ww";
+              action = "<cmd>ObsidianQuickSwitch<cr>";
+              options = {
+                desc = "Wiki index";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wi";
+              action = "<cmd>ObsidianDailies -365<cr>";
+              options = {
+                desc = "Diary index";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wW";
+              action = "<cmd>vsplit | ObsidianQuickSwitch<cr>";
+              options = {
+                desc = "Wiki index (split right)";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wh";
+              action.__raw = ''
+                function()
+                  local vault_path = vim.fn.expand('${normalizedVaultPath}')
+                  local home_page = vault_path .. "/${self.settings.homePage}"
+                  vim.cmd("edit " .. home_page)
+                end
+              '';
+              options = {
+                desc = "Homepage";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wH";
+              action.__raw = ''
+                function()
+                  local vault_path = vim.fn.expand('${normalizedVaultPath}')
+                  local home_page = vault_path .. "/${self.settings.homePage}"
+                  vim.cmd("vsplit " .. home_page)
+                end
+              '';
+              options = {
+                desc = "Homepage (split right)";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>w<leader>";
+              action = "<cmd>ObsidianSearch<cr>";
+              options = {
+                desc = "Search wiki";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wdw";
+              action.__raw = ''
+                function()
+                  ${lib.optionalString (self.settings.diaryTemplate != null) ''
+                    local vault_path = vim.fn.resolve(vim.fn.expand('${normalizedVaultPath}'))
+                    local today = os.date("%Y-%m-%d")
+                    local today_file = vault_path .. "/diary/" .. today .. ".md"
+                    local file_exists_before = vim.fn.filereadable(today_file) == 1
+                  ''}
+                  vim.cmd("ObsidianToday")
+                  ${lib.optionalString (self.settings.diaryTemplate != null) ''
+                    if not file_exists_before then
+                      vim.defer_fn(function()
+                        local buf = vim.api.nvim_get_current_buf()
+                        local template = ${lib.strings.escapeNixString self.settings.diaryTemplate}
+                        local lines = vim.split(template, "\n", { plain = true })
+                        ${lib.optionalString self.settings.addLinebreakBeforeTemplate ''
+                          table.insert(lines, 1, "")
+                        ''}
+                        local line_count = vim.api.nvim_buf_line_count(buf)
+                        vim.api.nvim_buf_set_lines(buf, line_count, line_count, false, lines)
+                        local final_line = line_count + #lines
+                        vim.api.nvim_win_set_cursor(0, {final_line, 0})
+                      end, 1000)
+                    end
+                  ''}
+                end
+              '';
+              options = {
+                desc = "Make today diary note";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wdy";
+              action = "<cmd>ObsidianYesterday<cr>";
+              options = {
+                desc = "Make yesterday diary note";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wdt";
+              action = "<cmd>vsplit | ObsidianToday<cr>";
+              options = {
+                desc = "Make today diary note (split right)";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wdm";
+              action = "<cmd>ObsidianTomorrow<cr>";
+              options = {
+                desc = "Make tomorrow diary note";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wD";
+              action.__raw = ''
+                function()
+                  local diary_dir = vim.fn.expand('${normalizedVaultPath}') .. "/diary"
+                  require('telescope.builtin').live_grep({
+                    prompt_title = "Search Diary",
+                    search_dirs = { diary_dir },
+                    additional_args = function()
+                      return { "--type", "md" }
+                    end
+                  })
+                end
+              '';
+              options = {
+                desc = "Search diary";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wT";
+              action = "<cmd>ObsidianTags<cr>";
+              options = {
+                desc = "Browse tags";
+                silent = true;
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wu";
+              action.__raw = "function() _G.obsidian_insert_linked_note() end";
+              options = {
+                desc = "Insert referenced note links";
+                silent = true;
+              };
+            }
+            {
+              mode = "i";
+              key = "<C-h>";
+              action.__raw = "function() _G.obsidian_insert_existing_note() end";
+              options = {
+                desc = "Insert link to existing note";
+                silent = true;
+              };
+            }
+            {
+              mode = "i";
+              key = "<C-q>";
+              action.__raw = "function() _G.obsidian_insert_linked_note() end";
+              options = {
+                desc = "Insert referenced note link";
+                silent = true;
+              };
+            }
+          ];
+
+          autoCmd = [
+            {
+              event = [ "BufEnter" ];
+              pattern = [ "*.md" ];
+              callback.__raw = ''
+                function()
+                  if _G.is_obsidian_vault_file() then
+                    vim.keymap.set("n", "<leader>wr", "<cmd>ObsidianRename<cr>", { desc = "Rename note", buffer = true })
+                    vim.keymap.set("n", "<leader>wn", "<cmd>ObsidianNew<cr>", { desc = "Go to note", buffer = true })
+                    vim.keymap.set("n", "<leader>wc", "<cmd>ObsidianToggleCheckbox<cr>", { desc = "Toggle checkbox", buffer = true })
+                    vim.keymap.set("n", "<CR>", function()
+                      return require("obsidian").util.gf_passthrough()
+                    end, { expr = true, desc = "Follow link", buffer = true })
+
+                  end
+                end
+              '';
+            }
+            {
+              event = [ "BufEnter" ];
+              pattern = [ "*.md" ];
+              callback.__raw = ''
+                function()
+                  local buf = vim.api.nvim_get_current_buf()
+                  if vim.b[buf].obsidian_daily_processed then
+                    return
+                  end
+
+                  local filepath = vim.fn.resolve(vim.api.nvim_buf_get_name(buf))
+                  local vault_path = vim.fn.resolve(vim.fn.expand('${normalizedVaultPath}'))
+                  local diary_path = vault_path .. "/diary/"
+
+                  if vim.startswith(filepath, diary_path) then
+                    local filename = vim.fn.fnamemodify(filepath, ":t:r")
+                    if filename:match("^%d%d%d%d%-%d%d%-%d%d$") then
+                      local today = os.date("%Y-%m-%d")
+                      local buf_empty = vim.api.nvim_buf_line_count(buf) == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == ""
+                      local file_exists = vim.fn.filereadable(filepath) == 1
+                      local buf_modified = vim.bo[buf].modified
+
+                      if buf_empty and file_exists and not buf_modified then
+                        vim.b[buf].obsidian_daily_processed = true
+                        vim.cmd("edit!")
+                      elseif not file_exists and buf_empty and not buf_modified and filename == today then
+                        vim.b[buf].obsidian_daily_processed = true
+                        ${lib.optionalString (self.settings.diaryTemplate != null) ''
+                          _G.obsidian_dates_needing_template = _G.obsidian_dates_needing_template or {}
+                          _G.obsidian_dates_needing_template[filename] = true
+                        ''}
+                        vim.cmd("ObsidianToday")
+                      end
+                    end
+                  end
+                end
+              '';
+            }
+          ]
+          ++ lib.optionals (self.settings.diaryTemplate != null) [
+            {
+              event = [ "BufRead" ];
+              pattern = [ "*.md" ];
+              callback.__raw = ''
+                function()
+                  local buf = vim.api.nvim_get_current_buf()
+                  local filepath = vim.fn.resolve(vim.api.nvim_buf_get_name(buf))
+                  local vault_path = vim.fn.resolve(vim.fn.expand('${normalizedVaultPath}'))
+                  local diary_path = vault_path .. "/diary/"
+
+                  if vim.startswith(filepath, diary_path) then
+                    local filename = vim.fn.fnamemodify(filepath, ":t:r")
+                    if filename:match("^%d%d%d%d%-%d%d%-%d%d$") then
+                      _G.obsidian_dates_needing_template = _G.obsidian_dates_needing_template or {}
+                      if _G.obsidian_dates_needing_template[filename] then
+                        _G.obsidian_dates_needing_template[filename] = nil
+                        vim.b[buf].obsidian_template_applied = true
+
+                        local template = ${lib.strings.escapeNixString self.settings.diaryTemplate}
+                        local lines = vim.split(template, "\n", { plain = true })
+                        ${lib.optionalString self.settings.addLinebreakBeforeTemplate ''
+                          table.insert(lines, 1, "")
+                        ''}
+                        local line_count = vim.api.nvim_buf_line_count(buf)
+                        vim.api.nvim_buf_set_lines(buf, line_count, line_count, false, lines)
+                        local final_line = line_count + #lines
+                        vim.api.nvim_win_set_cursor(0, {final_line, 0})
+                        vim.cmd("write")
+                      end
+                    end
+                  end
+                end
+              '';
+            }
+          ];
+
+          extraConfigLua = ''
+            _G.nx_modules = _G.nx_modules or {}
+
+            _G.nx_modules["40-obsidian-globals"] = function()
+              _G.is_obsidian_vault_file = function()
+                local file_path = vim.fn.expand('%:p')
+                local vault_path = vim.fn.expand('${self.settings.wikiPath}')
+                local normalized_file_path = vim.fn.resolve(file_path)
+                local normalized_vault_path = vim.fn.resolve(vault_path)
+                return string.find(normalized_file_path, normalized_vault_path, 1, true) == 1
+              end
+            end
+
+            _G.nx_modules["45-obsidian-unlinked"] = function()
+              _G.obsidian_insert_linked_note = function()
+                local saved_row, saved_col = unpack(vim.api.nvim_win_get_cursor(0))
+                local was_insert = vim.fn.mode() == 'i'
+
+                local vault_path = vim.fn.expand('${normalizedVaultPath}')
+
+                require('telescope.builtin').grep_string({
+                  prompt_title = "Insert Link to Referenced Note",
+                  cwd = vault_path,
+                  search = "\\[\\[[^\\]]+\\]\\]",
+                  use_regex = true,
                   additional_args = function()
                     return { "--type", "md" }
-                  end
+                  end,
+                  attach_mappings = function(prompt_bufnr, map)
+                    local actions = require('telescope.actions')
+                    local action_state = require('telescope.actions.state')
+
+                    actions.select_default:replace(function()
+                      local entry = action_state.get_selected_entry()
+                      actions.close(prompt_bufnr)
+
+                      local text = entry.text or ""
+                      local note_name = text:match("%[%[([^%]]+)%]%]")
+
+                      if note_name then
+                        local link = " [[" .. note_name .. "]]"
+                        local current_row, current_col = unpack(vim.api.nvim_win_get_cursor(0))
+                        vim.api.nvim_buf_set_text(0, current_row - 1, current_col, current_row - 1, current_col, { link })
+                        vim.api.nvim_win_set_cursor(0, { current_row, current_col + #link })
+                        if was_insert then
+                          vim.api.nvim_feedkeys("a", "n", false)
+                        end
+                      else
+                        vim.notify("Could not extract note name from: " .. text, vim.log.levels.WARN, {
+                          icon = "⚠️",
+                          title = "Obsidian"
+                        })
+                      end
+                    end)
+
+                    return true
+                  end,
                 })
               end
-            '';
-            options = {
-              desc = "Search diary";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wT";
-            action = "<cmd>ObsidianTags<cr>";
-            options = {
-              desc = "Browse tags";
-              silent = true;
-            };
-          }
-          {
-            mode = "n";
-            key = "<leader>wu";
-            action.__raw = "function() _G.obsidian_insert_linked_note() end";
-            options = {
-              desc = "Insert referenced note links";
-              silent = true;
-            };
-          }
-          {
-            mode = "i";
-            key = "<C-h>";
-            action.__raw = "function() _G.obsidian_insert_existing_note() end";
-            options = {
-              desc = "Insert link to existing note";
-              silent = true;
-            };
-          }
-          {
-            mode = "i";
-            key = "<C-q>";
-            action.__raw = "function() _G.obsidian_insert_linked_note() end";
-            options = {
-              desc = "Insert referenced note link";
-              silent = true;
-            };
-          }
-        ];
 
-        autoCmd = [
-          {
-            event = [ "BufEnter" ];
-            pattern = [ "*.md" ];
-            callback.__raw = ''
-              function()
-                if _G.is_obsidian_vault_file() then
-                  vim.keymap.set("n", "<leader>wr", "<cmd>ObsidianRename<cr>", { desc = "Rename note", buffer = true })
-                  vim.keymap.set("n", "<leader>wn", "<cmd>ObsidianNew<cr>", { desc = "Go to note", buffer = true })
-                  vim.keymap.set("n", "<leader>wc", "<cmd>ObsidianToggleCheckbox<cr>", { desc = "Toggle checkbox", buffer = true })
-                  vim.keymap.set("n", "<CR>", function()
-                    return require("obsidian").util.gf_passthrough()
-                  end, { expr = true, desc = "Follow link", buffer = true })
+              _G.obsidian_insert_existing_note = function()
+                local saved_row, saved_col = unpack(vim.api.nvim_win_get_cursor(0))
+                local was_insert = vim.fn.mode() == 'i'
 
-                end
-              end
-            '';
-          }
-          {
-            event = [ "BufEnter" ];
-            pattern = [ "*.md" ];
-            callback.__raw = ''
-              function()
-                local buf = vim.api.nvim_get_current_buf()
-                if vim.b[buf].obsidian_daily_processed then
-                  return
-                end
+                local vault_path = vim.fn.expand('${normalizedVaultPath}')
+                require('telescope.builtin').find_files({
+                  prompt_title = "Insert Link to Note",
+                  cwd = vault_path,
+                  find_command = { "fd", "--type", "f", "--extension", "md" },
+                  attach_mappings = function(prompt_bufnr, map)
+                    local actions = require('telescope.actions')
+                    local action_state = require('telescope.actions.state')
 
-                local filepath = vim.fn.resolve(vim.api.nvim_buf_get_name(buf))
-                local vault_path = vim.fn.resolve(vim.fn.expand('${normalizedVaultPath}'))
-                local diary_path = vault_path .. "/diary/"
+                    actions.select_default:replace(function()
+                      local entry = action_state.get_selected_entry()
+                      actions.close(prompt_bufnr)
 
-                if vim.startswith(filepath, diary_path) then
-                  local filename = vim.fn.fnamemodify(filepath, ":t:r")
-                  if filename:match("^%d%d%d%d%-%d%d%-%d%d$") then
-                    local today = os.date("%Y-%m-%d")
-                    local buf_empty = vim.api.nvim_buf_line_count(buf) == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == ""
-                    local file_exists = vim.fn.filereadable(filepath) == 1
-                    local buf_modified = vim.bo[buf].modified
-
-                    if buf_empty and file_exists and not buf_modified then
-                      vim.b[buf].obsidian_daily_processed = true
-                      vim.cmd("edit!")
-                    elseif not file_exists and buf_empty and not buf_modified and filename == today then
-                      vim.b[buf].obsidian_daily_processed = true
-                      ${lib.optionalString (self.settings.diaryTemplate != null) ''
-                        _G.obsidian_dates_needing_template = _G.obsidian_dates_needing_template or {}
-                        _G.obsidian_dates_needing_template[filename] = true
-                      ''}
-                      vim.cmd("ObsidianToday")
-                    end
-                  end
-                end
-              end
-            '';
-          }
-        ]
-        ++ lib.optionals (self.settings.diaryTemplate != null) [
-          {
-            event = [ "BufRead" ];
-            pattern = [ "*.md" ];
-            callback.__raw = ''
-              function()
-                local buf = vim.api.nvim_get_current_buf()
-                local filepath = vim.fn.resolve(vim.api.nvim_buf_get_name(buf))
-                local vault_path = vim.fn.resolve(vim.fn.expand('${normalizedVaultPath}'))
-                local diary_path = vault_path .. "/diary/"
-
-                if vim.startswith(filepath, diary_path) then
-                  local filename = vim.fn.fnamemodify(filepath, ":t:r")
-                  if filename:match("^%d%d%d%d%-%d%d%-%d%d$") then
-                    _G.obsidian_dates_needing_template = _G.obsidian_dates_needing_template or {}
-                    if _G.obsidian_dates_needing_template[filename] then
-                      _G.obsidian_dates_needing_template[filename] = nil
-                      vim.b[buf].obsidian_template_applied = true
-
-                      local template = ${lib.strings.escapeNixString self.settings.diaryTemplate}
-                      local lines = vim.split(template, "\n", { plain = true })
-                      ${lib.optionalString self.settings.addLinebreakBeforeTemplate ''
-                        table.insert(lines, 1, "")
-                      ''}
-                      local line_count = vim.api.nvim_buf_line_count(buf)
-                      vim.api.nvim_buf_set_lines(buf, line_count, line_count, false, lines)
-                      local final_line = line_count + #lines
-                      vim.api.nvim_win_set_cursor(0, {final_line, 0})
-                      vim.cmd("write")
-                    end
-                  end
-                end
-              end
-            '';
-          }
-        ];
-
-        extraConfigLua = ''
-          _G.nx_modules = _G.nx_modules or {}
-
-          _G.nx_modules["40-obsidian-globals"] = function()
-            _G.is_obsidian_vault_file = function()
-              local file_path = vim.fn.expand('%:p')
-              local vault_path = vim.fn.expand('${self.settings.wikiPath}')
-              local normalized_file_path = vim.fn.resolve(file_path)
-              local normalized_vault_path = vim.fn.resolve(vault_path)
-              return string.find(normalized_file_path, normalized_vault_path, 1, true) == 1
-            end
-          end
-
-          _G.nx_modules["45-obsidian-unlinked"] = function()
-            _G.obsidian_insert_linked_note = function()
-              local saved_row, saved_col = unpack(vim.api.nvim_win_get_cursor(0))
-              local was_insert = vim.fn.mode() == 'i'
-
-              local vault_path = vim.fn.expand('${normalizedVaultPath}')
-
-              require('telescope.builtin').grep_string({
-                prompt_title = "Insert Link to Referenced Note",
-                cwd = vault_path,
-                search = "\\[\\[[^\\]]+\\]\\]",
-                use_regex = true,
-                additional_args = function()
-                  return { "--type", "md" }
-                end,
-                attach_mappings = function(prompt_bufnr, map)
-                  local actions = require('telescope.actions')
-                  local action_state = require('telescope.actions.state')
-
-                  actions.select_default:replace(function()
-                    local entry = action_state.get_selected_entry()
-                    actions.close(prompt_bufnr)
-
-                    local text = entry.text or ""
-                    local note_name = text:match("%[%[([^%]]+)%]%]")
-
-                    if note_name then
+                      local note_name = vim.fn.fnamemodify(entry.value, ":t:r")
                       local link = " [[" .. note_name .. "]]"
                       local current_row, current_col = unpack(vim.api.nvim_win_get_cursor(0))
                       vim.api.nvim_buf_set_text(0, current_row - 1, current_col, current_row - 1, current_col, { link })
@@ -550,158 +588,121 @@ args@{
                       if was_insert then
                         vim.api.nvim_feedkeys("a", "n", false)
                       end
-                    else
-                      vim.notify("Could not extract note name from: " .. text, vim.log.levels.WARN, {
-                        icon = "⚠️",
-                        title = "Obsidian"
-                      })
-                    end
-                  end)
+                    end)
 
-                  return true
-                end,
-              })
-            end
-
-            _G.obsidian_insert_existing_note = function()
-              local saved_row, saved_col = unpack(vim.api.nvim_win_get_cursor(0))
-              local was_insert = vim.fn.mode() == 'i'
-
-              local vault_path = vim.fn.expand('${normalizedVaultPath}')
-              require('telescope.builtin').find_files({
-                prompt_title = "Insert Link to Note",
-                cwd = vault_path,
-                find_command = { "fd", "--type", "f", "--extension", "md" },
-                attach_mappings = function(prompt_bufnr, map)
-                  local actions = require('telescope.actions')
-                  local action_state = require('telescope.actions.state')
-
-                  actions.select_default:replace(function()
-                    local entry = action_state.get_selected_entry()
-                    actions.close(prompt_bufnr)
-
-                    local note_name = vim.fn.fnamemodify(entry.value, ":t:r")
-                    local link = " [[" .. note_name .. "]]"
-                    local current_row, current_col = unpack(vim.api.nvim_win_get_cursor(0))
-                    vim.api.nvim_buf_set_text(0, current_row - 1, current_col, current_row - 1, current_col, { link })
-                    vim.api.nvim_win_set_cursor(0, { current_row, current_col + #link })
-                    if was_insert then
-                      vim.api.nvim_feedkeys("a", "n", false)
-                    end
-                  end)
-
-                  return true
-                end,
-              })
-            end
-          end
-
-          ${lib.optionalString (self.isModuleEnabled "nvim-modules.calendar") ''
-            _G.nx_modules["50-obsidian-calendar"] = function()
-              vim.g.calendar_diary = vim.fn.expand('${normalizedVaultPath}') .. "/diary"
-              vim.g.calendar_diary_extension = ".md"
-              vim.g.calendar_action = "ObsidianCalendarAction"
-              vim.g.calendar_sign = "ObsidianCalendarSign"
-
-              _G.obsidian_create_daily_for_date = function(date_str)
-                local year, month, day = date_str:match("(%d+)-(%d+)-(%d+)")
-                if not year or not month or not day then
-                  vim.notify("Invalid date format: " .. date_str, vim.log.levels.ERROR, {
-                    icon = "⚠️",
-                    title = "Obsidian"
-                  })
-                  return
-                end
-
-                local target_time = os.time({
-                  year = tonumber(year),
-                  month = tonumber(month),
-                  day = tonumber(day),
-                  hour = 12,
-                  min = 0,
-                  sec = 0
+                    return true
+                  end,
                 })
-
-                local today = os.date("*t")
-                local today_time = os.time({
-                  year = today.year,
-                  month = today.month,
-                  day = today.day,
-                  hour = 12,
-                  min = 0,
-                  sec = 0
-                })
-
-                local offset_days = math.floor((target_time - today_time) / (24 * 60 * 60))
-
-                local ok, daily = pcall(require, "obsidian.daily")
-                if not ok then
-                  vim.notify("Failed to load obsidian.daily module", vim.log.levels.ERROR, {
-                    icon = "⚠️",
-                    title = "Obsidian"
-                  })
-                  return
-                end
-
-                local ok_note, note = pcall(function()
-                  return daily.daily(offset_days, {})
-                end)
-
-                if not ok_note or not note then
-                  vim.notify("Failed to create daily note for " .. date_str, vim.log.levels.ERROR, {
-                    icon = "⚠️",
-                    title = "Obsidian"
-                  })
-                  return
-                end
-
-                local ok_open, _ = pcall(function()
-                  note:open()
-                end)
-
-                if not ok_open then
-                  vim.notify("Failed to open daily note for " .. date_str, vim.log.levels.ERROR, {
-                    icon = "⚠️",
-                    title = "Obsidian"
-                  })
-                end
               end
-
-              vim.cmd([[
-                function! ObsidianCalendarSign(day, month, year)
-                  let diary_dir = expand('${normalizedVaultPath}') . "/diary"
-                  let date_str = printf("%04d-%02d-%02d", a:year, a:month, a:day)
-                  let diary_file = diary_dir . "/" . date_str . ".md"
-
-                  if filereadable(diary_file)
-                    return 1
-                  else
-                    return 0
-                  endif
-                endfunction
-
-                function! ObsidianCalendarAction(day, month, year, week, dir)
-                  let date_str = printf("%04d-%02d-%02d", a:year, a:month, a:day)
-
-                  if winnr('#') == 0
-                    if a:dir ==? 'V'
-                      vsplit
-                    else
-                      split
-                    endif
-                  else
-                    wincmd p
-                    if !&hidden && &modified
-                      new
-                    endif
-                  endif
-
-                  call luaeval('_G.obsidian_create_daily_for_date(_A)', date_str)
-                endfunction
-              ]])
             end
-          ''}
-        '';
+
+            ${lib.optionalString (self.isModuleEnabled "nvim-modules.calendar") ''
+              _G.nx_modules["50-obsidian-calendar"] = function()
+                vim.g.calendar_diary = vim.fn.expand('${normalizedVaultPath}') .. "/diary"
+                vim.g.calendar_diary_extension = ".md"
+                vim.g.calendar_action = "ObsidianCalendarAction"
+                vim.g.calendar_sign = "ObsidianCalendarSign"
+
+                _G.obsidian_create_daily_for_date = function(date_str)
+                  local year, month, day = date_str:match("(%d+)-(%d+)-(%d+)")
+                  if not year or not month or not day then
+                    vim.notify("Invalid date format: " .. date_str, vim.log.levels.ERROR, {
+                      icon = "⚠️",
+                      title = "Obsidian"
+                    })
+                    return
+                  end
+
+                  local target_time = os.time({
+                    year = tonumber(year),
+                    month = tonumber(month),
+                    day = tonumber(day),
+                    hour = 12,
+                    min = 0,
+                    sec = 0
+                  })
+
+                  local today = os.date("*t")
+                  local today_time = os.time({
+                    year = today.year,
+                    month = today.month,
+                    day = today.day,
+                    hour = 12,
+                    min = 0,
+                    sec = 0
+                  })
+
+                  local offset_days = math.floor((target_time - today_time) / (24 * 60 * 60))
+
+                  local ok, daily = pcall(require, "obsidian.daily")
+                  if not ok then
+                    vim.notify("Failed to load obsidian.daily module", vim.log.levels.ERROR, {
+                      icon = "⚠️",
+                      title = "Obsidian"
+                    })
+                    return
+                  end
+
+                  local ok_note, note = pcall(function()
+                    return daily.daily(offset_days, {})
+                  end)
+
+                  if not ok_note or not note then
+                    vim.notify("Failed to create daily note for " .. date_str, vim.log.levels.ERROR, {
+                      icon = "⚠️",
+                      title = "Obsidian"
+                    })
+                    return
+                  end
+
+                  local ok_open, _ = pcall(function()
+                    note:open()
+                  end)
+
+                  if not ok_open then
+                    vim.notify("Failed to open daily note for " .. date_str, vim.log.levels.ERROR, {
+                      icon = "⚠️",
+                      title = "Obsidian"
+                    })
+                  end
+                end
+
+                vim.cmd([[
+                  function! ObsidianCalendarSign(day, month, year)
+                    let diary_dir = expand('${normalizedVaultPath}') . "/diary"
+                    let date_str = printf("%04d-%02d-%02d", a:year, a:month, a:day)
+                    let diary_file = diary_dir . "/" . date_str . ".md"
+
+                    if filereadable(diary_file)
+                      return 1
+                    else
+                      return 0
+                    endif
+                  endfunction
+
+                  function! ObsidianCalendarAction(day, month, year, week, dir)
+                    let date_str = printf("%04d-%02d-%02d", a:year, a:month, a:day)
+
+                    if winnr('#') == 0
+                      if a:dir ==? 'V'
+                        vsplit
+                      else
+                        split
+                      endif
+                    else
+                      wincmd p
+                      if !&hidden && &modified
+                        new
+                      endif
+                    endif
+
+                    call luaeval('_G.obsidian_create_daily_for_date(_A)', date_str)
+                  endfunction
+                ]])
+              end
+            ''}
+          '';
+        };
       };
-    };
+  };
 }

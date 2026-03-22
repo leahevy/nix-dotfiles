@@ -13,11 +13,9 @@ args@{
 
   group = "doom-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.file.".config/doom/config/70-coding-setup.el".text = ''
         (add-hook 'rjsx-mode-hook
                   #'coding-hooks)
@@ -30,4 +28,5 @@ args@{
           (flyspell-prog-mode 1))
       '';
     };
+  };
 }

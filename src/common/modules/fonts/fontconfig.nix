@@ -13,22 +13,21 @@ args@{
 
   group = "fonts";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       fonts = {
         fontconfig = {
           enable = true;
         };
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".cache/fontconfig"
           ".config/fontconfig"
         ];
       };
     };
+  };
 }

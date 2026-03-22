@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     enabled = true;
@@ -142,310 +141,312 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      theme = config.nx.preferences.theme;
-      bgColor = theme.colors.terminal.normalBackgrounds.primary.html;
-      resolvedAnimations = {
-        fade = self.settings.animations.fade // {
-          fromColor =
-            if self.settings.animations.fade.fromColor != null then
-              self.settings.animations.fade.fromColor
-            else
-              theme.colors.terminal.colors.blue.html;
-          toColor =
-            if self.settings.animations.fade.toColor != null then
-              self.settings.animations.fade.toColor
-            else
-              bgColor;
+  on = {
+    home =
+      config:
+      let
+        theme = config.nx.preferences.theme;
+        bgColor = theme.colors.terminal.normalBackgrounds.primary.html;
+        resolvedAnimations = {
+          fade = self.settings.animations.fade // {
+            fromColor =
+              if self.settings.animations.fade.fromColor != null then
+                self.settings.animations.fade.fromColor
+              else
+                theme.colors.terminal.colors.blue.html;
+            toColor =
+              if self.settings.animations.fade.toColor != null then
+                self.settings.animations.fade.toColor
+              else
+                bgColor;
+          };
+          reverse_fade = self.settings.animations.reverse_fade // {
+            fromColor =
+              if self.settings.animations.reverse_fade.fromColor != null then
+                self.settings.animations.reverse_fade.fromColor
+              else
+                theme.colors.terminal.colors.green.html;
+            toColor =
+              if self.settings.animations.reverse_fade.toColor != null then
+                self.settings.animations.reverse_fade.toColor
+              else
+                bgColor;
+          };
+          pulse = self.settings.animations.pulse // {
+            fromColor =
+              if self.settings.animations.pulse.fromColor != null then
+                self.settings.animations.pulse.fromColor
+              else
+                theme.colors.terminal.colors.yellow.html;
+            toColor =
+              if self.settings.animations.pulse.toColor != null then
+                self.settings.animations.pulse.toColor
+              else
+                bgColor;
+          };
+          bounce = self.settings.animations.bounce // {
+            fromColor =
+              if self.settings.animations.bounce.fromColor != null then
+                self.settings.animations.bounce.fromColor
+              else
+                theme.colors.terminal.colors.pink.html;
+            toColor =
+              if self.settings.animations.bounce.toColor != null then
+                self.settings.animations.bounce.toColor
+              else
+                bgColor;
+          };
+          rainbow = self.settings.animations.rainbow;
+          left_to_right = self.settings.animations.left_to_right // {
+            fromColor =
+              if self.settings.animations.left_to_right.fromColor != null then
+                self.settings.animations.left_to_right.fromColor
+              else
+                theme.colors.terminal.colors.purple.html;
+            toColor =
+              if self.settings.animations.left_to_right.toColor != null then
+                self.settings.animations.left_to_right.toColor
+              else
+                bgColor;
+          };
         };
-        reverse_fade = self.settings.animations.reverse_fade // {
-          fromColor =
-            if self.settings.animations.reverse_fade.fromColor != null then
-              self.settings.animations.reverse_fade.fromColor
-            else
-              theme.colors.terminal.colors.green.html;
-          toColor =
-            if self.settings.animations.reverse_fade.toColor != null then
-              self.settings.animations.reverse_fade.toColor
-            else
-              bgColor;
-        };
-        pulse = self.settings.animations.pulse // {
-          fromColor =
-            if self.settings.animations.pulse.fromColor != null then
-              self.settings.animations.pulse.fromColor
-            else
-              theme.colors.terminal.colors.yellow.html;
-          toColor =
-            if self.settings.animations.pulse.toColor != null then
-              self.settings.animations.pulse.toColor
-            else
-              bgColor;
-        };
-        bounce = self.settings.animations.bounce // {
-          fromColor =
-            if self.settings.animations.bounce.fromColor != null then
-              self.settings.animations.bounce.fromColor
-            else
-              theme.colors.terminal.colors.pink.html;
-          toColor =
-            if self.settings.animations.bounce.toColor != null then
-              self.settings.animations.bounce.toColor
-            else
-              bgColor;
-        };
-        rainbow = self.settings.animations.rainbow;
-        left_to_right = self.settings.animations.left_to_right // {
-          fromColor =
-            if self.settings.animations.left_to_right.fromColor != null then
-              self.settings.animations.left_to_right.fromColor
-            else
-              theme.colors.terminal.colors.purple.html;
-          toColor =
-            if self.settings.animations.left_to_right.toColor != null then
-              self.settings.animations.left_to_right.toColor
-            else
-              bgColor;
-        };
-      };
-      configToLuaProps =
-        config:
-        let
-          convertKey =
-            key:
-            if key == "charsForMaxDuration" then
-              "chars_for_max_duration"
-            else if key == "fromColor" then
-              "from_color"
-            else if key == "toColor" then
-              "to_color"
-            else if key == "pulseCount" then
-              "pulse_count"
-            else if key == "oscillationCount" then
-              "oscillation_count"
-            else if key == "lingeringTime" then
-              "lingering_time"
-            else
-              key;
+        configToLuaProps =
+          config:
+          let
+            convertKey =
+              key:
+              if key == "charsForMaxDuration" then
+                "chars_for_max_duration"
+              else if key == "fromColor" then
+                "from_color"
+              else if key == "toColor" then
+                "to_color"
+              else if key == "pulseCount" then
+                "pulse_count"
+              else if key == "oscillationCount" then
+                "oscillation_count"
+              else if key == "lingeringTime" then
+                "lingering_time"
+              else
+                key;
 
-          minDuration = if config ? duration then toString (config.duration * 80 / 100) else null;
+            minDuration = if config ? duration then toString (config.duration * 80 / 100) else null;
 
-          configProps = lib.mapAttrsToList (
-            key: value:
-            let
-              luaKey = convertKey key;
-            in
-            if key == "duration" then
-              null
-            else if lib.isString value then
-              "${luaKey} = \"${value}\""
-            else
-              "${luaKey} = ${toString value}"
-          ) config;
+            configProps = lib.mapAttrsToList (
+              key: value:
+              let
+                luaKey = convertKey key;
+              in
+              if key == "duration" then
+                null
+              else if lib.isString value then
+                "${luaKey} = \"${value}\""
+              else
+                "${luaKey} = ${toString value}"
+            ) config;
 
-          durationProps =
-            if config ? duration then
-              [
-                "max_duration = ${toString config.duration}"
-                "min_duration = ${minDuration}"
-              ]
-            else
-              [ ];
+            durationProps =
+              if config ? duration then
+                [
+                  "max_duration = ${toString config.duration}"
+                  "min_duration = ${minDuration}"
+                ]
+              else
+                [ ];
 
-          allProps = durationProps ++ (lib.filter (x: x != null) configProps);
-        in
-        lib.concatStringsSep ",\n              " allProps;
+            allProps = durationProps ++ (lib.filter (x: x != null) configProps);
+          in
+          lib.concatStringsSep ",\n              " allProps;
 
-      generateAnimation = name: config: ''
-        ${name} = {
-                    ${configToLuaProps config}
-                  }'';
+        generateAnimation = name: config: ''
+          ${name} = {
+                      ${configToLuaProps config}
+                    }'';
 
-      allAnimations = lib.concatStringsSep ",\n            " (
-        lib.mapAttrsToList generateAnimation resolvedAnimations
-      );
+        allAnimations = lib.concatStringsSep ",\n            " (
+          lib.mapAttrsToList generateAnimation resolvedAnimations
+        );
 
-      pulsarAnimConfig = resolvedAnimations.${self.settings.pulsar.animation};
-      pulsarSettings = configToLuaProps pulsarAnimConfig;
-    in
-    {
-      programs.nixvim = {
-        extraPlugins = with pkgs.vimUtils; [
-          (buildVimPlugin {
-            name = "tiny-glimmer-nvim";
-            src = pkgs.fetchFromGitHub {
-              owner = self.settings.github.owner;
-              repo = self.settings.github.repo;
-              rev = self.settings.github.rev;
-              hash = self.settings.github.hash;
-            };
-          })
-        ];
+        pulsarAnimConfig = resolvedAnimations.${self.settings.pulsar.animation};
+        pulsarSettings = configToLuaProps pulsarAnimConfig;
+      in
+      {
+        programs.nixvim = {
+          extraPlugins = with pkgs.vimUtils; [
+            (buildVimPlugin {
+              name = "tiny-glimmer-nvim";
+              src = pkgs.fetchFromGitHub {
+                owner = self.settings.github.owner;
+                repo = self.settings.github.repo;
+                rev = self.settings.github.rev;
+                hash = self.settings.github.hash;
+              };
+            })
+          ];
 
-        keymaps = [
-          {
-            mode = "n";
-            key = "<leader>Xa";
-            action = "<cmd>lua _G.toggle_tiny_glimmer()<CR>";
-            options = {
-              desc = "Toggle animations";
-              silent = true;
-            };
-          }
-        ];
-
-        plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
-          {
-            __unkeyed-1 = "<leader>Xa";
-            desc = "Toggle animations";
-            icon = "✨";
-          }
-        ];
-
-        extraConfigLua = ''
-          _G.nx_modules = _G.nx_modules or {}
-          _G.nx_modules["50-tiny-glimmer"] = function()
-            local tiny_glimmer = require('tiny-glimmer')
-
-            _G.tiny_glimmer_enabled = ${if self.settings.enabled then "true" else "false"}
-
-            local excluded_filetypes = {
-              ${lib.concatMapStringsSep ", " (ft: "'${ft}'") self.settings.excludeFiletypes}
+          keymaps = [
+            {
+              mode = "n";
+              key = "<leader>Xa";
+              action = "<cmd>lua _G.toggle_tiny_glimmer()<CR>";
+              options = {
+                desc = "Toggle animations";
+                silent = true;
+              };
             }
+          ];
 
-            local function should_enable_animations()
-              local ft = vim.bo.filetype
-              local buftype = vim.bo.buftype
+          plugins.which-key.settings.spec = lib.mkIf (self.isModuleEnabled "nvim-modules.which-key") [
+            {
+              __unkeyed-1 = "<leader>Xa";
+              desc = "Toggle animations";
+              icon = "✨";
+            }
+          ];
 
-              for _, excluded_ft in ipairs(excluded_filetypes) do
-                if ft == excluded_ft then
+          extraConfigLua = ''
+            _G.nx_modules = _G.nx_modules or {}
+            _G.nx_modules["50-tiny-glimmer"] = function()
+              local tiny_glimmer = require('tiny-glimmer')
+
+              _G.tiny_glimmer_enabled = ${if self.settings.enabled then "true" else "false"}
+
+              local excluded_filetypes = {
+                ${lib.concatMapStringsSep ", " (ft: "'${ft}'") self.settings.excludeFiletypes}
+              }
+
+              local function should_enable_animations()
+                local ft = vim.bo.filetype
+                local buftype = vim.bo.buftype
+
+                for _, excluded_ft in ipairs(excluded_filetypes) do
+                  if ft == excluded_ft then
+                    return false
+                  end
+                end
+
+                if buftype ~= "" and buftype ~= "nofile" then
                   return false
                 end
+
+                return _G.tiny_glimmer_enabled
               end
 
-              if buftype ~= "" and buftype ~= "nofile" then
-                return false
-              end
+              function _G.toggle_tiny_glimmer()
+                _G.tiny_glimmer_enabled = not _G.tiny_glimmer_enabled
 
-              return _G.tiny_glimmer_enabled
-            end
-
-            function _G.toggle_tiny_glimmer()
-              _G.tiny_glimmer_enabled = not _G.tiny_glimmer_enabled
-
-              if _G.tiny_glimmer_enabled then
-                tiny_glimmer.enable()
-                vim.notify("Tiny Glimmer animations enabled", vim.log.levels.INFO, {
-                  icon = "✨",
-                  title = "Tiny Glimmer"
-                })
-              else
-                tiny_glimmer.disable()
-                vim.notify("Tiny Glimmer animations disabled", vim.log.levels.INFO, {
-                  icon = "✨",
-                  title = "Tiny Glimmer"
-                })
-              end
-            end
-
-            tiny_glimmer.setup({
-              enabled = true,
-              disable_warnings = ${if self.settings.disableWarnings then "true" else "false"},
-              refresh_interval_ms = ${toString self.settings.refreshIntervalMs},
-              ${lib.optionalString (
-                self.settings.transparencyColor != null
-              ) "transparency_color = '${self.settings.transparencyColor}',"}
-
-              overwrite = {
-                auto_map = true,
-
-                ${lib.optionalString (self.settings.yank != null) ''
-                  yank = {
-                    enabled = true,
-                    default_animation = "${self.settings.yank}",
-                  },''}
-
-                ${lib.optionalString (self.settings.paste != null) ''
-                  paste = {
-                    enabled = true,
-                    default_animation = "${self.settings.paste}",
-                    paste_mapping = "p",
-                    Paste_mapping = "P",
-                  },''}
-
-                ${lib.optionalString (self.settings.search != null) ''
-                  search = {
-                    enabled = true,
-                    default_animation = "${self.settings.search}",
-                    next_mapping = "n",
-                    prev_mapping = "N",
-                  },''}
-
-                ${lib.optionalString (self.settings.undo != null) ''
-                  undo = {
-                    enabled = true,
-                    default_animation = "${self.settings.undo}",
-                    undo_mapping = "u",
-                  },''}
-
-                ${lib.optionalString (self.settings.redo != null) ''
-                  redo = {
-                    enabled = true,
-                    default_animation = "${self.settings.redo}",
-                    redo_mapping = "<C-r>",
-                  },''}
-              },
-
-              presets = {
-                pulsar = {
-                  enabled = ${if self.settings.pulsar.animation != null then "true" else "false"},
-                  on_events = { ${
-                    lib.concatMapStringsSep ", " (event: "\"${event}\"") self.settings.pulsar.onEvents
-                  } },
-                  default_animation = {
-                    name = "${self.settings.pulsar.animation}",
-                    settings = {
-                      ${pulsarSettings}
-                    }
-                  }
-                }
-              },
-
-              animations = {
-                ${allAnimations}
-              }
-            })
-
-            if not _G.tiny_glimmer_enabled then
-              tiny_glimmer.disable()
-            end
-
-            vim.api.nvim_create_autocmd({"BufEnter", "FileType"}, {
-              callback = function()
-                if not should_enable_animations() then
-                  tiny_glimmer.disable()
-                elseif _G.tiny_glimmer_enabled then
+                if _G.tiny_glimmer_enabled then
                   tiny_glimmer.enable()
+                  vim.notify("Tiny Glimmer animations enabled", vim.log.levels.INFO, {
+                    icon = "✨",
+                    title = "Tiny Glimmer"
+                  })
+                else
+                  tiny_glimmer.disable()
+                  vim.notify("Tiny Glimmer animations disabled", vim.log.levels.INFO, {
+                    icon = "✨",
+                    title = "Tiny Glimmer"
+                  })
                 end
               end
-            })
 
-            vim.api.nvim_create_autocmd("VimEnter", {
-              once = true,
-              callback = function()
-                vim.defer_fn(function()
-                  if should_enable_animations() then
-                    tiny_glimmer.enable()
-                  else
-                    tiny_glimmer.disable()
-                  end
-                end, 100)
+              tiny_glimmer.setup({
+                enabled = true,
+                disable_warnings = ${if self.settings.disableWarnings then "true" else "false"},
+                refresh_interval_ms = ${toString self.settings.refreshIntervalMs},
+                ${lib.optionalString (
+                  self.settings.transparencyColor != null
+                ) "transparency_color = '${self.settings.transparencyColor}',"}
+
+                overwrite = {
+                  auto_map = true,
+
+                  ${lib.optionalString (self.settings.yank != null) ''
+                    yank = {
+                      enabled = true,
+                      default_animation = "${self.settings.yank}",
+                    },''}
+
+                  ${lib.optionalString (self.settings.paste != null) ''
+                    paste = {
+                      enabled = true,
+                      default_animation = "${self.settings.paste}",
+                      paste_mapping = "p",
+                      Paste_mapping = "P",
+                    },''}
+
+                  ${lib.optionalString (self.settings.search != null) ''
+                    search = {
+                      enabled = true,
+                      default_animation = "${self.settings.search}",
+                      next_mapping = "n",
+                      prev_mapping = "N",
+                    },''}
+
+                  ${lib.optionalString (self.settings.undo != null) ''
+                    undo = {
+                      enabled = true,
+                      default_animation = "${self.settings.undo}",
+                      undo_mapping = "u",
+                    },''}
+
+                  ${lib.optionalString (self.settings.redo != null) ''
+                    redo = {
+                      enabled = true,
+                      default_animation = "${self.settings.redo}",
+                      redo_mapping = "<C-r>",
+                    },''}
+                },
+
+                presets = {
+                  pulsar = {
+                    enabled = ${if self.settings.pulsar.animation != null then "true" else "false"},
+                    on_events = { ${
+                      lib.concatMapStringsSep ", " (event: "\"${event}\"") self.settings.pulsar.onEvents
+                    } },
+                    default_animation = {
+                      name = "${self.settings.pulsar.animation}",
+                      settings = {
+                        ${pulsarSettings}
+                      }
+                    }
+                  }
+                },
+
+                animations = {
+                  ${allAnimations}
+                }
+              })
+
+              if not _G.tiny_glimmer_enabled then
+                tiny_glimmer.disable()
               end
-            })
-          end
-        '';
+
+              vim.api.nvim_create_autocmd({"BufEnter", "FileType"}, {
+                callback = function()
+                  if not should_enable_animations() then
+                    tiny_glimmer.disable()
+                  elseif _G.tiny_glimmer_enabled then
+                    tiny_glimmer.enable()
+                  end
+                end
+              })
+
+              vim.api.nvim_create_autocmd("VimEnter", {
+                once = true,
+                callback = function()
+                  vim.defer_fn(function()
+                    if should_enable_animations() then
+                      tiny_glimmer.enable()
+                    else
+                      tiny_glimmer.disable()
+                    end
+                  end, 100)
+                end
+              })
+            end
+          '';
+        };
       };
-    };
+  };
 }

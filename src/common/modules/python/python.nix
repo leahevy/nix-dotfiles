@@ -13,7 +13,6 @@ args@{
 
   group = "python";
   input = "common";
-  namespace = "home";
 
   settings = {
     basePackages = [
@@ -28,13 +27,25 @@ args@{
     additionalPackages = [ ];
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.packages = with pkgs; [
-        (python313.withPackages (
-          p: map (pkg: p.${pkg}) (self.settings.basePackages ++ self.settings.additionalPackages)
-        ))
-      ];
+  options = {
+    additionalPackages = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Extra Python packages addable by other modules.";
     };
+  };
+
+  on = {
+    home =
+      config:
+      let
+        optionPackages = (self.options config).additionalPackages;
+        allPackages = self.settings.basePackages ++ self.settings.additionalPackages ++ optionPackages;
+      in
+      {
+        home.packages = with pkgs; [
+          (python313.withPackages (p: map (pkg: p.${pkg}) allPackages))
+        ];
+      };
+  };
 }

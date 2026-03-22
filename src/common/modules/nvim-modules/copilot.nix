@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   unfree = [ "copilot-language-server" ];
 
@@ -66,9 +65,8 @@ args@{
     additionalFiletypesToEnable = [ ];
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages = with pkgs; [
         (lib.lowPrio nodejs)
         copilot-language-server
@@ -332,11 +330,11 @@ args@{
         '';
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".config/github-copilot"
         ];
       };
-
     };
+  };
 }

@@ -13,11 +13,9 @@ args@{
 
   group = "doom-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.file.".config/doom/config/20-nix-doom-logo.el".text = ''
         (defun my-main-menu-banner ()
           "Insert Nix snowflake logo ASCII art."
@@ -52,4 +50,5 @@ args@{
         (setq +doom-dashboard-ascii-banner-fn #'my-main-menu-banner)
       '';
     };
+  };
 }

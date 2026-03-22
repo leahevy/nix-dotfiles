@@ -13,11 +13,9 @@ args@{
 
   group = "doom-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.file.".config/doom/config/60-transparency.el".text = ''
         (defun my/set-transparency (alpha-bg)
           "Set background transparency to ALPHA-BG (0-100)."
@@ -30,7 +28,7 @@ args@{
             (let ((frame (or frame (selected-frame))))
               ;; Make main background transparent
               (set-face-background 'default "unspecified-bg" frame)
-              
+
               ;; Force tab systems to be solid black (not transparent)
               (when (facep 'centaur-tabs-default)
                 (set-face-background 'centaur-tabs-default "#000000" frame))
@@ -55,4 +53,5 @@ args@{
               (add-to-list 'default-frame-alist '(alpha . (85 . 80))))))
       '';
     };
+  };
 }

@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     theme = "auto";
@@ -74,9 +73,8 @@ args@{
     ];
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim.opts.showmode = false;
 
       programs.nixvim.plugins.lualine = {
@@ -368,4 +366,5 @@ args@{
         return theme
       '';
     };
+  };
 }

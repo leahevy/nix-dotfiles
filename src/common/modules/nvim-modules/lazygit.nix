@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -23,9 +22,8 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         extraPlugins = with pkgs.vimPlugins; [
           lazygit-nvim
@@ -52,4 +50,5 @@ args@{
         ];
       };
     };
+  };
 }

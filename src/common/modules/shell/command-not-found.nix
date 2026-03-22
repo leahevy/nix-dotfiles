@@ -13,15 +13,14 @@ args@{
 
   group = "shell";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs = {
         command-not-found = {
           enable = true;
         };
       };
     };
+  };
 }

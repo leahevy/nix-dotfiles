@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   assertions = [
     {
@@ -34,9 +33,8 @@ args@{
     enableTreesitterProvider = true;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.nvim-ufo = {
           enable = true;
@@ -149,4 +147,5 @@ args@{
             ];
       };
     };
+  };
 }

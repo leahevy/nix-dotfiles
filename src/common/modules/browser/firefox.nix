@@ -13,36 +13,29 @@ args@{
 
   group = "browser";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.firefox = {
         enable = true;
       };
 
-      stylix =
-        lib.mkIf
-          (
-            (self.user.isStandalone && self.isModuleEnabled "style.stylix")
-            || (!self.user.isStandalone && self.host.isModuleEnabled "style.stylix")
-          )
-          {
-            targets.firefox.profileNames = [
-              "default-release"
-            ];
-          };
+      stylix = lib.mkIf (self.isModuleEnabled "style.stylix") {
+        targets.firefox.profileNames = [
+          "default-release"
+        ];
+      };
 
       home.sessionVariables = {
         MOZ_ENABLE_WAYLAND = "1";
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".mozilla"
           ".cache/mozilla/firefox"
         ];
       };
     };
+  };
 }

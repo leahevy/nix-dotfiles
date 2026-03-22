@@ -13,15 +13,14 @@ args@{
 
   group = "dev";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs = {
         direnv = {
           enable = true;
         };
       };
     };
+  };
 }

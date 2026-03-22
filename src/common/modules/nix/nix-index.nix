@@ -13,11 +13,9 @@ args@{
 
   group = "nix";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs = {
         nix-index.enable = true;
       };
@@ -28,10 +26,11 @@ args@{
         };
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".cache/nix-index"
         ];
       };
     };
+  };
 }

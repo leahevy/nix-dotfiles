@@ -13,15 +13,13 @@ args@{
 
   group = "dev";
   input = "common";
-  namespace = "home";
 
   settings = {
     useLatest = false;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages =
         if self.settings.useLatest then
           (with pkgs; [
@@ -32,4 +30,5 @@ args@{
             protobuf
           ]);
     };
+  };
 }

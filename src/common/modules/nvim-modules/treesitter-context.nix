@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -78,9 +77,8 @@ args@{
     ];
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.treesitter-context = {
           enable = true;
@@ -156,4 +154,5 @@ args@{
         '';
       };
     };
+  };
 }

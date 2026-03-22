@@ -13,7 +13,6 @@ args@{
 
   group = "browser";
   input = "common";
-  namespace = "home";
 
   settings = {
     backend = "webengine";
@@ -437,803 +436,805 @@ args@{
     darwinFileManager = [ "open" ];
   };
 
-  init =
-    context@{ config, options, ... }:
-    lib.mkIf self.isEnabled {
-      nx.preferences.desktop.programs.webBrowser = {
-        name = "qutebrowser";
-        package = null;
-        openCommand = "qutebrowser";
-        openFileCommand = "qutebrowser";
-        desktopFile = "org.qutebrowser.qutebrowser.desktop";
+  on = {
+    init =
+      config:
+      lib.mkIf self.isEnabled {
+        nx.preferences.desktop.programs.webBrowser = {
+          name = "qutebrowser";
+          package = null;
+          openCommand = "qutebrowser";
+          openFileCommand = "qutebrowser";
+          desktopFile = "org.qutebrowser.qutebrowser.desktop";
+        };
       };
-    };
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
-      textEditor = config.nx.preferences.desktop.programs.textEditor;
-      appLauncher = config.nx.preferences.desktop.programs.appLauncher;
-      hasAppLauncher = appLauncher != null;
+    home =
+      config:
+      let
+        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
+        textEditor = config.nx.preferences.desktop.programs.textEditor;
+        appLauncher = config.nx.preferences.desktop.programs.appLauncher;
+        hasAppLauncher = appLauncher != null;
 
-      defaultSearch =
-        if self.settings.privacySearch then
-          if self.settings.startpageAsPrivacySearch then
-            "https://www.startpage.com/sp/search?q="
+        defaultSearch =
+          if self.settings.privacySearch then
+            if self.settings.startpageAsPrivacySearch then
+              "https://www.startpage.com/sp/search?q="
+            else
+              "https://duckduckgo.com/?q="
           else
-            "https://duckduckgo.com/?q="
-        else
-          "https://${self.settings.googleDomain}/search?q=";
+            "https://${self.settings.googleDomain}/search?q=";
 
-      homeUrl =
-        if self.settings.home != null then
-          self.settings.home
-        else if self.settings.privacySearch then
-          if self.settings.startpageAsPrivacySearch then
-            "https://www.startpage.com"
+        homeUrl =
+          if self.settings.home != null then
+            self.settings.home
+          else if self.settings.privacySearch then
+            if self.settings.startpageAsPrivacySearch then
+              "https://www.startpage.com"
+            else
+              "https://duckduckgo.com"
           else
-            "https://duckduckgo.com"
-        else
-          "https://${self.settings.googleDomain}";
+            "https://${self.settings.googleDomain}";
 
-      userAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/{webkit_version} (KHTML, like Gecko) {upstream_browser_key}/{upstream_browser_version_short} Safari/{webkit_version}";
-      spoofedUserAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+        userAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/{webkit_version} (KHTML, like Gecko) {upstream_browser_key}/{upstream_browser_version_short} Safari/{webkit_version}";
+        spoofedUserAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 
-      keepassxcKeyBindings =
-        if
-          (
-            self.user.gpg != null
-            && self.user.gpg != ""
-            && (self.isModuleEnabled "passwords.keepassxc" || self.settings.alwaysCreateKeepassxcKeybindings)
-          )
-        then
-          {
-            normal = {
-              "pw" = "spawn --userscript qute-keepassxc --key ${self.user.gpg}";
-            };
-            insert = {
-              "<Alt-Shift-u>" = "spawn --userscript qute-keepassxc --key ${self.user.gpg}";
-            };
-          }
-        else
-          { };
+        keepassxcKeyBindings =
+          if
+            (
+              self.user.gpg != null
+              && self.user.gpg != ""
+              && (self.isModuleEnabled "passwords.keepassxc" || self.settings.alwaysCreateKeepassxcKeybindings)
+            )
+          then
+            {
+              normal = {
+                "pw" = "spawn --userscript qute-keepassxc --key ${self.user.gpg}";
+              };
+              insert = {
+                "<Alt-Shift-u>" = "spawn --userscript qute-keepassxc --key ${self.user.gpg}";
+              };
+            }
+          else
+            { };
 
-      bitwardenKeyBindings =
-        if self.isModuleEnabled "passwords.bitwarden" || self.settings.alwaysCreateBitwardenKeybindings then
-          {
-            normal = {
-              "pb" = "spawn --userscript qute-bitwarden";
-            };
-            insert = {
-              "<Alt-Shift-i>" = "spawn --userscript qute-bitwarden";
-            };
-          }
-        else
-          { };
+        bitwardenKeyBindings =
+          if self.isModuleEnabled "passwords.bitwarden" || self.settings.alwaysCreateBitwardenKeybindings then
+            {
+              normal = {
+                "pb" = "spawn --userscript qute-bitwarden";
+              };
+              insert = {
+                "<Alt-Shift-i>" = "spawn --userscript qute-bitwarden";
+              };
+            }
+          else
+            { };
 
-      dmenuKeyBindings =
-        if self.isLinux && hasAppLauncher && self.settings.useDmenuForOpenOnLinux then
-          {
-            normal = {
-              "o" = "spawn --userscript launcher-open";
-              "O" = "spawn --userscript launcher-open -t";
-            };
-          }
-        else
-          { };
+        dmenuKeyBindings =
+          if self.isLinux && hasAppLauncher && self.settings.useDmenuForOpenOnLinux then
+            {
+              normal = {
+                "o" = "spawn --userscript launcher-open";
+                "O" = "spawn --userscript launcher-open -t";
+              };
+            }
+          else
+            { };
 
-      mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings) keepassxcKeyBindings) dmenuKeyBindings) bitwardenKeyBindings;
+        mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings) keepassxcKeyBindings) dmenuKeyBindings) bitwardenKeyBindings;
 
-      flattenBookmarks =
-        let
-          flattenBookmarksRecursive =
-            prefix: bookmarks:
-            lib.concatMapAttrs (
-              name: value:
-              let
-                safeName = builtins.replaceStrings [ "/" ] [ "-" ] name;
-                fullName = if prefix == "" then safeName else "${prefix}/${safeName}";
-              in
-              if builtins.isString value then
-                { "${fullName}" = value; }
-              else if builtins.isAttrs value then
-                if builtins.length (builtins.attrNames value) > 0 then
-                  flattenBookmarksRecursive fullName value
+        flattenBookmarks =
+          let
+            flattenBookmarksRecursive =
+              prefix: bookmarks:
+              lib.concatMapAttrs (
+                name: value:
+                let
+                  safeName = builtins.replaceStrings [ "/" ] [ "-" ] name;
+                  fullName = if prefix == "" then safeName else "${prefix}/${safeName}";
+                in
+                if builtins.isString value then
+                  { "${fullName}" = value; }
+                else if builtins.isAttrs value then
+                  if builtins.length (builtins.attrNames value) > 0 then
+                    flattenBookmarksRecursive fullName value
+                  else
+                    { }
                 else
-                  { }
-              else
-                throw "Bookmark value must be either a string (URL) or attribute set (folder)"
-            ) bookmarks;
-        in
-        flattenBookmarksRecursive "";
+                  throw "Bookmark value must be either a string (URL) or attribute set (folder)"
+              ) bookmarks;
+          in
+          flattenBookmarksRecursive "";
 
-      python = {
-        toBool = val: if val then "True" else "False";
+        python = {
+          toBool = val: if val then "True" else "False";
 
-        toValue =
-          val:
-          if builtins.isBool val then
-            python.toBool val
-          else if builtins.isString val then
-            "'${val}'"
-          else if builtins.isInt val then
-            toString val
-          else if builtins.isFloat val then
-            toString val
-          else if val == null then
-            "None"
-          else if builtins.isList val then
-            "[${lib.concatMapStringsSep ", " python.toValue val}]"
-          else
-            throw "Unsupported value type for Python conversion: ${builtins.typeOf val}";
-      };
-
-      themedCSS = pkgs.stdenv.mkDerivation rec {
-        pname = "themed-css";
-        version = "0.1";
-
-        src = pkgs.fetchFromGitHub {
-          owner = "alphapapa";
-          repo = "solarized-everything-css";
-          rev = "bea989070bbb1389ca05e67118786beb55321e55";
-          sha256 = "sha256-pwl2B0hYrzGGsSicVs/amu+N0Txd1e3+4+LKyWpyTeI=";
+          toValue =
+            val:
+            if builtins.isBool val then
+              python.toBool val
+            else if builtins.isString val then
+              "'${val}'"
+            else if builtins.isInt val then
+              toString val
+            else if builtins.isFloat val then
+              toString val
+            else if val == null then
+              "None"
+            else if builtins.isList val then
+              "[${lib.concatMapStringsSep ", " python.toValue val}]"
+            else
+              throw "Unsupported value type for Python conversion: ${builtins.typeOf val}";
         };
 
-        buildPhase = ''
-          cat ${
-            pkgs.writeText "patched.css" (
-              builtins.replaceStrings
-                [
-                  "#000"
-                  "#262626"
-                  "#2a2a2a"
-                  "#2e2e2e"
-                  "#323232"
-                  "#363636"
-                  "#2c4125"
+        themedCSS = pkgs.stdenv.mkDerivation rec {
+          pname = "themed-css";
+          version = "0.1";
 
-                  "#5e6263"
-                  "#797fd4"
-                  "#909396"
-                  "#a6aaab"
-                  "#b8bbbd"
-                  "#c7c9ca"
-                  "#d2d8d9"
+          src = pkgs.fetchFromGitHub {
+            owner = "alphapapa";
+            repo = "solarized-everything-css";
+            rev = "bea989070bbb1389ca05e67118786beb55321e55";
+            sha256 = "sha256-pwl2B0hYrzGGsSicVs/amu+N0Txd1e3+4+LKyWpyTeI=";
+          };
 
-                  "#fff"
-                  "#fba"
-                  "#aba"
+          buildPhase = ''
+            cat ${
+              pkgs.writeText "patched.css" (
+                builtins.replaceStrings
+                  [
+                    "#000"
+                    "#262626"
+                    "#2a2a2a"
+                    "#2e2e2e"
+                    "#323232"
+                    "#363636"
+                    "#2c4125"
 
-                  "#2f7bde"
-                  "#639ce6"
+                    "#5e6263"
+                    "#797fd4"
+                    "#909396"
+                    "#a6aaab"
+                    "#b8bbbd"
+                    "#c7c9ca"
+                    "#d2d8d9"
 
-                  "#15968d"
-                  "#436237"
-                  "#598249"
+                    "#fff"
+                    "#fba"
+                    "#aba"
 
-                  "#b68800"
+                    "#2f7bde"
+                    "#639ce6"
 
-                  "#e05f27"
+                    "#15968d"
+                    "#436237"
+                    "#598249"
 
-                  "#5e1c19"
-                  "#bd3832"
-                  "#ce4139"
-                  "#a8366b"
-                ]
-                [
-                  config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                  config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                  config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                  config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                  config.nx.preferences.theme.colors.main.backgrounds.secondary.html
-                  config.nx.preferences.theme.colors.main.backgrounds.tertiary.html
-                  config.nx.preferences.theme.colors.main.backgrounds.themed.html
+                    "#b68800"
 
-                  config.nx.preferences.theme.colors.main.foregrounds.subtle.html
-                  config.nx.preferences.theme.colors.main.foregrounds.secondary.html
-                  config.nx.preferences.theme.colors.main.foregrounds.subtle.html
-                  config.nx.preferences.theme.colors.main.foregrounds.secondary.html
-                  config.nx.preferences.theme.colors.main.foregrounds.strong.html
-                  config.nx.preferences.theme.colors.main.foregrounds.strong.html
-                  config.nx.preferences.theme.colors.main.foregrounds.strong.html
+                    "#e05f27"
 
-                  config.nx.preferences.theme.colors.main.foregrounds.primary.html
-                  config.nx.preferences.theme.colors.main.foregrounds.emphasized.html
-                  config.nx.preferences.theme.colors.main.foregrounds.strong.html
+                    "#5e1c19"
+                    "#bd3832"
+                    "#ce4139"
+                    "#a8366b"
+                  ]
+                  [
+                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                    config.nx.preferences.theme.colors.main.backgrounds.secondary.html
+                    config.nx.preferences.theme.colors.main.backgrounds.tertiary.html
+                    config.nx.preferences.theme.colors.main.backgrounds.themed.html
 
-                  config.nx.preferences.theme.colors.semantic.modifiedDarker.html
-                  config.nx.preferences.theme.colors.semantic.removedDarker.html
+                    config.nx.preferences.theme.colors.main.foregrounds.subtle.html
+                    config.nx.preferences.theme.colors.main.foregrounds.secondary.html
+                    config.nx.preferences.theme.colors.main.foregrounds.subtle.html
+                    config.nx.preferences.theme.colors.main.foregrounds.secondary.html
+                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
+                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
+                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
 
-                  config.nx.preferences.theme.colors.semantic.success.html
-                  config.nx.preferences.theme.colors.semantic.successDarker.html
-                  config.nx.preferences.theme.colors.semantic.success.html
+                    config.nx.preferences.theme.colors.main.foregrounds.primary.html
+                    config.nx.preferences.theme.colors.main.foregrounds.emphasized.html
+                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
 
-                  config.nx.preferences.theme.colors.semantic.warning.html
+                    config.nx.preferences.theme.colors.semantic.modifiedDarker.html
+                    config.nx.preferences.theme.colors.semantic.removedDarker.html
 
-                  config.nx.preferences.theme.colors.semantic.error.html
+                    config.nx.preferences.theme.colors.semantic.success.html
+                    config.nx.preferences.theme.colors.semantic.successDarker.html
+                    config.nx.preferences.theme.colors.semantic.success.html
 
-                  config.nx.preferences.theme.colors.semantic.errorDarker.html
-                  config.nx.preferences.theme.colors.semantic.info.html
-                  config.nx.preferences.theme.colors.semantic.info.html
-                  config.nx.preferences.theme.colors.semantic.selected.html
-                ]
-                (builtins.readFile "${src}/css/darculized/darculized-all-sites.css")
-            )
-          } > patched.css
-        '';
+                    config.nx.preferences.theme.colors.semantic.warning.html
 
-        installPhase = ''
-          mkdir -p $out
-          cp patched.css $out/themed-css.css
-        '';
-      };
-    in
-    {
-      home.packages =
-        lib.optionals self.settings.useThemedUserCSS [
-          themedCSS
-        ]
-        ++ lib.optionals (dmenuKeyBindings != { }) [ pkgs.sqlite ];
+                    config.nx.preferences.theme.colors.semantic.error.html
 
-      programs.qutebrowser = {
-        enable = true;
-        package = lib.mkDefault pkgs.qutebrowser;
+                    config.nx.preferences.theme.colors.semantic.errorDarker.html
+                    config.nx.preferences.theme.colors.semantic.info.html
+                    config.nx.preferences.theme.colors.semantic.info.html
+                    config.nx.preferences.theme.colors.semantic.selected.html
+                  ]
+                  (builtins.readFile "${src}/css/darculized/darculized-all-sites.css")
+              )
+            } > patched.css
+          '';
 
-        loadAutoconfig = false;
-        enableDefaultBindings = false;
+          installPhase = ''
+            mkdir -p $out
+            cp patched.css $out/themed-css.css
+          '';
+        };
+      in
+      {
+        home.packages =
+          lib.optionals self.settings.useThemedUserCSS [
+            themedCSS
+          ]
+          ++ lib.optionals (dmenuKeyBindings != { }) [ pkgs.sqlite ];
 
-        settings = lib.recursiveUpdate (lib.recursiveUpdate
-          {
-            backend = self.settings.backend;
-            confirm_quit =
-              if self.settings.askOnQuit then
-                [
-                  "always"
-                ]
-              else
-                [ "downloads" ];
-            new_instance_open_target = "tab";
-            new_instance_open_target_window = "last-focused";
-            fonts = {
-              default_size = lib.mkForce ((builtins.toString self.settings.fontSize) + "pt");
-              hints = lib.mkForce (
-                "normal "
-                + (builtins.toString (builtins.floor (self.settings.fontSize * 0.8)))
-                + "pt default_family"
-              );
-              web = {
-                size = {
-                  default = lib.mkForce self.settings.webFontSize;
-                  default_fixed = lib.mkForce (builtins.floor (self.settings.webFontSize * 0.9));
-                  minimum = 0;
-                  minimum_logical = lib.mkForce (builtins.floor (self.settings.webFontSize * 0.6));
+        programs.qutebrowser = {
+          enable = true;
+          package = lib.mkDefault pkgs.qutebrowser;
+
+          loadAutoconfig = false;
+          enableDefaultBindings = false;
+
+          settings = lib.recursiveUpdate (lib.recursiveUpdate
+            {
+              backend = self.settings.backend;
+              confirm_quit =
+                if self.settings.askOnQuit then
+                  [
+                    "always"
+                  ]
+                else
+                  [ "downloads" ];
+              new_instance_open_target = "tab";
+              new_instance_open_target_window = "last-focused";
+              fonts = {
+                default_size = lib.mkForce ((builtins.toString self.settings.fontSize) + "pt");
+                hints = lib.mkForce (
+                  "normal "
+                  + (builtins.toString (builtins.floor (self.settings.fontSize * 0.8)))
+                  + "pt default_family"
+                );
+                web = {
+                  size = {
+                    default = lib.mkForce self.settings.webFontSize;
+                    default_fixed = lib.mkForce (builtins.floor (self.settings.webFontSize * 0.9));
+                    minimum = 0;
+                    minimum_logical = lib.mkForce (builtins.floor (self.settings.webFontSize * 0.6));
+                  };
                 };
               };
-            };
-            url = {
-              open_base_url = true;
-              default_page = homeUrl;
-              start_pages =
-                (
-                  if (self.settings.addHomeToStartPages || self.settings.additionalStartPages == [ ]) then
-                    [ homeUrl ]
-                  else
-                    [ ]
-                )
-                ++ self.settings.additionalStartPages;
-            };
-            window = {
-              hide_decoration = isNiriEnabled;
-              transparent = true;
-              title_format = "{audio} {current_title} ({host}) {private}";
-            };
-            colors = {
-              contextmenu = {
-                menu = {
-                  fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.primary.html;
-                  bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.primary.html;
+              url = {
+                open_base_url = true;
+                default_page = homeUrl;
+                start_pages =
+                  (
+                    if (self.settings.addHomeToStartPages || self.settings.additionalStartPages == [ ]) then
+                      [ homeUrl ]
+                    else
+                      [ ]
+                  )
+                  ++ self.settings.additionalStartPages;
+              };
+              window = {
+                hide_decoration = isNiriEnabled;
+                transparent = true;
+                title_format = "{audio} {current_title} ({host}) {private}";
+              };
+              colors = {
+                contextmenu = {
+                  menu = {
+                    fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.primary.html;
+                    bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.primary.html;
+                  };
+                  selected = {
+                    fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
+                    bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
+                  };
+                  disabled = {
+                    fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
+                    bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.tertiary.html;
+                  };
                 };
-                selected = {
-                  fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
-                  bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
+                hints = {
+                  bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
+                  fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
+                  match = {
+                    fg = lib.mkForce config.nx.preferences.theme.colors.blocks.accent.foreground.html;
+                  };
                 };
-                disabled = {
-                  fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
-                  bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.tertiary.html;
+                tabs = {
+                  even = {
+                    bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.secondary.html;
+                    fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
+                  };
+                  odd = {
+                    bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.secondary.html;
+                    fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
+                  };
+                  selected = {
+                    even = {
+                      bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
+                      fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
+                    };
+                    odd = {
+                      bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
+                      fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
+                    };
+                  };
+                };
+                webpage = {
+                  darkmode = {
+                    enabled = self.settings.darkMode;
+                  };
+                  preferred_color_scheme = lib.mkForce (if self.settings.darkMode then "dark" else "auto");
+                };
+              };
+              content = {
+                local_content_can_access_remote_urls = true;
+                canvas_reading = true;
+                fullscreen = {
+                  window = self.isLinux && isNiriEnabled;
+                };
+                default_encoding = "utf-8";
+                pdfjs = true;
+                autoplay = self.settings.autoplay;
+                blocking = lib.mkIf (self.settings.blockAds && (self.isDarwin || self.isLinux)) {
+                  enabled = true;
+                  method = if self.isLinux then "both" else "hosts";
+                  whitelist = self.settings.whitelistPatterns;
+                };
+                javascript = {
+                  clipboard = "access-paste";
+                  can_open_tabs_automatically = false;
+                };
+                geolocation = "ask";
+                notifications = {
+                  enabled = true;
+                  presenter = if self.isLinux then "auto" else "messages";
+                };
+                media = {
+                  audio_capture = "ask";
+                  audio_video_capture = "ask";
+                  video_capture = "ask";
+                };
+                cookies = {
+                  accept = "all";
+                };
+                headers = {
+                  accept_language = "${self.settings.locale},${builtins.head (lib.strings.splitString "-" self.settings.locale)};q=0.9";
+                  do_not_track = true;
+                  referer = "same-domain";
+                  user_agent = if self.settings.spoofUserAgent then spoofedUserAgent else userAgent;
+                };
+                tls = {
+                  certificate_errors = "ask-block-thirdparty";
+                };
+                webgl = true;
+                dns_prefetch = false;
+                user_stylesheets = lib.mkIf self.settings.useThemedUserCSS [
+                  "${themedCSS}/themed-css.css"
+                ];
+              };
+              downloads = {
+                position = "bottom";
+                location = {
+                  directory = config.xdg.userDirs.download;
+                  prompt = false;
+                  remember = false;
                 };
               };
               hints = {
-                bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
-                fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
-                match = {
-                  fg = lib.mkForce config.nx.preferences.theme.colors.blocks.accent.foreground.html;
-                };
+                uppercase = true;
               };
               tabs = {
-                even = {
-                  bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.secondary.html;
-                  fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
+                show = "multiple";
+                last_close = "default-page";
+                mode_on_change = "restore";
+              };
+              messages = {
+                timeout = 0;
+              };
+              scrolling = {
+                smooth = self.settings.smoothScrollingEnabled;
+                bar = "when-searching";
+              };
+              completion = {
+                use_best_match = true;
+                quick = true;
+                show = "always";
+                delay = 0;
+                min_chars = 1;
+              };
+              auto_save = {
+                session = true;
+              };
+              spellcheck = {
+                languages = self.settings.dictLanguages;
+              };
+              editor.command =
+                (helpers.additionalTerminalPrefixIf config textEditor)
+                ++ (helpers.runWithAbsolutePath config textEditor textEditor.openCommand [ ])
+                ++ [ "{file}" ];
+              fileselect =
+                let
+                  fileManagerCommand =
+                    if self.isDarwin then self.settings.darwinFileManager else self.settings.fileManager;
+                in
+                {
+                  folder.command = fileManagerCommand ++ [
+                    "{}"
+                  ];
+                  multiple_files.command = fileManagerCommand ++ [
+                    "{}"
+                  ];
+                  single_file.command = fileManagerCommand ++ [
+                    "{}"
+                  ];
                 };
-                odd = {
-                  bg = lib.mkForce config.nx.preferences.theme.colors.main.backgrounds.secondary.html;
-                  fg = lib.mkForce config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
-                };
-                selected = {
-                  even = {
-                    bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
-                    fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
-                  };
-                  odd = {
-                    bg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.background.html;
-                    fg = lib.mkForce config.nx.preferences.theme.colors.blocks.primary.foreground.html;
-                  };
-                };
-              };
-              webpage = {
-                darkmode = {
-                  enabled = self.settings.darkMode;
-                };
-                preferred_color_scheme = lib.mkForce (if self.settings.darkMode then "dark" else "auto");
-              };
-            };
-            content = {
-              local_content_can_access_remote_urls = true;
-              canvas_reading = true;
-              fullscreen = {
-                window = self.isLinux && isNiriEnabled;
-              };
-              default_encoding = "utf-8";
-              pdfjs = true;
-              autoplay = self.settings.autoplay;
-              blocking = lib.mkIf (self.settings.blockAds && (self.isDarwin || self.isLinux)) {
-                enabled = true;
-                method = if self.isLinux then "both" else "hosts";
-                whitelist = self.settings.whitelistPatterns;
-              };
-              javascript = {
-                clipboard = "access-paste";
-                can_open_tabs_automatically = false;
-              };
-              geolocation = "ask";
-              notifications = {
-                enabled = true;
-                presenter = if self.isLinux then "auto" else "messages";
-              };
-              media = {
-                audio_capture = "ask";
-                audio_video_capture = "ask";
-                video_capture = "ask";
-              };
-              cookies = {
-                accept = "all";
-              };
-              headers = {
-                accept_language = "${self.settings.locale},${builtins.head (lib.strings.splitString "-" self.settings.locale)};q=0.9";
-                do_not_track = true;
-                referer = "same-domain";
-                user_agent = if self.settings.spoofUserAgent then spoofedUserAgent else userAgent;
-              };
-              tls = {
-                certificate_errors = "ask-block-thirdparty";
-              };
-              webgl = true;
-              dns_prefetch = false;
-              user_stylesheets = lib.mkIf self.settings.useThemedUserCSS [
-                "${themedCSS}/themed-css.css"
-              ];
-            };
-            downloads = {
-              position = "bottom";
-              location = {
-                directory = config.xdg.userDirs.download;
-                prompt = false;
-                remember = false;
-              };
-            };
-            hints = {
-              uppercase = true;
-            };
-            tabs = {
-              show = "multiple";
-              last_close = "default-page";
-              mode_on_change = "restore";
-            };
-            messages = {
-              timeout = 0;
-            };
-            scrolling = {
-              smooth = self.settings.smoothScrollingEnabled;
-              bar = "when-searching";
-            };
-            completion = {
-              use_best_match = true;
-              quick = true;
-              show = "always";
-              delay = 0;
-              min_chars = 1;
-            };
-            auto_save = {
-              session = true;
-            };
-            spellcheck = {
-              languages = self.settings.dictLanguages;
-            };
-            editor.command =
-              (helpers.additionalTerminalPrefixIf config textEditor)
-              ++ (helpers.runWithAbsolutePath config textEditor textEditor.openCommand [ ])
-              ++ [ "{file}" ];
-            fileselect =
-              let
-                fileManagerCommand =
-                  if self.isDarwin then self.settings.darwinFileManager else self.settings.fileManager;
-              in
-              {
-                folder.command = fileManagerCommand ++ [
-                  "{}"
-                ];
-                multiple_files.command = fileManagerCommand ++ [
-                  "{}"
-                ];
-                single_file.command = fileManagerCommand ++ [
-                  "{}"
-                ];
-              };
-            qt = {
-              force_software_rendering =
-                if self.isLinux then
-                  if (self.linux.isModuleEnabled "graphics.nvidia-setup") && self.settings.nvidiaQuirks then
-                    self.settings.linuxRenderingNvidia
+              qt = {
+                force_software_rendering =
+                  if self.isLinux then
+                    if (self.linux.isModuleEnabled "graphics.nvidia-setup") && self.settings.nvidiaQuirks then
+                      self.settings.linuxRenderingNvidia
+                    else
+                      self.settings.linuxRenderingGeneric
                   else
-                    self.settings.linuxRenderingGeneric
-                else
-                  self.settings.darwinRendering;
-              args =
-                if self.isLinux then
-                  if (self.linux.isModuleEnabled "graphics.nvidia-setup") && self.settings.nvidiaQuirks then
-                    self.settings.linuxQTArgs ++ self.settings.linuxNvidiaQTArgs
+                    self.settings.darwinRendering;
+                args =
+                  if self.isLinux then
+                    if (self.linux.isModuleEnabled "graphics.nvidia-setup") && self.settings.nvidiaQuirks then
+                      self.settings.linuxQTArgs ++ self.settings.linuxNvidiaQTArgs
+                    else
+                      self.settings.linuxQTArgs
                   else
-                    self.settings.linuxQTArgs
-                else
-                  self.settings.darwinQTArgs;
-            };
-          }
-          (
-            if self.settings.backend == "webkit" then
-              {
-                content = {
-                  cache = {
-                    maximum_pages = 5;
+                    self.settings.darwinQTArgs;
+              };
+            }
+            (
+              if self.settings.backend == "webkit" then
+                {
+                  content = {
+                    cache = {
+                      maximum_pages = 5;
+                    };
                   };
-                };
+                }
+              else if self.settings.backend == "webengine" then
+                { }
+              else
+                { }
+            )
+          ) self.settings.customSettings;
+
+          searchEngines =
+            let
+              convertSearchEngines =
+                searchEngines:
+                lib.mapAttrs' (name: url: lib.nameValuePair "/${name}" url) searchEngines // searchEngines;
+            in
+            convertSearchEngines (
+              {
+                search = defaultSearch + "{}";
+                google = "https://${self.settings.googleDomain}/search?q={}";
               }
-            else if self.settings.backend == "webengine" then
-              { }
-            else
-              { }
-          )
-        ) self.settings.customSettings;
+              // lib.optionalAttrs self.settings.addAmazon {
+                amazon = "https://${self.settings.amazonDomain}/s?k={}";
+              }
+              // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
+                start = "https://www.startpage.com/sp/search?q={}";
+              }
+              // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
+                duck = "https://duckduckgo.com/?q={}";
+              }
+              // self.settings.baseSearchEngines
+              // self.settings.additionalSearchEngines
+            )
+            // {
+              DEFAULT = defaultSearch + "{}";
+            };
 
-        searchEngines =
-          let
-            convertSearchEngines =
-              searchEngines:
-              lib.mapAttrs' (name: url: lib.nameValuePair "/${name}" url) searchEngines // searchEngines;
-          in
-          convertSearchEngines (
-            {
-              search = defaultSearch + "{}";
-              google = "https://${self.settings.googleDomain}/search?q={}";
-            }
-            // lib.optionalAttrs self.settings.addAmazon {
-              amazon = "https://${self.settings.amazonDomain}/s?k={}";
-            }
-            // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
-              start = "https://www.startpage.com/sp/search?q={}";
-            }
-            // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
-              duck = "https://duckduckgo.com/?q={}";
-            }
-            // self.settings.baseSearchEngines
-            // self.settings.additionalSearchEngines
-          )
-          // {
-            DEFAULT = defaultSearch + "{}";
-          };
-
-        quickmarks =
-          let
-            convertQuickmarks =
-              quickmarks: lib.mapAttrs' (name: url: lib.nameValuePair "@${name}" url) quickmarks;
-          in
-          convertQuickmarks (
-            {
+          quickmarks =
+            let
+              convertQuickmarks =
+                quickmarks: lib.mapAttrs' (name: url: lib.nameValuePair "@${name}" url) quickmarks;
+            in
+            convertQuickmarks (
+              {
+                home = homeUrl;
+                google = "https://${self.settings.googleDomain}";
+              }
+              // lib.optionalAttrs self.settings.addAmazon {
+                amazon = "https://${self.settings.amazonDomain}";
+              }
+              // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
+                start = "https://www.startpage.com";
+              }
+              // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
+                duck = "https://duckduckgo.com";
+              }
+              // self.settings.baseBookmarks
+              // (flattenBookmarks self.settings.bookmarks)
+            )
+            // {
               home = homeUrl;
-              google = "https://${self.settings.googleDomain}";
-            }
-            // lib.optionalAttrs self.settings.addAmazon {
-              amazon = "https://${self.settings.amazonDomain}";
-            }
-            // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
-              start = "https://www.startpage.com";
-            }
-            // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
-              duck = "https://duckduckgo.com";
-            }
-            // self.settings.baseBookmarks
-            // (flattenBookmarks self.settings.bookmarks)
-          )
-          // {
-            home = homeUrl;
-          };
+            };
 
-        aliases =
-          let
-            flattenedBookmarks = flattenBookmarks self.settings.bookmarks;
+          aliases =
+            let
+              flattenedBookmarks = flattenBookmarks self.settings.bookmarks;
 
-            extractFolderPaths =
-              let
-                allKeys = builtins.attrNames flattenedBookmarks;
-                getAllPrefixes =
-                  keys:
-                  let
-                    extractFromKey =
-                      key:
+              extractFolderPaths =
+                let
+                  allKeys = builtins.attrNames flattenedBookmarks;
+                  getAllPrefixes =
+                    keys:
+                    let
+                      extractFromKey =
+                        key:
+                        let
+                          parts = lib.splitString "/" key;
+                          generatePrefixes =
+                            partsList: acc:
+                            if (builtins.length partsList) <= 1 then
+                              acc
+                            else
+                              let
+                                prefix = builtins.concatStringsSep "/" (lib.take ((builtins.length partsList) - 1) partsList);
+                              in
+                              [ prefix ] ++ (generatePrefixes (lib.init partsList) acc);
+                        in
+                        if (builtins.length parts) > 1 then generatePrefixes parts [ ] else [ ];
+                      allPrefixes = lib.concatMap extractFromKey keys;
+                    in
+                    lib.unique allPrefixes;
+                in
+                getAllPrefixes allKeys;
+
+              folderPaths = extractFolderPaths;
+
+              generateOpenCommand =
+                mode: urls:
+                let
+                  urlList = lib.attrValues urls;
+                  generateCommandString =
+                    if mode == "tab" then
                       let
-                        parts = lib.splitString "/" key;
-                        generatePrefixes =
-                          partsList: acc:
-                          if (builtins.length partsList) <= 1 then
-                            acc
-                          else
-                            let
-                              prefix = builtins.concatStringsSep "/" (lib.take ((builtins.length partsList) - 1) partsList);
-                            in
-                            [ prefix ] ++ (generatePrefixes (lib.init partsList) acc);
+                        firstUrl = lib.head urlList;
+                        restUrls = lib.tail urlList;
+                        firstCommand = "open -t ${firstUrl}";
+                        restCommands = map (url: "open -b ${url}") restUrls;
                       in
-                      if (builtins.length parts) > 1 then generatePrefixes parts [ ] else [ ];
-                    allPrefixes = lib.concatMap extractFromKey keys;
-                  in
-                  lib.unique allPrefixes;
-              in
-              getAllPrefixes allKeys;
-
-            folderPaths = extractFolderPaths;
-
-            generateOpenCommand =
-              mode: urls:
-              let
-                urlList = lib.attrValues urls;
-                generateCommandString =
-                  if mode == "tab" then
-                    let
-                      firstUrl = lib.head urlList;
-                      restUrls = lib.tail urlList;
-                      firstCommand = "open -t ${firstUrl}";
-                      restCommands = map (url: "open -b ${url}") restUrls;
-                    in
-                    builtins.concatStringsSep " ;; " ([ firstCommand ] ++ restCommands)
-                  else if mode == "background" then
-                    let
-                      commands = map (url: "open -b ${url}") urlList;
-                    in
-                    builtins.concatStringsSep " ;; " commands
+                      builtins.concatStringsSep " ;; " ([ firstCommand ] ++ restCommands)
+                    else if mode == "background" then
+                      let
+                        commands = map (url: "open -b ${url}") urlList;
+                      in
+                      builtins.concatStringsSep " ;; " commands
+                    else
+                      throw "Invalid bookmark mode, only ['tab', 'background']";
+                in
+                if mode == "window" then
+                  if self.isDarwin then
+                    "spawn --detach sh -c \\\"open -n -a qutebrowser --args ':${generateCommandString}'\\\""
                   else
-                    throw "Invalid bookmark mode, only ['tab', 'background']";
-              in
-              if mode == "window" then
-                if self.isDarwin then
-                  "spawn --detach sh -c \\\"open -n -a qutebrowser --args ':${generateCommandString}'\\\""
+                    "spawn --detach sh -c \\\"qutebrowser ':${generateCommandString}'\\\""
                 else
-                  "spawn --detach sh -c \\\"qutebrowser ':${generateCommandString}'\\\""
-              else
-                generateCommandString;
+                  generateCommandString;
 
-            generateFolderAliases =
-              folderPath:
-              let
-                matchingBookmarks = lib.filterAttrs (
-                  name: url: lib.hasPrefix "${folderPath}/" name || name == folderPath
-                ) flattenedBookmarks;
-              in
-              lib.optionalAttrs (builtins.length (builtins.attrNames matchingBookmarks) > 0) {
-                "fg-group#${folderPath}" = generateOpenCommand "tab" matchingBookmarks;
-                "bg-group#${folderPath}" = generateOpenCommand "background" matchingBookmarks;
-              };
+              generateFolderAliases =
+                folderPath:
+                let
+                  matchingBookmarks = lib.filterAttrs (
+                    name: url: lib.hasPrefix "${folderPath}/" name || name == folderPath
+                  ) flattenedBookmarks;
+                in
+                lib.optionalAttrs (builtins.length (builtins.attrNames matchingBookmarks) > 0) {
+                  "fg-group#${folderPath}" = generateOpenCommand "tab" matchingBookmarks;
+                  "bg-group#${folderPath}" = generateOpenCommand "background" matchingBookmarks;
+                };
 
-            allFolderAliases = lib.foldl' (
-              acc: folderPath: acc // (generateFolderAliases folderPath)
-            ) { } folderPaths;
-          in
-          allFolderAliases // self.settings.additionalAliases;
+              allFolderAliases = lib.foldl' (
+                acc: folderPath: acc // (generateFolderAliases folderPath)
+              ) { } folderPaths;
+            in
+            allFolderAliases // self.settings.additionalAliases;
 
-        keyMappings =
-          { }
-          // lib.optionalAttrs self.isLinux {
-            "~" = "<Shift-Escape>";
-          }
-          // self.settings.additionalKeyMappings;
+          keyMappings =
+            { }
+            // lib.optionalAttrs self.isLinux {
+              "~" = "<Shift-Escape>";
+            }
+            // self.settings.additionalKeyMappings;
 
-        keyBindings = mergedKeyBindings;
+          keyBindings = mergedKeyBindings;
 
-        extraConfig = ''
-          import os
-          import glob
+          extraConfig = ''
+            import os
+            import glob
 
-          init_dir = os.path.expanduser("~/.config/qutebrowser-init")
-          if os.path.exists(init_dir):
-              for config_file in sorted(glob.glob(os.path.join(init_dir, "*.py"))):
-                  config.source(config_file)
-        '';
-      };
-
-      home.persistence."${self.persist}" = {
-        directories = [
-          ".config/qutebrowser"
-          ".local/share/qutebrowser"
-          ".cache/qutebrowser"
-        ];
-      };
-
-      home.sessionVariables = {
-        BROWSER = "qutebrowser";
-      };
-
-      home.file.".local/share/qutebrowser/userscripts/launcher-open" =
-        lib.mkIf (dmenuKeyBindings != { })
-          {
-            text =
-              let
-                launcherCmd = lib.escapeShellArgs (
-                  helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
-                    prompt = "Open URL: ";
-                    placeholder = "Select a URL or enter a new one";
-                    width = 60;
-                    lines = 10;
-                  }
-                );
-              in
-              ''
-                #!/usr/bin/env bash
-
-                url=$(printf "%s\n%s" "${homeUrl}" "$(${pkgs.sqlite}/bin/sqlite3 -separator ' ' "$QUTE_DATA_DIR/history.sqlite" 'select title, url from CompletionHistory')" | cat "$QUTE_CONFIG_DIR/quickmarks" - | ${launcherCmd})
-                url=$(echo "$url" | sed -E 's/[^ ]+ +//g' | grep -E "https?:" || echo "$url")
-
-                [ -z "''${url// }" ] && exit
-
-                echo "open" "$@" "$url" >> "$QUTE_FIFO" || qutebrowser "$url"
-              '';
-            executable = true;
-          };
-
-      home.file.".local/bin/qutebrowser-install-dicts" = {
-        text = ''
-          #!/usr/bin/env bash
-          set -e
-
-          DICTCLI="$(find /nix/store/*-qutebrowser-*/ -iname '*dictcli.py*' | head -1)"
-
-          if [ -z "$DICTCLI" ]; then
-            echo "Error: Could not find dictcli.py in qutebrowser package"
-            exit 1
-          fi
-
-          echo "Found dictcli.py at: $DICTCLI"
-
-          ${lib.concatMapStringsSep "\n" (lang: ''
-            echo "Installing dictionary: ${lang}"
-            "$DICTCLI" install "${lang}"
-          '') self.settings.dictLanguages}
-
-          echo "All dictionaries installed successfully!"
-        '';
-        executable = true;
-      };
-
-      home.file.".local/bin/qutebrowser-bookmarks-from-firefox" = {
-        source = self.file "qutebrowser-bookmarks-from-firefox";
-        executable = true;
-      };
-
-      home.file.".config/qutebrowser-init/per-domain-settings.py" =
-        lib.mkIf ((self.settings.basePerDomainSettings // self.settings.additionalPerDomainSettings) != { })
-          {
-            text =
-              let
-                mergedPerDomainSettings =
-                  self.settings.basePerDomainSettings // self.settings.additionalPerDomainSettings;
-
-                generatePerDomainConfig =
-                  domain: settings:
-                  let
-                    processSettings =
-                      prefix: attrs:
-                      lib.concatStringsSep "\n" (
-                        lib.mapAttrsToList (
-                          key: value:
-                          let
-                            settingName = if prefix == "" then key else "${prefix}.${key}";
-                          in
-                          if builtins.isAttrs value then
-                            processSettings settingName value
-                          else
-                            "config.set('${settingName}', ${python.toValue value}, '${domain}')"
-                            + "\nconfig.set('${settingName}', ${python.toValue value}, '*.${domain}')"
-                        ) attrs
-                      );
-                  in
-                  if builtins.hasAttr "content" settings then
-                    processSettings "content" settings.content
-                  else
-                    processSettings "" settings;
-
-                perDomainPythonConfig = lib.concatStringsSep "\n\n" (
-                  lib.mapAttrsToList (
-                    domain: settings: generatePerDomainConfig domain settings
-                  ) mergedPerDomainSettings
-                );
-              in
-              perDomainPythonConfig;
-          };
-
-      home.file.".config/qutebrowser-init/qt-environ.py" =
-        let
-          qtEnvironVars =
-            if self.isLinux then
-              if (self.linux.isModuleEnabled "graphics.nvidia-setup") && self.settings.nvidiaQuirks then
-                self.settings.linuxQTEnviron // self.settings.linuxNvidiaQTEnviron
-              else
-                self.settings.linuxQTEnviron
-            else
-              self.settings.darwinQTEnviron;
-        in
-        lib.mkIf (qtEnvironVars != { }) {
-          text = lib.concatStringsSep "\n" (
-            lib.mapAttrsToList (name: value: ''c.qt.environ["${name}"] = "${value}"'') qtEnvironVars
-          );
+            init_dir = os.path.expanduser("~/.config/qutebrowser-init")
+            if os.path.exists(init_dir):
+                for config_file in sorted(glob.glob(os.path.join(init_dir, "*.py"))):
+                    config.source(config_file)
+          '';
         };
 
-      programs.niri = lib.mkIf isNiriEnabled {
-        settings = {
-          binds =
-            with config.lib.niri.actions;
+        home.persistence."${self.persist.home}" = {
+          directories = [
+            ".config/qutebrowser"
+            ".local/share/qutebrowser"
+            ".cache/qutebrowser"
+          ];
+        };
+
+        home.sessionVariables = {
+          BROWSER = "qutebrowser";
+        };
+
+        home.file.".local/share/qutebrowser/userscripts/launcher-open" =
+          lib.mkIf (dmenuKeyBindings != { })
             {
-              "Mod+Ctrl+Alt+N" = {
-                action = spawn-sh "qutebrowser";
-                hotkey-overlay.title = "Apps:Browser";
-              };
-            }
-            // lib.optionalAttrs hasAppLauncher {
-              "Mod+Alt+Space" =
+              text =
                 let
-                  searchLauncherCmd = lib.escapeShellArgs (
+                  launcherCmd = lib.escapeShellArgs (
                     helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
-                      prompt = "Web Search: ";
-                      placeholder = "Enter search query";
+                      prompt = "Open URL: ";
+                      placeholder = "Select a URL or enter a new one";
                       width = 60;
-                      lines = 0;
+                      lines = 10;
                     }
                   );
                 in
-                {
-                  action = spawn-sh ''
-                    query=$(echo "" | ${searchLauncherCmd})
-                    if [ -n "$query" ]; then
-                      qutebrowser --desktop-file-name "org.qutebrowser.websearch" --target window "${defaultSearch}$query"
-                    fi
-                  '';
-                  hotkey-overlay.title = "Apps:Web Search";
-                };
+                ''
+                  #!/usr/bin/env bash
+
+                  url=$(printf "%s\n%s" "${homeUrl}" "$(${pkgs.sqlite}/bin/sqlite3 -separator ' ' "$QUTE_DATA_DIR/history.sqlite" 'select title, url from CompletionHistory')" | cat "$QUTE_CONFIG_DIR/quickmarks" - | ${launcherCmd})
+                  url=$(echo "$url" | sed -E 's/[^ ]+ +//g' | grep -E "https?:" || echo "$url")
+
+                  [ -z "''${url// }" ] && exit
+
+                  echo "open" "$@" "$url" >> "$QUTE_FIFO" || qutebrowser "$url"
+                '';
+              executable = true;
             };
 
-          window-rules = [
+        home.file.".local/bin/qutebrowser-install-dicts" = {
+          text = ''
+            #!/usr/bin/env bash
+            set -e
+
+            DICTCLI="$(find /nix/store/*-qutebrowser-*/ -iname '*dictcli.py*' | head -1)"
+
+            if [ -z "$DICTCLI" ]; then
+              echo "Error: Could not find dictcli.py in qutebrowser package"
+              exit 1
+            fi
+
+            echo "Found dictcli.py at: $DICTCLI"
+
+            ${lib.concatMapStringsSep "\n" (lang: ''
+              echo "Installing dictionary: ${lang}"
+              "$DICTCLI" install "${lang}"
+            '') self.settings.dictLanguages}
+
+            echo "All dictionaries installed successfully!"
+          '';
+          executable = true;
+        };
+
+        home.file.".local/bin/qutebrowser-bookmarks-from-firefox" = {
+          source = self.file "qutebrowser-bookmarks-from-firefox";
+          executable = true;
+        };
+
+        home.file.".config/qutebrowser-init/per-domain-settings.py" =
+          lib.mkIf ((self.settings.basePerDomainSettings // self.settings.additionalPerDomainSettings) != { })
             {
-              matches = [ { app-id = "org.qutebrowser.qutebrowser"; } ];
-              open-on-workspace = "2";
-              open-focused = false;
-            }
-          ];
+              text =
+                let
+                  mergedPerDomainSettings =
+                    self.settings.basePerDomainSettings // self.settings.additionalPerDomainSettings;
+
+                  generatePerDomainConfig =
+                    domain: settings:
+                    let
+                      processSettings =
+                        prefix: attrs:
+                        lib.concatStringsSep "\n" (
+                          lib.mapAttrsToList (
+                            key: value:
+                            let
+                              settingName = if prefix == "" then key else "${prefix}.${key}";
+                            in
+                            if builtins.isAttrs value then
+                              processSettings settingName value
+                            else
+                              "config.set('${settingName}', ${python.toValue value}, '${domain}')"
+                              + "\nconfig.set('${settingName}', ${python.toValue value}, '*.${domain}')"
+                          ) attrs
+                        );
+                    in
+                    if builtins.hasAttr "content" settings then
+                      processSettings "content" settings.content
+                    else
+                      processSettings "" settings;
+
+                  perDomainPythonConfig = lib.concatStringsSep "\n\n" (
+                    lib.mapAttrsToList (
+                      domain: settings: generatePerDomainConfig domain settings
+                    ) mergedPerDomainSettings
+                  );
+                in
+                perDomainPythonConfig;
+            };
+
+        home.file.".config/qutebrowser-init/qt-environ.py" =
+          let
+            qtEnvironVars =
+              if self.isLinux then
+                if (self.linux.isModuleEnabled "graphics.nvidia-setup") && self.settings.nvidiaQuirks then
+                  self.settings.linuxQTEnviron // self.settings.linuxNvidiaQTEnviron
+                else
+                  self.settings.linuxQTEnviron
+              else
+                self.settings.darwinQTEnviron;
+          in
+          lib.mkIf (qtEnvironVars != { }) {
+            text = lib.concatStringsSep "\n" (
+              lib.mapAttrsToList (name: value: ''c.qt.environ["${name}"] = "${value}"'') qtEnvironVars
+            );
+          };
+
+        programs.niri = lib.mkIf isNiriEnabled {
+          settings = {
+            binds =
+              with config.lib.niri.actions;
+              {
+                "Mod+Ctrl+Alt+N" = {
+                  action = spawn-sh "qutebrowser";
+                  hotkey-overlay.title = "Apps:Browser";
+                };
+              }
+              // lib.optionalAttrs hasAppLauncher {
+                "Mod+Alt+Space" =
+                  let
+                    searchLauncherCmd = lib.escapeShellArgs (
+                      helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                        prompt = "Web Search: ";
+                        placeholder = "Enter search query";
+                        width = 60;
+                        lines = 0;
+                      }
+                    );
+                  in
+                  {
+                    action = spawn-sh ''
+                      query=$(echo "" | ${searchLauncherCmd})
+                      if [ -n "$query" ]; then
+                        qutebrowser --desktop-file-name "org.qutebrowser.websearch" --target window "${defaultSearch}$query"
+                      fi
+                    '';
+                    hotkey-overlay.title = "Apps:Web Search";
+                  };
+              };
+
+            window-rules = [
+              {
+                matches = [ { app-id = "org.qutebrowser.qutebrowser"; } ];
+                open-on-workspace = "2";
+                open-focused = false;
+              }
+            ];
+          };
         };
       };
-    };
+  };
 }

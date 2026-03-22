@@ -13,11 +13,9 @@ args@{
 
   group = "doom-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.file.".config/doom/config/20-vim.el".text = ''
         ;; Configure evil-escape for jk to exit insert mode
         (use-package! evil-escape
@@ -48,4 +46,5 @@ args@{
               :n ":" #'evil-repeat-find-char)
       '';
     };
+  };
 }

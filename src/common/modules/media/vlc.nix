@@ -13,32 +13,31 @@ args@{
 
   group = "media";
   input = "common";
-  namespace = "home";
 
-  init =
-    context@{ config, options, ... }:
-    lib.mkIf self.isEnabled {
-      nx.preferences.desktop.programs.videoPlayer = {
-        name = "vlc";
-        package = pkgs.vlc;
-        openCommand = "vlc";
-        openFileCommand = "vlc";
-        desktopFile = "vlc.desktop";
+  on = {
+    init =
+      config:
+      lib.mkIf self.isEnabled {
+        nx.preferences.desktop.programs.videoPlayer = {
+          name = "vlc";
+          package = pkgs.vlc;
+          openCommand = "vlc";
+          openFileCommand = "vlc";
+          desktopFile = "vlc.desktop";
+        };
       };
-    };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+    home = config: {
       home.packages = with pkgs; [
         vlc
       ];
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".config/vlc"
           ".local/share/vlc"
         ];
       };
     };
+  };
 }

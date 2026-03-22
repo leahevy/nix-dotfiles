@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     autoSave = true;
@@ -68,9 +67,8 @@ args@{
     ];
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         opts = {
           sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,localoptions";
@@ -374,6 +372,6 @@ args@{
           end
         '';
       };
-
     };
+  };
 }

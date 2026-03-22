@@ -13,11 +13,9 @@ args@{
 
   group = "text";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.texlive = {
         enable = true;
       };
@@ -26,4 +24,5 @@ args@{
         enable = true;
       };
     };
+  };
 }

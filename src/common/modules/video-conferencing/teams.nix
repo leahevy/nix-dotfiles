@@ -13,19 +13,18 @@ args@{
 
   group = "video-conferencing";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages = with pkgs; [
         teams-for-linux
       ];
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".config/teams-for-linux"
         ];
       };
     };
+  };
 }

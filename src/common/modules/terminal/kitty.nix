@@ -13,15 +13,13 @@ args@{
 
   group = "terminal";
   input = "common";
-  namespace = "home";
 
   settings = {
     setEnv = false;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.kitty = {
         enable = true;
         settings = { };
@@ -31,10 +29,11 @@ args@{
         TERMINAL = "kitty";
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".cache/kitty"
         ];
       };
     };
+  };
 }

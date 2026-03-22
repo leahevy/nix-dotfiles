@@ -13,11 +13,9 @@ args@{
 
   group = "shell";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home = {
         packages = with pkgs; [
           mc
@@ -25,11 +23,12 @@ args@{
         ];
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".config/ranger"
           ".local/share/ranger"
         ];
       };
     };
+  };
 }

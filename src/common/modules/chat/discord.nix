@@ -13,23 +13,22 @@ args@{
 
   group = "chat";
   input = "common";
-  namespace = "home";
 
   unfree = [
     "discord"
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages = with pkgs; [
         discord
       ];
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".config/discord"
         ];
       };
     };
+  };
 }

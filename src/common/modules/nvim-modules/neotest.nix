@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -47,9 +46,8 @@ args@{
     projects = { };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.neotest = {
           enable = true;
@@ -631,4 +629,5 @@ args@{
         );
       };
     };
+  };
 }

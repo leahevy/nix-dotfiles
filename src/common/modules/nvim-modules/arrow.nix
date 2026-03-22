@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     showIcons = true;
@@ -25,9 +24,8 @@ args@{
     saveKey = "git_root";
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.arrow = {
           enable = true;
@@ -112,4 +110,5 @@ args@{
             }
           ];
     };
+  };
 }

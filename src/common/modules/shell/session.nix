@@ -13,16 +13,14 @@ args@{
 
   group = "shell";
   input = "common";
-  namespace = "home";
 
   settings = {
     additionalEnvironment = { };
     additionalAliases = { };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home = {
         sessionVariables = {
           EDITOR = "vim";
@@ -97,11 +95,12 @@ args@{
         }
         // (self.settings.additionalAliases or { });
 
-        persistence."${self.persist}" = {
+        persistence."${self.persist.home}" = {
           directories = [
             ".dotfiles"
           ];
         };
       };
     };
+  };
 }

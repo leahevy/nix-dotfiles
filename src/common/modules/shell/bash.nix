@@ -13,11 +13,9 @@ args@{
 
   group = "shell";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs = {
         nix-index.enableBashIntegration = true;
         bash = {
@@ -35,10 +33,11 @@ args@{
 
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         files = [
           ".bash_history"
         ];
       };
     };
+  };
 }

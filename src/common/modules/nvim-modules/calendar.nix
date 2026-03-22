@@ -13,16 +13,14 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     mondayIsFirstWeekday = true;
     markAlignment = "left-fit";
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         extraPlugins = with pkgs.vimPlugins; [
           mattn-calendar-vim
@@ -59,4 +57,5 @@ args@{
             }
           ];
     };
+  };
 }

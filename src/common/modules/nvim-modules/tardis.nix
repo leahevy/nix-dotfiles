@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     keymap = {
@@ -31,9 +30,8 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         extraPlugins = [
           (pkgs.vimUtils.buildVimPlugin {
@@ -170,4 +168,5 @@ args@{
         '';
       };
     };
+  };
 }

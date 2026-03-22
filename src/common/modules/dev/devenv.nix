@@ -13,11 +13,9 @@ args@{
 
   group = "dev";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages = with pkgs; [
         devenv
       ];
@@ -50,10 +48,10 @@ args@{
             if not test -d "$target_dir"
               echo "Flake '$flake_name' does not exist at '$target_dir'"
               read -l -P "Create it with default template? [y/N] " create_flake
-              
+
               if test "$create_flake" = "y" -o "$create_flake" = "Y"
                 mkdir -p "$target_dir"
-                
+
                 echo 'Creating default flake.nix...'
                 set -l flake_content '{
               inputs = {
@@ -104,4 +102,5 @@ args@{
         };
       };
     };
+  };
 }

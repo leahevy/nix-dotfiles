@@ -13,7 +13,6 @@ args@{
 
   group = "proton";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {

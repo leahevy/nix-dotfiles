@@ -14,11 +14,9 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim.extraConfigLua = ''
         _G.nx_modules = _G.nx_modules or {}
         _G.nx_modules["50-auto-create-dirs"] = function()
@@ -27,7 +25,7 @@ args@{
             callback = function()
               local dir = vim.fn.expand("<afile>:p:h")
               if dir ~= "" and vim.fn.isdirectory(dir) == 0 then
-                if vim.v.cmdbang == "!" 
+                if vim.v.cmdbang == "!"
                    or vim.fn.input(string.format("Create directory %s? [y/N]: ", dir)):lower():match("^y") then
                   vim.fn.mkdir(dir, "p")
                 end
@@ -37,4 +35,5 @@ args@{
         end
       '';
     };
+  };
 }

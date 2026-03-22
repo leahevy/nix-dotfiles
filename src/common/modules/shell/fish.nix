@@ -13,7 +13,6 @@ args@{
 
   group = "shell";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -29,9 +28,8 @@ args@{
     additionalFishFunctions = { };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages =
         with pkgs;
         [
@@ -163,7 +161,7 @@ args@{
         };
       };
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".config/fish"
           ".local/share/fish"
@@ -180,4 +178,5 @@ args@{
         };
       };
     };
+  };
 }

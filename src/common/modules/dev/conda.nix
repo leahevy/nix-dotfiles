@@ -13,22 +13,13 @@ args@{
 
   group = "dev";
   input = "common";
-  namespace = "home";
 
   settings = {
     withPkgInstall = false;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.packages = lib.mkIf (self.isLinux && self.settings.withPkgInstall) (
-        with pkgs;
-        [
-          conda
-        ]
-      );
-
+  on = {
+    home = config: {
       home.file."${config.xdg.configHome}/fish-init/60-conda.fish".text = ''
         if command -q conda
         ${
@@ -122,14 +113,26 @@ args@{
           })
         end
       '';
+    };
 
-      home.persistence."${self.persist}" = lib.mkIf self.isLinux {
-        directories = [
-          ".conda"
-        ];
-        files = [
-          ".condarc"
-        ];
+    linux = {
+      home = config: {
+        home.packages = lib.mkIf (self.settings.withPkgInstall) (
+          with pkgs;
+          [
+            conda
+          ]
+        );
+
+        home.persistence."${self.persist.home}" = {
+          directories = [
+            ".conda"
+          ];
+          files = [
+            ".condarc"
+          ];
+        };
       };
     };
+  };
 }

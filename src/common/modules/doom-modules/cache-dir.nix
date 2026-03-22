@@ -13,11 +13,9 @@ args@{
 
   group = "doom-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.file.".config/doom/config/10-cache-dir.el".text = ''
         ;; Ensure cache directory exists
         (defvar my-emacs-cache-dir (expand-file-name "~/.local/cache/emacs/")
@@ -32,4 +30,5 @@ args@{
               projectile-known-projects-file (expand-file-name "projectile-bookmarks.eld" my-emacs-cache-dir))
       '';
     };
+  };
 }

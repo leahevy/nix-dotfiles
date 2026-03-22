@@ -13,7 +13,6 @@ args@{
 
   group = "fonts";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -23,12 +22,12 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages = with pkgs; [
         nerd-fonts.dejavu-sans-mono
         nerd-fonts.ubuntu
       ];
     };
+  };
 }

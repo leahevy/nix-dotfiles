@@ -13,7 +13,6 @@ args@{
 
   group = "terminal";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -31,9 +30,8 @@ args@{
     fontFamily = "DejaVuSansM Nerd Font Mono";
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.alacritty = {
         enable = true;
         package = lib.mkDefault (self.dummyPackage "alacritty");
@@ -169,4 +167,5 @@ args@{
         TERMINAL = "alacritty";
       };
     };
+  };
 }

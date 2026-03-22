@@ -13,11 +13,9 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim.extraConfigLua = ''
         _G.nx_modules = _G.nx_modules or {}
         _G.nx_modules["40-jk-escape"] = function()
@@ -35,4 +33,5 @@ args@{
         end
       '';
     };
+  };
 }

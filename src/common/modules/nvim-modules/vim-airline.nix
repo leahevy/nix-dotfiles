@@ -13,16 +13,14 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     powerlineSymbols = true;
     themeOverride = true;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.airline = {
           enable = true;
@@ -90,6 +88,6 @@ args@{
           let g:airline#themes#nx#palette.normal.airline_warning = ['${config.nx.preferences.theme.colors.blocks.warning.foreground.html}', '${config.nx.preferences.theme.colors.blocks.warning.background.html}', ${builtins.toString config.nx.preferences.theme.colors.blocks.warning.foreground.term}, ${builtins.toString config.nx.preferences.theme.colors.blocks.warning.background.term}]
           let g:airline#themes#nx#palette.normal.airline_error = ['${config.nx.preferences.theme.colors.blocks.critical.foreground.html}', '${config.nx.preferences.theme.colors.blocks.critical.background.html}', ${builtins.toString config.nx.preferences.theme.colors.blocks.critical.foreground.term}, ${builtins.toString config.nx.preferences.theme.colors.blocks.critical.background.term}]
         '';
-
     };
+  };
 }

@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   assertions = [
     {
@@ -22,9 +21,8 @@ args@{
     }
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim = {
         plugins.gitgutter = {
           enable = true;
@@ -105,4 +103,5 @@ args@{
         '';
       };
     };
+  };
 }

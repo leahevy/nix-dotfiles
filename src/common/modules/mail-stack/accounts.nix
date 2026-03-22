@@ -12,7 +12,6 @@ rec {
   name = "accounts";
   group = "mail-stack";
   input = "common";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -152,83 +151,85 @@ rec {
       };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      baseDataDir = "${config.xdg.dataHome}/${self.settings.baseDataDir}";
-      mailDir = "${baseDataDir}/${self.settings.maildirPath}";
+  on = {
+    home =
+      config:
+      let
+        baseDataDir = "${config.xdg.dataHome}/${self.settings.baseDataDir}";
+        mailDir = "${baseDataDir}/${self.settings.maildirPath}";
 
-      mkPasswordCommand =
-        (self.importFileFromOtherModuleSameInput {
-          inherit args self;
-          modulePath = "mail-stack.passwords";
-        }).custom.mkPasswordCommand;
+        mkPasswordCommand =
+          (self.importFileFromOtherModuleSameInput {
+            inherit args self;
+            modulePath = "mail-stack.passwords";
+          }).custom.mkPasswordCommand;
 
-      passwordsConfig = self.getModuleConfig "mail-stack.passwords";
+        passwordsConfig = self.getModuleConfig "mail-stack.passwords";
 
-      providers = self.settings.providers;
+        providers = self.settings.providers;
 
-      getProviderConfig =
-        account:
-        let
-          providerKey =
-            if account ? provider then account.provider else lib.last (lib.splitString "@" account.address);
-        in
-        providers.${providerKey} or providers.default;
-
-      buildServerConfig = custom.buildServerConfig;
-
-    in
-    {
-      accounts.email = {
-        maildirBasePath = mailDir;
-
-        accounts = lib.mapAttrs (
-          accountKey: account:
+        getProviderConfig =
+          account:
           let
-            serverConfig = buildServerConfig accountKey account;
+            providerKey =
+              if account ? provider then account.provider else lib.last (lib.splitString "@" account.address);
           in
-          {
-            address = account.address;
-            userName = account.username or account.address;
-            realName = account.realName or account.address;
-            passwordCommand = mkPasswordCommand accountKey passwordsConfig.service;
-            primary = account.default or false;
+          providers.${providerKey} or providers.default;
 
-            imap = {
-              host = serverConfig.imap.host;
-              port = serverConfig.imap.port;
-              tls = {
-                enable = true;
-                useStartTls = !serverConfig.imap.ssl;
+        buildServerConfig = custom.buildServerConfig;
+
+      in
+      {
+        accounts.email = {
+          maildirBasePath = mailDir;
+
+          accounts = lib.mapAttrs (
+            accountKey: account:
+            let
+              serverConfig = buildServerConfig accountKey account;
+            in
+            {
+              address = account.address;
+              userName = account.username or account.address;
+              realName = account.realName or account.address;
+              passwordCommand = mkPasswordCommand accountKey passwordsConfig.service;
+              primary = account.default or false;
+
+              imap = {
+                host = serverConfig.imap.host;
+                port = serverConfig.imap.port;
+                tls = {
+                  enable = true;
+                  useStartTls = !serverConfig.imap.ssl;
+                };
               };
-            };
 
-            smtp = {
-              host = serverConfig.smtp.host;
-              port = serverConfig.smtp.port;
-              tls = {
-                enable = true;
-                useStartTls = !serverConfig.smtp.ssl;
+              smtp = {
+                host = serverConfig.smtp.host;
+                port = serverConfig.smtp.port;
+                tls = {
+                  enable = true;
+                  useStartTls = !serverConfig.smtp.ssl;
+                };
               };
-            };
 
-            folders = lib.removeAttrs serverConfig.folders [
-              "archive"
-              "spam"
-            ];
-          }
-        ) self.settings.accounts;
+              folders = lib.removeAttrs serverConfig.folders [
+                "archive"
+                "spam"
+              ];
+            }
+          ) self.settings.accounts;
+        };
+
+        home.activation.accounts-maildir = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
+          run mkdir -p ${mailDir} || true
+        '';
+
+        home.persistence."${self.persist.home}" = {
+          directories = [
+            (lib.removePrefix "${config.home.homeDirectory}/" baseDataDir)
+          ];
+        };
       };
-
-      home.activation.accounts-maildir = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
-        run mkdir -p ${mailDir} || true
-      '';
-
-      home.persistence."${self.persist}" = {
-        directories = [
-          (lib.removePrefix "${config.home.homeDirectory}/" baseDataDir)
-        ];
-      };
-    };
+  };
 }

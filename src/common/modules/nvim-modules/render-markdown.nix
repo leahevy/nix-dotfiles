@@ -13,7 +13,6 @@ args@{
 
   group = "nvim-modules";
   input = "common";
-  namespace = "home";
 
   settings = {
     enabled = true;
@@ -31,9 +30,8 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       programs.nixvim.extraConfigLua = ''
         _G.nx_modules = _G.nx_modules or {}
         _G.nx_modules["85-render-markdown"] = function()
@@ -103,4 +101,5 @@ args@{
         }
       ];
     };
+  };
 }

@@ -13,11 +13,9 @@ args@{
 
   group = "utils";
   input = "common";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    home = config: {
       home.packages = with pkgs; [
         zstd
         zip
@@ -26,4 +24,5 @@ args@{
         gnutar
       ];
     };
+  };
 }
