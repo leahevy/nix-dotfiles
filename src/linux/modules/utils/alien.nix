@@ -13,11 +13,9 @@ args@{
 
   group = "utils";
   input = "linux";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.home = config: {
       home = {
         shellAliases =
           if self.isLinux then
@@ -30,4 +28,5 @@ args@{
             throw "Alien only works on Linux!";
       };
     };
+  };
 }

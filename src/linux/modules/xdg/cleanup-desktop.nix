@@ -13,11 +13,9 @@ args@{
 
   group = "xdg";
   input = "linux";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.home = config: {
       xdg.desktopEntries = {
         "nvidia-settings" = lib.mkIf (self.isModuleEnabled "graphics.nvidia-setup") {
           name = "NVIDIA X Server Settings";
@@ -60,4 +58,5 @@ args@{
         };
       };
     };
+  };
 }

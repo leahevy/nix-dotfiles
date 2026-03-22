@@ -13,24 +13,39 @@ args@{
 
   group = "graphics";
   input = "linux";
-  namespace = "home";
 
-  assertions = [
-    {
-      assertion =
-        (self.user.isStandalone or false) || (self.host.isModuleEnabled or (x: false)) "graphics.opengl";
-      message = "For integrated users: Requires linux.graphics.opengl system module to be enabled!";
-    }
-  ];
+  settings = {
+    withIntel = false;
+  };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.persistence."${self.persist}" = {
+  on = {
+    linux.home = config: {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".cache/mesa_shader_cache"
           ".cache/mesa_shader_cache_db"
         ];
       };
     };
+
+    linux.system = config: {
+      hardware.graphics = {
+        enable = true;
+        enable32Bit = true;
+        extraPackages =
+          with pkgs;
+          [
+            libva-vdpau-driver
+            libvdpau-va-gl
+          ]
+          ++ lib.optionals self.settings.withIntel [
+            intel-media-driver
+            vaapiIntel
+          ];
+        extraPackages32 = with pkgs.pkgsi686Linux; [
+          libvdpau
+        ];
+      };
+    };
+  };
 }

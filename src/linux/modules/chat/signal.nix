@@ -13,19 +13,18 @@ args@{
 
   group = "chat";
   input = "linux";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.home = config: {
       home.packages = with pkgs; [
         signal-desktop
       ];
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".config/Signal"
         ];
       };
     };
+  };
 }

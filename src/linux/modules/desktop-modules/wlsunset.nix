@@ -13,9 +13,8 @@ args@{
 
   group = "desktop-modules";
   input = "linux";
-  namespace = "home";
 
-  settings = rec {
+  settings = {
     location = if self.user.isStandalone then self.user.location else self.host.location;
   };
 
@@ -30,13 +29,13 @@ args@{
     }
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.home = config: {
       services.wlsunset = {
         enable = true;
         latitude = self.settings.location.latitude;
         longitude = self.settings.location.longitude;
       };
     };
+  };
 }

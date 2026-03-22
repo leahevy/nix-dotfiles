@@ -13,7 +13,6 @@ args@{
 
   group = "desktop-modules";
   input = "linux";
-  namespace = "home";
 
   settings = {
     useFancy = false;
@@ -23,9 +22,8 @@ args@{
     showKeyboardLayout = true;
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.home = config: {
       programs.swaylock = lib.mkIf (!self.settings.useFancy && !self.settings.useEffects) {
         enable = true;
         package = pkgs.swaylock;
@@ -49,4 +47,5 @@ args@{
         else
           [ ];
     };
+  };
 }

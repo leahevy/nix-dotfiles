@@ -13,13 +13,10 @@ args@{
 
   group = "style";
   input = "linux";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      config = lib.mkIf (self.user.isStandalone && self.isLinux) {
-        stylix.targets.gnome.enable = lib.mkForce true;
-      };
+  on = {
+    standalone = config: {
+      stylix.targets.gnome.enable = lib.mkForce true;
     };
+  };
 }

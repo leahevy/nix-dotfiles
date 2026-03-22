@@ -13,22 +13,21 @@ args@{
 
   group = "music";
   input = "linux";
-  namespace = "home";
 
   unfree = [ "spotify" ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.home = config: {
       home.packages = with pkgs; [
         spotify
       ];
 
-      home.persistence."${self.persist}" = {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".config/spotify"
           ".cache/spotify"
         ];
       };
     };
+  };
 }

@@ -13,24 +13,50 @@ args@{
 
   group = "graphics";
   input = "linux";
-  namespace = "home";
 
-  assertions = [
-    {
-      assertion =
-        (self.user.isStandalone or false)
-        || (self.host.isModuleEnabled or (x: false)) "graphics.nvidia-setup";
-      message = "For integrated users: Requires linux.graphics.nvidia-setup system module to be enabled!";
-    }
+  unfree = [
+    "nvidia-x11"
+    "nvidia-settings"
+    "nvidia-persistenced"
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.persistence."${self.persist}" = {
+  settings = {
+    withPowerManagement = true;
+    disableGspFirmware = false;
+    disableDisplayAudio = true;
+  };
+
+  on = {
+    linux.home = config: {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".cache/nvidia"
         ];
       };
     };
+
+    linux.system = config: {
+      hardware.nvidia = {
+        powerManagement = lib.mkIf self.settings.withPowerManagement {
+          enable = true;
+          finegrained = false;
+        };
+        nvidiaPersistenced = self.settings.withPowerManagement;
+      };
+
+      hardware.graphics = {
+        extraPackages = with pkgs; [
+          nvidia-vaapi-driver
+        ];
+      };
+
+      boot.kernelParams = lib.optionals self.settings.disableGspFirmware [
+        "nvidia.NVreg_EnableGpuFirmware=0"
+      ];
+
+      services.udev.extraRules = lib.optionalString self.settings.disableDisplayAudio ''
+        ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x040300", ATTR{remove}="1"
+      '';
+    };
+  };
 }

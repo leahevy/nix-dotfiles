@@ -13,7 +13,6 @@ args@{
 
   group = "web-apps";
   input = "linux";
-  namespace = "home";
 
   settings = {
     name = "Pihole";
@@ -69,34 +68,34 @@ args@{
     }
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      mainSettings = lib.filterAttrs (name: value: name != "additionalPiholes") self.settings;
+  on = {
+    home =
+      config:
+      let
+        mainSettings = lib.filterAttrs (name: value: name != "additionalPiholes") self.settings;
 
-      allSettings = [
-        mainSettings
-      ]
-      ++ lib.mapAttrsToList (
-        name: configOverrides:
-        mainSettings
-        // configOverrides
-        // {
-          name = "Pihole (${name})";
-          webapp = "pihole-${name}";
-        }
-      ) self.settings.additionalPiholes;
-    in
-    {
-      home.file = lib.mkMerge (
-        map (
-          settings: (config.nx.linux.desktop-modules.web-app.buildWebApp settings context).homeFiles
-        ) allSettings
-      );
-      xdg.desktopEntries = lib.mkMerge (
-        map (
-          settings: (config.nx.linux.desktop-modules.web-app.buildWebApp settings context).desktopEntries
-        ) allSettings
-      );
-    };
+        allSettings = [
+          mainSettings
+        ]
+        ++ lib.mapAttrsToList (
+          name: configOverrides:
+          mainSettings
+          // configOverrides
+          // {
+            name = "Pihole (${name})";
+            webapp = "pihole-${name}";
+          }
+        ) self.settings.additionalPiholes;
+      in
+      {
+        home.file = lib.mkMerge (
+          map (settings: (config.nx.linux.desktop-modules.web-app.buildWebApp settings).homeFiles) allSettings
+        );
+        xdg.desktopEntries = lib.mkMerge (
+          map (
+            settings: (config.nx.linux.desktop-modules.web-app.buildWebApp settings).desktopEntries
+          ) allSettings
+        );
+      };
+  };
 }

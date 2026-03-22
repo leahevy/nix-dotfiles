@@ -12,18 +12,22 @@ args@{
 
   group = "storage";
   input = "linux";
-  namespace = "home";
 
-  assertions = [
-    {
-      assertion = (self.host.isModuleEnabled or (x: false)) "storage.auto-mount";
-      message = "Home storage.auto-mount requires system storage.auto-mount to be enabled!";
-    }
-  ];
+  settings = {
+    hideInternalDevices = [
+      "sda"
+    ];
+    hideDeviceMappers = [
+      "cryptdata"
+      "crypted"
+    ];
+    hideByLabel = [
+      "data"
+    ];
+  };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.home = config: {
       services.udiskie = {
         enable = true;
         automount = true;
@@ -47,4 +51,90 @@ args@{
         gvfs
       ];
     };
+
+    linux.system = config: {
+      services.udisks2 = {
+        enable = true;
+        settings = {
+          "udisks2.conf" = {
+            settings = {
+              encryption = "luks2";
+            };
+            udisks2 = {
+              modules = [ "*" ];
+            };
+          };
+        };
+      };
+
+      security.polkit.enable = true;
+
+      security.polkit.extraConfig = ''
+        polkit.addRule(function(action, subject) {
+            if (action.id == "org.freedesktop.udisks2.filesystem-mount-system" ||
+                action.id == "org.freedesktop.udisks2.filesystem-unmount-others" ||
+                action.id == "org.freedesktop.udisks2.filesystem-mount" ||
+                action.id == "org.freedesktop.udisks2.encrypted-unlock" ||
+                action.id == "org.freedesktop.udisks2.encrypted-lock" ||
+                action.id == "org.freedesktop.udisks2.eject-media" ||
+                action.id == "org.freedesktop.udisks2.open-device" ||
+                action.id == "org.freedesktop.udisks2.modify-device") {
+
+                if (subject.isInGroup("wheel")) {
+                    var isRemovable = (action.lookup("drive.removable") === "true");
+                    if (isRemovable) {
+                        return polkit.Result.YES;
+                    } else {
+                        return polkit.Result.NO;
+                    }
+                }
+            }
+            return polkit.Result.NOT_HANDLED;
+        });
+      '';
+
+      environment.systemPackages = with pkgs; [
+        udisks2
+        udiskie
+      ];
+
+      services.udev.packages = with pkgs; [
+        udisks2
+      ];
+
+      services.udev.extraRules =
+        let
+          generateDeviceRules =
+            devices:
+            lib.concatMapStrings (device: ''
+              SUBSYSTEM=="block", KERNEL=="${device}*", ENV{UDISKS_IGNORE}="1"
+            '') devices;
+
+          generateMapperRules =
+            mappers:
+            lib.concatMapStrings (mapper: ''
+              SUBSYSTEM=="block", KERNEL=="dm-*", ENV{DM_NAME}=="${mapper}", ENV{UDISKS_IGNORE}="1"
+            '') mappers;
+
+          generateLabelRules =
+            labels:
+            lib.concatMapStrings (label: ''
+              SUBSYSTEM=="block", ENV{ID_FS_LABEL}=="${label}", ENV{UDISKS_IGNORE}="1"
+            '') labels;
+        in
+        ''
+          ${generateDeviceRules self.settings.hideInternalDevices}
+          ${generateMapperRules self.settings.hideDeviceMappers}
+          ${generateLabelRules self.settings.hideByLabel}
+
+          SUBSYSTEM=="block", ATTR{removable}=="0", ATTRS{removable}=="0", ENV{UDISKS_IGNORE}="1"
+        '';
+
+      environment.persistence."${self.persist.system}" = {
+        directories = [
+          "/var/lib/udisks2"
+        ];
+      };
+    };
+  };
 }

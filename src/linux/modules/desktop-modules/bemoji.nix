@@ -13,40 +13,41 @@ args@{
 
   group = "desktop-modules";
   input = "linux";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      isNiriEnabled = self.isModuleEnabled "desktop.niri";
-      appLauncher = config.nx.preferences.desktop.programs.appLauncher;
-      appLauncherDmenuSimple = lib.escapeShellArgs (
-        (helpers.runWithAbsolutePath config appLauncher appLauncher.openCommand [ ])
-        ++ appLauncher.dmenuArgs
-      );
-    in
-    {
-      home.packages = [ pkgs.bemoji ];
+  on = {
+    home =
+      config:
+      let
+        isNiriEnabled = self.isModuleEnabled "desktop.niri";
+        appLauncher = config.nx.preferences.desktop.programs.appLauncher;
+        appLauncherDmenuSimple = lib.escapeShellArgs (
+          (helpers.runWithAbsolutePath config appLauncher appLauncher.openCommand [ ])
+          ++ appLauncher.dmenuArgs
+        );
+      in
+      {
+        home.packages = [ pkgs.bemoji ];
 
-      home.sessionVariables = {
-        BEMOJI_PICKER_CMD = appLauncherDmenuSimple;
-      };
+        home.sessionVariables = {
+          BEMOJI_PICKER_CMD = appLauncherDmenuSimple;
+        };
 
-      home.persistence."${self.persist}" = {
-        directories = [
-          ".local/share/bemoji"
-        ];
-      };
+        home.persistence."${self.persist.home}" = {
+          directories = [
+            ".local/share/bemoji"
+          ];
+        };
 
-      programs.niri = lib.mkIf isNiriEnabled {
-        settings = {
-          binds = with config.lib.niri.actions; {
-            "Mod+Period" = {
-              action = spawn-sh "bemoji";
-              hotkey-overlay.title = "Utils:Emoji picker";
+        programs.niri = lib.mkIf isNiriEnabled {
+          settings = {
+            binds = with config.lib.niri.actions; {
+              "Mod+Period" = {
+                action = spawn-sh "bemoji";
+                hotkey-overlay.title = "Utils:Emoji picker";
+              };
             };
           };
         };
       };
-    };
+  };
 }

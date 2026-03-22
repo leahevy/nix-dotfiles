@@ -13,15 +13,14 @@ args@{
 
   group = "gnome";
   input = "linux";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.persistence."${self.persist}" = {
+  on = {
+    linux.home = config: {
+      home.persistence."${self.persist.home}" = {
         directories = [
           ".local/share/keyrings"
         ];
       };
     };
+  };
 }

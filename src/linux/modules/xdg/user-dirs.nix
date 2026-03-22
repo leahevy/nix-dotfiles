@@ -13,7 +13,6 @@ args@{
 
   group = "xdg";
   input = "linux";
-  namespace = "home";
 
   settings = {
     download = "downloads";
@@ -26,58 +25,57 @@ args@{
     templates = "templates";
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      config =
-        if !(self.linux.isModuleEnabled "storage.luks-data-drive") then
-          {
-            home.file =
-              (lib.mapAttrs' (
-                xdgName: dirName:
-                lib.nameValuePair dirName {
-                  source = helpers.symlinkToHomeDirPath config ".data/${dirName}";
-                }
-              ) self.settings)
-              // {
-                "data".source = helpers.symlinkToHomeDirPath config ".data/data";
-                "develop".source = helpers.symlinkToHomeDirPath config ".data/develop";
-              };
-
-            xdg.userDirs = {
-              enable = true;
-            }
-            // lib.mapAttrs (xdgName: dirName: "${config.home.homeDirectory}/${dirName}") self.settings;
-
-            home.persistence."${self.persist}" = {
-              directories = (map (dir: ".data/${dir}") (lib.attrValues self.settings)) ++ [
-                ".data/data"
-                ".data/develop"
-              ];
+  on = {
+    home =
+      config:
+      if !(self.linux.isModuleEnabled "storage.luks-data-drive") then
+        {
+          home.file =
+            (lib.mapAttrs' (
+              xdgName: dirName:
+              lib.nameValuePair dirName {
+                source = helpers.symlinkToHomeDirPath config ".data/${dirName}";
+              }
+            ) self.settings)
+            // {
+              "data".source = helpers.symlinkToHomeDirPath config ".data/data";
+              "develop".source = helpers.symlinkToHomeDirPath config ".data/develop";
             };
-          }
-        else
-          let
-            mountPoint = (self.linux.host.getModuleConfig "storage.luks-data-drive").mountpoint;
-          in
-          {
-            home.file =
-              (lib.mapAttrs' (
-                xdgName: dirName:
-                lib.nameValuePair dirName {
-                  source = helpers.symlink config "${mountPoint}/${self.host.hostname}/${self.user.home}/${dirName}";
-                }
-              ) self.settings)
-              // {
-                "data".source = helpers.symlink config "${mountPoint}/${self.host.hostname}/${self.user.home}/data";
-                "develop".source =
-                  helpers.symlink config "${mountPoint}/${self.host.hostname}/${self.user.home}/develop";
-              };
 
-            xdg.userDirs = {
-              enable = true;
-            }
-            // lib.mapAttrs (xdgName: dirName: "${config.home.homeDirectory}/${dirName}") self.settings;
+          xdg.userDirs = {
+            enable = true;
+          }
+          // lib.mapAttrs (xdgName: dirName: "${config.home.homeDirectory}/${dirName}") self.settings;
+
+          home.persistence."${self.persist.home}" = {
+            directories = (map (dir: ".data/${dir}") (lib.attrValues self.settings)) ++ [
+              ".data/data"
+              ".data/develop"
+            ];
           };
-    };
+        }
+      else
+        let
+          mountPoint = (self.linux.getModuleConfig "storage.luks-data-drive").mountpoint;
+        in
+        {
+          home.file =
+            (lib.mapAttrs' (
+              xdgName: dirName:
+              lib.nameValuePair dirName {
+                source = helpers.symlink config "${mountPoint}/${self.host.hostname}/${self.user.home}/${dirName}";
+              }
+            ) self.settings)
+            // {
+              "data".source = helpers.symlink config "${mountPoint}/${self.host.hostname}/${self.user.home}/data";
+              "develop".source =
+                helpers.symlink config "${mountPoint}/${self.host.hostname}/${self.user.home}/develop";
+            };
+
+          xdg.userDirs = {
+            enable = true;
+          }
+          // lib.mapAttrs (xdgName: dirName: "${config.home.homeDirectory}/${dirName}") self.settings;
+        };
+  };
 }

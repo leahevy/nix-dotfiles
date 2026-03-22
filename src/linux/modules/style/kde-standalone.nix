@@ -12,13 +12,10 @@ args@{
   name = "kde-standalone";
   group = "style";
   input = "linux";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      config = lib.mkIf (self.user.isStandalone && self.isLinux) {
-        stylix.targets.kde.enable = lib.mkForce true;
-      };
+  on = {
+    standalone = config: {
+      stylix.targets.kde.enable = lib.mkForce true;
     };
+  };
 }

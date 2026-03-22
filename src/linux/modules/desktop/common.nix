@@ -13,28 +13,30 @@ args@{
 
   group = "desktop";
   input = "linux";
-  namespace = "home";
 
   submodules = {
     linux = {
       desktop-modules = {
         keyd = true;
+        gamemode = true;
+      };
+      power = {
+        modes = true;
+      };
+      sound = {
+        pipewire = true;
+      };
+      graphics = {
+        opengl = true;
+      };
+      services = {
+        dbus = true;
       };
     };
   };
 
-  settings = { };
-
-  assertions = [
-    {
-      assertion = self.user.isModuleEnabled "desktop.common";
-      message = "Requires linux.desktop.common nixos module to be enabled!";
-    }
-  ];
-
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.home = config: {
       home = {
         sessionVariables = {
           QT_QPA_PLATFORMTHEME = lib.mkForce "gtk3";
@@ -42,4 +44,22 @@ args@{
         };
       };
     };
+
+    linux.system = config: {
+      services.libinput.enable = helpers.ifSet self.host.settings.system.touchpad.enabled false;
+
+      console.keyMap = self.host.settings.system.keymap.console;
+
+      environment.systemPackages = with pkgs; [
+        gvfs
+        gcr
+      ];
+
+      security.polkit.enable = true;
+
+      xdg.portal = {
+        enable = true;
+      };
+    };
+  };
 }

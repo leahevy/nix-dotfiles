@@ -13,7 +13,6 @@ args@{
 
   group = "games";
   input = "linux";
-  namespace = "home";
 
   submodules = {
     linux = {
@@ -22,6 +21,9 @@ args@{
       };
       graphics = {
         opengl = true;
+      };
+      networking = {
+        firewall = true;
       };
     };
   };
@@ -65,146 +67,195 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      withWayland = self.settings.withWayland;
+  on = {
+    home =
+      config:
+      let
+        withWayland = self.settings.withWayland;
 
-      enabledGamePorts = lib.filterAttrs (
-        gameName: gameConfig:
-        let
-          isGameEnabled = self.settings.games.${gameName} or false;
-          isPersistent = self.settings.persistentOpenPortsForGames.${gameName} or false;
-          hasAnyPorts = (gameConfig.tcp or [ ] != [ ]) || (gameConfig.udp or [ ] != [ ]);
-        in
-        isGameEnabled && !isPersistent && hasAnyPorts
-      ) self.settings.portsPerGame;
+        enabledGamePorts = lib.filterAttrs (
+          gameName: gameConfig:
+          let
+            isGameEnabled = self.settings.games.${gameName} or false;
+            isPersistent = self.settings.persistentOpenPortsForGames.${gameName} or false;
+            hasAnyPorts = (gameConfig.tcp or [ ] != [ ]) || (gameConfig.udp or [ ] != [ ]);
+          in
+          isGameEnabled && !isPersistent && hasAnyPorts
+        ) self.settings.portsPerGame;
 
-      additionalScriptPorts = lib.filterAttrs (
-        scriptName: scriptConfig: (scriptConfig.tcp or [ ] != [ ]) || (scriptConfig.udp or [ ] != [ ])
-      ) self.settings.additionalFirewallScripts;
+        additionalScriptPorts = lib.filterAttrs (
+          scriptName: scriptConfig: (scriptConfig.tcp or [ ] != [ ]) || (scriptConfig.udp or [ ] != [ ])
+        ) self.settings.additionalFirewallScripts;
 
-      allFirewallTargets = enabledGamePorts // additionalScriptPorts;
-      availableTargets = lib.attrNames allFirewallTargets;
+        allFirewallTargets = enabledGamePorts // additionalScriptPorts;
+        availableTargets = lib.attrNames allFirewallTargets;
 
-      heroicFirewallScript =
-        lib.optional (self.isModuleEnabled "networking.firewall" && allFirewallTargets != { })
-          (
-            pkgs.stdenv.mkDerivation {
-              name = "heroic-open-firewall";
-              buildCommand = ''
-                mkdir -p $out/bin $out/share/bash-completion/completions $out/share/zsh/site-functions $out/share/fish/vendor_completions.d
+        heroicFirewallScript =
+          lib.optional (self.isModuleEnabled "networking.firewall" && allFirewallTargets != { })
+            (
+              pkgs.stdenv.mkDerivation {
+                name = "heroic-open-firewall";
+                buildCommand = ''
+                  mkdir -p $out/bin $out/share/bash-completion/completions $out/share/zsh/site-functions $out/share/fish/vendor_completions.d
 
-                cat > $out/bin/heroic-open-firewall << 'SCRIPT_EOF'
-                #!/usr/bin/env bash
-                set -euo pipefail
+                  cat > $out/bin/heroic-open-firewall << 'SCRIPT_EOF'
+                  #!/usr/bin/env bash
+                  set -euo pipefail
 
-                if [ $# -eq 0 ]; then
-                  echo "Usage: heroic-open-firewall TARGET [TARGET ...]"
-                  echo "Available targets: ${lib.concatStringsSep " " availableTargets}"
-                  exit 1
-                fi
+                  if [ $# -eq 0 ]; then
+                    echo "Usage: heroic-open-firewall TARGET [TARGET ...]"
+                    echo "Available targets: ${lib.concatStringsSep " " availableTargets}"
+                    exit 1
+                  fi
 
-                for target in "$@"; do
-                  case "$target" in
-                    ${lib.concatMapStringsSep "\n                " (target: "${target}) ;;") availableTargets}
-                    *)
-                      echo "Error: Unknown target '$target'"
-                      echo "Available targets: ${lib.concatStringsSep " " availableTargets}"
-                      exit 1
-                      ;;
-                  esac
-                done
+                  for target in "$@"; do
+                    case "$target" in
+                      ${lib.concatMapStringsSep "\n                " (target: "${target}) ;;") availableTargets}
+                      *)
+                        echo "Error: Unknown target '$target'"
+                        echo "Available targets: ${lib.concatStringsSep " " availableTargets}"
+                        exit 1
+                        ;;
+                    esac
+                  done
 
-                ALL_PORTS=()
+                  ALL_PORTS=()
 
-                ${lib.concatMapStringsSep "\n            " (
-                  target:
-                  let
-                    config = allFirewallTargets.${target};
-                    tcpPortSpecs = map (port: "${toString port}/tcp") (config.tcp or [ ]);
-                    udpPortSpecs = map (port: "${toString port}/udp") (config.udp or [ ]);
-                    allPortSpecs = tcpPortSpecs ++ udpPortSpecs;
-                  in
-                  ''
-                    if [[ " $* " == *" ${target} "* ]]; then
-                      echo "Adding ports for ${target}..."
-                      ALL_PORTS+=(${lib.concatStringsSep " " allPortSpecs})
-                    fi''
-                ) availableTargets}
+                  ${lib.concatMapStringsSep "\n            " (
+                    target:
+                    let
+                      config = allFirewallTargets.${target};
+                      tcpPortSpecs = map (port: "${toString port}/tcp") (config.tcp or [ ]);
+                      udpPortSpecs = map (port: "${toString port}/udp") (config.udp or [ ]);
+                      allPortSpecs = tcpPortSpecs ++ udpPortSpecs;
+                    in
+                    ''
+                      if [[ " $* " == *" ${target} "* ]]; then
+                        echo "Adding ports for ${target}..."
+                        ALL_PORTS+=(${lib.concatStringsSep " " allPortSpecs})
+                      fi''
+                  ) availableTargets}
 
-                if [ ''${#ALL_PORTS[@]} -eq 0 ]; then
-                  echo "No ports to open for selected targets"
-                  exit 1
-                fi
+                  if [ ''${#ALL_PORTS[@]} -eq 0 ]; then
+                    echo "No ports to open for selected targets"
+                    exit 1
+                  fi
 
-                echo "Opening firewall ports for: $*"
-                echo "Total ports: ''${ALL_PORTS[*]}"
+                  echo "Opening firewall ports for: $*"
+                  echo "Total ports: ''${ALL_PORTS[*]}"
 
-                exec firewall-open-script --with-cleanup "''${ALL_PORTS[@]}"
-                SCRIPT_EOF
+                  exec firewall-open-script --with-cleanup "''${ALL_PORTS[@]}"
+                  SCRIPT_EOF
 
-                chmod +x $out/bin/heroic-open-firewall
+                  chmod +x $out/bin/heroic-open-firewall
 
-                cat > $out/share/bash-completion/completions/heroic-open-firewall << 'BASH_EOF'
-                _heroic_open_firewall() {
-                  local cur targets
-                  cur="''${COMP_WORDS[COMP_CWORD]}"
-                  targets="${lib.concatStringsSep " " availableTargets}"
-                  COMPREPLY=($(compgen -W "$targets" -- "$cur"))
-                  return 0
-                }
-                complete -F _heroic_open_firewall -o nospace heroic-open-firewall
-                BASH_EOF
+                  cat > $out/share/bash-completion/completions/heroic-open-firewall << 'BASH_EOF'
+                  _heroic_open_firewall() {
+                    local cur targets
+                    cur="''${COMP_WORDS[COMP_CWORD]}"
+                    targets="${lib.concatStringsSep " " availableTargets}"
+                    COMPREPLY=($(compgen -W "$targets" -- "$cur"))
+                    return 0
+                  }
+                  complete -F _heroic_open_firewall -o nospace heroic-open-firewall
+                  BASH_EOF
 
-                cat > $out/share/zsh/site-functions/_heroic-open-firewall << 'ZSH_EOF'
-                #compdef heroic-open-firewall
-                _heroic_open_firewall() {
-                  _arguments -S '*:targets:(${lib.concatStringsSep " " availableTargets})'
-                }
-                _heroic_open_firewall "$@"
-                ZSH_EOF
+                  cat > $out/share/zsh/site-functions/_heroic-open-firewall << 'ZSH_EOF'
+                  #compdef heroic-open-firewall
+                  _heroic_open_firewall() {
+                    _arguments -S '*:targets:(${lib.concatStringsSep " " availableTargets})'
+                  }
+                  _heroic_open_firewall "$@"
+                  ZSH_EOF
 
-                cat > $out/share/fish/vendor_completions.d/heroic-open-firewall.fish << 'FISH_EOF'
-                complete -c heroic-open-firewall -f -a "${lib.concatStringsSep " " availableTargets}"
-                FISH_EOF
-              '';
-            }
-          );
-    in
-    {
-      home.packages =
-        with pkgs;
-        [
-          heroic
-          lutris
-          bottles
-        ]
-        ++ heroicFirewallScript;
+                  cat > $out/share/fish/vendor_completions.d/heroic-open-firewall.fish << 'FISH_EOF'
+                  complete -c heroic-open-firewall -f -a "${lib.concatStringsSep " " availableTargets}"
+                  FISH_EOF
+                '';
+              }
+            );
+      in
+      {
+        home.packages =
+          with pkgs;
+          [
+            heroic
+            lutris
+            bottles
+          ]
+          ++ heroicFirewallScript;
 
-      home.persistence."${self.persist}" = {
-        directories = [
-          ".config/heroic"
-          ".local/share/comet"
-          ".local/state/Heroic/logs"
-          ".config/unity3d"
-          ".local/share/GOG.com"
-          ".local/share/lutris"
-          ".cache/lutris"
-          ".wine"
-        ]
-        ++ lib.optionals self.settings.games.stardewValley [
-          ".config/StardewValley"
-        ]
-        ++ lib.optionals self.settings.games.torchlightII [
-          ".local/share/Runic Games/Torchlight 2"
-        ]
-        ++ lib.optionals self.settings.withUmu [
-          ".local/share/umu"
-          ".cache/umu"
-          ".cache/umu-protonfixes"
-        ]
-        ++ self.settings.additionalGameStateDirs;
+        home.persistence."${self.persist.home}" = {
+          directories = [
+            ".config/heroic"
+            ".local/share/comet"
+            ".local/state/Heroic/logs"
+            ".config/unity3d"
+            ".local/share/GOG.com"
+            ".local/share/lutris"
+            ".cache/lutris"
+            ".wine"
+          ]
+          ++ lib.optionals self.settings.games.stardewValley [
+            ".config/StardewValley"
+          ]
+          ++ lib.optionals self.settings.games.torchlightII [
+            ".local/share/Runic Games/Torchlight 2"
+          ]
+          ++ lib.optionals self.settings.withUmu [
+            ".local/share/umu"
+            ".cache/umu"
+            ".cache/umu-protonfixes"
+          ]
+          ++ self.settings.additionalGameStateDirs;
+        };
       };
-    };
+
+    system =
+      config:
+      let
+        portsPerGame = self.settings.portsPerGame or { };
+        persistentOpenPortsForGames = self.settings.persistentOpenPortsForGames or { };
+
+        persistentTcpPorts = lib.flatten (
+          lib.mapAttrsToList (
+            gameName: isPersistent:
+            let
+              gameConfig = portsPerGame.${gameName} or { };
+              tcpPorts = gameConfig.tcp or [ ];
+              isGameEnabled = self.settings.games.${gameName} or false;
+            in
+            lib.optionals (isPersistent && isGameEnabled) tcpPorts
+          ) persistentOpenPortsForGames
+        );
+
+        persistentUdpPortRanges = lib.flatten (
+          lib.mapAttrsToList (
+            gameName: isPersistent:
+            let
+              gameConfig = portsPerGame.${gameName} or { };
+              udpPorts = gameConfig.udp or [ ];
+              isGameEnabled = self.settings.games.${gameName} or false;
+            in
+            lib.optionals (isPersistent && isGameEnabled) (
+              map (port: {
+                from = port;
+                to = port;
+              }) udpPorts
+            )
+          ) persistentOpenPortsForGames
+        );
+      in
+      {
+        networking.firewall = {
+          allowedTCPPorts = persistentTcpPorts ++ (self.settings.additionalTCPPortsToOpen or [ ]);
+          allowedUDPPortRanges =
+            persistentUdpPortRanges
+            ++ (map (port: {
+              from = port;
+              to = port;
+            }) (self.settings.additionalUDPPortsToOpen or [ ]));
+        };
+      };
+  };
 }

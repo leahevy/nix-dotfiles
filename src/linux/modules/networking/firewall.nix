@@ -13,18 +13,43 @@ args@{
 
   group = "networking";
   input = "linux";
-  namespace = "home";
 
-  assertions = [
-    {
-      assertion = self.host.isModuleEnabled "networking.firewall";
-      message = "The firewall home module requires the firewall system module to be enabled";
-    }
-  ];
+  settings = {
+    openWebServer = true;
+    additionalTCPPorts = [ ];
+    additionalUDPPortRanges = [ ]; # List of { from = INT; to = INT; }
+  };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.system = config: {
+      networking.firewall = {
+        enable = true;
+        allowedTCPPorts =
+          (
+            if self.settings.openWebServer then
+              [
+                80
+                443
+              ]
+            else
+              [ ]
+          )
+          ++ self.settings.additionalTCPPorts;
+        allowedUDPPortRanges = self.settings.additionalUDPPortRanges;
+      };
+
+      environment.systemPackages = with pkgs; [
+        nixos-firewall-tool
+      ];
+
+      environment.persistence."${self.persist.system}" = {
+        directories = [
+          "/var/lib/nftables"
+        ];
+      };
+    };
+
+    linux.home = config: {
       home.shellAliases = {
         firewall = "sudo nixos-firewall-tool";
         firewall-open-tcp = "sudo nixos-firewall-tool open tcp";
@@ -135,4 +160,5 @@ args@{
         '')
       ];
     };
+  };
 }

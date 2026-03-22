@@ -13,7 +13,6 @@ args@{
 
   group = "desktop-modules";
   input = "linux";
-  namespace = "home";
 
   settings = {
     package = pkgs.chromium;
@@ -27,18 +26,16 @@ args@{
     ];
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      package = self.settings.package;
-      program = self.settings.program;
-      chromiumArgs = self.settings.args;
-      bin = package + "/bin/${program}";
+  on = {
+    home =
+      config:
+      let
+        package = self.settings.package;
+        program = self.settings.program;
+        chromiumArgs = self.settings.args;
+        bin = package + "/bin/${program}";
 
-      buildWebAppFn =
-        webAppSettings:
-        innerContext@{ config, options, ... }:
-        {
+        buildWebAppFn = webAppSettings: {
           homeFiles = {
             ".local/bin/${webAppSettings.webapp}-webapp" = {
               executable = true;
@@ -54,22 +51,23 @@ args@{
             "${webAppSettings.webapp}" = {
               name = webAppSettings.name;
               comment = "${webAppSettings.name} Web-App";
-              exec = "${innerContext.config.home.homeDirectory}/.local/bin/${webAppSettings.webapp}-webapp %U";
+              exec = "${config.home.homeDirectory}/.local/bin/${webAppSettings.webapp}-webapp %U";
               icon = webAppSettings.iconPath;
               terminal = false;
               categories = webAppSettings.categories;
             };
           };
         };
-    in
-    {
-      nx.linux.desktop-modules.web-app.buildWebApp = buildWebAppFn;
+      in
+      {
+        nx.linux.desktop-modules.web-app.buildWebApp = buildWebAppFn;
 
-      home.packages = [ self.settings.package ];
+        home.packages = [ self.settings.package ];
 
-      home.persistence."${self.persist}" = {
-        directories = self.settings.persistenceDirs;
-        files = self.settings.persistenceFiles;
+        home.persistence."${self.persist.home}" = {
+          directories = self.settings.persistenceDirs;
+          files = self.settings.persistenceFiles;
+        };
       };
-    };
+  };
 }

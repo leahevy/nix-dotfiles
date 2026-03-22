@@ -13,11 +13,9 @@ args@{
 
   group = "desktop-modules";
   input = "linux";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.home = config: {
       home.file.".local/bin/scripts/toggle-dnd" = {
         executable = true;
         text = ''
@@ -276,4 +274,5 @@ args@{
         };
       };
     };
+  };
 }

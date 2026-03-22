@@ -13,11 +13,9 @@ args@{
 
   group = "games";
   input = "linux";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.home = config: {
       home.packages = with pkgs; [
         jstest-gtk
         evtest
@@ -25,4 +23,5 @@ args@{
         SDL2
       ];
     };
+  };
 }

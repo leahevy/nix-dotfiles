@@ -13,7 +13,6 @@ args@{
 
   group = "desktop-modules";
   input = "linux";
-  namespace = "home";
 
   submodules = {
     common = {
@@ -23,28 +22,30 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      unimatrix-wrapped = pkgs.symlinkJoin {
-        name = "unimatrix-wrapped";
-        paths = [ pkgs.unimatrix ];
-        buildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          wrapProgram $out/bin/unimatrix \
-            --run 'exec 2>/dev/null'
-        '';
-      };
-    in
-    {
-      home = {
-        packages = with pkgs; [
-          unimatrix-wrapped
-        ];
+  on = {
+    home =
+      config:
+      let
+        unimatrix-wrapped = pkgs.symlinkJoin {
+          name = "unimatrix-wrapped";
+          paths = [ pkgs.unimatrix ];
+          buildInputs = [ pkgs.makeWrapper ];
+          postBuild = ''
+            wrapProgram $out/bin/unimatrix \
+              --run 'exec 2>/dev/null'
+          '';
+        };
+      in
+      {
+        home = {
+          packages = [
+            unimatrix-wrapped
+          ];
 
-        shellAliases = {
-          matrix = "unimatrix -l kkknss -i -s 96";
+          shellAliases = {
+            matrix = "unimatrix -l kkknss -i -s 96";
+          };
         };
       };
-    };
+  };
 }

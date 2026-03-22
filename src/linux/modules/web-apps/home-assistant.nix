@@ -30,7 +30,6 @@ in
 
   group = "web-apps";
   input = "linux";
-  namespace = "home";
 
   settings = {
     name = "Home-Assistant";
@@ -66,11 +65,11 @@ in
     }
   ];
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.file = (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings context).homeFiles;
+  on = {
+    linux.home = config: {
+      home.file = (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings).homeFiles;
       xdg.desktopEntries =
-        (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings context).desktopEntries;
+        (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings).desktopEntries;
     };
+  };
 }

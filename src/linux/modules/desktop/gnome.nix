@@ -13,28 +13,31 @@ args@{
 
   group = "desktop";
   input = "linux";
-  namespace = "home";
 
   submodules = {
     linux = {
       desktop = {
         common = true;
       };
+      desktop-modules = {
+        xserver = true;
+      };
     };
   };
 
-  settings = { };
+  on = {
+    linux.system = config: {
+      services.displayManager.gdm.enable = true;
+      services.desktopManager.gnome.enable = true;
 
-  assertions = [
-    {
-      assertion =
-        (self.user.isStandalone or false) || (self.host.isModuleEnabled or (x: false)) "desktop.gnome";
-      message = "Requires linux.desktop.gnome nixos module to be enabled!";
-    }
-  ];
+      services.desktopManager.gnome.extraGSettingsOverrides = ''
+        [org.gnome.shell]
+        welcome-dialog-last-shown-version='999.999'
+      '';
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+      services.desktopManager.plasma5.excludePackages = with pkgs.libsForQt5; [
+        plasma-welcome
+      ];
     };
+  };
 }

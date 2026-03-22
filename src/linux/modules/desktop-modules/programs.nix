@@ -479,13 +479,10 @@ in
 
   group = "desktop-modules";
   input = "linux";
-  namespace = "home";
 
   assertions = [
     {
-      assertion =
-        (self.user.isStandalone or false)
-        || (self.host.isModuleEnabled or (x: false)) "desktop-modules.programs";
+      assertion = (self.user.isStandalone or false) || (self.isModuleEnabled "desktop-modules.programs");
       message = "Home desktop-modules.programs requires system desktop-modules.programs to be enabled (unless standalone)!";
     }
   ];
@@ -538,334 +535,364 @@ in
     additionalIconThemes = [ ];
   };
 
-  init =
-    context@{ config, options, ... }:
-    lib.mkIf self.isEnabled {
-      nx.preferences.desktop.programs = {
-        wallet = lib.mkDefault selectedPrograms.wallet;
-        fileBrowser = lib.mkDefault selectedPrograms.fileBrowser;
-        archiver = lib.mkDefault selectedPrograms.archiver;
-        textEditor = lib.mkDefault selectedPrograms.textEditor;
-        advancedTextEditor = lib.mkDefault selectedPrograms.advancedTextEditor;
-        terminal = lib.mkDefault selectedPrograms.terminal;
-        additionalTerminal = lib.mkDefault selectedPrograms.additionalTerminal;
-        systemSettings = lib.mkDefault selectedPrograms.systemSettings;
-        networkSettings = lib.mkDefault selectedPrograms.networkSettings;
-        imageViewer = lib.mkDefault selectedPrograms.imageViewer;
-        imageEditor = lib.mkDefault selectedPrograms.imageEditor;
-        paintImageEditor = lib.mkDefault selectedPrograms.paintImageEditor;
-        pdfViewer = lib.mkDefault selectedPrograms.pdfViewer;
-        videoPlayer = lib.mkDefault selectedPrograms.videoPlayer;
-        musicPlayer = lib.mkDefault selectedPrograms.musicPlayer;
-        emailClient = lib.mkDefault selectedPrograms.emailClient;
-        calendar = lib.mkDefault selectedPrograms.calendar;
-        contacts = lib.mkDefault selectedPrograms.contacts;
-        taskManager = lib.mkDefault selectedPrograms.taskManager;
-        diskUsage = lib.mkDefault selectedPrograms.diskUsage;
-        calculator = lib.mkDefault selectedPrograms.calculator;
-        clock = lib.mkDefault selectedPrograms.clock;
-        webBrowser = lib.mkDefault selectedPrograms.webBrowser;
-        dialog = lib.mkDefault selectedPrograms.dialog;
-        gitGui = lib.mkDefault selectedPrograms.gitGui;
-        drawingProgram = lib.mkDefault selectedPrograms.drawingProgram;
-      };
-    };
-
-  configuration =
-    context@{ config, options, ... }:
-    let
-      prefs = config.nx.preferences.desktop.programs;
-      isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
-
-      iconThemeString = config.nx.preferences.theme.icons.primary;
-      iconThemePackageName = lib.head (lib.splitString "/" iconThemeString);
-      iconThemePackage = lib.getAttr iconThemePackageName pkgs;
-      iconThemeName = lib.head (lib.tail (lib.splitString "/" iconThemeString));
-
-      fallbackIconThemeString = config.nx.preferences.theme.icons.fallback;
-      fallbackIconThemePackageName = lib.head (lib.splitString "/" fallbackIconThemeString);
-      fallbackIconThemePackage = lib.getAttr fallbackIconThemePackageName pkgs;
-
-      getProgramPackages =
-        program:
-        if program != null && program.package != null then
-          [ program.package ] ++ (program.additionalPackages or [ ])
-        else
-          [ ];
-
-      gamePackages =
-        (getProgramPackages selectedPrograms.gamesMine)
-        ++ (getProgramPackages selectedPrograms.gamesCards)
-        ++ (getProgramPackages selectedPrograms.sudoku);
-
-      officeSuitePackages = getProgramPackages selectedPrograms.officeSuite;
-    in
-    {
-      home.packages =
-        (getProgramPackages prefs.wallet)
-        ++ (getProgramPackages prefs.dialog)
-        ++ (getProgramPackages prefs.fileBrowser)
-        ++ (getProgramPackages prefs.archiver)
-        ++ (getProgramPackages prefs.textEditor)
-        ++ (getProgramPackages prefs.advancedTextEditor)
-        ++ (getProgramPackages prefs.terminal)
-        ++ (getProgramPackages prefs.additionalTerminal)
-        ++ (lib.optionals self.settings.installSystemSettings (getProgramPackages prefs.systemSettings))
-        ++ (lib.optionals self.settings.installSystemSettings (getProgramPackages prefs.networkSettings))
-        ++ (getProgramPackages prefs.imageViewer)
-        ++ (getProgramPackages prefs.imageEditor)
-        ++ (getProgramPackages prefs.paintImageEditor)
-        ++ (getProgramPackages prefs.pdfViewer)
-        ++ (getProgramPackages prefs.videoPlayer)
-        ++ (getProgramPackages prefs.musicPlayer)
-        ++ (getProgramPackages prefs.emailClient)
-        ++ (getProgramPackages prefs.calendar)
-        ++ (getProgramPackages prefs.contacts)
-        ++ (getProgramPackages prefs.taskManager)
-        ++ (getProgramPackages prefs.diskUsage)
-        ++ (getProgramPackages prefs.calculator)
-        ++ (getProgramPackages prefs.clock)
-        ++ (getProgramPackages prefs.webBrowser)
-        ++ (getProgramPackages prefs.gitGui)
-        ++ (getProgramPackages prefs.drawingProgram)
-        ++ (lib.optionals self.settings.installOfficeSuite officeSuitePackages)
-        ++ (lib.optionals self.settings.installGames gamePackages)
-        ++ self.settings.additionalPackages
-        ++ self.settings.additionalPrograms
-        ++ self.settings.additionalIconThemes
-        ++ [
-          iconThemePackage
-          fallbackIconThemePackage
-        ]
-        ++ (if isKDE then self.settings.additionalKDEPackages else [ ])
-        ++ (if isGnome then self.settings.additionalGnomePackages else [ ])
-        ++ config.nx.preferences.desktop.additionalPrograms;
-
-      gtk.iconTheme = lib.mkForce {
-        name = iconThemeName;
-        package = iconThemePackage;
-      };
-
-      services.gnome-keyring.enable = lib.mkForce isGnome;
-
-      programs.niri = lib.mkIf isNiriEnabled {
-        settings = {
-          window-rules = [
-            {
-              matches = [
-                {
-                  app-id = "org.kde.kwalletmanager";
-                }
-              ];
-              default-column-width = {
-                proportion = 0.5;
-              };
-            }
-          ];
+  on = {
+    linux.init =
+      config:
+      lib.mkIf self.isEnabled {
+        nx.preferences.desktop.programs = {
+          wallet = lib.mkDefault selectedPrograms.wallet;
+          fileBrowser = lib.mkDefault selectedPrograms.fileBrowser;
+          archiver = lib.mkDefault selectedPrograms.archiver;
+          textEditor = lib.mkDefault selectedPrograms.textEditor;
+          advancedTextEditor = lib.mkDefault selectedPrograms.advancedTextEditor;
+          terminal = lib.mkDefault selectedPrograms.terminal;
+          additionalTerminal = lib.mkDefault selectedPrograms.additionalTerminal;
+          systemSettings = lib.mkDefault selectedPrograms.systemSettings;
+          networkSettings = lib.mkDefault selectedPrograms.networkSettings;
+          imageViewer = lib.mkDefault selectedPrograms.imageViewer;
+          imageEditor = lib.mkDefault selectedPrograms.imageEditor;
+          paintImageEditor = lib.mkDefault selectedPrograms.paintImageEditor;
+          pdfViewer = lib.mkDefault selectedPrograms.pdfViewer;
+          videoPlayer = lib.mkDefault selectedPrograms.videoPlayer;
+          musicPlayer = lib.mkDefault selectedPrograms.musicPlayer;
+          emailClient = lib.mkDefault selectedPrograms.emailClient;
+          calendar = lib.mkDefault selectedPrograms.calendar;
+          contacts = lib.mkDefault selectedPrograms.contacts;
+          taskManager = lib.mkDefault selectedPrograms.taskManager;
+          diskUsage = lib.mkDefault selectedPrograms.diskUsage;
+          calculator = lib.mkDefault selectedPrograms.calculator;
+          clock = lib.mkDefault selectedPrograms.clock;
+          webBrowser = lib.mkDefault selectedPrograms.webBrowser;
+          dialog = lib.mkDefault selectedPrograms.dialog;
+          gitGui = lib.mkDefault selectedPrograms.gitGui;
+          drawingProgram = lib.mkDefault selectedPrograms.drawingProgram;
         };
       };
 
-      xdg.mimeApps = {
-        enable = true;
-        defaultApplications = {
-          "image/jpeg" = prefs.imageViewer.desktopFile;
-          "image/jpg" = prefs.imageViewer.desktopFile;
-          "image/png" = prefs.imageViewer.desktopFile;
-          "image/gif" = prefs.imageViewer.desktopFile;
-          "image/webp" = prefs.imageViewer.desktopFile;
-          "image/bmp" = prefs.imageViewer.desktopFile;
-          "image/tiff" = prefs.imageViewer.desktopFile;
-          "image/svg+xml" = prefs.imageViewer.desktopFile;
+    home =
+      config:
+      let
+        prefs = config.nx.preferences.desktop.programs;
+        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
 
-          "application/pdf" = prefs.pdfViewer.desktopFile;
+        iconThemeString = config.nx.preferences.theme.icons.primary;
+        iconThemePackageName = lib.head (lib.splitString "/" iconThemeString);
+        iconThemePackage = lib.getAttr iconThemePackageName pkgs;
+        iconThemeName = lib.head (lib.tail (lib.splitString "/" iconThemeString));
 
-          "video/mp4" = prefs.videoPlayer.desktopFile;
-          "video/avi" = prefs.videoPlayer.desktopFile;
-          "video/mkv" = prefs.videoPlayer.desktopFile;
-          "video/webm" = prefs.videoPlayer.desktopFile;
-          "video/x-msvideo" = prefs.videoPlayer.desktopFile;
-          "video/quicktime" = prefs.videoPlayer.desktopFile;
+        fallbackIconThemeString = config.nx.preferences.theme.icons.fallback;
+        fallbackIconThemePackageName = lib.head (lib.splitString "/" fallbackIconThemeString);
+        fallbackIconThemePackage = lib.getAttr fallbackIconThemePackageName pkgs;
 
-          "audio/mpeg" = prefs.musicPlayer.desktopFile;
-          "audio/mp3" = prefs.musicPlayer.desktopFile;
-          "audio/ogg" = prefs.musicPlayer.desktopFile;
-          "audio/flac" = prefs.musicPlayer.desktopFile;
-          "audio/wav" = prefs.musicPlayer.desktopFile;
-
-          "application/zip" = prefs.archiver.desktopFile;
-          "application/x-rar-compressed" = prefs.archiver.desktopFile;
-          "application/x-tar" = prefs.archiver.desktopFile;
-          "application/gzip" = prefs.archiver.desktopFile;
-          "application/x-7z-compressed" = prefs.archiver.desktopFile;
-
-          "text/plain" = prefs.textEditor.desktopFile;
-          "text/markdown" = prefs.advancedTextEditor.desktopFile;
-          "application/x-shellscript" = prefs.textEditor.desktopFile;
-
-          "inode/directory" = prefs.fileBrowser.desktopFile;
-
-          "text/html" = prefs.webBrowser.desktopFile;
-          "application/xhtml+xml" = prefs.webBrowser.desktopFile;
-          "x-scheme-handler/http" = prefs.webBrowser.desktopFile;
-          "x-scheme-handler/https" = prefs.webBrowser.desktopFile;
-          "x-scheme-handler/ftp" = prefs.webBrowser.desktopFile;
-          "x-scheme-handler/chrome" = prefs.webBrowser.desktopFile;
-          "application/x-extension-htm" = prefs.webBrowser.desktopFile;
-          "application/x-extension-html" = prefs.webBrowser.desktopFile;
-          "application/x-extension-shtml" = prefs.webBrowser.desktopFile;
-          "application/x-extension-xhtml" = prefs.webBrowser.desktopFile;
-          "application/x-extension-xht" = prefs.webBrowser.desktopFile;
-        }
-        // (
-          if self.settings.installOfficeSuite then
-            {
-              "application/vnd.oasis.opendocument.text" = selectedPrograms.officeSuite.desktopFile;
-              "application/vnd.oasis.opendocument.spreadsheet" = selectedPrograms.officeSuite.desktopFile;
-              "application/vnd.oasis.opendocument.presentation" = selectedPrograms.officeSuite.desktopFile;
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document" =
-                selectedPrograms.officeSuite.desktopFile;
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" =
-                selectedPrograms.officeSuite.desktopFile;
-              "application/vnd.openxmlformats-officedocument.presentationml.presentation" =
-                selectedPrograms.officeSuite.desktopFile;
-              "application/msword" = selectedPrograms.officeSuite.desktopFile;
-              "application/vnd.ms-excel" = selectedPrograms.officeSuite.desktopFile;
-              "application/vnd.ms-powerpoint" = selectedPrograms.officeSuite.desktopFile;
-            }
+        getProgramPackages =
+          program:
+          if program != null && program.package != null then
+            [ program.package ] ++ (program.additionalPackages or [ ])
           else
-            { }
-        );
-      };
+            [ ];
 
-      xdg.configFile = {
-        "menus/applications.menu".text = ''
-          <!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN"
-           "http://www.freedesktop.org/standards/menu-spec/1.0/menu.dtd">
-          <Menu>
-            <Name>Applications</Name>
-            <Directory>applications.directory</Directory>
+        gamePackages =
+          (getProgramPackages selectedPrograms.gamesMine)
+          ++ (getProgramPackages selectedPrograms.gamesCards)
+          ++ (getProgramPackages selectedPrograms.sudoku);
 
-            <AppDir>/etc/profiles/per-user/${config.home.username}/share/applications</AppDir>
-            <AppDir>/run/current-system/sw/share/applications</AppDir>
+        officeSuitePackages = getProgramPackages selectedPrograms.officeSuite;
+      in
+      {
+        home.packages =
+          (getProgramPackages prefs.wallet)
+          ++ (getProgramPackages prefs.dialog)
+          ++ (getProgramPackages prefs.fileBrowser)
+          ++ (getProgramPackages prefs.archiver)
+          ++ (getProgramPackages prefs.textEditor)
+          ++ (getProgramPackages prefs.advancedTextEditor)
+          ++ (getProgramPackages prefs.terminal)
+          ++ (getProgramPackages prefs.additionalTerminal)
+          ++ (lib.optionals self.settings.installSystemSettings (getProgramPackages prefs.systemSettings))
+          ++ (lib.optionals self.settings.installSystemSettings (getProgramPackages prefs.networkSettings))
+          ++ (getProgramPackages prefs.imageViewer)
+          ++ (getProgramPackages prefs.imageEditor)
+          ++ (getProgramPackages prefs.paintImageEditor)
+          ++ (getProgramPackages prefs.pdfViewer)
+          ++ (getProgramPackages prefs.videoPlayer)
+          ++ (getProgramPackages prefs.musicPlayer)
+          ++ (getProgramPackages prefs.emailClient)
+          ++ (getProgramPackages prefs.calendar)
+          ++ (getProgramPackages prefs.contacts)
+          ++ (getProgramPackages prefs.taskManager)
+          ++ (getProgramPackages prefs.diskUsage)
+          ++ (getProgramPackages prefs.calculator)
+          ++ (getProgramPackages prefs.clock)
+          ++ (getProgramPackages prefs.webBrowser)
+          ++ (getProgramPackages prefs.gitGui)
+          ++ (getProgramPackages prefs.drawingProgram)
+          ++ (lib.optionals self.settings.installOfficeSuite officeSuitePackages)
+          ++ (lib.optionals self.settings.installGames gamePackages)
+          ++ self.settings.additionalPackages
+          ++ self.settings.additionalPrograms
+          ++ self.settings.additionalIconThemes
+          ++ [
+            iconThemePackage
+            fallbackIconThemePackage
+          ]
+          ++ (if isKDE then self.settings.additionalKDEPackages else [ ])
+          ++ (if isGnome then self.settings.additionalGnomePackages else [ ])
+          ++ config.nx.preferences.desktop.additionalPrograms;
 
-            <Include>
-              <All/>
-            </Include>
-          </Menu>
-        '';
-      }
-      // lib.optionalAttrs isKDE {
-        "kdeglobals".text = ''
-          [General]
-          TerminalApplication=${
-            lib.concatStringsSep " " (
-              helpers.runWithAbsolutePath config prefs.additionalTerminal prefs.additionalTerminal.openCommand [ ]
-            )
+        gtk.iconTheme = lib.mkForce {
+          name = iconThemeName;
+          package = iconThemePackage;
+        };
+
+        services.gnome-keyring.enable = lib.mkForce isGnome;
+
+        programs.niri = lib.mkIf isNiriEnabled {
+          settings = {
+            window-rules = [
+              {
+                matches = [
+                  {
+                    app-id = "org.kde.kwalletmanager";
+                  }
+                ];
+                default-column-width = {
+                  proportion = 0.5;
+                };
+              }
+            ];
+          };
+        };
+
+        xdg.mimeApps = {
+          enable = true;
+          defaultApplications = {
+            "image/jpeg" = prefs.imageViewer.desktopFile;
+            "image/jpg" = prefs.imageViewer.desktopFile;
+            "image/png" = prefs.imageViewer.desktopFile;
+            "image/gif" = prefs.imageViewer.desktopFile;
+            "image/webp" = prefs.imageViewer.desktopFile;
+            "image/bmp" = prefs.imageViewer.desktopFile;
+            "image/tiff" = prefs.imageViewer.desktopFile;
+            "image/svg+xml" = prefs.imageViewer.desktopFile;
+
+            "application/pdf" = prefs.pdfViewer.desktopFile;
+
+            "video/mp4" = prefs.videoPlayer.desktopFile;
+            "video/avi" = prefs.videoPlayer.desktopFile;
+            "video/mkv" = prefs.videoPlayer.desktopFile;
+            "video/webm" = prefs.videoPlayer.desktopFile;
+            "video/x-msvideo" = prefs.videoPlayer.desktopFile;
+            "video/quicktime" = prefs.videoPlayer.desktopFile;
+
+            "audio/mpeg" = prefs.musicPlayer.desktopFile;
+            "audio/mp3" = prefs.musicPlayer.desktopFile;
+            "audio/ogg" = prefs.musicPlayer.desktopFile;
+            "audio/flac" = prefs.musicPlayer.desktopFile;
+            "audio/wav" = prefs.musicPlayer.desktopFile;
+
+            "application/zip" = prefs.archiver.desktopFile;
+            "application/x-rar-compressed" = prefs.archiver.desktopFile;
+            "application/x-tar" = prefs.archiver.desktopFile;
+            "application/gzip" = prefs.archiver.desktopFile;
+            "application/x-7z-compressed" = prefs.archiver.desktopFile;
+
+            "text/plain" = prefs.textEditor.desktopFile;
+            "text/markdown" = prefs.advancedTextEditor.desktopFile;
+            "application/x-shellscript" = prefs.textEditor.desktopFile;
+
+            "inode/directory" = prefs.fileBrowser.desktopFile;
+
+            "text/html" = prefs.webBrowser.desktopFile;
+            "application/xhtml+xml" = prefs.webBrowser.desktopFile;
+            "x-scheme-handler/http" = prefs.webBrowser.desktopFile;
+            "x-scheme-handler/https" = prefs.webBrowser.desktopFile;
+            "x-scheme-handler/ftp" = prefs.webBrowser.desktopFile;
+            "x-scheme-handler/chrome" = prefs.webBrowser.desktopFile;
+            "application/x-extension-htm" = prefs.webBrowser.desktopFile;
+            "application/x-extension-html" = prefs.webBrowser.desktopFile;
+            "application/x-extension-shtml" = prefs.webBrowser.desktopFile;
+            "application/x-extension-xhtml" = prefs.webBrowser.desktopFile;
+            "application/x-extension-xht" = prefs.webBrowser.desktopFile;
           }
-          TerminalService=${prefs.additionalTerminal.desktopFile}
-        '';
+          // (
+            if self.settings.installOfficeSuite then
+              {
+                "application/vnd.oasis.opendocument.text" = selectedPrograms.officeSuite.desktopFile;
+                "application/vnd.oasis.opendocument.spreadsheet" = selectedPrograms.officeSuite.desktopFile;
+                "application/vnd.oasis.opendocument.presentation" = selectedPrograms.officeSuite.desktopFile;
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document" =
+                  selectedPrograms.officeSuite.desktopFile;
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" =
+                  selectedPrograms.officeSuite.desktopFile;
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation" =
+                  selectedPrograms.officeSuite.desktopFile;
+                "application/msword" = selectedPrograms.officeSuite.desktopFile;
+                "application/vnd.ms-excel" = selectedPrograms.officeSuite.desktopFile;
+                "application/vnd.ms-powerpoint" = selectedPrograms.officeSuite.desktopFile;
+              }
+            else
+              { }
+          );
+        };
+
+        xdg.configFile = {
+          "menus/applications.menu".text = ''
+            <!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN"
+             "http://www.freedesktop.org/standards/menu-spec/1.0/menu.dtd">
+            <Menu>
+              <Name>Applications</Name>
+              <Directory>applications.directory</Directory>
+
+              <AppDir>/etc/profiles/per-user/${config.home.username}/share/applications</AppDir>
+              <AppDir>/run/current-system/sw/share/applications</AppDir>
+
+              <Include>
+                <All/>
+              </Include>
+            </Menu>
+          '';
+        }
+        // lib.optionalAttrs isKDE {
+          "kdeglobals".text = ''
+            [General]
+            TerminalApplication=${
+              lib.concatStringsSep " " (
+                helpers.runWithAbsolutePath config prefs.additionalTerminal prefs.additionalTerminal.openCommand [ ]
+              )
+            }
+            TerminalService=${prefs.additionalTerminal.desktopFile}
+          '';
+        };
+
+        xdg.portal = lib.mkIf (self.user.isStandalone or false) {
+          enable = true;
+          extraPortals = [
+            pkgs.xdg-desktop-portal-gtk
+            pkgs.xdg-desktop-portal-gnome
+          ]
+          ++ (lib.optionals isKDE [
+            pkgs.kdePackages.xdg-desktop-portal-kde
+          ]);
+          config = {
+            common = {
+              default = if isKDE then [ "kde" ] else [ "gtk" ];
+              "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kde" ] else [ "gnome" ];
+              "org.freedesktop.impl.portal.ScreenCast" = "gnome";
+              "org.freedesktop.impl.portal.Location" = "gtk";
+              "org.freedesktop.impl.portal.FileChooser" = "gtk";
+            };
+          };
+        };
+
+        home.persistence."${self.persist.home}" =
+          let
+            getProgramDirs = program: if program != null then (program.dirsToPersist or [ ]) else [ ];
+            getProgramFiles = program: if program != null then (program.filesToPersist or [ ]) else [ ];
+
+            allProgramDirs =
+              (getProgramDirs prefs.wallet)
+              ++ (getProgramDirs prefs.fileBrowser)
+              ++ (getProgramDirs prefs.archiver)
+              ++ (getProgramDirs prefs.textEditor)
+              ++ (getProgramDirs prefs.advancedTextEditor)
+              ++ (getProgramDirs prefs.terminal)
+              ++ (getProgramDirs prefs.additionalTerminal)
+              ++ (lib.optionals self.settings.installSystemSettings (getProgramDirs prefs.systemSettings))
+              ++ (getProgramDirs prefs.imageViewer)
+              ++ (getProgramDirs prefs.imageEditor)
+              ++ (getProgramDirs prefs.paintImageEditor)
+              ++ (getProgramDirs prefs.pdfViewer)
+              ++ (getProgramDirs prefs.videoPlayer)
+              ++ (getProgramDirs prefs.musicPlayer)
+              ++ (getProgramDirs prefs.emailClient)
+              ++ (getProgramDirs prefs.calendar)
+              ++ (getProgramDirs prefs.contacts)
+              ++ (getProgramDirs prefs.taskManager)
+              ++ (getProgramDirs prefs.diskUsage)
+              ++ (getProgramDirs prefs.calculator)
+              ++ (getProgramDirs prefs.clock)
+              ++ (getProgramDirs prefs.webBrowser)
+              ++ (getProgramDirs prefs.gitGui)
+              ++ (getProgramDirs prefs.drawingProgram)
+              ++ (lib.optionals self.settings.installOfficeSuite (getProgramDirs selectedPrograms.officeSuite));
+
+            allProgramFiles =
+              (getProgramFiles prefs.wallet)
+              ++ (getProgramFiles prefs.fileBrowser)
+              ++ (getProgramFiles prefs.archiver)
+              ++ (getProgramFiles prefs.textEditor)
+              ++ (getProgramFiles prefs.advancedTextEditor)
+              ++ (getProgramFiles prefs.terminal)
+              ++ (getProgramFiles prefs.additionalTerminal)
+              ++ (lib.optionals self.settings.installSystemSettings (getProgramFiles prefs.systemSettings))
+              ++ (getProgramFiles prefs.imageViewer)
+              ++ (getProgramFiles prefs.imageEditor)
+              ++ (getProgramFiles prefs.paintImageEditor)
+              ++ (getProgramFiles prefs.pdfViewer)
+              ++ (getProgramFiles prefs.videoPlayer)
+              ++ (getProgramFiles prefs.musicPlayer)
+              ++ (getProgramFiles prefs.emailClient)
+              ++ (getProgramFiles prefs.calendar)
+              ++ (getProgramFiles prefs.contacts)
+              ++ (getProgramFiles prefs.taskManager)
+              ++ (getProgramFiles prefs.diskUsage)
+              ++ (getProgramFiles prefs.calculator)
+              ++ (getProgramFiles prefs.clock)
+              ++ (getProgramFiles prefs.webBrowser)
+              ++ (getProgramFiles prefs.gitGui)
+              ++ (getProgramFiles prefs.drawingProgram)
+              ++ (lib.optionals self.settings.installOfficeSuite (getProgramFiles selectedPrograms.officeSuite));
+          in
+          {
+            directories = [
+              ".config/dconf"
+              ".local/share/applications"
+              ".config/libaccounts-glib"
+              ".config/htop"
+              ".config/btop"
+              ".config/pulse"
+            ]
+            ++ allProgramDirs
+            ++ self.settings.additionalDirsToPersist
+            ++ (if isKDE then self.settings.additionalKDEDirsToPersist else [ ])
+            ++ (if isGnome then self.settings.additionalGnomeDirsToPersist else [ ]);
+
+            files = [
+              ".local/share/user-places.xbel"
+            ]
+            ++ allProgramFiles
+            ++ self.settings.additionalFilesToPersist
+            ++ (if isKDE then self.settings.additionalKDEFilesToPersist else [ ])
+            ++ (if isGnome then self.settings.additionalGnomeFilesToPersist else [ ]);
+          };
       };
 
-      xdg.portal = lib.mkIf (self.user.isStandalone or false) {
+    linux.system = config: {
+      services.gnome.gnome-keyring.enable = lib.mkForce isGnome;
+
+      programs.dconf.enable = true;
+
+      xdg.portal = {
         enable = true;
-        extraPortals = [
-          pkgs.xdg-desktop-portal-gtk
-          pkgs.xdg-desktop-portal-gnome
-        ]
-        ++ (lib.optionals isKDE [
-          pkgs.kdePackages.xdg-desktop-portal-kde
-        ]);
+        extraPortals =
+          with pkgs;
+          [
+            xdg-desktop-portal-gtk
+            xdg-desktop-portal-gnome
+          ]
+          ++ lib.optionals isKDE [
+            kdePackages.xdg-desktop-portal-kde
+          ];
         config = {
           common = {
             default = if isKDE then [ "kde" ] else [ "gtk" ];
-            "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kde" ] else [ "gnome" ];
+            "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kwallet" ] else [ "gnome-keyring" ];
             "org.freedesktop.impl.portal.ScreenCast" = "gnome";
             "org.freedesktop.impl.portal.Location" = "gtk";
             "org.freedesktop.impl.portal.FileChooser" = "gtk";
           };
         };
       };
-
-      home.persistence."${self.persist}" =
-        let
-          getProgramDirs = program: if program != null then (program.dirsToPersist or [ ]) else [ ];
-          getProgramFiles = program: if program != null then (program.filesToPersist or [ ]) else [ ];
-
-          allProgramDirs =
-            (getProgramDirs prefs.wallet)
-            ++ (getProgramDirs prefs.fileBrowser)
-            ++ (getProgramDirs prefs.archiver)
-            ++ (getProgramDirs prefs.textEditor)
-            ++ (getProgramDirs prefs.advancedTextEditor)
-            ++ (getProgramDirs prefs.terminal)
-            ++ (getProgramDirs prefs.additionalTerminal)
-            ++ (lib.optionals self.settings.installSystemSettings (getProgramDirs prefs.systemSettings))
-            ++ (getProgramDirs prefs.imageViewer)
-            ++ (getProgramDirs prefs.imageEditor)
-            ++ (getProgramDirs prefs.paintImageEditor)
-            ++ (getProgramDirs prefs.pdfViewer)
-            ++ (getProgramDirs prefs.videoPlayer)
-            ++ (getProgramDirs prefs.musicPlayer)
-            ++ (getProgramDirs prefs.emailClient)
-            ++ (getProgramDirs prefs.calendar)
-            ++ (getProgramDirs prefs.contacts)
-            ++ (getProgramDirs prefs.taskManager)
-            ++ (getProgramDirs prefs.diskUsage)
-            ++ (getProgramDirs prefs.calculator)
-            ++ (getProgramDirs prefs.clock)
-            ++ (getProgramDirs prefs.webBrowser)
-            ++ (getProgramDirs prefs.gitGui)
-            ++ (getProgramDirs prefs.drawingProgram)
-            ++ (lib.optionals self.settings.installOfficeSuite (getProgramDirs selectedPrograms.officeSuite));
-
-          allProgramFiles =
-            (getProgramFiles prefs.wallet)
-            ++ (getProgramFiles prefs.fileBrowser)
-            ++ (getProgramFiles prefs.archiver)
-            ++ (getProgramFiles prefs.textEditor)
-            ++ (getProgramFiles prefs.advancedTextEditor)
-            ++ (getProgramFiles prefs.terminal)
-            ++ (getProgramFiles prefs.additionalTerminal)
-            ++ (lib.optionals self.settings.installSystemSettings (getProgramFiles prefs.systemSettings))
-            ++ (getProgramFiles prefs.imageViewer)
-            ++ (getProgramFiles prefs.imageEditor)
-            ++ (getProgramFiles prefs.paintImageEditor)
-            ++ (getProgramFiles prefs.pdfViewer)
-            ++ (getProgramFiles prefs.videoPlayer)
-            ++ (getProgramFiles prefs.musicPlayer)
-            ++ (getProgramFiles prefs.emailClient)
-            ++ (getProgramFiles prefs.calendar)
-            ++ (getProgramFiles prefs.contacts)
-            ++ (getProgramFiles prefs.taskManager)
-            ++ (getProgramFiles prefs.diskUsage)
-            ++ (getProgramFiles prefs.calculator)
-            ++ (getProgramFiles prefs.clock)
-            ++ (getProgramFiles prefs.webBrowser)
-            ++ (getProgramFiles prefs.gitGui)
-            ++ (getProgramFiles prefs.drawingProgram)
-            ++ (lib.optionals self.settings.installOfficeSuite (getProgramFiles selectedPrograms.officeSuite));
-        in
-        {
-          directories = [
-            ".config/dconf"
-            ".local/share/applications"
-            ".config/libaccounts-glib"
-            ".config/htop"
-            ".config/btop"
-            ".config/pulse"
-          ]
-          ++ allProgramDirs
-          ++ self.settings.additionalDirsToPersist
-          ++ (if isKDE then self.settings.additionalKDEDirsToPersist else [ ])
-          ++ (if isGnome then self.settings.additionalGnomeDirsToPersist else [ ]);
-
-          files = [
-            ".local/share/user-places.xbel"
-          ]
-          ++ allProgramFiles
-          ++ self.settings.additionalFilesToPersist
-          ++ (if isKDE then self.settings.additionalKDEFilesToPersist else [ ])
-          ++ (if isGnome then self.settings.additionalGnomeFilesToPersist else [ ]);
-        };
     };
+  };
 }

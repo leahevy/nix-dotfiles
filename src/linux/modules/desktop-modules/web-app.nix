@@ -13,14 +13,13 @@ args@{
 
   group = "desktop-modules";
   input = "linux";
-  namespace = "home";
 
   options = {
     buildWebApp = lib.mkOption {
-      type = lib.types.nullOr (lib.types.functionTo (lib.types.functionTo lib.types.attrs));
+      type = lib.types.nullOr (lib.types.functionTo lib.types.attrs);
       default = null;
       description = ''
-        Function to build a web app. Takes webAppSettings, returns context -> { homeFiles, desktopEntries }.
+        Function to build a web app. Takes webAppSettings, returns { homeFiles, desktopEntries }.
         Set by the active backend (qutebrowser or chromium).
       '';
     };

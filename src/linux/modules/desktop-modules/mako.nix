@@ -13,11 +13,9 @@ args@{
 
   group = "desktop-modules";
   input = "linux";
-  namespace = "home";
 
-  configuration =
-    context@{ config, options, ... }:
-    {
+  on = {
+    linux.home = config: {
       services.mako = {
         enable = true;
 
@@ -77,4 +75,5 @@ args@{
         };
       };
     };
+  };
 }

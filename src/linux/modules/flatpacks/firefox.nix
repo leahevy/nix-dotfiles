@@ -13,7 +13,6 @@ args@{
 
   group = "flatpacks";
   input = "linux";
-  namespace = "home";
 
   settings = {
     package = "org.mozilla.firefox";
@@ -27,13 +26,15 @@ args@{
     };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    let
-      dataDir = "${self.user.home}/.local/share/nx-flatpack";
-      packageFile = "${dataDir}/${self.settings.package}.flatpack";
-    in
-    {
-      home.file."${packageFile}".text = "";
-    };
+  on = {
+    home =
+      config:
+      let
+        dataDir = "${self.user.home}/.local/share/nx-flatpack";
+        packageFile = "${dataDir}/${self.settings.package}.flatpack";
+      in
+      {
+        home.file."${packageFile}".text = "";
+      };
+  };
 }

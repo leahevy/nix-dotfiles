@@ -13,19 +13,31 @@ args@{
 
   group = "system";
   input = "linux";
-  namespace = "home";
 
   settings = {
-    directories = [ ];
-    files = [ ];
+    home = {
+      directories = [ ];
+      files = [ ];
+    };
+    system = {
+      directories = [ ];
+      files = [ ];
+    };
   };
 
-  configuration =
-    context@{ config, options, ... }:
-    {
-      home.persistence."${self.persist}" = {
-        directories = self.settings.directories;
-        files = self.settings.files;
+  on = {
+    linux.home = config: {
+      home.persistence."${self.persist.home}" = {
+        directories = self.settings.home.directories;
+        files = self.settings.home.files;
       };
     };
+
+    linux.system = config: {
+      environment.persistence."${self.persist.system}" = {
+        directories = self.settings.system.directories;
+        files = self.settings.system.files;
+      };
+    };
+  };
 }
