@@ -40,124 +40,118 @@ args@{
         fallbackIconThemePackage = lib.getAttr fallbackIconThemePackageName pkgs;
         fallbackIconThemeName = lib.head (lib.tail (lib.splitString "/" fallbackIconThemeString));
         fallbackIconThemeBasePath = "${fallbackIconThemePackage}/share/icons/${fallbackIconThemeName}";
+
+        monitorScript = pkgs.writeShellScript "nx-user-notify-monitor" ''
+          set -euo pipefail
+
+          NOTIFY_SEND="${pkgs.libnotify}/bin/notify-send"
+          JOURNALCTL="${pkgs.systemd}/bin/journalctl"
+          SERVICE_TAG="nx-user-notify"
+          ICON_THEME_BASE="${iconThemeBasePath}"
+          FALLBACK_ICON_THEME_BASE="${fallbackIconThemeBasePath}"
+
+          CURSOR_FILE="${self.user.home}/.local/state/nx-user-notify-monitor-cursor"
+
+          mkdir -p "$(dirname "$CURSOR_FILE")"
+
+          resolve_icon() {
+              local icon_name="$1"
+
+              if [[ "$icon_name" == /* ]]; then
+                  echo "$icon_name"
+                  return 0
+              fi
+
+              for size in scalable 64x64 48x48; do
+                  for iconfile in "$ICON_THEME_BASE/$size"/*/"$icon_name.svg"; do
+                      if [[ -f "$iconfile" ]]; then
+                          echo "$iconfile"
+                          return 0
+                      fi
+                  done
+                  for iconfile in "$FALLBACK_ICON_THEME_BASE/$size"/*/"$icon_name.svg"; do
+                      if [[ -f "$iconfile" ]]; then
+                          echo "$iconfile"
+                          return 0
+                      fi
+                  done
+              done
+
+              return 1
+          }
+
+          notify() {
+              local urgency="''${1:-normal}"
+              local title="''${2:-System Notification}"
+              local body="''${3:-No message}"
+              local icon="''${4:-preferences-desktop-notification}"
+
+              local resolved_icon
+              if resolved_icon=$(resolve_icon "$icon") && [[ -r "$resolved_icon" ]]; then
+                  $NOTIFY_SEND --urgency="$urgency" --icon="$resolved_icon" "$title" "$body" || true
+              else
+                  $NOTIFY_SEND --urgency="$urgency" "$title" "$body" || true
+              fi
+          }
+
+          parse_message() {
+              local message="$1"
+              local priority="$2"
+
+              if [[ "$message" =~ ^([^:]+):[[:space:]]*(.*)$ ]]; then
+                  local title_icon_part="''${BASH_REMATCH[1]}"
+                  local body="''${BASH_REMATCH[2]}"
+
+                  local title="$title_icon_part"
+                  local icon=""
+
+                  if [[ "$title_icon_part" == *"|"* ]]; then
+                      title="''${title_icon_part%|*}"
+                      icon="''${title_icon_part##*|}"
+                  fi
+
+                  local urgency="normal"
+                  case "$priority" in
+                      0|1|2|3) urgency="critical" ;;
+                      *) urgency="normal" ;;
+                  esac
+
+                  notify "$urgency" "$title" "$body" "$icon"
+              else
+                  local urgency="normal"
+                  case "$priority" in
+                      0|1|2|3) urgency="critical" ;;
+                      *) urgency="normal" ;;
+                  esac
+                  notify "$urgency" "System Message" "$message"
+              fi
+          }
+
+          monitor_logs() {
+              $JOURNALCTL -t "$SERVICE_TAG" -f --output=json --cursor-file="$CURSOR_FILE" | while read -r line; do
+                  if [[ -n "$line" ]]; then
+                      local message=$(echo "$line" | ${pkgs.jq}/bin/jq -r '.MESSAGE // empty' 2>/dev/null || true)
+                      local priority=$(echo "$line" | ${pkgs.jq}/bin/jq -r '.PRIORITY // "6"' 2>/dev/null || true)
+
+                      if [[ -n "$message" ]]; then
+                          parse_message "$message" "$priority"
+                      fi
+                  fi
+              done
+          }
+
+          case "''${1:-monitor}" in
+              "monitor")
+                  monitor_logs
+                  ;;
+              *)
+                  echo "Usage: $0 {monitor}"
+                  exit 1
+                  ;;
+          esac
+        '';
       in
       {
-        home.file.".local/bin/scripts/nx-user-notify-monitor" =
-          lib.mkIf (self.settings.monitoringEnabled && !isHeadless)
-            {
-              text = ''
-                #!/usr/bin/env bash
-                set -euo pipefail
-
-                NOTIFY_SEND="${pkgs.libnotify}/bin/notify-send"
-                JOURNALCTL="${pkgs.systemd}/bin/journalctl"
-                SERVICE_TAG="nx-user-notify"
-                ICON_THEME_BASE="${iconThemeBasePath}"
-                FALLBACK_ICON_THEME_BASE="${fallbackIconThemeBasePath}"
-
-                CURSOR_FILE="${self.user.home}/.local/state/nx-user-notify-monitor-cursor"
-
-                mkdir -p "$(dirname "$CURSOR_FILE")"
-
-                resolve_icon() {
-                    local icon_name="$1"
-
-                    if [[ "$icon_name" == /* ]]; then
-                        echo "$icon_name"
-                        return 0
-                    fi
-
-                    for size in scalable 64x64 48x48; do
-                        for iconfile in "$ICON_THEME_BASE/$size"/*/"$icon_name.svg"; do
-                            if [[ -f "$iconfile" ]]; then
-                                echo "$iconfile"
-                                return 0
-                            fi
-                        done
-                        for iconfile in "$FALLBACK_ICON_THEME_BASE/$size"/*/"$icon_name.svg"; do
-                            if [[ -f "$iconfile" ]]; then
-                                echo "$iconfile"
-                                return 0
-                            fi
-                        done
-                    done
-
-                    return 1
-                }
-
-                notify() {
-                    local urgency="''${1:-normal}"
-                    local title="''${2:-System Notification}"
-                    local body="''${3:-No message}"
-                    local icon="''${4:-preferences-desktop-notification}"
-
-                    local resolved_icon
-                    if resolved_icon=$(resolve_icon "$icon") && [[ -r "$resolved_icon" ]]; then
-                        $NOTIFY_SEND --urgency="$urgency" --icon="$resolved_icon" "$title" "$body"
-                    else
-                        $NOTIFY_SEND --urgency="$urgency" "$title" "$body"
-                    fi
-                }
-
-                parse_message() {
-                    local message="$1"
-                    local priority="$2"
-
-                    if [[ "$message" =~ ^([^:]+):[[:space:]]*(.*)$ ]]; then
-                        local title_icon_part="''${BASH_REMATCH[1]}"
-                        local body="''${BASH_REMATCH[2]}"
-
-                        local title="$title_icon_part"
-                        local icon=""
-
-                        if [[ "$title_icon_part" == *"|"* ]]; then
-                            title="''${title_icon_part%|*}"
-                            icon="''${title_icon_part##*|}"
-                        fi
-
-                        local urgency="normal"
-                        case "$priority" in
-                            0|1|2|3) urgency="critical" ;;
-                            *) urgency="normal" ;;
-                        esac
-
-                        notify "$urgency" "$title" "$body" "$icon"
-                    else
-                        local urgency="normal"
-                        case "$priority" in
-                            0|1|2|3) urgency="critical" ;;
-                            *) urgency="normal" ;;
-                        esac
-                        notify "$urgency" "System Message" "$message"
-                    fi
-                }
-
-                monitor_logs() {
-                    $JOURNALCTL -t "$SERVICE_TAG" -f --output=json --cursor-file="$CURSOR_FILE" | while read -r line; do
-                        if [[ -n "$line" ]]; then
-                            local message=$(echo "$line" | ${pkgs.jq}/bin/jq -r '.MESSAGE // empty' 2>/dev/null)
-                            local priority=$(echo "$line" | ${pkgs.jq}/bin/jq -r '.PRIORITY // "6"' 2>/dev/null)
-
-                            if [[ -n "$message" ]]; then
-                                parse_message "$message" "$priority"
-                            fi
-                        fi
-                    done
-                }
-
-                case "''${1:-monitor}" in
-                    "monitor")
-                        monitor_logs
-                        ;;
-                    *)
-                        echo "Usage: $0 {monitor}"
-                        exit 1
-                        ;;
-                esac
-              '';
-              executable = true;
-            };
-
         home.file.".local/bin/nx-user-notify-logs" = {
           text = ''
             #!/usr/bin/env bash
@@ -242,7 +236,7 @@ args@{
                 Type = "simple";
                 Restart = "on-failure";
                 RestartSec = "10";
-                ExecStart = "${self.user.home}/.local/bin/scripts/nx-user-notify-monitor monitor";
+                ExecStart = "${monitorScript} monitor";
                 Environment = [
                   "PATH=${
                     lib.makeBinPath [
