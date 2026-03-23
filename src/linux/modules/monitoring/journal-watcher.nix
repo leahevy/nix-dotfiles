@@ -188,6 +188,8 @@ args@{
       "Ignoring duplicate name"
       "gtk_widget_"
       "gtk.*: assertion .* failed"
+      "gdk_gl_context_make_current\\(\\) failed"
+      "gdk_gl_context_.*assertion .* failed"
       "g_object_ref: assertion .* failed"
       "animated_list_item_get_destroying: assertion .* failed"
       "Realtime error: Could not get pidns for pid [0-9]+: Could not fstatat ns/pid: Not a directory"
@@ -270,6 +272,7 @@ args@{
       "nvidia_uvm: module uses symbols.*from proprietary module nvidia, inheriting taint"
       "NVRM: GPU at PCI:.*: GPU-.*"
       "NVRM: Xid \\(PCI:.*\\):.*"
+      "Failed to allocate NVKMS memory for GEM object"
     ];
     additionalStringsToIgnore = [ ];
 
