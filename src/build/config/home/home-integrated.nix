@@ -85,7 +85,18 @@ in
           [
             (pkgs.stdenv.mkDerivation {
               name = "nx";
-              src = defs.rootPath;
+              src = builtins.path {
+                path = defs.rootPath;
+                name = "nx-source";
+                filter =
+                  path: type:
+                  let
+                    baseName = builtins.baseNameOf path;
+                  in
+                  baseName == "nx"
+                  || baseName == "scripts"
+                  || lib.hasPrefix (toString defs.rootPath + "/scripts/") (toString path);
+              };
               dontAuditTmpdir = true;
               installPhase = ''
                                 mkdir -p $out/bin $out/share/nx
