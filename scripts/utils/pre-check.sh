@@ -979,6 +979,9 @@ check_deployment_conflicts() {
 }
 
 diff_store_paths() {
+    local changed_prefixes_to_ignore=""
+    local add_removal_prefixes_to_ignore="nixos-system-"
+
     local old="$1" new="$2"
 
     local old_file new_file
@@ -1010,28 +1013,60 @@ diff_store_paths() {
 
     while IFS= read -r name; do
         local hash
+
+        for p in $add_removal_prefixes_to_ignore; do
+          [[ "$name" == "$p"* ]] && continue 2
+        done
+
         hash="$(grep -m1 "	${name}$" "$new_file" | cut -f1)"
         echo -e "${GREEN}[A]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
     done < <(comm -13 "$old_names" "$new_names") >> "$out_file"
 
     while IFS= read -r name; do
         local hash
+
+        for p in $add_removal_prefixes_to_ignore; do
+          [[ "$name" == "$p"* ]] && continue 2
+        done
+
         hash="$(grep -m1 "	${name}$" "$old_file" | cut -f1)"
         echo -e "${RED}[R]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
     done < <(comm -23 "$old_names" "$new_names") >> "$out_file"
+
+    local changed_file
+    changed_file="$(mktemp)"
+    trap "rm -f '$old_file' '$new_file' '$old_names' '$new_names' '$out_file' '$changed_file'" RETURN
 
     while IFS= read -r name; do
         local old_hash new_hash
         old_hash="$(grep "	${name}$" "$old_file" | cut -f1 | sort | tr '\n' ' ')"
         new_hash="$(grep "	${name}$" "$new_file" | cut -f1 | sort | tr '\n' ' ')"
         if [[ "$old_hash" != "$new_hash" ]]; then
-            local oh nh
-            oh="$(grep -m1 "	${name}$" "$old_file" | cut -f1)"
-            nh="$(grep -m1 "	${name}$" "$new_file" | cut -f1)"
-            echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
-            echo -e "    ${GRAY}/nix/store/${oh}-${name}${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
+            echo "$name" >> "$changed_file"
         fi
-    done < <(comm -12 "$old_names" "$new_names") >> "$out_file"
+    done < <(comm -12 "$old_names" "$new_names")
+
+    local only_issue_etc=true
+    while IFS= read -r name; do
+        if [[ "$name" != "issue" && "$name" != "etc" ]]; then
+            only_issue_etc=false
+            break
+        fi
+    done < "$changed_file"
+
+    while IFS= read -r name; do
+        [[ "$name" == "issue" ]] && continue
+        for p in $changed_prefixes_to_ignore; do
+          [[ "$name" == "$p" || "$name" == "$p"* ]] && continue 2
+        done
+        $only_issue_etc && [[ "$name" == "etc" ]] && continue
+
+        local oh nh
+        oh="$(grep -m1 "	${name}$" "$old_file" | cut -f1)"
+        nh="$(grep -m1 "	${name}$" "$new_file" | cut -f1)"
+        echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
+        echo -e "    ${GRAY}/nix/store/${oh}-${name}${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
+    done < "$changed_file" >> "$out_file"
 
     if [[ -s "$out_file" ]]; then
         cat "$out_file"
