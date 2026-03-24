@@ -86,7 +86,7 @@ in
       };
 
       home.file.".gnupg/common.conf" = {
-        source = self.symlinkFile config "common.conf";
+        source = self.file "common.conf";
       };
 
       programs.gpg = {

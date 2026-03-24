@@ -302,7 +302,7 @@ args@{
         };
 
         home.file.".config/git/gitignore_global" = {
-          source = self.symlinkFile config "gitignore_global";
+          source = self.file "gitignore_global";
         };
 
         home.persistence."${self.persist.home}" = {
