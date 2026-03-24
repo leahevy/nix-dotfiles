@@ -421,7 +421,10 @@ rec {
         fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
       in
       if builtins.pathExists fullPath then
-        fullPath
+        builtins.path {
+          path = fullPath;
+          name = builtins.baseNameOf subPath;
+        }
       else
         throw "File not found: ${inputName}/${relativePath}";
 
