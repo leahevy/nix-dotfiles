@@ -1034,22 +1034,30 @@ args@{
                   };
 
                   "Print" = {
-                    action = screenshot { show-pointer = false; };
+                    action.screenshot = {
+                      show-pointer = false;
+                    };
                     hotkey-overlay.title = "Screenshot:Screenshot";
                   };
 
                   "Shift+Print" = {
-                    action = screenshot-window { write-to-disk = true; };
+                    action.screenshot-window = {
+                      write-to-disk = true;
+                    };
                     hotkey-overlay.title = "Screenshot:Window screenshot";
                   };
 
                   "Mod+P" = {
-                    action = screenshot { show-pointer = false; };
+                    action.screenshot = {
+                      show-pointer = false;
+                    };
                     hotkey-overlay.title = "Screenshot:Screenshot";
                   };
 
                   "Mod+Shift+P" = {
-                    action = screenshot-window { write-to-disk = true; };
+                    action.screenshot-window = {
+                      write-to-disk = true;
+                    };
                     hotkey-overlay.title = "Screenshot:Window screenshot";
                   };
 
