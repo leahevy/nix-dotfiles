@@ -5,6 +5,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
 deployment_script_setup "update"
 check_deployment_conflicts "update"
 
+old_flake_hash=$(sha256sum flake.lock | cut -d' ' -f1)
+
 if [[ $# -eq 0 ]]; then
     echo -e "Updating nixpkgs input of main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
     nix flake update nixpkgs home-manager stylix nixvim nix-darwin nixpkgs-unstable || true
@@ -28,7 +30,12 @@ else
 fi
 
 echo
-echo -e "Regenerating auto-upgrade reboot marker files..."
-sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-reboot-required
-sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-desktop-reboot-required
-echo -e "Created marker files with hash: $(cat .nx-auto-upgrade-reboot-required)"
+new_flake_hash=$(sha256sum flake.lock | cut -d' ' -f1)
+if [[ "$new_flake_hash" != "$old_flake_hash" ]]; then
+    echo -e "${GREEN}NXCore flake lock changed, creating auto-upgrade reboot marker files...${RESET}"
+    echo "$new_flake_hash" > .nx-auto-upgrade-reboot-required
+    echo "$new_flake_hash" > .nx-auto-upgrade-desktop-reboot-required
+    echo -e "Created marker files with hash: ${WHITE}$new_flake_hash${RESET}"
+else
+    echo -e "${YELLOW}NXCore flake lock unchanged, skipping marker file creation.${RESET}"
+fi
