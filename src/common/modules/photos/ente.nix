@@ -31,7 +31,7 @@ args@{
           settings = {
             binds = with config.lib.niri.actions; {
               "Mod+Ctrl+Alt+8" = {
-                action = spawn-sh "niri-scratchpad --app-id ente --all-windows --spawn ente-desktop";
+                action = spawn-sh "niri-scratchpad --title 'Ente Photos' --all-windows --spawn ente-desktop";
                 hotkey-overlay.title = "Apps:Ente";
               };
             };
@@ -40,7 +40,8 @@ args@{
               {
                 matches = [
                   {
-                    app-id = "ente";
+                    app-id = "electron";
+                    title = "Ente Photos";
                   }
                 ];
                 open-on-workspace = "scratch";
