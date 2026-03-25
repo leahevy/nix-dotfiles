@@ -17,7 +17,7 @@ if [[ -e /etc/NIXOS ]]; then
 
   nh os switch -H "$PROFILE" . -- --impure "${EXTRA_ARGS[@]:-}"
 else
-  nh home switch ".#homeConfigurations.$PROFILE.activationPackage" -b nix-rebuild.backup -- --impure "${EXTRA_ARGS[@]:-}"
+  nh home switch . -c "$PROFILE" -b nix-rebuild.backup -- --impure "${EXTRA_ARGS[@]:-}"
 fi
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
