@@ -860,7 +860,11 @@ check_nix_daemon_activity() {
 
 check_nix_tool_activity() {
     local nix_tool_processes
-    nix_tool_processes=$(ps ax -o stat,command | tail -n +2 | grep -E "nix (build|eval|flake|gc)" | grep -v grep | awk '$1 ~ /^(R|Rs|Rl|S\+)$/' | wc -l) || nix_tool_processes=0
+    if [[ "$(uname)" == "Darwin" ]]; then
+        nix_tool_processes=$(ps ax -o command | tail -n +2 | grep -E "nix (build|eval|flake|gc)" | grep -v grep | wc -l) || nix_tool_processes=0
+    else
+        nix_tool_processes=$(ps ax -o stat,command | tail -n +2 | grep -E "nix (build|eval|flake|gc)" | grep -v grep | awk '$1 ~ /^(R|Rs|Rl|S\+)$/' | wc -l) || nix_tool_processes=0
+    fi
 
     if [[ "$nix_tool_processes" -gt 0 ]]; then
         echo
