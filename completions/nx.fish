@@ -58,6 +58,7 @@ complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandli
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l offline -d "Build without network access"
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l diff -d "Compare built config with current active system"
 complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l skip-verification -d "Skip commit signature verification"
+complete -c nx -n "__fish_seen_subcommand_from build" -n "test (count (commandline -opc)) = 2" -l raw -d "Use raw log format"
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -f
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -l offline -d "Run without network access"
 complete -c nx -n "__fish_seen_subcommand_from sync dry test boot" -n "test (count (commandline -opc)) = 2" -l show-trace -d "Show detailed trace output"

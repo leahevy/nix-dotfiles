@@ -1,12 +1,12 @@
 _nx() {
     local context state line
-    
+
     _arguments \
         '(--help)--help[Show help message]' \
         '(--version)--version[Show version information]' \
         '1: :->commands' \
         '*::arg:->args'
-    
+
     case $state in
         commands)
             local commands=(
@@ -82,7 +82,8 @@ _nx() {
                                 '--dry-run[Test build without actual building]' \
                                 '--offline[Build without network access]' \
                                 '--diff[Compare built config with current active system]' \
-                                '--skip-verification[Skip commit signature verification]'
+                                '--skip-verification[Skip commit signature verification]' \
+                                '--raw[Use raw log format]'
                             ;;
                     esac
                     ;;

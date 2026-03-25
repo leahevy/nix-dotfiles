@@ -11,7 +11,7 @@ _complete_nx() {
                 COMPREPLY=($(compgen -W "user edit select reset help" -- "${cur}"))
                 ;;
             build)
-                COMPREPLY=($(compgen -W "--timeout --dry-run --offline --diff --skip-verification" -- "${cur}"))
+                COMPREPLY=($(compgen -W "--timeout --dry-run --offline --diff --skip-verification --raw" -- "${cur}"))
                 ;;
             sync|boot)
                 COMPREPLY=($(compgen -W "--offline --show-trace --allow-dirty-git --skip-verification" -- "${cur}"))

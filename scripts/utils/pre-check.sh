@@ -171,6 +171,7 @@ parse_build_deployment_args() {
     DRY_RUN=""
     BUILD_DIFF=false
     SKIP_VERIFICATION=false
+    RAW_LOG=false
 
     echo -e "${CYAN}Active branches:${RESET}"
     echo -e "  ${WHITE}nxcore:${RESET} ${YELLOW}$(git branch --show-current)${RESET}"
@@ -205,6 +206,10 @@ parse_build_deployment_args() {
                 SKIP_VERIFICATION=true
                 shift
                 ;;
+            --raw)
+                RAW_LOG=true
+                shift
+                ;;
             --help|-h)
                 echo "build: Test build configuration without deploying"
                 echo ""
@@ -214,6 +219,7 @@ parse_build_deployment_args() {
                 echo "  --offline            Build without network access"
                 echo "  --diff               Compare built config with current active system"
                 echo "  --skip-verification  Skip commit signature verification"
+                echo "  --raw                Use raw log format"
                 exit 0
                 ;;
             -*|--*)
@@ -227,7 +233,7 @@ parse_build_deployment_args() {
         esac
     done
 
-    export EXTRA_ARGS TIMEOUT DRY_RUN PROFILE_PATH BUILD_DIFF SKIP_VERIFICATION
+    export EXTRA_ARGS TIMEOUT DRY_RUN PROFILE_PATH BUILD_DIFF SKIP_VERIFICATION RAW_LOG
 }
 
 ensure_nixos_only() {
