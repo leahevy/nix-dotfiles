@@ -421,10 +421,13 @@ rec {
         fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
       in
       if builtins.pathExists fullPath then
-        builtins.path {
-          path = fullPath;
-          name = builtins.baseNameOf subPath;
-        }
+        if lib.hasSuffix ".nix" subPath then
+          fullPath
+        else
+          builtins.path {
+            path = fullPath;
+            name = builtins.baseNameOf subPath;
+          }
       else
         throw "File not found: ${inputName}/${relativePath}";
 
