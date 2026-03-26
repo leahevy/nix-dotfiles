@@ -93,6 +93,9 @@ args@{
   };
 
   settings = {
+    windowOpenShader = "pixelate";
+    windowCloseShader = "pixelate";
+    windowResizeShader = "unravel";
     disableNewAppSwitcher = true;
     addRestartShortcut = false;
     screenshotBasePictureDir = "screenshots";
@@ -131,6 +134,53 @@ args@{
     home =
       config:
       let
+        nirimationSrc = pkgs.fetchFromGitHub {
+          owner = "XansiVA";
+          repo = "nirimation";
+          rev = "17dda540a040ca501982418c436fd5c77a572392";
+          sha256 = "sha256-J6f02QKi8ggoEOtxK8RhLGSq4IkRh+LRahXcY/ReE18=";
+        };
+
+        nirimationShaders = pkgs.runCommand "nirimation-shaders" { } ''
+          mkdir -p $out
+          for kdl in ${nirimationSrc}/animations/*.kdl; do
+            name="$(basename "$kdl" .kdl)"
+            mkdir -p "$out/$name"
+            ${pkgs.gawk}/bin/awk '
+              /^[[:space:]]*(window-open|window-close|window-resize|workspace-switch)[[:space:]]*\{/ {
+                section = $1
+                gsub(/[[:space:]]*\{.*/, "", section)
+              }
+              /custom-shader r"/ {
+                capturing = 1
+                shader = ""
+                sub(/.*custom-shader r"/, "", $0)
+              }
+              capturing {
+                if (match($0, /^(.*)"[[:space:]]*$/, m)) {
+                  shader = shader m[1] "\n"
+                  outfile = OUTDIR "/" section ".glsl"
+                  printf "%s", shader > outfile
+                  close(outfile)
+                  capturing = 0
+                } else {
+                  shader = shader $0 "\n"
+                }
+              }
+            ' OUTDIR="$out/$name" "$kdl"
+          done
+        '';
+
+        getShader =
+          name:
+          let
+            parts = lib.splitString "/" name;
+            animation = builtins.elemAt parts 0;
+            section = builtins.elemAt parts 1;
+            path = "${nirimationShaders}/${animation}/${section}.glsl";
+          in
+          builtins.readFile path;
+
         mainDisplay = self.host.displays.main or self.user.displays.main or null;
         secondaryDisplay = self.host.displays.secondary or self.user.displays.secondary or null;
         programsConfig = config.nx.preferences.desktop.programs;
@@ -358,7 +408,11 @@ args@{
         ) (startupApps ++ delayedStartupApps);
       in
       {
-        home.packages = [ pkgs.jq ] ++ autostartDummies;
+        home.packages = [
+          pkgs.jq
+          nirimationShaders
+        ]
+        ++ autostartDummies;
 
         home.file.".local/bin/niri-scratchpad" = {
           source = self.file "niri-scratchpad/niri-scratchpad.sh";
@@ -1404,20 +1458,40 @@ args@{
 
               window-open = {
                 kind = {
-                  easing = {
-                    duration-ms = 150;
-                    curve = "ease-out-expo";
-                  };
+                  easing =
+                    if self.settings.windowOpenShader != null then
+                      {
+                        duration-ms = 250;
+                        curve = "linear";
+                      }
+                    else
+                      {
+                        duration-ms = 150;
+                        curve = "ease-out-expo";
+                      };
                 };
+              }
+              // lib.optionalAttrs (self.settings.windowOpenShader != null) {
+                custom-shader = getShader "${self.settings.windowOpenShader}/window-open";
               };
 
               window-close = {
                 kind = {
-                  easing = {
-                    duration-ms = 150;
-                    curve = "ease-out-quad";
-                  };
+                  easing =
+                    if self.settings.windowCloseShader != null then
+                      {
+                        duration-ms = 300;
+                        curve = "linear";
+                      }
+                    else
+                      {
+                        duration-ms = 150;
+                        curve = "ease-out-quad";
+                      };
                 };
+              }
+              // lib.optionalAttrs (self.settings.windowCloseShader != null) {
+                custom-shader = getShader "${self.settings.windowCloseShader}/window-close";
               };
 
               horizontal-view-movement = {
@@ -1448,6 +1522,9 @@ args@{
                     epsilon = 0.0001;
                   };
                 };
+              }
+              // lib.optionalAttrs (self.settings.windowResizeShader != null) {
+                custom-shader = getShader "${self.settings.windowResizeShader}/window-resize";
               };
 
               config-notification-open-close = {
