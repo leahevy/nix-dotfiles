@@ -76,6 +76,11 @@ args@{
         systemd.services.greetd = lib.mkIf (isGnome || isKDE) {
           serviceConfig = {
             KeyringMode = lib.mkForce "inherit";
+            Restart = "always";
+            RestartSec = "1s";
+          };
+          unitConfig = {
+            StartLimitIntervalSec = 0;
           };
         };
 
