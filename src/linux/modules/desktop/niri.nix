@@ -144,7 +144,7 @@ args@{
     windowCloseShader = "pixelate";
     windowResizeShader = "unravel";
     disableNewAppSwitcher = true;
-    addRestartShortcut = false;
+    addRestartShortcut = true;
     screenshotBasePictureDir = "screenshots";
     mainDisplayScale = 1.0;
     secondaryDisplayScale = 1.0;
@@ -677,7 +677,7 @@ args@{
 
             case "$choice" in
               "Yes")
-                systemctl --user restart niri.service
+                ${pkgs.uwsm}/bin/uwsm stop
                 ;;
               "No"|"")
                 exit 0
