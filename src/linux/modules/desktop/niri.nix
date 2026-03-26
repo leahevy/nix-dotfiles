@@ -932,57 +932,57 @@ args@{
         systemd.user.services = {
           waybar = {
             Unit = {
-              PartOf = [ "niri.service" ];
-              After = [ "niri.service" ];
+              PartOf = [ "graphical-session.target" ];
+              After = [ "graphical-session.target" ];
             };
           };
 
           "nx-swaybg" = {
             Unit = {
-              PartOf = [ "niri.service" ];
-              After = [ "niri.service" ];
+              PartOf = [ "graphical-session.target" ];
+              After = [ "graphical-session.target" ];
             };
           };
 
           swayidle = {
             Unit = {
-              PartOf = [ "niri.service" ];
-              After = [ "niri.service" ];
+              PartOf = [ "graphical-session.target" ];
+              After = [ "graphical-session.target" ];
             };
           };
 
           swaync = lib.mkIf (self.isModuleEnabled "desktop-modules.swaynotificationcenter") {
             Unit = {
-              PartOf = [ "niri.service" ];
-              After = [ "niri.service" ];
+              PartOf = [ "graphical-session.target" ];
+              After = [ "graphical-session.target" ];
             };
           };
 
           mako = lib.mkIf (self.isModuleEnabled "desktop-modules.mako") {
             Unit = {
-              PartOf = [ "niri.service" ];
-              After = [ "niri.service" ];
+              PartOf = [ "graphical-session.target" ];
+              After = [ "graphical-session.target" ];
             };
           };
 
           "nx-nwg-wrapper-1" = {
             Unit = {
-              PartOf = [ "niri.service" ];
-              After = [ "niri.service" ];
+              PartOf = [ "graphical-session.target" ];
+              After = [ "graphical-session.target" ];
             };
           };
 
           "nx-nwg-wrapper-2" = {
             Unit = {
-              PartOf = [ "niri.service" ];
-              After = [ "niri.service" ];
+              PartOf = [ "graphical-session.target" ];
+              After = [ "graphical-session.target" ];
             };
           };
 
           "nx-nwg-wrapper-3" = {
             Unit = {
-              PartOf = [ "niri.service" ];
-              After = [ "niri.service" ];
+              PartOf = [ "graphical-session.target" ];
+              After = [ "graphical-session.target" ];
             };
           };
         }
@@ -997,8 +997,8 @@ args@{
             {
               "nx-bongocat" = {
                 Unit = {
-                  PartOf = [ "niri.service" ];
-                  After = [ "niri.service" ];
+                  PartOf = [ "graphical-session.target" ];
+                  After = [ "graphical-session.target" ];
                   Wants = [ ];
                   Requisite = [ ];
                 };
@@ -1006,15 +1006,15 @@ args@{
 
               wlsunset = {
                 Unit = {
-                  PartOf = [ "niri.service" ];
-                  After = [ "niri.service" ];
+                  PartOf = [ "graphical-session.target" ];
+                  After = [ "graphical-session.target" ];
                 };
               };
 
               clipman = {
                 Unit = {
-                  PartOf = [ "niri.service" ];
-                  After = [ "niri.service" ];
+                  PartOf = [ "graphical-session.target" ];
+                  After = [ "graphical-session.target" ];
                 };
               };
             }
