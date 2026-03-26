@@ -27,29 +27,25 @@ args@{
 
         nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "ente-desktop" ];
 
-        programs.niri = lib.mkIf isNiriEnabled {
-          settings = {
-            binds = with config.lib.niri.actions; {
-              "Mod+Ctrl+Alt+8" = {
-                action = spawn-sh "niri-scratchpad --title 'Ente Photos' --all-windows --spawn ente-desktop";
-                hotkey-overlay.title = "Apps:Ente";
-              };
+        nx.linux.desktop.niri.lateWindowRules = lib.mkIf isNiriEnabled [
+          {
+            match = {
+              app-id = "electron";
+              title = "Ente Photos";
             };
+            apply = {
+              float = true;
+              workspace = "scratch";
+            };
+          }
+        ];
 
-            window-rules = [
-              {
-                matches = [
-                  {
-                    app-id = "electron";
-                    title = "Ente Photos";
-                  }
-                ];
-                open-on-workspace = "scratch";
-                open-floating = true;
-                open-focused = false;
-                block-out-from = "screencast";
-              }
-            ];
+        programs.niri = lib.mkIf isNiriEnabled {
+          settings.binds = with config.lib.niri.actions; {
+            "Mod+Ctrl+Alt+8" = {
+              action = spawn-sh "niri-scratchpad --title 'Ente Photos' --all-windows --spawn ente-desktop";
+              hotkey-overlay.title = "Apps:Ente";
+            };
           };
         };
 

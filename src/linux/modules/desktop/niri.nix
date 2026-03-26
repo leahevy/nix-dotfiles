@@ -20,6 +20,53 @@ args@{
       default = [ ];
       description = "Programs to autostart when niri starts.";
     };
+    lateWindowRules = lib.mkOption {
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            match = {
+              app-id = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+              };
+              title = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+              };
+            };
+            skipStaticRule = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Skip generating a corresponding static niri window rule.";
+            };
+            apply = {
+              float = lib.mkOption {
+                type = lib.types.nullOr lib.types.bool;
+                default = null;
+              };
+              workspace = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+              };
+              focus = lib.mkOption {
+                type = lib.types.nullOr lib.types.bool;
+                default = null;
+              };
+              width = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+              };
+              height = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+              };
+            };
+          };
+        }
+      );
+      default = [ ];
+      description = "Window rules applied via IPC when app-id/title change after window creation.";
+    };
   };
 
   submodules = {
@@ -180,6 +227,202 @@ args@{
             path = "${nirimationShaders}/${animation}/${section}.glsl";
           in
           builtins.readFile path;
+
+        lateRules = (self.options config).lateWindowRules;
+        hasLateRules = lateRules != [ ];
+
+        lateRulesJson = pkgs.writeText "niri-late-rules.json" (builtins.toJSON lateRules);
+
+        lateRulesScript =
+          pkgs.writers.writePython3 "niri-late-rules"
+            {
+              flakeIgnore = [ "E501" ];
+            }
+            ''
+              import json
+              import logging
+              import subprocess
+              import sys
+              import time
+
+              NIRI = "${pkgs.niri}/bin/niri"
+              logging.basicConfig(
+                  level=logging.INFO,
+                  format="%(asctime)s %(levelname)s %(message)s",
+                  datefmt="%H:%M:%S",
+              )
+              log = logging.getLogger("niri-late-rules")
+
+
+              def wait_for_niri(timeout=30):
+                  deadline = time.monotonic() + timeout
+                  attempt = 0
+                  while time.monotonic() < deadline:
+                      attempt += 1
+                      result = subprocess.run(
+                          [NIRI, "msg", "--json", "outputs"],
+                          capture_output=True, text=True,
+                      )
+                      if result.returncode == 0:
+                          try:
+                              outputs = json.loads(result.stdout)
+                              if len(outputs) > 0:
+                                  log.info(
+                                      "niri ready after %d attempt(s):"
+                                      " %d output(s) confirmed",
+                                      attempt, len(outputs),
+                                  )
+                                  return True
+                          except json.JSONDecodeError:
+                              pass
+                      log.info(
+                          "waiting for niri (attempt %d, %.0fs remaining)",
+                          attempt, deadline - time.monotonic(),
+                      )
+                      time.sleep(1)
+                  return False
+
+
+              def load_rules():
+                  with open("${lateRulesJson}") as f:
+                      return json.load(f)
+
+
+              def matches(rule, app_id, title):
+                  m = rule["match"]
+                  mid = m.get("app-id")
+                  mtitle = m.get("title")
+                  if mid is None and mtitle is None:
+                      return False
+                  if mid is not None and mid != app_id:
+                      return False
+                  if mtitle is not None and mtitle != title:
+                      return False
+                  return True
+
+
+              def niri_action(app_id, title, *args):
+                  cmd = [NIRI, "msg", "action", *args]
+                  log.info(
+                      "  niri cmd: %s (window: app-id=%s title=%s)",
+                      " ".join(args), app_id, title,
+                  )
+                  result = subprocess.run(cmd, capture_output=True, text=True)
+                  if result.returncode != 0:
+                      log.warning(
+                          "  niri cmd failed: %s", result.stderr.strip(),
+                      )
+
+
+              def apply_rule(rule, wid, app_id, title):
+                  a = rule["apply"]
+                  m = rule["match"]
+                  log.info(
+                      "matched rule (app-id=%s title=%s) on window %d"
+                      " (app-id=%s title=%s)",
+                      m.get("app-id"), m.get("title"), wid, app_id, title,
+                  )
+                  wid_s = str(wid)
+                  if a.get("float") is True:
+                      niri_action(
+                          app_id, title,
+                          "move-window-to-floating", "--id", wid_s,
+                      )
+                  if a.get("workspace"):
+                      niri_action(
+                          app_id, title,
+                          "move-window-to-workspace",
+                          "--window-id", wid_s,
+                          "--focus", "false",
+                          a["workspace"],
+                      )
+                  if a.get("width"):
+                      niri_action(
+                          app_id, title,
+                          "set-window-width", "--id", wid_s, a["width"],
+                      )
+                  if a.get("height"):
+                      niri_action(
+                          app_id, title,
+                          "set-window-height", "--id", wid_s, a["height"],
+                      )
+                  if a.get("focus") is True:
+                      niri_action(
+                          app_id, title,
+                          "focus-window", "--id", wid_s,
+                      )
+
+
+              def mark_existing(rules, handled):
+                  result = subprocess.run(
+                      [NIRI, "msg", "--json", "windows"],
+                      capture_output=True, text=True,
+                  )
+                  if result.returncode != 0:
+                      log.warning("failed to list existing windows")
+                      return
+                  for win in json.loads(result.stdout):
+                      wid = win["id"]
+                      app_id = win.get("app_id", "")
+                      title = win.get("title", "")
+                      for rule in rules:
+                          if matches(rule, app_id, title):
+                              handled.add(wid)
+                              log.info(
+                                  "marked existing window %d (app-id=%s title=%s)"
+                                  " as handled",
+                                  wid, app_id, title,
+                              )
+                              break
+
+
+              def main():
+                  rules = load_rules()
+                  log.info("started with %d late window rule(s)", len(rules))
+
+                  if not wait_for_niri():
+                      log.error("niri not ready after 30s, exiting")
+                      sys.exit(1)
+
+                  handled = set()
+                  mark_existing(rules, handled)
+
+                  proc = subprocess.Popen(
+                      [NIRI, "msg", "--json", "event-stream"],
+                      stdout=subprocess.PIPE,
+                      text=True,
+                  )
+
+                  for line in proc.stdout:
+                      try:
+                          event = json.loads(line)
+                      except json.JSONDecodeError:
+                          continue
+
+                      if "WindowOpenedOrChanged" in event:
+                          win = event["WindowOpenedOrChanged"]["window"]
+                          wid = win["id"]
+                          if wid in handled:
+                              continue
+                          app_id = win.get("app_id", "")
+                          title = win.get("title", "")
+                          for rule in rules:
+                              if matches(rule, app_id, title):
+                                  apply_rule(rule, wid, app_id, title)
+                                  handled.add(wid)
+                                  break
+
+                      elif "WindowClosed" in event:
+                          wid = event["WindowClosed"]["id"]
+                          handled.discard(wid)
+
+                  log.error("event stream ended unexpectedly")
+                  sys.exit(1)
+
+
+              if __name__ == "__main__":
+                  main()
+            '';
 
         mainDisplay = self.host.displays.main or self.user.displays.main or null;
         secondaryDisplay = self.host.displays.secondary or self.user.displays.secondary or null;
@@ -774,7 +1017,26 @@ args@{
                   After = [ "niri.service" ];
                 };
               };
+            }
+        // lib.optionalAttrs hasLateRules {
+          "niri-late-rules" = {
+            Unit = {
+              Description = "Niri late window rules";
+              PartOf = [ "graphical-session.target" ];
+              After = [ "graphical-session.target" ];
+              StartLimitIntervalSec = 0;
             };
+            Service = {
+              ExecStart = "${lateRulesScript}";
+              Restart = "always";
+              RestartSec = "2s";
+              Type = "simple";
+            };
+            Install = {
+              WantedBy = [ "graphical-session.target" ];
+            };
+          };
+        };
 
         programs.niri = {
           package = pkgs.niri;
@@ -1592,7 +1854,23 @@ args@{
                   proportion = 0.5;
                 };
               }
-            ];
+            ]
+            ++ (map (
+              rule:
+              let
+                m = rule.match;
+                a = rule.apply;
+                matchAttrs = lib.filterAttrs (_: v: v != null) {
+                  inherit (m) app-id title;
+                };
+              in
+              {
+                matches = [ matchAttrs ];
+              }
+              // lib.optionalAttrs (a.float == true) { open-floating = true; }
+              // lib.optionalAttrs (a.workspace != null) { open-on-workspace = a.workspace; }
+              // lib.optionalAttrs (a.focus != true) { open-focused = false; }
+            ) (lib.filter (r: !r.skipStaticRule) lateRules));
           };
         };
       };
