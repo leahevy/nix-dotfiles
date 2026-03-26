@@ -260,6 +260,9 @@ args@{
       "Unable to replace properties on [0-9]+: Error getting properties for ID"
       "Children but no menu.*children-display.*property"
       "GDBus\\.Error:org\\.freedesktop\\.DBus\\.Error\\.ServiceUnknown: The name is not activatable"
+      "dbus-.*org\\.kde\\.secretservicecompat.*Failed with result"
+      "dbus-.*org\\.kde\\.kwalletd6.*Failed with result"
+      "spa\\.bluez5\\.midi:.*RegisterApplication\\(\\) failed.*AlreadyExists"
     ];
     nvidiaStringsToIgnore = [
       "nvidia.*EDID checksum is invalid"
