@@ -73,16 +73,24 @@ args@{
           };
         };
 
-        systemd.services.greetd = lib.mkIf (isGnome || isKDE) {
-          serviceConfig = {
-            KeyringMode = lib.mkForce "inherit";
-            Restart = "always";
-            RestartSec = "1s";
-          };
-          unitConfig = {
-            StartLimitIntervalSec = 0;
-          };
-        };
+        systemd.services.greetd = lib.mkMerge [
+          {
+            serviceConfig = {
+              Restart = "always";
+              RestartSec = "1s";
+              RestartSteps = 5;
+              RestartMaxDelaySec = "30s";
+            };
+            unitConfig = {
+              StartLimitIntervalSec = 0;
+            };
+          }
+          (lib.mkIf (isGnome || isKDE) {
+            serviceConfig = {
+              KeyringMode = lib.mkForce "inherit";
+            };
+          })
+        ];
 
         services.displayManager.gdm.enable = lib.mkForce false;
         services.xserver.displayManager.lightdm.enable = lib.mkForce false;
