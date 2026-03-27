@@ -1853,6 +1853,11 @@ args@{
                 default-column-width = {
                   proportion = 0.5;
                 };
+                default-window-height = {
+                  proportion = 0.9;
+                };
+                open-floating = true;
+                open-focused = true;
               }
             ]
             ++ (map (
