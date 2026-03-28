@@ -15,6 +15,17 @@ args@{
   input = "linux";
 
   on = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          tag = "fuzzel-original";
+          string = "fuzzel: .*: failed to acquire lock: fuzzel already running\\?";
+          user = true;
+          unitless = true;
+        }
+      ];
+    };
+
     linux.init =
       config:
       let
