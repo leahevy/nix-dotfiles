@@ -27,10 +27,10 @@ in
         LC_MEASUREMENT = host.settings.system.locale.extra;
         LC_MONETARY = host.settings.system.locale.extra;
         LC_NAME = host.settings.system.locale.extra;
-        LC_NUMERIC = host.settings.system.locale.extra;
+        LC_NUMERIC = host.settings.system.locale.main;
         LC_PAPER = host.settings.system.locale.extra;
         LC_TELEPHONE = host.settings.system.locale.extra;
-        LC_TIME = host.settings.system.locale.extra;
+        LC_TIME = host.settings.system.locale.main;
       };
     };
   };
