@@ -394,6 +394,7 @@ args@{
             After = [
               "graphical-session.target"
               "nx-swaybg.service"
+              "nx-nwg-wrapper-1.service"
             ];
             StartLimitIntervalSec = 0;
           };
@@ -417,6 +418,7 @@ args@{
             After = [
               "graphical-session.target"
               "nx-swaybg.service"
+              "nx-nwg-wrapper-2.service"
             ];
             StartLimitIntervalSec = 0;
           };
