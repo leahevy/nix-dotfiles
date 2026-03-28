@@ -46,6 +46,30 @@ args@{
   ];
 
   on = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        { string = "CreateDevice failed: org\\.freedesktop\\.DBus\\.Error\\.ServiceUnknown"; }
+        { string = "CreateProfile failed: org\\.freedesktop\\.DBus\\.Error\\.ServiceUnknown"; }
+        { string = "The printer .* does not support requests with attribute set"; }
+        {
+          string = "Stopping 'cups\\.service', but its triggering units are still active";
+          unitless = true;
+        }
+        { string = "\\[Client [0-9]+\\] Returning IPP server-error-device-error for.*from localhost\\."; }
+        { string = "No limit for .* defined in policy default"; }
+        { string = "No JobPrivateAccess defined in policy default"; }
+        { string = "No JobPrivateValues defined in policy default"; }
+        { string = "No SubscriptionPrivateAccess defined in policy default"; }
+        { string = "No SubscriptionPrivateValues defined in policy default"; }
+        { string = "Notifier for subscription .* went away, retrying"; }
+        { string = "Raw queues are deprecated and will stop working in a future version of CUPS\\."; }
+        {
+          string = "^cups\\.socket$";
+          unitless = true;
+        }
+      ];
+    };
+
     linux.system = config: {
       services.avahi = lib.mkIf self.settings.withAvahi {
         enable = true;

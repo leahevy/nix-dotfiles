@@ -18,6 +18,15 @@ args@{
   };
 
   on = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          tag = "sudo";
+          all = true;
+        }
+      ];
+    };
+
     system = config: {
       security.sudo.extraConfig = ''
         Defaults lecture = never

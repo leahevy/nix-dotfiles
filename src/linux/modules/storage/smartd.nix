@@ -25,6 +25,12 @@ args@{
   };
 
   on = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        { service = "smartd.service"; }
+      ];
+    };
+
     system =
       config:
       let

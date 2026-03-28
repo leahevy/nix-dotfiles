@@ -32,6 +32,15 @@ args@{
   };
 
   on = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          string = "Process [0-9]+ \\(bongocat\\) of user [0-9]+ dumped core";
+          kernel = true;
+        }
+      ];
+    };
+
     home =
       config:
       let

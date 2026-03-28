@@ -18,6 +18,23 @@ rec {
   unfree = [ "aic8800" ];
 
   on = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          string = "aic_bluetooth_mod_init";
+          kernel = true;
+        }
+        {
+          string = "AICWFDBG\\(LOGINFO\\)";
+          kernel = true;
+        }
+        {
+          string = "RELEASE DATE:";
+          kernel = true;
+        }
+      ];
+    };
+
     system =
       config:
       let

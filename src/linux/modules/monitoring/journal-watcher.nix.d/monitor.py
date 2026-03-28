@@ -1,0 +1,819 @@
+#!/usr/bin/env python3
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from hashlib import sha256
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+STATS_INTERVAL = 10 * 60
+
+
+class Stats:
+    def __init__(self) -> None:
+        self.total = 0
+        self.ignored = 0
+        self.highlighted = 0
+        self.user_notify = 0
+        self.pushover = 0
+        self.rate_limited = 0
+        self.last_log_time = time.time()
+
+    def maybe_log(self, cfg: Dict[str, Any]) -> None:
+        now = time.time()
+        if now - self.last_log_time < STATS_INTERVAL:
+            return
+        elapsed = int(now - self.last_log_time)
+        pct_ignored = int(self.ignored / self.total * 100) if self.total else 0
+        parts = [
+            f"Stats (last {elapsed}s):",
+            f"total={self.total}",
+            f"ignored={self.ignored} ({pct_ignored}%)",
+            f"sent_user={self.user_notify}",
+        ]
+        if cfg["pushover_enabled"]:
+            parts.append(f"pushover={self.pushover}")
+        if self.highlighted:
+            parts.append(f"highlighted={self.highlighted}")
+        if self.rate_limited:
+            parts.append(f"rate_limited={self.rate_limited}")
+        print(" ".join(parts), flush=True)
+        self.total = 0
+        self.ignored = 0
+        self.highlighted = 0
+        self.user_notify = 0
+        self.pushover = 0
+        self.rate_limited = 0
+        self.last_log_time = now
+
+
+SERVICE_EXTRACT_RE = re.compile(
+    r"^([a-zA-Z0-9_-]+\."
+    r"(service|timer|socket|target|mount|path|slice|scope|device|swap))"
+    r":(.*)$"
+)
+
+
+class PatternMatcher:
+    def __init__(self, patterns: List[Dict[str, Any]], main_user_uid: int):
+        self.main_user_uid = main_user_uid
+        self.user_unit = f"user@{main_user_uid}.service"
+
+        self.service_only_re = None
+        self.tag_only_re = None
+        self.string_only_re = None
+        self.kernel_string_only_re = None
+        self.unitless_string_only_re = None
+        self.user_string_only_re = None
+
+        self.compound: List[Dict[str, Any]] = []
+        self.grouped: List[Dict[str, Any]] = []
+
+        service_only = []
+        tag_only = []
+        string_only = []
+        kernel_string_only = []
+        unitless_string_only = []
+        user_string_only = []
+        grouped_collect: Dict[Tuple, List[Dict[str, str]]] = {}
+
+        for pat in patterns:
+            service = pat.get("service")
+            tag = pat.get("tag")
+            string = pat.get("string")
+            is_user = pat.get("user", False)
+            is_kernel = pat.get("kernel", False)
+            is_unitless = pat.get("unitless", False)
+
+            has_service = service is not None
+            has_tag = tag is not None
+            has_string = string is not None
+            field_count = sum([has_service, has_tag, has_string])
+
+            if field_count == 0:
+                continue
+
+            if field_count >= 2 and has_string and string is not None:
+                key = (
+                    service or "",
+                    tag or "",
+                    is_user,
+                    is_kernel,
+                    is_unitless,
+                )
+                if key not in grouped_collect:
+                    grouped_collect[key] = []
+                grouped_collect[key].append({
+                    "string": string,
+                    "label": pat.get("label", ""),
+                    "title": pat.get("title", ""),
+                })
+                continue
+
+            if pat.get("label"):
+                self._add_compound(pat)
+                continue
+
+            if field_count == 1 and not is_user:
+                if (
+                    has_service
+                    and not is_kernel
+                    and not is_unitless
+                    and service is not None
+                ):
+                    service_only.append(re.escape(service))
+                elif has_tag and not is_kernel and not is_unitless and tag is not None:
+                    tag_only.append(re.escape(tag))
+                elif has_string:
+                    if is_kernel:
+                        kernel_string_only.append(string)
+                    elif is_unitless:
+                        unitless_string_only.append(string)
+                    else:
+                        string_only.append(string)
+                else:
+                    self._add_compound(pat)
+            elif field_count == 1 and is_user and has_string and not is_unitless:
+                user_string_only.append(string)
+            else:
+                self._add_compound(pat)
+
+        if service_only:
+            self.service_only_re = re.compile("|".join(f"({p})" for p in service_only))
+        if tag_only:
+            self.tag_only_re = re.compile("|".join(f"({p})" for p in tag_only))
+        if string_only:
+            self.string_only_re = re.compile("|".join(f"({p})" for p in string_only))
+        if kernel_string_only:
+            self.kernel_string_only_re = re.compile(
+                "|".join(f"({p})" for p in kernel_string_only)
+            )
+        if unitless_string_only:
+            self.unitless_string_only_re = re.compile(
+                "|".join(f"({p})" for p in unitless_string_only)
+            )
+        if user_string_only:
+            self.user_string_only_re = re.compile(
+                "|".join(f"({p})" for p in user_string_only)
+            )
+
+        for key, entries in grouped_collect.items():
+            service_val, tag_val, is_user, is_kernel, is_unitless = key
+            has_labels = any(e["label"] or e["title"] for e in entries)
+            if has_labels:
+                parts = []
+                labels = []
+                for i, e in enumerate(entries):
+                    parts.append(f"(?P<g{len(self.grouped)}_{i}>{e['string']})")
+                    labels.append((e["label"], e["title"]))
+                string_re = re.compile("|".join(parts))
+            else:
+                string_re = re.compile("|".join(f"({e['string']})" for e in entries))
+                labels = None
+            entry: Dict[str, Any] = {
+                "user": is_user,
+                "kernel": is_kernel,
+                "unitless": is_unitless,
+                "string_re": string_re,
+                "labels": labels,
+            }
+            if service_val:
+                entry["service"] = re.compile(re.escape(service_val))
+            if tag_val:
+                entry["tag"] = re.compile(re.escape(tag_val))
+            self.grouped.append(entry)
+
+    def _add_compound(self, pat: Dict[str, Any]):
+        compiled = {
+            "user": pat.get("user", False),
+            "kernel": pat.get("kernel", False),
+            "unitless": pat.get("unitless", False),
+            "label": pat.get("label", ""),
+            "title": pat.get("title", ""),
+        }
+        if pat.get("service"):
+            compiled["service"] = re.compile(re.escape(pat["service"]))
+        if pat.get("tag"):
+            compiled["tag"] = re.compile(re.escape(pat["tag"]))
+        if pat.get("string"):
+            compiled["string"] = re.compile(pat["string"])
+        self.compound.append(compiled)
+
+    def _extract_inner_service(self, message: str) -> Optional[str]:
+        m = SERVICE_EXTRACT_RE.match(message)
+        if m:
+            return m.group(1)
+        return None
+
+    def _match_impl(
+        self, unit: str, tag: str, message: str, transport: str
+    ) -> Optional[Tuple[str, str]]:
+        is_kernel = transport == "kernel"
+        has_unit = bool(unit)
+        is_user_unit = unit == self.user_unit
+
+        inner_service = None
+        if is_user_unit and message:
+            inner_service = self._extract_inner_service(message)
+
+        if has_unit and not is_kernel:
+            if self.service_only_re and unit and self.service_only_re.search(unit):
+                return ("", "")
+
+        if has_unit and not is_kernel and not is_user_unit:
+            if self.tag_only_re and tag and self.tag_only_re.search(tag):
+                return ("", "")
+
+        if has_unit and not is_kernel and not is_user_unit:
+            if self.string_only_re and message and self.string_only_re.search(message):
+                return ("", "")
+
+        if is_kernel:
+            if (
+                self.kernel_string_only_re
+                and message
+                and self.kernel_string_only_re.search(message)
+            ):
+                return ("", "")
+
+        if not has_unit and not is_kernel:
+            if (
+                self.unitless_string_only_re
+                and message
+                and self.unitless_string_only_re.search(message)
+            ):
+                return ("", "")
+
+        if is_user_unit:
+            if (
+                self.user_string_only_re
+                and message
+                and self.user_string_only_re.search(message)
+            ):
+                return ("", "")
+
+        for grp in self.grouped:
+            grp_kernel = grp["kernel"]
+            grp_unitless = grp["unitless"]
+            grp_user = grp["user"]
+
+            if grp_kernel and not is_kernel:
+                continue
+            if not grp_kernel and is_kernel:
+                continue
+            if grp_unitless:
+                if grp_user:
+                    if not is_user_unit or inner_service is not None:
+                        continue
+                else:
+                    if has_unit or is_kernel:
+                        continue
+            if grp_user and not grp_unitless and not is_user_unit:
+                continue
+            if not grp_kernel and not grp_unitless and not grp_user and not has_unit:
+                continue
+
+            all_match = True
+            if "service" in grp:
+                if grp_user:
+                    if not (inner_service and grp["service"].search(inner_service)):
+                        all_match = False
+                else:
+                    if not (unit and grp["service"].search(unit)):
+                        all_match = False
+            if "tag" in grp:
+                if not (tag and grp["tag"].search(tag)):
+                    all_match = False
+            if all_match and message:
+                m = grp["string_re"].search(message)
+                if m:
+                    labels = grp["labels"]
+                    if labels is None:
+                        return ("", "")
+                    idx = int(m.lastgroup.split("_", 1)[1])
+                    return labels[idx]
+
+        for pat in self.compound:
+            pat_kernel = pat["kernel"]
+            pat_unitless = pat["unitless"]
+            pat_user = pat["user"]
+
+            if pat_kernel and not is_kernel:
+                continue
+            if not pat_kernel and is_kernel:
+                continue
+            if pat_unitless:
+                if pat_user:
+                    if not is_user_unit or inner_service is not None:
+                        continue
+                else:
+                    if has_unit or is_kernel:
+                        continue
+            if pat_user and not pat_unitless and not is_user_unit:
+                continue
+            if not pat_kernel and not pat_unitless and not pat_user and not has_unit:
+                continue
+
+            all_match = True
+            if "service" in pat:
+                if pat_user:
+                    if not (inner_service and pat["service"].search(inner_service)):
+                        all_match = False
+                else:
+                    if not (unit and pat["service"].search(unit)):
+                        all_match = False
+            if "tag" in pat:
+                if not (tag and pat["tag"].search(tag)):
+                    all_match = False
+            if "string" in pat:
+                if not (message and pat["string"].search(message)):
+                    all_match = False
+            if all_match:
+                return (pat["label"], pat["title"])
+
+        return None
+
+    def matches(self, unit: str, tag: str, message: str, transport: str) -> bool:
+        return self._match_impl(unit, tag, message, transport) is not None
+
+    def match_highlight(
+        self, unit: str, tag: str, message: str, transport: str
+    ) -> Optional[Tuple[str, str]]:
+        return self._match_impl(unit, tag, message, transport)
+
+
+def to_string(value, default=""):
+    if isinstance(value, list):
+        if not value:
+            return default
+        if all(isinstance(x, int) and 0 <= x <= 255 for x in value):
+            try:
+                return bytes(value).decode("utf-8", errors="replace")
+            except Exception:
+                return str(value[0])
+        else:
+            return str(value[0])
+    elif value is None:
+        return default
+    else:
+        return str(value)
+
+
+def setup_directories(cfg: Dict[str, Any]):
+    try:
+        os.makedirs(cfg["state_dir"], exist_ok=True)
+        os.makedirs(cfg["rate_limit_state_dir"], exist_ok=True)
+    except (OSError, PermissionError) as e:
+        print(f"Failed to create directories: {e}", file=sys.stderr, flush=True)
+        sys.exit(1)
+
+
+def cleanup_old_rate_limits(cfg: Dict[str, Any]):
+    current_time = int(time.time())
+    cleaned_up = False
+    rate_limit_path = Path(cfg["rate_limit_state_dir"])
+    if not rate_limit_path.exists():
+        return
+    for file_path in rate_limit_path.iterdir():
+        if file_path.is_file():
+            try:
+                stored_data = file_path.read_text().strip()
+                if ":" in stored_data:
+                    _, stored_time_str = stored_data.split(":", 1)
+                    stored_time = int(stored_time_str)
+                    if current_time - stored_time > (2 * 60 * 60):
+                        file_path.unlink()
+                        cleaned_up = True
+            except (ValueError, IOError):
+                continue
+    if cleaned_up:
+        print("Cleaned up old rate limit files.", flush=True)
+
+
+def check_rate_limit(cfg: Dict[str, Any], service_unit: str) -> bool:
+    cleanup_old_rate_limits(cfg)
+    service_file = re.sub(r"[^a-zA-Z0-9_-]", "_", service_unit)
+    if not service_file:
+        service_file = "unknown"
+    rate_limit_file = Path(cfg["rate_limit_state_dir"]) / service_file
+    current_time = int(time.time())
+    current_hour = current_time // 3600
+    rate_limit = (
+        cfg["rate_limit_per_hour_unknown"]
+        if service_file == "unknown"
+        else cfg["rate_limit_per_hour"]
+    )
+    if rate_limit_file.exists():
+        try:
+            stored_data = rate_limit_file.read_text().strip()
+            stored_count_str, stored_time_str = stored_data.split(":", 1)
+            stored_count = int(stored_count_str)
+            stored_hour = int(stored_time_str) // 3600
+            if stored_hour == current_hour:
+                if stored_count >= rate_limit:
+                    return False
+                else:
+                    rate_limit_file.write_text(f"{stored_count + 1}:{current_time}")
+                    return True
+            else:
+                rate_limit_file.write_text(f"1:{current_time}")
+                return True
+        except (ValueError, IOError):
+            rate_limit_file.write_text(f"1:{current_time}")
+            return True
+    else:
+        rate_limit_file.write_text(f"1:{current_time}")
+        return True
+
+
+def check_message_rate_limit(
+    cfg: Dict[str, Any], service_unit: str, message: str
+) -> bool:
+    message_key = f"{service_unit}:{message}"
+    message_hash = sha256(message_key.encode()).hexdigest()
+    current_time = int(time.time())
+    rate_limit_seconds = cfg["message_rate_limit_minutes"] * 60
+    message_hashes_path = Path(cfg["message_hashes_file"])
+    valid_hashes = []
+    if message_hashes_path.exists():
+        try:
+            for line in message_hashes_path.read_text().splitlines():
+                if ":" in line:
+                    stored_hash, stored_time_str = line.split(":", 1)
+                    try:
+                        stored_time = int(stored_time_str)
+                        if current_time - stored_time < rate_limit_seconds:
+                            valid_hashes.append(line)
+                            if stored_hash == message_hash:
+                                return False
+                        else:
+                            print(
+                                f"Message rate limit expired for message: ({service_unit}) {message}",
+                                flush=True,
+                            )
+                    except ValueError:
+                        continue
+        except IOError:
+            pass
+    valid_hashes.append(f"{message_hash}:{current_time}")
+    try:
+        message_hashes_path.write_text("\n".join(valid_hashes) + "\n")
+    except IOError:
+        pass
+    return True
+
+
+def build_message_context(
+    json_data: Dict[str, Any], main_user_uid: int
+) -> Optional[Dict[str, Any]]:
+    is_inner_user_service = False
+    priority = to_string(json_data.get("PRIORITY", "6"), "6")
+    message = to_string(json_data.get("MESSAGE"))
+    unit = to_string(json_data.get("_SYSTEMD_UNIT", "unknown"), "unknown")
+    tag = to_string(json_data.get("SYSLOG_IDENTIFIER", "system"), "system")
+
+    is_user_unit = unit == f"user@{main_user_uid}.service"
+    is_unknown_unit = unit == "unknown"
+
+    if is_user_unit or is_unknown_unit:
+        match = SERVICE_EXTRACT_RE.match(message)
+        if match:
+            is_inner_user_service = True
+            unit = match.group(1)
+            message = match.group(3).strip()
+
+    if not message:
+        return None
+
+    transport = to_string(json_data.get("_TRANSPORT"))
+    is_kernel = transport == "kernel"
+    has_no_unit = is_unknown_unit and not is_inner_user_service
+
+    pattern_info: Dict[str, Any] = {
+        "string": message,
+        "service": unit,
+        "tag": tag,
+        "priority": int(priority),
+    }
+    if is_inner_user_service:
+        pattern_info["user"] = True
+    if is_kernel:
+        pattern_info["kernel"] = True
+    elif has_no_unit:
+        pattern_info["unitless"] = True
+    elif is_user_unit and not is_inner_user_service:
+        pattern_info["service"] = None
+        pattern_info["user"] = True
+        pattern_info["unitless"] = True
+
+    return {
+        "pattern_info": pattern_info,
+        "message": message,
+        "unit": unit,
+        "tag": tag,
+        "priority": int(priority),
+        "is_inner_user_service": is_inner_user_service,
+        "is_user_unit": is_user_unit,
+        "is_kernel": is_kernel,
+        "has_no_unit": has_no_unit,
+    }
+
+
+def filter_message(
+    json_data: Dict[str, Any],
+    ignore_matcher: PatternMatcher,
+    highlight_matcher: PatternMatcher,
+) -> Tuple[bool, bool, Optional[Tuple[str, str]]]:
+    unit = to_string(json_data.get("_SYSTEMD_UNIT"))
+    tag = to_string(json_data.get("SYSLOG_IDENTIFIER"))
+    message = to_string(json_data.get("MESSAGE"))
+    transport = to_string(json_data.get("_TRANSPORT"))
+    priority = int(to_string(json_data.get("PRIORITY", "6"), "6"))
+
+    ignored = ignore_matcher.matches(unit, tag, message, transport)
+    highlight_info = highlight_matcher.match_highlight(unit, tag, message, transport)
+    highlighted = highlight_info is not None
+
+    if highlighted:
+        ignored = False
+
+    if not ignored and priority > 4 and not highlighted:
+        ignored = True
+
+    return ignored, highlighted, highlight_info
+
+
+def process_message(
+    cfg: Dict[str, Any],
+    json_data: Dict[str, Any],
+    highlighted: bool,
+    highlight_info: Optional[Tuple[str, str]],
+    stats: Stats,
+):
+    try:
+        ctx = build_message_context(json_data, cfg["main_user_uid"])
+        if ctx is None:
+            return
+
+        message = ctx["message"]
+        unit = ctx["unit"]
+        tag = ctx["tag"]
+        priority = ctx["priority"]
+        is_inner_user_service = ctx["is_inner_user_service"]
+        is_user_unit = ctx["is_user_unit"]
+        is_kernel = ctx["is_kernel"]
+        has_no_unit = ctx["has_no_unit"]
+        pattern_info = ctx["pattern_info"]
+
+        if not check_message_rate_limit(cfg, unit, message):
+            print(
+                f"Ignore notification <rate limited> ({tag}/{unit}): {message}",
+                flush=True,
+            )
+            stats.rate_limited += 1
+            return
+
+        hl_marker = " [highlighted]" if highlighted else ""
+        print(
+            f"Send notification{hl_marker} pattern: {json.dumps(pattern_info)}",
+            flush=True,
+        )
+
+        priority_map = {
+            "0": "emerg",
+            "1": "emerg",
+            "2": "emerg",
+            "3": "failed",
+            "4": "warn",
+        }
+        notify_type = priority_map.get(priority, "info")
+
+        icon_map_system = {
+            "emerg": "dialog-error",
+            "failed": "computer-fail",
+            "warn": "dialog-warning",
+            "info": "dialog-information",
+        }
+
+        icon_map_user = {
+            "emerg": "dialog-error",
+            "failed": "computer-fail",
+            "warn": "dialog-warning",
+            "info": "avatar-default",
+        }
+
+        priority_titles = {
+            "emerg": "Emergency",
+            "failed": "Failed",
+            "warn": "Warning",
+            "info": "Info",
+        }
+
+        icon = (
+            icon_map_user.get(notify_type, "avatar-default")
+            if is_user_unit
+            else icon_map_system.get(notify_type, "dialog-information")
+        )
+        priority_title = priority_titles.get(notify_type, "Info")
+
+        highlight_label = highlight_info[0] if highlight_info else ""
+        highlight_title = highlight_info[1] if highlight_info else ""
+
+        if highlight_title:
+            suffix = highlight_title
+        elif is_inner_user_service or (
+            unit != "unknown" and not is_user_unit and not is_kernel
+        ):
+            suffix = unit
+        elif tag:
+            suffix = tag[0].upper() + tag[1:]
+        else:
+            suffix = "Journal Message"
+
+        if highlight_label:
+            bracket = f"[{highlight_label}]"
+        elif is_kernel:
+            bracket = "[Kernel]"
+        elif is_user_unit or is_inner_user_service:
+            bracket = "[User]"
+        else:
+            bracket = "[NixOS]"
+
+        title = f"{bracket} {suffix}"
+
+        title_text_pushover = title
+        title_text_user = f"{title}|{icon}"
+        tag_suffix = tag[0].upper() + tag[1:] if tag else None
+        message_text_pushover = (
+            f"{message} ({tag})" if (tag and suffix != tag_suffix) else message
+        )
+        message_text_user = (
+            f"{message} <b>({tag})</b>" if (tag and suffix != tag_suffix) else message
+        )
+
+        if cfg["user_notify_enabled"] and not cfg["debug_enabled"]:
+            try:
+                subprocess.run(
+                    [
+                        cfg["logger_bin"],
+                        "-p",
+                        "user.warning",
+                        "-t",
+                        "nx-user-notify",
+                        f"{title_text_user}: {message_text_user}",
+                    ],
+                    check=False,
+                    timeout=30,
+                )
+                stats.user_notify += 1
+            except (subprocess.TimeoutExpired, OSError) as e:
+                print(
+                    f"Failed to send user notification: {e}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        if cfg["pushover_enabled"] and not cfg["debug_enabled"]:
+            should_send_pushover = True
+
+            if is_user_unit and cfg["ignore_user_services_for_pushover"]:
+                if is_inner_user_service or not highlighted:
+                    should_send_pushover = False
+
+            if should_send_pushover and (highlighted or check_rate_limit(cfg, unit)):
+                pushover_cmd = list(cfg["pushover_cmd"])
+                pushover_cmd = [
+                    s.format(
+                        title_text_pushover=title_text_pushover,
+                        message_text_pushover=message_text_pushover,
+                        notify_type=notify_type,
+                    )
+                    for s in pushover_cmd
+                ]
+                try:
+                    result = subprocess.run(pushover_cmd, check=False, timeout=30)
+                    if result.returncode == 0:
+                        stats.pushover += 1
+                    else:
+                        err_msg = f"pushover-send exited with code {result.returncode}"
+                        print(
+                            f"Failed to send pushover notification: {err_msg}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
+                        if cfg["user_notify_enabled"]:
+                            subprocess.run(
+                                [
+                                    cfg["logger_bin"],
+                                    "-p",
+                                    "user.err",
+                                    "-t",
+                                    "nx-user-notify",
+                                    f"Pushover Error|dialog-error: {err_msg}",
+                                ],
+                                check=False,
+                                timeout=10,
+                            )
+                except (subprocess.TimeoutExpired, OSError) as e:
+                    print(
+                        f"Failed to send pushover notification: {e}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    if cfg["user_notify_enabled"]:
+                        subprocess.run(
+                            [
+                                cfg["logger_bin"],
+                                "-p",
+                                "user.err",
+                                "-t",
+                                "nx-user-notify",
+                                f"Pushover Error|dialog-error: {e}",
+                            ],
+                            check=False,
+                            timeout=10,
+                        )
+    except Exception as e:
+        print(f"Error processing message: {e}", file=sys.stderr, flush=True)
+
+
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: monitor.py <config.json>", file=sys.stderr, flush=True)
+        sys.exit(1)
+
+    with open(sys.argv[1]) as f:
+        cfg = json.load(f)
+
+    setup_directories(cfg)
+
+    ignore_matcher = PatternMatcher(cfg["ignore_patterns"], cfg["main_user_uid"])
+    highlight_matcher = PatternMatcher(cfg["highlight_patterns"], cfg["main_user_uid"])
+    stats = Stats()
+
+    cmd = [
+        cfg["journalctl_bin"],
+        "-f",
+        "-p",
+        "debug",
+        "--output=json",
+        f"--cursor-file={cfg['cursor_file']}",
+    ]
+
+    parts = [
+        "Starting journal watcher",
+        f"ignore_patterns={len(cfg['ignore_patterns'])}",
+        f"highlight_patterns={len(cfg['highlight_patterns'])}",
+        f"debug={cfg['debug_enabled']}",
+        f"dev={cfg['dev_enabled']}",
+        f"user_notify={cfg['user_notify_enabled']}",
+        f"pushover={cfg['pushover_enabled']}",
+        f"rate_limit={cfg['rate_limit_per_hour']}/h",
+        f"dedup={cfg['message_rate_limit_minutes']}min",
+    ]
+    print(" ".join(parts), flush=True)
+    try:
+        with subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
+        ) as proc:
+            for line in proc.stdout:
+                line = line.strip()
+                if line:
+                    try:
+                        json_data = json.loads(line)
+                        ignored, highlighted, highlight_info = filter_message(
+                            json_data, ignore_matcher, highlight_matcher
+                        )
+                        stats.total += 1
+                        if ignored:
+                            stats.ignored += 1
+                            if cfg["dev_enabled"]:
+                                ctx = build_message_context(
+                                    json_data, cfg["main_user_uid"]
+                                )
+                                if ctx and ctx["unit"] != "nx-journal-watcher.service":
+                                    print(
+                                        f"Ignore pattern: {json.dumps(ctx['pattern_info'])}",
+                                        flush=True,
+                                    )
+                        else:
+                            if highlighted:
+                                stats.highlighted += 1
+                            process_message(
+                                cfg, json_data, highlighted, highlight_info, stats
+                            )
+                        stats.maybe_log(cfg)
+                    except json.JSONDecodeError:
+                        continue
+    except KeyboardInterrupt:
+        print("Journal watcher stopped.", flush=True)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr, flush=True)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

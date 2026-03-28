@@ -35,6 +35,55 @@ args@{
       };
     };
 
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          string = "nvidia.*EDID checksum is invalid";
+          kernel = true;
+        }
+        {
+          string = "nvidia.*invalid EDID header";
+          kernel = true;
+        }
+        {
+          string = "nvidia-modeset:.*Unable to read EDID for display device.*";
+          kernel = true;
+        }
+        {
+          string = "nvidia: module license 'NVIDIA' taints kernel";
+          kernel = true;
+        }
+        {
+          string = "nvidia: module license taints kernel";
+          kernel = true;
+        }
+        {
+          string = "Disabling lock debugging due to kernel taint";
+          kernel = true;
+        }
+        {
+          string = "NVRM: loading NVIDIA UNIX x86_64 Kernel Module";
+          kernel = true;
+        }
+        {
+          string = "nvidia_uvm: module uses symbols.*from proprietary module nvidia, inheriting taint";
+          kernel = true;
+        }
+        {
+          string = "NVRM: GPU at PCI:.*: GPU-.*";
+          kernel = true;
+        }
+        {
+          string = "NVRM: Xid \\(PCI:.*\\):.*";
+          kernel = true;
+        }
+        {
+          string = "Failed to allocate NVKMS memory for GEM object";
+          kernel = true;
+        }
+      ];
+    };
+
     linux.system = config: {
       hardware.nvidia = {
         powerManagement = lib.mkIf self.settings.withPowerManagement {

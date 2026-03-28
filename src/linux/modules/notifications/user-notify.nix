@@ -19,6 +19,15 @@ args@{
   };
 
   on = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          tag = "nx-user-notify";
+          all = true;
+        }
+      ];
+    };
+
     home =
       config:
       let

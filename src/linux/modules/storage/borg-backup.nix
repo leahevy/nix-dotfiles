@@ -63,6 +63,14 @@ args@{
   ];
 
   on = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        { service = "borgbackup-job-system.service"; }
+        { string = "borgbackup-job-system.service"; }
+        { string = "BorgBackup job system"; }
+      ];
+    };
+
     home =
       config:
       let

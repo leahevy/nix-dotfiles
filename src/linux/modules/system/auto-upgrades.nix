@@ -33,6 +33,16 @@ args@{
   };
 
   on = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        { service = "nx-auto-upgrade.service"; }
+        { string = "nx-auto-upgrade.service"; }
+        { string = "nx-auto-upgrade-delayed.service"; }
+        { string = "nx-auto-upgrade-notify.service"; }
+        { string = "NX Auto-Upgrade"; }
+      ];
+    };
+
     home =
       config:
       let

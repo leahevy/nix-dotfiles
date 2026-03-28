@@ -19,6 +19,115 @@ args@{
   };
 
   on = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          string = "spa\\.alsa:.*error pcm info.*No such device";
+          user = true;
+        }
+        {
+          string = "spa\\.alsa:.*error iterating devices.*No such device";
+          user = true;
+        }
+        {
+          string = "spa\\.alsa: Error opening low-level control device.*No such file or directory";
+          user = true;
+        }
+        {
+          string = "spa\\.alsa: can't open control for card.*No such file or directory";
+          user = true;
+        }
+        {
+          string = "spa\\.alsa:.*snd_pcm_start.*Broken pipe";
+          user = true;
+        }
+        {
+          string = "spa\\.alsa:.*snd_pcm_avail.*Broken pipe";
+          user = true;
+        }
+        {
+          string = "spa\\.alsa:.*snd_pcm_start.*File descriptor in bad state";
+          user = true;
+        }
+        {
+          string = "spa\\.alsa:.*snd_pcm_drop.*No such device";
+          user = true;
+        }
+        {
+          string = "spa\\.alsa:.*close failed.*No such device";
+          user = true;
+        }
+        {
+          string = "spa\\.alsa:.*playback open failed.*Device or resource busy";
+          user = true;
+        }
+        {
+          string = "spa\\.v4l2:.*VIDIOC_STREAMON: No space left on device";
+          user = true;
+        }
+        {
+          string = "spa\\.v4l2:.*Cannot open.*No such file or directory";
+          user = true;
+        }
+        {
+          string = "spa\\.bluez5\\.midi:.*RegisterApplication\\(\\) failed.*AlreadyExists";
+          user = true;
+        }
+        {
+          string = "pw\\.node:.*suspended -> error \\(Start error: Device or resource busy\\)";
+          user = true;
+        }
+        {
+          string = "pw\\.node:.*suspended -> error \\(Start error: No space left on device\\)";
+          user = true;
+        }
+        {
+          string = "pw\\.link:.*one of the nodes is in error";
+          user = true;
+        }
+        {
+          string = "pw\\.core: .* leaked proxy .* id:[0-9]+";
+          user = true;
+        }
+        {
+          string = "Caught PipeWire error: connection error";
+          user = true;
+        }
+        {
+          string = "wp-event-dispatcher: .*assertion.*already_registered_dispatcher.*failed";
+          user = true;
+        }
+        {
+          string = "Couldn't load pipewire.*library";
+          user = true;
+        }
+        {
+          string = "Couldn't resolve pipewire.*symbols";
+          user = true;
+        }
+        {
+          string = "kpipewire_vaapi_logging: VAAPI:.*";
+          user = true;
+        }
+        {
+          string = "The canary thread is apparently starving\\. Taking action\\.";
+          user = true;
+        }
+        {
+          string = "mod\\.protocol-pulse: client .* ERROR command:[0-9]+ \\(.*\\) tag:[0-9]+ error:[0-9]+ \\(.*\\)";
+          user = true;
+        }
+        {
+          string = "Realtime error: Could not get pidns for pid [0-9]+: Could not fstatat ns/pid: Not a directory";
+          user = true;
+        }
+        {
+          string = "Failed to get percentage from UPower";
+          user = true;
+        }
+      ];
+    };
+
     home =
       config:
       let
