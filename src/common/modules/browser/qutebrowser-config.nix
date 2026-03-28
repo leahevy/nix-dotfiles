@@ -1096,8 +1096,27 @@ args@{
                 ''
                   #!/usr/bin/env bash
 
-                  url=$(printf "%s\n%s" "${homeUrl}" "$(${pkgs.sqlite}/bin/sqlite3 -separator ' ' "$QUTE_DATA_DIR/history.sqlite" 'select title, url from CompletionHistory')" | cat "$QUTE_CONFIG_DIR/quickmarks" - | ${launcherCmd})
-                  url=$(echo "$url" | sed -E 's/[^ ]+ +//g' | grep -E "https?:" || echo "$url")
+                  history_domains=$(
+                    ${pkgs.sqlite}/bin/sqlite3 "$QUTE_DATA_DIR/history.sqlite" 'select url from CompletionHistory' \
+                      | grep -E '^https?://' \
+                      | sed -E 's|(https?://[^/?#]+).*|\1|' \
+                      | sort -u
+                  )
+
+                  bookmarks=$(awk '{print $1}' "$QUTE_CONFIG_DIR/quickmarks")
+
+                  selection=$(printf "%s\n%s\n%s" "${homeUrl}" "$bookmarks" "$history_domains" | ${launcherCmd})
+
+                  [ -z "''${selection// }" ] && exit
+
+                  case $selection in
+                    @*)
+                      url=$(awk -v name="$selection" '$1 == name {print $2; exit}' "$QUTE_CONFIG_DIR/quickmarks")
+                      ;;
+                    *)
+                      url=$selection
+                      ;;
+                  esac
 
                   [ -z "''${url// }" ] && exit
 
