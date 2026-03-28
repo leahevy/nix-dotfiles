@@ -97,34 +97,34 @@ args@{
           parse_message() {
               local message="$1"
               local priority="$2"
+              local title body icon urgency
 
-              if [[ "$message" =~ ^([^:]+):[[:space:]]*(.*)$ ]]; then
-                  local title_icon_part="''${BASH_REMATCH[1]}"
-                  local body="''${BASH_REMATCH[2]}"
-
-                  local title="$title_icon_part"
-                  local icon=""
-
-                  if [[ "$title_icon_part" == *"|"* ]]; then
-                      title="''${title_icon_part%|*}"
-                      icon="''${title_icon_part##*|}"
+              if [[ "$message" == *"|"* ]]; then
+                  title="''${message%%|*}"
+                  local rest="''${message#*|}"
+                  if [[ "$rest" =~ ^([^:]+):[[:space:]]*(.*)$ ]]; then
+                      icon="''${BASH_REMATCH[1]}"
+                      body="''${BASH_REMATCH[2]}"
+                  else
+                      icon=""
+                      body="$rest"
                   fi
-
-                  local urgency="normal"
-                  case "$priority" in
-                      0|1|2|3) urgency="critical" ;;
-                      *) urgency="normal" ;;
-                  esac
-
-                  notify "$urgency" "$title" "$body" "$icon"
+              elif [[ "$message" =~ ^([^:]+):[[:space:]]*(.*)$ ]]; then
+                  title="''${BASH_REMATCH[1]}"
+                  body="''${BASH_REMATCH[2]}"
+                  icon=""
               else
-                  local urgency="normal"
-                  case "$priority" in
-                      0|1|2|3) urgency="critical" ;;
-                      *) urgency="normal" ;;
-                  esac
-                  notify "$urgency" "System Message" "$message"
+                  title="System Message"
+                  body="$message"
+                  icon=""
               fi
+
+              urgency="normal"
+              case "$priority" in
+                  0|1|2|3) urgency="critical" ;;
+              esac
+
+              notify "$urgency" "$title" "$body" "$icon"
           }
 
           monitor_logs() {
