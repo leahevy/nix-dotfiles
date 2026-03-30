@@ -130,6 +130,7 @@ class PatternMatcher:
                     {
                         "string": string,
                         "mapping": pat.get("mapping"),
+                        "pattern_type": pat.get("pattern_type"),
                     }
                 )
                 continue
