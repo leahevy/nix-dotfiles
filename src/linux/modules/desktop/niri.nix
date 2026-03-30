@@ -1697,12 +1697,6 @@ args@{
 
             window-rules = [
               {
-                matches = [ { app-id = "com.mitchellh.ghostty"; } ];
-                default-column-width = {
-                  proportion = 0.33;
-                };
-              }
-              {
                 matches = [ { app-id = "org.nx.scratchpad"; } ];
                 default-column-width = {
                   proportion = 0.52;

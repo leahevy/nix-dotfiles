@@ -118,5 +118,20 @@ args@{
         TERMINAL = "ghostty";
       };
     };
+
+    linux = {
+      home =
+        config:
+        lib.mkIf (self.linux.isModuleEnabled "desktop.niri") {
+          programs.niri.settings.window-rules = [
+            {
+              matches = [ { app-id = "com.mitchellh.ghostty"; } ];
+              default-column-width = {
+                proportion = 0.33;
+              };
+            }
+          ];
+        };
+    };
   };
 }
