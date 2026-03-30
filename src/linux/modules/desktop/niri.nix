@@ -67,6 +67,24 @@ args@{
       default = [ ];
       description = "Window rules applied via IPC when app-id/title change after window creation.";
     };
+    powerMenuChecks = lib.mkOption {
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            condition = lib.mkOption {
+              type = lib.types.str;
+              description = "Shell command that exits 0 to block power actions.";
+            };
+            message = lib.mkOption {
+              type = lib.types.str;
+              description = "Message shown via notify-send when the condition is met.";
+            };
+          };
+        }
+      );
+      default = [ ];
+      description = "Checks run before power menu actions. If a condition exits 0, the message is shown and the menu is blocked.";
+    };
   };
 
   submodules = {
@@ -485,18 +503,37 @@ args@{
           else
             theme.colors.main.backgrounds.secondary.html;
 
-        rcloneEnabled = self.common.isModuleEnabled "drive.rclone";
-        rcloneConfig = if rcloneEnabled then self.common.getModuleConfig "drive.rclone" else { };
-        rcloneRemoteNames = lib.attrNames (rcloneConfig.remotes or { });
+        userNotifyEnabled = self.isModuleEnabled "notifications.user-notify";
 
-        rcloneLockCheck = lib.optionalString rcloneEnabled ''
-          ${lib.concatMapStringsSep "\n" (name: ''
-            if ! ${pkgs.util-linux}/bin/flock --nonblock --exclusive "''${XDG_RUNTIME_DIR}/rclone-sync-${name}.lock" true 2>/dev/null; then
-                notify-send "Power Menu" "Cannot access power options while rclone sync is running!" --icon=emblem-synchronizing
-                exit 1
-            fi
-          '') rcloneRemoteNames}
-        '';
+        deploymentLockCheck = {
+          condition = ''[[ -d "/tmp/.nx-deployment-lock" ]]'';
+          message = "Cannot access power options while NX deployment is running!";
+        };
+
+        powerMenuChecksScript = lib.concatMapStrings (
+          check:
+          let
+            jsonPayload = builtins.toJSON {
+              title = "Power Menu";
+              body = check.message;
+              icon = "dialog-error";
+            };
+          in
+          if userNotifyEnabled then
+            ''
+              if ${check.condition} 2>/dev/null; then
+                  ${pkgs.util-linux}/bin/logger -p user.err -t nx-user-notify 'JSON-DATA::${jsonPayload}'
+                  exit 1
+              fi
+            ''
+          else
+            ''
+              if ${check.condition} 2>/dev/null; then
+                  ${pkgs.libnotify}/bin/notify-send --urgency=critical --icon=dialog-error "Power Menu" "${check.message}"
+                  exit 1
+              fi
+            ''
+        ) ([ deploymentLockCheck ] ++ (self.options config).powerMenuChecks);
 
         screenshotPath =
           let
@@ -696,12 +733,7 @@ args@{
 
             set -euo pipefail
 
-            if [[ -d "/tmp/.nx-deployment-lock" ]]; then
-                notify-send "Power Menu" "Cannot access power options while NX deployment is running!" --icon=dialog-error
-                exit 1
-            fi
-
-            ${rcloneLockCheck}
+            ${powerMenuChecksScript}
 
             action=$(echo -e "Poweroff\nReboot" | ${
               appLauncherDmenu {

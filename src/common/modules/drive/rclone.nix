@@ -1173,6 +1173,13 @@ args@{
           ++ localPaths;
         };
 
+        nx.linux.desktop.niri.powerMenuChecks = lib.mkIf isNiriEnabled (
+          map (name: {
+            condition = "! ${pkgs.util-linux}/bin/flock --nonblock --exclusive \"$XDG_RUNTIME_DIR/rclone-sync-${name}.lock\" true";
+            message = "Cannot access power options while rclone sync is running!";
+          }) remoteNames
+        );
+
         programs.niri = lib.mkIf isNiriEnabled {
           settings = {
             binds = with config.lib.niri.actions; {

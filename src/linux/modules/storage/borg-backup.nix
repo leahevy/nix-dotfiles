@@ -127,6 +127,13 @@ args@{
       in
       {
 
+        nx.linux.desktop.niri.powerMenuChecks = lib.mkIf isNiriEnabled [
+          {
+            condition = "${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service";
+            message = "Cannot access power options while Borg backup is running!";
+          }
+        ];
+
         home.file.".local/bin/borg-backup-status" = {
           text = ''
             #!/usr/bin/env bash
