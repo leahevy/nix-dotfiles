@@ -841,7 +841,8 @@ def main():
         f"rate_limit={cfg['rate_limit_per_hour']}/h",
         f"dedup={cfg['message_rate_limit_minutes']}min",
     ]
-    print(" ".join(parts), flush=True)
+    if not cfg["dev_enabled"]:
+        print(" ".join(parts), flush=True)
     try:
         with subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
