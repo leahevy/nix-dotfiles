@@ -108,7 +108,12 @@ args@{
               local priority="$2"
               local title body icon urgency
 
-              if [[ "$message" == *"|"* ]]; then
+              if [[ "$message" == "JSON-DATA::"* ]]; then
+                  local json="''${message#JSON-DATA::}"
+                  title=$(echo "$json" | ${pkgs.jq}/bin/jq -r '.title // "System Notification"' 2>/dev/null || echo "System Notification")
+                  body=$(echo "$json" | ${pkgs.jq}/bin/jq -r '.body // "No message"' 2>/dev/null || echo "No message")
+                  icon=$(echo "$json" | ${pkgs.jq}/bin/jq -r '.icon // "dialog-information"' 2>/dev/null || echo "dialog-information")
+              elif [[ "$message" == *"|"* ]]; then
                   title="''${message%%|*}"
                   local rest="''${message#*|}"
                   if [[ "$rest" =~ ^([^:]+):[[:space:]]*(.*)$ ]]; then
