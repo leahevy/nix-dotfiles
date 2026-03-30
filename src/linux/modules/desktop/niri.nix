@@ -90,6 +90,21 @@ args@{
       default = [ ];
       description = "Checks run before power menu actions. If a condition exits 0, the message is shown and the menu is blocked.";
     };
+    appIdMapping = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Map of custom app-ids to real app-ids for icon resolution.";
+    };
+    nextWallpaperCommand = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Command to switch to the next wallpaper on workspace change.";
+    };
+    resetWallpaperCommand = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Command to reset the wallpaper on workspace change.";
+    };
   };
 
   submodules = {
@@ -180,9 +195,6 @@ args@{
     modKeyNested = "Alt";
     honorXDGActivation = true;
     deactivateUnfocusedWindows = true;
-    appIdMapping = {
-      "org.nx.scratchpad" = "com.mitchellh.ghostty";
-    };
     displayModes = {
       main = null;
       secondary = null;
@@ -452,6 +464,13 @@ args@{
         programsConfig = config.nx.preferences.desktop.programs;
         terminal = programsConfig.terminal;
         additionalTerminal = programsConfig.additionalTerminal;
+        terminalWindowClass =
+          if terminal.desktopFile != null then lib.removeSuffix ".desktop" terminal.desktopFile else null;
+        effectiveAppIdMapping =
+          (self.options config).appIdMapping
+          // lib.optionalAttrs (terminalWindowClass != null) {
+            "org.nx.scratchpad" = terminalWindowClass;
+          };
         scratchpadRunWithClass =
           class: cmd:
           lib.escapeShellArgs (
@@ -805,7 +824,7 @@ args@{
 
               case "$app_id" in
                 ${lib.concatStringsSep "\n              " (
-                  lib.mapAttrsToList (k: v: "\"${k}\") echo \"${v}\" ;;") self.settings.appIdMapping
+                  lib.mapAttrsToList (k: v: "\"${k}\") echo \"${v}\" ;;") effectiveAppIdMapping
                 )}
                 *)
                   if [[ -f "$desktop_file" ]]; then
@@ -880,18 +899,24 @@ args@{
             ${pkgs.niri}/bin/niri msg action "''${ARGS[@]}"
 
             ${
-              if self.settings.switchBackgroundOnWorkspaceChange then
-                ''
-                  if [[ "$CHANGE_WALLPAPER" == "true" && -x "$HOME/.local/bin/swaybg-next-wallpaper" ]]; then
-                    "$HOME/.local/bin/swaybg-next-wallpaper"
-                  fi
-                ''
-              else
-                ''
-                  if [[ "$CHANGE_WALLPAPER" == "true" && -x "$HOME/.local/bin/swaybg-reset-wallpaper" ]]; then
-                    "$HOME/.local/bin/swaybg-reset-wallpaper"
-                  fi
-                ''
+              let
+                nextCmd = (self.options config).nextWallpaperCommand;
+                resetCmd = (self.options config).resetWallpaperCommand;
+              in
+              lib.optionalString (nextCmd != null || resetCmd != null) (
+                if self.settings.switchBackgroundOnWorkspaceChange then
+                  lib.optionalString (nextCmd != null) ''
+                    if [[ "$CHANGE_WALLPAPER" == "true" ]]; then
+                      ${nextCmd}
+                    fi
+                  ''
+                else
+                  lib.optionalString (resetCmd != null) ''
+                    if [[ "$CHANGE_WALLPAPER" == "true" ]]; then
+                      ${resetCmd}
+                    fi
+                  ''
+              )
             }
           '';
         };

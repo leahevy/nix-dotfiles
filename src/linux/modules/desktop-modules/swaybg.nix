@@ -472,6 +472,11 @@ args@{
           };
         };
 
+        nx.linux.desktop.niri.nextWallpaperCommand =
+          lib.mkIf (self.isModuleEnabled "desktop.niri") "${self.user.home}/.local/bin/swaybg-next-wallpaper";
+        nx.linux.desktop.niri.resetWallpaperCommand =
+          lib.mkIf (self.isModuleEnabled "desktop.niri") "${self.user.home}/.local/bin/swaybg-reset-wallpaper";
+
         programs.niri.settings = lib.mkIf (self.isModuleEnabled "desktop.niri") {
           binds = with config.lib.niri.actions; {
             "Mod+Shift+Backslash" = {
