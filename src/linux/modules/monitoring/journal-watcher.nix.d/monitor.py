@@ -9,7 +9,12 @@ import time
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
+
+
+class GroupEntry(TypedDict):
+    string: str
+    mapping: Optional[Dict[str, Any]]
 
 
 @dataclass
@@ -89,7 +94,7 @@ class PatternMatcher:
         kernel_string_only = []
         unitless_string_only = []
         user_string_only = []
-        grouped_collect: Dict[Tuple, List[Dict[str, str]]] = {}
+        grouped_collect: Dict[Tuple, List[GroupEntry]] = {}
 
         for pat in patterns:
             service = pat.get("service")
@@ -575,11 +580,33 @@ def filter_message(
     return ignored, highlighted, highlight_info
 
 
+def send_user_notify(
+    cfg: Dict[str, Any],
+    title: str,
+    body: str,
+    icon: str,
+    priority: str = "user.warning",
+):
+    payload = json.dumps({"title": title, "body": body, "icon": icon})
+    subprocess.run(
+        [
+            cfg["logger_bin"],
+            "-p",
+            priority,
+            "-t",
+            "nx-user-notify",
+            f"JSON-DATA::{payload}",
+        ],
+        check=False,
+        timeout=30,
+    )
+
+
 def process_message(
     cfg: Dict[str, Any],
     json_data: Dict[str, Any],
     highlighted: bool,
-    highlight_info: Optional[Tuple[str, str]],
+    highlight_info: Optional[PatternMatch],
     stats: Stats,
 ):
     try:
@@ -700,7 +727,6 @@ def process_message(
         title = f"{bracket} {suffix}" if bracket else suffix
 
         title_text_pushover = title
-        title_text_user = f"{title}|{icon}"
         tag_suffix = tag_to_title(display_tag) if display_tag else None
         message_text_pushover = (
             f"{message} ({tag_suffix})"
@@ -719,18 +745,7 @@ def process_message(
 
         if cfg["user_notify_enabled"] and not cfg["debug_enabled"]:
             try:
-                subprocess.run(
-                    [
-                        cfg["logger_bin"],
-                        "-p",
-                        "user.warning",
-                        "-t",
-                        "nx-user-notify",
-                        f"{title_text_user}: {message_text_user}",
-                    ],
-                    check=False,
-                    timeout=30,
-                )
+                send_user_notify(cfg, title, message_text_user, icon)
                 stats.user_notify += 1
             except (subprocess.TimeoutExpired, OSError) as e:
                 print(
@@ -768,17 +783,12 @@ def process_message(
                             flush=True,
                         )
                         if cfg["user_notify_enabled"]:
-                            subprocess.run(
-                                [
-                                    cfg["logger_bin"],
-                                    "-p",
-                                    "user.err",
-                                    "-t",
-                                    "nx-user-notify",
-                                    f"Pushover Error|dialog-error: {err_msg}",
-                                ],
-                                check=False,
-                                timeout=10,
+                            send_user_notify(
+                                cfg,
+                                "Pushover Error",
+                                err_msg,
+                                "dialog-error",
+                                "user.err",
                             )
                 except (subprocess.TimeoutExpired, OSError) as e:
                     print(
@@ -787,17 +797,8 @@ def process_message(
                         flush=True,
                     )
                     if cfg["user_notify_enabled"]:
-                        subprocess.run(
-                            [
-                                cfg["logger_bin"],
-                                "-p",
-                                "user.err",
-                                "-t",
-                                "nx-user-notify",
-                                f"Pushover Error|dialog-error: {e}",
-                            ],
-                            check=False,
-                            timeout=10,
+                        send_user_notify(
+                            cfg, "Pushover Error", str(e), "dialog-error", "user.err"
                         )
     except Exception as e:
         print(f"Error processing message: {e}", file=sys.stderr, flush=True)
