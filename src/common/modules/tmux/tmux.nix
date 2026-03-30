@@ -36,6 +36,112 @@ args@{
   };
 
   on = {
+    linux = {
+      home =
+        config:
+        let
+          programsConfig = config.nx.preferences.desktop.programs;
+          appLauncher = programsConfig.appLauncher;
+          hasAppLauncher = appLauncher != null;
+          isNiriEnabled = self.linux.isModuleEnabled "desktop.niri";
+
+          allConfigs = self.settings.tmuxinatorBaseConfigs // self.settings.tmuxinatorConfigs;
+          sessionNames = lib.attrNames allConfigs;
+          tmuxinatorPackage = self.settings.tmuxinatorPackage;
+        in
+        lib.mkMerge [
+          (lib.mkIf hasAppLauncher (
+            let
+              additionalTerminal = programsConfig.additionalTerminal;
+              appLauncherDmenu =
+                opts:
+                lib.escapeShellArgs (helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts);
+              terminalShellCmd =
+                cmd:
+                lib.escapeShellArgs (
+                  helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openShellCommand cmd
+                );
+            in
+            {
+              home.file.".local/bin/tmux-session-manager" = {
+                executable = true;
+                text = ''
+                  #!/usr/bin/env bash
+
+                  set -euo pipefail
+
+                  ${''
+                    current_sessions=()
+                    if ${pkgs.tmux}/bin/tmux list-sessions 2>/dev/null; then
+                      while IFS=: read -r session_name _; do
+                        current_sessions+=("$session_name")
+                      done < <(${pkgs.tmux}/bin/tmux list-sessions -F "#{session_name}" 2>/dev/null || true)
+                    fi
+
+                    session_list=""
+
+                    for session in "''${current_sessions[@]}"; do
+                      session_list+="● $session (running)"$'\n'
+                    done
+
+                    ${lib.concatStringsSep "\n" (
+                      map (name: ''
+                        found=false
+                        for current in "''${current_sessions[@]}"; do
+                          if [[ "$current" == "${name}" ]]; then
+                            found=true
+                            break
+                          fi
+                        done
+                        if [[ "$found" == "false" ]]; then
+                          session_list+="○ ${name} (start)"$'\n'
+                        fi
+                      '') sessionNames
+                    )}
+
+                    session_list+="+ New session"$'\n'
+
+                    if [[ -n "$session_list" ]]; then
+                      session_list=$(echo "$session_list" | head -c -1)
+                    fi
+
+                    selection=$(echo -e "$session_list" | ${
+                      appLauncherDmenu {
+                        prompt = "Tmux sessions: ";
+                        width = 35;
+                      }
+                    })
+
+                    if [[ -z "$selection" ]]; then
+                      exit 0
+                    fi
+
+                    if [[ "$selection" == "+ New session" ]]; then
+                      exec ${terminalShellCmd "${pkgs.tmux}/bin/tmux new-session"}
+                    elif [[ "$selection" =~ ^○\ (.+)\ \(start\)$ ]]; then
+                      session_name="''${BASH_REMATCH[1]}"
+                      exec ${terminalShellCmd "${tmuxinatorPackage}/bin/tmuxinator start \"$session_name\""}
+                    elif [[ "$selection" =~ ^●\ (.+)\ \(running\)$ ]]; then
+                      session_name="''${BASH_REMATCH[1]}"
+                      exec ${terminalShellCmd "${pkgs.tmux}/bin/tmux attach-session -t \"$session_name\""}
+                    fi
+                  ''}
+                '';
+              };
+            }
+          ))
+          (lib.mkIf isNiriEnabled {
+            nx.linux.desktop.niri.scratchpadCommand = "tx";
+          })
+          (lib.mkIf (hasAppLauncher && isNiriEnabled) {
+            programs.niri.settings.binds."Mod+Shift+Return" = with config.lib.niri.actions; {
+              action = spawn-sh "tmux-session-manager";
+              hotkey-overlay.title = "Apps:Tmux Session Manager";
+            };
+          })
+        ];
+    };
+
     home =
       config:
       let

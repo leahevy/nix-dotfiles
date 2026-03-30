@@ -20,6 +20,11 @@ args@{
       default = [ ];
       description = "Programs to autostart when niri starts.";
     };
+    scratchpadCommand = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Command to run inside the scratchpad terminal. If null, opens a plain terminal.";
+    };
     lateWindowRules = lib.mkOption {
       type = lib.types.listOf (
         lib.types.submodule {
@@ -452,20 +457,14 @@ args@{
           lib.escapeShellArgs (
             helpers.runWithAbsolutePath config terminal (terminal.openRunWithClass class) cmd
           );
+        scratchpadOpenWithClass =
+          class:
+          lib.escapeShellArgs (
+            helpers.runWithAbsolutePath config terminal (terminal.openWithClass class) [ ]
+          );
         terminalCmd = lib.escapeShellArgs (
           helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openCommand [ ]
         );
-        terminalRunCmd =
-          cmd:
-          lib.escapeShellArgs (
-            helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openRunCommand cmd
-          );
-        terminalShellCmd =
-          cmd:
-          lib.escapeShellArgs (
-            helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openShellCommand cmd
-          );
-
         appLauncher =
           if programsConfig.appLauncher == null then
             throw "niri requires an application launcher (e.g., enable linux.desktop-modules.fuzzel)"
@@ -487,9 +486,18 @@ args@{
           lib.escapeShellArgs (
             helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuIndexCommand opts
           );
-        requiredApps = [
-          (scratchpadRunWithClass "org.nx.scratchpad" "tx")
-        ];
+        requiredApps =
+          let
+            scratchpadCmd = (self.options config).scratchpadCommand;
+          in
+          [
+            (
+              if scratchpadCmd != null then
+                scratchpadRunWithClass "org.nx.scratchpad" scratchpadCmd
+              else
+                scratchpadOpenWithClass "org.nx.scratchpad"
+            )
+          ];
         delayedRequiredApps = [ ];
         theme = config.nx.preferences.theme;
         activeColor =
@@ -766,87 +774,22 @@ args@{
           '';
         };
 
-        home.file.".local/bin/scratchpad-terminal" = {
-          executable = true;
-          text = ''
-            #!/usr/bin/env bash
-            exec ${scratchpadRunWithClass "org.nx.scratchpad" "tx"}
-          '';
-        };
-
-        home.file.".local/bin/tmux-session-manager" = lib.mkIf (self.common.isModuleEnabled "tmux.tmux") {
-          executable = true;
-          text = ''
-            #!/usr/bin/env bash
-
-            set -euo pipefail
-
-            ${
-              let
-                tmuxConfig = self.common.getModuleConfig "tmux.tmux";
-                allConfigs = tmuxConfig.tmuxinatorBaseConfigs // tmuxConfig.tmuxinatorConfigs;
-                sessionNames = lib.attrNames allConfigs;
-                tmuxinatorPackage = tmuxConfig.tmuxinatorPackage or pkgs.tmuxinator;
-              in
-              ''
-                current_sessions=()
-                if ${pkgs.tmux}/bin/tmux list-sessions 2>/dev/null; then
-                  while IFS=: read -r session_name _; do
-                    current_sessions+=("$session_name")
-                  done < <(${pkgs.tmux}/bin/tmux list-sessions -F "#{session_name}" 2>/dev/null || true)
-                fi
-
-                session_list=""
-
-                for session in "''${current_sessions[@]}"; do
-                  session_list+="● $session (running)"$'\n'
-                done
-
-                ${lib.concatStringsSep "\n" (
-                  map (name: ''
-                    found=false
-                    for current in "''${current_sessions[@]}"; do
-                      if [[ "$current" == "${name}" ]]; then
-                        found=true
-                        break
-                      fi
-                    done
-                    if [[ "$found" == "false" ]]; then
-                      session_list+="○ ${name} (start)"$'\n'
-                    fi
-                  '') sessionNames
-                )}
-
-                session_list+="+ New session"$'\n'
-
-                if [[ -n "$session_list" ]]; then
-                  session_list=$(echo "$session_list" | head -c -1)
-                fi
-
-                selection=$(echo -e "$session_list" | ${
-                  appLauncherDmenu {
-                    prompt = "Tmux sessions: ";
-                    width = 35;
-                  }
-                })
-
-                if [[ -z "$selection" ]]; then
-                  exit 0
-                fi
-
-                if [[ "$selection" == "+ New session" ]]; then
-                  exec ${terminalShellCmd "${pkgs.tmux}/bin/tmux new-session"}
-                elif [[ "$selection" =~ ^○\ (.+)\ \(start\)$ ]]; then
-                  session_name="''${BASH_REMATCH[1]}"
-                  exec ${terminalShellCmd "${tmuxinatorPackage}/bin/tmuxinator start \"$session_name\""}
-                elif [[ "$selection" =~ ^●\ (.+)\ \(running\)$ ]]; then
-                  session_name="''${BASH_REMATCH[1]}"
-                  exec ${terminalShellCmd "${pkgs.tmux}/bin/tmux attach-session -t \"$session_name\""}
-                fi
-              ''
-            }
-          '';
-        };
+        home.file.".local/bin/scratchpad-terminal" =
+          let
+            scratchpadCmd = (self.options config).scratchpadCommand;
+          in
+          {
+            executable = true;
+            text = ''
+              #!/usr/bin/env bash
+              exec ${
+                if scratchpadCmd != null then
+                  scratchpadRunWithClass "org.nx.scratchpad" scratchpadCmd
+                else
+                  scratchpadOpenWithClass "org.nx.scratchpad"
+              }
+            '';
+          };
 
         home.file.".local/bin/niri-window-switcher" = {
           executable = true;
@@ -1226,16 +1169,6 @@ args@{
                     action = spawn-sh terminalCmd;
                     hotkey-overlay.title = "Apps:Terminal";
                   };
-
-                  "Mod+Shift+Return" =
-                    let
-                      withSessionManager = self.common.isModuleEnabled "tmux.tmux";
-                    in
-                    {
-                      action = spawn-sh (if withSessionManager then "tmux-session-manager" else terminalRunCmd "tx");
-                      hotkey-overlay.title =
-                        if withSessionManager then "Apps:Tmux Session Manager" else "Apps:Tmux Main Session";
-                    };
 
                   "Mod+Space" = {
                     action = spawn-sh appLauncherCmd;
