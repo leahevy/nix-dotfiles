@@ -58,6 +58,8 @@ args@{
         };
       };
 
+      nx.linux.desktop.common.graphicalSessionServices = [ "mako" ];
+
       programs.niri.settings = lib.mkIf (self.isModuleEnabled "desktop.niri") {
         binds = with config.lib.niri.actions; {
           "Mod+N" = {

@@ -653,6 +653,8 @@ args@{
               }
             '';
         };
+
+        nx.linux.desktop.common.graphicalSessionServices = [ "waybar" ];
       };
   };
 }

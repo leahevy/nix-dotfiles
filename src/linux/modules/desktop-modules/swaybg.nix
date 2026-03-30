@@ -427,11 +427,11 @@ args@{
           '';
         };
 
+        nx.linux.desktop.common.graphicalSessionServices = [ "nx-swaybg" ];
+
         systemd.user.services.nx-swaybg = {
           Unit = {
             Description = "Wayland wallpaper daemon";
-            PartOf = [ "graphical-session.target" ];
-            After = [ "graphical-session.target" ];
           };
 
           Service = {

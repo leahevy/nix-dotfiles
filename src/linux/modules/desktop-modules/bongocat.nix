@@ -153,11 +153,11 @@ args@{
           executable = true;
         };
 
+        nx.linux.desktop.common.graphicalSessionServices = [ "nx-bongocat" ];
+
         systemd.user.services.nx-bongocat = {
           Unit = {
             Description = "Wayland Bongocat";
-            After = [ "graphical-session.target" ];
-            PartOf = [ "graphical-session.target" ];
             StartLimitIntervalSec = 0;
           };
 

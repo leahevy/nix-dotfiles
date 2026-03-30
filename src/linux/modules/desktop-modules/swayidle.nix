@@ -151,6 +151,8 @@ args@{
           '';
         };
 
+        nx.linux.desktop.common.graphicalSessionServices = [ "swayidle" ];
+
         services.swayidle =
           let
             wrapperCommand = "${self.user.home}/.local/bin/scripts/swaylock-wrapper-daemon ${self.settings.package}/bin/${commandlineValidated}";

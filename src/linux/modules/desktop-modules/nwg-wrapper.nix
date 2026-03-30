@@ -364,14 +364,18 @@ args@{
           executable = true;
         };
 
+        nx.linux.desktop.common.graphicalSessionServices = [
+          "nx-nwg-wrapper-1"
+        ]
+        ++ lib.optionals self.settings.niriKeybindings [
+          "nx-nwg-wrapper-2"
+          "nx-nwg-wrapper-3"
+        ];
+
         systemd.user.services.nx-nwg-wrapper-1 = {
           Unit = {
             Description = "Background window daemon 1";
-            PartOf = [ "graphical-session.target" ];
-            After = [
-              "graphical-session.target"
-              "nx-swaybg.service"
-            ];
+            After = [ "nx-swaybg.service" ];
             StartLimitIntervalSec = 0;
           };
 
@@ -390,9 +394,7 @@ args@{
         systemd.user.services.nx-nwg-wrapper-2 = lib.mkIf self.settings.niriKeybindings {
           Unit = {
             Description = "Background window daemon 2 - Keybindings Left";
-            PartOf = [ "graphical-session.target" ];
             After = [
-              "graphical-session.target"
               "nx-swaybg.service"
               "nx-nwg-wrapper-1.service"
             ];
@@ -414,9 +416,7 @@ args@{
         systemd.user.services.nx-nwg-wrapper-3 = lib.mkIf self.settings.niriKeybindings {
           Unit = {
             Description = "Background window daemon 3 - Keybindings Right";
-            PartOf = [ "graphical-session.target" ];
             After = [
-              "graphical-session.target"
               "nx-swaybg.service"
               "nx-nwg-wrapper-2.service"
             ];
