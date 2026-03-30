@@ -35,8 +35,25 @@ args@{
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
+          tag = "systemd-coredump";
           string = "Process [0-9]+ \\(bongocat\\) of user [0-9]+ dumped core";
-          kernel = true;
+        }
+        {
+          service = "nx-bongocat.service";
+          string = "Main process exited, code=dumped, status=6/ABRT";
+          user = true;
+        }
+      ];
+      nx.linux.monitoring.journal-watcher.highlightPatterns = [
+        {
+          service = "nx-bongocat.service";
+          string = "Failed with result 'core-dump'\\.";
+          user = true;
+          mapping = {
+            label = "";
+            title = "Bongocat";
+            message = "Crashed and will restart.";
+          };
         }
       ];
     };
