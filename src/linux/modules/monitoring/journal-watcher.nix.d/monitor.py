@@ -5,9 +5,16 @@ import re
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+
+@dataclass
+class PatternMatch:
+    mapping: Optional[Dict[str, Any]] = None
+
 
 STATS_INTERVAL = 10 * 60
 
@@ -106,14 +113,15 @@ class PatternMatcher:
                 )
                 if key not in grouped_collect:
                     grouped_collect[key] = []
-                grouped_collect[key].append({
-                    "string": string,
-                    "label": pat.get("label", ""),
-                    "title": pat.get("title", ""),
-                })
+                grouped_collect[key].append(
+                    {
+                        "string": string,
+                        "mapping": pat.get("mapping"),
+                    }
+                )
                 continue
 
-            if pat.get("label"):
+            if pat.get("pattern_type") == "highlight" and pat.get("mapping"):
                 self._add_compound(pat)
                 continue
 
@@ -162,13 +170,16 @@ class PatternMatcher:
 
         for key, entries in grouped_collect.items():
             service_val, tag_val, is_user, is_kernel, is_unitless = key
-            has_labels = any(e["label"] or e["title"] for e in entries)
+            has_labels = any(
+                e.get("pattern_type") == "highlight" and e.get("mapping")
+                for e in entries
+            )
             if has_labels:
                 parts = []
                 labels = []
                 for i, e in enumerate(entries):
                     parts.append(f"(?P<g{len(self.grouped)}_{i}>{e['string']})")
-                    labels.append((e["label"], e["title"]))
+                    labels.append(PatternMatch(mapping=e.get("mapping")))
                 string_re = re.compile("|".join(parts))
             else:
                 string_re = re.compile("|".join(f"({e['string']})" for e in entries))
@@ -191,8 +202,7 @@ class PatternMatcher:
             "user": pat.get("user", False),
             "kernel": pat.get("kernel", False),
             "unitless": pat.get("unitless", False),
-            "label": pat.get("label", ""),
-            "title": pat.get("title", ""),
+            "mapping": pat.get("mapping"),
         }
         if pat.get("service"):
             compiled["service"] = re.compile(re.escape(pat["service"]))
@@ -210,7 +220,7 @@ class PatternMatcher:
 
     def _match_impl(
         self, unit: str, tag: str, message: str, transport: str
-    ) -> Optional[Tuple[str, str]]:
+    ) -> Optional[PatternMatch]:
         is_kernel = transport == "kernel"
         has_unit = bool(unit)
         is_user_unit = unit == self.user_unit
@@ -221,15 +231,15 @@ class PatternMatcher:
 
         if has_unit and not is_kernel:
             if self.service_only_re and unit and self.service_only_re.search(unit):
-                return ("", "")
+                return PatternMatch()
 
         if has_unit and not is_kernel and not is_user_unit:
             if self.tag_only_re and tag and self.tag_only_re.search(tag):
-                return ("", "")
+                return PatternMatch()
 
         if has_unit and not is_kernel and not is_user_unit:
             if self.string_only_re and message and self.string_only_re.search(message):
-                return ("", "")
+                return PatternMatch()
 
         if is_kernel:
             if (
@@ -237,7 +247,7 @@ class PatternMatcher:
                 and message
                 and self.kernel_string_only_re.search(message)
             ):
-                return ("", "")
+                return PatternMatch()
 
         if not has_unit and not is_kernel:
             if (
@@ -245,7 +255,7 @@ class PatternMatcher:
                 and message
                 and self.unitless_string_only_re.search(message)
             ):
-                return ("", "")
+                return PatternMatch()
 
         if is_user_unit:
             if (
@@ -253,7 +263,7 @@ class PatternMatcher:
                 and message
                 and self.user_string_only_re.search(message)
             ):
-                return ("", "")
+                return PatternMatch()
 
         for grp in self.grouped:
             grp_kernel = grp["kernel"]
@@ -292,7 +302,7 @@ class PatternMatcher:
                 if m:
                     labels = grp["labels"]
                     if labels is None:
-                        return ("", "")
+                        return PatternMatch()
                     idx = int(m.lastgroup.split("_", 1)[1])
                     return labels[idx]
 
@@ -332,7 +342,7 @@ class PatternMatcher:
                 if not (message and pat["string"].search(message)):
                     all_match = False
             if all_match:
-                return (pat["label"], pat["title"])
+                return PatternMatch(mapping=pat.get("mapping"))
 
         return None
 
@@ -341,8 +351,13 @@ class PatternMatcher:
 
     def match_highlight(
         self, unit: str, tag: str, message: str, transport: str
-    ) -> Optional[Tuple[str, str]]:
+    ) -> Optional[PatternMatch]:
         return self._match_impl(unit, tag, message, transport)
+
+
+def tag_to_title(tag: str) -> str:
+    parts = re.split(r"[-_]", tag)
+    return " ".join(p if p.isupper() else p.capitalize() for p in parts if p)
 
 
 def to_string(value, default=""):
@@ -526,7 +541,7 @@ def filter_message(
     json_data: Dict[str, Any],
     ignore_matcher: PatternMatcher,
     highlight_matcher: PatternMatcher,
-) -> Tuple[bool, bool, Optional[Tuple[str, str]]]:
+) -> Tuple[bool, bool, Optional[PatternMatch]]:
     unit = to_string(json_data.get("_SYSTEMD_UNIT"))
     tag = to_string(json_data.get("SYSLOG_IDENTIFIER"))
     message = to_string(json_data.get("MESSAGE"))
@@ -619,22 +634,35 @@ def process_message(
         )
         priority_title = priority_titles.get(notify_type, "Info")
 
-        highlight_label = highlight_info[0] if highlight_info else ""
-        highlight_title = highlight_info[1] if highlight_info else ""
+        generic_tags = {"system", cfg.get("main_user_username", "")}
+        display_tag = tag if tag and tag not in generic_tags else None
 
-        if highlight_title:
-            suffix = highlight_title
+        effective_mapping: Dict[str, Any] = {}
+        tag_mapping = cfg.get("tag_mappings", {}).get(tag)
+        if tag_mapping:
+            effective_mapping.update(
+                {k: v for k, v in tag_mapping.items() if v is not None}
+            )
+        if highlight_info and highlight_info.mapping:
+            effective_mapping.update(
+                {k: v for k, v in highlight_info.mapping.items() if v is not None}
+            )
+
+        hl_title = effective_mapping.get("title")
+        if hl_title is not None:
+            suffix = hl_title
         elif is_inner_user_service or (
             unit != "unknown" and not is_user_unit and not is_kernel
         ):
             suffix = unit
-        elif tag:
-            suffix = tag[0].upper() + tag[1:]
+        elif display_tag:
+            suffix = tag_to_title(display_tag)
         else:
             suffix = "Journal Message"
 
-        if highlight_label:
-            bracket = f"[{highlight_label}]"
+        hl_label = effective_mapping.get("label")
+        if hl_label is not None:
+            bracket = f"[{hl_label}]" if hl_label else ""
         elif is_kernel:
             bracket = "[Kernel]"
         elif is_user_unit or is_inner_user_service:
@@ -642,17 +670,37 @@ def process_message(
         else:
             bracket = "[NixOS]"
 
-        title = f"{bracket} {suffix}"
+        if effective_mapping:
+            type_icon_key = {
+                "emerg": "emergIcon",
+                "failed": "failedIcon",
+                "warn": "warnIcon",
+            }.get(notify_type, "infoIcon")
+            override_icon = effective_mapping.get(type_icon_key)
+            if override_icon is None:
+                override_icon = effective_mapping.get("icon")
+            if override_icon is not None:
+                icon = override_icon
+
+        title = f"{bracket} {suffix}" if bracket else suffix
 
         title_text_pushover = title
         title_text_user = f"{title}|{icon}"
-        tag_suffix = tag[0].upper() + tag[1:] if tag else None
+        tag_suffix = tag_to_title(display_tag) if display_tag else None
         message_text_pushover = (
-            f"{message} ({tag})" if (tag and suffix != tag_suffix) else message
+            f"{message} ({tag_suffix})"
+            if (display_tag and suffix != tag_suffix)
+            else message
         )
         message_text_user = (
-            f"{message} <b>({tag})</b>" if (tag and suffix != tag_suffix) else message
+            f"{message} <b>({tag_suffix})</b>"
+            if (display_tag and suffix != tag_suffix)
+            else message
         )
+
+        if effective_mapping.get("message") is not None:
+            message_text_pushover = effective_mapping["message"]
+            message_text_user = effective_mapping["message"]
 
         if cfg["user_notify_enabled"] and not cfg["debug_enabled"]:
             try:

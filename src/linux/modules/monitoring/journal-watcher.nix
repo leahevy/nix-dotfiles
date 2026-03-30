@@ -16,6 +16,51 @@ args@{
 
   options =
     let
+      mkMappingSubmodule = lib.types.submodule {
+        options = {
+          icon = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Default icon, used when no priority-specific icon is set.";
+          };
+          infoIcon = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Icon for info-level notifications.";
+          };
+          warnIcon = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Icon for warning-level notifications.";
+          };
+          failedIcon = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Icon for failed-level notifications.";
+          };
+          emergIcon = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Icon for emergency-level notifications.";
+          };
+          label = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Override the bracket label. Empty string omits the bracket entirely.";
+          };
+          title = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Override the title suffix.";
+          };
+          message = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Override the notification message body.";
+          };
+        };
+      };
+
       mkPatternSubmodule =
         withHighlightFields:
         lib.types.submodule {
@@ -57,15 +102,10 @@ args@{
             };
           }
           // lib.optionalAttrs withHighlightFields {
-            label = lib.mkOption {
-              type = lib.types.nullOr lib.types.str;
+            mapping = lib.mkOption {
+              type = lib.types.nullOr mkMappingSubmodule;
               default = null;
-              description = "Replace the [User]/[NixOS]/[Kernel] bracket with [{label}] when this highlight pattern matches.";
-            };
-            title = lib.mkOption {
-              type = lib.types.nullOr lib.types.str;
-              default = null;
-              description = "Replace the suffix part of the notification title when this highlight pattern matches.";
+              description = "Optional notification overrides applied when this highlight pattern matches.";
             };
           };
         };
@@ -81,6 +121,11 @@ args@{
         default = [ ];
         description = "Compound highlight patterns. All specified fields must match (AND logic).";
       };
+      tagMappings = lib.mkOption {
+        type = lib.types.attrsOf mkMappingSubmodule;
+        default = { };
+        description = "Per-tag overrides for notification icon, bracket, title, and message.";
+      };
     };
 
   settings = {
@@ -91,11 +136,17 @@ args@{
       {
         tag = "nixos";
         user = true;
-        label = "NixOS";
-        title = "System Switch";
+        mapping = {
+          label = "NixOS";
+          title = "System Switch";
+          icon = "applications-science";
+        };
       }
     ];
     highlightPatterns = [ ];
+
+    baseTagMappings = { };
+    tagMappings = { };
 
     baseSystemServicesToIgnore = [
       "nx-journal-watcher"
@@ -361,85 +412,89 @@ args@{
             ]
           ) patterns;
 
-        allIgnorePatterns = lib.concatMap expandPattern (
-          self.settings.baseIgnorePatterns
-          ++ (map (s: mkPattern { service = s; }) allSystemServicesToIgnore)
-          ++ (map (
-            s:
-            mkPattern {
-              service = s;
-              user = true;
-            }
-          ) allUserServicesToIgnore)
-          ++ (map (
-            t:
-            mkPattern {
-              tag = t;
-              all = true;
-            }
-          ) allTagsToIgnore)
-          ++ (map (
-            s:
-            mkPattern {
-              string = s;
-              all = true;
-            }
-          ) allStringsToIgnore)
-          ++ (map (s: mkPattern { string = s; }) allSystemStringsToIgnore)
-          ++ (map (
-            s:
-            mkPattern {
-              string = s;
-              kernel = true;
-            }
-          ) allKernelStringsToIgnore)
-          ++ (map (
-            s:
-            mkPattern {
-              string = s;
-              user = true;
-            }
-          ) allUserStringsToIgnore)
-          ++ self.settings.ignorePatterns
-          ++ opts.ignorePatterns
+        allIgnorePatterns = map (p: p // { pattern_type = "ignore"; }) (
+          lib.concatMap expandPattern (
+            self.settings.baseIgnorePatterns
+            ++ (map (s: mkPattern { service = s; }) allSystemServicesToIgnore)
+            ++ (map (
+              s:
+              mkPattern {
+                service = s;
+                user = true;
+              }
+            ) allUserServicesToIgnore)
+            ++ (map (
+              t:
+              mkPattern {
+                tag = t;
+                all = true;
+              }
+            ) allTagsToIgnore)
+            ++ (map (
+              s:
+              mkPattern {
+                string = s;
+                all = true;
+              }
+            ) allStringsToIgnore)
+            ++ (map (s: mkPattern { string = s; }) allSystemStringsToIgnore)
+            ++ (map (
+              s:
+              mkPattern {
+                string = s;
+                kernel = true;
+              }
+            ) allKernelStringsToIgnore)
+            ++ (map (
+              s:
+              mkPattern {
+                string = s;
+                user = true;
+              }
+            ) allUserStringsToIgnore)
+            ++ self.settings.ignorePatterns
+            ++ opts.ignorePatterns
+          )
         );
         ignorePatternsJson = pkgs.writeText "journal-watcher-ignore-patterns.json" (
           builtins.toJSON allIgnorePatterns
         );
 
-        allHighlightPatterns = lib.concatMap expandPattern (
-          self.settings.baseHighlightPatterns
-          ++ (map (
-            s:
-            mkPattern {
-              string = s;
-              all = true;
-            }
-          ) allStringsToHighlight)
-          ++ (map (s: mkPattern { string = s; }) allSystemStringsToHighlight)
-          ++ (map (
-            s:
-            mkPattern {
-              string = s;
-              kernel = true;
-            }
-          ) allKernelStringsToHighlight)
-          ++ (map (
-            s:
-            mkPattern {
-              string = s;
-              user = true;
-            }
-          ) allUserStringsToHighlight)
-          ++ (map (
-            t:
-            mkPattern {
-              tag = t;
-              all = true;
-            }
-          ) allTagsToHighlight)
-          ++ self.settings.highlightPatterns
-          ++ opts.highlightPatterns
+        allHighlightPatterns = map (p: p // { pattern_type = "highlight"; }) (
+          lib.concatMap expandPattern (
+            self.settings.baseHighlightPatterns
+            ++ (map (
+              s:
+              mkPattern {
+                string = s;
+                all = true;
+              }
+            ) allStringsToHighlight)
+            ++ (map (s: mkPattern { string = s; }) allSystemStringsToHighlight)
+            ++ (map (
+              s:
+              mkPattern {
+                string = s;
+                kernel = true;
+              }
+            ) allKernelStringsToHighlight)
+            ++ (map (
+              s:
+              mkPattern {
+                string = s;
+                user = true;
+              }
+            ) allUserStringsToHighlight)
+            ++ (map (
+              t:
+              mkPattern {
+                tag = t;
+                all = true;
+              }
+            ) allTagsToHighlight)
+            ++ self.settings.highlightPatterns
+            ++ opts.highlightPatterns
+          )
         );
         highlightPatternsJson = pkgs.writeText "journal-watcher-highlight-patterns.json" (
           builtins.toJSON allHighlightPatterns
@@ -460,6 +515,8 @@ args@{
           else
             [ ];
 
+        allTagMappings = self.settings.baseTagMappings // self.settings.tagMappings // opts.tagMappings;
+
         watcherConfigJson = pkgs.writeText "journal-watcher-config.json" (
           builtins.toJSON {
             state_dir = stateDir;
@@ -475,11 +532,13 @@ args@{
             dev_enabled = self.settings.dev;
             ignore_user_services_for_pushover = self.settings.ignoreUserServicesForPushover;
             main_user_uid = config.users.users.${self.host.mainUser.username}.uid;
+            main_user_username = self.host.mainUser.username;
             journalctl_bin = "${pkgs.systemd}/bin/journalctl";
             logger_bin = "${pkgs.util-linux}/bin/logger";
             pushover_cmd = pushoverCmd;
             ignore_patterns = allIgnorePatterns;
             highlight_patterns = allHighlightPatterns;
+            tag_mappings = allTagMappings;
           }
         );
 
