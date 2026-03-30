@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -810,6 +811,9 @@ def main():
     with open(sys.argv[1]) as f:
         cfg = json.load(f)
 
+    if cfg["dev_enabled"]:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
     setup_directories(cfg)
 
     ignore_matcher = PatternMatcher(cfg["ignore_patterns"], cfg["main_user_uid"])
@@ -879,4 +883,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except BrokenPipeError:
+        pass
