@@ -107,6 +107,26 @@ args@{
               default = null;
               description = "Optional notification overrides applied when this highlight pattern matches.";
             };
+            channels = lib.mkOption {
+              type = lib.types.nullOr (
+                lib.types.submodule {
+                  options = {
+                    pushover = lib.mkOption {
+                      type = lib.types.nullOr lib.types.bool;
+                      default = null;
+                      description = "Send to pushover. null = scope default (true for system, false for user when ignore_user_services_for_pushover is set).";
+                    };
+                    user = lib.mkOption {
+                      type = lib.types.nullOr lib.types.bool;
+                      default = null;
+                      description = "Send desktop notification. null = always enabled.";
+                    };
+                  };
+                }
+              );
+              default = null;
+              description = "Override notification channels for this highlight pattern. null fields use scope-based defaults.";
+            };
           };
         };
     in

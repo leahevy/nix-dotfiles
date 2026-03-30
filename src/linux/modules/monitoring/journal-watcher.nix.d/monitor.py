@@ -20,6 +20,7 @@ class GroupEntry(TypedDict):
 @dataclass
 class PatternMatch:
     mapping: Optional[Dict[str, Any]] = None
+    channels: Optional[Dict[str, Any]] = None
 
 
 STATS_INTERVAL = 10 * 60
@@ -113,6 +114,9 @@ class PatternMatcher:
                 continue
 
             if field_count >= 2 and has_string and string is not None:
+                if pat.get("channels") is not None:
+                    self._add_compound(pat)
+                    continue
                 key = (
                     service or "",
                     tag or "",
@@ -212,6 +216,7 @@ class PatternMatcher:
             "kernel": pat.get("kernel", False),
             "unitless": pat.get("unitless", False),
             "mapping": pat.get("mapping"),
+            "channels": pat.get("channels"),
         }
         if pat.get("service"):
             compiled["service"] = re.compile(re.escape(pat["service"]))
@@ -351,7 +356,9 @@ class PatternMatcher:
                 if not (message and pat["string"].search(message)):
                     all_match = False
             if all_match:
-                return PatternMatch(mapping=pat.get("mapping"))
+                return PatternMatch(
+                    mapping=pat.get("mapping"), channels=pat.get("channels")
+                )
 
         return None
 
@@ -743,22 +750,33 @@ def process_message(
             message_text_pushover = effective_mapping["message"]
             message_text_user = effective_mapping["message"]
 
+        hl_channels = {}
+        if highlighted and highlight_info and highlight_info.channels:
+            hl_channels = highlight_info.channels
+
         if cfg["user_notify_enabled"] and not cfg["debug_enabled"]:
-            try:
-                send_user_notify(cfg, title, message_text_user, icon)
-                stats.user_notify += 1
-            except (subprocess.TimeoutExpired, OSError) as e:
-                print(
-                    f"Failed to send user notification: {e}",
-                    file=sys.stderr,
-                    flush=True,
-                )
+            if hl_channels.get("user") is not False:
+                try:
+                    send_user_notify(cfg, title, message_text_user, icon)
+                    stats.user_notify += 1
+                except (subprocess.TimeoutExpired, OSError) as e:
+                    print(
+                        f"Failed to send user notification: {e}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
 
         if cfg["pushover_enabled"] and not cfg["debug_enabled"]:
             should_send_pushover = True
 
-            if is_user_unit and cfg["ignore_user_services_for_pushover"]:
-                if is_inner_user_service or not highlighted:
+            pushover_channel = hl_channels.get("pushover")
+
+            if pushover_channel is False:
+                should_send_pushover = False
+            elif is_user_unit and cfg["ignore_user_services_for_pushover"]:
+                if is_inner_user_service:
+                    should_send_pushover = False
+                elif pushover_channel is not True:
                     should_send_pushover = False
 
             if should_send_pushover and (highlighted or check_rate_limit(cfg, unit)):
