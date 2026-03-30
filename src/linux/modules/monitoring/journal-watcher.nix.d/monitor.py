@@ -30,6 +30,9 @@ class Stats:
         self.last_log_time = time.time()
 
     def maybe_log(self, cfg: Dict[str, Any]) -> None:
+        if not cfg.get("stats_enabled", True):
+            self.last_log_time = time.time()
+            return
         now = time.time()
         if now - self.last_log_time < STATS_INTERVAL:
             return
@@ -360,6 +363,16 @@ def tag_to_title(tag: str) -> str:
     return " ".join(p if p.isupper() else p.capitalize() for p in parts if p)
 
 
+def entry_ts(json_data: Dict[str, Any]) -> str:
+    try:
+        return time.strftime(
+            "%b %d %H:%M:%S",
+            time.localtime(int(json_data["__REALTIME_TIMESTAMP"]) / 1_000_000),
+        )
+    except (KeyError, ValueError):
+        return "??:??:??"
+
+
 def to_string(value, default=""):
     if isinstance(value, list):
         if not value:
@@ -582,10 +595,11 @@ def process_message(
         is_kernel = ctx["is_kernel"]
         has_no_unit = ctx["has_no_unit"]
         pattern_info = ctx["pattern_info"]
+        ts_prefix = f"[{entry_ts(json_data)}] " if cfg["dev_enabled"] else ""
 
         if not check_message_rate_limit(cfg, unit, message):
             print(
-                f"Ignore notification <rate limited> ({tag}/{unit}): {message}",
+                f"{ts_prefix}Ignore notification <rate limited> ({tag}/{unit}): {message}",
                 flush=True,
             )
             stats.rate_limited += 1
@@ -593,7 +607,7 @@ def process_message(
 
         hl_marker = " [highlighted]" if highlighted else ""
         print(
-            f"Send notification{hl_marker} pattern: {json.dumps(pattern_info)}",
+            f"{ts_prefix}Send notification{hl_marker} pattern: {json.dumps(pattern_info)}",
             flush=True,
         )
 
@@ -817,6 +831,7 @@ def main():
         f"highlight_patterns={len(cfg['highlight_patterns'])}",
         f"debug={cfg['debug_enabled']}",
         f"dev={cfg['dev_enabled']}",
+        f"stats={cfg['stats_enabled']}",
         f"user_notify={cfg['user_notify_enabled']}",
         f"pushover={cfg['pushover_enabled']}",
         f"rate_limit={cfg['rate_limit_per_hour']}/h",
@@ -844,7 +859,7 @@ def main():
                                 )
                                 if ctx and ctx["unit"] != "nx-journal-watcher.service":
                                     print(
-                                        f"Ignore pattern: {json.dumps(ctx['pattern_info'])}",
+                                        f"[{entry_ts(json_data)}] Ignore pattern: {json.dumps(ctx['pattern_info'])}",
                                         flush=True,
                                     )
                         else:

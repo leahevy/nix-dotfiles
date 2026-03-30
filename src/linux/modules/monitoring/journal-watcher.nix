@@ -286,7 +286,6 @@ args@{
     additionalTagsToHighlight = [ ];
 
     debug = false;
-    dev = false;
     ignoreUserServicesForPushover = true;
     pushoverRateLimit = 10;
     pushoverRateLimitUnknown = 30;
@@ -529,7 +528,8 @@ args@{
             user_notify_enabled = self.isModuleEnabled "notifications.user-notify";
             pushover_enabled = self.isModuleEnabled "notifications.pushover" && pushover.script != null;
             debug_enabled = self.settings.debug;
-            dev_enabled = self.settings.dev;
+            dev_enabled = false;
+            stats_enabled = true;
             ignore_user_services_for_pushover = self.settings.ignoreUserServicesForPushover;
             main_user_uid = config.users.users.${self.host.mainUser.username}.uid;
             main_user_username = self.host.mainUser.username;
@@ -543,6 +543,41 @@ args@{
         );
 
         monitorScript = self.file "monitor.py";
+
+        patchConfigScript = pkgs.writeText "journal-watcher-patch-config.py" ''
+          import json, os, sys
+          source, tmpdir = sys.argv[1], sys.argv[2]
+          if not os.path.isdir(tmpdir):
+              sys.exit(f"error: tmpdir does not exist or is not a directory: {tmpdir}")
+          if not os.path.realpath(tmpdir).startswith("/tmp/"):
+              sys.exit(f"error: tmpdir is not under /tmp: {tmpdir}")
+          state_dir = tmpdir + "/state"
+          with open(source) as f:
+              cfg = json.load(f)
+          cfg.update({
+              "state_dir": state_dir,
+              "rate_limit_state_dir": state_dir + "/rate-limits",
+              "cursor_file": state_dir + "/cursor",
+              "message_hashes_file": state_dir + "/hashes",
+              "debug_enabled": True,
+              "dev_enabled": True,
+              "user_notify_enabled": False,
+              "pushover_enabled": False,
+              "stats_enabled": False,
+          })
+          os.makedirs(state_dir, exist_ok=True)
+          out = tmpdir + "/config.json"
+          with open(out, "w") as f:
+              json.dump(cfg, f)
+          print(out)
+        '';
+
+        testScript = pkgs.writeShellScriptBin "nx-journal-watcher-event-log" ''
+          tmpdir=$(mktemp -d)
+          trap 'rm -rf "$tmpdir"' EXIT
+          config=$(${pkgs.python3}/bin/python3 ${patchConfigScript} ${watcherConfigJson} "$tmpdir")
+          ${pkgs.python3}/bin/python3 ${monitorScript} "$config"
+        '';
 
         regexValidation = pkgs.runCommand "journal-watcher-regex-validation" { } ''
           ${pkgs.python3}/bin/python3 ${pkgs.writeText "validate-regexes.py" ''
@@ -619,6 +654,8 @@ args@{
         };
 
         system.extraDependencies = [ regexValidation ];
+
+        environment.systemPackages = [ testScript ];
 
         environment.persistence."${self.persist.system}" = {
           directories = [
