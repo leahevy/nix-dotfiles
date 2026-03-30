@@ -655,6 +655,19 @@ args@{
         };
 
         nx.linux.desktop.common.graphicalSessionServices = [ "waybar" ];
+
+        programs.niri = lib.mkIf (self.isModuleEnabled "desktop.niri") {
+          settings.binds = with config.lib.niri.actions; {
+            "Mod+Y" = {
+              action = spawn-sh "systemctl --user kill -s SIGUSR1 waybar.service";
+              hotkey-overlay.title = "UI:Toggle waybar visibility";
+            };
+            "Mod+Shift+Y" = {
+              action = spawn-sh "systemctl --user restart waybar.service";
+              hotkey-overlay.title = "UI:Restart waybar";
+            };
+          };
+        };
       };
   };
 }
