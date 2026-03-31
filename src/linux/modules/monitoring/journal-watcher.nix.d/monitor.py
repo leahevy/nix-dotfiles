@@ -656,20 +656,6 @@ def process_message(
         }
         notify_type = priority_map.get(priority, "info")
 
-        icon_map_system = {
-            "emerg": "dialog-error",
-            "failed": "computer-fail",
-            "warn": "dialog-warning",
-            "info": "dialog-information",
-        }
-
-        icon_map_user = {
-            "emerg": "dialog-error",
-            "failed": "computer-fail",
-            "warn": "dialog-warning",
-            "info": "avatar-default",
-        }
-
         priority_titles = {
             "emerg": "Emergency",
             "failed": "Failed",
@@ -677,10 +663,12 @@ def process_message(
             "info": "Info",
         }
 
+        icon_map_system = cfg["icon_map_system"]
+        icon_map_user = cfg["icon_map_user"]
         icon = (
-            icon_map_user.get(notify_type, "avatar-default")
+            icon_map_user.get(notify_type, icon_map_user["info"])
             if is_user_unit
-            else icon_map_system.get(notify_type, "dialog-information")
+            else icon_map_system.get(notify_type, icon_map_system["info"])
         )
         priority_title = priority_titles.get(notify_type, "Info")
 

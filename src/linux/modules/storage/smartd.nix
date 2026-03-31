@@ -66,21 +66,66 @@ args@{
           PUSHOVER_MESSAGE=""
 
           if [ "$FAILURE_TYPE" = "EmailTest" ] || [ "$FAILURE_TYPE" = "EMailTest" ]; then
-            USER_NOTIFY_MESSAGE="SMART Test|drive-harddisk: smartd notification system is working"
+            USER_NOTIFY_MESSAGE="Notification system is working"
             PUSHOVER_MESSAGE="smartd notification test successful"
           else
-            case "$NOTIFY_TYPE" in
-              "info") ICON_NAME="drive-harddisk" ;;
-              "warn") ICON_NAME="dialog-warning" ;;
-              "failed") ICON_NAME="computer-fail" ;;
-              *) ICON_NAME="computer-fail" ;;
-            esac
-            USER_NOTIFY_MESSAGE="SMART Alert (''${NOTIFY_TYPE})|$ICON_NAME: ''${DEVICE} - ''${MESSAGE}"
+            USER_NOTIFY_MESSAGE="''${DEVICE} - ''${MESSAGE}"
             PUSHOVER_MESSAGE="''${DEVICE}: ''${MESSAGE}"
           fi
 
           if [ "$USER_NOTIFY_ENABLED" = "true" ]; then
-            ${pkgs.util-linux}/bin/logger -p user.err -t nx-user-notify "''${USER_NOTIFY_MESSAGE}"
+            if [ "$FAILURE_TYPE" = "EmailTest" ] || [ "$FAILURE_TYPE" = "EMailTest" ]; then
+              ${self.notifyUser {
+                title = "SMART Test";
+                body = "$USER_NOTIFY_MESSAGE";
+                icon = "drive-harddisk";
+                urgency = "critical";
+                validation = { inherit config; };
+              }}
+            else
+              case "$NOTIFY_TYPE" in
+                "info")
+                  ${
+                    self.notifyUser {
+                      title = "SMART Alert (info)";
+                      body = "$USER_NOTIFY_MESSAGE";
+                      icon = "drive-harddisk";
+                      urgency = "critical";
+                      validation = { inherit config; };
+                    }
+                  };;
+                "warn")
+                  ${
+                    self.notifyUser {
+                      title = "SMART Alert (warn)";
+                      body = "$USER_NOTIFY_MESSAGE";
+                      icon = "dialog-warning";
+                      urgency = "critical";
+                      validation = { inherit config; };
+                    }
+                  };;
+                "failed")
+                  ${
+                    self.notifyUser {
+                      title = "SMART Alert (failed)";
+                      body = "$USER_NOTIFY_MESSAGE";
+                      icon = "computer-fail";
+                      urgency = "critical";
+                      validation = { inherit config; };
+                    }
+                  };;
+                *)
+                  ${
+                    self.notifyUser {
+                      title = "SMART Alert (failed)";
+                      body = "$USER_NOTIFY_MESSAGE";
+                      icon = "computer-fail";
+                      urgency = "critical";
+                      validation = { inherit config; };
+                    }
+                  };;
+              esac
+            fi
           fi
 
           if [ "$PUSHOVER_ENABLED" = "true" ]; then

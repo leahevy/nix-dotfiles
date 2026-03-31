@@ -29,11 +29,6 @@ args@{
         isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
         luksDataDriveEnabled = self.isLinux && self.linux.isModuleEnabled "storage.luks-data-drive";
 
-        iconThemeString = config.nx.preferences.theme.icons.primary;
-        iconThemePackage = lib.getAttr (lib.head (lib.splitString "/" iconThemeString)) pkgs;
-        iconThemeName = lib.head (lib.tail (lib.splitString "/" iconThemeString));
-        iconThemeBasePath = "${iconThemePackage}/share/icons/${iconThemeName}";
-
         remoteConfigs = lib.mapAttrs (name: cfg: {
           config = {
             type = cfg.type or "webdav";
@@ -68,7 +63,6 @@ args@{
 
         rcloneConfigPath = "${config.home.homeDirectory}/.config/rclone/rclone.conf";
 
-        getEventServiceName = name: "rclone-event-sync-${name}";
         getLockfile = name: "\${XDG_RUNTIME_DIR}/rclone-sync-${name}.lock";
         getTimestampFile = name: "\${XDG_RUNTIME_DIR}/rclone-boot-${name}.timestamp";
 
@@ -202,11 +196,6 @@ args@{
           fi
         '';
 
-        sanityChecksFor = name: ''
-          ${sanityCheckConfig}
-          ${sanityCheckSecrets name}
-        '';
-
         sanityChecksAll = ''
           ${sanityCheckConfig}
           ${lib.concatMapStringsSep "\n" sanityCheckSecrets remoteNames}
@@ -294,6 +283,52 @@ args@{
                 ''["--checkers=${toString self.settings.sftpCheckers}"]''
               else
                 "[]";
+            notifyScripts = {
+              synchronizing = lib.head (
+                lib.splitString " " (
+                  self.notifyUser {
+                    title = "Rclone (${name})";
+                    body = "$1";
+                    icon = "emblem-synchronizing";
+                    urgency = "normal";
+                    validation = { inherit config; };
+                  }
+                )
+              );
+              info = lib.head (
+                lib.splitString " " (
+                  self.notifyUser {
+                    title = "Rclone (${name})";
+                    body = "$1";
+                    icon = "emblem-ok-symbolic";
+                    urgency = "normal";
+                    validation = { inherit config; };
+                  }
+                )
+              );
+              warning = lib.head (
+                lib.splitString " " (
+                  self.notifyUser {
+                    title = "Rclone (${name})";
+                    body = "$1";
+                    icon = "dialog-warning";
+                    urgency = "normal";
+                    validation = { inherit config; };
+                  }
+                )
+              );
+              error = lib.head (
+                lib.splitString " " (
+                  self.notifyUser {
+                    title = "Rclone (${name})";
+                    body = "$1";
+                    icon = "dialog-error";
+                    urgency = "critical";
+                    validation = { inherit config; };
+                  }
+                )
+              );
+            };
           in
           ''
             #!${pkgs.python3}/bin/python3
@@ -313,7 +348,10 @@ args@{
             DEBOUNCE = ${toString self.settings.debounceSeconds}
             RCLONE = "${pkgs.rclone}/bin/rclone"
             INOTIFYWAIT = "${pkgs.inotify-tools}/bin/inotifywait"
-            LOGGER = "${pkgs.util-linux}/bin/logger"
+            NOTIFY_SCRIPT_SYNC = "${notifyScripts.synchronizing}"
+            NOTIFY_SCRIPT_INFO = "${notifyScripts.info}"
+            NOTIFY_SCRIPT_WARN = "${notifyScripts.warning}"
+            NOTIFY_SCRIPT_ERROR = "${notifyScripts.error}"
             PING = "${pkgs.iputils}/bin/ping"
             EXTRA_FLAGS = ${extraFlagsNix}
 
@@ -358,11 +396,6 @@ args@{
 
             def log(message):
                 print(message, flush=True)
-
-
-            def notify(title, message, icon, error=False):
-                priority = "user.err" if error else "user.info"
-                subprocess.run([LOGGER, "-p", priority, "-t", "nx-user-notify", f"{title}|{icon}: {message}"])
 
 
             def ensure_log_dir():
@@ -536,7 +569,7 @@ args@{
 
                 def notify_progress():
                     progress_notified.set()
-                    notify(f"Rclone ({REMOTE_NAME})", "Sync in progress...", "emblem-synchronizing")
+                    subprocess.run([NOTIFY_SCRIPT_SYNC, "Sync in progress..."])
 
                 progress_timer = Timer(10, notify_progress)
                 progress_timer.start()
@@ -698,7 +731,7 @@ args@{
 
                     if failed_changes or failed_deletes or failed_mkdirs or failed_populates or failed_purges:
                         restore_pending(failed_changes, failed_deletes, failed_mkdirs, failed_populates, failed_purges)
-                        notify(f"Rclone ({REMOTE_NAME})", "Sync failed", "dialog-error", error=True)
+                        subprocess.run([NOTIFY_SCRIPT_ERROR, "Sync failed"])
                     else:
                         commit_pending()
                         if synced_count > 0 or deleted_count > 0 or populate_count > 0 or purge_count > 0:
@@ -712,11 +745,11 @@ args@{
                             if purge_count > 0:
                                 parts.append(f"deleted {purge_count} dirs")
                             msg = ", ".join(parts).capitalize()
-                            notify(f"Rclone ({REMOTE_NAME})", msg, "emblem-synchronizing")
+                            subprocess.run([NOTIFY_SCRIPT_INFO, msg])
                         elif mkdir_count > 0:
-                            notify(f"Rclone ({REMOTE_NAME})", "Sync completed", "emblem-synchronizing")
+                            subprocess.run([NOTIFY_SCRIPT_INFO, "Sync completed"])
                         elif progress_notified.is_set():
-                            notify(f"Rclone ({REMOTE_NAME})", "Sync completed (already up to date)", "emblem-synchronizing")
+                            subprocess.run([NOTIFY_SCRIPT_INFO, "Sync completed (already up to date)"])
                 finally:
                     progress_timer.cancel()
                     fcntl.flock(lock_fd, fcntl.LOCK_UN)
@@ -768,10 +801,10 @@ args@{
                         result = subprocess.run(cmd)
                     if result.returncode != 0:
                         log("Overflow bisync failed")
-                        notify(f"Rclone ({REMOTE_NAME})", "Overflow sync failed", "dialog-error", error=True)
+                        subprocess.run([NOTIFY_SCRIPT_ERROR, "Overflow sync failed"])
                     else:
                         open(TIMESTAMP_FILE, 'w').close()
-                        notify(f"Rclone ({REMOTE_NAME})", "Overflow sync completed", "emblem-ok-symbolic")
+                        subprocess.run([NOTIFY_SCRIPT_INFO, "Overflow sync completed"])
                 finally:
                     fcntl.flock(lock_fd, fcntl.LOCK_UN)
                     lock_fd.close()
@@ -894,7 +927,7 @@ args@{
                     return
 
                 log("Performing initial bisync")
-                notify(f"Rclone ({REMOTE_NAME})", "Initial sync starting...", "emblem-synchronizing")
+                subprocess.run([NOTIFY_SCRIPT_SYNC, "Initial sync starting..."])
                 try:
                     clear_bisync_lock()
                     cmd = [RCLONE, "bisync", REMOTE, LOCAL] + BISYNC_RECOVER_FLAGS
@@ -908,10 +941,10 @@ args@{
                         result = subprocess.run(cmd)
                     if result.returncode != 0:
                         log("Initial sync failed")
-                        notify(f"Rclone ({REMOTE_NAME})", "Initial sync failed", "dialog-error", error=True)
+                        subprocess.run([NOTIFY_SCRIPT_ERROR, "Initial sync failed"])
                     else:
                         open(TIMESTAMP_FILE, 'w').close()
-                        notify(f"Rclone ({REMOTE_NAME})", "Initial sync completed", "emblem-ok-symbolic")
+                        subprocess.run([NOTIFY_SCRIPT_INFO, "Initial sync completed"])
                 finally:
                     fcntl.flock(lock_fd, fcntl.LOCK_UN)
                     lock_fd.close()
@@ -945,7 +978,7 @@ args@{
                         line = line.strip()
                         if "Q_OVERFLOW" in line:
                             log("WARNING: inotify queue overflow detected, scheduling full bisync")
-                            notify(f"Rclone ({REMOTE_NAME})", "Event overflow, syncing...", "dialog-warning")
+                            subprocess.run([NOTIFY_SCRIPT_WARN, "Event overflow, syncing..."])
                             schedule_overflow_bisync()
                             continue
                         if "|" not in line:
@@ -1065,10 +1098,22 @@ args@{
 
                 if [[ $SYNC_FAILED -eq 0 ]]; then
                   echo "Manual bisync completed successfully."
-                  ${pkgs.util-linux}/bin/logger -t nx-user-notify "Rclone|emblem-ok-symbolic: Manual sync completed"
+                  ${self.notifyUser {
+                    title = "Rclone";
+                    body = "Manual sync completed";
+                    icon = "emblem-ok-symbolic";
+                    urgency = "normal";
+                    validation = { inherit config; };
+                  }}
                 else
                   echo "Manual bisync failed for one or more remotes."
-                  ${pkgs.util-linux}/bin/logger -p user.err -t nx-user-notify "Rclone|dialog-error: Manual sync failed"
+                  ${self.notifyUser {
+                    title = "Rclone";
+                    body = "Manual sync failed";
+                    icon = "dialog-error";
+                    urgency = "critical";
+                    validation = { inherit config; };
+                  }}
                   exit 1
                 fi
               '';
@@ -1190,9 +1235,22 @@ args@{
                   ''
                     STATE=$(${pkgs.systemd}/bin/systemctl --user show -p ActiveState --value rclone-bisync-manual.service)
                     if [[ "$STATE" == "activating" ]]; then
-                      ${pkgs.util-linux}/bin/logger -t nx-user-notify "Rclone|emblem-synchronizing: Manual sync already running"
+                      ${self.notifyUser {
+                        title = "Rclone";
+                        body = "Manual sync already running";
+                        icon = "emblem-synchronizing";
+                        urgency = "normal";
+                        validation = { inherit config; };
+                      }}
                     else
-                      ${pkgs.util-linux}/bin/logger -t nx-user-notify "Rclone|emblem-synchronizing: Starting manual sync..."
+                      ${self.notifyUser {
+                        title = "Rclone";
+                        body = "Starting manual sync...";
+                        icon = "emblem-synchronizing";
+                        urgency = "normal";
+                        validation = { inherit config; };
+                      }}
+
                       ${pkgs.systemd}/bin/systemctl --user start rclone-bisync-manual.service
                     fi
                   ''

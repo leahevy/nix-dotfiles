@@ -530,37 +530,23 @@ args@{
           else
             theme.colors.main.backgrounds.secondary.html;
 
-        userNotifyEnabled = self.isModuleEnabled "notifications.user-notify";
-
         deploymentLockCheck = {
           condition = ''[[ -d "/tmp/.nx-deployment-lock" ]]'';
           message = "Cannot access power options while NX deployment is running!";
         };
 
-        powerMenuChecksScript = lib.concatMapStrings (
-          check:
-          let
-            jsonPayload = builtins.toJSON {
-              title = "Power Menu";
-              body = check.message;
-              icon = "dialog-error";
-            };
-          in
-          if userNotifyEnabled then
-            ''
-              if ${check.condition} 2>/dev/null; then
-                  ${pkgs.util-linux}/bin/logger -p user.err -t nx-user-notify 'JSON-DATA::${jsonPayload}'
-                  exit 1
-              fi
-            ''
-          else
-            ''
-              if ${check.condition} 2>/dev/null; then
-                  ${pkgs.libnotify}/bin/notify-send --urgency=critical --icon=dialog-error "Power Menu" "${check.message}"
-                  exit 1
-              fi
-            ''
-        ) ([ deploymentLockCheck ] ++ (self.options config).powerMenuChecks);
+        powerMenuChecksScript = lib.concatMapStrings (check: ''
+          if ${check.condition} 2>/dev/null; then
+              ${self.notifyUser {
+                title = "Power Menu";
+                body = check.message;
+                icon = "dialog-error";
+                urgency = "critical";
+                validation = { inherit config; };
+              }}
+              exit 1
+          fi
+        '') ([ deploymentLockCheck ] ++ (self.options config).powerMenuChecks);
 
         screenshotPath =
           let

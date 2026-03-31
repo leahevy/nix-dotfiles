@@ -33,16 +33,42 @@ args@{
             userNotifyEnabled = (self.isModuleEnabled "notifications.user-notify");
             pushoverEnabled = self.settings.pushoverNotifications;
 
+            userNotifyTitle =
+              if userNotifyEnabled then
+                if lib.hasPrefix "RENEWED:" message then
+                  "Let's Encrypt (renewed)"
+                else if lib.hasPrefix "WARNING:" message then
+                  "Let's Encrypt (warning)"
+                else if lib.hasPrefix "ERROR:" message then
+                  "Let's Encrypt (error)"
+                else
+                  "Let's Encrypt"
+              else
+                "";
+
             userNotifyMessage =
               if userNotifyEnabled then
                 if lib.hasPrefix "RENEWED:" message then
-                  "Let's Encrypt (renewed)|certificate: ${lib.removePrefix "RENEWED: " message}"
+                  lib.removePrefix "RENEWED: " message
                 else if lib.hasPrefix "WARNING:" message then
-                  "Let's Encrypt (warning)|dialog-warning: ${lib.removePrefix "WARNING: " message}"
+                  lib.removePrefix "WARNING: " message
                 else if lib.hasPrefix "ERROR:" message then
-                  "Let's Encrypt (error)|dialog-error: ${lib.removePrefix "ERROR: " message}"
+                  lib.removePrefix "ERROR: " message
                 else
-                  "Let's Encrypt|certificate: ${message}"
+                  message
+              else
+                "";
+
+            userNotifyIcon =
+              if userNotifyEnabled then
+                if lib.hasPrefix "RENEWED:" message then
+                  "application-certificate"
+                else if lib.hasPrefix "WARNING:" message then
+                  "dialog-warning"
+                else if lib.hasPrefix "ERROR:" message then
+                  "dialog-error"
+                else
+                  "application-certificate"
               else
                 "";
 
@@ -69,7 +95,15 @@ args@{
                 message;
           in
           ''
-            ${lib.optionalString userNotifyEnabled ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
+            ${lib.optionalString userNotifyEnabled (
+              self.notifyUser {
+                title = userNotifyTitle;
+                body = userNotifyMessage;
+                icon = userNotifyIcon;
+                urgency = helpers.loggerLevelToNotifyLevel level;
+                validation = { inherit config; };
+              }
+            )}
             ${lib.optionalString shouldSendPushover (
               pushover.send {
                 title = "Let's Encrypt";

@@ -169,21 +169,11 @@ args@{
         syncthingMonitor = pkgs.writeShellScript "syncthing-monitor" ''
           set -euo pipefail
 
-          NOTIFY_SEND="${pkgs.libnotify}/bin/notify-send"
           JOURNALCTL="${pkgs.systemd}/bin/journalctl"
           SERVICE_NAME="syncthing.service"
 
           STATE_FILE="$HOME/.local/state/syncthing-monitor-state"
           mkdir -p "$(dirname "$STATE_FILE")"
-
-          notify() {
-              local urgency="''${1:-normal}"
-              local summary="''${2:-No summary}"
-              local body="''${3:-No body}"
-
-              echo "Sending notification: [$urgency] $summary - $body"
-              $NOTIFY_SEND --urgency="$urgency" --icon=syncthing "$summary" "$body"
-          }
 
           check_service_status() {
               local current_state=""
@@ -194,12 +184,24 @@ args@{
               if systemctl --user is-active "$SERVICE_NAME" >/dev/null 2>&1; then
                   if [[ ! -f "$STATE_FILE" ]] || [[ "$current_state" != "running" ]]; then
                       echo "running" > "$STATE_FILE"
-                      notify "normal" "Syncthing Started" "Syncthing service is now running. Open with: http://127.0.0.1:${builtins.toString self.settings.guiPort}"
+                      ${self.notifyUser {
+                        title = "Syncthing Started";
+                        body = "Syncthing service is now running. Open with: http://127.0.0.1:${builtins.toString self.settings.guiPort}";
+                        icon = "syncthing";
+                        urgency = "normal";
+                        validation = { inherit config; };
+                      }}
                   fi
               else
                   if [[ -f "$STATE_FILE" ]] && [[ "$current_state" == "running" ]]; then
                       echo "stopped" > "$STATE_FILE"
-                      notify "critical" "Syncthing Stopped" "Syncthing service has stopped unexpectedly"
+                      ${self.notifyUser {
+                        title = "Syncthing Stopped";
+                        body = "Syncthing service has stopped unexpectedly";
+                        icon = "syncthing";
+                        urgency = "critical";
+                        validation = { inherit config; };
+                      }}
                   fi
               fi
           }
@@ -239,19 +241,49 @@ args@{
                                       # Ignore lost device connection info messages
                                       ;;
                                   *"ERROR"*|*"error"*|*"Error"*)
-                                      notify "critical" "Syncthing Error" "$message"
+                                      ${self.notifyUser {
+                                        title = "Syncthing Error";
+                                        body = "$message";
+                                        icon = "syncthing";
+                                        urgency = "critical";
+                                        validation = { inherit config; };
+                                      }}
                                       ;;
                                   *"WARNING"*|*"warning"*|*"Warning"*)
-                                      notify "normal" "Syncthing Warning" "$message"
+                                      ${self.notifyUser {
+                                        title = "Syncthing Warning";
+                                        body = "$message";
+                                        icon = "syncthing";
+                                        urgency = "normal";
+                                        validation = { inherit config; };
+                                      }}
                                       ;;
                                   *"Connection to"*"failed"*|*"connection failed"*|*"Connection lost"*)
-                                      notify "normal" "Syncthing Connection Issue" "$message"
+                                      ${self.notifyUser {
+                                        title = "Syncthing Connection Issue";
+                                        body = "$message";
+                                        icon = "syncthing";
+                                        urgency = "normal";
+                                        validation = { inherit config; };
+                                      }}
                                       ;;
                                   *"Folder"*"error"*|*"folder"*"error"*|*"sync error"*|*"synchronization error"*)
-                                      notify "critical" "Syncthing Sync Error" "$message"
+                                      ${self.notifyUser {
+                                        title = "Syncthing Sync Error";
+                                        body = "$message";
+                                        icon = "syncthing";
+                                        urgency = "critical";
+                                        validation = { inherit config; };
+                                      }}
                                       ;;
                                   *"Device"*"disconnected"*|*"device"*"disconnected"*)
-                                      notify "normal" "Syncthing Device Disconnected" "$message"
+                                      ${self.notifyUser {
+                                        title = "Syncthing Device Disconnected";
+                                        body = "$message";
+                                        icon = "syncthing";
+                                        urgency = "normal";
+                                        validation = { inherit config; };
+                                      }}
                                       ;;
                               esac
                           fi
@@ -372,17 +404,6 @@ args@{
               fi
           }
 
-          notify() {
-              local urgency="$1"
-              local summary="$2"
-              local body="$3"
-              local icon="$4"
-              icon="syncthing"
-
-              echo "Sending notification: [$urgency] $summary - $body"
-              notify-send --urgency="$urgency" --icon="$icon" "$summary" "$body"
-          }
-
           sleep "$INITIAL_DELAY"
 
           is_first_check=false
@@ -413,7 +434,13 @@ args@{
                           if [[ "$is_first_check" == "true" ]]; then
                               if [[ "$connected" == "false" ]]; then
                                   device_display_name=$(get_device_display_name "$device_id")
-                                  notify "normal" "Syncthing: Device" "Disconnected: <b>$device_display_name</b>" "computer-fail"
+                                  ${self.notifyUser {
+                                    title = "Syncthing: Device";
+                                    body = "Disconnected: <b>$device_display_name</b>";
+                                    icon = "syncthing";
+                                    urgency = "normal";
+                                    validation = { inherit config; };
+                                  }}
                               fi
                           else
                               prev_connected="''${prev_device_states[$device_id]:-unknown}"
@@ -423,12 +450,24 @@ args@{
                                   case "$connected" in
                                       "true")
                                           if [[ "$prev_connected" == "false" ]]; then
-                                              notify "normal" "Syncthing: Device" "Connected: <b>$device_display_name</b>" "checkmark"
+                                              ${self.notifyUser {
+                                                title = "Syncthing: Device";
+                                                body = "Connected: <b>$device_display_name</b>";
+                                                icon = "syncthing";
+                                                urgency = "normal";
+                                                validation = { inherit config; };
+                                              }}
                                           fi
                                           ;;
                                       "false")
                                           if [[ "$prev_connected" == "true" ]]; then
-                                              notify "normal" "Syncthing: Device" "Disconnected: <b>$device_display_name</b>" "computer-fail"
+                                              ${self.notifyUser {
+                                                title = "Syncthing: Device";
+                                                body = "Disconnected: <b>$device_display_name</b>";
+                                                icon = "syncthing";
+                                                urgency = "normal";
+                                                validation = { inherit config; };
+                                              }}
                                           fi
                                           ;;
                                   esac
@@ -483,7 +522,13 @@ args@{
                               if [[ "$is_first_check" == "true" ]]; then
                                   if [[ "$sync_status" == "syncing" ]]; then
                                       device_display_name=$(get_device_display_name "$device_id")
-                                      notify "normal" "Syncthing: Device Sync" "Currently syncing: <b>$device_display_name</b>" "folder-sync"
+                                      ${self.notifyUser {
+                                        title = "Syncthing: Device Sync";
+                                        body = "Currently syncing: <b>$device_display_name</b>";
+                                        icon = "syncthing";
+                                        urgency = "normal";
+                                        validation = { inherit config; };
+                                      }}
                                   fi
                               else
                                   prev_sync_status="''${prev_device_sync_states[$device_id]:-unknown}"
@@ -493,12 +538,24 @@ args@{
                                       case "$sync_status" in
                                           "syncing")
                                               if [[ "$prev_sync_status" == "idle" || "$prev_sync_status" == "unknown" ]]; then
-                                                  notify "normal" "Syncthing: Device Sync" "Started syncing: <b>$device_display_name</b>" "folder-sync"
+                                                  ${self.notifyUser {
+                                                    title = "Syncthing: Device Sync";
+                                                    body = "Started syncing: <b>$device_display_name</b>";
+                                                    icon = "syncthing";
+                                                    urgency = "normal";
+                                                    validation = { inherit config; };
+                                                  }}
                                               fi
                                               ;;
                                           "idle")
                                               if [[ "$prev_sync_status" == "syncing" ]]; then
-                                                  notify "normal" "Syncthing: Device Sync" "Completed syncing: <b>$device_display_name</b> (Up to Date)" "checkmark"
+                                                  ${self.notifyUser {
+                                                    title = "Syncthing: Device Sync";
+                                                    body = "Completed syncing: <b>$device_display_name</b> (Up to Date)";
+                                                    icon = "syncthing";
+                                                    urgency = "normal";
+                                                    validation = { inherit config; };
+                                                  }}
                                               fi
                                               ;;
                                       esac
@@ -506,7 +563,13 @@ args@{
                                       prev_hash="''${prev_device_state_hashes[$device_id]:-0}"
                                       if [[ "$prev_hash" != "0" && "$state_hash" != "$prev_hash" && "$sync_status" == "idle" ]]; then
                                           device_display_name=$(get_device_display_name "$device_id")
-                                          notify "normal" "Syncthing: Device Sync" "Updated: <b>$device_display_name</b> (Up to Date)" "checkmark"
+                                          ${self.notifyUser {
+                                            title = "Syncthing: Device Sync";
+                                            body = "Updated: <b>$device_display_name</b> (Up to Date)";
+                                            icon = "syncthing";
+                                            urgency = "normal";
+                                            validation = { inherit config; };
+                                          }}
                                       fi
                                   fi
                               fi
@@ -568,13 +631,31 @@ args@{
                                   if [[ "$effective_state" != "idle" ]]; then
                                       case "$effective_state" in
                                           "scanning"|"sync-preparing"|"syncing")
-                                              notify "normal" "Syncthing: Folder Sync" "Currently syncing: $folder_display" "folder-sync"
+                                              ${self.notifyUser {
+                                                title = "Syncthing: Folder Sync";
+                                                body = "Currently syncing: $folder_display";
+                                                icon = "syncthing";
+                                                urgency = "normal";
+                                                validation = { inherit config; };
+                                              }}
                                               ;;
                                           "error")
-                                              notify "critical" "Syncthing: Folder Error" "$folder_display has $pull_errors pull errors - manual intervention needed" "dialog-error"
+                                              ${self.notifyUser {
+                                                title = "Syncthing: Folder Error";
+                                                body = "$folder_display has $pull_errors pull errors - manual intervention needed";
+                                                icon = "syncthing";
+                                                urgency = "critical";
+                                                validation = { inherit config; };
+                                              }}
                                               ;;
                                           "out-of-sync")
-                                              notify "normal" "Syncthing: Folder Sync" "Out of sync: $folder_display has $need_items items pending" "folder-sync"
+                                              ${self.notifyUser {
+                                                title = "Syncthing: Folder Sync";
+                                                body = "Out of sync: $folder_display has $need_items items pending";
+                                                icon = "syncthing";
+                                                urgency = "normal";
+                                                validation = { inherit config; };
+                                              }}
                                               ;;
                                       esac
                                   fi
@@ -585,27 +666,57 @@ args@{
                                       case "$effective_state" in
                                           "scanning"|"sync-preparing"|"syncing")
                                               if [[ "$prev_state" == "idle" || "$prev_state" == "unknown" ]]; then
-                                                  notify "normal" "Syncthing: Folder Sync" "Started: $folder_display" "folder-sync"
+                                                  ${self.notifyUser {
+                                                    title = "Syncthing: Folder Sync";
+                                                    body = "Started: $folder_display";
+                                                    icon = "syncthing";
+                                                    urgency = "normal";
+                                                    validation = { inherit config; };
+                                                  }}
                                               fi
                                               ;;
                                           "idle")
                                               if [[ "$prev_state" == "scanning" || "$prev_state" == "sync-preparing" || "$prev_state" == "syncing" ]]; then
                                                   sync_status=$(check_folder_device_sync_status "$folder_id")
-                                                  notify "normal" "Syncthing: Folder Sync" "Completed: $folder_display$sync_status" "checkmark"
+                                                  ${self.notifyUser {
+                                                    title = "Syncthing: Folder Sync";
+                                                    body = "Completed: $folder_display$sync_status";
+                                                    icon = "syncthing";
+                                                    urgency = "normal";
+                                                    validation = { inherit config; };
+                                                  }}
                                               fi
                                               ;;
                                           "error")
-                                              notify "critical" "Syncthing: Folder Error" "$folder_display has $pull_errors pull errors - manual intervention needed" "dialog-error"
+                                              ${self.notifyUser {
+                                                title = "Syncthing: Folder Error";
+                                                body = "$folder_display has $pull_errors pull errors - manual intervention needed";
+                                                icon = "syncthing";
+                                                urgency = "critical";
+                                                validation = { inherit config; };
+                                              }}
                                               ;;
                                           "out-of-sync")
-                                              notify "normal" "Syncthing: Folder Sync" "Out of sync: $folder_display has $need_items items pending" "folder-sync"
+                                              ${self.notifyUser {
+                                                title = "Syncthing: Folder Sync";
+                                                body = "Out of sync: $folder_display has $need_items items pending";
+                                                icon = "syncthing";
+                                                urgency = "normal";
+                                                validation = { inherit config; };
+                                              }}
                                               ;;
                                       esac
                                   else
                                       prev_sequence="''${prev_folder_sequences[$folder_id]:-0}"
                                       if [[ "$prev_sequence" != "0" && "$sequence" != "$prev_sequence" && "$effective_state" == "idle" ]]; then
                                           sync_status=$(check_folder_device_sync_status "$folder_id")
-                                          notify "normal" "Syncthing: Folder Sync" "Updated: $folder_display$sync_status" "checkmark"
+                                          ${self.notifyUser {
+                                            title = "Syncthing: Folder Sync";
+                                            body = "Updated: $folder_display$sync_status";
+                                            icon = "syncthing";
+                                            urgency = "normal";
+                                            validation = { inherit config; };
+                                          }}
                                       fi
                                   fi
                               fi

@@ -140,6 +140,119 @@ rec {
       in
       if imported ? on then imported.on else { };
 
+    # Send a user notification, preferring nx-user-notify (logger) when enabled, else raw notify-send (osascript -e 'display notification...' on Darwin)
+    # Usage: self.notifyUser { title = "..."; body = "..."; icon = "dialog-information"; urgency = "normal"; }
+    # urgency: "low" | "normal" | "critical"
+    # validation: optional { config } — if given, validates the icon name exists in the icon cache; skipped for absolute paths
+    # autoFormat: default true — detects $VAR / ${VAR} in body and uses jq at runtime for safe JSON encoding; set false to disable
+    notifyUser =
+      self:
+      {
+        title,
+        body,
+        icon ? "dialog-information",
+        urgency ? "normal",
+        validation ? null,
+        autoFormat ? true,
+      }@args:
+      let
+        validUrgencies = [
+          "low"
+          "normal"
+          "critical"
+        ];
+        title =
+          if builtins.isString args.title && args.title != "" then
+            args.title
+          else
+            throw "notifyUser: title must be a non-empty string";
+        body = if builtins.isString args.body then args.body else throw "notifyUser: body must be a string";
+        urgency =
+          let
+            v = args.urgency or "normal";
+          in
+          if builtins.elem v validUrgencies then
+            v
+          else
+            throw "notifyUser: urgency must be one of ${lib.concatStringsSep ", " validUrgencies}, got '${v}'";
+        validation =
+          let
+            v = args.validation or null;
+          in
+          if v == null then
+            null
+          else if !(v ? config) then
+            throw "notifyUser: validation requires 'config' field"
+          else
+            v;
+        icon =
+          let
+            v = args.icon or "dialog-information";
+          in
+          if !(builtins.isString v && v != "") then
+            throw "notifyUser: icon must be a non-empty string"
+          else if validation != null && !self.isDarwin && !(lib.hasPrefix "/" v) then
+            helpers.icons.getIcon validation.config v
+          else
+            v;
+        autoFormat =
+          let
+            v = args.autoFormat or true;
+          in
+          if !builtins.isBool v then throw "notifyUser: autoFormat must be a boolean" else v;
+        isDynamic = autoFormat && builtins.match ''.*\$[{]?[A-Za-z_][A-Za-z0-9_]*[}]?.*'' body != null;
+        pkgsSet = self.pkgs { };
+        loggerPriority =
+          if urgency == "critical" then
+            "user.err"
+          else if urgency == "low" then
+            "user.info"
+          else
+            "user.notice";
+        jsonPayload = builtins.toJSON { inherit title body icon; };
+        userNotifyEnabled = self.linux.isModuleEnabled "notifications.user-notify";
+        shellTitle = lib.escapeShellArg title;
+        shellIcon = lib.escapeShellArg icon;
+        shellUrgency = lib.escapeShellArg urgency;
+        shellBody = lib.replaceStrings [ "\"" ] [ "\\\"" ] body;
+        scriptContent =
+          if self.isDarwin then
+            if isDynamic then
+              ''
+                export _NOTIFY_TITLE=${shellTitle}
+                export _NOTIFY_BODY="$1"
+                /usr/bin/osascript -e 'display notification (system attribute "_NOTIFY_BODY") with title (system attribute "_NOTIFY_TITLE")'
+              ''
+            else
+              ''
+                export _NOTIFY_TITLE=${shellTitle}
+                export _NOTIFY_BODY=${lib.escapeShellArg body}
+                /usr/bin/osascript -e 'display notification (system attribute "_NOTIFY_BODY") with title (system attribute "_NOTIFY_TITLE")'
+              ''
+          else if userNotifyEnabled then
+            if isDynamic then
+              ''
+                export _NOTIFY_TITLE=${shellTitle}
+                export _NOTIFY_ICON=${shellIcon}
+                export _NOTIFY_BODY="$1"
+                ${pkgsSet.util-linux}/bin/logger -p ${loggerPriority} -t nx-user-notify "JSON-DATA::$(${pkgsSet.jq}/bin/jq -cn '{title:$ENV._NOTIFY_TITLE,body:$ENV._NOTIFY_BODY,icon:$ENV._NOTIFY_ICON}')"
+              ''
+            else
+              ''
+                ${pkgsSet.util-linux}/bin/logger -p ${loggerPriority} -t nx-user-notify ${lib.escapeShellArg "JSON-DATA::${jsonPayload}"}
+              ''
+          else if isDynamic then
+            ''
+              ${pkgsSet.libnotify}/bin/notify-send --urgency=${shellUrgency} --icon=${shellIcon} ${shellTitle} "$1"
+            ''
+          else
+            ''
+              ${pkgsSet.libnotify}/bin/notify-send --urgency=${shellUrgency} --icon=${shellIcon} ${shellTitle} ${lib.escapeShellArg body}
+            '';
+        script = pkgsSet.writeShellScript "nx-notify" scriptContent;
+      in
+      if isDynamic then "${script} \"${shellBody}\"" else "${script}";
+
     # Import module structure from same input
     # Usage: self.importFileFromOtherModuleSameInput { inherit args; modulePath = "desktop-modules.web-app"; subpath = "file.nix"; }
     importFileFromOtherModuleSameInput =

@@ -24,8 +24,20 @@ args@{
           };
 
           custom = {
-            start = "${pkgs.libnotify}/bin/notify-send 'GameMode started' --icon=com.valvesoftware.Steam";
-            end = "${pkgs.libnotify}/bin/notify-send 'GameMode ended' --icon=com.valvesoftware.Steam";
+            start = self.notifyUser {
+              title = "GameMode";
+              body = "GameMode started";
+              icon = "com.valvesoftware.Steam";
+              urgency = "normal";
+              validation = { inherit config; };
+            };
+            end = self.notifyUser {
+              title = "GameMode";
+              body = "GameMode ended";
+              icon = "com.valvesoftware.Steam";
+              urgency = "normal";
+              validation = { inherit config; };
+            };
           };
         };
       };

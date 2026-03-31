@@ -52,22 +52,6 @@ args@{
           MODEL_PULL_RETRIES=3
           MODEL_PULL_RETRY_INTERVAL=10
 
-          notify_user() {
-            local level="$1"
-            local icon="$2"
-            local message="$3"
-            ${lib.optionalString self.isLinux ''
-              if [ "$level" = "error" ]; then
-                ${pkgs.util-linux}/bin/logger -p user.err -t nx-user-notify "Ollama|$icon: $message"
-              else
-                ${pkgs.util-linux}/bin/logger -t nx-user-notify "Ollama|$icon: $message"
-              fi
-            ''}
-            ${lib.optionalString self.isDarwin ''
-              /usr/bin/osascript -e "display notification \"$message\" with title \"Ollama\""
-            ''}
-          }
-
           echo "Waiting for Ollama to be ready at $OLLAMA_URL..."
 
           while true; do
@@ -120,7 +104,13 @@ args@{
             if [ "$success" = false ]; then
               echo "ERROR: Failed to pull model $model after $MODEL_PULL_RETRIES attempts."
               FAILED_MODELS+=("$model")
-              notify_user "error" "dialog-error" "Failed to pull model $model"
+              ${self.notifyUser {
+                title = "Ollama";
+                body = "Failed to pull model $model";
+                icon = "dialog-error";
+                urgency = "critical";
+                validation = { inherit config; };
+              }}
             fi
           done
 
@@ -129,12 +119,24 @@ args@{
 
           if [ $FAILED_COUNT -gt 0 ]; then
             echo "WARNING: Failed to pull the following models: ''${FAILED_MODELS[*]}"
-            notify_user "error" "dialog-warning" "$SUCCESS_COUNT models ready, $FAILED_COUNT failed"
+            ${self.notifyUser {
+              title = "Ollama";
+              body = "$SUCCESS_COUNT models ready, $FAILED_COUNT failed";
+              icon = "dialog-warning";
+              urgency = "critical";
+              validation = { inherit config; };
+            }}
             exit 1
           fi
 
           echo "All models pulled successfully."
-          notify_user "info" "chat-symbolic" "All $TOTAL_MODELS models ready"
+          ${self.notifyUser {
+            title = "Ollama";
+            body = "All $TOTAL_MODELS models ready";
+            icon = "chat-symbolic";
+            urgency = "normal";
+            validation = { inherit config; };
+          }}
         '';
 
         triggerScript = pkgs.writeShellScriptBin "ollama-pull-models" (

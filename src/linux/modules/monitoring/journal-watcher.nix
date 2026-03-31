@@ -479,42 +479,44 @@ args@{
           builtins.toJSON allIgnorePatterns
         );
 
-        allHighlightPatterns = map (p: p // { pattern_type = "highlight"; }) (
-          lib.concatMap expandPattern (
-            self.settings.baseHighlightPatterns
-            ++ (map (
-              s:
-              mkPattern {
-                string = s;
-                all = true;
-              }
-            ) allStringsToHighlight)
-            ++ (map (s: mkPattern { string = s; }) allSystemStringsToHighlight)
-            ++ (map (
-              s:
-              mkPattern {
-                string = s;
-                kernel = true;
-              }
-            ) allKernelStringsToHighlight)
-            ++ (map (
-              s:
-              mkPattern {
-                string = s;
-                user = true;
-              }
-            ) allUserStringsToHighlight)
-            ++ (map (
-              t:
-              mkPattern {
-                tag = t;
-                all = true;
-              }
-            ) allTagsToHighlight)
-            ++ self.settings.highlightPatterns
-            ++ opts.highlightPatterns
-          )
-        );
+        allHighlightPatterns =
+          map (p: (p // { pattern_type = "highlight"; }) // { mapping = resolveMapping (p.mapping or null); })
+            (
+              lib.concatMap expandPattern (
+                self.settings.baseHighlightPatterns
+                ++ (map (
+                  s:
+                  mkPattern {
+                    string = s;
+                    all = true;
+                  }
+                ) allStringsToHighlight)
+                ++ (map (s: mkPattern { string = s; }) allSystemStringsToHighlight)
+                ++ (map (
+                  s:
+                  mkPattern {
+                    string = s;
+                    kernel = true;
+                  }
+                ) allKernelStringsToHighlight)
+                ++ (map (
+                  s:
+                  mkPattern {
+                    string = s;
+                    user = true;
+                  }
+                ) allUserStringsToHighlight)
+                ++ (map (
+                  t:
+                  mkPattern {
+                    tag = t;
+                    all = true;
+                  }
+                ) allTagsToHighlight)
+                ++ self.settings.highlightPatterns
+                ++ opts.highlightPatterns
+              )
+            );
         highlightPatternsJson = pkgs.writeText "journal-watcher-highlight-patterns.json" (
           builtins.toJSON allHighlightPatterns
         );
@@ -534,7 +536,32 @@ args@{
           else
             [ ];
 
-        allTagMappings = self.settings.baseTagMappings // self.settings.tagMappings // opts.tagMappings;
+        resolveIconField =
+          icon:
+          if icon == null then
+            null
+          else if lib.hasPrefix "/" icon then
+            icon
+          else
+            helpers.icons.getIcon config icon;
+
+        resolveMapping =
+          mapping:
+          if mapping == null then
+            null
+          else
+            mapping
+            // {
+              icon = resolveIconField (mapping.icon or null);
+              infoIcon = resolveIconField (mapping.infoIcon or null);
+              warnIcon = resolveIconField (mapping.warnIcon or null);
+              failedIcon = resolveIconField (mapping.failedIcon or null);
+              emergIcon = resolveIconField (mapping.emergIcon or null);
+            };
+
+        allTagMappings = lib.mapAttrs (_: resolveMapping) (
+          self.settings.baseTagMappings // self.settings.tagMappings // opts.tagMappings
+        );
 
         watcherConfigJson = pkgs.writeText "journal-watcher-config.json" (
           builtins.toJSON {
@@ -556,6 +583,18 @@ args@{
             journalctl_bin = "${pkgs.systemd}/bin/journalctl";
             logger_bin = "${pkgs.util-linux}/bin/logger";
             pushover_cmd = pushoverCmd;
+            icon_map_system = {
+              emerg = helpers.icons.getIcon config "dialog-error";
+              failed = helpers.icons.searchIcon config "computer-fail|dialog-error";
+              warn = helpers.icons.getIcon config "dialog-warning";
+              info = helpers.icons.getIcon config "dialog-information";
+            };
+            icon_map_user = {
+              emerg = helpers.icons.getIcon config "dialog-error";
+              failed = helpers.icons.searchIcon config "computer-fail|dialog-error";
+              warn = helpers.icons.getIcon config "dialog-warning";
+              info = helpers.icons.searchIcon config "avatar-default|dialog-information";
+            };
             ignore_patterns = allIgnorePatterns;
             highlight_patterns = allHighlightPatterns;
             tag_mappings = allTagMappings;

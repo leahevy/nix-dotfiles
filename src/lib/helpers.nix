@@ -606,4 +606,18 @@ rec {
       else
         builtins.throw "nx icons: no icon found for '${pattern}' in icon cache";
   };
+
+  # Converts a systemlog logger level to a notify-send level.
+  # Usage: loggerLevelToNotifyLevel "info"
+  loggerLevelToNotifyLevel =
+    level:
+
+    if level == "info" then
+      "normal"
+    else if level == "warning" then
+      "normal"
+    else if level == "err" || level == "error" then
+      "critical"
+    else
+      throw "loggerLevelToNotifyLevel: unknown level '${level}'";
 }

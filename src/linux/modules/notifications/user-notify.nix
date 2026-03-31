@@ -38,17 +38,7 @@ args@{
           cmd:
           lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
 
-        iconThemeString = config.nx.preferences.theme.icons.primary;
-        iconThemePackageName = lib.head (lib.splitString "/" iconThemeString);
-        iconThemePackage = lib.getAttr iconThemePackageName pkgs;
-        iconThemeName = lib.head (lib.tail (lib.splitString "/" iconThemeString));
-        iconThemeBasePath = "${iconThemePackage}/share/icons/${iconThemeName}";
-
-        fallbackIconThemeString = config.nx.preferences.theme.icons.fallback;
-        fallbackIconThemePackageName = lib.head (lib.splitString "/" fallbackIconThemeString);
-        fallbackIconThemePackage = lib.getAttr fallbackIconThemePackageName pkgs;
-        fallbackIconThemeName = lib.head (lib.tail (lib.splitString "/" fallbackIconThemeString));
-        fallbackIconThemeBasePath = "${fallbackIconThemePackage}/share/icons/${fallbackIconThemeName}";
+        iconResolveScript = config.nx.lib.iconResolveScript;
 
         monitorScript = pkgs.writeShellScript "nx-user-notify-monitor" ''
           set -euo pipefail
@@ -56,38 +46,10 @@ args@{
           NOTIFY_SEND="${pkgs.libnotify}/bin/notify-send"
           JOURNALCTL="${pkgs.systemd}/bin/journalctl"
           SERVICE_TAG="nx-user-notify"
-          ICON_THEME_BASE="${iconThemeBasePath}"
-          FALLBACK_ICON_THEME_BASE="${fallbackIconThemeBasePath}"
 
           CURSOR_FILE="${self.user.home}/.local/state/nx-user-notify-monitor-cursor"
 
           mkdir -p "$(dirname "$CURSOR_FILE")"
-
-          resolve_icon() {
-              local icon_name="$1"
-
-              if [[ "$icon_name" == /* ]]; then
-                  echo "$icon_name"
-                  return 0
-              fi
-
-              for size in scalable 64x64 48x48; do
-                  for iconfile in "$ICON_THEME_BASE/$size"/*/"$icon_name.svg"; do
-                      if [[ -f "$iconfile" ]]; then
-                          echo "$iconfile"
-                          return 0
-                      fi
-                  done
-                  for iconfile in "$FALLBACK_ICON_THEME_BASE/$size"/*/"$icon_name.svg"; do
-                      if [[ -f "$iconfile" ]]; then
-                          echo "$iconfile"
-                          return 0
-                      fi
-                  done
-              done
-
-              return 1
-          }
 
           notify() {
               local urgency="''${1:-normal}"
@@ -96,7 +58,7 @@ args@{
               local icon="''${4:-preferences-desktop-notification}"
 
               local resolved_icon
-              if resolved_icon=$(resolve_icon "$icon") && [[ -r "$resolved_icon" ]]; then
+              if resolved_icon=$(nx-resolve-icon "$icon") && [[ -r "$resolved_icon" ]]; then
                   $NOTIFY_SEND --urgency="$urgency" --icon="$resolved_icon" "$title" "$body" || true
               else
                   $NOTIFY_SEND --urgency="$urgency" "$title" "$body" || true
@@ -259,6 +221,7 @@ args@{
                       pkgs.libnotify
                       pkgs.systemd
                       pkgs.jq
+                      iconResolveScript
                     ]
                   }"
                 ];

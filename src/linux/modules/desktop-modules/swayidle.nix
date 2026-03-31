@@ -75,10 +75,22 @@ args@{
 
           if [[ -f "$DISABLE_FILE" ]]; then
             rm "$DISABLE_FILE"
-            ${pkgs.libnotify}/bin/notify-send "Swayidle" "Timeout commands enabled" --icon=system-suspend
+            ${self.notifyUser {
+              title = "Swayidle";
+              body = "Timeout commands enabled";
+              icon = "system-suspend";
+              urgency = "normal";
+              validation = { inherit config; };
+            }}
           else
             touch "$DISABLE_FILE"
-            ${pkgs.libnotify}/bin/notify-send "Swayidle" "Timeout commands disabled" --icon=system-lock-screen
+            ${self.notifyUser {
+              title = "Swayidle";
+              body = "Timeout commands disabled";
+              icon = "system-lock-screen";
+              urgency = "normal";
+              validation = { inherit config; };
+            }}
           fi
         '';
       in

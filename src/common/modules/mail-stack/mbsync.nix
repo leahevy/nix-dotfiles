@@ -191,9 +191,21 @@ args@{
                           AFTER_COUNT=$(${pkgs.notmuch}/bin/notmuch count -- tag:inbox)
                           NEW_COUNT=$((AFTER_COUNT - BEFORE_COUNT))
                           if [ "$NEW_COUNT" -gt 0 ]; then
-                            ${pkgs.libnotify}/bin/notify-send "New Mail" "$NEW_COUNT new messages" --icon=email
+                            ${self.notifyUser {
+                              title = "New Mail";
+                              body = "$NEW_COUNT new messages";
+                              icon = "email";
+                              urgency = "normal";
+                              validation = { inherit config; };
+                            }}
                           elif [ "$NEW_COUNT" -lt 0 ]; then
-                            ${pkgs.libnotify}/bin/notify-send "Mail Update" "Some messages in inbox were updated" --icon=email
+                            ${self.notifyUser {
+                              title = "Mail Update";
+                              body = "Some messages in inbox were updated";
+                              icon = "email";
+                              urgency = "normal";
+                              validation = { inherit config; };
+                            }}
                           fi
                         ''
                       else

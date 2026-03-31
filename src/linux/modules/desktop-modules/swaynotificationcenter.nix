@@ -27,9 +27,21 @@ args@{
 
           if [ "$current_state" = "true" ]; then
             swaync-client -d > /dev/null 2>&1
-            notify-send "Do Not Disturb" "Notifications enabled" --icon=audio-volume-medium
+            ${self.notifyUser {
+              title = "Do Not Disturb";
+              body = "Notifications enabled";
+              icon = "audio-volume-medium";
+              urgency = "normal";
+              validation = { inherit config; };
+            }}
           else
-            notify-send "Do Not Disturb" "Notifications disabled" --icon=audio-volume-muted
+            ${self.notifyUser {
+              title = "Do Not Disturb";
+              body = "Notifications disabled";
+              icon = "audio-volume-muted";
+              urgency = "normal";
+              validation = { inherit config; };
+            }}
             sleep 5
             current_state=$(swaync-client -D)
             if [ "$current_state" = "false" ]; then

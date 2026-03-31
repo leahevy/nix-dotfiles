@@ -334,7 +334,13 @@ args@{
               if isHeadless then
                 ""
               else
-                ''${pkgs.libnotify}/bin/notify-send --urgency="normal" "Backup Triggered" "Manual backup triggered - will start in 2 minutes" --icon=archive''
+                "${self.notifyUser {
+                  title = "Backup Triggered";
+                  body = "Manual backup triggered - will start in 2 minutes";
+                  icon = "archive";
+                  urgency = "normal";
+                  validation = { inherit config; };
+                }}"
             }
           '';
           executable = true;
@@ -438,18 +444,48 @@ args@{
             userNotifyEnabled = (self.isModuleEnabled "notifications.user-notify");
             pushoverEnabled = self.settings.pushoverNotifications;
 
+            userNotifyTitle =
+              if userNotifyEnabled then
+                if lib.hasPrefix "STARTED:" message then
+                  "Borg Backup (starting)"
+                else if lib.hasPrefix "SUCCESS:" message then
+                  "Borg Backup (completed)"
+                else if lib.hasPrefix "FAILURE:" message then
+                  "Borg Backup (failed)"
+                else if lib.hasPrefix "INFO:" message then
+                  "Borg Backup (info)"
+                else
+                  "Borg Backup"
+              else
+                "";
+
             userNotifyMessage =
               if userNotifyEnabled then
                 if lib.hasPrefix "STARTED:" message then
-                  "Borg Backup (starting)|folder-sync: ${lib.removePrefix "STARTED: " message}"
+                  lib.removePrefix "STARTED: " message
                 else if lib.hasPrefix "SUCCESS:" message then
-                  "Borg Backup (completed)|checkmark: ${lib.removePrefix "SUCCESS: " message}"
+                  lib.removePrefix "SUCCESS: " message
                 else if lib.hasPrefix "FAILURE:" message then
-                  "Borg Backup (failed)|dialog-error: ${lib.removePrefix "FAILURE: " message}"
+                  lib.removePrefix "FAILURE: " message
                 else if lib.hasPrefix "INFO:" message then
-                  "Borg Backup (info)|folder-sync: ${lib.removePrefix "INFO: " message}"
+                  lib.removePrefix "INFO: " message
                 else
-                  "Borg Backup|folder-sync: ${message}"
+                  message
+              else
+                "";
+
+            userNotifyIcon =
+              if userNotifyEnabled then
+                if lib.hasPrefix "STARTED:" message then
+                  "folder-sync"
+                else if lib.hasPrefix "SUCCESS:" message then
+                  "checkmark"
+                else if lib.hasPrefix "FAILURE:" message then
+                  "dialog-error"
+                else if lib.hasPrefix "INFO:" message then
+                  "folder-sync"
+                else
+                  "folder-sync"
               else
                 "";
 
@@ -480,7 +516,16 @@ args@{
                 message;
           in
           ''
-            ${lib.optionalString userNotifyEnabled ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
+            ${lib.optionalString userNotifyEnabled (
+              self.notifyUser {
+                title = userNotifyTitle;
+                body = userNotifyMessage;
+                icon = userNotifyIcon;
+                urgency = helpers.loggerLevelToNotifyLevel level;
+                validation = { inherit config; };
+              }
+            )}
+
             ${lib.optionalString shouldSendPushover (
               pushover.send {
                 title = "Borg-Backup";

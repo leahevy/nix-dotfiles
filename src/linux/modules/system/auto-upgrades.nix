@@ -127,7 +127,13 @@ args@{
               if isHeadless then
                 ""
               else
-                ''${pkgs.libnotify}/bin/notify-send --urgency="normal" "Auto-Upgrade Triggered" "Manual auto-upgrade triggered" --icon=system-reboot''
+                "${self.notifyUser {
+                  title = "Auto-Upgrade Triggered";
+                  body = "Manual auto-upgrade triggered";
+                  icon = "system-reboot";
+                  urgency = "normal";
+                  validation = { inherit config; };
+                }}"
             }
           '';
           executable = true;
@@ -195,35 +201,99 @@ args@{
             userNotifyEnabled = (self.isModuleEnabled "notifications.user-notify");
             pushoverEnabled = self.settings.pushoverNotifications;
 
-            userNotifyMessage =
+            userNotifyTitle =
               if userNotifyEnabled then
                 if lib.hasPrefix "STARTED:" message then
-                  "Auto-Upgrade (starting)|system-reboot: ${lib.removePrefix "STARTED: " message}"
+                  "Auto-Upgrade (starting)"
                 else if lib.hasPrefix "SUCCESS:" message then
-                  "Auto-Upgrade (completed)|checkmark: ${lib.removePrefix "SUCCESS: " message}"
+                  "Auto-Upgrade (completed)"
                 else if lib.hasPrefix "SUCCESS-REBOOT-NOW:" message then
-                  "Auto-Upgrade (rebooting)|system-reboot: ${lib.removePrefix "SUCCESS-REBOOT-NOW: " message}"
+                  "Auto-Upgrade (rebooting)"
                 else if lib.hasPrefix "SUCCESS-REBOOT-LATER:" message then
-                  "Auto-Upgrade (completed)|checkmark: ${lib.removePrefix "SUCCESS-REBOOT-LATER: " message}"
+                  "Auto-Upgrade (completed)"
                 else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
-                  "Auto-Upgrade (post-reboot)|checkmark: ${lib.removePrefix "SUCCESS-POST-REBOOT: " message}"
+                  "Auto-Upgrade (post-reboot)"
                 else if lib.hasPrefix "FAILURE:" message then
-                  "Auto-Upgrade (failed)|dialog-error: ${lib.removePrefix "FAILURE: " message}"
+                  "Auto-Upgrade (failed)"
                 else if lib.hasPrefix "WARNING:" message then
-                  "Auto-Upgrade (warning)|dialog-warning: ${lib.removePrefix "WARNING: " message}"
+                  "Auto-Upgrade (warning)"
                 else if lib.hasPrefix "DEBUG:" message then
                   null
                 else if lib.hasPrefix "INFO:" message then
                   if lib.hasSuffix "skipping upgrade" message then
-                    "Auto-Upgrade (info)|system-reboot: ${lib.removePrefix "INFO: " message}"
+                    "Auto-Upgrade (info)"
                   else if lib.hasInfix "Borg backup" message then
-                    "Auto-Upgrade (info)|system-reboot: ${lib.removePrefix "INFO: " message}"
+                    "Auto-Upgrade (info)"
                   else
                     null
                 else if lib.hasPrefix "NOTICE:" message then
-                  "Auto-Upgrade (notice)|system-reboot: ${lib.removePrefix "NOTICE: " message}"
+                  "Auto-Upgrade (notice)"
                 else
-                  "Auto-Upgrade|system-reboot: ${message}"
+                  "Auto-Upgrade"
+              else
+                null;
+
+            userNotifyMessage =
+              if userNotifyEnabled then
+                if lib.hasPrefix "STARTED:" message then
+                  lib.removePrefix "STARTED: " message
+                else if lib.hasPrefix "SUCCESS:" message then
+                  lib.removePrefix "SUCCESS: " message
+                else if lib.hasPrefix "SUCCESS-REBOOT-NOW:" message then
+                  lib.removePrefix "SUCCESS-REBOOT-NOW: " message
+                else if lib.hasPrefix "SUCCESS-REBOOT-LATER:" message then
+                  lib.removePrefix "SUCCESS-REBOOT-LATER: " message
+                else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
+                  lib.removePrefix "SUCCESS-POST-REBOOT: " message
+                else if lib.hasPrefix "FAILURE:" message then
+                  lib.removePrefix "FAILURE: " message
+                else if lib.hasPrefix "WARNING:" message then
+                  lib.removePrefix "WARNING: " message
+                else if lib.hasPrefix "DEBUG:" message then
+                  null
+                else if lib.hasPrefix "INFO:" message then
+                  if lib.hasSuffix "skipping upgrade" message then
+                    lib.removePrefix "INFO: " message
+                  else if lib.hasInfix "Borg backup" message then
+                    lib.removePrefix "INFO: " message
+                  else
+                    null
+                else if lib.hasPrefix "NOTICE:" message then
+                  lib.removePrefix "NOTICE: " message
+                else
+                  message
+              else
+                null;
+
+            userNotifyIcon =
+              if userNotifyEnabled then
+                if lib.hasPrefix "STARTED:" message then
+                  "system-reboot"
+                else if lib.hasPrefix "SUCCESS:" message then
+                  "checkmark"
+                else if lib.hasPrefix "SUCCESS-REBOOT-NOW:" message then
+                  "system-reboot"
+                else if lib.hasPrefix "SUCCESS-REBOOT-LATER:" message then
+                  "checkmark"
+                else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
+                  "checkmark"
+                else if lib.hasPrefix "FAILURE:" message then
+                  "dialog-error"
+                else if lib.hasPrefix "WARNING:" message then
+                  "dialog-warning"
+                else if lib.hasPrefix "DEBUG:" message then
+                  null
+                else if lib.hasPrefix "INFO:" message then
+                  if lib.hasSuffix "skipping upgrade" message then
+                    "system-reboot"
+                  else if lib.hasInfix "Borg backup" message then
+                    "system-reboot"
+                  else
+                    null
+                else if lib.hasPrefix "NOTICE:" message then
+                  "system-reboot"
+                else
+                  "system-reboot"
               else
                 null;
 
@@ -286,7 +356,15 @@ args@{
                 message;
           in
           ''
-            ${lib.optionalString shouldSendUserNotify ''${pkgs.util-linux}/bin/logger -p user.${level} -t nx-user-notify "${userNotifyMessage}"''}
+            ${lib.optionalString shouldSendUserNotify (
+              self.notifyUser {
+                title = userNotifyTitle;
+                body = userNotifyMessage;
+                icon = userNotifyIcon;
+                urgency = helpers.loggerLevelToNotifyLevel level;
+                validation = { inherit config; };
+              }
+            )}
             ${lib.optionalString shouldSendPushover (
               pushover.send {
                 title = "Auto-Upgrade";
