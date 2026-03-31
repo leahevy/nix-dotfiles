@@ -286,6 +286,17 @@ in
   input = "build";
 
   rawOptions = {
+    nx.lib.iconResolveScript = lib.mkOption {
+      type = lib.types.package;
+      description = "nx-resolve-icon script for resolving icon names to store paths at runtime";
+    };
+
+    nx.cache.icons = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Cache mapping icon names to nix store paths, built from the active icon themes";
+    };
+
     nx.preferences = {
       theme = {
         name = lib.mkOption {
@@ -607,4 +618,139 @@ in
       };
     };
   };
+
+  on.linux =
+    let
+      buildThemeBasePath =
+        themeString:
+        let
+          parts = lib.splitString "/" themeString;
+        in
+        "${pkgs.${lib.head parts}}/share/icons/${lib.concatStringsSep "/" (lib.tail parts)}";
+
+      buildIconCache =
+        config:
+        let
+          primaryBase = buildThemeBasePath config.nx.preferences.theme.icons.primary;
+          fallbackBase = buildThemeBasePath config.nx.preferences.theme.icons.fallback;
+          sizes = [
+            "scalable"
+            "64x64"
+            "48x48"
+            "32x32"
+            "24x24"
+            "22x22"
+            "16x16"
+          ];
+          iconsInDir =
+            base: size:
+            let
+              dir = "${base}/${size}";
+            in
+            if builtins.pathExists dir then
+              lib.concatMap
+                (
+                  cat:
+                  let
+                    catDir = "${dir}/${cat}";
+                  in
+                  lib.concatMap
+                    (
+                      file:
+                      let
+                        isSvg = lib.hasSuffix ".svg" file;
+                        isPng = lib.hasSuffix ".png" file;
+                        stem =
+                          if isSvg then
+                            lib.removeSuffix ".svg" file
+                          else if isPng then
+                            lib.removeSuffix ".png" file
+                          else
+                            "";
+                      in
+                      if isSvg || isPng then
+                        [
+                          {
+                            name = stem;
+                            value = "${catDir}/${file}";
+                          }
+                        ]
+                      else
+                        [ ]
+                    )
+                    (
+                      builtins.attrNames (
+                        lib.filterAttrs (_: t: t == "regular" || t == "symlink") (builtins.readDir catDir)
+                      )
+                    )
+                )
+                (
+                  builtins.attrNames (
+                    lib.filterAttrs (_: t: t == "directory" || t == "symlink") (builtins.readDir dir)
+                  )
+                )
+            else
+              [ ];
+          allEntries = lib.concatMap (
+            size: (iconsInDir primaryBase size) ++ (iconsInDir fallbackBase size)
+          ) sizes;
+        in
+        lib.listToAttrs allEntries;
+
+      mkScript =
+        config:
+        let
+          primary = buildThemeBasePath config.nx.preferences.theme.icons.primary;
+          fallback = buildThemeBasePath config.nx.preferences.theme.icons.fallback;
+        in
+        pkgs.writeScriptBin "nx-resolve-icon" ''
+          #!${pkgs.bash}/bin/bash
+          all=false
+          if [[ "$1" == "--all" ]]; then
+            all=true
+            shift
+          elif [[ "$1" == -* ]]; then
+            echo "nx-resolve-icon: unknown option '$1'" >&2
+            exit 1
+          fi
+          if [[ $# -eq 0 ]]; then
+            echo "nx-resolve-icon: icon name required" >&2
+            exit 1
+          fi
+          if [[ $# -gt 1 ]]; then
+            echo "nx-resolve-icon: too many arguments" >&2
+            exit 1
+          fi
+          icon_name="$1"
+          if [[ "$icon_name" == /* ]]; then echo "$icon_name"; exit 0; fi
+          found=false
+          for size in scalable 64x64 48x48 32x32 24x24 22x22 16x16; do
+            for iconfile in "${primary}/$size"/*/"$icon_name.svg"; do
+              if [[ -f "$iconfile" ]]; then
+                echo "$iconfile"
+                if $all; then found=true; else exit 0; fi
+              fi
+            done
+            for iconfile in "${fallback}/$size"/*/"$icon_name.svg"; do
+              if [[ -f "$iconfile" ]]; then
+                echo "$iconfile"
+                if $all; then found=true; else exit 0; fi
+              fi
+            done
+          done
+          $found && exit 0 || exit 1
+        '';
+    in
+    {
+      enabled = config: {
+        nx.lib.iconResolveScript = lib.mkDefault (mkScript config);
+        nx.cache.icons = lib.mkDefault (buildIconCache config);
+      };
+      standalone = config: {
+        home.packages = [ config.nx.lib.iconResolveScript ];
+      };
+      system = config: {
+        environment.systemPackages = [ config.nx.lib.iconResolveScript ];
+      };
+    };
 }

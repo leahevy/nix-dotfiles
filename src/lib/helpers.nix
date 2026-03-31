@@ -580,4 +580,30 @@ rec {
       runWithAbsolutePath config terminal terminal.openRunPrefix [ ]
     else
       [ ];
+
+  # Functions to search for icons in the icons cache (Linux only)
+  icons = {
+    # Returns the absolute path to an icon from the icons cache, or throws an error if not found.
+    # Usage: getIcon config "icon-name"
+    getIcon =
+      config: name:
+      if config.nx.cache.icons ? ${name} then
+        config.nx.cache.icons.${name}
+      else
+        builtins.throw "nx icons: '${name}' not found in icon cache";
+
+    # Returns the absolute path to an icon from the icons cache that matches the given pattern, or throws an error if not found.
+    # Usage: searchIcon config "icon-pattern"
+    searchIcon =
+      config: pattern:
+      let
+        cache = config.nx.cache.icons;
+        names = lib.splitString "|" pattern;
+        result = lib.findFirst (name: cache ? ${name}) null names;
+      in
+      if result != null then
+        cache.${result}
+      else
+        builtins.throw "nx icons: no icon found for '${pattern}' in icon cache";
+  };
 }
