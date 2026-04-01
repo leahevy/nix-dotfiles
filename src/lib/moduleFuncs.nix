@@ -219,10 +219,12 @@ rec {
         shellIcon = lib.escapeShellArg icon;
         shellUrgency = lib.escapeShellArg urgency;
         shellBody = lib.replaceStrings [ "\"" ] [ "\\\"" ] body;
+        commentBody = lib.replaceStrings [ "\n" ] [ " " ] body;
         scriptContent =
           if self.isDarwin then
             if isDynamic then
               ''
+                # ${commentBody}
                 export _NOTIFY_TITLE=${shellTitle}
                 export _NOTIFY_BODY="$1"
                 /usr/bin/osascript -e 'display notification (system attribute "_NOTIFY_BODY") with title (system attribute "_NOTIFY_TITLE")'
@@ -236,6 +238,7 @@ rec {
           else if userNotifyEnabled then
             if isDynamic then
               ''
+                # ${commentBody}
                 export _NOTIFY_TITLE=${shellTitle}
                 export _NOTIFY_ICON=${shellIcon}
                 export _NOTIFY_BODY="$1"
@@ -247,6 +250,7 @@ rec {
               ''
           else if isDynamic then
             ''
+              # ${commentBody}
               ${pkgsSet.libnotify}/bin/notify-send --urgency=${shellUrgency} --icon=${shellIcon} ${shellTitle} "$1"
             ''
           else
