@@ -648,11 +648,11 @@ def process_message(
         )
 
         priority_map = {
-            "0": "emerg",
-            "1": "emerg",
-            "2": "emerg",
-            "3": "failed",
-            "4": "warn",
+            0: "emerg",
+            1: "emerg",
+            2: "emerg",
+            3: "failed",
+            4: "warn",
         }
         notify_type = priority_map.get(priority, "info")
 
