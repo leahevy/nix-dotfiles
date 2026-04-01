@@ -633,69 +633,48 @@ in
         let
           primaryBase = buildThemeBasePath config.nx.preferences.theme.icons.primary;
           fallbackBase = buildThemeBasePath config.nx.preferences.theme.icons.fallback;
-          sizes = [
-            "scalable"
-            "64x64"
-            "48x48"
-            "32x32"
-            "24x24"
-            "22x22"
-            "16x16"
-          ];
-          iconsInDir =
-            base: size:
-            let
-              dir = "${base}/${size}";
-            in
-            if builtins.pathExists dir then
-              lib.concatMap
-                (
-                  cat:
-                  let
-                    catDir = "${dir}/${cat}";
-                  in
-                  lib.concatMap
-                    (
-                      file:
-                      let
-                        isSvg = lib.hasSuffix ".svg" file;
-                        isPng = lib.hasSuffix ".png" file;
-                        stem =
-                          if isSvg then
-                            lib.removeSuffix ".svg" file
-                          else if isPng then
-                            lib.removeSuffix ".png" file
-                          else
-                            "";
-                      in
-                      if isSvg || isPng then
-                        [
-                          {
-                            name = stem;
-                            value = "${catDir}/${file}";
-                          }
-                        ]
-                      else
-                        [ ]
-                    )
-                    (
-                      builtins.attrNames (
-                        lib.filterAttrs (_: t: t == "regular" || t == "symlink") (builtins.readDir catDir)
-                      )
-                    )
-                )
-                (
-                  builtins.attrNames (
-                    lib.filterAttrs (_: t: t == "directory" || t == "symlink") (builtins.readDir dir)
-                  )
-                )
-            else
-              [ ];
-          allEntries = lib.concatMap (
-            size: (iconsInDir primaryBase size) ++ (iconsInDir fallbackBase size)
-          ) sizes;
+          cacheScript = pkgs.writeText "nx-build-icon-cache.py" ''
+            import json, os, sys
+
+            def scan_size(base, key, size, cache):
+                size_dir = os.path.join(base, size)
+                if not os.path.isdir(size_dir):
+                    return
+                try:
+                    categories = sorted(os.scandir(size_dir), key=lambda e: e.name)
+                except OSError:
+                    return
+                for cat in categories:
+                    if not cat.is_dir(follow_symlinks=True):
+                        continue
+                    try:
+                        files = sorted(os.scandir(cat.path), key=lambda e: e.name)
+                    except OSError:
+                        continue
+                    for f in files:
+                        if f.name.endswith('.svg') or f.name.endswith('.png'):
+                            cache[f.name[:-4]] = [key, os.path.relpath(f.path, base)]
+
+            primary_base, fallback_base = sys.argv[1], sys.argv[2]
+            sizes = ["scalable", "64x64", "48x48", "32x32", "24x24", "22x22", "16x16"]
+            cache = {}
+            for size in reversed(sizes):
+                scan_size(fallback_base, "f", size, cache)
+                scan_size(primary_base, "p", size, cache)
+            sys.stdout.write(json.dumps(cache))
+          '';
+          cacheDrv = pkgs.runCommand "nx-icon-cache" { } ''
+            ${pkgs.python3}/bin/python3 ${cacheScript} ${primaryBase} ${fallbackBase} > $out
+          '';
+          rawCache = builtins.fromJSON (builtins.readFile cacheDrv);
         in
-        lib.listToAttrs allEntries;
+        lib.mapAttrs (
+          _: v:
+          if builtins.elemAt v 0 == "p" then
+            "${primaryBase}/${builtins.elemAt v 1}"
+          else
+            "${fallbackBase}/${builtins.elemAt v 1}"
+        ) rawCache;
 
       mkScript =
         config:
