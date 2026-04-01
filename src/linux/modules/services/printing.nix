@@ -53,6 +53,12 @@ args@{
         { string = "The printer .* does not support requests with attribute set"; }
         {
           string = "Stopping 'cups\\.service', but its triggering units are still active";
+          service = "ensure-printers.service";
+          tag = "systemctl";
+        }
+        {
+          string = "Stopping 'cups\\.service', but its triggering units are still active";
+          tag = "systemctl";
           unitless = true;
         }
         { string = "\\[Client [0-9]+\\] Returning IPP server-error-device-error for.*from localhost\\."; }
@@ -65,6 +71,12 @@ args@{
         { string = "Raw queues are deprecated and will stop working in a future version of CUPS\\."; }
         {
           string = "^cups\\.socket$";
+          service = "ensure-printers.service";
+          tag = "systemctl";
+        }
+        {
+          string = "^cups\\.socket$";
+          tag = "systemctl";
           unitless = true;
         }
       ];
