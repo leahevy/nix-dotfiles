@@ -166,7 +166,11 @@ rec {
             args.title
           else
             throw "notifyUser: title must be a non-empty string";
-        body = if builtins.isString args.body then args.body else throw "notifyUser: body must be a string";
+        body =
+          if builtins.isString args.body && args.body != "" then
+            args.body
+          else
+            throw "notifyUser: body must be a non-empty string";
         urgency =
           let
             v = args.urgency or "normal";
