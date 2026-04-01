@@ -2,83 +2,7 @@
 set -euo pipefail
 
 NAME="nx"
-VERSION="0.0.1"
-
-HELP_MSG=$(
-cat <<EOF
-Usage: $NAME <command> [args...]
-       $NAME --help
-       $NAME --version
-
-Description:
-  The $NAME tool manages home-manager (via Nix) or whole NixOS system.
-
-Commands:
-
-  Configuration:
-    profile <\$1>    # Configures to use profile <\$1>. To revert it remove
-                      the file .nx-profile.conf in the nxcore directory.
-
-
-  Switch Commands:
-    sync            # Sync/deploys the system state.
-    build           # Test build configuration without deploying.
-    gc              # Run the garbage collection.
-    update          # Updates the flake in git (without switching).
-    dist-upgrade    # Bump NixOS version.
-
-
-  Darwin Only:
-    brew            # Sync Homebrew packages.
-
-
-  NixOS Only:
-    dry             # Tests the configuration without deploying it.
-    test            # Activates the system state without adding it to the
-                      bootloader menu.
-    boot            # Add the configuration to the bootloader without
-                      switching right yet.
-    rollback        # Rollback to the previous configuration.
-    impermanence    # Manage ephemeral root filesystems.
-
-
-  Evaluation:
-    eval <path>     # Evaluate a flake path with config override.
-    package <pkg>   # Get store path for package(s). Use --unstable for nixpkgs-unstable.
-    version         # Show the current NixOS version.
-
-
-  Home-Manager only:
-    news            # Shows recent news.
-
-
-  Folder Commands:
-    config          # Open a shell in the config directory.
-    core            # Open a shell in the core directory.
-    format          # Formats directories with treefmt.
-    exec            # Runs any command in the core directory.
-
-
-  Git Commands:
-    log             # Runs the git log command.
-    head            # Runs the git show HEAD command.
-    diff            # Runs the git diff command.
-    diffc           # Runs the git diff command with --cached.
-    status          # Runs the git status command.
-    switch-branch   # Switches the git branch.
-    commit          # Runs the git commit command.
-    pull            # Runs the git pull command.
-    push            # Runs the git push command.
-    add             # Runs the git add command.
-    addp            # Runs the git add command with --patch.
-    stash           # Runs the git stash command.
-
-
-Options:
-    --help|-h       # Shows this help message.
-    --version       # Shows version information.
-EOF
-)
+NX_META=""
 
 if [[ "$UID" == 0 ]]; then
   RED='\033[1;31m'
@@ -88,19 +12,33 @@ if [[ "$UID" == 0 ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_PATH="$SCRIPT_DIR"
 SCRIPTS_PATH="$SCRIPT_DIR/scripts/deployment"
 
 source "$SCRIPTS_PATH/../utils/pre-check.sh"
 check_config_directory "help" "deployment"
 
+if [[ -n "${NX_INSTALL_PATH:-}" && -f "$NX_INSTALL_PATH/nx-meta.json" ]]; then
+    NX_META="$NX_INSTALL_PATH/nx-meta.json"
+fi
+
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || "${1:-}" == "help" ]]; then
-    echo "$HELP_MSG" >&2
+    if [[ -n "${NX_INSTALL_PATH:-}" && -f "$NX_INSTALL_PATH/nx-help.txt" ]]; then
+        cat "$NX_INSTALL_PATH/nx-help.txt" >&2
+    else
+        echo "Usage: $NAME <command> [args...]" >&2
+        echo "       $NAME --help" >&2
+        echo "" >&2
+        echo "Run '$NAME --help' from the installed version for full help." >&2
+    fi
     exit 0
 fi
 
 if [[ "${1:-}" == "--version" ]]; then
-    echo "$NAME version $VERSION" >&2
+    if [[ -n "$NX_META" ]]; then
+        echo "$NAME version $(jq -r '.version' "$NX_META")" >&2
+    else
+        echo "$NAME local development version" >&2
+    fi
     exit 0
 fi
 
@@ -122,6 +60,25 @@ if [[ -e "${SCRIPT_FILE}.sh" ]]; then
 elif [[ -e "${SCRIPT_FILE}.py" ]]; then
     python "${SCRIPT_FILE}.py" "$@"
 else
-    echo -e "${RED}Error: command '${WHITE}${SCRIPT_NAME:-}${RED}' not found or not executable. Try ${WHITE}$NAME --help${RESET}" >&2
+    if [[ "${SCRIPT_NAME:-}" == -* ]]; then
+        echo -e "${RED}Error: unknown option '${WHITE}${SCRIPT_NAME:-}${RED}'${RESET}" >&2
+        echo >&2
+        if [[ -n "$NX_META" ]]; then
+            OPTS=$(jq -r '.options | join(", ")' "$NX_META")
+            echo -e "${CYAN}Available options: ${WHITE}${OPTS}${RESET}" >&2
+        else
+            echo -e "${CYAN}Try ${WHITE}$NAME --help${RESET}" >&2
+        fi
+    else
+        echo -e "${RED}Error: unknown command '${WHITE}${SCRIPT_NAME:-}${RED}'${RESET}" >&2
+        echo >&2
+        if [[ -n "$NX_META" ]]; then
+            CMDS=$(jq -r '.commands | join(", ")' "$NX_META")
+            echo -e "${CYAN}Available commands: ${WHITE}${CMDS}${RESET}" >&2
+            echo -e "${CYAN}Use ${WHITE}$NAME --help${CYAN} for details${RESET}" >&2
+        else
+            echo -e "${CYAN}Try ${WHITE}$NAME --help${RESET}" >&2
+        fi
+    fi
     exit 1
 fi

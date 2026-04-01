@@ -218,6 +218,7 @@ parse_build_deployment_args() {
                 echo "  --dry-run            Test build without actual building"
                 echo "  --offline            Build without network access"
                 echo "  --diff               Compare built config with current active system"
+                echo "  --show-trace         Show detailed Nix error traces"
                 echo "  --skip-verification  Skip commit signature verification"
                 echo "  --raw                Use raw log format"
                 exit 0

@@ -52,6 +52,12 @@ let
 
   profileInitModules = userProfileOn.initModules;
   profileContextModules = userProfileOn.contextModules;
+
+  nxDef = import (defs.rootPath + "/nx.nix") {
+    inherit lib;
+    scope = "standalone";
+    system = if pkgs.stdenv.isDarwin then "darwin" else "linux";
+  };
 in
 { config, options, ... }:
 
@@ -117,6 +123,9 @@ in
             exec $out/share/nx/nx "\$@"
             EOF
                       chmod +x $out/bin/nx
+
+                      cp ${pkgs.writeText "nx-help.txt" nxDef.help} $out/share/nx/nx-help.txt
+                      cp ${pkgs.writeText "nx-meta.json" nxDef.meta} $out/share/nx/nx-meta.json
           '';
         })
       ]
@@ -124,13 +133,13 @@ in
 
     file =
       lib.optionalAttrs (config.programs.fish.enable or false) {
-        ".config/fish/completions/nx.fish".source = defs.rootPath + "/completions/nx.fish";
+        ".config/fish/completions/nx.fish".text = nxDef.fish;
       }
       // lib.optionalAttrs (config.programs.bash.enable or false) {
-        ".local/share/bash-completion/completions/nx".source = defs.rootPath + "/completions/nx.bash";
+        ".local/share/bash-completion/completions/nx".text = nxDef.bash;
       }
       // lib.optionalAttrs (config.programs.zsh.enable or false) {
-        ".local/share/zsh/site-functions/_nx".source = defs.rootPath + "/completions/nx.zsh";
+        ".local/share/zsh/site-functions/_nx".text = nxDef.zsh;
       };
 
     sessionVariables = {
