@@ -18,6 +18,7 @@ args@{
     linux = {
       games = {
         utils = true;
+        common = true;
       };
       graphics = {
         opengl = true;

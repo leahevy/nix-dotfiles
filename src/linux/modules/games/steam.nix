@@ -19,6 +19,14 @@ args@{
     "steam-unwrapped"
   ];
 
+  submodules = {
+    linux = {
+      games = {
+        common = true;
+      };
+    };
+  };
+
   settings = {
     withWayland = false;
     dataPath = null;
