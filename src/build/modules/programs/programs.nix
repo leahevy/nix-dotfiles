@@ -41,6 +41,7 @@ args@{
           pciutils
           hwinfo
           psmisc
+          smemstat
           lsof
           tree
         ]
