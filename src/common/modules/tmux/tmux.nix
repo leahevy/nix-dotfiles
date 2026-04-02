@@ -37,6 +37,10 @@ args@{
 
   on = {
     linux = {
+      enabled = config: {
+        nx.linux.desktop.niri.scratchpadCommand = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") "tx";
+      };
+
       home =
         config:
         let
@@ -130,9 +134,6 @@ args@{
               };
             }
           ))
-          (lib.mkIf isNiriEnabled {
-            nx.linux.desktop.niri.scratchpadCommand = "tx";
-          })
           (lib.mkIf (hasAppLauncher && isNiriEnabled) {
             programs.niri.settings.binds."Mod+Shift+Return" = with config.lib.niri.actions; {
               action = spawn-sh "tmux-session-manager";

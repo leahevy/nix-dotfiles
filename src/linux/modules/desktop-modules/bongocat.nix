@@ -56,6 +56,7 @@ args@{
           };
         }
       ];
+      nx.linux.desktop.common.graphicalSessionServices = [ "nx-bongocat" ];
     };
 
     home =
@@ -152,8 +153,6 @@ args@{
           '';
           executable = true;
         };
-
-        nx.linux.desktop.common.graphicalSessionServices = [ "nx-bongocat" ];
 
         systemd.user.services.nx-bongocat = {
           Unit = {

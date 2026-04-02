@@ -431,22 +431,49 @@ rec {
       isHome = buildContext == "home-standalone" || buildContext == "home-integrated";
       isStandalone = buildContext == "home-standalone";
       isIntegrated = buildContext == "home-integrated";
+
+      tag = fn: type: { inherit fn type; };
     in
-    lib.optional (includeInit && on ? init) on.init
-    ++ lib.optional (includeInit && platformOn ? init) platformOn.init
-    ++ lib.optional (on ? enabled) on.enabled
-    ++ lib.optional (platformOn ? enabled) platformOn.enabled
-    ++ lib.optional (isHome && on ? home) on.home
-    ++ lib.optional (isHome && platformOn ? home) platformOn.home
-    ++ lib.optional (isHome && isStandalone && on ? standalone) on.standalone
-    ++ lib.optional (isHome && isStandalone && platformOn ? standalone) platformOn.standalone
-    ++ lib.optional (isHome && isIntegrated && on ? integrated) on.integrated
-    ++ lib.optional (isHome && isIntegrated && platformOn ? integrated) platformOn.integrated
-    ++ lib.optional (!isHome && on ? system) on.system
-    ++ lib.optional (!isHome && platformOn ? system) platformOn.system;
+    lib.optional (includeInit && on ? init) (tag on.init "init")
+    ++ lib.optional (includeInit && platformOn ? init) (tag platformOn.init "init")
+    ++ lib.optional (on ? enabled) (tag on.enabled "enabled")
+    ++ lib.optional (platformOn ? enabled) (tag platformOn.enabled "enabled")
+    ++ lib.optional (isHome && on ? home) (tag on.home "home")
+    ++ lib.optional (isHome && platformOn ? home) (tag platformOn.home "home")
+    ++ lib.optional (isHome && isStandalone && on ? standalone) (tag on.standalone "standalone")
+    ++ lib.optional (isHome && isStandalone && platformOn ? standalone) (
+      tag platformOn.standalone "standalone"
+    )
+    ++ lib.optional (isHome && isIntegrated && on ? integrated) (tag on.integrated "integrated")
+    ++ lib.optional (isHome && isIntegrated && platformOn ? integrated) (
+      tag platformOn.integrated "integrated"
+    )
+    ++ lib.optional (!isHome && on ? system) (tag on.system "system")
+    ++ lib.optional (!isHome && platformOn ? system) (tag platformOn.system "system");
 
   mergeOnFunctions =
-    fns: if fns == [ ] then { } else { config, ... }: lib.mkMerge (map (fn: fn config) fns);
+    moduleIdentifier: fns:
+    if fns == [ ] then
+      { }
+    else
+      { config, ... }:
+      let
+        contextSpecific = [
+          "home"
+          "system"
+          "integrated"
+        ];
+        callAndValidate =
+          { fn, type }:
+          let
+            result = fn config;
+          in
+          if (result ? nx) && (builtins.elem type contextSpecific) then
+            throw "Module ${moduleIdentifier}: nx.* options cannot be set in on.${type}.\n\nUse on.init or on.enabled for shared options or on.standalone for home-manager only options (only works in home-manager only profiles)!"
+          else
+            result;
+      in
+      lib.mkMerge (map callAndValidate fns);
 
   importModule =
     args: moduleSpec: allProcessedModules: buildContext:
@@ -506,7 +533,7 @@ rec {
         inherit on buildContext architecture;
       };
 
-      configFn = mergeOnFunctions applicableFns;
+      configFn = mergeOnFunctions (toString modulePath) applicableFns;
     in
     {
       configuration = configFn;
@@ -565,26 +592,40 @@ rec {
         else
           { };
 
-      initFns = lib.optional (on ? init) on.init ++ lib.optional (platformOn ? init) platformOn.init;
+      tag = fn: type: { inherit fn type; };
+      initFns =
+        lib.optional (on ? init) (tag on.init "init")
+        ++ lib.optional (platformOn ? init) (tag platformOn.init "init");
 
       contextFns = selectApplicableOnFns {
         inherit on buildContext architecture;
       };
 
-      applyArgs = fn: config: fn enhancedArgs config;
+      applyArgs =
+        { fn, type }:
+        {
+          fn = (config: fn enhancedArgs config);
+          inherit type;
+        };
     in
     {
       initModules =
         let
           applied = map applyArgs initFns;
         in
-        if applied == [ ] then [ ] else [ (mergeOnFunctions applied) ];
+        if applied == [ ] then
+          [ ]
+        else
+          [ (mergeOnFunctions "profile:${profileType}/${profileName}" applied) ];
 
       contextModules =
         let
           applied = map applyArgs contextFns;
         in
-        if applied == [ ] then [ ] else [ (mergeOnFunctions applied) ];
+        if applied == [ ] then
+          [ ]
+        else
+          [ (mergeOnFunctions "profile:${profileType}/${profileName}" applied) ];
     };
 
   collectModuleAssertions =

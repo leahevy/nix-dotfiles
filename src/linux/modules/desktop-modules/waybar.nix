@@ -23,6 +23,10 @@ args@{
   };
 
   on = {
+    linux.enabled = config: {
+      nx.linux.desktop.common.graphicalSessionServices = [ "waybar" ];
+    };
+
     home =
       config:
       let
@@ -653,8 +657,6 @@ args@{
               }
             '';
         };
-
-        nx.linux.desktop.common.graphicalSessionServices = [ "waybar" ];
 
         programs.niri = lib.mkIf (self.isModuleEnabled "desktop.niri") {
           settings.binds = with config.lib.niri.actions; {

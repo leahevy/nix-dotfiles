@@ -25,7 +25,15 @@ args@{
   };
 
   on = {
-    home =
+    linux.enabled = config: {
+      nx.linux.desktop.common.graphicalSessionServices = [ "nx-swaybg" ];
+      nx.linux.desktop.niri.nextWallpaperCommand =
+        lib.mkIf (self.isModuleEnabled "desktop.niri") "${self.user.home}/.local/bin/swaybg-next-wallpaper";
+      nx.linux.desktop.niri.resetWallpaperCommand =
+        lib.mkIf (self.isModuleEnabled "desktop.niri") "${self.user.home}/.local/bin/swaybg-reset-wallpaper";
+    };
+
+    linux.home =
       config:
       let
         appLauncher = config.nx.preferences.desktop.programs.appLauncher;
@@ -427,8 +435,6 @@ args@{
           '';
         };
 
-        nx.linux.desktop.common.graphicalSessionServices = [ "nx-swaybg" ];
-
         systemd.user.services.nx-swaybg = {
           Unit = {
             Description = "Wayland wallpaper daemon";
@@ -471,11 +477,6 @@ args@{
             ExecStart = "${config.home.homeDirectory}/.local/bin/swaybg-next-wallpaper";
           };
         };
-
-        nx.linux.desktop.niri.nextWallpaperCommand =
-          lib.mkIf (self.isModuleEnabled "desktop.niri") "${self.user.home}/.local/bin/swaybg-next-wallpaper";
-        nx.linux.desktop.niri.resetWallpaperCommand =
-          lib.mkIf (self.isModuleEnabled "desktop.niri") "${self.user.home}/.local/bin/swaybg-reset-wallpaper";
 
         programs.niri.settings = lib.mkIf (self.isModuleEnabled "desktop.niri") {
           binds = with config.lib.niri.actions; {

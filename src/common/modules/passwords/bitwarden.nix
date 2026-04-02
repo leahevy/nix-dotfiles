@@ -25,6 +25,12 @@ args@{
   };
 
   on = {
+    linux.enabled = config: {
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
+        "bitwarden"
+      ];
+    };
+
     home =
       config:
       let
@@ -102,8 +108,6 @@ args@{
             pkgs.bws
             pkgs.jq
           ];
-
-        nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "bitwarden" ];
 
         programs.niri = lib.mkIf isNiriEnabled {
           settings = {

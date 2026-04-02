@@ -88,7 +88,7 @@ args@{
           lib.mkDefault config.nx.preferences.desktop.programs.terminal;
       };
 
-    darwin.home = config: {
+    darwin.enabled = config: {
       nx.homebrew.casks = [ "ghostty" ];
     };
   };

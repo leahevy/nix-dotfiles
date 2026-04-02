@@ -21,6 +21,12 @@ args@{
   };
 
   on = {
+    linux.enabled = config: {
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.isModuleEnabled "desktop.niri") [
+        "beeper"
+      ];
+    };
+
     home =
       config:
       let
@@ -53,8 +59,6 @@ args@{
         home.persistence."${self.persist.home}" = {
           directories = [ ".config/BeeperTexts" ];
         };
-
-        nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "beeper" ];
 
         programs.niri = lib.mkIf isNiriEnabled {
           settings = {

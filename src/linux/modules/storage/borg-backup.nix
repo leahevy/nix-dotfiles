@@ -64,6 +64,12 @@ args@{
 
   on = {
     enabled = config: {
+      nx.linux.desktop.niri.powerMenuChecks = lib.mkIf (self.isModuleEnabled "desktop.niri") [
+        {
+          condition = "${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service";
+          message = "Cannot access power options while Borg backup is running!";
+        }
+      ];
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         { service = "borgbackup-job-system.service"; }
         { string = "borgbackup-job-system.service"; }
@@ -126,13 +132,6 @@ args@{
         '';
       in
       {
-
-        nx.linux.desktop.niri.powerMenuChecks = lib.mkIf isNiriEnabled [
-          {
-            condition = "${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service";
-            message = "Cannot access power options while Borg backup is running!";
-          }
-        ];
 
         home.file.".local/bin/borg-backup-status" = {
           text = ''

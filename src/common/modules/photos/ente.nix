@@ -15,6 +15,24 @@ args@{
   input = "common";
 
   on = {
+    linux.enabled = config: {
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
+        "ente-desktop"
+      ];
+      nx.linux.desktop.niri.lateWindowRules = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
+        {
+          match = {
+            app-id = "electron";
+            title = "Ente Photos";
+          };
+          apply = {
+            float = true;
+            workspace = "scratch";
+          };
+        }
+      ];
+    };
+
     home =
       config:
       let
@@ -23,21 +41,6 @@ args@{
       {
         home.packages = with pkgs; [
           ente-desktop
-        ];
-
-        nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "ente-desktop" ];
-
-        nx.linux.desktop.niri.lateWindowRules = lib.mkIf isNiriEnabled [
-          {
-            match = {
-              app-id = "electron";
-              title = "Ente Photos";
-            };
-            apply = {
-              float = true;
-              workspace = "scratch";
-            };
-          }
         ];
 
         programs.niri = lib.mkIf isNiriEnabled {

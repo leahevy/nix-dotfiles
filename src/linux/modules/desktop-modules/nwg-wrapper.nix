@@ -22,6 +22,16 @@ args@{
   };
 
   on = {
+    linux.enabled = config: {
+      nx.linux.desktop.common.graphicalSessionServices = [
+        "nx-nwg-wrapper-1"
+      ]
+      ++ lib.optionals self.settings.niriKeybindings [
+        "nx-nwg-wrapper-2"
+        "nx-nwg-wrapper-3"
+      ];
+    };
+
     home =
       config:
       let
@@ -363,14 +373,6 @@ args@{
           '';
           executable = true;
         };
-
-        nx.linux.desktop.common.graphicalSessionServices = [
-          "nx-nwg-wrapper-1"
-        ]
-        ++ lib.optionals self.settings.niriKeybindings [
-          "nx-nwg-wrapper-2"
-          "nx-nwg-wrapper-3"
-        ];
 
         systemd.user.services.nx-nwg-wrapper-1 = {
           Unit = {

@@ -30,7 +30,7 @@ args@{
   ];
 
   on = {
-    darwin.home = config: {
+    darwin.enabled = config: {
       nx.homebrew.casks = [ "amethyst" ];
     };
   };

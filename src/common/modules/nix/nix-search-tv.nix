@@ -15,6 +15,12 @@ args@{
   input = "common";
 
   on = {
+    linux.enabled = config: {
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
+        "nstv-term"
+      ];
+    };
+
     home =
       config:
       let
@@ -53,8 +59,6 @@ args@{
           '';
           executable = true;
         };
-
-        nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "nstv-term" ];
 
         programs.niri = lib.mkIf isNiriEnabled {
           settings = {

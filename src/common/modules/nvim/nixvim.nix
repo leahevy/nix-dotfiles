@@ -127,31 +127,33 @@ args@{
   };
 
   on = {
-    init =
-      config:
-      lib.mkIf self.isEnabled {
-        nx.preferences.desktop.programs.textEditor = {
-          name = "nvim";
-          openCommand = [ "nvim" ];
-          openFileCommand = path: [
-            "nvim"
-            path
-          ];
-          desktopFile = "nvim.desktop";
-          needsTerminal = true;
-        };
-
-        nx.preferences.desktop.programs.advancedTextEditor = {
-          name = "nvim";
-          openCommand = [ "nvim" ];
-          openFileCommand = path: [
-            "nvim"
-            path
-          ];
-          desktopFile = "nvim.desktop";
-          needsTerminal = true;
-        };
+    enabled = config: {
+      nx.preferences.desktop.programs.textEditor = {
+        name = "nvim";
+        package = null;
+        localBin = true;
+        openCommand = [ "nvim" ];
+        openFileCommand = path: [
+          "nvim"
+          path
+        ];
+        desktopFile = "nvim.desktop";
+        needsTerminal = true;
       };
+
+      nx.preferences.desktop.programs.advancedTextEditor = {
+        name = "nvim";
+        package = null;
+        localBin = true;
+        openCommand = [ "nvim" ];
+        openFileCommand = path: [
+          "nvim"
+          path
+        ];
+        desktopFile = "nvim.desktop";
+        needsTerminal = true;
+      };
+    };
 
     home =
       config:
@@ -218,8 +220,13 @@ args@{
             };
       in
       {
-        nx.preferences.desktop.programs.textEditor.package = config.programs.nixvim.build.package;
-        nx.preferences.desktop.programs.advancedTextEditor.package = config.programs.nixvim.build.package;
+        home.file.".local/bin/nvim" = {
+          executable = true;
+          text = ''
+            #!/usr/bin/env bash
+            exec ${config.programs.nixvim.build.package}/bin/nvim "$@"
+          '';
+        };
 
         # See https://nix-community.github.io/nixvim/search/ for available options:
         programs.nixvim = {

@@ -15,6 +15,10 @@ args@{
   input = "linux";
 
   on = {
+    linux.enabled = config: {
+      nx.linux.desktop.common.graphicalSessionServices = [ "swaync" ];
+    };
+
     linux.home = config: {
       home.file.".local/bin/scripts/toggle-dnd" = {
         executable = true;
@@ -264,8 +268,6 @@ args@{
           ExecStartPost = "${pkgs.bash}/bin/bash -c 'sleep 2 && ${pkgs.swaynotificationcenter}/bin/swaync-client -df'";
         };
       };
-
-      nx.linux.desktop.common.graphicalSessionServices = [ "swaync" ];
 
       programs.niri.settings = lib.mkIf (self.isModuleEnabled "desktop.niri") {
         binds = with config.lib.niri.actions; {

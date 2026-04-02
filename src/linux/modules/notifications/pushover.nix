@@ -8,7 +8,7 @@ args@{
   self,
   ...
 }:
-rec {
+{
   name = "pushover";
 
   group = "notifications";
@@ -104,139 +104,24 @@ rec {
     };
   };
 
-  on = {
-    linux.init =
-      config:
-      let
-        sendListFn =
-          {
-            title,
-            message,
-            type ? null,
-            priority ? null,
-            url ? null,
-            urlTitle ? null,
-            html ? false,
-            path ? null,
-            extraArgs ? [ ],
-            shellVars ? false,
-          }:
-          let
-            script = config.nx.linux.notifications.pushover.script;
-            scriptCmd =
-              if !self.isEnabled then
-                null
-              else if path != null then
-                path
-              else if script != null then
-                "${script}/bin/pushover-send"
-              else
-                "pushover-send";
-          in
-          if scriptCmd == null then
-            [ ]
-          else
-            [
-              scriptCmd
-              "--title"
-              title
-              "--message"
-              message
-            ]
-            ++ lib.optionals (type != null) [
-              "--type"
-              type
-            ]
-            ++ lib.optionals (priority != null) [
-              "--priority"
-              (toString priority)
-            ]
-            ++ lib.optionals (url != null) [
-              "--url"
-              url
-            ]
-            ++ lib.optionals (urlTitle != null) [
-              "--url-title"
-              urlTitle
-            ]
-            ++ lib.optionals html [ "--html" ]
-            ++ extraArgs;
-      in
-      {
-        nx.linux.notifications.pushover.sendList = sendListFn;
+  on =
+    let
+      generateBashArray =
+        name: attrset: field:
+        let
+          entries = lib.mapAttrsToList (
+            key: value:
+            let
+              fieldValue = if value ? ${field} then value.${field} else "";
+            in
+            "[\"${key}\"]=\"${fieldValue}\""
+          ) attrset;
+        in
+        "declare -A ${name}=(${lib.concatStringsSep " " entries})";
 
-        nx.linux.notifications.pushover.send =
-          args:
-          let
-            cmdList = sendListFn args;
-            shellVars = args.shellVars or false;
-            escapeDoubleQuotes = s: builtins.replaceStrings [ "\\" "\"" ] [ "\\\\" "\\\"" ] s;
-            doubleQuote = s: "\"${escapeDoubleQuotes s}\"";
-            buildDoubleQuotedCmd = lib.concatStringsSep " " (
-              [
-                (builtins.head cmdList)
-                "--title"
-                (doubleQuote args.title)
-                "--message"
-                (doubleQuote args.message)
-              ]
-              ++ lib.optionals (args.type or null != null) [
-                "--type"
-                (doubleQuote args.type)
-              ]
-              ++ lib.optionals (args.priority or null != null) [
-                "--priority"
-                (toString args.priority)
-              ]
-              ++ lib.optionals (args.url or null != null) [
-                "--url"
-                (doubleQuote args.url)
-              ]
-              ++ lib.optionals (args.urlTitle or null != null) [
-                "--url-title"
-                (doubleQuote args.urlTitle)
-              ]
-              ++ lib.optionals (args.html or false) [ "--html" ]
-              ++ (args.extraArgs or [ ])
-            );
-          in
-          if cmdList == [ ] then
-            ":"
-          else if shellVars then
-            "${buildDoubleQuotedCmd} || true"
-          else
-            "${lib.escapeShellArgs cmdList} || true";
-
-        nx.linux.notifications.pushover.sendAsPythonList =
-          args:
-          let
-            cmdList = sendListFn args;
-            toPyFStr = s: "f\"${s}\"";
-          in
-          if cmdList == [ ] then "[]" else "[${lib.concatStringsSep ", " (map toPyFStr cmdList)}]";
-      };
-
-    system =
-      config:
-      let
-        hostname = self.host.hostname;
-        mainUser = config.users.users.${self.host.mainUser.username};
-        mainUserGroup = mainUser.group;
-
-        generateBashArray =
-          name: attrset: field:
-          let
-            entries = lib.mapAttrsToList (
-              key: value:
-              let
-                fieldValue = if value ? ${field} then value.${field} else "";
-              in
-              "[\"${key}\"]=\"${fieldValue}\""
-            ) attrset;
-          in
-          "declare -A ${name}=(${lib.concatStringsSep " " entries})";
-
-        pushoverSendScript = pkgs.writeShellScriptBin "pushover-send" ''
+      pushoverSendScript =
+        config:
+        pkgs.writeShellScriptBin "pushover-send" ''
           set -euo pipefail
 
           ${generateBashArray "PRIORITY_SOUND" self.settings.priorityDefaults "sound"}
@@ -486,54 +371,183 @@ rec {
                       ${pkgs.coreutils}/bin/sleep $sleep_time
                   else
                       echo "Pushover API call failed after 5 attempts" >&2
+                      ${
+                        self.notifyUser {
+                          title = "Pushover Notification Failed";
+                          body = "Pushover API call failed after 5 attempts. Please check your internet connection and try again!\\n\\n<b>Title</b>: <u>$TITLE</u>\\n<b>Message</b>: <u>$MESSAGE</u>";
+                          icon = "dialog-error";
+                          urgency = "critical";
+                          validation = { inherit config; };
+                        }
+                      } || true
                       exit $exit_code
                   fi
               fi
           done
         '';
-      in
-      {
-        nx.linux.notifications.pushover.script = pushoverSendScript;
+    in
+    {
+      linux.init =
+        config:
+        let
+          sendListFn =
+            {
+              title,
+              message,
+              type ? null,
+              priority ? null,
+              url ? null,
+              urlTitle ? null,
+              html ? false,
+              path ? null,
+              extraArgs ? [ ],
+              shellVars ? false,
+            }:
+            let
+              script = config.nx.linux.notifications.pushover.script;
+              scriptCmd =
+                if !self.isEnabled then
+                  null
+                else if path != null then
+                  path
+                else if script != null then
+                  "${script}/bin/pushover-send"
+                else
+                  "pushover-send";
+            in
+            if scriptCmd == null then
+              [ ]
+            else
+              [
+                scriptCmd
+                "--title"
+                title
+                "--message"
+                message
+              ]
+              ++ lib.optionals (type != null) [
+                "--type"
+                type
+              ]
+              ++ lib.optionals (priority != null) [
+                "--priority"
+                (toString priority)
+              ]
+              ++ lib.optionals (url != null) [
+                "--url"
+                url
+              ]
+              ++ lib.optionals (urlTitle != null) [
+                "--url-title"
+                urlTitle
+              ]
+              ++ lib.optionals html [ "--html" ]
+              ++ extraArgs;
+        in
+        {
+          nx.linux.notifications.pushover.sendList = sendListFn;
 
-        sops.secrets."pushover-user" = {
-          format = "binary";
-          sopsFile = self.config.secretsPath "pushover-user";
-          mode = if (self.isModuleEnabled "security.letsencrypt") then "0440" else "0400";
-          owner = "root";
-          group = if (self.isModuleEnabled "security.letsencrypt") then "acme" else "root";
+          nx.linux.notifications.pushover.send =
+            args:
+            let
+              cmdList = sendListFn args;
+              shellVars = args.shellVars or false;
+              escapeDoubleQuotes = s: builtins.replaceStrings [ "\\" "\"" ] [ "\\\\" "\\\"" ] s;
+              doubleQuote = s: "\"${escapeDoubleQuotes s}\"";
+              buildDoubleQuotedCmd = lib.concatStringsSep " " (
+                [
+                  (builtins.head cmdList)
+                  "--title"
+                  (doubleQuote args.title)
+                  "--message"
+                  (doubleQuote args.message)
+                ]
+                ++ lib.optionals (args.type or null != null) [
+                  "--type"
+                  (doubleQuote args.type)
+                ]
+                ++ lib.optionals (args.priority or null != null) [
+                  "--priority"
+                  (toString args.priority)
+                ]
+                ++ lib.optionals (args.url or null != null) [
+                  "--url"
+                  (doubleQuote args.url)
+                ]
+                ++ lib.optionals (args.urlTitle or null != null) [
+                  "--url-title"
+                  (doubleQuote args.urlTitle)
+                ]
+                ++ lib.optionals (args.html or false) [ "--html" ]
+                ++ (args.extraArgs or [ ])
+              );
+            in
+            if cmdList == [ ] then
+              ":"
+            else if shellVars then
+              "${buildDoubleQuotedCmd} || true"
+            else
+              "${lib.escapeShellArgs cmdList} || true";
+
+          nx.linux.notifications.pushover.sendAsPythonList =
+            args:
+            let
+              cmdList = sendListFn args;
+              toPyFStr = s: "f\"${s}\"";
+            in
+            if cmdList == [ ] then "[]" else "[${lib.concatStringsSep ", " (map toPyFStr cmdList)}]";
         };
 
-        sops.secrets."${hostname}-pushover-token" = {
-          format = "binary";
-          sopsFile = self.profile.secretsPath "pushover-token";
-          mode = if (self.isModuleEnabled "security.letsencrypt") then "0440" else "0400";
-          owner = "root";
-          group = if (self.isModuleEnabled "security.letsencrypt") then "acme" else "root";
-        };
-
-        sops.secrets."pushover-user-${self.host.mainUser.username}" = {
-          format = "binary";
-          sopsFile = self.config.secretsPath "pushover-user";
-          mode = "0440";
-          owner = "root";
-          group = mainUserGroup;
-          path = "/run/pushover-user-${self.host.mainUser.username}";
-        };
-
-        sops.secrets."pushover-token-${self.host.mainUser.username}" = {
-          format = "binary";
-          sopsFile = self.profile.secretsPath "pushover-token";
-          mode = "0440";
-          owner = "root";
-          group = mainUserGroup;
-          path = "/run/pushover-token-${self.host.mainUser.username}";
-        };
-
-        environment.systemPackages = [
-          pushoverSendScript
-          pkgs.curl
-        ];
+      linux.enabled = config: {
+        nx.linux.notifications.pushover.script = pushoverSendScript config;
       };
-  };
 
+      linux.system =
+        config:
+        let
+          hostname = self.host.hostname;
+          mainUser = config.users.users.${self.host.mainUser.username};
+          mainUserGroup = mainUser.group;
+        in
+        {
+          sops.secrets."pushover-user" = {
+            format = "binary";
+            sopsFile = self.config.secretsPath "pushover-user";
+            mode = if (self.isModuleEnabled "security.letsencrypt") then "0440" else "0400";
+            owner = "root";
+            group = if (self.isModuleEnabled "security.letsencrypt") then "acme" else "root";
+          };
+
+          sops.secrets."${hostname}-pushover-token" = {
+            format = "binary";
+            sopsFile = self.profile.secretsPath "pushover-token";
+            mode = if (self.isModuleEnabled "security.letsencrypt") then "0440" else "0400";
+            owner = "root";
+            group = if (self.isModuleEnabled "security.letsencrypt") then "acme" else "root";
+          };
+
+          sops.secrets."pushover-user-${self.host.mainUser.username}" = {
+            format = "binary";
+            sopsFile = self.config.secretsPath "pushover-user";
+            mode = "0440";
+            owner = "root";
+            group = mainUserGroup;
+            path = "/run/pushover-user-${self.host.mainUser.username}";
+          };
+
+          sops.secrets."pushover-token-${self.host.mainUser.username}" = {
+            format = "binary";
+            sopsFile = self.profile.secretsPath "pushover-token";
+            mode = "0440";
+            owner = "root";
+            group = mainUserGroup;
+            path = "/run/pushover-token-${self.host.mainUser.username}";
+          };
+
+          environment.systemPackages = [
+            config.nx.linux.notifications.pushover.script
+            pkgs.curl
+          ];
+        };
+    };
 }

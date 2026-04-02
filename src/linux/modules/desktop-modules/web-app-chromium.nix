@@ -26,42 +26,43 @@ args@{
     ];
   };
 
-  on = {
-    home =
-      config:
-      let
-        package = self.settings.package;
-        program = self.settings.program;
-        chromiumArgs = self.settings.args;
-        bin = package + "/bin/${program}";
+  on =
+    let
+      package = self.settings.package;
+      program = self.settings.program;
+      chromiumArgs = self.settings.args;
+      bin = package + "/bin/${program}";
 
-        buildWebAppFn = webAppSettings: {
-          homeFiles = {
-            ".local/bin/${webAppSettings.webapp}-webapp" = {
-              executable = true;
-              text = ''
-                #!/usr/bin/env bash
-                set -euo pipefail
+      buildWebAppFn = config: webAppSettings: {
+        homeFiles = {
+          ".local/bin/${webAppSettings.webapp}-webapp" = {
+            executable = true;
+            text = ''
+              #!/usr/bin/env bash
+              set -euo pipefail
 
-                exec ${bin} ${chromiumArgs}"${webAppSettings.protocol}://${webAppSettings.subdomain}.${webAppSettings.domain}${webAppSettings.args}"
-              '';
-            };
-          };
-          desktopEntries = {
-            "${webAppSettings.webapp}" = {
-              name = webAppSettings.name;
-              comment = "${webAppSettings.name} Web-App";
-              exec = "${config.home.homeDirectory}/.local/bin/${webAppSettings.webapp}-webapp %U";
-              icon = webAppSettings.iconPath;
-              terminal = false;
-              categories = webAppSettings.categories;
-            };
+              exec ${bin} ${chromiumArgs}"${webAppSettings.protocol}://${webAppSettings.subdomain}.${webAppSettings.domain}${webAppSettings.args}"
+            '';
           };
         };
-      in
-      {
-        nx.linux.desktop-modules.web-app.buildWebApp = buildWebAppFn;
+        desktopEntries = {
+          "${webAppSettings.webapp}" = {
+            name = webAppSettings.name;
+            comment = "${webAppSettings.name} Web-App";
+            exec = "${self.user.home}/.local/bin/${webAppSettings.webapp}-webapp %U";
+            icon = webAppSettings.iconPath;
+            terminal = false;
+            categories = webAppSettings.categories;
+          };
+        };
+      };
+    in
+    {
+      linux.enabled = config: {
+        nx.linux.desktop-modules.web-app.buildWebApp = buildWebAppFn config;
+      };
 
+      linux.home = config: {
         home.packages = [ self.settings.package ];
 
         home.persistence."${self.persist.home}" = {
@@ -69,5 +70,5 @@ args@{
           files = self.settings.persistenceFiles;
         };
       };
-  };
+    };
 }

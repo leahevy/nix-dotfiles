@@ -36,9 +36,12 @@ args@{
         nx.preferences.desktop.programs.additionalTerminal.package = lib.mkDefault pkgs.ghostty;
       };
 
+    linux.enabled = config: {
+      nx.preferences.desktop.programs.terminal.package = lib.mkForce pkgs.ghostty;
+    };
+
     linux.home = config: {
       programs.ghostty.package = lib.mkForce pkgs.ghostty;
-      nx.preferences.desktop.programs.terminal.package = lib.mkForce pkgs.ghostty;
     };
   };
 }

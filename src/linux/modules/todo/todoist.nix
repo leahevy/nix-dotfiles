@@ -17,6 +17,12 @@ args@{
   unfree = [ "todoist-electron" ];
 
   on = {
+    linux.enabled = config: {
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.isModuleEnabled "desktop.niri") [
+        "todoist-electron"
+      ];
+    };
+
     home =
       config:
       let
@@ -30,8 +36,6 @@ args@{
         home.persistence."${self.persist.home}" = {
           directories = [ ".config/Todoist" ];
         };
-
-        nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "todoist-electron" ];
 
         programs.niri = lib.mkIf isNiriEnabled {
           settings = {

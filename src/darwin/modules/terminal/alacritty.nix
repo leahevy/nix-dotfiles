@@ -86,7 +86,7 @@ args@{
         };
       };
 
-    darwin.home = config: {
+    darwin.enabled = config: {
       nx.homebrew.casks = [ "alacritty" ];
     };
   };

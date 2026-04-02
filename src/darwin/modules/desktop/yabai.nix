@@ -144,6 +144,61 @@ args@{
   };
 
   on = {
+    darwin.enabled = config: {
+      nx.homebrew.taps = [
+        "koekeishiya/formulae"
+        "FelixKratz/formulae"
+      ];
+      nx.homebrew.brews = [
+        {
+          name = "yabai";
+          args = [ "HEAD" ];
+        }
+        "skhd"
+        {
+          name = "borders";
+          restartOnChanged = true;
+        }
+        {
+          name = "sketchybar";
+          restartOnChanged = true;
+        }
+      ];
+      nx.homebrew.notes.yabai = ''
+        # Required macOS Settings:
+
+          1. System Settings → Desktop & Dock → Mission Control → Enable "Displays have separate Spaces"
+          2. System Settings → Desktop & Dock → Mission Control → Disable "Automatically rearrange Spaces"
+          3. System Settings → Menu Bar → Set "Automatically hide and show the menu bar" to "Always"
+          4. System Settings → Privacy & Security → Accessibility → Allow yabai and skhd binaries on first start
+
+        ## First-time setup:
+
+          1. Run: yabai --start-service
+          2. Run: skhd --start-service
+          3. Run: brew services start borders
+          4. Run: brew services start sketchybar
+        ${lib.optionalString self.settings.withSIPDisabled ''
+
+          ## To disable SIP:
+
+          1. Find out yabai shasum, Run: shasum -a 256 /opt/homebrew/bin/yabai | awk '{print $1}'
+          2. Edit sudoers file, Run: sudo visudo -f /private/etc/sudoers.d/yabai
+            - Add this line with <SHA> replaced:
+
+              ${self.user.username} ALL=(root) NOPASSWD: sha256:<SHA> /opt/homebrew/bin/yabai --load-sa
+
+          3. Boot to Recovery Mode (hold power button during boot)
+          4. Menu -> Utilities -> Terminal
+          5. Run (Apple Silicon macOS 13.x.x OR newer): csrutil enable --without fs --without debug --without nvram
+          6. Reboot in normal mode
+          7. Run: sudo nvram boot-args=-arm64e_preview_abi
+          8. Reboot again
+          9. Verify SIP is disabled, Run: csrutil status
+        ''}
+      '';
+    };
+
     home =
       config:
       let
@@ -321,27 +376,6 @@ args@{
       {
         home.packages = with pkgs; [
           jq
-        ];
-
-        nx.homebrew.taps = [
-          "koekeishiya/formulae"
-          "FelixKratz/formulae"
-        ];
-
-        nx.homebrew.brews = [
-          {
-            name = "yabai";
-            args = [ "HEAD" ];
-          }
-          "skhd"
-          {
-            name = "borders";
-            restartOnChanged = true;
-          }
-          {
-            name = "sketchybar";
-            restartOnChanged = true;
-          }
         ];
 
         home.file.".config/yabai/yabairc" =
@@ -1125,40 +1159,6 @@ args@{
               echo $RESULT
             '';
           };
-
-        nx.homebrew.notes.yabai = ''
-          # Required macOS Settings:
-
-            1. System Settings → Desktop & Dock → Mission Control → Enable "Displays have separate Spaces"
-            2. System Settings → Desktop & Dock → Mission Control → Disable "Automatically rearrange Spaces"
-            3. System Settings → Menu Bar → Set "Automatically hide and show the menu bar" to "Always"
-            4. System Settings → Privacy & Security → Accessibility → Allow yabai and skhd binaries on first start
-
-          ## First-time setup:
-
-            1. Run: yabai --start-service
-            2. Run: skhd --start-service
-            3. Run: brew services start borders
-            4. Run: brew services start sketchybar
-          ${lib.optionalString self.settings.withSIPDisabled ''
-
-            ## To disable SIP:
-
-            1. Find out yabai shasum, Run: shasum -a 256 /opt/homebrew/bin/yabai | awk '{print $1}'
-            2. Edit sudoers file, Run: sudo visudo -f /private/etc/sudoers.d/yabai
-              - Add this line with <SHA> replaced:
-
-                ${self.user.username} ALL=(root) NOPASSWD: sha256:<SHA> /opt/homebrew/bin/yabai --load-sa
-
-            3. Boot to Recovery Mode (hold power button during boot)
-            4. Menu -> Utilities -> Terminal
-            5. Run (Apple Silicon macOS 13.x.x OR newer): csrutil enable --without fs --without debug --without nvram
-            6. Reboot in normal mode
-            7. Run: sudo nvram boot-args=-arm64e_preview_abi
-            8. Reboot again
-            9. Verify SIP is disabled, Run: csrutil status
-          ''}
-        '';
       };
   };
 }

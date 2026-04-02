@@ -15,6 +15,12 @@ args@{
   input = "linux";
 
   on = {
+    linux.enabled = config: {
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.isModuleEnabled "desktop.niri") [
+        "logseq"
+      ];
+    };
+
     home =
       config:
       let
@@ -49,8 +55,6 @@ args@{
             ];
           };
         };
-
-        nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "logseq" ];
 
         home.persistence."${self.persist.home}" = {
           directories = [

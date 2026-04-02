@@ -24,6 +24,10 @@ args@{
   };
 
   on = {
+    linux.enabled = config: {
+      nx.linux.desktop.common.graphicalSessionServices = [ "swayidle" ];
+    };
+
     home =
       config:
       let
@@ -162,8 +166,6 @@ args@{
             echo "Unlock detected, recorded timestamp: $(${pkgs.coreutils}/bin/cat "$UNLOCK_TIME_FILE")"
           '';
         };
-
-        nx.linux.desktop.common.graphicalSessionServices = [ "swayidle" ];
 
         services.swayidle =
           let

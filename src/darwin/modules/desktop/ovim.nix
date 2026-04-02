@@ -15,7 +15,7 @@ args@{
   input = "darwin";
 
   on = {
-    darwin.home = config: {
+    darwin.enabled = config: {
       nx.homebrew.taps = [ "tonisives/tap" ];
       nx.homebrew.casks = [ "ovim" ];
     };

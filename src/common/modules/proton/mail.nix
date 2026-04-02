@@ -21,14 +21,22 @@ args@{
   };
 
   on = {
-    init =
-      config:
-      lib.mkIf self.isEnabled {
-        nx.preferences.desktop.programs.emailClient.name = lib.mkForce "proton-mail";
-        nx.preferences.desktop.programs.emailClient.openCommand = lib.mkForce "proton-mail";
-        nx.preferences.desktop.programs.emailClient.openFileCommand = lib.mkForce "proton-mail";
-        nx.preferences.desktop.programs.emailClient.desktopFile = lib.mkForce "proton-mail.desktop";
+    linux.enabled = config: {
+      nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
+        "proton-mail"
+      ];
+    };
+
+    enabled = config: {
+      nx.preferences.desktop.programs.emailClient = {
+        name = lib.mkForce "proton-mail";
+        package = lib.mkForce null;
+        localBin = lib.mkForce true;
+        openCommand = lib.mkForce "proton-mail";
+        openFileCommand = lib.mkForce "proton-mail";
+        desktopFile = lib.mkForce "proton-mail.desktop";
       };
+    };
 
     home =
       config:
@@ -60,9 +68,13 @@ args@{
         isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
       in
       {
-        nx.preferences.desktop.programs.emailClient.package = lib.mkForce protonmailWrapped;
-
-        nx.linux.desktop.niri.autostartPrograms = lib.mkIf isNiriEnabled [ "proton-mail" ];
+        home.file.".local/bin/proton-mail" = {
+          executable = true;
+          text = ''
+            #!/usr/bin/env bash
+            exec ${protonmailWrapped}/bin/proton-mail "$@"
+          '';
+        };
 
         programs.niri = lib.mkIf isNiriEnabled {
           settings = {
