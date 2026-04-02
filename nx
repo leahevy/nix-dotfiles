@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NAME="nx"
 NX_META=""
 
 if [[ "$UID" == 0 ]]; then
@@ -19,6 +18,12 @@ check_config_directory "help" "deployment"
 
 if [[ -n "${NX_INSTALL_PATH:-}" && -f "$NX_INSTALL_PATH/nx-meta.json" ]]; then
     NX_META="$NX_INSTALL_PATH/nx-meta.json"
+fi
+
+if [[ -n "$NX_META" ]]; then
+    NAME="$(jq -r '.name' "$NX_META" 2>/dev/null || echo 'nx')"
+else
+    NAME="nx"
 fi
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || "${1:-}" == "help" ]]; then

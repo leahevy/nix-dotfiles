@@ -37,7 +37,7 @@ let
     };
 
     optionWithDefault = description: argName: type: default: {
-      inherit description;
+      description = "${description} (default: ${default})";
       argument = {
         name = argName;
         inherit type default;
@@ -272,12 +272,144 @@ let
           cmd.subcommands or { }
         )
       );
+
+    assertValidGroups =
+      path: cmd: validGroupIds:
+      let
+        checkSubcommand =
+          subPath: subCmd:
+          (
+            if subCmd ? group then
+              if !(elem subCmd.group validGroupIds) then
+                throw "${subPath}: invalid group '${subCmd.group}', must be one of [${concatStringsSep ", " validGroupIds}]"
+              else
+                true
+            else
+              true
+          )
+          && all (x: x) (
+            mapAttrsToList (n: s: checkSubcommand "${subPath}.subcommands.${n}" s) (subCmd.subcommands or { })
+          );
+      in
+      all (x: x) (
+        mapAttrsToList (n: s: checkSubcommand "${path}.subcommands.${n}" s) (cmd.subcommands or { })
+      );
+
+    assertValidGroupStructure =
+      groupList:
+      all (x: x) (
+        imap0 (
+          i: g:
+          let
+            path = "groups[${toString i}]";
+          in
+          assertRequiredFields [ "id" "label" ] g path && assertKnownFields [ "id" "label" ] g path
+        ) groupList
+      );
+
+    assertUniqueShortFlags =
+      path: cmd:
+      let
+        collectShorts =
+          prefix: c:
+          let
+            optShorts = mapAttrsToList (
+              n: o:
+              if o ? short then
+                {
+                  name = "${prefix}.${n}";
+                  short = o.short;
+                }
+              else
+                null
+            ) (c.options or { });
+            subShorts = builtins.concatMap (
+              name: collectShorts "${prefix}.subcommands.${name}" (c.subcommands.${name})
+            ) (attrNames (c.subcommands or { }));
+          in
+          (filter (x: x != null) optShorts) ++ subShorts;
+
+        allShorts = collectShorts path cmd;
+        shortFlags = map (x: x.short) allShorts;
+
+        findDuplicates =
+          list:
+          let
+            count = f: builtins.length (filter (x: x == f) list);
+            seen =
+              s: xs:
+              if xs == [ ] then
+                [ ]
+              else
+                let
+                  h = builtins.head xs;
+                  t = builtins.tail xs;
+                in
+                if elem h s then
+                  seen s t
+                else if count h > 1 then
+                  [ h ] ++ seen (s ++ [ h ]) t
+                else
+                  seen (s ++ [ h ]) t;
+          in
+          seen [ ] list;
+
+        dups = findDuplicates shortFlags;
+      in
+      if dups != [ ] then
+        let
+          dupInfo = concatStringsSep ", " (
+            map (
+              d:
+              let
+                locations = map (x: x.name) (filter (x: x.short == d) allShorts);
+              in
+              "-${d} (used in: ${concatStringsSep ", " locations})"
+            ) dups
+          );
+        in
+        throw "${path}: duplicate short flags found: ${dupInfo}"
+      else
+        true;
   };
 
-  inherit (validation) assertValidCommand;
+  inherit (validation)
+    assertValidCommand
+    assertValidGroups
+    assertValidGroupStructure
+    assertUniqueShortFlags
+    ;
 
   name = "nx";
   version = "0.0.1";
+  gitRepoPath = "~/.config/nx/nxcore";
+
+  groups = [
+    {
+      id = "configuration";
+      label = "Configuration";
+    }
+    {
+      id = "switch";
+      label = "Switch Commands";
+    }
+    {
+      id = "evaluation";
+      label = "Evaluation";
+    }
+    {
+      id = "modules";
+      label = "Specializations & Modules";
+    }
+    {
+      id = "folder";
+      label = "Folder Commands";
+    }
+    {
+      id = "git";
+      label = "Git Commands";
+    }
+  ];
 
   nx = {
     description = "Manage home-manager or NixOS system";
@@ -680,14 +812,23 @@ let
     ;
 
   nxValidated =
+    assert assertValidGroupStructure groups;
     assert assertValidCommand "nx" nx;
+    assert assertValidGroups "nx" nx (map (g: g.id) groups);
+    assert assertUniqueShortFlags "nx" nx;
     filterTree nx;
 
   outputs = {
     bash =
       let
         subs = getSubs nxValidated;
+        opts = getOpts nxValidated;
         allSubsStr = concatStringsSep " " (attrNames subs);
+
+        topLevelOpts = concatStringsSep " " (
+          (map (n: "--${n}") (attrNames opts))
+          ++ (filter (s: s != "") (mapAttrsToList (_: o: if o ? short then "-${o.short}" else "") opts))
+        );
 
         level2Cases = compactMapAttrs (
           name: cmd:
@@ -799,13 +940,13 @@ let
 
       in
       ''
-        _complete_nx() {
+        _complete_${name}() {
             local cur="''${COMP_WORDS[COMP_CWORD]}"
             local prev="''${COMP_WORDS[COMP_CWORD-1]}"
             local commands="${allSubsStr}"
 
             if [[ ''${COMP_CWORD} -eq 1 ]]; then
-                COMPREPLY=($(compgen -W "''${commands} --help --version" -- "''${cur}"))
+                COMPREPLY=($(compgen -W "''${commands} ${topLevelOpts}" -- "''${cur}"))
             elif [[ ''${COMP_CWORD} -eq 2 ]]; then
                 case "$prev" in
         ${level2Cases}
@@ -818,7 +959,7 @@ let
             fi
         }
 
-        complete -F _complete_nx nx
+        complete -F _complete_${name} ${name}
       '';
 
     zsh =
@@ -990,14 +1131,28 @@ let
 
         cmdCases = concatStringsSep "\n" (filter (s: s != null) (mapAttrsToList zshCmdCase subs));
 
+        topLevelOptsZsh =
+          let
+            opts = getOpts nxValidated;
+            formatTopOpt =
+              optName: opt:
+              let
+                short = if opt ? short then "-${opt.short}" else null;
+                long = "--${optName}";
+                mutual = if short != null then "(${short} ${long})" else "(${long})";
+                flags = if short != null then "'{${short},${long}}'" else "${long}";
+              in
+              "'${mutual}${flags}[${opt.description}]'";
+          in
+          concatStringsSep " \\\n                " (mapAttrsToList formatTopOpt opts);
+
       in
       ''
-        _nx() {
+        _${name}() {
             local context state line
 
             _arguments \
-                '(--help)--help[Show help message]' \
-                '(--version)--version[Show version information]' \
+                ${topLevelOptsZsh} \
                 '1: :->commands' \
                 '*::arg:->args'
 
@@ -1016,7 +1171,7 @@ let
             esac
         }
 
-        compdef _nx nx
+        compdef _${name} ${name}
       '';
 
     fish =
@@ -1034,12 +1189,12 @@ let
 
         topLevel = concatStringsSep "\n" (
           [
-            "complete -c nx${noFileCond} -f"
+            "complete -c ${name}${noFileCond} -f"
             ""
           ]
           ++ (mapAttrsToList (
-            name: cmd:
-            "complete -c nx -n \"not __fish_seen_subcommand_from ${allSubsStr}\" -a \"${name}\" -d \"${cmd.description}\""
+            cmdName: cmd:
+            "complete -c ${name} -n \"not __fish_seen_subcommand_from ${allSubsStr}\" -a \"${cmdName}\" -d \"${cmd.description}\""
           ) subs)
         );
 
@@ -1065,13 +1220,13 @@ let
                 t = if a != null then (a.type or "string") else "";
                 fFlag = if a != null && t != "filepath" && t != "dirpath" then " -f" else "";
               in
-              "complete -c nx${condFlags} -l ${oName} -d \"${opt.description}\"${rFlag}${fFlag}${aFlag}";
+              "complete -c ${name}${condFlags} -l ${oName} -d \"${opt.description}\"${rFlag}${fFlag}${aFlag}";
 
             cmdCondFlags = " -n \"${baseCond}\"${subGuard}";
             optLines = mapAttrsToList (fishOptLine cmdCondFlags) opts;
 
             subLines = mapAttrsToList (
-              sn: sc: "complete -c nx${cmdCondFlags} -a \"${sn}\" -d \"${sc.description}\""
+              sn: sc: "complete -c ${name}${cmdCondFlags} -a \"${sn}\" -d \"${sc.description}\""
             ) cmdSubs;
 
             perSubLines = builtins.concatMap (
@@ -1087,7 +1242,7 @@ let
                 soLines = mapAttrsToList (fishOptLine subCondFlags) (getOpts sub);
 
                 ssLines = mapAttrsToList (
-                  ssn: ssc: "complete -c nx${subCondFlags}${subSubGuard} -a \"${ssn}\" -d \"${ssc.description}\""
+                  ssn: ssc: "complete -c ${name}${subCondFlags}${subSubGuard} -a \"${ssn}\" -d \"${ssc.description}\""
                 ) subSubs;
 
                 ssoLines = builtins.concatMap (
@@ -1101,10 +1256,12 @@ let
                 saLines = builtins.concatMap (
                   a:
                   if a.type == "gitBranch" then
-                    [ "complete -c nx${subCondFlags}${subSubGuard} -a \"(__nx_git_branches)\" -d \"${a.description}\"" ]
+                    [
+                      "complete -c ${name}${subCondFlags}${subSubGuard} -a \"(__${name}_git_branches)\" -d \"${a.description}\""
+                    ]
                   else if a.type == "enum" then
                     [
-                      "complete -c nx${subCondFlags}${subSubGuard} -a \"${
+                      "complete -c ${name}${subCondFlags}${subSubGuard} -a \"${
                         concatStringsSep " " (a.values or [ ])
                       }\" -d \"${a.description}\""
                     ]
@@ -1119,11 +1276,11 @@ let
               a:
               if a.type == "gitBranch" then
                 [
-                  "complete -c nx${cmdCondFlags} -a \"(__nx_git_branches)\" -d \"${a.description}\""
+                  "complete -c ${name}${cmdCondFlags} -a \"(__${name}_git_branches)\" -d \"${a.description}\""
                 ]
               else if a.type == "enum" then
                 [
-                  "complete -c nx${cmdCondFlags} -a \"${
+                  "complete -c ${name}${cmdCondFlags} -a \"${
                     concatStringsSep " " (a.values or [ ])
                   }\" -d \"${a.description}\""
                 ]
@@ -1137,22 +1294,36 @@ let
 
         perCmdSections = concatStringsSep "" (mapAttrsToList fishCmdSection subs);
 
+        hasGitBranchType =
+          let
+            checkArgs = args: any (a: (a.type or "") == "gitBranch") args;
+            checkCmd = cmd: checkArgs (getArgs cmd) || any checkCmd (attrValues (getSubs cmd));
+          in
+          checkCmd nxValidated;
+
         branchHelper =
-          if subs ? "switch-branch" then
+          if hasGitBranchType then
             ''
 
-              function __nx_git_branches
-                  if test -d ~/.config/nx/nxcore/.git
-                      git -C ~/.config/nx/nxcore branch --format='%(refname:short)' 2>/dev/null
+              function __${name}_git_branches
+                  if test -d ${gitRepoPath}/.git
+                      git -C ${gitRepoPath} branch --format='%(refname:short)' 2>/dev/null
                   end
               end''
           else
             "";
 
-        globalOpts = ''
-
-          complete -c nx -l help -d "Show help message"
-          complete -c nx -l version -d "Show version information"'';
+        globalOpts =
+          let
+            opts = getOpts nxValidated;
+            formatGlobalOpt =
+              optName: opt:
+              let
+                shortFlag = if opt ? short then " -s ${opt.short}" else "";
+              in
+              "complete -c ${name} -l ${optName}${shortFlag} -d \"${opt.description}\"";
+          in
+          "\n" + concatStringsSep "\n" (mapAttrsToList formatGlobalOpt opts);
 
       in
       ''
@@ -1165,35 +1336,26 @@ let
     help =
       let
         subs = getSubs nxValidated;
-
-        groupOrder = [
-          {
-            id = "configuration";
-            label = "Configuration";
-          }
-          {
-            id = "switch";
-            label = "Switch Commands";
-          }
-          {
-            id = "evaluation";
-            label = "Evaluation";
-          }
-          {
-            id = "modules";
-            label = "Specializations & Modules";
-          }
-          {
-            id = "folder";
-            label = "Folder Commands";
-          }
-          {
-            id = "git";
-            label = "Git Commands";
-          }
-        ];
+        opts = getOpts nxValidated;
 
         cmdsByGroup = id: filterAttrs (_: cmd: (cmd.group or "") == id) subs;
+
+        formatCmdName =
+          name: cmd:
+          let
+            args = getArgs cmd;
+            argNames = map (a: if a ? required && !a.required then "[${a.name}]" else "<${a.name}>") args;
+            argStr = if argNames == [ ] then "" else " ${concatStringsSep " " argNames}";
+          in
+          "${name}${argStr}";
+
+        maxCmdLength =
+          let
+            lengths = map builtins.stringLength (mapAttrsToList (name: cmd: formatCmdName name cmd) subs);
+          in
+          if lengths == [ ] then 16 else builtins.foldl' (max: len: if len > max then len else max) 0 lengths;
+
+        paddingWidth = if maxCmdLength > 16 then maxCmdLength else 16;
 
         formatGroup =
           { id, label }:
@@ -1208,29 +1370,72 @@ let
               mapAttrsToList (
                 name: cmd:
                 let
-                  padding = builtins.genList (_: " ") (16 - builtins.stringLength name);
+                  cmdDisplay = formatCmdName name cmd;
+                  displayLen = builtins.stringLength cmdDisplay;
+                  minSpacing = 2;
                 in
-                "    ${name}${concatStringsSep "" padding}${cmd.description}"
+                if displayLen + minSpacing >= paddingWidth then
+                  "    ${cmdDisplay}\n${
+                        concatStringsSep "" (builtins.genList (_: " ") (paddingWidth + 4))
+                      }${cmd.description}"
+                else
+                  let
+                    paddingLen = paddingWidth - displayLen;
+                    padding = builtins.genList (_: " ") paddingLen;
+                  in
+                  "    ${cmdDisplay}${concatStringsSep "" padding}${cmd.description}"
               ) cmds
             )
             + "\n";
 
-        groups = concatStringsSep "\n" (filter (s: s != "") (map formatGroup groupOrder));
+        groupsFormatted = concatStringsSep "\n" (filter (s: s != "") (map formatGroup groups));
+
+        usageLines = concatStringsSep "\n" (
+          mapAttrsToList (
+            optName: opt:
+            let
+              a = opt.argument or null;
+              argName = if a != null then " <${a.name}>" else "";
+            in
+            "       ${name} --${optName}${argName}"
+          ) opts
+        );
+
+        formatOption =
+          optName: opt:
+          let
+            a = opt.argument or null;
+            argName = if a != null then " <${a.name}>" else "";
+            fullDisplay =
+              if opt ? short then "-${opt.short}, --${optName}${argName}" else "--${optName}${argName}";
+            displayLen = builtins.stringLength fullDisplay;
+            minSpacing = 2;
+          in
+          if displayLen + minSpacing >= paddingWidth then
+            "    ${fullDisplay}\n${
+                  concatStringsSep "" (builtins.genList (_: " ") (paddingWidth + 4))
+                }${opt.description}"
+          else
+            let
+              paddingLen = paddingWidth - displayLen;
+              padding = builtins.genList (_: " ") paddingLen;
+            in
+            "    ${fullDisplay}${concatStringsSep "" padding}${opt.description}";
+
+        optionsSection = concatStringsSep "\n" (mapAttrsToList formatOption opts);
       in
       ''
-        Usage: nx <command> [args...]
-               nx --help
-               nx --version
+        Usage: ${name} <command> [args...]
+        ${usageLines}
 
         Description:
-          The nx tool manages home-manager (via Nix) or whole NixOS system.
+          ${nxValidated.description}
 
         Commands:
 
-        ${groups}
+        ${groupsFormatted}
         Options:
-            --help|-h       Show help message
-            --version       Show version information
+        ${optionsSection}
       '';
     meta = builtins.toJSON {
       inherit name version;
