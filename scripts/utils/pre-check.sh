@@ -1075,8 +1075,11 @@ diff_store_paths() {
         local oh nh
         oh="$(grep -m1 "	${name}$" "$old_file" | cut -f1)"
         nh="$(grep -m1 "	${name}$" "$new_file" | cut -f1)"
-        echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
-        echo -e "    ${GRAY}/nix/store/${oh}-${name}${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
+
+        if [[ "$oh" != "$nh" ]]; then
+          echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
+          echo -e "    ${GRAY}/nix/store/${oh}-${name}${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
+        fi
     done < "$changed_file" >> "$out_file"
 
     if [[ -s "$out_file" ]]; then
