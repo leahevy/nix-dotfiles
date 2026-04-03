@@ -2,6 +2,31 @@
   description = "NX Configuration";
 
   inputs = {
+    sops-nix = {
+      url = "github:leahevy/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    disko = {
+      url = "github:leahevy/disko/v1.13.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    impermanence = {
+      url = "github:leahevy/impermanence";
+    };
+
+    lanzaboote = {
+      url = "github:leahevy/lanzaboote/v1.0.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    niri-flake = {
+      url = "github:leahevy/niri-flake";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+      inputs.nixpkgs-stable.follows = "nixpkgs";
+    };
+
     lib = {
       url = "path:./src/lib";
       flake = false;
@@ -66,18 +91,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    sops-nix = {
-      url = "github:leahevy/sops-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     stylix = {
       url = "github:nix-community/stylix/release-25.11";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    disko = {
-      url = "github:leahevy/disko/v1.13.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -88,15 +103,6 @@
 
     nixos-hardware = {
       url = "github:NixOS/nixos-hardware/master";
-    };
-
-    impermanence = {
-      url = "github:leahevy/impermanence";
-    };
-
-    lanzaboote = {
-      url = "github:leahevy/lanzaboote/v1.0.0";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nix-darwin = {
@@ -114,11 +120,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    niri-flake = {
-      url = "github:sodiboo/niri-flake";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
-      inputs.nixpkgs-stable.follows = "nixpkgs";
-    };
   };
 
   outputs =
