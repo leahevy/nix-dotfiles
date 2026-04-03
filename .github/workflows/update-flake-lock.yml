@@ -8,14 +8,20 @@ jobs:
   update-flake-lock:
     runs-on: ubuntu-latest
     env:
-      UPDATE_INPUTS: "nixpkgs,home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable"
-      EXCLUDE_FROM_REBOOT_CHECK: "home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable"
+      UPDATE_INPUTS: "nixpkgs,home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable,sops-nix,disko,impermanence,lanzaboote,niri-flake,nixos-hardware"
+      EXCLUDE_FROM_REBOOT_CHECK: "home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable,sops-nix,disko,impermanence,lanzaboote,niri-flake,nixos-hardware"
       REPO_nixpkgs: "NixOS/nixpkgs"
       REPO_home_manager: "nix-community/home-manager"
       REPO_stylix: "nix-community/stylix"
       REPO_nixvim: "nix-community/nixvim"
       REPO_nix_darwin: "nix-darwin/nix-darwin"
       REPO_nixpkgs_unstable: "NixOS/nixpkgs"
+      REPO_sops_nix: "leahevy/sops-nix"
+      REPO_disko: "leahevy/disko"
+      REPO_impermanence: "leahevy/impermanence"
+      REPO_lanzaboote: "leahevy/lanzaboote"
+      REPO_niri_flake: "leahevy/niri-flake"
+      REPO_nixos_hardware: "leahevy/nixos-hardware"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
