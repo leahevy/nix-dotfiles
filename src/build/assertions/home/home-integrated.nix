@@ -50,7 +50,7 @@ args@{
   })
   ++ (
     let
-      allowedHomePersistPath = "${variables.persist.home}/${user.username}";
+      allowedHomePersistPath = "${variables.persist.home}";
       persistKeys = builtins.attrNames (config.home.persistence or { });
       invalidKeys = builtins.filter (key: key != allowedHomePersistPath) persistKeys;
     in

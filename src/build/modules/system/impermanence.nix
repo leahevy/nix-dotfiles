@@ -333,8 +333,6 @@ in
             ".bash_history"
             ".zsh_history"
           ];
-
-          allowOther = true;
         };
       };
   };

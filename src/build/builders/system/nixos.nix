@@ -78,9 +78,7 @@ let
               inputs.nixvim.homeModules.nixvim
             ]
             ++ (
-              if hostConfig.host.impermanence or false then
-                [ inputs.impermanence.homeManagerModules.impermanence ]
-              else
+              if !(hostConfig.host.impermanence or false) then
                 [
                   {
                     options.home.persistence = lib.mkOption {
@@ -91,6 +89,8 @@ let
                     config = { };
                   }
                 ]
+              else
+                [ ]
             );
             home-manager.useGlobalPkgs = false;
             home-manager.useUserPackages = true;

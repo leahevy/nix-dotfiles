@@ -37,7 +37,8 @@ args@{
 
       home.persistence."${self.persist.home}" = {
         files = [
-          ".zsh_history"
+          # Already included in impermanence.nix
+          # ".zsh_history"
         ];
         directories = [
           ".config/zsh"

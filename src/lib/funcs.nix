@@ -299,7 +299,7 @@ rec {
         persist = {
           home =
             if moduleContext.user or null != null then
-              "${moduleContext.variables.persist.home}/${moduleContext.user.username}"
+              moduleContext.variables.persist.home
             else
               throw "Cannot access persist.home: no user context available";
           system = moduleContext.variables.persist.system;

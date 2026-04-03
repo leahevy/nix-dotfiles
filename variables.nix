@@ -19,7 +19,7 @@
 
   persist = {
     system = "/persist";
-    home = "/persist/home";
+    home = "/persist";
   };
 
   httpConnections = 15;

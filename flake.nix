@@ -91,7 +91,7 @@
     };
 
     impermanence = {
-      url = "github:nix-community/impermanence";
+      url = "github:leahevy/impermanence";
     };
 
     lanzaboote = {

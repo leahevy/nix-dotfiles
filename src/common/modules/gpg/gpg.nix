@@ -162,7 +162,8 @@ in
 
       home.persistence."${self.persist.home}" = {
         directories = [
-          ".gnupg"
+          # Already implicitly persisted
+          # ".gnupg"
         ];
       };
     };
