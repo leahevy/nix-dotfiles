@@ -27,6 +27,10 @@
       inputs.nixpkgs-stable.follows = "nixpkgs";
     };
 
+    nixos-hardware = {
+      url = "github:leahevy/nixos-hardware/master";
+    };
+
     lib = {
       url = "path:./src/lib";
       flake = false;
@@ -99,10 +103,6 @@
     nixvim = {
       url = "github:nix-community/nixvim/nixos-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nixos-hardware = {
-      url = "github:NixOS/nixos-hardware/master";
     };
 
     nix-darwin = {
