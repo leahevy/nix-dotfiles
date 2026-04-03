@@ -67,7 +67,7 @@
     };
 
     sops-nix = {
-      url = "github:Mic92/sops-nix";
+      url = "github:leahevy/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
