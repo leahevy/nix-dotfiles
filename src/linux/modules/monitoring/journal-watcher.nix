@@ -284,6 +284,16 @@ args@{
       "^Modules linked in:.*$"
       "^ [a-z][a-z0-9_]+(\\([A-Z]+\\))?( [a-z][a-z0-9_]+(\\([A-Z]+\\))?)+$"
       "^ (\\? )?[a-zA-Z_][a-zA-Z0-9_]*\\+0x[0-9a-f]+/0x[0-9a-f]+( \\[[a-z_]+\\])?$"
+      "^\\s*(?:[A-Za-z0-9_]+(?:\\([A-Z]\\))?\\s+){10,}[A-Za-z0-9_]+(?:\\([A-Z]\\))?\\s*$"
+      "^CPU: .*Tainted:.*$"
+      "^Tainted: .*"
+      "^Hardware name: .*"
+      "^RIP: .*"
+      "^RSP: .*"
+      "^Code: .*"
+      "^\\s*[A-Za-z0-9_\\.]+\\+0x[0-9a-f]+/0x[0-9a-f]+$"
+      "^\\[drm:.*\\].*$"
+      "^.*drm_WARN_ON.*$"
     ];
     additionalKernelStringsToIgnore = [ ];
 
