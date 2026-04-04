@@ -721,7 +721,7 @@ def process_message(
                 icon = override_icon
 
         bracket_label = bracket.strip("[]") if bracket else ""
-        if bracket and bracket_label == suffix:
+        if bracket and bracket_label.lower() == suffix.lower():
             title = suffix
         else:
             title = f"{bracket} {suffix}" if bracket else suffix
