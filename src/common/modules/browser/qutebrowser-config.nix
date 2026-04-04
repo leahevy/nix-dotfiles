@@ -457,6 +457,60 @@ args@{
         appLauncher = config.nx.preferences.desktop.programs.appLauncher;
         hasAppLauncher = appLauncher != null;
 
+        flattenBookmarks =
+          let
+            flattenBookmarksRecursive =
+              prefix: bookmarks:
+              lib.concatMapAttrs (
+                name: value:
+                let
+                  safeName = builtins.replaceStrings [ "/" ] [ "-" ] name;
+                  fullName = if prefix == "" then safeName else "${prefix}/${safeName}";
+                in
+                if builtins.isString value then
+                  { "${fullName}" = value; }
+                else if builtins.isAttrs value then
+                  if builtins.length (builtins.attrNames value) > 0 then
+                    flattenBookmarksRecursive fullName value
+                  else
+                    { }
+                else
+                  throw "Bookmark value must be either a string (URL) or attribute set (folder)"
+              ) bookmarks;
+          in
+          flattenBookmarksRecursive "";
+
+        flattenedBookmarks = flattenBookmarks self.settings.bookmarks;
+
+        extractFolderPaths =
+          let
+            allKeys = builtins.attrNames flattenedBookmarks;
+            getAllPrefixes =
+              keys:
+              let
+                extractFromKey =
+                  key:
+                  let
+                    parts = lib.splitString "/" key;
+                    generatePrefixes =
+                      partsList: acc:
+                      if (builtins.length partsList) <= 1 then
+                        acc
+                      else
+                        let
+                          prefix = builtins.concatStringsSep "/" (lib.take ((builtins.length partsList) - 1) partsList);
+                        in
+                        [ prefix ] ++ (generatePrefixes (lib.init partsList) acc);
+                  in
+                  if (builtins.length parts) > 1 then generatePrefixes parts [ ] else [ ];
+                allPrefixes = lib.concatMap extractFromKey keys;
+              in
+              lib.unique allPrefixes;
+          in
+          getAllPrefixes allKeys;
+
+        folderPaths = extractFolderPaths;
+
         defaultSearch =
           if self.settings.privacySearch then
             if self.settings.startpageAsPrivacySearch then
@@ -518,35 +572,14 @@ args@{
               normal = {
                 "o" = "spawn --userscript launcher-open";
                 "O" = "spawn --userscript launcher-open -t";
+                "<Alt+Space>" = "spawn --userscript launcher-bookmark-group-fg";
+                "<Ctrl+Space>" = "spawn --userscript launcher-bookmark-group-bg";
               };
             }
           else
             { };
 
         mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings) keepassxcKeyBindings) dmenuKeyBindings) bitwardenKeyBindings;
-
-        flattenBookmarks =
-          let
-            flattenBookmarksRecursive =
-              prefix: bookmarks:
-              lib.concatMapAttrs (
-                name: value:
-                let
-                  safeName = builtins.replaceStrings [ "/" ] [ "-" ] name;
-                  fullName = if prefix == "" then safeName else "${prefix}/${safeName}";
-                in
-                if builtins.isString value then
-                  { "${fullName}" = value; }
-                else if builtins.isAttrs value then
-                  if builtins.length (builtins.attrNames value) > 0 then
-                    flattenBookmarksRecursive fullName value
-                  else
-                    { }
-                else
-                  throw "Bookmark value must be either a string (URL) or attribute set (folder)"
-              ) bookmarks;
-          in
-          flattenBookmarksRecursive "";
 
         python = {
           toBool = val: if val then "True" else "False";
@@ -969,37 +1002,6 @@ args@{
 
           aliases =
             let
-              flattenedBookmarks = flattenBookmarks self.settings.bookmarks;
-
-              extractFolderPaths =
-                let
-                  allKeys = builtins.attrNames flattenedBookmarks;
-                  getAllPrefixes =
-                    keys:
-                    let
-                      extractFromKey =
-                        key:
-                        let
-                          parts = lib.splitString "/" key;
-                          generatePrefixes =
-                            partsList: acc:
-                            if (builtins.length partsList) <= 1 then
-                              acc
-                            else
-                              let
-                                prefix = builtins.concatStringsSep "/" (lib.take ((builtins.length partsList) - 1) partsList);
-                              in
-                              [ prefix ] ++ (generatePrefixes (lib.init partsList) acc);
-                        in
-                        if (builtins.length parts) > 1 then generatePrefixes parts [ ] else [ ];
-                      allPrefixes = lib.concatMap extractFromKey keys;
-                    in
-                    lib.unique allPrefixes;
-                in
-                getAllPrefixes allKeys;
-
-              folderPaths = extractFolderPaths;
-
               generateOpenCommand =
                 mode: urls:
                 let
@@ -1121,6 +1123,64 @@ args@{
                   [ -z "''${url// }" ] && exit
 
                   echo "open" "$@" "$url" >> "$QUTE_FIFO" || qutebrowser "$url"
+                '';
+              executable = true;
+            };
+
+        home.file.".local/share/qutebrowser/userscripts/launcher-bookmark-group-fg" =
+          lib.mkIf (dmenuKeyBindings != { })
+            {
+              text =
+                let
+                  launcherCmd = lib.escapeShellArgs (
+                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                      prompt = "Open bookmark group (foreground): ";
+                      placeholder = "Select a bookmark group";
+                      width = 60;
+                      lines = 10;
+                    }
+                  );
+                  groupsList = lib.concatStringsSep "\\n" (map (path: "@${path}") folderPaths);
+                in
+                ''
+                  #!/usr/bin/env bash
+
+                  selection=$(printf "${groupsList}\n" | ${launcherCmd})
+
+                  [ -z "''${selection// }" ] && exit
+
+                  group="''${selection#@}"
+
+                  echo "fg-group#$group" >> "$QUTE_FIFO"
+                '';
+              executable = true;
+            };
+
+        home.file.".local/share/qutebrowser/userscripts/launcher-bookmark-group-bg" =
+          lib.mkIf (dmenuKeyBindings != { })
+            {
+              text =
+                let
+                  launcherCmd = lib.escapeShellArgs (
+                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                      prompt = "Open bookmark group (background): ";
+                      placeholder = "Select a bookmark group";
+                      width = 60;
+                      lines = 10;
+                    }
+                  );
+                  groupsList = lib.concatStringsSep "\\n" (map (path: "@${path}") folderPaths);
+                in
+                ''
+                  #!/usr/bin/env bash
+
+                  selection=$(printf "${groupsList}\n" | ${launcherCmd})
+
+                  [ -z "''${selection// }" ] && exit
+
+                  group="''${selection#@}"
+
+                  echo "bg-group#$group" >> "$QUTE_FIFO"
                 '';
               executable = true;
             };
