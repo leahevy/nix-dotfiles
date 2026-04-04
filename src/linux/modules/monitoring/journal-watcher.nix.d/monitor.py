@@ -720,7 +720,11 @@ def process_message(
             if override_icon is not None:
                 icon = override_icon
 
-        title = f"{bracket} {suffix}" if bracket else suffix
+        bracket_label = bracket.strip("[]") if bracket else ""
+        if bracket and bracket_label == suffix:
+            title = suffix
+        else:
+            title = f"{bracket} {suffix}" if bracket else suffix
 
         title_text_pushover = title
         tag_suffix = tag_to_title(display_tag) if display_tag else None
