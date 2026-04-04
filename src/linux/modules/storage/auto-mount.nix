@@ -130,7 +130,7 @@ args@{
           SUBSYSTEM=="block", ATTR{removable}=="0", ATTRS{removable}=="0", ENV{UDISKS_IGNORE}="1"
         '';
 
-      environment.persistence."${self.persist.system}" = {
+      environment.persistence."${self.persist}" = {
         directories = [
           "/var/lib/udisks2"
         ];

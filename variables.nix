@@ -17,10 +17,7 @@
 
   allowedUnfreePackages = [ ];
 
-  persist = {
-    system = "/persist";
-    home = "/persist";
-  };
+  persist = "/persist";
 
   httpConnections = 15;
 

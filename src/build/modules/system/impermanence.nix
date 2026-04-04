@@ -228,7 +228,7 @@ in
       lib.mkIf (self.host.impermanence or false) {
         environment.systemPackages = [ pkgs.rsync ];
 
-        environment.persistence.${self.persist.system} = {
+        environment.persistence.${self.persist} = {
           hideMounts = true;
 
           directories = [
@@ -251,9 +251,9 @@ in
           ];
         };
 
-        sops.age.keyFile = lib.mkDefault "${self.persist.system}/etc/sops/age/keys.txt";
+        sops.age.keyFile = lib.mkDefault "${self.persist}/etc/sops/age/keys.txt";
 
-        fileSystems.${self.persist.system} = {
+        fileSystems.${self.persist} = {
           neededForBoot = true;
         };
 
@@ -311,7 +311,7 @@ in
         );
 
         sops.age.sshKeyPaths = lib.mkDefault [
-          "${self.persist.system}/etc/ssh/ssh_host_ed25519_key"
+          "${self.persist}/etc/ssh/ssh_host_ed25519_key"
         ];
 
         programs.fuse.userAllowOther = true;
@@ -320,7 +320,7 @@ in
     home =
       config:
       lib.mkIf (!self.user.isStandalone && self.isLinux && (self.host.impermanence or false)) {
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".config/nx"
             ".config/nix"

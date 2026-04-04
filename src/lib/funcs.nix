@@ -296,14 +296,7 @@ rec {
       hierarchicalFuncs = moduleFuncs.hierarchicalInputFuncs moduleContext moduleContext.moduleBasePath;
 
       persistShortcut = {
-        persist = {
-          home =
-            if moduleContext.user or null != null then
-              moduleContext.variables.persist.home
-            else
-              throw "Cannot access persist.home: no user context available";
-          system = moduleContext.variables.persist.system;
-        };
+        persist = moduleContext.variables.persist;
       };
     in
     moduleContext // appliedCommonFuncs // contextFuncs // hierarchicalFuncs // persistShortcut;

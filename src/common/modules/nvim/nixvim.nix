@@ -1428,7 +1428,7 @@ args@{
           run touch ${self.user.home}/.config/nvim/timestamp || true
         '';
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".config/nvim"
             ".local/share/nvim"

@@ -1281,7 +1281,7 @@ args@{
 
         system.autoUpgrade.enable = lib.mkForce false;
 
-        environment.persistence."${self.persist.system}" = {
+        environment.persistence."${self.persist}" = {
           directories = [
             "/var/lib/nx-auto-upgrade"
           ];

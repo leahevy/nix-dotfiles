@@ -26,7 +26,7 @@ args@{
           if self.user.isStandalone then
             "${config.xdg.configHome}/sops/age/keys.txt"
           else if self.host.impermanence or false then
-            "${self.variables.persist.home}${self.user.home}/.config/sops/age/keys.txt"
+            "${self.variables.persist}${self.user.home}/.config/sops/age/keys.txt"
           else
             "${config.xdg.configHome}/sops/age/keys.txt";
       };
@@ -36,7 +36,7 @@ args@{
           if self.user.isStandalone then
             "${config.xdg.configHome}/sops/age/keys.txt"
           else if self.host.impermanence or false then
-            "${self.variables.persist.home}${self.user.home}/.config/sops/age/keys.txt"
+            "${self.variables.persist}${self.user.home}/.config/sops/age/keys.txt"
           else
             "${config.xdg.configHome}/sops/age/keys.txt";
       };
@@ -53,7 +53,7 @@ args@{
     system = config: {
       sops = {
         defaultSopsFile = self.config.secretsPath "host-secrets.yaml";
-        age.keyFile = "${self.variables.persist.system}/etc/sops/age/keys.txt";
+        age.keyFile = "${self.variables.persist}/etc/sops/age/keys.txt";
       };
     };
   };

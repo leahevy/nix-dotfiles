@@ -23,7 +23,7 @@ args@{
         ];
       };
 
-      home.persistence."${self.persist.home}" = {
+      home.persistence."${self.persist}" = {
         directories = [
           ".config/ranger"
           ".local/share/ranger"

@@ -784,7 +784,7 @@ in
           };
         };
 
-        home.persistence."${self.persist.home}" =
+        home.persistence."${self.persist}" =
           let
             getProgramDirs = program: if program != null then (program.dirsToPersist or [ ]) else [ ];
             getProgramFiles = program: if program != null then (program.filesToPersist or [ ]) else [ ];

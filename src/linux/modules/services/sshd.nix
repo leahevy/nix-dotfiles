@@ -42,7 +42,7 @@ args@{
       };
 
       # Already configured in system module as ssh keys should always be persisted!
-      environment.persistence.${self.persist.system} = { };
+      environment.persistence.${self.persist} = { };
     };
   };
 }

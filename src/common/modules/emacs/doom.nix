@@ -410,7 +410,7 @@ args@{
           doom = "$HOME/.config/emacs/bin/doom";
         };
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".config/doom"
           ];

@@ -20,7 +20,7 @@ args@{
         teams-for-linux
       ];
 
-      home.persistence."${self.persist.home}" = {
+      home.persistence."${self.persist}" = {
         directories = [
           ".config/teams-for-linux"
         ];

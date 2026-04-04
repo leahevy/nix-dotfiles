@@ -68,7 +68,7 @@ args@{
           openFirewall = self.settings.openFirewall;
         };
 
-        environment.persistence."${self.persist.system}" = {
+        environment.persistence."${self.persist}" = {
           directories = [
             "/var/lib/tailscale"
           ];

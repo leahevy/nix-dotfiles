@@ -20,7 +20,7 @@ args@{
         enable = true;
       };
 
-      environment.persistence."${self.persist.system}" = {
+      environment.persistence."${self.persist}" = {
         directories = [
           "/var/lib/fail2ban"
         ];

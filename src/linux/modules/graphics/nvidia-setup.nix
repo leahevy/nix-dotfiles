@@ -28,7 +28,7 @@ args@{
 
   on = {
     linux.home = config: {
-      home.persistence."${self.persist.home}" = {
+      home.persistence."${self.persist}" = {
         directories = [
           ".cache/nvidia"
         ];

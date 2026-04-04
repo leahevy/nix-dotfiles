@@ -65,7 +65,7 @@ args@{
       linux.home = config: {
         home.packages = [ self.settings.package ];
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = self.settings.persistenceDirs;
           files = self.settings.persistenceFiles;
         };

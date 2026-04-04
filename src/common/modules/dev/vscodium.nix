@@ -20,7 +20,7 @@ args@{
         vscodium
       ];
 
-      home.persistence."${self.persist.home}" = {
+      home.persistence."${self.persist}" = {
         directories = [
           ".config/VSCodium"
           ".vscode-oss"

@@ -47,7 +47,7 @@ args@{
           customPkgs.zoom-us
         ];
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".cache/zoom"
             ".zoom"

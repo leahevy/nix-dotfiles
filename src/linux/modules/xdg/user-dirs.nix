@@ -47,7 +47,7 @@ args@{
           }
           // lib.mapAttrs (xdgName: dirName: "${config.home.homeDirectory}/${dirName}") self.settings;
 
-          home.persistence."${self.persist.home}" = {
+          home.persistence."${self.persist}" = {
             directories = (map (dir: ".data/${dir}") (lib.attrValues self.settings)) ++ [
               ".data/data"
               ".data/develop"

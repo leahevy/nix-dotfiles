@@ -56,7 +56,7 @@ args@{
           beeperWrapped
         ];
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [ ".config/BeeperTexts" ];
         };
 

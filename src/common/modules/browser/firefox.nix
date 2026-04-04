@@ -30,7 +30,7 @@ args@{
         MOZ_ENABLE_WAYLAND = "1";
       };
 
-      home.persistence."${self.persist.home}" = {
+      home.persistence."${self.persist}" = {
         directories = [
           ".mozilla"
           ".cache/mozilla/firefox"

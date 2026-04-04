@@ -42,7 +42,7 @@ args@{
         nixos-firewall-tool
       ];
 
-      environment.persistence."${self.persist.system}" = {
+      environment.persistence."${self.persist}" = {
         directories = [
           "/var/lib/nftables"
         ];

@@ -128,7 +128,7 @@ args@{
             }
             // mcpFiles;
 
-          persistence."${self.persist.home}" = {
+          persistence."${self.persist}" = {
             directories = [
               ".claude"
             ];

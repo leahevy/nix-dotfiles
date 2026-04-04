@@ -160,7 +160,7 @@ in
         executable = true;
       };
 
-      home.persistence."${self.persist.home}" = {
+      home.persistence."${self.persist}" = {
         directories = [
           # Already implicitly persisted
           # ".gnupg"

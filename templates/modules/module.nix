@@ -53,7 +53,7 @@ args@{
 
     # Enabled, home context
     home = config: {
-      home.persistence."${self.persist.home}" = {
+      home.persistence."${self.persist}" = {
         directories = [ ];
         files = [ ];
       };
@@ -61,7 +61,7 @@ args@{
 
     # Enabled, system context
     # system = config: {
-    #   environment.persistence."${self.persist.system}" = {
+    #   environment.persistence."${self.persist}" = {
     #     directories = [ ];
     #     files = [ ];
     #   };

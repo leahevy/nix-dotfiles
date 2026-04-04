@@ -39,7 +39,7 @@ args@{
             map (pkg: pkgs.nodePackages.${pkg}) combinedPackages
           );
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".npm"
           ];

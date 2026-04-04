@@ -16,7 +16,7 @@ args@{
 
   on = {
     linux.home = config: {
-      home.persistence."${self.persist.home}" = {
+      home.persistence."${self.persist}" = {
         directories = [
           ".local/share/keyrings"
         ];

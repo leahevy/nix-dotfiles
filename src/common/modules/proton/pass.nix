@@ -64,7 +64,7 @@ args@{
           proton-pass-cli
         ]);
 
-        home.persistence."${self.persist.home}" = lib.mkIf self.settings.isolateConfig {
+        home.persistence."${self.persist}" = lib.mkIf self.settings.isolateConfig {
           directories = [ ".config/proton-pass" ];
         };
       };

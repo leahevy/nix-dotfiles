@@ -1067,7 +1067,7 @@ args@{
           '';
         };
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".config/qutebrowser"
             ".local/share/qutebrowser"

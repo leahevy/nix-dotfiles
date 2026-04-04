@@ -115,7 +115,7 @@ args@{
           '';
       in
       {
-        environment.persistence."${self.persist.system}" = {
+        environment.persistence."${self.persist}" = {
           directories = [
             "/var/lib/acme"
           ];

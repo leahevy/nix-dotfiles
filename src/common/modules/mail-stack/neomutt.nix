@@ -1050,7 +1050,7 @@ args@{
           };
         };
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             (lib.removePrefix "${config.home.homeDirectory}/" cacheDir)
           ];

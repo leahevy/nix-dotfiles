@@ -305,7 +305,7 @@ in
           ".config/homebrew/Brewfile".text = brewfileContent;
         };
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".config/homebrew"
           ];

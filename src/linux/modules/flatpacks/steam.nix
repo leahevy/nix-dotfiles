@@ -151,7 +151,7 @@ args@{
           };
         };
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".var/app/${self.settings.package}"
             ".flatpack-homes/${self.settings.appName}"

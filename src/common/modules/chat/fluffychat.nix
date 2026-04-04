@@ -25,7 +25,7 @@ args@{
           fluffychat
         ];
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".local/share/chat.fluffy.fluffychat"
           ];

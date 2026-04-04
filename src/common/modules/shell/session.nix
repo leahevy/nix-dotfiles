@@ -95,7 +95,7 @@ args@{
         }
         // (self.settings.additionalAliases or { });
 
-        persistence."${self.persist.home}" = {
+        persistence."${self.persist}" = {
           directories = [
             ".dotfiles"
           ];

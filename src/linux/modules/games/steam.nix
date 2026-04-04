@@ -63,7 +63,7 @@ args@{
             };
           };
 
-          home.persistence."${self.persist.home}" = lib.mkIf (!usesDataPath) {
+          home.persistence."${self.persist}" = lib.mkIf (!usesDataPath) {
             directories = [
               ".local/share/Steam"
               ".steam"

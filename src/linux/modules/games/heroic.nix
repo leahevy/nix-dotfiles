@@ -186,7 +186,7 @@ args@{
           ]
           ++ heroicFirewallScript;
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".config/heroic"
             ".local/share/comet"

@@ -305,7 +305,7 @@ args@{
           source = self.file "gitignore_global";
         };
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".config/git"
           ];

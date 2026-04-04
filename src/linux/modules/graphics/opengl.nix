@@ -20,7 +20,7 @@ args@{
 
   on = {
     linux.home = config: {
-      home.persistence."${self.persist.home}" = {
+      home.persistence."${self.persist}" = {
         directories = [
           ".cache/mesa_shader_cache"
           ".cache/mesa_shader_cache_db"

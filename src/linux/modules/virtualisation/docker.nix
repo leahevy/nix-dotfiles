@@ -46,7 +46,7 @@ args@{
         docker-compose
       ];
 
-      environment.persistence."${self.persist.system}" = {
+      environment.persistence."${self.persist}" = {
         directories = [
           self.settings.dataPath
         ];

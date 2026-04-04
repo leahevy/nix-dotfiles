@@ -428,10 +428,10 @@ subcommand_check() {
     log_and_display "Add missing files and folders to /persist:"
     log_and_display ""
     log_and_display " For home modules:"
-    log_and_display '  home.persistence."${self.persist.home}" = { directories = [...], files = [...] };'
+    log_and_display '  home.persistence."${self.persist}" = { directories = [...], files = [...] };'
     log_and_display ""
     log_and_display " For system modules:"
-    log_and_display '  environment.persistence."${self.persist.system}" = { directories = [...], files = [...] };'
+    log_and_display '  environment.persistence."${self.persist}" = { directories = [...], files = [...] };'
     log_and_display ""
     log_and_display " Note: Files may not work depending on the program."
     log_and_display "       Specifying directories for bind mounts is generally"

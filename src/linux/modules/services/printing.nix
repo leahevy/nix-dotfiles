@@ -201,7 +201,7 @@ args@{
             '')
           ];
 
-      environment.persistence.${self.persist.system} = {
+      environment.persistence.${self.persist} = {
         directories = [
           "/var/lib/cups"
           "/var/cache/cups"

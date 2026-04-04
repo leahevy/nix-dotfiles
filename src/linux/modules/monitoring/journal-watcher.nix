@@ -726,7 +726,7 @@ args@{
 
         environment.systemPackages = [ testScript ];
 
-        environment.persistence."${self.persist.system}" = {
+        environment.persistence."${self.persist}" = {
           directories = [
             "/var/lib/nx-journal-watcher"
           ];

@@ -225,7 +225,7 @@ args@{
 
         launchd.agents.ollama.config.RunAtLoad = lib.mkIf self.isDarwin true;
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [ ".ollama" ];
           files = [ ];
         };

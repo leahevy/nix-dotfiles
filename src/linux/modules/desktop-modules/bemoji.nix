@@ -32,7 +32,7 @@ args@{
           BEMOJI_PICKER_CMD = appLauncherDmenuSimple;
         };
 
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".local/share/bemoji"
           ];

@@ -27,14 +27,14 @@ args@{
 
   on = {
     linux.home = config: {
-      home.persistence."${self.persist.home}" = {
+      home.persistence."${self.persist}" = {
         directories = self.settings.home.directories;
         files = self.settings.home.files;
       };
     };
 
     linux.system = config: {
-      environment.persistence."${self.persist.system}" = {
+      environment.persistence."${self.persist}" = {
         directories = self.settings.system.directories;
         files = self.settings.system.files;
       };

@@ -708,7 +708,7 @@ args@{
           };
         };
 
-        environment.persistence."${self.persist.system}" = {
+        environment.persistence."${self.persist}" = {
           directories = [
             "/root/.config/borg"
             "/root/.cache/borg"

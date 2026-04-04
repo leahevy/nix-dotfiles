@@ -52,14 +52,14 @@ args@{
   })
   ++ (
     let
-      allowedSystemPersistPath = variables.persist.system;
+      allowedSystemPersistPath = variables.persist;
       persistKeys = builtins.attrNames (config.environment.persistence or { });
       invalidKeys = builtins.filter (key: key != allowedSystemPersistPath) persistKeys;
     in
     [
       {
         assertion = invalidKeys == [ ];
-        message = "environment.persistence contains invalid mount points: ${builtins.concatStringsSep ", " invalidKeys}. Only '${allowedSystemPersistPath}' is allowed (use self.persist.system).";
+        message = "environment.persistence contains invalid mount points: ${builtins.concatStringsSep ", " invalidKeys}. Only '${allowedSystemPersistPath}' is allowed (use self.persist).";
       }
     ]
   );

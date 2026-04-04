@@ -188,7 +188,7 @@ args@{
         '';
       in
       {
-        home.persistence."${self.persist.home}" = {
+        home.persistence."${self.persist}" = {
           directories = [
             ".local/share/nx-flatpack"
             ".local/share/flatpak"
@@ -253,7 +253,7 @@ args@{
     linux.system = config: {
       services.flatpak.enable = true;
 
-      environment.persistence."${self.persist.system}" = {
+      environment.persistence."${self.persist}" = {
         directories = [
           "/var/lib/flatpak"
         ];

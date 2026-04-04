@@ -33,7 +33,7 @@ args@{
 
       };
 
-      home.persistence."${self.persist.home}" = {
+      home.persistence."${self.persist}" = {
         files = [
           # Already included in impermanence.nix
           # ".bash_history"
