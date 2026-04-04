@@ -29,10 +29,14 @@ if [[ -e /etc/NIXOS ]]; then
     MAIN_USER="$(get_main_username)"
     FULL_EVAL_PATH="nixosConfigurations.${PROFILE}.config.home-manager.users.${MAIN_USER}.${EVAL_PATH}"
   else
-    FULL_EVAL_PATH="nixosConfigurations.${PROFILE}.${EVAL_PATH}"
+    FULL_EVAL_PATH="nixosConfigurations.${PROFILE}.config.${EVAL_PATH}"
   fi
 else
-  FULL_EVAL_PATH="homeConfigurations.${PROFILE}.${EVAL_PATH}"
+  if [[ "$HOME_MODE" == "true" ]]; then
+    echo -e "${RED}Option ${WHITE}--home${RED} is not available in standalone mode${RESET}" >&2
+    exit 1
+  fi
+  FULL_EVAL_PATH="homeConfigurations.${PROFILE}.config.${EVAL_PATH}"
 fi
 
 EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH" "--json")
