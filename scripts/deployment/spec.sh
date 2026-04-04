@@ -36,20 +36,6 @@ else
   SPEC_TYPE="system"
 fi
 
-usage() {
-  echo "Usage: $0 [--home] <command> [args]"
-  echo ""
-  echo "Options:"
-  echo "  --home              Operate on home-manager specialisations instead of system"
-  echo "                      (automatically enabled on non-NixOS systems)"
-  echo ""
-  echo "Commands:"
-  echo "  list                List all available specialisations"
-  echo "  switch <name>       Switch to the specified specialisation"
-  echo "  reset               Reset to base configuration (home-manager only)"
-  echo ""
-}
-
 cmd_list() {
   if [[ ! -d "$SPECIALISATION_DIR" ]]; then
     echo -e "${RED}No $SPEC_TYPE specialisations found (directory does not exist: ${WHITE}$SPECIALISATION_DIR${RED})${RESET}" >&2
@@ -167,18 +153,14 @@ case "${ARGS[0]:-}" in
   reset)
     cmd_reset
     ;;
-  -h|--help|help)
-    usage
-    exit 0
-    ;;
   "")
-    echo -e "${RED}Error: Command required${RESET}" >&2
-    usage >&2
+    echo -e "${RED}Error: Subcommand required${RESET}" >&2
+    echo -e "Run '${WHITE}nx spec --help${RESET}' for usage information." >&2
     exit 1
     ;;
   *)
-    echo -e "${RED}Error: Unknown command '${WHITE}${ARGS[0]:-}${RED}'${RESET}" >&2
-    usage >&2
+    echo -e "${RED}Error: Unknown subcommand: ${WHITE}${ARGS[0]:-}${RESET}" >&2
+    echo -e "Run '${WHITE}nx spec --help${RESET}' for usage information." >&2
     exit 1
     ;;
 esac

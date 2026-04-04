@@ -24,35 +24,6 @@ check_impermanence() {
 
 
 
-show_help() {
-  cat << 'EOF'
-Usage:
-    nx impermanence <command>
-
-Description:
-    Manages impermanence on NixOS systems.
-
-SUBCOMMANDS:
-    check [OPTIONS]      List files/directories in ephemeral root (not persisted)
-
-                         OPTIONS:
-                          --home           Show only paths under /home
-                          --system         Show only system paths (excludes /home and /persist)
-                          --filter <keyword>  Filter results containing keyword (can be used multiple times)
-
-    diff [OPTIONS]       Compare historical impermanence check logs
-
-                         OPTIONS:
-                          --range <N>      Compare with Nth previous log (default: 1)
-                          --home           Compare only home check logs
-                          --system         Compare only system check logs
-
-    logs                 Show impermanence rollback logs
-
-    help                 Show this help message
-EOF
-}
-
 setup_impermanence_logging() {
   local check_type="$1"
   local real_user="${SUDO_USER:-$USER}"
@@ -554,7 +525,7 @@ main() {
   check_nixos
   check_impermanence
 
-  case "${1:-help}" in
+  case "${1:-}" in
     check)
       shift
       subcommand_check "$@"
@@ -566,12 +537,14 @@ main() {
     logs)
       subcommand_logs
       ;;
-    help|--help|-h)
-      show_help
+    "")
+      echo -e "${RED}Error: Subcommand required${RESET}" >&2
+      echo -e "Run '${WHITE}nx impermanence --help${RESET}' for usage information." >&2
+      exit 1
       ;;
     *)
       echo -e "${RED}Error: Unknown subcommand: ${WHITE}$1${RESET}" >&2
-      echo -e "Run '${WHITE}nx impermanence help${RESET}' for usage information." >&2
+      echo -e "Run '${WHITE}nx impermanence --help${RESET}' for usage information." >&2
       exit 1
       ;;
   esac

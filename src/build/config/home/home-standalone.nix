@@ -53,8 +53,9 @@ let
   profileInitModules = userProfileOn.initModules;
   profileContextModules = userProfileOn.contextModules;
 
-  nxDef = import (defs.rootPath + "/nx.nix") {
+  nxDef = import (inputs.lib + "/cmds.nix") {
     inherit lib;
+    rootPath = defs.rootPath;
     scope = "standalone";
     system = if pkgs.stdenv.isDarwin then "darwin" else "linux";
   };
@@ -97,9 +98,10 @@ in
           };
           dontAuditTmpdir = true;
           installPhase = ''
-                      mkdir -p $out/bin $out/share/nx
+                      mkdir -p $out/bin $out/share/nx/scripts/utils
                       cp -r scripts $out/share/nx/
                       cp nx $out/share/nx/
+                      chmod +x $out/share/nx/scripts/utils/nx-help-formatter.py
 
                       find $out/share/nx/scripts -type f -exec sh -c '
                         if head -1 "$1" 2>/dev/null | grep -q "^#!/usr/bin/env bash"; then
@@ -124,8 +126,7 @@ in
             EOF
                       chmod +x $out/bin/nx
 
-                      cp ${pkgs.writeText "nx-help.txt" nxDef.help} $out/share/nx/nx-help.txt
-                      cp ${pkgs.writeText "nx-meta.json" nxDef.meta} $out/share/nx/nx-meta.json
+                      cp ${pkgs.writeText "nx-spec.json" nxDef.json} $out/share/nx/nx-spec.json
           '';
         })
       ]

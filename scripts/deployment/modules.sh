@@ -7,41 +7,6 @@ check_deployment_conflicts "modules"
 
 PROFILE_PATH="$(retrieve_active_profile_path)"
 
-show_help() {
-  cat << 'EOF'
-Usage:
-    nx modules <command>
-
-Description:
-    Manages and inspects NX modules.
-
-SUBCOMMANDS:
-    list [OPTIONS]          List available modules
-
-                            OPTIONS:
-                              --active          Show only active modules for current profile
-                              --inactive        Show only inactive modules for current profile
-                              --profile <name>  Use specific profile instead of current
-                              --nixos           Force NixOS mode (host + user modules)
-                              --standalone      Force standalone mode (user modules only)
-
-    config [OPTIONS]        Show complete active configuration
-
-                            OPTIONS:
-                              --profile <name>  Use specific profile instead of current
-                              --arch <arch>     Use specific architecture
-                              --nixos           Force NixOS mode (host + user modules)
-                              --standalone      Force standalone mode (user modules only)
-
-    info <MODULE>           Show detailed module information
-    edit <MODULE>           Open module file in editor (creates if doesn't exist)
-    help                    Show this help message
-
-MODULE FORMAT:
-    INPUT.GROUP.MODULE   Example: common.shell.bash
-EOF
-}
-
 subcommand_list() {
   local show_active_only=false
   local show_inactive_only=false
@@ -515,7 +480,7 @@ subcommand_config() {
 
 
 main() {
-  case "${1:-help}" in
+  case "${1:-}" in
     list)
       shift
       subcommand_list "$@"
@@ -532,12 +497,14 @@ main() {
       shift
       subcommand_edit "$@"
       ;;
-    help|--help|-h)
-      show_help
+    "")
+      echo -e "${RED}Error: Subcommand required${RESET}" >&2
+      echo -e "Run '${WHITE}nx modules --help${RESET}' for usage information." >&2
+      exit 1
       ;;
     *)
       echo -e "${RED}Error: Unknown subcommand: ${WHITE}$1${RESET}" >&2
-      echo -e "Run '${WHITE}nx modules help${RESET}' for usage information." >&2
+      echo -e "Run '${WHITE}nx modules --help${RESET}' for usage information." >&2
       exit 1
       ;;
   esac

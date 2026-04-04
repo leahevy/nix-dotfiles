@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NX_META=""
+NX_SPEC=""
 
 if [[ "$UID" == 0 ]]; then
   RED='\033[1;31m'
@@ -16,31 +16,29 @@ SCRIPTS_PATH="$SCRIPT_DIR/scripts/deployment"
 source "$SCRIPTS_PATH/../utils/pre-check.sh"
 check_config_directory "help" "deployment"
 
-if [[ -n "${NX_INSTALL_PATH:-}" && -f "$NX_INSTALL_PATH/nx-meta.json" ]]; then
-    NX_META="$NX_INSTALL_PATH/nx-meta.json"
+if [[ -n "${NX_INSTALL_PATH:-}" && "$SCRIPT_DIR" != "$NX_INSTALL_PATH" ]]; then
+    unset NX_INSTALL_PATH
 fi
 
-if [[ -n "$NX_META" ]]; then
-    NAME="$(jq -r '.name' "$NX_META" 2>/dev/null || echo 'nx')"
+if [[ -n "${NX_INSTALL_PATH:-}" && -f "$NX_INSTALL_PATH/nx-spec.json" ]]; then
+    NX_SPEC="$NX_INSTALL_PATH/nx-spec.json"
+fi
+
+if [[ -n "$NX_SPEC" ]]; then
+    NAME="$(jq -r '.name' "$NX_SPEC" 2>/dev/null || echo 'nx')"
 else
     NAME="nx"
 fi
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || "${1:-}" == "help" ]]; then
-    if [[ -n "${NX_INSTALL_PATH:-}" && -f "$NX_INSTALL_PATH/nx-help.txt" ]]; then
-        cat "$NX_INSTALL_PATH/nx-help.txt" >&2
-    else
-        echo "Usage: $NAME <command> [args...]" >&2
-        echo "       $NAME --help" >&2
-        echo "" >&2
-        echo "Run '$NAME --help' from the installed version for full help." >&2
-    fi
+    source "$SCRIPTS_PATH/../utils/nx-validate.sh"
+    show_command_help ""
     exit 0
 fi
 
 if [[ "${1:-}" == "--version" ]]; then
-    if [[ -n "$NX_META" ]]; then
-        echo "$NAME version $(jq -r '.version' "$NX_META")" >&2
+    if [[ -n "$NX_SPEC" ]]; then
+        echo "$NAME version $(jq -r '.version' "$NX_SPEC")" >&2
     else
         echo "$NAME local development version" >&2
     fi
@@ -56,6 +54,31 @@ if [[ $# -eq 0 ]]; then
 else
   SCRIPT_NAME="$1"
   shift
+
+  source "$SCRIPTS_PATH/../utils/nx-validate.sh"
+
+  help_requested=false
+  for arg in "$@"; do
+    if [[ "$arg" == "--help" || "$arg" == "-h" ]]; then
+      help_requested=true
+      break
+    fi
+  done
+
+  if [[ "$help_requested" == "true" ]]; then
+    cmd_path="$SCRIPT_NAME"
+    for arg in "$@"; do
+      if [[ "$arg" == "--help" || "$arg" == "-h" || "$arg" == --* || "$arg" == -* ]]; then
+        break
+      fi
+      cmd_path="$cmd_path $arg"
+    done
+    show_command_help "$cmd_path"
+  fi
+
+  if ! validate_command "$SCRIPT_NAME" "$@"; then
+    exit 1
+  fi
 fi
 
 SCRIPT_FILE="$SCRIPTS_PATH/$SCRIPT_NAME"
@@ -68,8 +91,8 @@ else
     if [[ "${SCRIPT_NAME:-}" == -* ]]; then
         echo -e "${RED}Error: unknown option '${WHITE}${SCRIPT_NAME:-}${RED}'${RESET}" >&2
         echo >&2
-        if [[ -n "$NX_META" ]]; then
-            OPTS=$(jq -r '.options | join(", ")' "$NX_META")
+        if [[ -n "$NX_SPEC" ]]; then
+            OPTS=$(jq -r '.options | keys | map("--" + .) | join(", ")' "$NX_SPEC")
             echo -e "${CYAN}Available options: ${WHITE}${OPTS}${RESET}" >&2
         else
             echo -e "${CYAN}Try ${WHITE}$NAME --help${RESET}" >&2
@@ -77,8 +100,8 @@ else
     else
         echo -e "${RED}Error: unknown command '${WHITE}${SCRIPT_NAME:-}${RED}'${RESET}" >&2
         echo >&2
-        if [[ -n "$NX_META" ]]; then
-            CMDS=$(jq -r '.commands | join(", ")' "$NX_META")
+        if [[ -n "$NX_SPEC" ]]; then
+            CMDS=$(jq -r '.subcommands | keys | join(", ")' "$NX_SPEC")
             echo -e "${CYAN}Available commands: ${WHITE}${CMDS}${RESET}" >&2
             echo -e "${CYAN}Use ${WHITE}$NAME --help${CYAN} for details${RESET}" >&2
         else

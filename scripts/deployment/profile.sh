@@ -6,31 +6,6 @@ simple_deployment_script_setup "profile"
 
 PROFILE_PATH="$(retrieve_active_profile_path)"
 
-show_help() {
-  cat << 'EOF'
-Usage:
-    nx profile [SUBCOMMAND]
-
-Description:
-    Manage NX profiles - navigate to profile directories and edit configurations.
-
-SUBCOMMANDS:
-    (no args)               Navigate to active profile directory
-    user                    Navigate to integrated user directory (NixOS only)
-    edit                    Edit active profile configuration file
-    user edit               Edit integrated user configuration file (NixOS only)
-    select <PROFILE>        Set active profile name
-    reset                   Reset to default profile
-    help                    Show this help message
-
-EXAMPLES:
-    nx profile              # Open shell in active profile directory
-    nx profile edit         # Edit main profile configuration file
-    nx profile select myhost # Set active profile to 'myhost'
-    nx profile reset        # Reset to default profile
-EOF
-}
-
 resolve_active_profile_base() {
     local full_profile
     full_profile="$(retrieve_active_profile 2>/dev/null | tail -1)"
@@ -205,12 +180,9 @@ case "$SUBCOMMAND" in
     "reset")
         subcommand_reset
         ;;
-    "help"|"--help"|"-h")
-        show_help
-        ;;
     *)
         echo -e "${RED}Unknown subcommand: ${WHITE}$SUBCOMMAND${RESET}" >&2
-        echo -e "${RED}Run ${WHITE}nx profile help${RED} for usage information${RESET}" >&2
+        echo -e "${RED}Run ${WHITE}nx profile --help${RED} for usage information${RESET}" >&2
         exit 1
         ;;
 esac
