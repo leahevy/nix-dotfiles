@@ -81,6 +81,24 @@ args@{
           string = "Failed to allocate NVKMS memory for GEM object";
           kernel = true;
         }
+      ]
+      ++ lib.optionals (self.linux.isModuleEnabled "boot.plymouth") [
+        {
+          string = "WARNING:.*at drivers/gpu/drm/drm_mode_config\\.c:(520|554) drm_mode_config_cleanup\\+0x";
+          kernel = true;
+        }
+        {
+          string = "\\[drm:drm_mode_config_cleanup\\] \\*ERROR\\* connector Unknown-[0-9]+ leaked!";
+          kernel = true;
+        }
+        {
+          string = "platform simple-framebuffer\\.0: \\[drm\\] drm_WARN_ON\\(shmem->vmap_use_count\\)";
+          kernel = true;
+        }
+        {
+          string = "WARNING:.*at drivers/gpu/drm/drm_gem_shmem_helper\\.c:146 drm_gem_shmem_free\\+0x";
+          kernel = true;
+        }
       ];
     };
 
