@@ -58,6 +58,18 @@ args@{
             default = null;
             description = "Override the notification message body.";
           };
+          priority = lib.mkOption {
+            type = lib.types.nullOr (
+              lib.types.enum [
+                "info"
+                "warn"
+                "failed"
+                "emerg"
+              ]
+            );
+            default = null;
+            description = "Override notification priority.";
+          };
         };
       };
 

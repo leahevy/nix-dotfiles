@@ -702,22 +702,6 @@ def process_message(
         }
         notify_type = priority_map.get(priority, "info")
 
-        priority_titles = {
-            "emerg": "Emergency",
-            "failed": "Failed",
-            "warn": "Warning",
-            "info": "Info",
-        }
-
-        icon_map_system = cfg["icon_map_system"]
-        icon_map_user = cfg["icon_map_user"]
-        icon = (
-            icon_map_user.get(notify_type, icon_map_user["info"])
-            if is_user_unit
-            else icon_map_system.get(notify_type, icon_map_system["info"])
-        )
-        priority_title = priority_titles.get(notify_type, "Info")
-
         generic_tags = {"system", cfg.get("main_user_username", "")}
         display_tag = tag if tag and tag not in generic_tags else None
 
@@ -731,6 +715,25 @@ def process_message(
             effective_mapping.update(
                 {k: v for k, v in highlight_info.mapping.items() if v is not None}
             )
+
+        if effective_mapping.get("priority"):
+            notify_type = effective_mapping["priority"]
+
+        syslog_priority_map = {
+            "emerg": "user.emerg",
+            "failed": "user.err",
+            "warn": "user.warning",
+            "info": "user.info",
+        }
+        syslog_priority = syslog_priority_map.get(notify_type, "user.warning")
+
+        icon_map_system = cfg["icon_map_system"]
+        icon_map_user = cfg["icon_map_user"]
+        icon = (
+            icon_map_user.get(notify_type, icon_map_user["info"])
+            if is_user_unit
+            else icon_map_system.get(notify_type, icon_map_system["info"])
+        )
 
         hl_title = effective_mapping.get("title")
         if hl_title is not None:
@@ -796,7 +799,9 @@ def process_message(
         if cfg["user_notify_enabled"] and not cfg["debug_enabled"]:
             if hl_channels.get("user") is not False:
                 try:
-                    send_user_notify(cfg, title, message_text_user, icon)
+                    send_user_notify(
+                        cfg, title, message_text_user, icon, syslog_priority
+                    )
                     stats.user_notify += 1
                 except (subprocess.TimeoutExpired, OSError) as e:
                     print(
