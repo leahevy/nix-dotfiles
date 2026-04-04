@@ -15,12 +15,15 @@ from typing import Any, Dict, List, Optional, Tuple, TypedDict
 class GroupEntry(TypedDict):
     string: str
     mapping: Optional[Dict[str, Any]]
+    pattern_type: Optional[str]
+    pattern: Optional[Dict[str, Any]]
 
 
 @dataclass
 class PatternMatch:
     mapping: Optional[Dict[str, Any]] = None
     channels: Optional[Dict[str, Any]] = None
+    pattern_id: Optional[str] = None
 
 
 STATS_INTERVAL = 10 * 60
@@ -72,6 +75,17 @@ SERVICE_EXTRACT_RE = re.compile(
     r"(service|timer|socket|target|mount|path|slice|scope|device|swap))"
     r":(.*)$"
 )
+
+
+def compute_pattern_hash(pat: Dict[str, Any]) -> str:
+    fields = ["service", "tag", "string", "user", "kernel", "unitless", "all"]
+    parts = []
+    for field in fields:
+        value = pat.get(field)
+        if value:
+            parts.append(f"{field}={value}")
+    key = "|".join(parts) if parts else "empty"
+    return sha256(key.encode()).hexdigest()[:16]
 
 
 class PatternMatcher:
@@ -131,6 +145,7 @@ class PatternMatcher:
                         "string": string,
                         "mapping": pat.get("mapping"),
                         "pattern_type": pat.get("pattern_type"),
+                        "pattern": pat,
                     }
                 )
                 continue
@@ -193,7 +208,13 @@ class PatternMatcher:
                 labels = []
                 for i, e in enumerate(entries):
                     parts.append(f"(?P<g{len(self.grouped)}_{i}>{e['string']})")
-                    labels.append(PatternMatch(mapping=e.get("mapping")))
+                    pattern_hash = None
+                    pattern = e.get("pattern")
+                    if e.get("pattern_type") == "highlight" and pattern is not None:
+                        pattern_hash = compute_pattern_hash(pattern)
+                    labels.append(
+                        PatternMatch(mapping=e.get("mapping"), pattern_id=pattern_hash)
+                    )
                 string_re = re.compile("|".join(parts))
             else:
                 string_re = re.compile("|".join(f"({e['string']})" for e in entries))
@@ -219,6 +240,8 @@ class PatternMatcher:
             "mapping": pat.get("mapping"),
             "channels": pat.get("channels"),
         }
+        if pat.get("pattern_type") == "highlight":
+            compiled["pattern_hash"] = compute_pattern_hash(pat)
         if pat.get("service"):
             compiled["service"] = re.compile(re.escape(pat["service"]))
         if pat.get("tag"):
@@ -358,7 +381,9 @@ class PatternMatcher:
                     all_match = False
             if all_match:
                 return PatternMatch(
-                    mapping=pat.get("mapping"), channels=pat.get("channels")
+                    mapping=pat.get("mapping"),
+                    channels=pat.get("channels"),
+                    pattern_id=pat.get("pattern_hash"),
                 )
 
         return None
@@ -435,19 +460,12 @@ def cleanup_old_rate_limits(cfg: Dict[str, Any]):
         print("Cleaned up old rate limit files.", flush=True)
 
 
-def check_rate_limit(cfg: Dict[str, Any], service_unit: str) -> bool:
-    cleanup_old_rate_limits(cfg)
-    service_file = re.sub(r"[^a-zA-Z0-9_-]", "_", service_unit)
-    if not service_file:
-        service_file = "unknown"
-    rate_limit_file = Path(cfg["rate_limit_state_dir"]) / service_file
+def check_hourly_rate_limit(
+    cfg: Dict[str, Any], filename: str, rate_limit: int
+) -> bool:
+    rate_limit_file = Path(cfg["rate_limit_state_dir"]) / filename
     current_time = int(time.time())
     current_hour = current_time // 3600
-    rate_limit = (
-        cfg["rate_limit_per_hour_unknown"]
-        if service_file == "unknown"
-        else cfg["rate_limit_per_hour"]
-    )
     if rate_limit_file.exists():
         try:
             stored_data = rate_limit_file.read_text().strip()
@@ -469,6 +487,23 @@ def check_rate_limit(cfg: Dict[str, Any], service_unit: str) -> bool:
     else:
         rate_limit_file.write_text(f"1:{current_time}")
         return True
+
+
+def check_rate_limit(cfg: Dict[str, Any], service_unit: str) -> bool:
+    service_file = re.sub(r"[^a-zA-Z0-9_-]", "_", service_unit)
+    if not service_file:
+        service_file = "unknown"
+    rate_limit = (
+        cfg["rate_limit_per_hour_unknown"]
+        if service_file == "unknown"
+        else cfg["rate_limit_per_hour"]
+    )
+    return check_hourly_rate_limit(cfg, service_file, rate_limit)
+
+
+def check_highlight_rate_limit(cfg: Dict[str, Any], pattern_hash: str) -> bool:
+    rate_limit = cfg.get("highlight_rate_limit_per_hour", cfg["rate_limit_per_hour"])
+    return check_hourly_rate_limit(cfg, f"hl_{pattern_hash}", rate_limit)
 
 
 def check_message_rate_limit(
@@ -633,6 +668,8 @@ def process_message(
         pattern_info = ctx["pattern_info"]
         ts_prefix = f"[{entry_ts(json_data)}] " if cfg["dev_enabled"] else ""
 
+        cleanup_old_rate_limits(cfg)
+
         if not check_message_rate_limit(cfg, unit, message):
             print(
                 f"{ts_prefix}Ignore notification <rate limited> ({tag}/{unit}): {message}",
@@ -640,6 +677,15 @@ def process_message(
             )
             stats.rate_limited += 1
             return
+
+        if highlighted and highlight_info and highlight_info.pattern_id:
+            if not check_highlight_rate_limit(cfg, highlight_info.pattern_id):
+                print(
+                    f"{ts_prefix}Ignore notification <highlight pattern rate limited> ({tag}/{unit}): {message}",
+                    flush=True,
+                )
+                stats.rate_limited += 1
+                return
 
         hl_marker = " [highlighted]" if highlighted else ""
         print(

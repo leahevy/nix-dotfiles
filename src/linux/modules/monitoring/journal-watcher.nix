@@ -319,6 +319,7 @@ args@{
     ignoreUserServicesForPushover = true;
     pushoverRateLimit = 10;
     pushoverRateLimitUnknown = 30;
+    highlightRateLimit = 40;
     sameMessageRateLimitMinutes = 15;
   };
 
@@ -581,6 +582,7 @@ args@{
             message_hashes_file = messageHashesFile;
             rate_limit_per_hour = self.settings.pushoverRateLimit;
             rate_limit_per_hour_unknown = self.settings.pushoverRateLimitUnknown;
+            highlight_rate_limit_per_hour = self.settings.highlightRateLimit;
             message_rate_limit_minutes = self.settings.sameMessageRateLimitMinutes;
             user_notify_enabled = self.isModuleEnabled "notifications.user-notify";
             pushover_enabled = self.isModuleEnabled "notifications.pushover" && pushover.script != null;
