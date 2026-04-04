@@ -178,8 +178,10 @@ args@{
   };
 
   settings = {
-    windowOpenShader = "pixelate";
-    windowCloseShader = "pixelate";
+    windowOpenShader = "roll-drop";
+    windowOpenShaderDuration = 170;
+    windowCloseShader = "swipe-window";
+    windowCloseShaderDuration = 120;
     windowResizeShader = "unravel";
     disableNewAppSwitcher = true;
     addRestartShortcut = true;
@@ -217,7 +219,7 @@ args@{
       config:
       let
         nirimationSrc = pkgs.fetchFromGitHub {
-          owner = "XansiVA";
+          owner = "leahevy";
           repo = "nirimation";
           rev = "17dda540a040ca501982418c436fd5c77a572392";
           sha256 = "sha256-J6f02QKi8ggoEOtxK8RhLGSq4IkRh+LRahXcY/ReE18=";
@@ -237,6 +239,11 @@ args@{
                 capturing = 1
                 shader = ""
                 sub(/.*custom-shader r"/, "", $0)
+              }
+              /custom-shader "/ && !/custom-shader r"/ {
+                capturing = 1
+                shader = ""
+                sub(/.*custom-shader "/, "", $0)
               }
               capturing {
                 if (match($0, /^(.*)"[[:space:]]*$/, m)) {
@@ -1600,7 +1607,7 @@ args@{
                   easing =
                     if self.settings.windowOpenShader != null then
                       {
-                        duration-ms = 250;
+                        duration-ms = self.settings.windowOpenShaderDuration;
                         curve = "linear";
                       }
                     else
@@ -1619,7 +1626,7 @@ args@{
                   easing =
                     if self.settings.windowCloseShader != null then
                       {
-                        duration-ms = 300;
+                        duration-ms = self.settings.windowCloseShaderDuration;
                         curve = "linear";
                       }
                     else
