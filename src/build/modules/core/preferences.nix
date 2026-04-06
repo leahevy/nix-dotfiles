@@ -732,4 +732,8 @@ in
         environment.systemPackages = [ config.nx.lib.iconResolveScript ];
       };
     };
+
+  on.darwin.enabled = config: {
+    nx.lib.iconResolveScript = self.dummyPackage "iconResolveScript";
+  };
 }
