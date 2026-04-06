@@ -101,6 +101,7 @@
       update = {
         description = "Update the flake in git (without switching)";
         group = "switch";
+        arguments = [ (argVariadic "inputs" "Flake input name(s) to update" "string") ];
       };
 
       dist-upgrade = {
