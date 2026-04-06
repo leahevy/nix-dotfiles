@@ -74,6 +74,16 @@ let
         default = [ ];
         description = "Files to persist for this program";
       };
+      journalPatternsToIgnore = lib.mkOption {
+        type = lib.types.listOf lib.types.attrs;
+        default = [ ];
+        description = "Journal watcher patterns to ignore for this program";
+      };
+      journalPatternsToHighlight = lib.mkOption {
+        type = lib.types.listOf lib.types.attrs;
+        default = [ ];
+        description = "Journal watcher patterns to highlight for this program";
+      };
       needsTerminal = lib.mkOption {
         type = lib.types.bool;
         default = false;
@@ -158,6 +168,16 @@ let
         default = [ ];
         description = "Files to persist for this terminal";
       };
+      journalPatternsToIgnore = lib.mkOption {
+        type = lib.types.listOf lib.types.attrs;
+        default = [ ];
+        description = "Journal watcher patterns to ignore for this terminal";
+      };
+      journalPatternsToHighlight = lib.mkOption {
+        type = lib.types.listOf lib.types.attrs;
+        default = [ ];
+        description = "Journal watcher patterns to highlight for this terminal";
+      };
       localBin = lib.mkOption {
         type = lib.types.bool;
         default = false;
@@ -238,6 +258,16 @@ let
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Desktop file name";
+      };
+      journalPatternsToIgnore = lib.mkOption {
+        type = lib.types.listOf lib.types.attrs;
+        default = [ ];
+        description = "Journal watcher patterns to ignore for this launcher";
+      };
+      journalPatternsToHighlight = lib.mkOption {
+        type = lib.types.listOf lib.types.attrs;
+        default = [ ];
+        description = "Journal watcher patterns to highlight for this launcher";
       };
       localBin = lib.mkOption {
         type = lib.types.bool;

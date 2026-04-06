@@ -22,6 +22,8 @@ let
       desktopFile ? null,
       dirsToPersist ? [ ],
       filesToPersist ? [ ],
+      journalPatternsToIgnore ? [ ],
+      journalPatternsToHighlight ? [ ],
     }:
     let
       nameParts = lib.splitString "." name;
@@ -34,6 +36,8 @@ let
         additionalPackages
         dirsToPersist
         filesToPersist
+        journalPatternsToIgnore
+        journalPatternsToHighlight
         ;
       package = package;
       openCommand = finalOpenCommand;
@@ -57,6 +61,8 @@ let
       desktopFile ? null,
       dirsToPersist ? [ ],
       filesToPersist ? [ ],
+      journalPatternsToIgnore ? [ ],
+      journalPatternsToHighlight ? [ ],
       execFlag ? "-e",
       directoryFlag ? "--working-directory=",
       classFlag ? "--class=",
@@ -73,6 +79,8 @@ let
         desktopFile
         dirsToPersist
         filesToPersist
+        journalPatternsToIgnore
+        journalPatternsToHighlight
         ;
       package = package;
       openCommand = finalOpenCommand;
@@ -142,6 +150,8 @@ let
       desktopFile ? null,
       dirsToPersist ? [ ],
       filesToPersist ? [ ],
+      journalPatternsToIgnore ? [ ],
+      journalPatternsToHighlight ? [ ],
     }:
     let
       nameParts = lib.splitString "." name;
@@ -157,6 +167,8 @@ let
         additionalPackages
         dirsToPersist
         filesToPersist
+        journalPatternsToIgnore
+        journalPatternsToHighlight
         ;
       package = resolvedPackage;
       desktopFile = resolvedDesktopFile;
@@ -177,6 +189,8 @@ let
       desktopFile ? null,
       dirsToPersist ? [ ],
       filesToPersist ? [ ],
+      journalPatternsToIgnore ? [ ],
+      journalPatternsToHighlight ? [ ],
       execFlag ? "-e",
       directoryFlag ? "--workdir ",
       classFlag ? "--class ",
@@ -200,6 +214,8 @@ let
         additionalPackages
         dirsToPersist
         filesToPersist
+        journalPatternsToIgnore
+        journalPatternsToHighlight
         execFlag
         directoryFlag
         classFlag
@@ -218,6 +234,8 @@ let
       desktopFile ? null,
       dirsToPersist ? [ ],
       filesToPersist ? [ ],
+      journalPatternsToIgnore ? [ ],
+      journalPatternsToHighlight ? [ ],
     }:
     let
       nameParts = lib.splitString "." name;
@@ -233,6 +251,8 @@ let
         additionalPackages
         dirsToPersist
         filesToPersist
+        journalPatternsToIgnore
+        journalPatternsToHighlight
         ;
       package = resolvedPackage;
       desktopFile = resolvedDesktopFile;
@@ -253,6 +273,8 @@ let
       desktopFile ? null,
       dirsToPersist ? [ ],
       filesToPersist ? [ ],
+      journalPatternsToIgnore ? [ ],
+      journalPatternsToHighlight ? [ ],
       execFlag ? "--",
       directoryFlag ? "--working-directory=",
       classFlag ? "--class=",
@@ -276,6 +298,8 @@ let
         additionalPackages
         dirsToPersist
         filesToPersist
+        journalPatternsToIgnore
+        journalPatternsToHighlight
         execFlag
         directoryFlag
         classFlag
@@ -536,6 +560,76 @@ in
   };
 
   on = {
+    linux.enabled =
+      config:
+      let
+        prefs = config.nx.preferences.desktop.programs;
+        getProgramIgnorePatterns =
+          program: if program != null then (program.journalPatternsToIgnore or [ ]) else [ ];
+        getProgramHighlightPatterns =
+          program: if program != null then (program.journalPatternsToHighlight or [ ]) else [ ];
+
+        allIgnorePatterns =
+          (getProgramIgnorePatterns prefs.wallet)
+          ++ (getProgramIgnorePatterns prefs.fileBrowser)
+          ++ (getProgramIgnorePatterns prefs.archiver)
+          ++ (getProgramIgnorePatterns prefs.textEditor)
+          ++ (getProgramIgnorePatterns prefs.advancedTextEditor)
+          ++ (getProgramIgnorePatterns prefs.terminal)
+          ++ (getProgramIgnorePatterns prefs.additionalTerminal)
+          ++ (getProgramIgnorePatterns prefs.systemSettings)
+          ++ (getProgramIgnorePatterns prefs.networkSettings)
+          ++ (getProgramIgnorePatterns prefs.imageViewer)
+          ++ (getProgramIgnorePatterns prefs.imageEditor)
+          ++ (getProgramIgnorePatterns prefs.paintImageEditor)
+          ++ (getProgramIgnorePatterns prefs.pdfViewer)
+          ++ (getProgramIgnorePatterns prefs.videoPlayer)
+          ++ (getProgramIgnorePatterns prefs.musicPlayer)
+          ++ (getProgramIgnorePatterns prefs.emailClient)
+          ++ (getProgramIgnorePatterns prefs.calendar)
+          ++ (getProgramIgnorePatterns prefs.contacts)
+          ++ (getProgramIgnorePatterns prefs.taskManager)
+          ++ (getProgramIgnorePatterns prefs.diskUsage)
+          ++ (getProgramIgnorePatterns prefs.calculator)
+          ++ (getProgramIgnorePatterns prefs.clock)
+          ++ (getProgramIgnorePatterns prefs.webBrowser)
+          ++ (getProgramIgnorePatterns prefs.dialog)
+          ++ (getProgramIgnorePatterns prefs.gitGui)
+          ++ (getProgramIgnorePatterns prefs.drawingProgram);
+
+        allHighlightPatterns =
+          (getProgramHighlightPatterns prefs.wallet)
+          ++ (getProgramHighlightPatterns prefs.fileBrowser)
+          ++ (getProgramHighlightPatterns prefs.archiver)
+          ++ (getProgramHighlightPatterns prefs.textEditor)
+          ++ (getProgramHighlightPatterns prefs.advancedTextEditor)
+          ++ (getProgramHighlightPatterns prefs.terminal)
+          ++ (getProgramHighlightPatterns prefs.additionalTerminal)
+          ++ (getProgramHighlightPatterns prefs.systemSettings)
+          ++ (getProgramHighlightPatterns prefs.networkSettings)
+          ++ (getProgramHighlightPatterns prefs.imageViewer)
+          ++ (getProgramHighlightPatterns prefs.imageEditor)
+          ++ (getProgramHighlightPatterns prefs.paintImageEditor)
+          ++ (getProgramHighlightPatterns prefs.pdfViewer)
+          ++ (getProgramHighlightPatterns prefs.videoPlayer)
+          ++ (getProgramHighlightPatterns prefs.musicPlayer)
+          ++ (getProgramHighlightPatterns prefs.emailClient)
+          ++ (getProgramHighlightPatterns prefs.calendar)
+          ++ (getProgramHighlightPatterns prefs.contacts)
+          ++ (getProgramHighlightPatterns prefs.taskManager)
+          ++ (getProgramHighlightPatterns prefs.diskUsage)
+          ++ (getProgramHighlightPatterns prefs.calculator)
+          ++ (getProgramHighlightPatterns prefs.clock)
+          ++ (getProgramHighlightPatterns prefs.webBrowser)
+          ++ (getProgramHighlightPatterns prefs.dialog)
+          ++ (getProgramHighlightPatterns prefs.gitGui)
+          ++ (getProgramHighlightPatterns prefs.drawingProgram);
+      in
+      {
+        nx.linux.monitoring.journal-watcher.ignorePatterns = allIgnorePatterns;
+        nx.linux.monitoring.journal-watcher.highlightPatterns = allHighlightPatterns;
+      };
+
     linux.init =
       config:
       lib.mkIf self.isEnabled {
