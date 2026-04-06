@@ -191,31 +191,6 @@ let
     };
   };
 
-  dmenuOptsType = lib.types.submodule {
-    options = {
-      prompt = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        description = "Prompt text";
-      };
-      width = lib.mkOption {
-        type = lib.types.nullOr lib.types.int;
-        default = null;
-        description = "Menu width";
-      };
-      lines = lib.mkOption {
-        type = lib.types.nullOr lib.types.int;
-        default = null;
-        description = "Number of lines to show";
-      };
-      placeholder = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Placeholder text";
-      };
-    };
-  };
-
   dmenuOptsFnType = lib.types.functionTo (lib.types.listOf lib.types.str);
 
   appLauncherType = lib.types.submodule {
