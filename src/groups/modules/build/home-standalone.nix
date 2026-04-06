@@ -17,26 +17,22 @@ args@{
 
   submodules = {
     build = {
-      core = {
-        programs = true;
-        utils = true;
-        tokens = true;
-        sops = true;
-        path = true;
-        preferences = true;
-        nx-config = true;
-        homebrew = true;
-      };
-      desktop = {
-        desktop = true;
-        terminal = true;
-      };
-      system = {
-        dummy-files = true;
-      };
-      theme = {
-        theme-home = true;
-      };
+      core = [
+        "programs"
+        "utils"
+        "tokens"
+        "sops"
+        "path"
+        "preferences"
+        "nx-config"
+        "homebrew"
+      ];
+      desktop = [
+        "desktop"
+        "terminal"
+      ];
+      system = [ "dummy-files" ];
+      theme = [ "theme-home" ];
     };
   };
 }

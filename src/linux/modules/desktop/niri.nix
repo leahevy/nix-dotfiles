@@ -105,6 +105,100 @@ args@{
       default = null;
       description = "Command to reset the wallpaper on workspace change.";
     };
+    windowOpenShader = lib.mkOption {
+      type = lib.types.str;
+      default = "roll-drop";
+    };
+    windowOpenShaderDuration = lib.mkOption {
+      type = lib.types.int;
+      default = 170;
+    };
+    windowCloseShader = lib.mkOption {
+      type = lib.types.str;
+      default = "swipe-window";
+    };
+    windowCloseShaderDuration = lib.mkOption {
+      type = lib.types.int;
+      default = 120;
+    };
+    windowResizeShader = lib.mkOption {
+      type = lib.types.str;
+      default = "unravel";
+    };
+    disableNewAppSwitcher = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+    };
+    addRestartShortcut = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+    };
+    screenshotBasePictureDir = lib.mkOption {
+      type = lib.types.str;
+      default = "screenshots";
+    };
+    mainDisplayScale = lib.mkOption {
+      type = lib.types.float;
+      default = 1.0;
+    };
+    secondaryDisplayScale = lib.mkOption {
+      type = lib.types.float;
+      default = 1.0;
+    };
+    applicationsToStart = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+    };
+    delayedApplicationsToStart = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+    };
+    activeColor = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+    };
+    inactiveColor = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+    };
+    switchBackgroundOnWorkspaceChange = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+    };
+    modKey = lib.mkOption {
+      type = lib.types.str;
+      default = "Super";
+    };
+    modKeyNested = lib.mkOption {
+      type = lib.types.str;
+      default = "Alt";
+    };
+    honorXDGActivation = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+    };
+    deactivateUnfocusedWindows = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+    };
+    displayModes = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          main = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+          };
+          secondary = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+          };
+        };
+      };
+      default = {
+        main = null;
+        secondary = null;
+      };
+    };
   };
 
   submodules = {
@@ -174,32 +268,6 @@ args@{
       media = {
         vlc = true;
       };
-    };
-  };
-
-  settings = {
-    windowOpenShader = "roll-drop";
-    windowOpenShaderDuration = 170;
-    windowCloseShader = "swipe-window";
-    windowCloseShaderDuration = 120;
-    windowResizeShader = "unravel";
-    disableNewAppSwitcher = true;
-    addRestartShortcut = true;
-    screenshotBasePictureDir = "screenshots";
-    mainDisplayScale = 1.0;
-    secondaryDisplayScale = 1.0;
-    applicationsToStart = [ ];
-    delayedApplicationsToStart = [ ];
-    activeColor = null;
-    inactiveColor = null;
-    switchBackgroundOnWorkspaceChange = false;
-    modKey = "Super";
-    modKeyNested = "Alt";
-    honorXDGActivation = true;
-    deactivateUnfocusedWindows = true;
-    displayModes = {
-      main = null;
-      secondary = null;
     };
   };
 
@@ -527,13 +595,13 @@ args@{
         delayedRequiredApps = [ ];
         theme = config.nx.preferences.theme;
         activeColor =
-          if self.settings.activeColor != null then
-            self.settings.activeColor
+          if (self.options config).activeColor != null then
+            (self.options config).activeColor
           else
             theme.colors.main.foregrounds.primary.html;
         inactiveColor =
-          if self.settings.inactiveColor != null then
-            self.settings.inactiveColor
+          if (self.options config).inactiveColor != null then
+            (self.options config).inactiveColor
           else
             theme.colors.main.backgrounds.secondary.html;
 
@@ -564,7 +632,7 @@ args@{
               else
                 "${self.user.home}/Pictures";
           in
-          "${picturesDir}/${self.settings.screenshotBasePictureDir}/%Y_%m_%d_%H%M%S.png";
+          "${picturesDir}/${(self.options config).screenshotBasePictureDir}/%Y_%m_%d_%H%M%S.png";
 
         screenshotDir = builtins.dirOf screenshotPath;
 
@@ -572,10 +640,10 @@ args@{
 
         generateDelayedStartupCommands = apps: map (app: { sh = "sleep 6 && uwsm app -- ${app}"; }) apps;
 
-        startupApps = requiredApps ++ self.settings.applicationsToStart;
+        startupApps = requiredApps ++ (self.options config).applicationsToStart;
         autostartPrograms = (self.options config).autostartPrograms;
         delayedStartupApps =
-          delayedRequiredApps ++ self.settings.delayedApplicationsToStart ++ autostartPrograms;
+          delayedRequiredApps ++ (self.options config).delayedApplicationsToStart ++ autostartPrograms;
 
         generateWorkspaces =
           main: secondary:
@@ -719,7 +787,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/restart-niri" = lib.mkIf self.settings.addRestartShortcut {
+        home.file.".local/bin/restart-niri" = lib.mkIf (self.options config).addRestartShortcut {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -897,7 +965,7 @@ args@{
                 resetCmd = (self.options config).resetWallpaperCommand;
               in
               lib.optionalString (nextCmd != null || resetCmd != null) (
-                if self.settings.switchBackgroundOnWorkspaceChange then
+                if (self.options config).switchBackgroundOnWorkspaceChange then
                   lib.optionalString (nextCmd != null) ''
                     if [[ "$CHANGE_WALLPAPER" == "true" ]]; then
                       ${nextCmd}
@@ -950,10 +1018,10 @@ args@{
             screenshot-path = screenshotPath;
 
             debug = lib.mkMerge [
-              (lib.mkIf self.settings.honorXDGActivation {
+              (lib.mkIf (self.options config).honorXDGActivation {
                 honor-xdg-activation-with-invalid-serial = [ ];
               })
-              (lib.mkIf self.settings.deactivateUnfocusedWindows {
+              (lib.mkIf (self.options config).deactivateUnfocusedWindows {
                 deactivate-unfocused-windows = [ ];
               })
             ];
@@ -962,8 +1030,8 @@ args@{
               (generateStartupCommands startupApps) ++ (generateDelayedStartupCommands delayedStartupApps);
 
             input = {
-              mod-key = self.settings.modKey;
-              mod-key-nested = self.settings.modKeyNested;
+              mod-key = (self.options config).modKey;
+              mod-key-nested = (self.options config).modKeyNested;
               workspace-auto-back-and-forth = true;
 
               keyboard = {
@@ -1058,14 +1126,18 @@ args@{
               (lib.mkIf (mainDisplay != null) {
                 ${mainDisplay} = {
                   focus-at-startup = true;
-                  scale = self.settings.mainDisplayScale;
-                  mode = lib.mkIf (self.settings.displayModes.main != null) self.settings.displayModes.main;
+                  scale = (self.options config).mainDisplayScale;
+                  mode =
+                    lib.mkIf ((self.options config).displayModes.main != null)
+                      (self.options config).displayModes.main;
                 };
               })
               (lib.mkIf (secondaryDisplay != null) {
                 ${secondaryDisplay} = {
-                  scale = self.settings.secondaryDisplayScale;
-                  mode = lib.mkIf (self.settings.displayModes.secondary != null) self.settings.displayModes.secondary;
+                  scale = (self.options config).secondaryDisplayScale;
+                  mode =
+                    lib.mkIf ((self.options config).displayModes.secondary != null)
+                      (self.options config).displayModes.secondary;
                 };
               })
             ];
@@ -1175,11 +1247,11 @@ args@{
                 );
 
                 actualBindings = {
-                  "Alt+Tab" = lib.mkIf self.settings.disableNewAppSwitcher {
+                  "Alt+Tab" = lib.mkIf (self.options config).disableNewAppSwitcher {
                     action = spawn-sh "nop";
                   };
 
-                  "Alt+Shift+Tab" = lib.mkIf self.settings.disableNewAppSwitcher {
+                  "Alt+Shift+Tab" = lib.mkIf (self.options config).disableNewAppSwitcher {
                     action = spawn-sh "nop";
                   };
 
@@ -1541,7 +1613,7 @@ args@{
                     hotkey-overlay.title = "System:Power menu";
                   };
 
-                  "Mod+Ctrl+Alt+R" = lib.mkIf self.settings.addRestartShortcut {
+                  "Mod+Ctrl+Alt+R" = lib.mkIf (self.options config).addRestartShortcut {
                     action = spawn-sh "restart-niri";
                     hotkey-overlay.title = "System:Restart niri";
                   };
@@ -1605,9 +1677,9 @@ args@{
               window-open = {
                 kind = {
                   easing =
-                    if self.settings.windowOpenShader != null then
+                    if (self.options config).windowOpenShader != null then
                       {
-                        duration-ms = self.settings.windowOpenShaderDuration;
+                        duration-ms = (self.options config).windowOpenShaderDuration;
                         curve = "linear";
                       }
                     else
@@ -1617,16 +1689,16 @@ args@{
                       };
                 };
               }
-              // lib.optionalAttrs (self.settings.windowOpenShader != null) {
-                custom-shader = getShader "${self.settings.windowOpenShader}/window-open";
+              // lib.optionalAttrs ((self.options config).windowOpenShader != null) {
+                custom-shader = getShader "${(self.options config).windowOpenShader}/window-open";
               };
 
               window-close = {
                 kind = {
                   easing =
-                    if self.settings.windowCloseShader != null then
+                    if (self.options config).windowCloseShader != null then
                       {
-                        duration-ms = self.settings.windowCloseShaderDuration;
+                        duration-ms = (self.options config).windowCloseShaderDuration;
                         curve = "linear";
                       }
                     else
@@ -1636,8 +1708,8 @@ args@{
                       };
                 };
               }
-              // lib.optionalAttrs (self.settings.windowCloseShader != null) {
-                custom-shader = getShader "${self.settings.windowCloseShader}/window-close";
+              // lib.optionalAttrs ((self.options config).windowCloseShader != null) {
+                custom-shader = getShader "${(self.options config).windowCloseShader}/window-close";
               };
 
               horizontal-view-movement = {
@@ -1669,8 +1741,8 @@ args@{
                   };
                 };
               }
-              // lib.optionalAttrs (self.settings.windowResizeShader != null) {
-                custom-shader = getShader "${self.settings.windowResizeShader}/window-resize";
+              // lib.optionalAttrs ((self.options config).windowResizeShader != null) {
+                custom-shader = getShader "${(self.options config).windowResizeShader}/window-resize";
               };
 
               config-notification-open-close = {

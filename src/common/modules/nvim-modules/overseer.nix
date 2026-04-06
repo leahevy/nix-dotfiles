@@ -15,8 +15,6 @@ args@{
   input = "common";
 
   settings = {
-    enable = true;
-
     autoDetectSuccessColor = true;
     dapIntegration = true;
     defaultTaskStrategy = "terminal";
@@ -104,7 +102,7 @@ args@{
     home = config: {
       programs.nixvim = {
         plugins.overseer = {
-          enable = self.settings.enable;
+          enable = true;
           settings = {
             auto_detect_success_color = self.settings.autoDetectSuccessColor;
             dap = self.settings.dapIntegration;

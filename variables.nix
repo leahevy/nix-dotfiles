@@ -22,6 +22,7 @@
   httpConnections = 15;
 
   nx.config = {
+    minEnabledModules = 20;
     security = {
       commitVerification = {
         nxcore = "last"; # "all" | "last" | "none"

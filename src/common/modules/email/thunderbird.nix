@@ -21,16 +21,22 @@ args@{
         nx.preferences.desktop.programs.emailClient = {
           name = "thunderbird";
           package = pkgs.thunderbird;
-          openCommand = "thunderbird";
-          openFileCommand = "thunderbird";
+          openCommand = [ "thunderbird" ];
+          openFileCommand = path: [
+            "thunderbird"
+            path
+          ];
           desktopFile = "thunderbird.desktop";
         };
 
         nx.preferences.desktop.programs.calendar = {
           name = "thunderbird";
           package = null;
-          openCommand = "thunderbird";
-          openFileCommand = "thunderbird";
+          openCommand = [ "thunderbird" ];
+          openFileCommand = path: [
+            "thunderbird"
+            path
+          ];
           desktopFile = "thunderbird.desktop";
         };
       };

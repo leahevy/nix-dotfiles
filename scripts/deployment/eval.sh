@@ -39,6 +39,17 @@ else
   FULL_EVAL_PATH="homeConfigurations.${PROFILE}.config.${EVAL_PATH}"
 fi
 
-EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH" "--json")
+EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
 
-nix eval ".#${FULL_EVAL_PATH}" "${EXTRA_ARGS[@]}"
+nix eval ".#${FULL_EVAL_PATH}" "${EXTRA_ARGS[@]}" --apply '
+x: let
+  lib = builtins;
+  sanitize = v:
+    if lib.isFunction v then "<function>"
+    else if lib.isAttrs v then
+      if v ? __functor then "<function>"
+      else lib.mapAttrs (n: _: sanitize v.${n}) (lib.removeAttrs v ["_module"])
+    else if lib.isList v then map sanitize v
+    else v;
+in sanitize x
+' --json

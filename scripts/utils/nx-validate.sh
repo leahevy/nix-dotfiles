@@ -535,3 +535,124 @@ validate_command() {
 
     validate_command_recursive "$cmd_spec" "$cmd" ${args[@]+"${args[@]}"}
 }
+
+inject_defaults_for_command() {
+    local cmd="$1"
+    shift
+    local args=("$@")
+
+    load_nx_spec
+
+    if [[ ! -f "$NX_SPEC" ]]; then
+        printf '%s\0' "${args[@]}"
+        return 0
+    fi
+
+    local cmd_spec
+    cmd_spec=$(get_command_spec "$cmd")
+
+    if [[ "$cmd_spec" == "null" ]]; then
+        printf '%s\0' "${args[@]}"
+        return 0
+    fi
+
+    local result=()
+    local arg_index=0
+
+    local defaults_to_inject=()
+    local options_json
+    options_json=$(echo "$cmd_spec" | jq -c '.options // {}')
+
+    local opt_entries
+    opt_entries=$(echo "$options_json" | jq -c 'to_entries[] | select(.value.argument.default != null)')
+
+    if [[ -n "$opt_entries" ]]; then
+        while IFS= read -r opt_entry; do
+            if [[ -z "$opt_entry" ]]; then
+                continue
+            fi
+
+            local opt_name
+            local default_val
+
+            opt_name=$(echo "$opt_entry" | jq -r '.key')
+            default_val=$(echo "$opt_entry" | jq -r '.value.argument.default')
+
+            local found=false
+            for check_arg in "${args[@]}"; do
+                if [[ "$check_arg" == "--$opt_name" ]]; then
+                    found=true
+                    break
+                fi
+            done
+
+            if [[ "$found" == "false" ]]; then
+                defaults_to_inject+=("--$opt_name" "$default_val")
+            fi
+        done <<< "$opt_entries"
+    fi
+
+    result+=("${defaults_to_inject[@]}")
+
+    while [[ $arg_index -lt ${#args[@]} ]]; do
+        local arg="${args[$arg_index]}"
+
+        if [[ "$arg" == -* ]] || [[ "$arg" == "--" ]]; then
+            break
+        fi
+
+        local sub_spec
+        sub_spec=$(get_subcommand_spec "$cmd_spec" "$arg")
+
+        if [[ "$sub_spec" == "null" ]]; then
+            break
+        fi
+
+        result+=("$arg")
+        arg_index=$((arg_index + 1))
+
+        cmd_spec="$sub_spec"
+
+        local defaults_to_inject=()
+        local options_json
+        options_json=$(echo "$cmd_spec" | jq -c '.options // {}')
+
+        local opt_entries
+        opt_entries=$(echo "$options_json" | jq -c 'to_entries[] | select(.value.argument.default != null)')
+
+        if [[ -n "$opt_entries" ]]; then
+            while IFS= read -r opt_entry; do
+                if [[ -z "$opt_entry" ]]; then
+                    continue
+                fi
+
+                local opt_name
+                local default_val
+
+                opt_name=$(echo "$opt_entry" | jq -r '.key')
+                default_val=$(echo "$opt_entry" | jq -r '.value.argument.default')
+
+                local found=false
+                for check_arg in "${args[@]}"; do
+                    if [[ "$check_arg" == "--$opt_name" ]]; then
+                        found=true
+                        break
+                    fi
+                done
+
+                if [[ "$found" == "false" ]]; then
+                    defaults_to_inject+=("--$opt_name" "$default_val")
+                fi
+            done <<< "$opt_entries"
+        fi
+
+        result+=("${defaults_to_inject[@]}")
+    done
+
+    while [[ $arg_index -lt ${#args[@]} ]]; do
+        result+=("${args[$arg_index]}")
+        arg_index=$((arg_index + 1))
+    done
+
+    printf '%s\0' "${result[@]}"
+}

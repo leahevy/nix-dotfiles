@@ -9,9 +9,30 @@ args@{
   ...
 }:
 { config, ... }:
+let
+  moduleInputs = defs.moduleInputsToScan;
 
+  countEnabledModules = lib.pipe moduleInputs [
+    (map (
+      inputName:
+      lib.mapAttrsToList (
+        groupName: groupModules:
+        lib.mapAttrsToList (
+          moduleName: moduleConfig:
+          if (config.nx.${inputName}.${groupName}.${moduleName}.enable or false) then 1 else 0
+        ) groupModules
+      ) (config.nx.${inputName} or { })
+    ))
+    lib.flatten
+    (builtins.foldl' builtins.add 0)
+  ];
+in
 {
   assertions = [
+    {
+      assertion = countEnabledModules >= config.nx.global.minEnabledModules;
+      message = "Only ${toString countEnabledModules} modules enabled, but at least ${toString config.nx.global.minEnabledModules} required for configuration integrity";
+    }
     {
       assertion = builtins.match "^[0-9]+[MG]$" host.settings.system.tmpSize != null;
       message = "host.settings.system.tmpSize must be in format '{number}M' or '{number}G' (e.g., '4G', '512M')";

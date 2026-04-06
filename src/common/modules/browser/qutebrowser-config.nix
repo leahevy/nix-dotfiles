@@ -443,8 +443,11 @@ args@{
         nx.preferences.desktop.programs.webBrowser = {
           name = "qutebrowser";
           package = null;
-          openCommand = "qutebrowser";
-          openFileCommand = "qutebrowser";
+          openCommand = [ "qutebrowser" ];
+          openFileCommand = path: [
+            "qutebrowser"
+            path
+          ];
           desktopFile = "org.qutebrowser.qutebrowser.desktop";
         };
       };

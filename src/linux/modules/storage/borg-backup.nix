@@ -606,8 +606,8 @@ args@{
             ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped /tmp/nx-backup-completed /tmp/nx-backup-no-success
             ${checkDailyBackupCompleteScript}
             check_daily_backup_complete
-            ${pkgs.coreutils}/bin/echo "Waiting 2 minutes for system readiness..."
-            ${pkgs.coreutils}/bin/sleep 120
+            ${pkgs.coreutils}/bin/echo "Waiting 10 minutes for system readiness..."
+            ${pkgs.coreutils}/bin/sleep 600
             ${checkAutoUpgradeRunningScript}
             check_auto_upgrade_running
             ${networkWaitScript}

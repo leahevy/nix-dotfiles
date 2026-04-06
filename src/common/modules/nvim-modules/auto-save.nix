@@ -15,7 +15,6 @@ args@{
   input = "common";
 
   settings = {
-    enable = true;
     debounceDelay = 5000;
     onlyInHomeDirectories = true;
     showNotifications = true;
@@ -71,7 +70,7 @@ args@{
     home = config: {
       programs.nixvim = {
         plugins.auto-save = {
-          enable = self.settings.enable;
+          enable = true;
           settings = {
             enabled = true;
             trigger_events = {

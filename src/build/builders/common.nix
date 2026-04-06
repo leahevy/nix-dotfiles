@@ -13,8 +13,6 @@
 }:
 
 let
-  configInputs = config.configInputs;
-
   evalConfigModule =
     {
       configPath,

@@ -17,31 +17,25 @@ args@{
 
   submodules = {
     build = {
-      core = {
-        boot = true;
-        journal = true;
-        sudo = true;
-        i18n = true;
-        network = true;
-        users = true;
-        nix-ld = true;
-        tokens = true;
-        sops = true;
-        nx-config = true;
-        firmware = true;
-        sysctl = true;
-        homebrew = true;
-      };
-      desktop = {
-        desktop = true;
-      };
-      programs = {
-        programs = true;
-      };
-      system = { } // (if self.host.impermanence or false then { impermanence = true; } else { });
-      theme = {
-        theme-system = true;
-      };
+      core = [
+        "boot"
+        "journal"
+        "sudo"
+        "i18n"
+        "network"
+        "users"
+        "nix-ld"
+        "tokens"
+        "sops"
+        "nx-config"
+        "firmware"
+        "sysctl"
+        "homebrew"
+      ];
+      desktop = [ "desktop" ];
+      programs = [ "programs" ];
+      system = [ ] ++ (if self.host.impermanence or false then [ "impermanence" ] else [ ]);
+      theme = [ "theme-system" ];
     };
   };
 }

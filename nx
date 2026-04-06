@@ -79,6 +79,14 @@ else
   if ! validate_command "$SCRIPT_NAME" "$@"; then
     exit 1
   fi
+
+  if [[ -n "$NX_SPEC" ]]; then
+    readarray -d '' INJECTED_ARGS < <(inject_defaults_for_command "$SCRIPT_NAME" "$@")
+    if [[ ${#INJECTED_ARGS[@]} -gt 0 ]] && [[ -z "${INJECTED_ARGS[-1]}" ]]; then
+      unset 'INJECTED_ARGS[-1]'
+    fi
+    set -- "${INJECTED_ARGS[@]}"
+  fi
 fi
 
 SCRIPT_FILE="$SCRIPTS_PATH/$SCRIPT_NAME"

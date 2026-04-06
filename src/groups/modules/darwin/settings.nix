@@ -15,23 +15,20 @@ args@{
   input = "groups";
 
   submodules = {
-    darwin = {
-      settings = {
-        finder = true;
-        dock = true;
-        hotcorners = true;
-        mission-control = true;
-        widgets = true;
-        windows = true;
-        stage-manager = true;
-        focus = true;
-        appearance = true;
-        date-and-time = false;
-        notifications = true;
-        sound = true;
-        spotlight = true;
-        control-center = true;
-      };
-    };
+    darwin.settings = [
+      "finder"
+      "dock"
+      "hotcorners"
+      "mission-control"
+      "widgets"
+      "windows"
+      "stage-manager"
+      "focus"
+      "appearance"
+      "notifications"
+      "sound"
+      "spotlight"
+      "control-center"
+    ];
   };
 }

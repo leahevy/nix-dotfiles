@@ -15,7 +15,7 @@ args@{
   group = "{{_lua:extract_group()_}}";
   input = "{{_lua:extract_input()_}}";
 
-  # INPUT = { GROUP = { MODULE = true or { ... }; }; };
+  # Attrset: { INPUT.GROUP = { MODULE = true or {...}; }; } or List: { INPUT.GROUP = [ "module1" "module2" ]; }
   submodules = { };
 
   # Defaults for self.settings, overridable from profile

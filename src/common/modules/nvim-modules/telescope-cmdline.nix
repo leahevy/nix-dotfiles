@@ -15,8 +15,6 @@ args@{
   input = "common";
 
   settings = {
-    enable = true;
-
     picker = {
       layout_config = {
         width = 120;

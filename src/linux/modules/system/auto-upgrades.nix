@@ -1033,8 +1033,8 @@ args@{
           path = lib.optionals (pushover.script != null) [ pushover.script ];
 
           script = ''
-            ${logScript "info" "DEBUG: Auto-upgrade notify service starting, waiting 30s to avoid race conditions"}
-            ${pkgs.coreutils}/bin/sleep 30
+            ${logScript "info" "DEBUG: Auto-upgrade notify service starting, waiting 10 minutes for system readiness"}
+            ${pkgs.coreutils}/bin/sleep 600
 
             ${checkDailyStartNotifyScript}
             check_daily_start_notify

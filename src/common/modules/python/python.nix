@@ -14,20 +14,20 @@ args@{
   group = "python";
   input = "common";
 
-  settings = {
-    basePackages = [
-      "black"
-      "isort"
-      "mypy"
-      "requests"
-      "python-dotenv"
-      "python-lsp-server"
-      "debugpy"
-    ];
-    additionalPackages = [ ];
-  };
-
   options = {
+    basePackages = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "black"
+        "isort"
+        "mypy"
+        "requests"
+        "python-dotenv"
+        "python-lsp-server"
+        "debugpy"
+      ];
+      description = "Extra Python packages addable by other modules.";
+    };
     additionalPackages = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -39,8 +39,7 @@ args@{
     home =
       config:
       let
-        optionPackages = (self.options config).additionalPackages;
-        allPackages = self.settings.basePackages ++ self.settings.additionalPackages ++ optionPackages;
+        allPackages = (self.options config).additionalPackages ++ (self.options config).basePackages;
       in
       {
         home.packages = with pkgs; [

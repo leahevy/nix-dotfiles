@@ -16,13 +16,11 @@ args@{
   input = "groups";
 
   submodules = {
-    common = {
-      shell = {
-        bash = true;
-        zsh = true;
-        fish = true;
-        session = true;
-      };
-    };
+    common.shell = [
+      "bash"
+      "zsh"
+      "fish"
+      "session"
+    ];
   };
 }

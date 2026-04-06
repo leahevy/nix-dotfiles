@@ -276,10 +276,6 @@
           ;
       };
 
-      registryBuilder = import (inputs.build + "/builders/registry.nix") {
-        inherit lib inputs defs;
-      };
-
       hosts = nixosBuilder.extractHosts;
       users = homeManagerBuilder.extractUsers;
 
@@ -301,7 +297,6 @@
 
       inherit (inputs) nixpkgs nixpkgs-unstable;
 
-      modules = registryBuilder.modules;
       isoConfigurations = isoBuilder.buildIsoConfigurations;
       nixosConfigurations = nixosBuilder.buildNixOSConfigurations;
       homeConfigurations = homeManagerBuilder.buildHomeConfigurations;

@@ -144,6 +144,16 @@ rec {
       throw pathErrorMessage
     else if invalidAttrs != [ ] then
       throw topLevelErrorMessage
+    else if (moduleResult.settings or { }) ? enable then
+      throw "${filePath}: 'enable' is a reserved name and cannot be used in settings. It is auto-injected by the build system."
+    else if (moduleResult.options or { }) ? enable then
+      throw "${filePath}: 'enable' is a reserved name and cannot be used in options. It is auto-injected by the build system."
+    else if (moduleResult.settings or { }) ? meta then
+      throw "${filePath}: 'meta' is a reserved name and cannot be used in settings. It is auto-injected by the build system."
+    else if (moduleResult.options or { }) ? meta then
+      throw "${filePath}: 'meta' is a reserved name and cannot be used in options. It is auto-injected by the build system."
+    else if (moduleResult.settings or { }) != { } && (moduleResult.options or { }) != { } then
+      throw "${filePath}: Modules cannot have both 'settings' and 'options' fields. Use either settings (with auto-generated options) OR options (with merged settings forwarded to them), but not both. This ensures all merged settings are visible at config.nx.*."
     else
       let
         moduleWarning = moduleResult.warning or null;
@@ -230,12 +240,19 @@ rec {
         };
 
         moduleDefaults = moduleResult.settings or { };
+        moduleOptions = moduleResult.options or { };
+        moduleRawOptions = moduleResult.rawOptions or { };
         moduleUnfree = moduleResult.unfree or [ ];
+
+        hasSettings = moduleDefaults != { };
+        hasStandardOptions = moduleOptions != { };
 
         userSettings = if moduleSettings == true then { } else moduleSettings;
 
         validatedUserSettings =
           if userSettings == { } then
+            userSettings
+          else if !hasSettings && hasStandardOptions then
             userSettings
           else
             validateSettingsOverride moduleDefaults userSettings inputName groupName moduleName;
@@ -717,6 +734,24 @@ rec {
       message = "Module ${assertion.moduleSpec.inputName}.${assertion.moduleSpec.group}.${assertion.moduleSpec.name} assertion failed: ${targetAssertion.message}";
     };
 
+  normalizeListsToAttrsets =
+    modules:
+    lib.mapAttrs (
+      inputName: inputGroups:
+      lib.mapAttrs (
+        groupName: groupModules:
+        if builtins.isList groupModules then
+          lib.listToAttrs (
+            map (name: {
+              name = name;
+              value = true;
+            }) groupModules
+          )
+        else
+          groupModules
+      ) inputGroups
+    ) modules;
+
   collectSubModules =
     args: moduleSpecs:
     let
@@ -759,7 +794,7 @@ rec {
           moduleResult = import modulePath consolidatedArgs;
         in
         let
-          rawSubmodules = moduleResult.submodules or { };
+          rawSubmodules = normalizeListsToAttrsets (moduleResult.submodules or { });
           filterAndNormalizeSubmodules =
             submodules:
             lib.mapAttrs (
@@ -873,9 +908,8 @@ rec {
           ) inputGroups
         ) modules;
 
-      modulesWithBuild = lib.recursiveUpdate initialModules buildModules;
-
-      filteredInitialModules = filterFalseValues modulesWithBuild;
+      normalizedListSyntax = normalizeListsToAttrsets (lib.recursiveUpdate initialModules buildModules);
+      filteredInitialModules = filterFalseValues normalizedListSyntax;
       normalizedInitialModules = normalizeModules filteredInitialModules;
 
       collectRound =
@@ -1102,7 +1136,7 @@ rec {
     in
     lib.concatMap scanInput defs.moduleInputsToScan;
 
-  collectAllModuleOptions =
+  collectAllModuleData =
     args:
     let
 
@@ -1113,7 +1147,12 @@ rec {
         funcs = { };
         helpers = helpers;
         defs = args.defs;
-        self = { };
+        self = {
+          isDarwin = args.pkgs.stdenv.isDarwin;
+          isLinux = args.pkgs.stdenv.isLinux;
+          isX86_64 = args.pkgs.stdenv.hostPlatform.isx86_64;
+          isAARCH64 = args.pkgs.stdenv.hostPlatform.isAarch64;
+        };
       };
 
       scanInput =
@@ -1138,6 +1177,8 @@ rec {
                   ;
                 options = moduleResult.value.options or { };
                 rawOptions = moduleResult.value.rawOptions or { };
+                settings = moduleResult.value.settings or { };
+                description = moduleResult.value.description or "";
               }
             else
               {
@@ -1149,17 +1190,22 @@ rec {
                   ;
                 options = { };
                 rawOptions = { };
+                settings = { };
+                description = "";
               }
           ) moduleSpecs
         else
           [ ];
 
-      allModuleOptions = lib.flatten (map scanInput defs.moduleInputsToScan);
+      allModuleData = lib.flatten (map scanInput defs.moduleInputsToScan);
     in
-    builtins.filter (m: m.options != { } || m.rawOptions != { }) allModuleOptions;
+    allModuleData;
+
+  collectAllModuleOptions =
+    args: builtins.filter (m: m.options != { } || m.rawOptions != { }) (collectAllModuleData args);
 
   generateOptionsModules =
-    collectedOptions:
+    allModuleData:
     let
       moduleOptionsModules = map (
         m:
@@ -1171,13 +1217,145 @@ rec {
           }
         else
           { }
-      ) collectedOptions;
+      ) allModuleData;
 
       rawOptionsModules = map (m: if m.rawOptions != { } then { options = m.rawOptions; } else { }) (
-        builtins.filter (m: m.rawOptions != { }) collectedOptions
+        builtins.filter (m: m.rawOptions != { }) allModuleData
       );
+
+      settingsOptionsModules = map (
+        m:
+        if m.settings != { } && m.options == { } && m.rawOptions == { } then
+          {
+            options.nx.${m.inputName}.${m.groupName}.${m.moduleName} = lib.mapAttrs (
+              name: defaultValue:
+              lib.mkOption {
+                type = lib.types.anything;
+                default = defaultValue;
+              }
+            ) m.settings;
+          }
+        else
+          { }
+      ) allModuleData;
+
+      enableOptionsModules = map (m: {
+        options.nx.${m.inputName}.${m.groupName}.${m.moduleName}.enable = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+        };
+      }) allModuleData;
+
+      metaOptionsModules = map (m: {
+        options.nx.${m.inputName}.${m.groupName}.${m.moduleName}.meta = lib.mkOption {
+          type = lib.types.submodule {
+            options = {
+              description = lib.mkOption {
+                type = lib.types.str;
+                default = "";
+              };
+              input = lib.mkOption {
+                type = lib.types.str;
+                default = "";
+              };
+              group = lib.mkOption {
+                type = lib.types.str;
+                default = "";
+              };
+              name = lib.mkOption {
+                type = lib.types.str;
+                default = "";
+              };
+            };
+          };
+          default = { };
+        };
+      }) allModuleData;
     in
-    (builtins.filter (m: m != { }) moduleOptionsModules) ++ rawOptionsModules;
+    (builtins.filter (m: m != { }) moduleOptionsModules)
+    ++ rawOptionsModules
+    ++ (builtins.filter (m: m != { }) settingsOptionsModules)
+    ++ enableOptionsModules
+    ++ metaOptionsModules;
+
+  generateSettingsValueModules =
+    allModuleData: processedModules:
+    let
+      settingsOnlyModules = builtins.filter (
+        m: m.settings != { } && m.options == { } && m.rawOptions == { }
+      ) allModuleData;
+      systemManagedAttrs = [ "nx_unfree" ];
+    in
+    map (
+      m:
+      let
+        mergedSettings = processedModules.${m.inputName}.${m.groupName}.${m.moduleName} or { };
+        filteredSettings = removeAttrs mergedSettings systemManagedAttrs;
+      in
+      { config, ... }:
+      {
+        config.nx.${m.inputName}.${m.groupName}.${m.moduleName} = filteredSettings;
+      }
+    ) settingsOnlyModules;
+
+  generateOptionsValueModules =
+    allModuleData: processedModules:
+    let
+      optionsOnlyModules = builtins.filter (m: m.options != { } && m.settings == { }) allModuleData;
+      systemManagedAttrs = [ "nx_unfree" ];
+    in
+    map (
+      m:
+      let
+        mergedSettings = processedModules.${m.inputName}.${m.groupName}.${m.moduleName} or { };
+        filteredSettings = removeAttrs mergedSettings systemManagedAttrs;
+      in
+      { config, ... }:
+      {
+        config.nx.${m.inputName}.${m.groupName}.${m.moduleName} = lib.mapAttrs (
+          name: value: value
+        ) filteredSettings;
+      }
+    ) optionsOnlyModules;
+
+  generateEnableValueModules =
+    allModuleData: processedModules:
+    map (
+      m:
+      let
+        isEnabled =
+          processedModules ? ${m.inputName}
+          && processedModules.${m.inputName} ? ${m.groupName}
+          && processedModules.${m.inputName}.${m.groupName} ? ${m.moduleName};
+      in
+      { config, ... }:
+      {
+        config.nx.${m.inputName}.${m.groupName}.${m.moduleName}.enable = isEnabled;
+      }
+    ) allModuleData;
+
+  generateMetaValueModules =
+    allModuleData:
+    map (
+      m:
+      let
+        autoDescription = lib.strings.concatStrings [
+          (lib.strings.toUpper (lib.strings.substring 0 1 m.moduleName))
+          (lib.strings.substring 1 (-1) m.moduleName)
+          " Configuration"
+        ];
+        finalDescription = if m.description != "" then m.description else autoDescription;
+      in
+      { config, ... }:
+      {
+        config.nx.${m.inputName}.${m.groupName}.${m.moduleName}.meta = {
+          description = finalDescription;
+          input = m.inputName;
+          group = m.groupName;
+          name = m.moduleName;
+        };
+      }
+    ) allModuleData;
 
   importAllModuleInits =
     args:

@@ -19,35 +19,23 @@ args@{
   submodules =
     if self ? isLinux && self.isLinux then
       {
-        common = {
-          style = {
-            stylix = true;
-          };
-        };
+        common.style = [ "stylix" ];
         linux = {
-          memory = {
-            zram = true;
-          };
-          storage = {
-            smartd = true;
-          };
-          system = {
-            gc = true;
-            auto-upgrades = true;
-            timesyncd = true;
-            tmp = true;
-          };
-          services = {
-            sshd = true;
-            printing = true;
-            scanning = true;
-          };
-          networking = {
-            firewall = true;
-          };
-          boot = {
-            plymouth = true;
-          };
+          memory = [ "zram" ];
+          storage = [ "smartd" ];
+          system = [
+            "gc"
+            "auto-upgrades"
+            "timesyncd"
+            "tmp"
+          ];
+          services = [
+            "sshd"
+            "printing"
+            "scanning"
+          ];
+          networking = [ "firewall" ];
+          boot = [ "plymouth" ];
         };
       }
     else

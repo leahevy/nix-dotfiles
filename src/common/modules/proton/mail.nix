@@ -32,8 +32,11 @@ args@{
         name = lib.mkForce "proton-mail";
         package = lib.mkForce null;
         localBin = lib.mkForce true;
-        openCommand = lib.mkForce "proton-mail";
-        openFileCommand = lib.mkForce "proton-mail";
+        openCommand = lib.mkForce [ "proton-mail" ];
+        openFileCommand = lib.mkForce (path: [
+          "proton-mail"
+          path
+        ]);
         desktopFile = lib.mkForce "proton-mail.desktop";
       };
     };

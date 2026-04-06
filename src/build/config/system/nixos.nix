@@ -25,8 +25,12 @@ let
 
   extraModules = moduleResults.modules;
 
-  allOptionsData = funcs.collectAllModuleOptions systemArgs;
-  optionsModules = funcs.generateOptionsModules allOptionsData;
+  allModuleData = funcs.collectAllModuleData systemArgs;
+  optionsModules = funcs.generateOptionsModules allModuleData;
+  settingsValueModules = funcs.generateSettingsValueModules allModuleData allModules;
+  optionsValueModules = funcs.generateOptionsValueModules allModuleData allModules;
+  enableValueModules = funcs.generateEnableValueModules allModuleData allModules;
+  metaValueModules = funcs.generateMetaValueModules allModuleData;
 
   initModules = funcs.importAllModuleInits systemArgs;
 
@@ -64,6 +68,10 @@ in
 {
   imports =
     optionsModules
+    ++ settingsValueModules
+    ++ optionsValueModules
+    ++ enableValueModules
+    ++ metaValueModules
     ++ initModules
     ++ profileInitModules
     ++ extraModules

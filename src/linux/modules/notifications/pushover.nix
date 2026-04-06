@@ -14,71 +14,112 @@ args@{
   group = "notifications";
   input = "linux";
 
-  settings = {
-    defaultPriority = 0;
-    pushoverAPIEndpoint = "https://api.pushover.net/1/messages.json";
-
-    defaultSound = "none";
-    defaultTtl = "";
-
-    priorityDefaults = {
-      "-2" = {
-        sound = "none";
-        ttl = "14400";
-      };
-      "-1" = {
-        sound = "none";
-        ttl = "28800";
-      };
-      "0" = {
-        sound = "vibrate";
-        ttl = "259200";
-      };
-      "1" = {
-        sound = "pushover";
-        ttl = "1209600";
-      };
-      "2" = {
-        sound = "tugboat";
-      };
-    };
-
-    typeDefaults = {
-      started = {
-        sound = "vibrate";
-        ttl = "14400";
-      };
-      stopped = {
-        sound = "pushover";
-        ttl = "1209600";
-      };
-      failed = {
-        sound = "pushover";
-        ttl = "1209600";
-      };
-      warn = {
-        sound = "gamelan";
-        ttl = "1209600";
-      };
-      success = {
-        sound = "pianobar";
-        ttl = "259200";
-      };
-      info = {
-        sound = "vibrate";
-        ttl = "86400";
-      };
-      debug = {
-        sound = "none";
-        ttl = "7200";
-      };
-      emerg = {
-        sound = "tugboat";
-      };
-    };
-  };
-
   options = {
+    defaultPriority = lib.mkOption {
+      type = lib.types.int;
+      default = 0;
+    };
+    pushoverAPIEndpoint = lib.mkOption {
+      type = lib.types.str;
+      default = "https://api.pushover.net/1/messages.json";
+    };
+    defaultSound = lib.mkOption {
+      type = lib.types.str;
+      default = "none";
+    };
+    defaultTtl = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+    };
+    priorityDefaults = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            sound = lib.mkOption {
+              type = lib.types.str;
+              default = "none";
+            };
+            ttl = lib.mkOption {
+              type = lib.types.str;
+              default = "";
+            };
+          };
+        }
+      );
+      default = {
+        "-2" = {
+          sound = "none";
+          ttl = "14400";
+        };
+        "-1" = {
+          sound = "none";
+          ttl = "28800";
+        };
+        "0" = {
+          sound = "vibrate";
+          ttl = "259200";
+        };
+        "1" = {
+          sound = "pushover";
+          ttl = "1209600";
+        };
+        "2" = {
+          sound = "tugboat";
+          ttl = "";
+        };
+      };
+    };
+    typeDefaults = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            sound = lib.mkOption {
+              type = lib.types.str;
+              default = "none";
+            };
+            ttl = lib.mkOption {
+              type = lib.types.str;
+              default = "";
+            };
+          };
+        }
+      );
+      default = {
+        started = {
+          sound = "vibrate";
+          ttl = "14400";
+        };
+        stopped = {
+          sound = "pushover";
+          ttl = "1209600";
+        };
+        failed = {
+          sound = "pushover";
+          ttl = "1209600";
+        };
+        warn = {
+          sound = "gamelan";
+          ttl = "1209600";
+        };
+        success = {
+          sound = "pianobar";
+          ttl = "259200";
+        };
+        info = {
+          sound = "vibrate";
+          ttl = "86400";
+        };
+        debug = {
+          sound = "none";
+          ttl = "7200";
+        };
+        emerg = {
+          sound = "tugboat";
+          ttl = "";
+        };
+      };
+    };
+
     script = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
@@ -124,13 +165,13 @@ args@{
         pkgs.writeShellScriptBin "pushover-send" ''
           set -euo pipefail
 
-          ${generateBashArray "PRIORITY_SOUND" self.settings.priorityDefaults "sound"}
-          ${generateBashArray "PRIORITY_TTL" self.settings.priorityDefaults "ttl"}
-          ${generateBashArray "TYPE_SOUND" self.settings.typeDefaults "sound"}
-          ${generateBashArray "TYPE_TTL" self.settings.typeDefaults "ttl"}
+          ${generateBashArray "PRIORITY_SOUND" (self.options config).priorityDefaults "sound"}
+          ${generateBashArray "PRIORITY_TTL" (self.options config).priorityDefaults "ttl"}
+          ${generateBashArray "TYPE_SOUND" (self.options config).typeDefaults "sound"}
+          ${generateBashArray "TYPE_TTL" (self.options config).typeDefaults "ttl"}
 
-          DEFAULT_SOUND="${self.settings.defaultSound}"
-          DEFAULT_TTL="${self.settings.defaultTtl}"
+          DEFAULT_SOUND="${(self.options config).defaultSound}"
+          DEFAULT_TTL="${(self.options config).defaultTtl}"
 
           show_usage() {
               echo "Usage: $0 --title <title> --message <message> [--priority <priority>] [--type <type>] [--url <url>] [--url-title <url-title>] [--html] [--debug] [--dry-run] [-h|--help] [-- <extra-pushover-args>]" >&2
@@ -139,7 +180,7 @@ args@{
 
           TITLE=""
           MESSAGE=""
-          PRIORITY="${toString self.settings.defaultPriority}"
+          PRIORITY="${toString (self.options config).defaultPriority}"
           PRIORITY_SET=false
           TYPE=""
           URL=""
@@ -361,7 +402,7 @@ args@{
           fi
 
           for attempt in {1..5}; do
-              if ${pkgs.curl}/bin/curl -fsS -m 30 --connect-timeout 10 -o /dev/null --config "$TEMP_CONFIG" ${self.settings.pushoverAPIEndpoint}; then
+              if ${pkgs.curl}/bin/curl -fsS -m 30 --connect-timeout 10 -o /dev/null --config "$TEMP_CONFIG" ${(self.options config).pushoverAPIEndpoint}; then
                   exit 0
               else
                   exit_code=$?

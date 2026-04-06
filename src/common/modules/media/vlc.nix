@@ -21,8 +21,11 @@ args@{
         nx.preferences.desktop.programs.videoPlayer = {
           name = "vlc";
           package = pkgs.vlc;
-          openCommand = "vlc";
-          openFileCommand = "vlc";
+          openCommand = [ "vlc" ];
+          openFileCommand = path: [
+            "vlc"
+            path
+          ];
           desktopFile = "vlc.desktop";
         };
       };

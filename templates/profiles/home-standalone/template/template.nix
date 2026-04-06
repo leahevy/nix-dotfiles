@@ -23,7 +23,7 @@
 
     allowedUnfreePackages = [ ];
 
-    modules = { };
+    modules = { }; # Attrset or list at GROUP level: { common.shell = [ "bash" "zsh" ]; }
 
     specialisations = { };
 

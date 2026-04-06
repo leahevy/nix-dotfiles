@@ -8,6 +8,134 @@ args@{
   self,
   ...
 }:
+let
+  baseModules = {
+    common = {
+      proton = [ "mail" ];
+      photos = [ "ente" ];
+      utils = [ "archive-tools" ];
+      browser = [ "firefox" ];
+      dev = [
+        "conda"
+        "poetry"
+        "uv"
+        "devenv"
+        "cmake"
+        "utils"
+        "direnv"
+        "claude"
+        "nodejs"
+        "typescript-lsp"
+        "vscodium"
+      ];
+      services = [
+        "ollama"
+        "ssh-agent"
+      ];
+      fonts = [
+        "japanese"
+        "general"
+        "fontconfig"
+        "nerdfonts"
+      ];
+      git = [
+        "git"
+        "lazygit"
+        "git-credential-manager"
+      ];
+      gpg = [ "gpg" ];
+      nix = [
+        "nix-index"
+        "nix-search-tv"
+        "comma"
+      ];
+      passwords = [
+        "keepassxc"
+        "bitwarden"
+      ];
+      python = [ "python" ];
+      shell = [
+        "fastfetch"
+        "starship"
+        "file-manager"
+        "go-programs"
+        "timg"
+        "yazi"
+        "clipboard"
+      ];
+      spell = [ "ispell" ];
+      tmux = [ "tmux" ];
+      nvim = [ "nixvim" ];
+      chat = [ "fluffychat" ];
+    };
+    groups.shell = [ "shell" ];
+  };
+
+  mergeModules = base: extra: lib.recursiveUpdate base extra;
+
+  baseLinuxModules = {
+    linux = {
+      chat = [
+        "beeper"
+        "signal"
+      ];
+      browser = [ "qutebrowser" ];
+      utils = [ "alien" ];
+      gnome = [
+        "keyring"
+        "gtk"
+      ];
+      organising = [ "logseq" ];
+      todo = [ "todoist" ];
+      xdg = [ "user-dirs" ];
+      music = [ "spotify" ];
+    };
+  };
+
+  nixosIntegratedModules = mergeModules baseModules (
+    mergeModules baseLinuxModules {
+      linux.notifications = [ "user-notify" ];
+    }
+  );
+
+  linuxStandaloneModules = mergeModules baseModules (
+    mergeModules baseLinuxModules {
+      common.style = [ "stylix" ];
+    }
+  );
+
+  macosStandaloneModules = mergeModules baseModules {
+    common.style = [ "stylix" ];
+    darwin = {
+      software = [ "homebrew" ];
+      browser = [
+        "firefox"
+        "qutebrowser"
+      ];
+      chat = [
+        "beeper"
+        "slack"
+      ];
+      dev = [
+        "docker-desktop"
+        "conda"
+      ];
+      desktop = [
+        "yabai"
+        "better-display"
+        "ovim"
+      ];
+      music = [ "spotify" ];
+      organising = [ "logseq" ];
+      passwords = [ "keepassxc" ];
+      terminal = [
+        "alacritty"
+        "ghostty"
+      ];
+    };
+    groups.darwin = [ "settings" ];
+  };
+in
 {
   name = "home-manager";
   description = "Home Manager base group";
@@ -16,408 +144,21 @@ args@{
   input = "groups";
 
   submodules =
-    # NixOS Integrated
     if
       (self ? isLinux && self.isLinux)
       && (self ? user && self.user ? isStandalone && !self.user.isStandalone)
     then
-      {
-        common = {
-          proton = {
-            mail = true;
-          };
-          photos = {
-            ente = true;
-          };
-          drive = {
-            filen = false;
-          };
-          text = {
-            latex = false;
-          };
-          notes = {
-            notesnook = false;
-          };
-          utils = {
-            archive-tools = true;
-          };
-          browser = {
-            firefox = true;
-          };
-          dev = {
-            conda = true;
-            poetry = true;
-            uv = true;
-            devenv = true;
-            cmake = true;
-            utils = true;
-            direnv = true;
-            claude = true;
-            nodejs = true;
-            typescript-lsp = true;
-            vscodium = true;
-          };
-          services = {
-            ollama = true;
-            ssh-agent = true;
-          };
-          fonts = {
-            japanese = true;
-            general = true;
-            fontconfig = true;
-            nerdfonts = true;
-          };
-          git = {
-            git = true;
-            lazygit = true;
-            git-credential-manager = true;
-          };
-          gpg = {
-            gpg = true;
-          };
-          nix = {
-            nix-index = true;
-            nix-search-tv = true;
-            comma = true;
-          };
-          passwords = {
-            keepassxc = true;
-            bitwarden = true;
-          };
-          python = {
-            python = true;
-          };
-          shell = {
-            fastfetch = true;
-            starship = true;
-            file-manager = true;
-            go-programs = true;
-            timg = true;
-            yazi = true;
-            clipboard = true;
-          };
-          spell = {
-            ispell = true;
-          };
-          tmux = {
-            tmux = true;
-          };
-          nvim = {
-            nixvim = true;
-          };
-          chat = {
-            fluffychat = true;
-          };
-        };
-        linux = {
-          notifications = {
-            user-notify = true;
-          };
-          chat = {
-            beeper = true;
-            signal = true;
-          };
-          browser = {
-            qutebrowser = true;
-          };
-          utils = {
-            alien = true;
-          };
-          gnome = {
-            keyring = true;
-            gtk = true;
-          };
-          organising = {
-            logseq = true;
-          };
-          todo = {
-            todoist = true;
-          };
-          xdg = {
-            user-dirs = true;
-          };
-          music = {
-            spotify = true;
-          };
-        };
-        groups = {
-          shell = {
-            shell = true;
-          };
-        };
-      }
-    # Linux standalone
+      nixosIntegratedModules
     else if
       (self ? isLinux && self.isLinux)
       && (self ? user && self.user ? isStandalone && self.user.isStandalone)
     then
-      {
-        common = {
-          proton = {
-            mail = true;
-          };
-          photos = {
-            ente = true;
-          };
-          drive = {
-            filen = false;
-          };
-          text = {
-            latex = false;
-          };
-          notes = {
-            notesnook = false;
-          };
-          utils = {
-            archive-tools = true;
-          };
-          browser = {
-            firefox = true;
-          };
-          dev = {
-            conda = true;
-            poetry = true;
-            uv = true;
-            devenv = true;
-            cmake = true;
-            utils = true;
-            direnv = true;
-            claude = true;
-            nodejs = true;
-            typescript-lsp = true;
-            vscodium = true;
-          };
-          services = {
-            ollama = true;
-            ssh-agent = true;
-          };
-          fonts = {
-            japanese = true;
-            general = true;
-            fontconfig = true;
-            nerdfonts = true;
-          };
-          git = {
-            git = true;
-            lazygit = true;
-            git-credential-manager = true;
-          };
-          gpg = {
-            gpg = true;
-          };
-          nix = {
-            nix-index = true;
-            nix-search-tv = true;
-            comma = true;
-          };
-          passwords = {
-            keepassxc = true;
-            bitwarden = true;
-          };
-          python = {
-            python = true;
-          };
-          shell = {
-            fastfetch = true;
-            starship = true;
-            file-manager = true;
-            go-programs = true;
-            timg = true;
-            yazi = true;
-            clipboard = true;
-          };
-          spell = {
-            ispell = true;
-          };
-          style = {
-            stylix = true;
-          };
-          tmux = {
-            tmux = true;
-          };
-          nvim = {
-            nixvim = true;
-          };
-          chat = {
-            fluffychat = true;
-          };
-        };
-        linux = {
-          chat = {
-            beeper = true;
-            signal = true;
-          };
-          browser = {
-            qutebrowser = true;
-          };
-          utils = {
-            alien = true;
-          };
-          gnome = {
-            keyring = true;
-            gtk = true;
-          };
-          organising = {
-            logseq = true;
-          };
-          todo = {
-            todoist = true;
-          };
-          xdg = {
-            user-dirs = true;
-          };
-          music = {
-            spotify = true;
-          };
-        };
-        groups = {
-          shell = {
-            shell = true;
-          };
-        };
-      }
-    # MacOS Standalone
+      linuxStandaloneModules
     else if
       (self ? isDarwin && self.isDarwin)
       && (self ? user && self.user ? isStandalone && self.user.isStandalone)
     then
-      {
-        common = {
-          proton = {
-            mail = true;
-          };
-          photos = {
-            ente = true;
-          };
-          drive = {
-            filen = false;
-          };
-          text = {
-            latex = false;
-          };
-          notes = {
-            notesnook = false;
-          };
-          utils = {
-            archive-tools = true;
-          };
-          browser = {
-            firefox = true;
-          };
-          dev = {
-            conda = true;
-            poetry = true;
-            uv = true;
-            devenv = true;
-            cmake = true;
-            utils = true;
-            direnv = true;
-            claude = true;
-            nodejs = true;
-            typescript-lsp = true;
-            vscodium = true;
-          };
-          services = {
-            ollama = true;
-            ssh-agent = true;
-          };
-          fonts = {
-            japanese = true;
-            general = true;
-            fontconfig = true;
-            nerdfonts = true;
-          };
-          git = {
-            git = true;
-            lazygit = true;
-            git-credential-manager = true;
-          };
-          gpg = {
-            gpg = true;
-          };
-          nix = {
-            nix-index = true;
-            nix-search-tv = true;
-            comma = true;
-          };
-          passwords = {
-            keepassxc = true;
-            bitwarden = true;
-          };
-          python = {
-            python = true;
-          };
-          shell = {
-            fastfetch = true;
-            starship = true;
-            file-manager = true;
-            go-programs = true;
-            timg = true;
-            yazi = true;
-            clipboard = true;
-          };
-          spell = {
-            ispell = true;
-          };
-          style = {
-            stylix = true;
-          };
-          tmux = {
-            tmux = true;
-          };
-          nvim = {
-            nixvim = true;
-          };
-          chat = {
-            fluffychat = true;
-          };
-        };
-        darwin = {
-          software = {
-            homebrew = true;
-          };
-          browser = {
-            firefox = true;
-            qutebrowser = true;
-          };
-          chat = {
-            beeper = true;
-            slack = true;
-          };
-          dev = {
-            docker-desktop = true;
-          };
-          desktop = {
-            yabai = true;
-            better-display = true;
-            ovim = true;
-          };
-          dev = {
-            conda = true;
-          };
-          music = {
-            spotify = true;
-          };
-          organising = {
-            logseq = true;
-          };
-          passwords = {
-            keepassxc = true;
-          };
-          terminal = {
-            alacritty = true;
-            ghostty = true;
-          };
-        };
-        groups = {
-          shell = {
-            shell = true;
-          };
-          darwin = {
-            settings = true;
-          };
-        };
-      }
+      macosStandaloneModules
     else
       { };
 }
