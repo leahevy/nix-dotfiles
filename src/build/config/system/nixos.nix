@@ -41,8 +41,6 @@ let
     };
   }) host.specialisations;
 
-  ifSet = helpers.ifSet;
-
   hostProfileOn = funcs.processProfileOn {
     profile = host;
     profileType = "nixos";
