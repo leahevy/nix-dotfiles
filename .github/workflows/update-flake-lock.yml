@@ -8,14 +8,15 @@ jobs:
   update-flake-lock:
     runs-on: ubuntu-latest
     env:
-      UPDATE_INPUTS: "nixpkgs,home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable,sops-nix,disko,impermanence,lanzaboote,niri-flake,nixos-hardware"
-      EXCLUDE_FROM_REBOOT_CHECK: "home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable,sops-nix,disko,impermanence,lanzaboote,niri-flake,nixos-hardware"
+      UPDATE_INPUTS: "nixpkgs,home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable,sops-nix,disko,impermanence,lanzaboote,niri-flake,nixos-hardware,treefmt-nix"
+      EXCLUDE_FROM_REBOOT_CHECK: "home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable,sops-nix,disko,impermanence,lanzaboote,niri-flake,nixos-hardware,treefmt-nix"
       REPO_nixpkgs: "NixOS/nixpkgs"
       REPO_home_manager: "nix-community/home-manager"
       REPO_stylix: "nix-community/stylix"
       REPO_nixvim: "nix-community/nixvim"
       REPO_nix_darwin: "nix-darwin/nix-darwin"
       REPO_nixpkgs_unstable: "NixOS/nixpkgs"
+      REPO_treefmt_nix: "numtide/treefmt-nix"
       REPO_sops_nix: "leahevy/sops-nix"
       REPO_disko: "leahevy/disko"
       REPO_impermanence: "leahevy/impermanence"

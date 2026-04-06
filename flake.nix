@@ -14,6 +14,8 @@
 
     impermanence = {
       url = "github:leahevy/impermanence";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
     };
 
     lanzaboote = {
@@ -113,11 +115,18 @@
     mac-app-util = {
       url = "github:hraban/mac-app-util";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.treefmt-nix.follows = "treefmt-nix";
+    };
+
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix/main";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nix-plist-manager = {
       url = "github:SushyDev/nix-plist-manager/main";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
     };
 
   };
@@ -178,44 +187,6 @@
         "aarch64-darwin"
       ];
       allArchitectures = nixosArchitectures ++ darwinArchitectures;
-
-      generateNixOSProfiles =
-        profileNames:
-        lib.flatten (
-          map (
-            profileName:
-            map (arch: {
-              name = "${profileName}--${arch}";
-              profileName = profileName;
-              architecture = arch;
-            }) nixosArchitectures
-          ) profileNames
-        );
-
-      generateHomeStandaloneProfiles =
-        profileNames:
-        lib.flatten (
-          map (
-            profileName:
-            map (arch: {
-              name = "${profileName}--${arch}";
-              profileName = profileName;
-              architecture = arch;
-            }) allArchitectures
-          ) profileNames
-        );
-
-      evalConfigModule =
-        {
-          configPath,
-          optionsPath,
-        }:
-        lib.evalModules {
-          modules = [
-            optionsPath
-            configPath
-          ];
-        };
 
       common = import (inputs.build + "/builders/common.nix") {
         inherit lib inputs;
