@@ -3,3 +3,8 @@
 **/profiles/nixos/**/*.nix
 !/templates/profiles/nixos/**/*.nix
 /file.txt
+
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
