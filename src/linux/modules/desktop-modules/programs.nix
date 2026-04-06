@@ -381,6 +381,14 @@ let
       name = "okular";
       dirsToPersist = [ ".local/share/okular" ];
       filesToPersist = [ ".config/okularrc" ];
+      journalPatternsToIgnore = [
+        {
+          tag = "okular";
+          string = "Couldn't write \".*\\.config/okularrc\" \\. Disk full\\?";
+          user = true;
+          unitless = true;
+        }
+      ];
     };
     videoPlayer = mkKdeProgram { name = "dragon"; };
     musicPlayer = mkKdeProgram {
