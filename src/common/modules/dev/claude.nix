@@ -17,7 +17,7 @@ args@{
   unfree = [ "claude-code" ];
 
   settings = {
-    package = pkgs-unstable.claude-code;
+    package = pkgs.claude-code;
     blockSSH = true;
     additionalMCPServers = { };
   };
