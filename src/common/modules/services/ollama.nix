@@ -105,6 +105,7 @@ args@{
               echo "ERROR: Failed to pull model $model after $MODEL_PULL_RETRIES attempts."
               FAILED_MODELS+=("$model")
               ${self.notifyUser {
+                inherit pkgs;
                 title = "Ollama";
                 body = "Failed to pull model $model";
                 icon = "dialog-error";
@@ -120,6 +121,7 @@ args@{
           if [ $FAILED_COUNT -gt 0 ]; then
             echo "WARNING: Failed to pull the following models: ''${FAILED_MODELS[*]}"
             ${self.notifyUser {
+              inherit pkgs;
               title = "Ollama";
               body = "$SUCCESS_COUNT models ready, $FAILED_COUNT failed";
               icon = "dialog-warning";
@@ -131,6 +133,7 @@ args@{
 
           echo "All models pulled successfully."
           ${self.notifyUser {
+            inherit pkgs;
             title = "Ollama";
             body = "All $TOTAL_MODELS models ready";
             icon = "chat-symbolic";

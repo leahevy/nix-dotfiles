@@ -185,6 +185,7 @@ args@{
                   if [[ ! -f "$STATE_FILE" ]] || [[ "$current_state" != "running" ]]; then
                       echo "running" > "$STATE_FILE"
                       ${self.notifyUser {
+                        inherit pkgs;
                         title = "Syncthing Started";
                         body = "Syncthing service is now running. Open with: http://127.0.0.1:${builtins.toString self.settings.guiPort}";
                         icon = "syncthing";
@@ -196,6 +197,7 @@ args@{
                   if [[ -f "$STATE_FILE" ]] && [[ "$current_state" == "running" ]]; then
                       echo "stopped" > "$STATE_FILE"
                       ${self.notifyUser {
+                        inherit pkgs;
                         title = "Syncthing Stopped";
                         body = "Syncthing service has stopped unexpectedly";
                         icon = "syncthing";
@@ -242,6 +244,7 @@ args@{
                                       ;;
                                   *"ERROR"*|*"error"*|*"Error"*)
                                       ${self.notifyUser {
+                                        inherit pkgs;
                                         title = "Syncthing Error";
                                         body = "$message";
                                         icon = "syncthing";
@@ -251,6 +254,7 @@ args@{
                                       ;;
                                   *"WARNING"*|*"warning"*|*"Warning"*)
                                       ${self.notifyUser {
+                                        inherit pkgs;
                                         title = "Syncthing Warning";
                                         body = "$message";
                                         icon = "syncthing";
@@ -260,6 +264,7 @@ args@{
                                       ;;
                                   *"Connection to"*"failed"*|*"connection failed"*|*"Connection lost"*)
                                       ${self.notifyUser {
+                                        inherit pkgs;
                                         title = "Syncthing Connection Issue";
                                         body = "$message";
                                         icon = "syncthing";
@@ -269,6 +274,7 @@ args@{
                                       ;;
                                   *"Folder"*"error"*|*"folder"*"error"*|*"sync error"*|*"synchronization error"*)
                                       ${self.notifyUser {
+                                        inherit pkgs;
                                         title = "Syncthing Sync Error";
                                         body = "$message";
                                         icon = "syncthing";
@@ -278,6 +284,7 @@ args@{
                                       ;;
                                   *"Device"*"disconnected"*|*"device"*"disconnected"*)
                                       ${self.notifyUser {
+                                        inherit pkgs;
                                         title = "Syncthing Device Disconnected";
                                         body = "$message";
                                         icon = "syncthing";
@@ -435,6 +442,7 @@ args@{
                               if [[ "$connected" == "false" ]]; then
                                   device_display_name=$(get_device_display_name "$device_id")
                                   ${self.notifyUser {
+                                    inherit pkgs;
                                     title = "Syncthing: Device";
                                     body = "Disconnected: <b>$device_display_name</b>";
                                     icon = "syncthing";
@@ -451,6 +459,7 @@ args@{
                                       "true")
                                           if [[ "$prev_connected" == "false" ]]; then
                                               ${self.notifyUser {
+                                                inherit pkgs;
                                                 title = "Syncthing: Device";
                                                 body = "Connected: <b>$device_display_name</b>";
                                                 icon = "syncthing";
@@ -462,6 +471,7 @@ args@{
                                       "false")
                                           if [[ "$prev_connected" == "true" ]]; then
                                               ${self.notifyUser {
+                                                inherit pkgs;
                                                 title = "Syncthing: Device";
                                                 body = "Disconnected: <b>$device_display_name</b>";
                                                 icon = "syncthing";
@@ -523,6 +533,7 @@ args@{
                                   if [[ "$sync_status" == "syncing" ]]; then
                                       device_display_name=$(get_device_display_name "$device_id")
                                       ${self.notifyUser {
+                                        inherit pkgs;
                                         title = "Syncthing: Device Sync";
                                         body = "Currently syncing: <b>$device_display_name</b>";
                                         icon = "syncthing";
@@ -539,6 +550,7 @@ args@{
                                           "syncing")
                                               if [[ "$prev_sync_status" == "idle" || "$prev_sync_status" == "unknown" ]]; then
                                                   ${self.notifyUser {
+                                                    inherit pkgs;
                                                     title = "Syncthing: Device Sync";
                                                     body = "Started syncing: <b>$device_display_name</b>";
                                                     icon = "syncthing";
@@ -550,6 +562,7 @@ args@{
                                           "idle")
                                               if [[ "$prev_sync_status" == "syncing" ]]; then
                                                   ${self.notifyUser {
+                                                    inherit pkgs;
                                                     title = "Syncthing: Device Sync";
                                                     body = "Completed syncing: <b>$device_display_name</b> (Up to Date)";
                                                     icon = "syncthing";
@@ -564,6 +577,7 @@ args@{
                                       if [[ "$prev_hash" != "0" && "$state_hash" != "$prev_hash" && "$sync_status" == "idle" ]]; then
                                           device_display_name=$(get_device_display_name "$device_id")
                                           ${self.notifyUser {
+                                            inherit pkgs;
                                             title = "Syncthing: Device Sync";
                                             body = "Updated: <b>$device_display_name</b> (Up to Date)";
                                             icon = "syncthing";
@@ -632,6 +646,7 @@ args@{
                                       case "$effective_state" in
                                           "scanning"|"sync-preparing"|"syncing")
                                               ${self.notifyUser {
+                                                inherit pkgs;
                                                 title = "Syncthing: Folder Sync";
                                                 body = "Currently syncing: $folder_display";
                                                 icon = "syncthing";
@@ -641,6 +656,7 @@ args@{
                                               ;;
                                           "error")
                                               ${self.notifyUser {
+                                                inherit pkgs;
                                                 title = "Syncthing: Folder Error";
                                                 body = "$folder_display has $pull_errors pull errors - manual intervention needed";
                                                 icon = "syncthing";
@@ -650,6 +666,7 @@ args@{
                                               ;;
                                           "out-of-sync")
                                               ${self.notifyUser {
+                                                inherit pkgs;
                                                 title = "Syncthing: Folder Sync";
                                                 body = "Out of sync: $folder_display has $need_items items pending";
                                                 icon = "syncthing";
@@ -667,6 +684,7 @@ args@{
                                           "scanning"|"sync-preparing"|"syncing")
                                               if [[ "$prev_state" == "idle" || "$prev_state" == "unknown" ]]; then
                                                   ${self.notifyUser {
+                                                    inherit pkgs;
                                                     title = "Syncthing: Folder Sync";
                                                     body = "Started: $folder_display";
                                                     icon = "syncthing";
@@ -679,6 +697,7 @@ args@{
                                               if [[ "$prev_state" == "scanning" || "$prev_state" == "sync-preparing" || "$prev_state" == "syncing" ]]; then
                                                   sync_status=$(check_folder_device_sync_status "$folder_id")
                                                   ${self.notifyUser {
+                                                    inherit pkgs;
                                                     title = "Syncthing: Folder Sync";
                                                     body = "Completed: $folder_display$sync_status";
                                                     icon = "syncthing";
@@ -689,6 +708,7 @@ args@{
                                               ;;
                                           "error")
                                               ${self.notifyUser {
+                                                inherit pkgs;
                                                 title = "Syncthing: Folder Error";
                                                 body = "$folder_display has $pull_errors pull errors - manual intervention needed";
                                                 icon = "syncthing";
@@ -698,6 +718,7 @@ args@{
                                               ;;
                                           "out-of-sync")
                                               ${self.notifyUser {
+                                                inherit pkgs;
                                                 title = "Syncthing: Folder Sync";
                                                 body = "Out of sync: $folder_display has $need_items items pending";
                                                 icon = "syncthing";
@@ -711,6 +732,7 @@ args@{
                                       if [[ "$prev_sequence" != "0" && "$sequence" != "$prev_sequence" && "$effective_state" == "idle" ]]; then
                                           sync_status=$(check_folder_device_sync_status "$folder_id")
                                           ${self.notifyUser {
+                                            inherit pkgs;
                                             title = "Syncthing: Folder Sync";
                                             body = "Updated: $folder_display$sync_status";
                                             icon = "syncthing";

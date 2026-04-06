@@ -25,6 +25,7 @@ args@{
 
           custom = {
             start = self.notifyUser {
+              inherit pkgs;
               title = "GameMode";
               body = "GameMode started";
               icon = "com.valvesoftware.Steam";
@@ -32,6 +33,7 @@ args@{
               validation = { inherit config; };
             };
             end = self.notifyUser {
+              inherit pkgs;
               title = "GameMode";
               body = "GameMode ended";
               icon = "com.valvesoftware.Steam";

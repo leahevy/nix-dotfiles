@@ -80,6 +80,7 @@ args@{
           if [[ -f "$DISABLE_FILE" ]]; then
             rm "$DISABLE_FILE"
             ${self.notifyUser {
+              inherit pkgs;
               title = "Swayidle";
               body = "Timeout commands enabled";
               icon = "system-suspend";
@@ -89,6 +90,7 @@ args@{
           else
             touch "$DISABLE_FILE"
             ${self.notifyUser {
+              inherit pkgs;
               title = "Swayidle";
               body = "Timeout commands disabled";
               icon = "system-lock-screen";

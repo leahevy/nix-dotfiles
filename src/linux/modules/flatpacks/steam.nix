@@ -79,6 +79,7 @@ args@{
           if ! ${pkgs.procps}/bin/pgrep -f "flatpak.*$PACKAGE_ID" > /dev/null; then
             ${
               self.notifyUser {
+                inherit pkgs;
                 title = "Flatpack";
                 body = "Configuring $PACKAGE_ID";
                 icon = "com.valvesoftware.Steam";
@@ -104,6 +105,7 @@ args@{
               --device=all
             ${
               self.notifyUser {
+                inherit pkgs;
                 title = "Flatpack";
                 body = "Successfully configured $PACKAGE_ID";
                 icon = "com.valvesoftware.Steam";
@@ -114,6 +116,7 @@ args@{
           else
             ${
               self.notifyUser {
+                inherit pkgs;
                 title = "Flatpack";
                 body = "$PACKAGE_ID is running, configuration will apply on next restart";
                 icon = "com.valvesoftware.Steam";

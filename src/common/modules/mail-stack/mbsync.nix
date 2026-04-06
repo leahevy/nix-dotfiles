@@ -192,6 +192,7 @@ args@{
                           NEW_COUNT=$((AFTER_COUNT - BEFORE_COUNT))
                           if [ "$NEW_COUNT" -gt 0 ]; then
                             ${self.notifyUser {
+                              inherit pkgs;
                               title = "New Mail";
                               body = "$NEW_COUNT new messages";
                               icon = "email";
@@ -200,6 +201,7 @@ args@{
                             }}
                           elif [ "$NEW_COUNT" -lt 0 ]; then
                             ${self.notifyUser {
+                              inherit pkgs;
                               title = "Mail Update";
                               body = "Some messages in inbox were updated";
                               icon = "email";

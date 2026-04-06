@@ -97,6 +97,7 @@ args@{
           ''
             ${lib.optionalString userNotifyEnabled (
               self.notifyUser {
+                inherit pkgs;
                 title = userNotifyTitle;
                 body = userNotifyMessage;
                 icon = userNotifyIcon;

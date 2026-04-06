@@ -32,6 +32,7 @@ args@{
           if [ "$current_state" = "true" ]; then
             swaync-client -d > /dev/null 2>&1
             ${self.notifyUser {
+              inherit pkgs;
               title = "Do Not Disturb";
               body = "Notifications enabled";
               icon = "audio-volume-medium";
@@ -40,6 +41,7 @@ args@{
             }}
           else
             ${self.notifyUser {
+              inherit pkgs;
               title = "Do Not Disturb";
               body = "Notifications disabled";
               icon = "audio-volume-muted";

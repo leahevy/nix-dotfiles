@@ -41,6 +41,7 @@ args@{
           if [[ "$SUCCEEDED" != "1" ]]; then
             ${
               self.notifyUser {
+                inherit pkgs;
                 title = "Flatpack";
                 body = "Failed to add FlatHub repository";
                 icon = "dialog-error";
@@ -67,6 +68,7 @@ args@{
               if ! echo "$INSTALLED" | grep -q "^$package_id$"; then
                 ${
                   self.notifyUser {
+                    inherit pkgs;
                     title = "Flatpack";
                     body = "Installing $package_id";
                     icon = "list-add";
@@ -78,6 +80,7 @@ args@{
                   if ${pkgs.flatpak}/bin/flatpak install --user --noninteractive flathub "$package_id"; then
                     ${
                       self.notifyUser {
+                        inherit pkgs;
                         title = "Flatpack";
                         body = "Successfully installed $package_id";
                         icon = "list-add";
@@ -94,6 +97,7 @@ args@{
                     else
                       ${
                         self.notifyUser {
+                          inherit pkgs;
                           title = "Flatpack";
                           body = "Failed to install $package_id after 5 attempts";
                           icon = "dialog-error";
@@ -107,6 +111,7 @@ args@{
               else
                 ${
                   self.notifyUser {
+                    inherit pkgs;
                     title = "Flatpack";
                     body = "Updating $package_id";
                     icon = "go-down";
@@ -117,6 +122,7 @@ args@{
                 if ${pkgs.flatpak}/bin/flatpak update --user --noninteractive "$package_id"; then
                   ${
                     self.notifyUser {
+                      inherit pkgs;
                       title = "Flatpack";
                       body = "Successfully updated $package_id";
                       icon = "go-down";
@@ -127,6 +133,7 @@ args@{
                 else
                   ${
                     self.notifyUser {
+                      inherit pkgs;
                       title = "Flatpack";
                       body = "Failed to update $package_id";
                       icon = "dialog-error";
@@ -151,6 +158,7 @@ args@{
             if [[ "$found" == "false" ]] && [[ -f "${stateFile}" ]] && grep -q "\"$installed_package\"" "${stateFile}"; then
               ${
                 self.notifyUser {
+                  inherit pkgs;
                   title = "Flatpack";
                   body = "Removing orphaned package $installed_package";
                   icon = "list-remove";
@@ -161,6 +169,7 @@ args@{
               if ${pkgs.flatpak}/bin/flatpak uninstall --user --noninteractive "$installed_package"; then
                 ${
                   self.notifyUser {
+                    inherit pkgs;
                     title = "Flatpack";
                     body = "Successfully removed $installed_package";
                     icon = "list-remove";
@@ -171,6 +180,7 @@ args@{
               else
                 ${
                   self.notifyUser {
+                    inherit pkgs;
                     title = "Flatpack";
                     body = "Failed to remove $installed_package";
                     icon = "dialog-error";

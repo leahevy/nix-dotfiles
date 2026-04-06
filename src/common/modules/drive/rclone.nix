@@ -301,6 +301,7 @@ args@{
               synchronizing = lib.head (
                 lib.splitString " " (
                   self.notifyUser {
+                    inherit pkgs;
                     title = "Rclone (${name})";
                     body = "$1";
                     icon = "emblem-synchronizing";
@@ -312,6 +313,7 @@ args@{
               info = lib.head (
                 lib.splitString " " (
                   self.notifyUser {
+                    inherit pkgs;
                     title = "Rclone (${name})";
                     body = "$1";
                     icon = "emblem-ok-symbolic";
@@ -323,6 +325,7 @@ args@{
               warning = lib.head (
                 lib.splitString " " (
                   self.notifyUser {
+                    inherit pkgs;
                     title = "Rclone (${name})";
                     body = "$1";
                     icon = "dialog-warning";
@@ -334,6 +337,7 @@ args@{
               error = lib.head (
                 lib.splitString " " (
                   self.notifyUser {
+                    inherit pkgs;
                     title = "Rclone (${name})";
                     body = "$1";
                     icon = "dialog-error";
@@ -1113,6 +1117,7 @@ args@{
                 if [[ $SYNC_FAILED -eq 0 ]]; then
                   echo "Manual bisync completed successfully."
                   ${self.notifyUser {
+                    inherit pkgs;
                     title = "Rclone";
                     body = "Manual sync completed";
                     icon = "emblem-ok-symbolic";
@@ -1122,6 +1127,7 @@ args@{
                 else
                   echo "Manual bisync failed for one or more remotes."
                   ${self.notifyUser {
+                    inherit pkgs;
                     title = "Rclone";
                     body = "Manual sync failed";
                     icon = "dialog-error";
@@ -1243,6 +1249,7 @@ args@{
                     STATE=$(${pkgs.systemd}/bin/systemctl --user show -p ActiveState --value rclone-bisync-manual.service)
                     if [[ "$STATE" == "activating" ]]; then
                       ${self.notifyUser {
+                        inherit pkgs;
                         title = "Rclone";
                         body = "Manual sync already running";
                         icon = "emblem-synchronizing";
@@ -1251,6 +1258,7 @@ args@{
                       }}
                     else
                       ${self.notifyUser {
+                        inherit pkgs;
                         title = "Rclone";
                         body = "Starting manual sync...";
                         icon = "emblem-synchronizing";

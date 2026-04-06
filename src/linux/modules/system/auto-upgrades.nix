@@ -128,6 +128,7 @@ args@{
                 ""
               else
                 "${self.notifyUser {
+                  inherit pkgs;
                   title = "Auto-Upgrade Triggered";
                   body = "Manual auto-upgrade triggered";
                   icon = "system-reboot";
@@ -358,6 +359,7 @@ args@{
           ''
             ${lib.optionalString shouldSendUserNotify (
               self.notifyUser {
+                inherit pkgs;
                 title = userNotifyTitle;
                 body = userNotifyMessage;
                 icon = userNotifyIcon;

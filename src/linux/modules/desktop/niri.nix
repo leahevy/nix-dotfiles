@@ -613,6 +613,7 @@ args@{
         powerMenuChecksScript = lib.concatMapStrings (check: ''
           if ${check.condition} 2>/dev/null; then
               ${self.notifyUser {
+                inherit pkgs;
                 title = "Power Menu";
                 body = check.message;
                 icon = "dialog-error";

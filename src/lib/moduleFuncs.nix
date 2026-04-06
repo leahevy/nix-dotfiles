@@ -10,7 +10,6 @@ let
 in
 rec {
   commonFuncs = {
-
     # Check if current module architecture is Linux
     # Usage: isLinux $SELF
     isLinux =
@@ -148,6 +147,7 @@ rec {
     notifyUser =
       self:
       {
+        pkgs,
         title,
         body,
         icon ? "dialog-information",
@@ -161,6 +161,7 @@ rec {
           "normal"
           "critical"
         ];
+        pkgs = if args.pkgs != "" then args.pkgs else throw "notifyUser: pkgs argument is required";
         title =
           if builtins.isString args.title && args.title != "" then
             args.title
@@ -205,7 +206,6 @@ rec {
           in
           if !builtins.isBool v then throw "notifyUser: autoFormat must be a boolean" else v;
         isDynamic = autoFormat && builtins.match ''.*\$[{]?[A-Za-z_][A-Za-z0-9_]*[}]?.*'' body != null;
-        pkgsSet = self.pkgs { };
         loggerPriority =
           if urgency == "critical" then
             "user.err"
@@ -242,22 +242,22 @@ rec {
                 export _NOTIFY_TITLE=${shellTitle}
                 export _NOTIFY_ICON=${shellIcon}
                 export _NOTIFY_BODY="$1"
-                ${pkgsSet.util-linux}/bin/logger -p ${loggerPriority} -t nx-user-notify "JSON-DATA::$(${pkgsSet.jq}/bin/jq -cn '{title:$ENV._NOTIFY_TITLE,body:$ENV._NOTIFY_BODY,icon:$ENV._NOTIFY_ICON}')"
+                ${pkgs.util-linux}/bin/logger -p ${loggerPriority} -t nx-user-notify "JSON-DATA::$(${pkgs.jq}/bin/jq -cn '{title:$ENV._NOTIFY_TITLE,body:$ENV._NOTIFY_BODY,icon:$ENV._NOTIFY_ICON}')"
               ''
             else
               ''
-                ${pkgsSet.util-linux}/bin/logger -p ${loggerPriority} -t nx-user-notify ${lib.escapeShellArg "JSON-DATA::${jsonPayload}"}
+                ${pkgs.util-linux}/bin/logger -p ${loggerPriority} -t nx-user-notify ${lib.escapeShellArg "JSON-DATA::${jsonPayload}"}
               ''
           else if isDynamic then
             ''
               # ${commentBody}
-              ${pkgsSet.libnotify}/bin/notify-send --urgency=${shellUrgency} --icon=${shellIcon} ${shellTitle} "$1"
+              ${pkgs.libnotify}/bin/notify-send --urgency=${shellUrgency} --icon=${shellIcon} ${shellTitle} "$1"
             ''
           else
             ''
-              ${pkgsSet.libnotify}/bin/notify-send --urgency=${shellUrgency} --icon=${shellIcon} ${shellTitle} ${lib.escapeShellArg body}
+              ${pkgs.libnotify}/bin/notify-send --urgency=${shellUrgency} --icon=${shellIcon} ${shellTitle} ${lib.escapeShellArg body}
             '';
-        script = pkgsSet.writeShellScript "nx-notify" scriptContent;
+        script = pkgs.writeShellScript "nx-notify" scriptContent;
       in
       if isDynamic then "${script} \"${shellBody}\"" else "${script}";
 

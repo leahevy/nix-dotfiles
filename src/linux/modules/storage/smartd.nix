@@ -76,6 +76,7 @@ args@{
           if [ "$USER_NOTIFY_ENABLED" = "true" ]; then
             if [ "$FAILURE_TYPE" = "EmailTest" ] || [ "$FAILURE_TYPE" = "EMailTest" ]; then
               ${self.notifyUser {
+                inherit pkgs;
                 title = "SMART Test";
                 body = "$USER_NOTIFY_MESSAGE";
                 icon = "drive-harddisk";
@@ -87,6 +88,7 @@ args@{
                 "info")
                   ${
                     self.notifyUser {
+                      inherit pkgs;
                       title = "SMART Alert (info)";
                       body = "$USER_NOTIFY_MESSAGE";
                       icon = "drive-harddisk";
@@ -97,6 +99,7 @@ args@{
                 "warn")
                   ${
                     self.notifyUser {
+                      inherit pkgs;
                       title = "SMART Alert (warn)";
                       body = "$USER_NOTIFY_MESSAGE";
                       icon = "dialog-warning";
@@ -107,6 +110,7 @@ args@{
                 "failed")
                   ${
                     self.notifyUser {
+                      inherit pkgs;
                       title = "SMART Alert (failed)";
                       body = "$USER_NOTIFY_MESSAGE";
                       icon = "computer-fail";
@@ -117,6 +121,7 @@ args@{
                 *)
                   ${
                     self.notifyUser {
+                      inherit pkgs;
                       title = "SMART Alert (failed)";
                       body = "$USER_NOTIFY_MESSAGE";
                       icon = "computer-fail";

@@ -414,6 +414,7 @@ args@{
                       echo "Pushover API call failed after 5 attempts" >&2
                       ${
                         self.notifyUser {
+                          inherit pkgs;
                           title = "Pushover Notification Failed";
                           body = "Pushover API call failed after 5 attempts. Please check your internet connection and try again!\\n\\n<b>Title</b>: <u>$TITLE</u>\\n<b>Message</b>: <u>$MESSAGE</u>";
                           icon = "dialog-error";

@@ -334,6 +334,7 @@ args@{
                 ""
               else
                 "${self.notifyUser {
+                  inherit pkgs;
                   title = "Backup Triggered";
                   body = "Manual backup triggered - will start in 2 minutes";
                   icon = "archive";
@@ -517,6 +518,7 @@ args@{
           ''
             ${lib.optionalString userNotifyEnabled (
               self.notifyUser {
+                inherit pkgs;
                 title = userNotifyTitle;
                 body = userNotifyMessage;
                 icon = userNotifyIcon;
