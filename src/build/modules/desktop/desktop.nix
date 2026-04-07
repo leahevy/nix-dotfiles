@@ -39,7 +39,7 @@ in
 
   submodules =
     if desktopSetting != null then
-      if isLinux then
+      if lib.elem desktopSetting defs.allowedLinuxDesktops then
         {
           linux = {
             desktop = {
@@ -47,7 +47,7 @@ in
             };
           };
         }
-      else if isDarwin then
+      else if lib.elem desktopSetting defs.allowedDarwinDesktops then
         {
           darwin = {
             desktop = {
