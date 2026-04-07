@@ -7,25 +7,17 @@ on:
 jobs:
   update-flake-lock:
     runs-on: ubuntu-latest
-    env:
-      UPDATE_INPUTS: "nixpkgs,home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable,sops-nix,disko,impermanence,lanzaboote,niri-flake,nixos-hardware,treefmt-nix"
-      EXCLUDE_FROM_REBOOT_CHECK: "home-manager,stylix,nixvim,nix-darwin,nixpkgs-unstable,sops-nix,disko,impermanence,lanzaboote,niri-flake,nixos-hardware,treefmt-nix"
-      REPO_nixpkgs: "NixOS/nixpkgs"
-      REPO_home_manager: "nix-community/home-manager"
-      REPO_stylix: "nix-community/stylix"
-      REPO_nixvim: "nix-community/nixvim"
-      REPO_nix_darwin: "nix-darwin/nix-darwin"
-      REPO_nixpkgs_unstable: "NixOS/nixpkgs"
-      REPO_treefmt_nix: "numtide/treefmt-nix"
-      REPO_sops_nix: "leahevy/sops-nix"
-      REPO_disko: "leahevy/disko"
-      REPO_impermanence: "leahevy/impermanence"
-      REPO_lanzaboote: "leahevy/lanzaboote"
-      REPO_niri_flake: "leahevy/niri-flake"
-      REPO_nixos_hardware: "leahevy/nixos-hardware"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Load definitions
+        run: |
+          source scripts/utils/defs.sh
+          echo "UPDATE_INPUTS=$(IFS=,; echo "${AUTO_UPDATE_INPUTS[*]}")" >> $GITHUB_ENV
+          echo "EXCLUDE_FROM_REBOOT_CHECK=$(printf '%s\n' "${AUTO_UPDATE_INPUTS[@]}" | grep -vxF -f <(printf '%s\n' "${REBOOT_CHECK_INPUTS[@]}") | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_ENV
+          echo "UPDATE_AUTO_MERGE_ENABLED=$UPDATE_AUTO_MERGE_ENABLED" >> $GITHUB_ENV
+          echo "UPDATE_MERGE_DAYS=$(IFS=,; echo "${UPDATE_MERGE_DAYS[*]}")" >> $GITHUB_ENV
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
@@ -115,10 +107,12 @@ jobs:
           }
 
           get_repo() {
-            local input=$1
-            local input_var=$(echo "$input" | tr '-' '_')
-            local repo_var="REPO_$input_var"
-            echo "${!repo_var:-}"
+            local node=$1
+            local owner=$(jq -r --arg node "$node" '.nodes[$node].original.owner // empty' flake.lock)
+            local repo=$(jq -r --arg node "$node" '.nodes[$node].original.repo // empty' flake.lock)
+            if [[ -n "$owner" && -n "$repo" ]]; then
+              echo "$owner/$repo"
+            fi
           }
 
           REBOOT_PACKAGES=(
@@ -180,7 +174,7 @@ jobs:
             input=$(echo "$input" | xargs)
             input_var=$(echo "$input" | tr '-' '_')
             node=$(get_lockfile_node "$input")
-            repo=$(get_repo "$input")
+            repo=$(get_repo "$node")
 
             if [ "$node" != "null" ] && [ -n "$repo" ]; then
               new_commit=$(nix flake metadata --json . | jq -r --arg node "$node" '.locks.nodes[$node].locked.rev')
@@ -315,16 +309,12 @@ jobs:
         id: check-day
         run: |
           set -euo pipefail
-          # MERGE_DAYS="6"
-          # current_day=$(date +%u)
-          # if echo "$MERGE_DAYS" | grep -q "\b$current_day\b"; then
-          #   echo "its_mergeday=true" >> $GITHUB_OUTPUT
-          # else
-          #   echo "its_mergeday=false" >> $GITHUB_OUTPUT
-          # fi
-          #
-          # Disabled: Every day is merge day but only auto-merge if no reboot is required!
-          echo "its_mergeday=false" >> $GITHUB_OUTPUT
+          current_day=$(date +%u)
+          if [[ "$UPDATE_AUTO_MERGE_ENABLED" == "true" ]] && echo ",$UPDATE_MERGE_DAYS," | grep -q ",$current_day,"; then
+            echo "its_mergeday=true" >> $GITHUB_OUTPUT
+          else
+            echo "its_mergeday=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create Pull Request
         if: steps.changes.outputs.changed == 'true'
