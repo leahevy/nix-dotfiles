@@ -53,14 +53,26 @@ jobs:
 
           for input in "${inputs[@]}"; do
             input=$(echo "$input" | xargs)
+            input_var=$(echo "$input" | tr '-' '_')
+
             echo "Updating input: $input"
             nix flake update "$input"
-            if [ -z "$updated_inputs" ]; then
-              updated_inputs="$input"
-            else
-              updated_inputs="$updated_inputs, $input"
+
+            node=$(nix flake metadata --json . | jq -r --arg input "$input" '.locks.nodes.root.inputs[$input]')
+            new_commit=$(nix flake metadata --json . | jq -r --arg node "$node" '.locks.nodes[$node].locked.rev')
+
+            old_commit_var="OLD_COMMIT_$input_var"
+            old_commit="${!old_commit_var:-}"
+
+            if [ -n "$old_commit" ] && [ "$old_commit" != "$new_commit" ]; then
+              if [ -z "$updated_inputs" ]; then
+                updated_inputs="$input"
+              else
+                updated_inputs="$updated_inputs, $input"
+              fi
             fi
           done
+
           echo "UPDATED_INPUTS=$updated_inputs" >> $GITHUB_ENV
 
       - name: Check for changes
