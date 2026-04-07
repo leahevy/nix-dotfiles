@@ -129,11 +129,11 @@
     # -----------------------------------------------------------------------------
 
     nixpkgs = {
-      url = "nixpkgs/nixos-25.11";
+      url = "github:NixOS/nixpkgs/nixos-25.11";
     };
 
     nixpkgs-unstable = {
-      url = "nixpkgs/nixos-unstable";
+      url = "github:NixOS/nixpkgs/nixos-unstable";
     };
 
     # -----------------------------------------------------------------------------
