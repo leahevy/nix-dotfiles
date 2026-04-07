@@ -2,6 +2,41 @@
   description = "NX Configuration";
 
   inputs = {
+    # -----------------------------------------------------------------------------
+    # Library inputs
+    # -----------------------------------------------------------------------------
+
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
+
+    flake-utils = {
+      url = "github:numtide/flake-utils";
+      inputs.systems.follows = "nix-systems";
+    };
+
+    flake-compat = {
+      url = "github:NixOS/flake-compat";
+      flake = false;
+    };
+
+    nix-systems = {
+      url = "github:nix-systems/default";
+    };
+
+    nix-systems-linux = {
+      url = "github:nix-systems/default-linux";
+    };
+
+    nix-systems-darwin = {
+      url = "github:nix-systems/default-darwin";
+    };
+
+    # -----------------------------------------------------------------------------
+    # Forked inputs (require manual sync with upstream)
+    # -----------------------------------------------------------------------------
+
     sops-nix = {
       url = "github:leahevy/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -21,6 +56,7 @@
     lanzaboote = {
       url = "github:leahevy/lanzaboote/v1.0.0";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.pre-commit.inputs.flake-compat.follows = "flake-compat";
     };
 
     niri-flake = {
@@ -32,6 +68,10 @@
     nixos-hardware = {
       url = "github:leahevy/nixos-hardware/master";
     };
+
+    # -----------------------------------------------------------------------------
+    # Local inputs
+    # -----------------------------------------------------------------------------
 
     lib = {
       url = "path:./src/lib";
@@ -84,6 +124,10 @@
       flake = false;
     };
 
+    # -----------------------------------------------------------------------------
+    # Core inputs
+    # -----------------------------------------------------------------------------
+
     nixpkgs = {
       url = "nixpkgs/nixos-25.11";
     };
@@ -91,6 +135,10 @@
     nixpkgs-unstable = {
       url = "nixpkgs/nixos-unstable";
     };
+
+    # -----------------------------------------------------------------------------
+    # Community inputs
+    # -----------------------------------------------------------------------------
 
     home-manager = {
       url = "github:nix-community/home-manager/release-25.11";
@@ -100,11 +148,17 @@
     stylix = {
       url = "github:nix-community/stylix/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
+      inputs.systems.follows = "nix-systems";
     };
 
     nixvim = {
       url = "github:nix-community/nixvim/nixos-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
+      inputs.systems.follows = "nix-systems";
+      inputs.nuschtosSearch.inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nuschtosSearch.inputs.flake-utils.follows = "flake-utils";
     };
 
     nix-darwin = {
@@ -112,15 +166,21 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # -----------------------------------------------------------------------------
+    # Third-party inputs (require manual review on update)
+    # -----------------------------------------------------------------------------
+
     mac-app-util = {
       url = "github:hraban/mac-app-util";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.treefmt-nix.follows = "treefmt-nix";
-    };
-
-    treefmt-nix = {
-      url = "github:numtide/treefmt-nix/main";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.systems.follows = "nix-systems-darwin";
+      inputs.flake-utils.follows = "flake-utils";
+      inputs.flake-compat.follows = "flake-compat";
+      inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+      inputs.cl-nix-lite.inputs.nixpkgs.follows = "nixpkgs";
+      inputs.cl-nix-lite.inputs.treefmt-nix.follows = "mac-app-util/treefmt-nix";
+      inputs.cl-nix-lite.inputs.flake-parts.follows = "flake-parts";
+      inputs.cl-nix-lite.inputs.systems.follows = "nix-systems";
     };
 
     nix-plist-manager = {
@@ -128,7 +188,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
     };
-
   };
 
   outputs =
@@ -178,15 +237,9 @@
         builtins.attrNames (builtins.readDir (inputs.config + "/profiles/nixos"))
       );
 
-      nixosArchitectures = [
-        "x86_64-linux"
-        "aarch64-linux"
-      ];
-      darwinArchitectures = [
-        "x86_64-darwin"
-        "aarch64-darwin"
-      ];
-      allArchitectures = nixosArchitectures ++ darwinArchitectures;
+      nixosArchitectures = import inputs.nix-systems-linux;
+      darwinArchitectures = import inputs.nix-systems-darwin;
+      allArchitectures = import inputs.nix-systems;
 
       common = import (inputs.build + "/builders/common.nix") {
         inherit lib inputs;
