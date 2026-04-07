@@ -55,7 +55,7 @@ args@{
               base0F: "${theme.colors.main.base.pink.html}"
           '';
 
-          customSchemePackage = pkgs.writeTextDir "share/themes/nx-theme.yaml" themeYaml;
+          customSchemeFile = builtins.toFile "nx-theme.yaml" themeYaml;
 
           getPackage =
             fontConfig:
@@ -84,7 +84,7 @@ args@{
           stylixAttrs = {
             enable = true;
 
-            base16Scheme = "${customSchemePackage}/share/themes/nx-theme.yaml";
+            base16Scheme = customSchemeFile;
 
             image =
               if (self.settings.wallpaper.config or null) != null then
