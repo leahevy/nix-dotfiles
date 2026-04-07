@@ -25,26 +25,19 @@ args@{
         desktopPreference = self.user.settings.desktopPreference;
         isKDE = desktopPreference == "kde";
         isGnome = desktopPreference == "gnome";
-
-        customPkgs =
-          if self.isLinux then
-            (self.pkgs {
-              overlays = [
-                (final: prev: {
-                  zoom-us = prev.zoom-us.override {
-                    xdgDesktopPortalSupport = true;
-                    plasma6XdgDesktopPortalSupport = isKDE;
-                    gnomeXdgDesktopPortalSupport = isGnome;
-                  };
-                })
-              ];
-            })
-          else
-            pkgs;
       in
       {
         home.packages = [
-          customPkgs.zoom-us
+          (
+            if self.isLinux then
+              pkgs.zoom-us.override {
+                xdgDesktopPortalSupport = true;
+                plasma6XdgDesktopPortalSupport = isKDE;
+                gnomeXdgDesktopPortalSupport = isGnome;
+              }
+            else
+              pkgs.zoom-us
+          )
         ];
 
         home.persistence."${self.persist}" = {

@@ -34,7 +34,7 @@ args@{
     home = config: {
       programs.alacritty = {
         enable = true;
-        package = lib.mkDefault (self.dummyPackage "alacritty");
+        package = lib.mkDefault (self.dummyPackage pkgs "alacritty");
 
         settings = {
           general = {

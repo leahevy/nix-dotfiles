@@ -116,18 +116,8 @@ args@{
           else
             pkg;
 
-        customPkgs =
-          if (dataPath != null) then
-            self.pkgs {
-              overlays = [
-                (final: prev: {
-                  protonup-ng = wrapSteamBinary prev.protonup-ng "protonup";
-                  protontricks = wrapSteamBinary prev.protontricks "protontricks";
-                })
-              ];
-            }
-          else
-            { };
+        wrappedProtonupNg = wrapSteamBinary pkgs.protonup-ng "protonup";
+        wrappedProtontricks = wrapSteamBinary pkgs.protontricks "protontricks";
       in
       {
         programs.steam = {
@@ -164,8 +154,8 @@ args@{
         };
 
         environment.systemPackages = [
-          customPkgs.protonup-ng or pkgs.protonup-ng
-          customPkgs.protontricks or pkgs.protontricks
+          wrappedProtonupNg
+          wrappedProtontricks
         ]
         ++ (with pkgs; [
           mangohud

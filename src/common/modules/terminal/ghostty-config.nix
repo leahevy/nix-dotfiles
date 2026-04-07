@@ -80,7 +80,7 @@ args@{
     home = config: {
       programs.ghostty = {
         enable = true;
-        package = lib.mkDefault (self.dummyPackage "ghostty");
+        package = lib.mkDefault (self.dummyPackage pkgs "ghostty");
         clearDefaultKeybinds = true;
         settings = {
           font-size = lib.mkForce self.settings.fontSize;

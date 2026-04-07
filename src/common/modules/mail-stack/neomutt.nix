@@ -234,6 +234,20 @@ args@{
   };
 
   on = {
+    overlays = [
+      (final: prev: {
+        neomutt = prev.neomutt.overrideAttrs (oldAttrs: {
+          nativeBuildInputs = oldAttrs.nativeBuildInputs ++ [
+            prev.makeWrapper
+          ];
+          postFixup = oldAttrs.postFixup or "" + ''
+            wrapProgram $out/bin/neomutt \
+              --set TERM "xterm-direct"
+          '';
+        });
+      })
+    ];
+
     home =
       config:
       let
@@ -414,22 +428,6 @@ args@{
         cacheDir = "${config.xdg.cacheHome}/neomutt";
 
         generateUnbind = context: key: "unbind ${context} ${key}";
-
-        customPkgs = self.pkgs {
-          overlays = [
-            (final: prev: {
-              neomutt = prev.neomutt.overrideAttrs (oldAttrs: {
-                nativeBuildInputs = oldAttrs.nativeBuildInputs ++ [
-                  prev.makeWrapper
-                ];
-                postFixup = oldAttrs.postFixup or "" + ''
-                  wrapProgram $out/bin/neomutt \
-                    --set TERM "xterm-direct"
-                '';
-              });
-            })
-          ];
-        };
 
         generateBinds =
           context: binds:
@@ -617,7 +615,6 @@ args@{
       {
         programs.neomutt = {
           enable = true;
-          package = lib.mkForce customPkgs.neomutt;
 
           settings = {
             folder = mailDir;

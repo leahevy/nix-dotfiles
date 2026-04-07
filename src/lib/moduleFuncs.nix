@@ -430,13 +430,15 @@ rec {
 
       # Create custom nixpkgs import with module-scoped unfree predicate
       # Usage: self . pkgs { overlays = [...]; }
+      # WARNING: Creates a new pkgs instance on every call, heavily impacting evaluation performance.
+      # Prefer using on.overlays or on.linux.overlays / on.darwin.overlays instead.
       pkgs = createPkgsImport moduleContext.inputs.nixpkgs;
 
       # Create a dummy package usable for creating home-manager config without installing the package
-      # Usage: self.dummyPackage $NAME
+      # Usage: self.dummyPackage pkgs $NAME
       dummyPackage =
-        name:
-        (pkgs { }).runCommand name
+        pkgs: name:
+        pkgs.runCommand name
           {
             meta.mainProgram = name;
           }
@@ -448,6 +450,8 @@ rec {
 
       # Create custom nixpkgs-unstable import with module-scoped unfree predicate
       # Usage: self . pkgs-unstable { overlays = [...]; }
+      # WARNING: Creates a new pkgs instance on every call, heavily impacting evaluation performance.
+      # Prefer using on.overlays or on.linux.overlays / on.darwin.overlays instead.
       pkgs-unstable = createPkgsImport moduleContext.inputs.nixpkgs-unstable;
 
       host = if moduleContext ? host && moduleContext.host != null then moduleContext.host else { };

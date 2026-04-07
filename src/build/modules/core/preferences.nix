@@ -739,6 +739,6 @@ in
     };
 
   on.darwin.enabled = config: {
-    nx.lib.iconResolveScript = self.dummyPackage "iconResolveScript";
+    nx.lib.iconResolveScript = self.dummyPackage pkgs "iconResolveScript";
   };
 }

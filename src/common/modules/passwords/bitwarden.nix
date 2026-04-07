@@ -25,6 +25,19 @@ args@{
   };
 
   on = {
+    overlays = [
+      (final: prev: {
+        bitwarden-cli = prev.bitwarden-cli.overrideAttrs (oldAttrs: {
+          nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ prev.makeWrapper ];
+          postInstall = (oldAttrs.postInstall or "") + ''
+            wrapProgram $out/bin/bw \
+              --run 'export BITWARDENCLI_APPDATA_DIR="$HOME/.config/Bitwarden-CLI"'
+          '';
+          doInstallCheck = false;
+        });
+      })
+    ];
+
     linux.enabled = config: {
       nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
         "bitwarden"
@@ -35,21 +48,6 @@ args@{
       config:
       let
         isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
-
-        customPkgs = self.pkgs {
-          overlays = [
-            (final: prev: {
-              bitwarden-cli = prev.bitwarden-cli.overrideAttrs (oldAttrs: {
-                nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ prev.makeWrapper ];
-                postInstall = (oldAttrs.postInstall or "") + ''
-                  wrapProgram $out/bin/bw \
-                    --set BITWARDENCLI_APPDATA_DIR "${config.home.homeDirectory}/.config/Bitwarden-CLI"
-                '';
-                doInstallCheck = false;
-              });
-            })
-          ];
-        };
       in
       {
         sops.secrets."bitwarden-api-token" = lib.mkIf self.settings.withSecretManager {
@@ -102,7 +100,7 @@ args@{
             pkgs.bitwarden-desktop
           ]
           ++ [
-            customPkgs.bitwarden-cli
+            pkgs.bitwarden-cli
           ]
           ++ lib.optionals self.settings.withSecretManager [
             pkgs.bws
@@ -149,14 +147,11 @@ args@{
 
             Service = {
               Type = "oneshot";
-              ExecStart = "${customPkgs.bitwarden-cli}/bin/bw sync";
-              Environment = [
-                "BITWARDENCLI_APPDATA_DIR=${config.home.homeDirectory}/.config/Bitwarden-CLI"
-              ];
+              ExecStart = "${pkgs.bitwarden-cli}/bin/bw sync";
               ExecCondition = pkgs.writeShellScript "check-bw-status" ''
                 set -euo pipefail
                 [[ -f "${config.home.homeDirectory}/.config/Bitwarden-CLI/data.json" && -r "${config.home.homeDirectory}/.config/Bitwarden-CLI/data.json" ]] || exit 1
-                response=$(${customPkgs.bitwarden-cli}/bin/bw status 2>/dev/null || echo '{}')
+                response=$(${pkgs.bitwarden-cli}/bin/bw status 2>/dev/null || echo '{}')
                 userId=$(echo "$response" | ${pkgs.jq}/bin/jq -r '.userId // ""')
                 [[ -n "$userId" && "$userId" != "null" ]]
 

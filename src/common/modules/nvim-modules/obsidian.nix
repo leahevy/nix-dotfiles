@@ -30,6 +30,19 @@ args@{
   ];
 
   on = {
+    overlays = [
+      (final: prev: {
+        vimPlugins = prev.vimPlugins // {
+          obsidian-nvim = prev.vimPlugins.obsidian-nvim.overrideAttrs (oldAttrs: {
+            nvimSkipModules = (oldAttrs.nvimSkipModules or [ ]) ++ [
+              "obsidian.pickers._fzf"
+              "obsidian.picker._fzf"
+            ];
+          });
+        };
+      })
+    ];
+
     home =
       config:
       let
@@ -39,27 +52,12 @@ args@{
             homePrefix = "$HOME";
           in
           if lib.hasPrefix homePrefix path then "~" + lib.removePrefix homePrefix path else path;
-
-        customPkgs = self.pkgs {
-          overlays = [
-            (final: prev: {
-              vimPlugins = prev.vimPlugins // {
-                obsidian-nvim = prev.vimPlugins.obsidian-nvim.overrideAttrs (oldAttrs: {
-                  nvimSkipModules = (oldAttrs.nvimSkipModules or [ ]) ++ [
-                    "obsidian.pickers._fzf"
-                    "obsidian.picker._fzf"
-                  ];
-                });
-              };
-            })
-          ];
-        };
       in
       {
         programs.nixvim = {
           plugins.obsidian = {
             enable = true;
-            package = customPkgs.vimPlugins.obsidian-nvim;
+            package = pkgs.vimPlugins.obsidian-nvim;
             settings = {
               workspaces = [
                 {
