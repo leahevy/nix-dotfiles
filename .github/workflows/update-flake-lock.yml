@@ -198,8 +198,9 @@ jobs:
               if [ "$old_commit" != "$new_commit" ] && [ -n "$old_commit" ]; then
                 echo "Fetching commits for $input from $repo..."
 
-                if commits_json=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                  "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit"); then
+                commits_json=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit")
+
+                if echo "$commits_json" | jq -e '.commits' > /dev/null 2>&1; then
 
                   total_commits=$(echo "$commits_json" | jq -r '.total_commits // 0')
                   returned_commits=$(echo "$commits_json" | jq -r '.commits | length')
