@@ -245,6 +245,22 @@ subcommand_info() {
   local group_name="${rest%%.*}"
   local module_name="${rest#*.}"
 
+  local base_path
+  if [[ "$input_name" == "config" ]]; then
+    base_path="$CONFIG_DIR"
+  elif [[ "$input_name" == "profile" ]]; then
+    base_path="$PROFILE_PATH"
+  else
+    base_path="$PWD/src/$input_name"
+  fi
+
+  local module_file="$base_path/modules/$group_name/$module_name.nix"
+  if [[ ! -f "$module_file" ]]; then
+    echo -e "${RED}Error: Module file not found: ${WHITE}$module_file${RESET}" >&2
+    echo -e "${YELLOW}Hint: Check the module path for typos. Expected format: INPUT.GROUP.MODULE${RESET}" >&2
+    exit 1
+  fi
+
   local profile
   profile="$(retrieve_active_profile)"
   local context
