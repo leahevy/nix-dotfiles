@@ -228,6 +228,7 @@
 
       helpers = import (inputs.lib + "/helpers.nix") {
         inherit lib defs additionalInputs;
+        buildSystem = builtins.currentSystem;
       };
 
       standalone-user-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (

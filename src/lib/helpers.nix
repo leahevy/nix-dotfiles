@@ -2,8 +2,15 @@
   lib,
   defs,
   additionalInputs,
+  buildSystem ? null,
 }:
 rec {
+  inherit buildSystem;
+
+  # Check if building for native or compatible architecture
+  # Usage: isHostArchitecture pkgs
+  isHostArchitecture = pkgs: buildSystem != null && pkgs.stdenv.hostPlatform.system == buildSystem;
+
   # Null-safe value selection
   # Usage: ifSet $VALUE $DEFAULT
   ifSet = value: default: if value != null then value else default;
@@ -582,13 +589,19 @@ rec {
       [ ];
 
   # Functions to search for icons in the icons cache (Linux only)
+  # When cache is null (cross-platform evaluation), returns icon name without validation
   icons = {
     # Returns the absolute path to an icon from the icons cache, or throws an error if not found.
     # Usage: getIcon config "icon-name"
     getIcon =
       config: name:
-      if config.nx.cache.icons ? ${name} then
-        config.nx.cache.icons.${name}
+      let
+        cache = config.nx.cache.icons;
+      in
+      if cache == null then
+        name
+      else if cache ? ${name} then
+        cache.${name}
       else
         builtins.throw "nx icons: '${name}' not found in icon cache";
 
@@ -601,7 +614,9 @@ rec {
         names = lib.splitString "|" pattern;
         result = lib.findFirst (name: cache ? ${name}) null names;
       in
-      if result != null then
+      if cache == null then
+        lib.head names
+      else if result != null then
         cache.${result}
       else
         builtins.throw "nx icons: no icon found for '${pattern}' in icon cache";

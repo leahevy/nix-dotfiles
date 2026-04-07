@@ -234,7 +234,7 @@ rec {
           pkgs = args.pkgs;
           pkgs-unstable = args.pkgs-unstable;
           funcs = args.funcs;
-          helpers = helpers;
+          helpers = args.helpers;
           defs = args.defs;
           self = enhancedModuleContext;
         };
@@ -500,7 +500,7 @@ rec {
         pkgs = args.pkgs;
         pkgs-unstable = args.pkgs-unstable;
         funcs = args.funcs;
-        helpers = helpers;
+        helpers = args.helpers;
         defs = args.defs;
         self = { };
       };
@@ -527,7 +527,7 @@ rec {
         pkgs = args.pkgs;
         pkgs-unstable = args.pkgs-unstable;
         funcs = args.funcs;
-        helpers = helpers;
+        helpers = args.helpers;
         defs = args.defs;
         self = enhancedModuleContext;
       };
@@ -668,7 +668,7 @@ rec {
                     pkgs = args.pkgs;
                     pkgs-unstable = args.pkgs-unstable;
                     funcs = args.funcs;
-                    helpers = helpers;
+                    helpers = args.helpers;
                     defs = args.defs;
                     self = { };
                   };
@@ -718,7 +718,7 @@ rec {
         pkgs = args.pkgs;
         pkgs-unstable = args.pkgs-unstable;
         funcs = args.funcs;
-        helpers = helpers;
+        helpers = args.helpers;
         defs = args.defs;
         self = enhancedContext;
       };
@@ -786,7 +786,7 @@ rec {
             pkgs = args.pkgs;
             pkgs-unstable = args.pkgs-unstable;
             funcs = args.funcs;
-            helpers = helpers;
+            helpers = args.helpers;
             defs = args.defs;
             self = enhancedModuleContext;
           };
@@ -1145,7 +1145,7 @@ rec {
         pkgs = args.pkgs;
         pkgs-unstable = args.pkgs-unstable;
         funcs = { };
-        helpers = helpers;
+        helpers = args.helpers;
         defs = args.defs;
         self = {
           isDarwin = args.pkgs.stdenv.isDarwin;
@@ -1402,7 +1402,7 @@ rec {
                   pkgs = args.pkgs;
                   pkgs-unstable = args.pkgs-unstable;
                   funcs = args.funcs;
-                  helpers = helpers;
+                  helpers = args.helpers;
                   defs = args.defs;
                   self = contextWithOptions;
                 };

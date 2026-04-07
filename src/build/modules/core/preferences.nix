@@ -297,9 +297,9 @@ in
     };
 
     nx.cache.icons = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
-      default = { };
-      description = "Cache mapping icon names to nix store paths, built from the active icon themes";
+      type = lib.types.nullOr (lib.types.attrsOf lib.types.str);
+      default = null;
+      description = "Cache mapping icon names to nix store paths, built from the active icon themes (null when cross-evaluating)";
     };
 
     nx.preferences = {
@@ -728,7 +728,9 @@ in
     {
       enabled = config: {
         nx.lib.iconResolveScript = lib.mkDefault (mkScript config);
-        nx.cache.icons = lib.mkDefault (buildIconCache config);
+        nx.cache.icons = lib.mkDefault (
+          if helpers.isHostArchitecture pkgs then buildIconCache config else null
+        );
       };
       standalone = config: {
         home.packages = [ config.nx.lib.iconResolveScript ];
