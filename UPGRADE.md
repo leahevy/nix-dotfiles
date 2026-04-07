@@ -8,7 +8,9 @@
 
 - [ ] 1. Run `nx switch-branch upgrade-nixos-<TARGET_VERSION>`, e.g. `25.11` as `<TARGET_VERSION>`
 - [ ] 2. Run `nx dist-upgrade <TARGET_VERSION>` (requires clean git repo)
-- [ ] 3. Verify if critical flake inputs should be updated via `nx update <INPUT>`: **sops-nix**, **disko**, **nixos-hardware**, **impermanence**, **lanzaboote**, **niri-flake**, **mac-app-util**, **nix-plist-manager**
+- [ ] 3. Update flake inputs not covered by automatic updates:
+    - [ ] 3a. Forked inputs (sync with upstream, verify no conflicts): **sops-nix**, **disko**, **impermanence**, **lanzaboote**, **niri-flake**, **nixos-hardware**
+    - [ ] 3b. Third-party inputs (review diffs for breaking changes): **mac-app-util**, **nix-plist-manager**
 - [ ] 4. Search for `buildVimPlugin` in the repository to check if any should be replaced with:
     - [ ] 4a. packages that arrived in nixpkgs as `vimPlugins.*` at same or later version
     - [ ] 4b. supported nixvim plugins, e.g. `programs.nixvim.plugins.*`
