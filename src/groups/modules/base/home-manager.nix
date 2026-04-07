@@ -107,7 +107,6 @@ let
   macosStandaloneModules = mergeModules baseModules {
     common.style = [ "stylix" ];
     darwin = {
-      software = [ "homebrew" ];
       browser = [
         "firefox"
         "qutebrowser"
