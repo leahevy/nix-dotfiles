@@ -120,8 +120,15 @@ jobs:
 
           get_repo() {
             local node=$1
+
             local owner=$(jq -r --arg node "$node" '.nodes[$node].original.owner // empty' flake.lock)
             local repo=$(jq -r --arg node "$node" '.nodes[$node].original.repo // empty' flake.lock)
+
+            if [[ -z "$owner" || -z "$repo" ]]; then
+              owner=$(jq -r --arg node "$node" '.nodes[$node].locked.owner // empty' flake.lock)
+              repo=$(jq -r --arg node "$node" '.nodes[$node].locked.repo // empty' flake.lock)
+            fi
+
             if [[ -n "$owner" && -n "$repo" ]]; then
               echo "$owner/$repo"
             fi
