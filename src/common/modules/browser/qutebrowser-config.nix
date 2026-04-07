@@ -584,27 +584,6 @@ args@{
 
         mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings) keepassxcKeyBindings) dmenuKeyBindings) bitwardenKeyBindings;
 
-        python = {
-          toBool = val: if val then "True" else "False";
-
-          toValue =
-            val:
-            if builtins.isBool val then
-              python.toBool val
-            else if builtins.isString val then
-              "'${val}'"
-            else if builtins.isInt val then
-              toString val
-            else if builtins.isFloat val then
-              toString val
-            else if val == null then
-              "None"
-            else if builtins.isList val then
-              "[${lib.concatMapStringsSep ", " python.toValue val}]"
-            else
-              throw "Unsupported value type for Python conversion: ${builtins.typeOf val}";
-        };
-
         themedCSS = pkgs.stdenv.mkDerivation rec {
           pname = "themed-css";
           version = "0.1";
@@ -1061,6 +1040,27 @@ args@{
 
           keyBindings = mergedKeyBindings;
 
+          perDomainSettings =
+            let
+              mergedSettings = self.settings.basePerDomainSettings // self.settings.additionalPerDomainSettings;
+              duplicateWithWildcard =
+                domain: settings:
+                let
+                  wildcardDomain = "*.${domain}";
+                  hasWildcard = lib.hasPrefix "*." domain;
+                  wildcardExists = builtins.hasAttr wildcardDomain mergedSettings;
+                in
+                {
+                  "${domain}" = settings;
+                }
+                // lib.optionalAttrs (!hasWildcard && !wildcardExists) {
+                  "${wildcardDomain}" = settings;
+                };
+            in
+            lib.foldl' (acc: domain: acc // (duplicateWithWildcard domain mergedSettings.${domain})) { } (
+              builtins.attrNames mergedSettings
+            );
+
           extraConfig = ''
             import os
             import glob
@@ -1216,47 +1216,6 @@ args@{
           source = self.file "qutebrowser-bookmarks-from-firefox";
           executable = true;
         };
-
-        home.file.".config/qutebrowser-init/per-domain-settings.py" =
-          lib.mkIf ((self.settings.basePerDomainSettings // self.settings.additionalPerDomainSettings) != { })
-            {
-              text =
-                let
-                  mergedPerDomainSettings =
-                    self.settings.basePerDomainSettings // self.settings.additionalPerDomainSettings;
-
-                  generatePerDomainConfig =
-                    domain: settings:
-                    let
-                      processSettings =
-                        prefix: attrs:
-                        lib.concatStringsSep "\n" (
-                          lib.mapAttrsToList (
-                            key: value:
-                            let
-                              settingName = if prefix == "" then key else "${prefix}.${key}";
-                            in
-                            if builtins.isAttrs value then
-                              processSettings settingName value
-                            else
-                              "config.set('${settingName}', ${python.toValue value}, '${domain}')"
-                              + "\nconfig.set('${settingName}', ${python.toValue value}, '*.${domain}')"
-                          ) attrs
-                        );
-                    in
-                    if builtins.hasAttr "content" settings then
-                      processSettings "content" settings.content
-                    else
-                      processSettings "" settings;
-
-                  perDomainPythonConfig = lib.concatStringsSep "\n\n" (
-                    lib.mapAttrsToList (
-                      domain: settings: generatePerDomainConfig domain settings
-                    ) mergedPerDomainSettings
-                  );
-                in
-                perDomainPythonConfig;
-            };
 
         home.file.".config/qutebrowser-init/qt-environ.py" =
           let
