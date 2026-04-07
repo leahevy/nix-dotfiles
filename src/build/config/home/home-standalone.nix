@@ -59,6 +59,7 @@ let
 
   nxDef = import (inputs.lib + "/cmds.nix") {
     inherit lib;
+    architectures = import inputs.nix-systems;
     rootPath = defs.rootPath;
     scope = "standalone";
     system = if pkgs.stdenv.isDarwin then "darwin" else "linux";

@@ -3,6 +3,7 @@
   rootPath,
   scope,
   system,
+  architectures,
 }:
 
 let
@@ -106,6 +107,7 @@ let
 
   deploymentSpec = import (rootPath + "/scripts/utils/deployment.nix") {
     inherit
+      architectures
       option
       optionWith
       optionWithDefault

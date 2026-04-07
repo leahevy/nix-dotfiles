@@ -1,4 +1,5 @@
 {
+  architectures,
   option,
   optionWith,
   optionWithDefault,
@@ -184,12 +185,7 @@
           profile = optionWith "Use specific profile" "profile" "string";
           nixos = option "Force NixOS mode";
           standalone = option "Force standalone mode";
-          arch = optionWithEnum "Use specific architecture" "architecture" [
-            "x86_64-linux"
-            "aarch64-linux"
-            "x86_64-darwin"
-            "aarch64-darwin"
-          ];
+          arch = optionWithEnum "Use specific architecture" "architecture" architectures;
         };
         arguments = [ (arg "path" "Nix eval path" "string") ];
       };
@@ -256,24 +252,14 @@
               profile = optionWith "Use specific profile" "profile" "string";
               nixos = option "Force NixOS mode";
               standalone = option "Force standalone mode";
-              arch = optionWithEnum "Use specific architecture" "architecture" [
-                "x86_64-linux"
-                "aarch64-linux"
-                "x86_64-darwin"
-                "aarch64-darwin"
-              ];
+              arch = optionWithEnum "Use specific architecture" "architecture" architectures;
             };
           };
           config = {
             description = "Show complete active configuration";
             options = {
               profile = optionWith "Use specific profile" "profile" "string";
-              arch = optionWithEnum "Use specific architecture" "architecture" [
-                "x86_64-linux"
-                "aarch64-linux"
-                "x86_64-darwin"
-                "aarch64-darwin"
-              ];
+              arch = optionWithEnum "Use specific architecture" "architecture" architectures;
               nixos = option "Force NixOS mode";
               standalone = option "Force standalone mode";
             };
