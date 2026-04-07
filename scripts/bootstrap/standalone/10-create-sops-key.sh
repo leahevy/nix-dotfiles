@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../" && pwd)"
 cd "$REPO_ROOT"
 export BOOTSTRAP_NEEDS_NIX=true
-source "$REPO_ROOT/scripts/utils/pre-check.sh"
+source "$REPO_ROOT/scripts/utils/common.sh"
 
 if [[ -e /etc/NIXOS ]]; then
   echo -e "${RED}Detected NixOS -> aborting installation...${RESET}" >&2

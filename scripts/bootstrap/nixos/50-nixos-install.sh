@@ -7,7 +7,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../../" && pwd)"
 cd "$REPO_ROOT"
 
 export BOOTSTRAP_NEEDS_NIX=true
-source "$REPO_ROOT/scripts/utils/pre-check.sh"
+source "$REPO_ROOT/scripts/utils/common.sh"
 
 if [[ ! -e /etc/NIXOS ]]; then
   echo -e "${RED}Did not detect NixOS -> aborting installation...${RESET}" >&2
@@ -41,7 +41,7 @@ fi
 PROFILE_PATH="$(retrieve_active_profile_path)"
 
 FULL_PROFILE="$(construct_profile_name "$HOSTNAME")"
-USERNAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
+USERNAME="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
 if [[ -z "$USERNAME" || "$USERNAME" == "null" || "$USERNAME" == "\"null\"" ]]; then
   echo -e "${RED}Error: Could not determine main user from host configuration for ${WHITE}$HOSTNAME${RESET}" >&2
   echo -e "${RED}Make sure ${WHITE}mainUser${RED} is set in ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix${RESET}" >&2
@@ -53,9 +53,9 @@ echo -e "Using full profile name: ${WHITE}$FULL_PROFILE${RESET}"
 
 echo
 echo -e "${WHITE}Checking if impermanence is enabled for this host...${RESET}"
-IMPERMANENCE_ENABLED="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
+IMPERMANENCE_ENABLED="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
 
-HOME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
+HOME="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
 if [[ -z "$HOME" || "$HOME" == "null" ]]; then
   echo -e "${RED}Error: Failed to extract valid home directory for ${WHITE}$USERNAME${RESET}" >&2
   exit 1
@@ -71,19 +71,19 @@ echo -e "${MAGENTA}You are about to install NixOS from profile ${WHITE}$CONFIG_D
 read -p "Continue? [y|N]: " -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo -e "\n"
-  
+
   if ! mountpoint -q /mnt; then
     echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted${RESET}" >&2
     echo -e "${RED}Please mount your target filesystem to ${WHITE}/mnt${RED} before running nixos-install${RESET}" >&2
     exit 1
   fi
-  
+
   if [[ ! -f "/mnt/etc/sops/age/keys.txt" ]]; then
     echo -e "${RED}Error: Root SOPS key not found at ${WHITE}/mnt/etc/sops/age/keys.txt${RESET}" >&2
     echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/30-nixos-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
     exit 1
   fi
-  
+
   USER_SOPS_KEY="/mnt/$HOME/.config/sops/age/keys.txt"
   if [[ ! -f "$USER_SOPS_KEY" ]]; then
     echo -e "${RED}Error: User SOPS key not found at ${WHITE}$USER_SOPS_KEY${RESET}" >&2
@@ -91,9 +91,9 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     exit 1
   fi
 
-  USER_UID="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.uid")"
-  GROUP_NAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.group")"
-  
+  USER_UID="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.uid")"
+  GROUP_NAME="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.group")"
+
   if [[ -z "$USER_UID" || "$USER_UID" == "null" || -z "$GROUP_NAME" || "$GROUP_NAME" == "null" ]]; then
     echo -e "${RED}Error: Failed to extract valid user information for ${WHITE}$USERNAME${RESET}" >&2
     exit 1
@@ -101,8 +101,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
   USER_UID="${USER_UID//\"/}"
   GROUP_NAME="${GROUP_NAME//\"/}"
-  
-  USER_GID="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.groups.$GROUP_NAME.gid")"
+
+  USER_GID="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.groups.$GROUP_NAME.gid")"
   if [[ -z "$USER_GID" || "$USER_GID" == "null" ]]; then
     echo -e "${RED}Error: Failed to extract valid group GID for group ${WHITE}$GROUP_NAME${RESET}" >&2
     exit 1
@@ -113,7 +113,6 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${YELLOW}NixOS already appears to be installed on ${WHITE}/mnt${YELLOW} (found ${WHITE}/mnt/etc/NIXOS${YELLOW})" >&2
     echo -e "${YELLOW}Skipping nixos-install - system appears ready${RESET}" >&2
     echo -e "${YELLOW}If you need to reinstall, remove ${WHITE}/mnt/etc/NIXOS${YELLOW} first${RESET}" >&2
-    NIXOS_ALREADY_INSTALLED=true
   else
     if [[ -d "/mnt/$HOME" ]]; then
       echo -e "Fixing general user dir permissions"
@@ -139,13 +138,12 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     rm -rf /mnt/persist/* || true
 
     echo -e "${GREEN}NixOS installation completed successfully.${RESET}"
-    NIXOS_ALREADY_INSTALLED=false
   fi
 
   BASE_DIR="/mnt/$HOME/.config/nx"
   CORE_DIR="/mnt/$HOME/.config/nx/nxcore"
   CONFIG_TARGET_DIR="/mnt/$HOME/.config/nx/nxconfig"
-  
+
   if [[ -d "$CORE_DIR" && -f "$CORE_DIR/flake.nix" && -d "$CONFIG_TARGET_DIR" && -d "$CONFIG_TARGET_DIR/profiles" ]]; then
     echo -e "${GREEN}Both core and config directories appear to be already set up:${RESET}"
     echo -e "  - ${WHITE}$CORE_DIR${RESET} (has ${WHITE}flake.nix${RESET})"
@@ -168,14 +166,14 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     mkdir -p "/mnt/$HOME/.config/nx"
     cp -R --verbose -T . "$CORE_DIR"
     chown -R "$USER_UID:$USER_GID" "$CORE_DIR"
-    
+
     echo -e "${WHITE}Copying config repository to target system...${RESET}"
-    copy_config_to_target "$USERNAME" "$HOME" "$USER_UID" "$USER_GID"
+    copy_config_to_target "$HOME" "$USER_UID" "$USER_GID"
 
     chown "$USER_UID:$USER_GID" "$BASE_DIR"
     chmod 700 "$CORE_DIR"
     chmod 700 "$CONFIG_TARGET_DIR"
-    
+
     echo -e "${WHITE}Configuring git remotes for target system...${RESET}"
     configure_target_git_remotes "$HOME" "$USER_UID" "$USER_GID"
   fi

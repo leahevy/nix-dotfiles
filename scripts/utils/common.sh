@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
 
-RED='\033[1;31m'
-YELLOW='\033[1;33m'
-GREEN='\033[1;32m'
-WHITE='\033[1;37m'
-MAGENTA='\033[1;35m'
-BLUE='\033[1;34m'
-CYAN='\033[1;36m'
-GRAY='\033[1;90m'
-RESET='\033[0m'
+source "$(dirname "${BASH_SOURCE[0]}")/defs.sh"
 
 get_nx_default() {
     local key="$1"
@@ -28,7 +20,8 @@ get_nx_default() {
 get_config_value() {
     local key="$1"
     local config_json="$2"
-    local default_value="$(get_nx_default "$key")"
+    local default_value
+    default_value="$(get_nx_default "$key")"
 
     if [[ -n "$config_json" ]] && command -v jq >/dev/null 2>&1; then
         echo "$config_json" | jq -r ".$key // \"$default_value\""
@@ -99,14 +92,16 @@ deployment_script_setup() {
     else
         SCRIPT_DIR="${NX_INSTALL_PATH}/scripts/deployment"
     fi
-    cd "${NXCORE_DIR:-$HOME/.config/nx/nxcore}"
+    cd "${NXCORE_DIR:-$HOME/.config/nx/nxcore}" || exit 1
 
     if [[ "$UID" == 0 ]]; then
         echo -e "${RED}Do NOT run as root!${RESET}" >&2
         exit 1
     fi
 
+    # shellcheck disable=SC2012
     perm=$(ls -ld "$PWD" | awk '{print $1}')
+    # shellcheck disable=SC2012
     owner=$(ls -ld "$PWD" | awk '{print $3}')
 
     if [[ ! -d $PWD || $perm != drwx------* || $owner != "$USER" ]]; then
@@ -150,7 +145,7 @@ parse_common_deployment_args() {
                 SKIP_VERIFICATION=true
                 shift
                 ;;
-            -*|--*)
+            -*)
                 echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
                 exit 1
                 ;;
@@ -210,7 +205,7 @@ parse_build_deployment_args() {
                 RAW_LOG=true
                 shift
                 ;;
-            -*|--*)
+            -*)
                 echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
                 exit 1
                 ;;
@@ -258,7 +253,7 @@ parse_minimal_deployment_args() {
                 ALLOW_DIRTY_GIT=true
                 shift
                 ;;
-            -*|--*)
+            -*)
                 echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
                 exit 1
                 ;;
@@ -280,14 +275,16 @@ simple_deployment_script_setup() {
     else
         SCRIPT_DIR="${NX_INSTALL_PATH}/scripts/deployment"
     fi
-    cd "${NXCORE_DIR:-$HOME/.config/nx/nxcore}"
+    cd "${NXCORE_DIR:-$HOME/.config/nx/nxcore}" || exit 1
 
     if [[ "$UID" == 0 ]]; then
         echo -e "${RED}Do NOT run as root!${RESET}" >&2
         exit 1
     fi
 
+    # shellcheck disable=SC2012
     perm=$(ls -ld "$PWD" | awk '{print $1}')
+    # shellcheck disable=SC2012
     owner=$(ls -ld "$PWD" | awk '{print $3}')
 
     if [[ ! -d $PWD || $perm != drwx------* || $owner != "$USER" ]]; then
@@ -414,7 +411,8 @@ verify_commit_range() {
 
     (cd "$repo_path" || return 1
 
-    local commits=$(git rev-list "$range" 2>/dev/null || echo "")
+    local commits
+    commits=$(git rev-list "$range" 2>/dev/null || echo "")
     if [[ -z "$commits" ]]; then
         echo -e "${GRAY}No commits to verify in $repo_name range $range${RESET}" >&2
         return 0
@@ -437,7 +435,8 @@ verify_commit_range() {
         return 1
     fi
 
-    local num_commits=$(echo "$commits" | wc -l | tr -d ' ')
+    local num_commits
+    num_commits=$(echo "$commits" | wc -l | tr -d ' ')
     if [[ "$num_commits" -eq 1 ]]; then
         echo -e "${BLUE}Commit verification: ${GREEN}Last commit verified in $repo_name${RESET}" >&2
     else
@@ -454,13 +453,15 @@ verify_all_repo_commits() {
 
     (cd "$repo_path" || return 1
 
-    local all_commits=$(git rev-list HEAD 2>/dev/null || echo "")
+    local all_commits
+    all_commits=$(git rev-list HEAD 2>/dev/null || echo "")
     if [[ -z "$all_commits" ]]; then
         echo -e "${GRAY}No commits to verify in $repo_name${RESET}" >&2
         return 0
     fi
 
-    local total_commits=$(echo "$all_commits" | wc -l | tr -d ' ')
+    local total_commits
+    total_commits=$(echo "$all_commits" | wc -l | tr -d ' ')
     local failed_commits=()
     local count=0
 
@@ -541,8 +542,10 @@ export_nixos_label() {
     local use_dir="$CONFIG_DIR"
 
     if [[ -n "${CONFIG_DIR:-}" && -n "${NXCORE_DIR:-}" && -d "$CONFIG_DIR/.git" && -d "$NXCORE_DIR/.git" ]]; then
-        local config_timestamp=$(get_latest_commit_timestamp "$CONFIG_DIR")
-        local core_timestamp=$(get_latest_commit_timestamp "$NXCORE_DIR")
+        local config_timestamp
+        config_timestamp=$(get_latest_commit_timestamp "$CONFIG_DIR")
+        local core_timestamp
+        core_timestamp=$(get_latest_commit_timestamp "$NXCORE_DIR")
 
         if [[ "$core_timestamp" -gt "$config_timestamp" ]]; then
             use_dir="$NXCORE_DIR"
@@ -551,13 +554,17 @@ export_nixos_label() {
         use_dir="$NXCORE_DIR"
     fi
 
+    local commit_msg
     commit_msg=$(cd "$use_dir" && git log -1 --pretty=format:"%s" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9-]//g' | awk '{if(length($0)>25) print substr($0,1,24)"-"; else print $0}' | sed 's/--$/-/')
-    export NIXOS_LABEL="$(cd "$use_dir" && git log -1 --pretty=format:"$(git branch --show-current).%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
+    NIXOS_LABEL="$(cd "$use_dir" && git log -1 --pretty=format:"$(git branch --show-current).%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
+    export NIXOS_LABEL
 }
 
 detect_system_architecture() {
-    local uname_system="$(uname -s)"
-    local uname_machine="$(uname -m)"
+    local uname_system
+    uname_system="$(uname -s)"
+    local uname_machine
+    uname_machine="$(uname -m)"
 
     case "$uname_system" in
         Linux)
@@ -597,7 +604,7 @@ detect_system_architecture() {
 
 construct_profile_name() {
     local base_profile="$1"
-    local architecture="$(detect_system_architecture)"
+    local architecture="${2:-$(detect_system_architecture)}"
     echo "${base_profile}--${architecture}"
 }
 
@@ -616,7 +623,7 @@ retrieve_active_profile() {
     fi
 
     target_profile="$(construct_profile_name "$base_profile")"
-    local arch="${target_profile#$base_profile--}"
+    local arch="${target_profile#"$base_profile"--}"
     echo -e "${GREEN}Selected profile: ${YELLOW}$base_profile ${RED}(${arch})${RESET}\n" >&2
     echo "$target_profile"
 }
@@ -644,13 +651,16 @@ retrieve_active_profile_path() {
 }
 
 get_main_username() {
-    local hostname="$(hostname)"
-    local full_profile="$(construct_profile_name "$hostname")"
-    local profile_path="$(retrieve_active_profile_path 2>/dev/null | tail -1)"
+    local hostname
+    hostname="$(hostname)"
+    local full_profile
+    full_profile="$(construct_profile_name "$hostname")"
+    local profile_path
+    profile_path="$(retrieve_active_profile_path 2>/dev/null | tail -1)"
 
     if [[ -d "$CONFIG_DIR" ]]; then
         local username
-        username="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$profile_path" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+        username="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$profile_path" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
         if [[ -n "$username" && "$username" != "null" && "$username" != "\"null\"" ]]; then
             echo "${username//\"/}"
             return 0
@@ -662,10 +672,9 @@ get_main_username() {
 }
 
 copy_config_to_target() {
-    local USERNAME="$1"
-    local TARGET_HOME="$2"
-    local USER_ID="$3"
-    local GROUP_ID="$4"
+    local TARGET_HOME="$1"
+    local USER_ID="$2"
+    local GROUP_ID="$3"
 
     if [[ -z "$CONFIG_DIR" ]]; then
         echo -e "${RED}Error: CONFIG_DIR not set. Call check_config_directory first.${RESET}" >&2
@@ -691,7 +700,8 @@ configure_target_git_remotes() {
         exit 1
     fi
 
-    local PROFILE_PATH="$(retrieve_active_profile_path)"
+    local PROFILE_PATH
+    PROFILE_PATH="$(retrieve_active_profile_path)"
 
     local TARGET_CORE="/mnt$TARGET_HOME/.config/nx/nxcore"
     local TARGET_CONFIG="/mnt$TARGET_HOME/.config/nx/nxconfig"
@@ -699,15 +709,15 @@ configure_target_git_remotes() {
     local CORE_INSTALL_URL
     local CONFIG_INSTALL_URL
 
-    CORE_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
+    CORE_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CORE_INSTALL_URL" == "null" || "$CORE_INSTALL_URL" == "\"null\"" ]]; then
-        CORE_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
+        CORE_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
     fi
     CORE_INSTALL_URL="${CORE_INSTALL_URL//\"/}"
 
-    CONFIG_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
+    CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CONFIG_INSTALL_URL" == "null" || "$CONFIG_INSTALL_URL" == "\"null\"" ]]; then
-        CONFIG_INSTALL_URL="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.configRepoIsoUrl" 2>/dev/null)"
+        CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.configRepoIsoUrl" 2>/dev/null)"
     fi
     CONFIG_INSTALL_URL="${CONFIG_INSTALL_URL//\"/}"
 
@@ -715,7 +725,7 @@ configure_target_git_remotes() {
 
     if [[ -d "$TARGET_CORE/.git" && -n "$CORE_INSTALL_URL" ]]; then
         echo -e "Setting core repository remote to: ${WHITE}$CORE_INSTALL_URL${RESET}"
-        cd "$TARGET_CORE"
+        cd "$TARGET_CORE" || return 1
         if git remote get-url origin >/dev/null 2>&1; then
             git remote set-url origin "$CORE_INSTALL_URL"
         else
@@ -726,7 +736,7 @@ configure_target_git_remotes() {
 
     if [[ -d "$TARGET_CONFIG/.git" && -n "$CONFIG_INSTALL_URL" ]]; then
         echo -e "Setting config repository remote to: ${WHITE}$CONFIG_INSTALL_URL${RESET}"
-        cd "$TARGET_CONFIG"
+        cd "$TARGET_CONFIG" || return 1
         if git remote get-url origin >/dev/null 2>&1; then
             git remote set-url origin "$CONFIG_INSTALL_URL"
         else
@@ -740,7 +750,6 @@ configure_target_git_remotes() {
 
 setup_log_directory() {
     local log_dir="$1"
-    local real_user="${SUDO_USER:-$USER}"
     local real_uid="${SUDO_UID:-$(id -u)}"
     local real_gid="${SUDO_GID:-$(id -g)}"
 
@@ -748,7 +757,8 @@ setup_log_directory() {
 
     if [[ "$UID" == 0 && -n "${SUDO_USER:-}" ]]; then
         chown "$real_uid:$real_gid" "$log_dir"
-        local parent_dir="$(dirname "$log_dir")"
+        local parent_dir
+        parent_dir="$(dirname "$log_dir")"
         while [[ "$parent_dir" != "/" && "$parent_dir" != "." ]]; do
             if [[ "$(stat -c %u "$parent_dir")" == "0" ]]; then
                 chown "$real_uid:$real_gid" "$parent_dir"
@@ -766,7 +776,10 @@ rotate_logs() {
         return 0
     fi
 
-    local logs=($(find "$log_dir" -name "*.log" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | cut -d' ' -f2-))
+    local logs=()
+    while IFS= read -r log; do
+        [[ -n "$log" ]] && logs+=("$log")
+    done < <(find "$log_dir" -name "*.log" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | cut -d' ' -f2-)
     local log_count=${#logs[@]}
 
     if [[ $log_count -gt $max_logs ]]; then
@@ -780,13 +793,13 @@ rotate_logs() {
 create_log_filename() {
     local log_dir="$1"
     local prefix="$2"
-    local timestamp="$(date '+%Y%m%d_%H%M%S')"
+    local timestamp
+    timestamp="$(date '+%Y%m%d_%H%M%S')"
     echo "$log_dir/${prefix}_${timestamp}.log"
 }
 
 create_log_file() {
     local log_file="$1"
-    local real_user="${SUDO_USER:-$USER}"
     local real_uid="${SUDO_UID:-$(id -u)}"
     local real_gid="${SUDO_GID:-$(id -g)}"
 
@@ -985,6 +998,7 @@ diff_store_paths() {
     local old_file new_file
     old_file="$(mktemp)"
     new_file="$(mktemp)"
+    # shellcheck disable=SC2064
     trap "rm -f '$old_file' '$new_file'" RETURN
 
     nix path-info -r "$old" 2>/dev/null | while IFS= read -r path; do
@@ -1000,6 +1014,7 @@ diff_store_paths() {
     local old_names new_names
     old_names="$(mktemp)"
     new_names="$(mktemp)"
+    # shellcheck disable=SC2064
     trap "rm -f '$old_file' '$new_file' '$old_names' '$new_names'" RETURN
 
     cut -f2 "$old_file" | sort -u > "$old_names"
@@ -1007,6 +1022,7 @@ diff_store_paths() {
 
     local out_file
     out_file="$(mktemp)"
+    # shellcheck disable=SC2064
     trap "rm -f '$old_file' '$new_file' '$old_names' '$new_names' '$out_file'" RETURN
 
     while IFS= read -r name; do
@@ -1033,6 +1049,7 @@ diff_store_paths() {
 
     local changed_file
     changed_file="$(mktemp)"
+    # shellcheck disable=SC2064
     trap "rm -f '$old_file' '$new_file' '$old_names' '$new_names' '$out_file' '$changed_file'" RETURN
 
     while IFS= read -r name; do

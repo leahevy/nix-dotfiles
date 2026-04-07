@@ -6,7 +6,7 @@ cd "$SCRIPT_DIR/../../"
 REPO_ROOT="$(pwd)"
 
 export BOOTSTRAP_NEEDS_NIX=true
-source "$SCRIPT_DIR/../utils/pre-check.sh"
+source "$SCRIPT_DIR/../utils/common.sh"
 
 if [[ "$UID" == 0 ]]; then
   echo -e "${RED}Do NOT run as root!${RESET}" >&2
@@ -18,7 +18,9 @@ if [[ "$PWD" != "$HOME/.config/nx/nxcore" ]]; then
   exit 1
 fi
 
+# shellcheck disable=SC2012
 perm=$(ls -ld "$PWD" | awk '{print $1}')
+# shellcheck disable=SC2012
 owner=$(ls -ld "$PWD" | awk '{print $3}')
 
 if [[ ! -d $PWD || $perm != drwx------* || $owner != "$USER" ]]; then
@@ -98,7 +100,7 @@ while [[ $# -gt 0 ]]; do
       echo "  $0 --timeout 7200               # Build with 2-hour timeout"
       exit 0
       ;;
-    -*|--*)
+    -*)
       echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
       echo -e "Use ${WHITE}--help${RESET} for usage information"
       exit 1

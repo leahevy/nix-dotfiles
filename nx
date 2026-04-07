@@ -13,7 +13,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS_PATH="$SCRIPT_DIR/scripts/deployment"
 
-source "$SCRIPTS_PATH/../utils/pre-check.sh"
+source "$SCRIPTS_PATH/../utils/common.sh"
 check_config_directory "help" "deployment"
 
 if [[ -n "${NX_INSTALL_PATH:-}" && "$SCRIPT_DIR" != "$NX_INSTALL_PATH" ]]; then

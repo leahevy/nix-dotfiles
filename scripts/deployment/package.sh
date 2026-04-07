@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "package"
 check_deployment_conflicts "package"
 
@@ -42,7 +42,7 @@ HAS_ERRORS=false
 for PACKAGE in "${PACKAGES[@]}"; do
   EVAL_PATH="${NIXPKGS_INPUT}.legacyPackages.${ARCHITECTURE}.${PACKAGE}.drvPath"
 
-  if DRV_PATH=$(nix eval ".#${EVAL_PATH}" --raw 2>/dev/null); then
+  if DRV_PATH=$(nix eval --impure ".#${EVAL_PATH}" --raw 2>/dev/null); then
     if STORE_PATH=$(nix-store -q --outputs "$DRV_PATH" 2>/dev/null); then
       echo "$STORE_PATH"
     else

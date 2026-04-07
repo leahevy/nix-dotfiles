@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "build-test"
 
 PROFILE="$(retrieve_active_profile)"
@@ -16,6 +16,7 @@ if [[ "${RAW_LOG:-false}" == "true" ]]; then
 fi
 
 if [[ -e /etc/NIXOS ]]; then
+  # shellcheck disable=SC2086
   NEW_SYSTEM=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN $LOG_FORMAT ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
 
   if [[ "${BUILD_DIFF:-false}" == "true" ]]; then
@@ -28,6 +29,7 @@ if [[ -e /etc/NIXOS ]]; then
     nvd --color=always --version-highlight=xmas diff /run/current-system "$NEW_SYSTEM"
   fi
 else
+  # shellcheck disable=SC2086
   NEW_HOME=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN $LOG_FORMAT ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
 
   if [[ "${BUILD_DIFF:-false}" == "true" ]]; then

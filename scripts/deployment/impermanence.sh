@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "impermanence"
 
 PROFILE_PATH="$(retrieve_active_profile_path)"
@@ -26,7 +26,6 @@ check_impermanence() {
 
 setup_impermanence_logging() {
   local check_type="$1"
-  local real_user="${SUDO_USER:-$USER}"
   local real_home
 
   if [[ -n "${SUDO_USER:-}" ]]; then
@@ -93,7 +92,6 @@ subcommand_check() {
 
   local log_file
   log_file="$(setup_impermanence_logging "$check_type")"
-  local real_user="${SUDO_USER:-$USER}"
 
   log_and_display() {
     echo "$@" | tee -a "$log_file"
@@ -125,7 +123,7 @@ subcommand_check() {
   is_item_filtered() {
     local item_path="$1"
     local item_rel="${item_path#/}"
-    local item_home_rel="${item_path#$user_home/}"
+    local item_home_rel="${item_path#"$user_home"/}"
 
     if echo "$system_dirs $system_files $user_dirs $user_files" | grep -Fq "$item_rel" || echo "$user_dirs $user_files" | grep -Fq "$item_home_rel" || echo "$mount_output" | grep -Fq " on $item_path type "; then
       return 0
@@ -196,7 +194,7 @@ subcommand_check() {
   local user_home="/home/$username"
   if [[ -d "$CONFIG_DIR" ]]; then
     full_profile="$(construct_profile_name "$hostname")"
-    home_path="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
+    home_path="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.users.users.$username.home" 2>/dev/null || echo "null")"
     if [[ -n "$home_path" && "$home_path" != "null" && "$home_path" != "\"null\"" ]]; then
       user_home="${home_path//\"/}"
@@ -217,21 +215,22 @@ subcommand_check() {
   fi
 
   if [[ -d "$CONFIG_DIR" ]]; then
-    local full_profile="$(construct_profile_name "$hostname")"
+    local full_profile
+    full_profile="$(construct_profile_name "$hostname")"
 
-    system_dirs="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
+    system_dirs="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".directories" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
 
-    system_files="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
+    system_files="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".files" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
 
-    user_dirs="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
+    user_dirs="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".directories" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
 
-    user_files="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
+    user_files="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
       ".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".files" 2>/dev/null \
       | jq -r '.[]?' 2>/dev/null || echo "")"
   fi
@@ -290,7 +289,7 @@ subcommand_check() {
 
   is_common_parent_path() {
     local path="$1"
-    local path_rel="${path#$user_home/}"
+    local path_rel="${path#"$user_home"/}"
 
     case "$path_rel" in
       .local|.cache|.config|.local/share|.local/state)
@@ -371,7 +370,7 @@ subcommand_check() {
     for item in "${ephemeral_items[@]}"; do
       local display_item="$item"
       if [[ "$show_home_only" == "true" && "$item" =~ ^$user_home/ ]]; then
-        display_item="${item#$user_home/}"
+        display_item="${item#"$user_home"/}"
       fi
 
       if [[ -d "$item" ]]; then
@@ -399,9 +398,11 @@ subcommand_check() {
     log_and_display "Add missing files and folders to /persist:"
     log_and_display ""
     log_and_display " For home modules:"
+    # shellcheck disable=SC2016
     log_and_display '  home.persistence."${self.persist}" = { directories = [...], files = [...] };'
     log_and_display ""
     log_and_display " For system modules:"
+    # shellcheck disable=SC2016
     log_and_display '  environment.persistence."${self.persist}" = { directories = [...], files = [...] };'
     log_and_display ""
     log_and_display " Note: Files may not work depending on the program."
@@ -466,9 +467,7 @@ subcommand_diff() {
     check_type="system"
   fi
 
-  local real_user="${SUDO_USER:-$USER}"
   local real_home
-
   if [[ -n "${SUDO_USER:-}" ]]; then
     real_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
   else

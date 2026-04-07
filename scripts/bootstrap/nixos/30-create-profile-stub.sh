@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../" && pwd)"
 
 export BOOTSTRAP_NEEDS_NIX=true
-source "$REPO_ROOT/scripts/utils/pre-check.sh"
+source "$REPO_ROOT/scripts/utils/common.sh"
 
 if [[ ! -e /etc/NIXOS ]]; then
   echo -e "${RED}Did not detect NixOS -> aborting installation...${RESET}" >&2
@@ -83,6 +83,7 @@ if [[ "$OVERWRITE_PROFILE" == "true" ]]; then
 
   if [[ "$NO_ROOT" == "true" ]]; then
     echo -e "${GREEN}Running: ${WHITE}nixos-generate-config --show-hardware-config${RESET}"
+    # shellcheck disable=SC2024
     sudo nixos-generate-config --show-hardware-config > "$HARDWARE_CONFIG"
   else
     echo -e "${GREEN}Running: ${WHITE}nixos-generate-config --show-hardware-config --root /mnt${RESET}"
@@ -90,6 +91,7 @@ if [[ "$OVERWRITE_PROFILE" == "true" ]]; then
       echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted. Use ${WHITE}--no-root${RED} to generate config for current system.${RESET}" >&2
       exit 1
     fi
+    # shellcheck disable=SC2024
     sudo nixos-generate-config --show-hardware-config --root /mnt > "$HARDWARE_CONFIG"
   fi
 

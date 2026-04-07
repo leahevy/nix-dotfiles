@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../utils/pre-check.sh"
+source "$SCRIPT_DIR/../../utils/common.sh"
 
 if [ ! -e /etc/NIXOS ]; then
   echo -e "${RED}Error: This script must be run on a NixOS live system${RESET}" >&2

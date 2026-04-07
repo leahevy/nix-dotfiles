@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 simple_deployment_script_setup "brew"
 
 ensure_darwin_only "brew"

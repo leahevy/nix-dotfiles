@@ -181,6 +181,15 @@
         group = "evaluation";
         options = {
           home = option "Evaluate in home-manager context";
+          profile = optionWith "Use specific profile" "profile" "string";
+          nixos = option "Force NixOS mode";
+          standalone = option "Force standalone mode";
+          arch = optionWithEnum "Use specific architecture" "architecture" [
+            "x86_64-linux"
+            "aarch64-linux"
+            "x86_64-darwin"
+            "aarch64-darwin"
+          ];
         };
         arguments = [ (arg "path" "Nix eval path" "string") ];
       };
@@ -247,6 +256,12 @@
               profile = optionWith "Use specific profile" "profile" "string";
               nixos = option "Force NixOS mode";
               standalone = option "Force standalone mode";
+              arch = optionWithEnum "Use specific architecture" "architecture" [
+                "x86_64-linux"
+                "aarch64-linux"
+                "x86_64-darwin"
+                "aarch64-darwin"
+              ];
             };
           };
           config = {

@@ -1,9 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "update"
 check_deployment_conflicts "update"
+
+matched_tp_inputs=()
+if [[ $# -eq 0 ]]; then
+    matched_tp_inputs=("${THIRD_PARTY_INPUTS[@]}")
+else
+    for input in "$@"; do
+        for tp_input in "${THIRD_PARTY_INPUTS[@]}"; do
+            if [[ "$input" == "$tp_input" ]]; then
+                matched_tp_inputs+=("$tp_input")
+            fi
+        done
+    done
+fi
+
+if [[ ${#matched_tp_inputs[@]} -gt 0 ]]; then
+    echo -e "${YELLOW}This update includes third-party inputs: ${WHITE}${matched_tp_inputs[*]}${RESET}"
+    echo -e "${YELLOW}These require manual review of upstream changes before updating.${RESET}"
+    echo
+    echo -e -n "${CYAN}Have you reviewed the changes in these repositories? [${GREEN}y${CYAN}/${RED}N${CYAN}]${RESET} "
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        echo -e "${RED}Aborting update.${RESET}"
+        exit 1
+    fi
+fi
 
 old_flake_hash=$(sha256sum flake.lock | cut -d' ' -f1)
 

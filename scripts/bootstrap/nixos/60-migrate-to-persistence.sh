@@ -7,7 +7,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../../" && pwd)"
 cd "$REPO_ROOT"
 
 export BOOTSTRAP_NEEDS_NIX=true
-source "$REPO_ROOT/scripts/utils/pre-check.sh"
+source "$REPO_ROOT/scripts/utils/common.sh"
 
 if [[ ! -f /etc/NIXOS ]]; then
   echo -e "${RED}Did not detect NixOS -> aborting migration...${RESET}" >&2
@@ -60,7 +60,7 @@ FULL_PROFILE="$(construct_profile_name "$HOSTNAME")"
 
 PROFILE_PATH="$(retrieve_active_profile_path)"
 
-IMPERMANENCE_ENABLED="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
+IMPERMANENCE_ENABLED="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
 
 if [[ "$IMPERMANENCE_ENABLED" != "true" ]]; then
   echo -e "Info: Impermanence is disabled for ${WHITE}$HOSTNAME${RESET}"
@@ -76,15 +76,15 @@ if [[ ! -e "/mnt/etc/NIXOS" && ! -e "/mnt/persist/etc/NIXOS" ]]; then
   exit 1
 fi
 
-USERNAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
+USERNAME="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
 if [[ -z "$USERNAME" || "$USERNAME" == "null" || "$USERNAME" == "\"null\"" ]]; then
   echo -e "${RED}Error: Could not determine main user from host configuration for ${WHITE}$HOSTNAME${RESET}" >&2
   exit 1
 fi
 USERNAME="${USERNAME//\"/}"
 
-USER_UID="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.uid")"
-GROUP_NAME="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.group")"
+USER_UID="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.uid")"
+GROUP_NAME="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.group")"
 
 if [[ -z "$USER_UID" || "$USER_UID" == "null" || -z "$GROUP_NAME" || "$GROUP_NAME" == "null" ]]; then
   echo -e "${RED}Error: Failed to extract valid user information for ${WHITE}$USERNAME${RESET}" >&2
@@ -94,7 +94,7 @@ fi
 USER_UID="${USER_UID//\"/}"
 GROUP_NAME="${GROUP_NAME//\"/}"
 
-USER_GID="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.groups.$GROUP_NAME.gid")"
+USER_GID="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#nixosConfigurations.$FULL_PROFILE.config.users.groups.$GROUP_NAME.gid")"
 if [[ -z "$USER_GID" || "$USER_GID" == "null" ]]; then
   echo -e "${RED}Error: Failed to extract valid group GID for group ${WHITE}$GROUP_NAME${RESET}" >&2
   exit 1
@@ -193,20 +193,20 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   }
   
   echo -e "${WHITE}Querying system persistence requirements...${RESET}"
-  SYSTEM_PERSIST_DIRS="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
+  SYSTEM_PERSIST_DIRS="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
     ".#nixosConfigurations.$FULL_PROFILE.config.environment.persistence.\"$PERSIST_SYSTEM\".directories" 2>/dev/null \
     | jq -r '.[] | if type == "string" then . else .directory end' 2>/dev/null || echo "")"
   
-  SYSTEM_PERSIST_FILES="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
+  SYSTEM_PERSIST_FILES="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
     ".#nixosConfigurations.$FULL_PROFILE.config.environment.persistence.\"$PERSIST_SYSTEM\".files" 2>/dev/null \
     | jq -r '.[] | if type == "string" then . else .file end' 2>/dev/null || echo "")"
   
   echo -e "Querying user persistence requirements for ${WHITE}$USERNAME${RESET}..."
-  USER_PERSIST_DIRS="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
+  USER_PERSIST_DIRS="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
     ".#nixosConfigurations.$FULL_PROFILE.config.home-manager.users.$USERNAME.home.persistence.\"$PERSIST_USER_FULL\".directories" 2>/dev/null \
     | jq -r '.[] | if type == "string" then . else .directory end' 2>/dev/null || echo "")"
   
-  USER_PERSIST_FILES="$(nix eval --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
+  USER_PERSIST_FILES="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" \
     ".#nixosConfigurations.$FULL_PROFILE.config.home-manager.users.$USERNAME.home.persistence.\"$PERSIST_USER_FULL\".files" 2>/dev/null \
     | jq -r '.[] | if type == "string" then . else .file end' 2>/dev/null || echo "")"
   

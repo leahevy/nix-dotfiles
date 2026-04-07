@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "format"
 
 echo -e "${GREEN}Formatting main repository ${WHITE}(.config/nx/nxcore)${RESET}..."

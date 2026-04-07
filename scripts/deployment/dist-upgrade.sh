@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/../utils/pre-check.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "dist-upgrade"
 check_deployment_conflicts "dist-upgrade"
 
@@ -56,7 +56,7 @@ fi
 
 echo
 echo -e "Updating flake inputs for ${WHITE}nxcore${RESET}..."
-nix flake update nixpkgs home-manager stylix nixvim nix-darwin nixpkgs-unstable || true
+nix flake update "${AUTO_UPDATE_INPUTS[@]}" || true
 
 echo
 echo -e "Updating flake inputs for ${WHITE}src/nxconfig${RESET}..."
