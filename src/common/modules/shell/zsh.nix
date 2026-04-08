@@ -24,10 +24,23 @@ args@{
           initContent = ''
             PROMPT='%F{green}%*%f %F{blue}%~%f $ '
 
-            if [[ -f ${pkgs.fish}/bin/fish ]]; then
-              if [[ $(${pkgs.procps}/bin/ps -o command= -p "$PPID" | awk '{print $1}') != "fish" ]]; then
-                [[ -o login ]] && LOGIN_OPTION="--login" || LOGIN_OPTION=""
-                exec ${pkgs.fish}/bin/fish $LOGIN_OPTION
+            if [[ -n ''${__SHELL_BOOTSTRAPPED:-} ]]; then
+              return
+            fi
+
+            [[ -o login ]] && LOGIN_OPTION="--login" || LOGIN_OPTION=""
+
+            if [[ -x ${pkgs.fish}/bin/fish && -z ''${FISH_VERSION:-} ]]; then
+              if ${pkgs.fish}/bin/fish $LOGIN_OPTION --command 'exit 0' >/dev/null 2>&1; then
+                __SHELL_BOOTSTRAPPED=1 exec ${pkgs.fish}/bin/fish $LOGIN_OPTION
+              fi
+            fi
+
+            if [[ -n ''${ZSH_VERSION:-} ]]; then
+              if [[ ''${ZSH_NAME:-} != "zsh" || ''${ZSH_ARGZERO:-} != "${pkgs.zsh}/bin/zsh" ]]; then
+                if [[ -x ${pkgs.zsh}/bin/zsh && ''${ZSH_ARGZERO:-} != "${pkgs.zsh}/bin/zsh" ]]; then
+                  __SHELL_BOOTSTRAPPED=1 exec ${pkgs.zsh}/bin/zsh $LOGIN_OPTION
+                fi
               fi
             fi
           '';
