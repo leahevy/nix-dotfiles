@@ -86,7 +86,7 @@
           "flake-parts"
         ],
         "nixpkgs": [
-          "nixpkgs"
+          "nixpkgs-darwin"
         ],
         "systems": [
           "nix-systems"
@@ -460,7 +460,7 @@
           "flake-utils"
         ],
         "nixpkgs": [
-          "nixpkgs"
+          "nixpkgs-darwin"
         ],
         "systems": [
           "nix-systems-darwin"
@@ -568,7 +568,7 @@
           "home-manager"
         ],
         "nixpkgs": [
-          "nixpkgs"
+          "nixpkgs-darwin"
         ]
       },
       "locked": {
@@ -659,6 +659,22 @@
       "original": {
         "owner": "NixOS",
         "ref": "nixos-25.11",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs-darwin": {
+      "locked": {
+        "lastModified": 1775606036,
+        "narHash": "sha256-bTNdwrVuX3+0Ierq+iWBHBT1wRorkyGL7MvWHwBgKyw=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "4dd7d46ccff57ff2373b9999ccff381f0f95ad6f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-25.11-darwin",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -830,6 +846,7 @@
         "nix-systems-linux": "nix-systems-linux",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs",
+        "nixpkgs-darwin": "nixpkgs-darwin",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",
         "overlays": "overlays",
@@ -1015,7 +1032,7 @@
     "treefmt-nix": {
       "inputs": {
         "nixpkgs": [
-          "nixpkgs"
+          "nixpkgs-darwin"
         ]
       },
       "locked": {

@@ -15,21 +15,22 @@
     - [ ] 4a. packages that arrived in nixpkgs as `vimPlugins.*` at same or later version
     - [ ] 4b. supported nixvim plugins, e.g. `programs.nixvim.plugins.*`
 - [ ] 5. Search for `fetchFromGitHub` in the repository to check if any derivations did arrive in `nixpkgs`
-- [ ] 6. Fix evaluation warnings until configuration builds without warnings (use `NIX_ABORT_ON_WARN=true` with build command to find warning sources)
-- [ ] 7. Build with `nx build --diff` to see the changes
-- [ ] 8. Commit everything with `nx commit`
-- [ ] 9. Create pre-boot impermanence logs with `nx impermanence check --home` and `nx impermanence check --system`
-- [ ] 10. Boot into the new config via `nx boot` and `reboot`
+- [ ] 6. Consider removing packages specified as unstable in both `variables.nix` files
+- [ ] 7. Fix evaluation warnings until configuration builds without warnings (use `NIX_ABORT_ON_WARN=true` with build command to find warning sources)
+- [ ] 8. Build with `nx build --diff` to see the changes
+- [ ] 9. Commit everything with `nx commit`
+- [ ] 10. Create pre-boot impermanence logs with `nx impermanence check --home` and `nx impermanence check --system`
+- [ ] 11. Boot into the new config via `nx boot` and `reboot`
 
 ## Post-Reboot Verification
 
-- [ ] 11. Check for service failures: `systemctl --failed` and `systemctl --user --failed`
-- [ ] 12. Test that the new config can build our nx configuration: `nx sync`
-- [ ] 13. Create post-boot impermanence logs with `nx impermanence check --home` and `nx impermanence check --system`
-- [ ] 14. Check impermanence diffs with `nx impermanence diff --home` and `nx impermanence diff --system`
-- [ ] 15. Push the feature branches: `nx push`
-- [ ] 16. Change back to the **main** branch: `nx switch-branch main`
-- [ ] 17. Tag main branch before the upgrade `git tag -a nixos-<TARGET_VERSION>-pre-upgrade -m "NixOS <OLD_VERSION> before upgrading to <TARGET_VERSION>"` and push with `git push --tags`
-- [ ] 18. Merge the feature branches into main
-- [ ] 19. Push main branch: `nx push`
-- [ ] 20. Tag with `git tag -a nixos-<TARGET_VERSION> -m "NixOS <TARGET_VERSION>"` and push with `git push --tags`
+- [ ] 12. Check for service failures: `systemctl --failed` and `systemctl --user --failed`
+- [ ] 13. Test that the new config can build our nx configuration: `nx sync`
+- [ ] 14. Create post-boot impermanence logs with `nx impermanence check --home` and `nx impermanence check --system`
+- [ ] 15. Check impermanence diffs with `nx impermanence diff --home` and `nx impermanence diff --system`
+- [ ] 16. Push the feature branches: `nx push`
+- [ ] 17. Change back to the **main** branch: `nx switch-branch main`
+- [ ] 18. Tag main branch before the upgrade `git tag -a nixos-<TARGET_VERSION>-pre-upgrade -m "NixOS <OLD_VERSION> before upgrading to <TARGET_VERSION>"` and push with `git push --tags`
+- [ ] 19. Merge the feature branches into main
+- [ ] 20. Push main branch: `nx push`
+- [ ] 21. Tag with `git tag -a nixos-<TARGET_VERSION> -m "NixOS <TARGET_VERSION>"` and push with `git push --tags`

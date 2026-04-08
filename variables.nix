@@ -20,6 +20,10 @@
 
   httpConnections = 15;
 
+  unstablePackages = [ ];
+  unstableLinuxPackages = [ ];
+  unstableDarwinPackages = [ ];
+
   nx.config = {
     minEnabledModules = 20;
     security = {

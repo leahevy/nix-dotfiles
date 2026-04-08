@@ -33,19 +33,48 @@ let
       extraOverlays ? [ ],
       nixpkgs ? inputs.nixpkgs,
       nixpkgs-unstable ? inputs.nixpkgs-unstable,
+      nixpkgs-darwin ? inputs.nixpkgs-darwin,
     }:
     let
       moduleOverlays = funcs.collectModuleOverlays system;
       overlays = moduleOverlays ++ extraOverlays;
 
-      pkgs = import nixpkgs {
-        inherit system overlays;
-        config.allowUnfreePredicate = pkg: true;
-      };
       pkgs-unstable = import nixpkgs-unstable {
         inherit system overlays;
         config.allowUnfreePredicate = pkg: true;
       };
+
+      unstablePackages =
+        variables.unstablePackages
+        ++ lib.optionals (helpers.isLinuxArch system) variables.unstableLinuxPackages
+        ++ lib.optionals (helpers.isDarwinArch system) variables.unstableDarwinPackages;
+
+      unstableOverrides = builtins.listToAttrs (
+        map (name: {
+          inherit name;
+          value = pkgs-unstable.${name};
+        }) unstablePackages
+      );
+
+      pkgs =
+        if helpers.isLinuxArch system then
+          import nixpkgs {
+            inherit system;
+            overlays = overlays ++ [
+              (final: prev: unstableOverrides)
+            ];
+            config.allowUnfreePredicate = pkg: true;
+          }
+        else if helpers.isDarwinArch system then
+          import nixpkgs-darwin {
+            inherit system;
+            overlays = overlays ++ [
+              (final: prev: unstableOverrides)
+            ];
+            config.allowUnfreePredicate = pkg: true;
+          }
+        else
+          throw "builder: cannot determine system architecture!";
     in
     {
       inherit pkgs pkgs-unstable;

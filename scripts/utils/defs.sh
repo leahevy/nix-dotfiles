@@ -12,6 +12,7 @@ export RESET='\033[0m'
 
 export AUTO_UPDATE_INPUTS=(
     "nixpkgs"
+    "nixpkgs-darwin"
     "home-manager"
     "stylix"
     "nixvim"

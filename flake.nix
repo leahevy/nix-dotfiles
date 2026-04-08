@@ -132,6 +132,10 @@
       url = "github:NixOS/nixpkgs/nixos-25.11";
     };
 
+    nixpkgs-darwin = {
+      url = "github:NixOS/nixpkgs/nixpkgs-25.11-darwin";
+    };
+
     nixpkgs-unstable = {
       url = "github:NixOS/nixpkgs/nixos-unstable";
     };
@@ -172,12 +176,12 @@
 
     mac-app-util = {
       url = "github:hraban/mac-app-util";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nixpkgs-darwin";
       inputs.systems.follows = "nix-systems-darwin";
       inputs.flake-utils.follows = "flake-utils";
       inputs.flake-compat.follows = "flake-compat";
-      inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
-      inputs.cl-nix-lite.inputs.nixpkgs.follows = "nixpkgs";
+      inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs-darwin";
+      inputs.cl-nix-lite.inputs.nixpkgs.follows = "nixpkgs-darwin";
       inputs.cl-nix-lite.inputs.treefmt-nix.follows = "mac-app-util/treefmt-nix";
       inputs.cl-nix-lite.inputs.flake-parts.follows = "flake-parts";
       inputs.cl-nix-lite.inputs.systems.follows = "nix-systems";
@@ -185,7 +189,7 @@
 
     nix-plist-manager = {
       url = "github:SushyDev/nix-plist-manager/main";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nixpkgs-darwin";
       inputs.home-manager.follows = "home-manager";
     };
   };
