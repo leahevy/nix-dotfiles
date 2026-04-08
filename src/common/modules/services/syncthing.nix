@@ -51,12 +51,6 @@ args@{
     home =
       config:
       let
-        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
-        terminal = config.nx.preferences.desktop.programs.additionalTerminal;
-        terminalShellCmd =
-          cmd:
-          lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
-
         devicesAttr = builtins.listToAttrs (
           map (d: {
             name = d.name;
@@ -1082,8 +1076,18 @@ args@{
             RemainAfterExit = true;
           };
         };
+      };
 
-        programs.niri = lib.mkIf isNiriEnabled {
+    ifEnabled.linux.desktop.niri.home =
+      config:
+      let
+        terminal = config.nx.preferences.desktop.programs.additionalTerminal;
+        terminalShellCmd =
+          cmd:
+          lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
+      in
+      {
+        programs.niri = {
           settings = {
             binds = with config.lib.niri.actions; {
               "Mod+Ctrl+Alt+S" = {

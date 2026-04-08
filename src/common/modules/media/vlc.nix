@@ -15,20 +15,18 @@ args@{
   input = "common";
 
   on = {
-    init =
-      config:
-      lib.mkIf self.isEnabled {
-        nx.preferences.desktop.programs.videoPlayer = {
-          name = "vlc";
-          package = pkgs.vlc;
-          openCommand = [ "vlc" ];
-          openFileCommand = path: [
-            "vlc"
-            path
-          ];
-          desktopFile = "vlc.desktop";
-        };
+    enabled = config: {
+      nx.preferences.desktop.programs.videoPlayer = {
+        name = "vlc";
+        package = pkgs.vlc;
+        openCommand = [ "vlc" ];
+        openFileCommand = path: [
+          "vlc"
+          path
+        ];
+        desktopFile = "vlc.desktop";
       };
+    };
 
     home = config: {
       home.packages = with pkgs; [

@@ -51,7 +51,6 @@ args@{
     home =
       config:
       let
-        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;
         terminalRunWithClass =
           class: cmd:
@@ -85,33 +84,35 @@ args@{
           executable = true;
         };
 
-        programs.niri = lib.mkIf isNiriEnabled {
-          settings = {
-            binds = with config.lib.niri.actions; {
-              "Mod+Ctrl+Alt+M" = {
-                action = spawn-sh "niri-scratchpad --app-id org.nx.yazi --all-windows --spawn nx-yazi-term";
-                hotkey-overlay.title = "Apps:File manager";
-              };
-            };
-
-            window-rules = [
-              {
-                matches = [ { app-id = "org.nx.yazi"; } ];
-                min-width = 1200;
-                min-height = 800;
-                open-on-workspace = "scratch";
-                open-floating = true;
-                open-focused = false;
-              }
-            ];
-          };
-        };
-
         home.persistence."${self.persist}" = {
           directories = [
             ".local/state/yazi"
           ];
         };
       };
+
+    ifEnabled.linux.desktop.niri.home = config: {
+      programs.niri = {
+        settings = {
+          binds = with config.lib.niri.actions; {
+            "Mod+Ctrl+Alt+M" = {
+              action = spawn-sh "niri-scratchpad --app-id org.nx.yazi --all-windows --spawn nx-yazi-term";
+              hotkey-overlay.title = "Apps:File manager";
+            };
+          };
+
+          window-rules = [
+            {
+              matches = [ { app-id = "org.nx.yazi"; } ];
+              min-width = 1200;
+              min-height = 800;
+              open-on-workspace = "scratch";
+              open-floating = true;
+              open-focused = false;
+            }
+          ];
+        };
+      };
+    };
   };
 }

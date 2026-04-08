@@ -437,20 +437,18 @@ args@{
   };
 
   on = {
-    init =
-      config:
-      lib.mkIf self.isEnabled {
-        nx.preferences.desktop.programs.webBrowser = {
-          name = "qutebrowser";
-          package = null;
-          openCommand = [ "qutebrowser" ];
-          openFileCommand = path: [
-            "qutebrowser"
-            path
-          ];
-          desktopFile = "org.qutebrowser.qutebrowser.desktop";
-        };
+    enabled = config: {
+      nx.preferences.desktop.programs.webBrowser = {
+        name = "qutebrowser";
+        package = null;
+        openCommand = [ "qutebrowser" ];
+        openFileCommand = path: [
+          "qutebrowser"
+          path
+        ];
+        desktopFile = "org.qutebrowser.qutebrowser.desktop";
       };
+    };
 
     home =
       config:

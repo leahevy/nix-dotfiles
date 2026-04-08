@@ -24,7 +24,6 @@ args@{
     home =
       config:
       let
-        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;
         terminalRunWithClass =
           class: cmd:
@@ -59,28 +58,31 @@ args@{
           '';
           executable = true;
         };
+      };
 
-        programs.niri = lib.mkIf isNiriEnabled {
-          settings = {
-            binds = with config.lib.niri.actions; {
-              "Mod+Ctrl+Alt+H" = {
-                action = spawn-sh "niri-scratchpad --app-id org.nx.nix-search-tv --all-windows --spawn nstv-term";
-                hotkey-overlay.title = "System:Search Nix Packages";
-              };
+    ifEnabled.linux.desktop.niri.home = config: {
+      programs.niri = {
+        settings = {
+          binds = with config.lib.niri.actions; {
+            "Mod+Ctrl+Alt+H" = {
+              action = spawn-sh "niri-scratchpad --app-id org.nx.nix-search-tv --all-windows --spawn nstv-term";
+              hotkey-overlay.title = "System:Search Nix Packages";
             };
-
-            window-rules = [
-              {
-                matches = [ { app-id = "org.nx.nix-search-tv"; } ];
-                min-width = 800;
-                min-height = 800;
-                open-on-workspace = "scratch";
-                open-floating = true;
-                open-focused = false;
-              }
-            ];
           };
+
+          window-rules = [
+            {
+              matches = [ { app-id = "org.nx.nix-search-tv"; } ];
+              min-width = 800;
+              min-height = 800;
+              open-on-workspace = "scratch";
+              open-floating = true;
+              open-focused = false;
+            }
+          ];
         };
       };
+
+    };
   };
 }

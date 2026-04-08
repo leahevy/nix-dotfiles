@@ -32,12 +32,33 @@ args@{
   };
 
   on = {
+    ifEnabled.linux.desktop.niri.home = config: {
+      programs.niri = {
+        settings = {
+          window-rules = [
+            {
+              matches = [
+                {
+                  app-id = "com.valvesoftware.Steam";
+                  title = "^notificationtoasts_\\d+_desktop$";
+                }
+              ];
+              default-floating-position = {
+                x = 10;
+                y = 10;
+                relative-to = "bottom-right";
+              };
+            }
+          ];
+        };
+      };
+    };
+
     home =
       config:
       let
         dataDir = "${self.user.home}/.local/share/nx-flatpack";
         packageFile = "${dataDir}/${self.settings.package}.flatpack";
-        isNiriEnabled = self.isLinux && self.linux.isModuleEnabled "desktop.niri";
         withWayland = self.settings.withWayland;
         withDataDir = self.settings.withDataDir;
       in
@@ -48,26 +69,6 @@ args@{
 
         home.shellAliases = {
           "${self.settings.appName}" = "flatpak run ${self.settings.package}";
-        };
-
-        programs.niri = lib.mkIf isNiriEnabled {
-          settings = {
-            window-rules = [
-              {
-                matches = [
-                  {
-                    app-id = "com.valvesoftware.Steam";
-                    title = "^notificationtoasts_\\d+_desktop$";
-                  }
-                ];
-                default-floating-position = {
-                  x = 10;
-                  y = 10;
-                  relative-to = "bottom-right";
-                };
-              }
-            ];
-          };
         };
 
         home.file."${packageFile}".text = ''

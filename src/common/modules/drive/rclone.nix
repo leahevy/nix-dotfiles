@@ -40,7 +40,6 @@ args@{
       let
         hasRemotes = self.settings.remotes != { };
         remoteNames = lib.attrNames self.settings.remotes;
-        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
         luksDataDriveEnabled = self.isLinux && self.linux.isModuleEnabled "storage.luks-data-drive";
 
         remoteConfigs = lib.mapAttrs (name: cfg: {
@@ -1237,44 +1236,46 @@ args@{
           ]
           ++ localPaths;
         };
+      };
 
-        programs.niri = lib.mkIf isNiriEnabled {
-          settings = {
-            binds = with config.lib.niri.actions; {
-              "Mod+Shift+E" = {
-                action = spawn [
-                  "${pkgs.bash}/bin/bash"
-                  "-c"
-                  ''
-                    STATE=$(${pkgs.systemd}/bin/systemctl --user show -p ActiveState --value rclone-bisync-manual.service)
-                    if [[ "$STATE" == "activating" ]]; then
-                      ${self.notifyUser {
-                        inherit pkgs;
-                        title = "Rclone";
-                        body = "Manual sync already running";
-                        icon = "emblem-synchronizing";
-                        urgency = "normal";
-                        validation = { inherit config; };
-                      }}
-                    else
-                      ${self.notifyUser {
-                        inherit pkgs;
-                        title = "Rclone";
-                        body = "Starting manual sync...";
-                        icon = "emblem-synchronizing";
-                        urgency = "normal";
-                        validation = { inherit config; };
-                      }}
+    ifEnabled.linux.desktop.niri.home = config: {
+      programs.niri = {
+        settings = {
+          binds = with config.lib.niri.actions; {
+            "Mod+Shift+E" = {
+              action = spawn [
+                "${pkgs.bash}/bin/bash"
+                "-c"
+                ''
+                  STATE=$(${pkgs.systemd}/bin/systemctl --user show -p ActiveState --value rclone-bisync-manual.service)
+                  if [[ "$STATE" == "activating" ]]; then
+                    ${self.notifyUser {
+                      inherit pkgs;
+                      title = "Rclone";
+                      body = "Manual sync already running";
+                      icon = "emblem-synchronizing";
+                      urgency = "normal";
+                      validation = { inherit config; };
+                    }}
+                  else
+                    ${self.notifyUser {
+                      inherit pkgs;
+                      title = "Rclone";
+                      body = "Starting manual sync...";
+                      icon = "emblem-synchronizing";
+                      urgency = "normal";
+                      validation = { inherit config; };
+                    }}
 
-                      ${pkgs.systemd}/bin/systemctl --user start rclone-bisync-manual.service
-                    fi
-                  ''
-                ];
-                hotkey-overlay.title = "Apps:Rclone Manual Sync";
-              };
+                    ${pkgs.systemd}/bin/systemctl --user start rclone-bisync-manual.service
+                  fi
+                ''
+              ];
+              hotkey-overlay.title = "Apps:Rclone Manual Sync";
             };
           };
         };
       };
+    };
   };
 }

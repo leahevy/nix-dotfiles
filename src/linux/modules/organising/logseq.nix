@@ -21,47 +21,44 @@ args@{
       ];
     };
 
-    home =
-      config:
-      let
-        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
-      in
-      {
-        home.packages = with pkgs; [
-          logseq
-        ];
-
-        programs.niri = lib.mkIf isNiriEnabled {
-          settings = {
-            binds = with config.lib.niri.actions; {
-              "Mod+Ctrl+Alt+J" = {
-                action = spawn-sh "niri-scratchpad --app-id Logseq --all-windows --spawn logseq";
-                hotkey-overlay.title = "Apps:Logseq";
-              };
+    ifEnabled.linux.desktop.niri.home = config: {
+      programs.niri = {
+        settings = {
+          binds = with config.lib.niri.actions; {
+            "Mod+Ctrl+Alt+J" = {
+              action = spawn-sh "niri-scratchpad --app-id Logseq --all-windows --spawn logseq";
+              hotkey-overlay.title = "Apps:Logseq";
             };
-
-            window-rules = [
-              {
-                matches = [
-                  {
-                    app-id = "Logseq";
-                  }
-                ];
-                open-on-workspace = "scratch";
-                open-floating = true;
-                open-focused = false;
-                block-out-from = "screencast";
-              }
-            ];
           };
-        };
 
-        home.persistence."${self.persist}" = {
-          directories = [
-            ".config/Logseq"
-            ".logseq"
+          window-rules = [
+            {
+              matches = [
+                {
+                  app-id = "Logseq";
+                }
+              ];
+              open-on-workspace = "scratch";
+              open-floating = true;
+              open-focused = false;
+              block-out-from = "screencast";
+            }
           ];
         };
       };
+    };
+
+    home = config: {
+      home.packages = with pkgs; [
+        logseq
+      ];
+
+      home.persistence."${self.persist}" = {
+        directories = [
+          ".config/Logseq"
+          ".logseq"
+        ];
+      };
+    };
   };
 }

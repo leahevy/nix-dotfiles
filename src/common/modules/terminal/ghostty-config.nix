@@ -34,48 +34,46 @@ args@{
   };
 
   on = {
-    init =
-      config:
-      lib.mkIf self.isEnabled {
-        nx.preferences.desktop.programs.terminal = {
-          name = "ghostty";
-          package = null;
-          openCommand = [ "ghostty" ];
-          openDirectoryCommand = path: [
-            "ghostty"
-            "--working-directory=${path}"
-          ];
-          openRunCommand = cmd: [
-            "ghostty"
-            "-e"
-            cmd
-          ];
-          openRunPrefix = [
-            "ghostty"
-            "-e"
-          ];
-          openShellCommand = cmd: [
-            "ghostty"
-            "-e"
-            "sh"
-            "-c"
-            cmd
-          ];
-          openWithClass = class: [
-            "ghostty"
-            "--class=${class}"
-          ];
-          openRunWithClass = class: cmd: [
-            "ghostty"
-            "--class=${class}"
-            "-e"
-            cmd
-          ];
-          desktopFile = "com.mitchellh.ghostty.desktop";
-        };
-        nx.preferences.desktop.programs.additionalTerminal =
-          lib.mkIf self.isLinux config.nx.preferences.desktop.programs.terminal;
+    enabled = config: {
+      nx.preferences.desktop.programs.terminal = {
+        name = "ghostty";
+        package = null;
+        openCommand = [ "ghostty" ];
+        openDirectoryCommand = path: [
+          "ghostty"
+          "--working-directory=${path}"
+        ];
+        openRunCommand = cmd: [
+          "ghostty"
+          "-e"
+          cmd
+        ];
+        openRunPrefix = [
+          "ghostty"
+          "-e"
+        ];
+        openShellCommand = cmd: [
+          "ghostty"
+          "-e"
+          "sh"
+          "-c"
+          cmd
+        ];
+        openWithClass = class: [
+          "ghostty"
+          "--class=${class}"
+        ];
+        openRunWithClass = class: cmd: [
+          "ghostty"
+          "--class=${class}"
+          "-e"
+          cmd
+        ];
+        desktopFile = "com.mitchellh.ghostty.desktop";
       };
+      nx.preferences.desktop.programs.additionalTerminal =
+        lib.mkIf self.isLinux config.nx.preferences.desktop.programs.terminal;
+    };
 
     home = config: {
       programs.ghostty = {

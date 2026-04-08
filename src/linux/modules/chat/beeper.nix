@@ -27,10 +27,39 @@ args@{
       ];
     };
 
+    ifEnabled.linux.desktop.niri.home = config: {
+      programs.niri = {
+        settings = {
+          binds = with config.lib.niri.actions; {
+            "Mod+Ctrl+Alt+I" = {
+              action = spawn-sh "niri-scratchpad --app-id BeeperTexts --all-windows --spawn beeper";
+              hotkey-overlay.title = "Apps:Chat app";
+            };
+          };
+
+          window-rules = [
+            {
+              matches = [
+                {
+                  app-id = "BeeperTexts";
+                  title = "Beeper";
+                }
+              ];
+              min-width = 1500;
+              min-height = 800;
+              open-on-workspace = "scratch";
+              open-floating = true;
+              open-focused = false;
+              block-out-from = "screencast";
+            }
+          ];
+        };
+      };
+    };
+
     home =
       config:
       let
-        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
         beeperWrapped =
           if self.settings.waylandQuirks then
             (pkgs.symlinkJoin {
@@ -58,34 +87,6 @@ args@{
 
         home.persistence."${self.persist}" = {
           directories = [ ".config/BeeperTexts" ];
-        };
-
-        programs.niri = lib.mkIf isNiriEnabled {
-          settings = {
-            binds = with config.lib.niri.actions; {
-              "Mod+Ctrl+Alt+I" = {
-                action = spawn-sh "niri-scratchpad --app-id BeeperTexts --all-windows --spawn beeper";
-                hotkey-overlay.title = "Apps:Chat app";
-              };
-            };
-
-            window-rules = [
-              {
-                matches = [
-                  {
-                    app-id = "BeeperTexts";
-                    title = "Beeper";
-                  }
-                ];
-                min-width = 1500;
-                min-height = 800;
-                open-on-workspace = "scratch";
-                open-floating = true;
-                open-focused = false;
-                block-out-from = "screencast";
-              }
-            ];
-          };
         };
       };
   };

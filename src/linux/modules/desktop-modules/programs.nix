@@ -636,11 +636,7 @@ in
       {
         nx.linux.monitoring.journal-watcher.ignorePatterns = allIgnorePatterns;
         nx.linux.monitoring.journal-watcher.highlightPatterns = allHighlightPatterns;
-      };
 
-    linux.init =
-      config:
-      lib.mkIf self.isEnabled {
         nx.preferences.desktop.programs = {
           wallet = lib.mkDefault selectedPrograms.wallet;
           fileBrowser = lib.mkDefault selectedPrograms.fileBrowser;
@@ -675,7 +671,6 @@ in
       config:
       let
         prefs = config.nx.preferences.desktop.programs;
-        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
 
         iconThemeString = config.nx.preferences.theme.icons.primary;
         iconThemePackageName = lib.head (lib.splitString "/" iconThemeString);
@@ -747,23 +742,6 @@ in
         };
 
         services.gnome-keyring.enable = lib.mkForce isGnome;
-
-        programs.niri = lib.mkIf isNiriEnabled {
-          settings = {
-            window-rules = [
-              {
-                matches = [
-                  {
-                    app-id = "org.kde.kwalletmanager";
-                  }
-                ];
-                default-column-width = {
-                  proportion = 0.5;
-                };
-              }
-            ];
-          };
-        };
 
         xdg.mimeApps = {
           enable = true;
@@ -993,6 +971,25 @@ in
             "org.freedesktop.impl.portal.Location" = "gtk";
             "org.freedesktop.impl.portal.FileChooser" = "gtk";
           };
+        };
+      };
+    };
+
+    ifEnabled.linux.desktop.niri.home = config: {
+      programs.niri = {
+        settings = {
+          window-rules = [
+            {
+              matches = [
+                {
+                  app-id = "org.kde.kwalletmanager";
+                }
+              ];
+              default-column-width = {
+                proportion = 0.5;
+              };
+            }
+          ];
         };
       };
     };

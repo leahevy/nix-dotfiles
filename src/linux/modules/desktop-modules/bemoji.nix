@@ -15,10 +15,22 @@ args@{
   input = "linux";
 
   on = {
+    ifEnabled.linux.desktop.niri.home = config: {
+      programs.niri = {
+        settings = {
+          binds = with config.lib.niri.actions; {
+            "Mod+Period" = {
+              action = spawn-sh "bemoji";
+              hotkey-overlay.title = "Utils:Emoji picker";
+            };
+          };
+        };
+      };
+    };
+
     home =
       config:
       let
-        isNiriEnabled = self.isModuleEnabled "desktop.niri";
         appLauncher = config.nx.preferences.desktop.programs.appLauncher;
         appLauncherDmenuSimple = lib.escapeShellArgs (
           (helpers.runWithAbsolutePath config appLauncher appLauncher.openCommand [ ])
@@ -36,17 +48,6 @@ args@{
           directories = [
             ".local/share/bemoji"
           ];
-        };
-
-        programs.niri = lib.mkIf isNiriEnabled {
-          settings = {
-            binds = with config.lib.niri.actions; {
-              "Mod+Period" = {
-                action = spawn-sh "bemoji";
-                hotkey-overlay.title = "Utils:Emoji picker";
-              };
-            };
-          };
         };
       };
   };

@@ -31,12 +31,7 @@ args@{
     home =
       config:
       let
-        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
         isHeadless = (self.host.settings.system.desktop or null) == null;
-        terminal = config.nx.preferences.desktop.programs.additionalTerminal;
-        terminalShellCmd =
-          cmd:
-          lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
 
         iconResolveScript = config.nx.lib.iconResolveScript;
 
@@ -258,7 +253,18 @@ args@{
               };
             };
 
-        programs.niri = lib.mkIf isNiriEnabled {
+      };
+
+    ifEnabled.linux.desktop.niri.home =
+      config:
+      let
+        terminal = config.nx.preferences.desktop.programs.additionalTerminal;
+        terminalShellCmd =
+          cmd:
+          lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
+      in
+      {
+        programs.niri = {
           settings = {
             binds = with config.lib.niri.actions; {
               "Mod+Ctrl+Alt+L" = {

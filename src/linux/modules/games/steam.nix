@@ -33,65 +33,70 @@ args@{
   };
 
   on = {
-    home =
+
+    ifEnabled.linux.desktop.niri.home = config: {
+      programs.niri = {
+        settings = {
+          window-rules = [
+            {
+              matches = [
+                {
+                  app-id = "steam";
+                  title = "^notificationtoasts_\\d+_desktop$";
+                }
+              ];
+              default-floating-position = {
+                x = 10;
+                y = 10;
+                relative-to = "bottom-right";
+              };
+            }
+          ];
+        };
+      };
+    };
+
+    standalone =
       config:
       let
-        isNiriEnabled = self.isLinux && self.linux.isModuleEnabled "desktop.niri";
-        isStandalone = self.user.isStandalone or false;
         withWayland = self.settings.withWayland;
         usesDataPath = self.settings.dataPath != null;
       in
-      lib.mkMerge [
-        {
-          programs.niri = lib.mkIf isNiriEnabled {
-            settings = {
-              window-rules = [
-                {
-                  matches = [
-                    {
-                      app-id = "steam";
-                      title = "^notificationtoasts_\\d+_desktop$";
-                    }
-                  ];
-                  default-floating-position = {
-                    x = 10;
-                    y = 10;
-                    relative-to = "bottom-right";
-                  };
-                }
-              ];
-            };
-          };
+      {
+        home.packages = with pkgs; [
+          steam
+          mangohud
+          protonup-ng
+          protontricks
+          winetricks
+          (if withWayland then wineWowPackages.waylandFull else wineWowPackages.stable)
+        ];
 
-          home.persistence."${self.persist}" = lib.mkIf (!usesDataPath) {
-            directories = [
-              ".local/share/Steam"
-              ".steam"
-            ];
-          };
+        home.sessionVariables = {
+          STEAM_EXTRA_COMPAT_TOOLS_PATHS =
+            if usesDataPath then
+              "${self.settings.dataPath}/.steam/root/compatibilitytools.d"
+            else
+              "$HOME/.steam/root/compatibilitytools.d";
         }
-        (lib.mkIf isStandalone {
-          home.packages = with pkgs; [
-            steam
-            mangohud
-            protonup-ng
-            protontricks
-            winetricks
-            (if withWayland then wineWowPackages.waylandFull else wineWowPackages.stable)
-          ];
+        // lib.optionalAttrs withWayland {
+          STEAM_USE_WAYLAND = "1";
+        };
+      };
 
-          home.sessionVariables = {
-            STEAM_EXTRA_COMPAT_TOOLS_PATHS =
-              if (!isStandalone && usesDataPath) then
-                "${self.settings.dataPath}/.steam/root/compatibilitytools.d"
-              else
-                "$HOME/.steam/root/compatibilitytools.d";
-          }
-          // lib.optionalAttrs withWayland {
-            STEAM_USE_WAYLAND = "1";
-          };
-        })
-      ];
+    integrated =
+      config:
+      let
+        usesDataPath = self.settings.dataPath != null;
+      in
+      {
+        home.persistence."${self.persist}" = lib.mkIf (!usesDataPath) {
+          directories = [
+            ".local/share/Steam"
+            ".steam"
+          ];
+        };
+      };
 
     system =
       config:

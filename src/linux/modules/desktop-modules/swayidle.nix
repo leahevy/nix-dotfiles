@@ -28,6 +28,49 @@ args@{
       nx.linux.desktop.common.graphicalSessionServices = [ "swayidle" ];
     };
 
+    ifEnabled.linux.desktop.niri.home =
+      config:
+      let
+        toggleSwayidleScript = pkgs.writeShellScript "toggle-swayidle" ''
+          #!/usr/bin/env bash
+          DISABLE_FILE="/tmp/.nx-no-swayidle"
+
+          if [[ -f "$DISABLE_FILE" ]]; then
+            rm "$DISABLE_FILE"
+            ${self.notifyUser {
+              inherit pkgs;
+              title = "Swayidle";
+              body = "Timeout commands enabled";
+              icon = "system-suspend";
+              urgency = "normal";
+              validation = { inherit config; };
+            }}
+          else
+            touch "$DISABLE_FILE"
+            ${self.notifyUser {
+              inherit pkgs;
+              title = "Swayidle";
+              body = "Timeout commands disabled";
+              icon = "system-lock-screen";
+              urgency = "normal";
+              validation = { inherit config; };
+            }}
+          fi
+        '';
+      in
+      {
+        programs.niri = {
+          settings = {
+            binds = with config.lib.niri.actions; {
+              "Mod+T" = {
+                action = spawn-sh (toString toggleSwayidleScript);
+                hotkey-overlay.title = "UI:Toggle swayidle timeouts";
+              };
+            };
+          };
+        };
+      };
+
     home =
       config:
       let
@@ -62,8 +105,6 @@ args@{
           else
             commandline;
 
-        isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
-
         wrapTimeoutCommand =
           command:
           pkgs.writeShellScript "swayidle-timeout-wrapper" ''
@@ -72,33 +113,6 @@ args@{
               ${command}
             fi
           '';
-
-        toggleSwayidleScript = pkgs.writeShellScript "toggle-swayidle" ''
-          #!/usr/bin/env bash
-          DISABLE_FILE="/tmp/.nx-no-swayidle"
-
-          if [[ -f "$DISABLE_FILE" ]]; then
-            rm "$DISABLE_FILE"
-            ${self.notifyUser {
-              inherit pkgs;
-              title = "Swayidle";
-              body = "Timeout commands enabled";
-              icon = "system-suspend";
-              urgency = "normal";
-              validation = { inherit config; };
-            }}
-          else
-            touch "$DISABLE_FILE"
-            ${self.notifyUser {
-              inherit pkgs;
-              title = "Swayidle";
-              body = "Timeout commands disabled";
-              icon = "system-lock-screen";
-              urgency = "normal";
-              validation = { inherit config; };
-            }}
-          fi
-        '';
       in
       {
         home.packages =
@@ -202,17 +216,6 @@ args@{
               }
             ];
           };
-
-        programs.niri = lib.mkIf isNiriEnabled {
-          settings = {
-            binds = with config.lib.niri.actions; {
-              "Mod+T" = {
-                action = spawn-sh (toString toggleSwayidleScript);
-                hotkey-overlay.title = "UI:Toggle swayidle timeouts";
-              };
-            };
-          };
-        };
 
         systemd.user.services.nx-lock-on-login = lib.mkIf self.settings.auto-lock-on-login {
           Unit = {

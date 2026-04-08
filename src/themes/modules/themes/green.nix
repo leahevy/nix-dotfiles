@@ -526,10 +526,8 @@ in
   input = "themes";
 
   on = {
-    init =
-      config:
-      lib.mkIf self.isEnabled {
-        nx.preferences.theme = themeData;
-      };
+    enabled = config: {
+      nx.preferences.theme = themeData;
+    };
   };
 }

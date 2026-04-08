@@ -26,7 +26,7 @@ args@{
       ];
     };
 
-    linux.init =
+    linux.enabled =
       config:
       let
         isNiriEnabled = self.isModuleEnabled "desktop.niri";
@@ -70,7 +70,7 @@ args@{
           else
             pkgs.fuzzel;
       in
-      lib.mkIf self.isEnabled {
+      {
         nx.preferences.desktop.programs.appLauncher = {
           name = "fuzzel";
           package = fuzzelPackage;

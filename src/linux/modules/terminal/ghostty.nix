@@ -29,14 +29,8 @@ args@{
   };
 
   on = {
-    linux.init =
-      config:
-      lib.mkIf self.isEnabled {
-        nx.preferences.desktop.programs.terminal.package = lib.mkDefault pkgs.ghostty;
-        nx.preferences.desktop.programs.additionalTerminal.package = lib.mkDefault pkgs.ghostty;
-      };
-
     linux.enabled = config: {
+      nx.preferences.desktop.programs.additionalTerminal.package = lib.mkDefault pkgs.ghostty;
       nx.preferences.desktop.programs.terminal.package = lib.mkForce pkgs.ghostty;
     };
 
