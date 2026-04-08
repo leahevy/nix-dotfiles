@@ -228,15 +228,56 @@ subcommand_list() {
 }
 
 subcommand_info() {
-  [[ $# -eq 0 ]] && {
+  local override_profile=""
+  local override_arch=""
+  local module_id=""
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --profile)
+        [[ $# -lt 2 ]] && { echo -e "${RED}Error: --profile requires a profile name${RESET}" >&2; exit 1; }
+        override_profile="$2"
+        shift 2
+        ;;
+      --arch)
+        [[ $# -lt 2 ]] && { echo -e "${RED}Error: --arch requires an architecture${RESET}" >&2; exit 1; }
+        override_arch="$2"
+        shift 2
+        ;;
+      --nixos)
+        force_nixos=true
+        shift
+        ;;
+      --standalone)
+        force_standalone=true
+        shift
+        ;;
+      -*)
+        echo -e "${RED}Error: Unknown option: ${WHITE}$1${RESET}" >&2
+        echo -e "Usage: ${WHITE}nx modules info [--profile <profile>] [--arch <arch>] [--nixos] [--standalone] INPUT.GROUP.MODULE${RESET}" >&2
+        exit 1
+        ;;
+      *)
+        [[ -n "$module_id" ]] && { echo -e "${RED}Error: Unexpected argument: ${WHITE}$1${RESET}" >&2; exit 1; }
+        module_id="$1"
+        shift
+        ;;
+    esac
+  done
+
+  [[ -z "$module_id" ]] && {
     echo -e "${RED}Error: MODULE argument required${RESET}" >&2
-    echo -e "Usage: ${WHITE}nx modules info INPUT.GROUP.MODULE${RESET}" >&2
+    echo -e "Usage: ${WHITE}nx modules info [--profile <profile>] [--arch <arch>] [--nixos] [--standalone] INPUT.GROUP.MODULE${RESET}" >&2
     exit 1
   }
 
-  local module_id="$1"
   [[ ! "$module_id" =~ ^[^.]+\.[^.]+\.[^.]+$ ]] && {
     echo -e "${RED}Error: Invalid module format. Expected: INPUT.GROUP.MODULE${RESET}" >&2
+    exit 1
+  }
+
+  [[ "${force_nixos:-false}" == "true" && "${force_standalone:-false}" == "true" ]] && {
+    echo -e "${RED}Error: --nixos and --standalone cannot be used together${RESET}" >&2
     exit 1
   }
 
@@ -261,10 +302,35 @@ subcommand_info() {
     exit 1
   fi
 
+  local base_profile
+  if [[ -n "$override_profile" ]]; then
+    base_profile="$override_profile"
+  elif [[ -e .nx-profile.conf ]]; then
+    base_profile="$(cat .nx-profile.conf)"
+  elif [[ -e /etc/nixos ]]; then
+    base_profile="$HOSTNAME"
+  else
+    base_profile="$USER"
+  fi
+
   local profile
-  profile="$(retrieve_active_profile)"
+  if [[ -n "$override_arch" ]]; then
+    profile="$(construct_profile_name "$base_profile" "$override_arch")"
+  else
+    profile="$(construct_profile_name "$base_profile")"
+  fi
+
   local context
   context="$(determine_context)"
+
+  if [[ -n "$override_arch" ]]; then
+    if [[ "$context" == "nixos" && ! "$override_arch" =~ -linux$ ]]; then
+      echo -e "${RED}Error: NixOS profiles only support Linux architectures (x86_64-linux, aarch64-linux)${RESET}" >&2
+      echo -e "${YELLOW}Hint: Use --profile to specify a home-manager profile, or use --standalone flag${RESET}" >&2
+      exit 1
+    fi
+  fi
+
   local config_path
   config_path="$(get_config_path "$profile" "$context")"
 

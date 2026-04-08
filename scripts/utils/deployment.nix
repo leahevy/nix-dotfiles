@@ -267,6 +267,12 @@
           info = {
             description = "Show detailed module information";
             arguments = [ (arg "module" "Module name (INPUT.GROUP.MODULE)" "modulePath") ];
+            options = {
+              profile = optionWith "Use specific profile" "profile" "string";
+              arch = optionWithEnum "Use specific architecture" "architecture" architectures;
+              nixos = option "Force NixOS mode";
+              standalone = option "Force standalone mode";
+            };
           };
           edit = {
             description = "Open module file in editor, creates if needed";
