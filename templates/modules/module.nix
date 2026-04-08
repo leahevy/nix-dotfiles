@@ -37,6 +37,14 @@ args@{
   # error = "This module is currently broken!";
   # broken = true;
 
+  # Warn if built on wrong platform/arch
+  # platforms = [ "linux" "darwin" ];
+  # architectures = [ "x86_64" "aarch64" ];
+
+  # Error if built on wrong platform/arch
+  # requiredPlatforms = [ "linux" "darwin" ];
+  # requiredArchitectures = [ "x86_64" "aarch64" ];
+
   assertions = [
     {
       assertion = true;

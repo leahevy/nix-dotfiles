@@ -68,6 +68,10 @@ rec {
         "broken"
         "options"
         "rawOptions"
+        "platforms"
+        "requiredPlatforms"
+        "architectures"
+        "requiredArchitectures"
       ];
 
       actualAttrs = builtins.attrNames moduleResult;
@@ -135,6 +139,34 @@ rec {
         File ${filePath} has path validation errors:
         ${builtins.concatStringsSep "\n" pathValidationErrors}
       '';
+
+      attrValueErrors =
+        let
+          check =
+            attr: valid:
+            let
+              val = moduleResult.${attr} or null;
+              invalid = if val == null then [ ] else builtins.filter (x: !(builtins.elem x valid)) val;
+            in
+            if invalid != [ ] then
+              "'${attr}' contains invalid values: ${builtins.concatStringsSep ", " invalid}. Allowed values: ${builtins.concatStringsSep ", " valid}."
+            else
+              null;
+          validPlatforms = [
+            "linux"
+            "darwin"
+          ];
+          validArchitectures = [
+            "x86_64"
+            "aarch64"
+          ];
+        in
+        builtins.filter (x: x != null) [
+          (check "platforms" validPlatforms)
+          (check "requiredPlatforms" validPlatforms)
+          (check "architectures" validArchitectures)
+          (check "requiredArchitectures" validArchitectures)
+        ];
     in
     if !correctFormat then
       throw formatErrorMessage
@@ -144,6 +176,8 @@ rec {
       throw pathErrorMessage
     else if invalidAttrs != [ ] then
       throw topLevelErrorMessage
+    else if attrValueErrors != [ ] then
+      throw "${filePath}: ${builtins.head attrValueErrors}"
     else if (moduleResult.settings or { }) ? enable then
       throw "${filePath}: 'enable' is a reserved name and cannot be used in settings. It is auto-injected by the build system."
     else if (moduleResult.options or { }) ? enable then
@@ -159,6 +193,40 @@ rec {
         moduleWarning = moduleResult.warning or null;
         moduleError = moduleResult.error or null;
         moduleBroken = moduleResult.broken or false;
+
+        architecture =
+          moduleContext.architecture
+            or (throw "${toString filePath}: validateModule called without architecture in moduleContext");
+        currentPlatform =
+          if helpers.isLinuxArch architecture then
+            "linux"
+          else if helpers.isDarwinArch architecture then
+            "darwin"
+          else
+            throw "${toString filePath}: unrecognized platform in architecture '${architecture}'";
+        currentArch =
+          if helpers.isX86_64Arch architecture then
+            "x86_64"
+          else if helpers.isAARCH64Arch architecture then
+            "aarch64"
+          else
+            throw "${toString filePath}: unrecognized architecture in '${architecture}'";
+
+        inputImpliedPlatform =
+          if moduleContext.inputName == "linux" then
+            "linux"
+          else if moduleContext.inputName == "darwin" then
+            "darwin"
+          else
+            null;
+
+        platformAllowed = list: builtins.elem currentPlatform list;
+        archAllowed = list: builtins.elem currentArch list;
+
+        platformsValue = moduleResult.platforms or null;
+        requiredPlatformsValue = moduleResult.requiredPlatforms or null;
+        architecturesValue = moduleResult.architectures or null;
+        requiredArchitecturesValue = moduleResult.requiredArchitectures or null;
 
         getCleanPath =
           _:
@@ -182,8 +250,18 @@ rec {
         throw "${getCleanPath null}: ${moduleError}"
       else if moduleBroken then
         throw "${getCleanPath null}: This module is currently broken!"
+      else if inputImpliedPlatform != null && currentPlatform != inputImpliedPlatform then
+        throw "${getCleanPath null}: This module is in the '${moduleContext.inputName}' input and only supports [${inputImpliedPlatform}] platforms. Current platform: ${currentPlatform}."
+      else if requiredPlatformsValue != null && !(platformAllowed requiredPlatformsValue) then
+        throw "${getCleanPath null}: This module only supports [${builtins.concatStringsSep ", " requiredPlatformsValue}] platforms. Current platform: ${currentPlatform}."
+      else if requiredArchitecturesValue != null && !(archAllowed requiredArchitecturesValue) then
+        throw "${getCleanPath null}: This module only supports [${builtins.concatStringsSep ", " requiredArchitecturesValue}] architectures. Current architecture: ${currentArch}."
       else if moduleWarning != null then
         builtins.trace "${getCleanPath null}: ${moduleWarning}" moduleResult
+      else if platformsValue != null && !(platformAllowed platformsValue) then
+        builtins.trace "${getCleanPath null}: This module is intended for [${builtins.concatStringsSep ", " platformsValue}] platforms. Current platform: ${currentPlatform}." moduleResult
+      else if architecturesValue != null && !(archAllowed architecturesValue) then
+        builtins.trace "${getCleanPath null}: This module is intended for [${builtins.concatStringsSep ", " architecturesValue}] architectures. Current architecture: ${currentArch}." moduleResult
       else
         moduleResult;
 
@@ -534,6 +612,7 @@ rec {
 
       moduleResult = validateModule (import modulePath consolidatedArgs) modulePath {
         inputName = moduleSpec.inputName;
+        architecture = resolveArchitecture args;
       };
 
       on = validateOn modulePath (moduleResult.on or { });
