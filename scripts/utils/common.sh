@@ -990,8 +990,9 @@ check_deployment_conflicts() {
 }
 
 diff_store_paths() {
-    local changed_prefixes_to_ignore=""
-    local add_removal_prefixes_to_ignore="nixos-system-"
+    local exact_names_to_ignore=("man-cache")
+    local changed_prefixes_to_ignore=()
+    local add_removal_prefixes_to_ignore=("nixos-system-")
 
     local old="$1" new="$2"
 
@@ -1028,9 +1029,15 @@ diff_store_paths() {
     while IFS= read -r name; do
         local hash
 
-        for p in $add_removal_prefixes_to_ignore; do
+        for p in "${add_removal_prefixes_to_ignore[@]+"${add_removal_prefixes_to_ignore[@]}"}"; do
           [[ "$name" == "$p"* ]] && continue 2
         done
+        for p in "${exact_names_to_ignore[@]+"${exact_names_to_ignore[@]}"}"; do
+          [[ "$name" == "$p" ]] && continue 2
+        done
+
+        [[ "$name" =~ -[0-9]+\.[0-9]+([.][0-9]+)*([a-zA-Z]+[0-9]*)?(-[0-9A-Za-z]+)*$ ]] && continue
+        [[ "$name" =~ (-wrapped|-fish-completions|\.manpath)$ ]] && continue
 
         hash="$(grep -m1 "	${name}$" "$new_file" | cut -f1)"
         echo -e "${GREEN}[A]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
@@ -1039,9 +1046,15 @@ diff_store_paths() {
     while IFS= read -r name; do
         local hash
 
-        for p in $add_removal_prefixes_to_ignore; do
+        for p in "${add_removal_prefixes_to_ignore[@]+"${add_removal_prefixes_to_ignore[@]}"}"; do
           [[ "$name" == "$p"* ]] && continue 2
         done
+        for p in "${exact_names_to_ignore[@]+"${exact_names_to_ignore[@]}"}"; do
+          [[ "$name" == "$p" ]] && continue 2
+        done
+
+        [[ "$name" =~ -[0-9]+\.[0-9]+([.][0-9]+)*([a-zA-Z]+[0-9]*)?(-[0-9A-Za-z]+)*$ ]] && continue
+        [[ "$name" =~ (-wrapped|-fish-completions|\.manpath)$ ]] && continue
 
         hash="$(grep -m1 "	${name}$" "$old_file" | cut -f1)"
         echo -e "${RED}[R]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
@@ -1071,10 +1084,16 @@ diff_store_paths() {
 
     while IFS= read -r name; do
         [[ "$name" == "issue" ]] && continue
-        for p in $changed_prefixes_to_ignore; do
+        for p in ${changed_prefixes_to_ignore[@]+"${changed_prefixes_to_ignore[@]}"}; do
           [[ "$name" == "$p" || "$name" == "$p"* ]] && continue 2
         done
+        for p in "${exact_names_to_ignore[@]+"${exact_names_to_ignore[@]}"}"; do
+          [[ "$name" == "$p" ]] && continue 2
+        done
         $only_issue_etc && [[ "$name" == "etc" ]] && continue
+
+        [[ "$name" =~ -[0-9]+\.[0-9]+([.][0-9]+)*([a-zA-Z]+[0-9]*)?(-[0-9A-Za-z]+)*$ ]] && continue
+        [[ "$name" =~ (-wrapped|-fish-completions|\.manpath)$ ]] && continue
 
         local oh nh
         oh="$(grep -m1 "	${name}$" "$old_file" | cut -f1)"
