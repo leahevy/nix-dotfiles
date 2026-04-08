@@ -14,6 +14,8 @@ else
   CURRENT_SHELL="$(basename "$SHELL")"
 fi
 
+unset __SHELL_BOOTSTRAPPED
+
 case "$CURRENT_SHELL" in
   bash)
     (cd "$TARGET_DIR" && exec "$SHELL" --rcfile <(echo "cd \"$TARGET_DIR\"") -i)

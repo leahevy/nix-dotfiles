@@ -75,6 +75,8 @@ open_shell_in_dir() {
         CURRENT_SHELL="$(basename "$SHELL")"
     fi
 
+    unset __SHELL_BOOTSTRAPPED
+
     case "$CURRENT_SHELL" in
         bash)
             (cd "$target_dir" && exec "$SHELL" --rcfile <(echo "cd \"$target_dir\"") -i)
