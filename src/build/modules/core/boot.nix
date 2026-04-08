@@ -29,11 +29,15 @@ in
 
         kernelPackages =
           if host.kernel.variant == "latest" then
-            pkgs.linuxKernel.packages.${self.variables.latestLinux}
+            if self.variables.latestLinuxOverride != null then
+              pkgs.linuxKernel.packages.${self.variables.latestLinuxOverride}
+            else
+              pkgs.linuxPackages_latest
           else if host.kernel.variant == "lts" then
-            pkgs.linuxKernel.packages.${self.variables.ltsLinux}
-          else if host.kernel.variant == "hardened" then
-            pkgs.linuxKernel.packages.${self.variables.hardenedLinux}
+            if self.variables.ltsLinuxOverride != null then
+              pkgs.linuxKernel.packages.${self.variables.ltsLinuxOverride}
+            else
+              pkgs.linuxPackages
           else
             throw "Did not find a Linux kernel for chosen variant '${host.kernel.variant}'!";
 

@@ -2,9 +2,8 @@
 {
   cudaArchitectures = [ ];
 
-  latestLinux = "linux_6_16";
-  ltsLinux = "linux_6_12";
-  hardenedLinux = "linux_6_12_hardened";
+  latestLinuxOverride = null; # e.g. "linux_6_16";
+  ltsLinuxOverride = null; # e.g. "linux_6_12";
 
   state-version = "25.05";
 

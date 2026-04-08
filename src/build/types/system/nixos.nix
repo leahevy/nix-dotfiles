@@ -90,7 +90,6 @@ with lib;
             type = types.enum [
               "lts"
               "latest"
-              "hardened"
             ];
             default = "lts";
             description = "The kernel variant to use";
