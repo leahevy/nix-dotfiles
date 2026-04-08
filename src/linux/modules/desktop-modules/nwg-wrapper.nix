@@ -30,6 +30,26 @@ args@{
         "nx-nwg-wrapper-2"
         "nx-nwg-wrapper-3"
       ];
+
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          service = "nx-nwg-wrapper-1.service";
+          string = "Failed with result 'exit-code'\.";
+          user = true;
+        }
+      ]
+      ++ lib.optionals self.settings.niriKeybindings [
+        {
+          service = "nx-nwg-wrapper-2.service";
+          string = "Failed with result 'exit-code'\.";
+          user = true;
+        }
+        {
+          service = "nx-nwg-wrapper-3.service";
+          string = "Failed with result 'exit-code'\.";
+          user = true;
+        }
+      ];
     };
 
     home =
