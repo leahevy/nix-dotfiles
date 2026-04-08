@@ -381,7 +381,6 @@ rec {
     moduleContext: moduleBasePath:
     let
       currentInputName = moduleContext.moduleInputName;
-      isStandalone = moduleContext.user.isStandalone or false;
 
       pathParts = lib.splitString "/" moduleBasePath;
       moduleGroupName = if builtins.length pathParts >= 2 then builtins.elemAt pathParts 1 else null;
@@ -394,45 +393,10 @@ rec {
       ) additionalInputs;
 
     in
-    let
-      # Create custom nixpkgs imports with module-scoped unfree predicate
-      createPkgsImport =
-        nixpkgsInput: additionalArgs:
-        let
-          moduleUnfree = moduleContext.unfree or [ ];
-          allowUnfreePredicate =
-            pkg:
-            let
-              pkgName = pkg.pname or pkg.name or "unknown";
-            in
-            builtins.elem pkgName moduleUnfree;
-
-          architecture =
-            if moduleContext ? user && moduleContext.user ? architecture then
-              moduleContext.user.architecture
-            else if moduleContext ? host && moduleContext.host ? architecture then
-              moduleContext.host.architecture
-            else
-              throw "No architecture found in self context for pkgs import";
-        in
-        import nixpkgsInput (
-          {
-            system = architecture;
-            config = { inherit allowUnfreePredicate; };
-          }
-          // additionalArgs
-        );
-    in
     rec {
       # Get Home Manager library functions - always takes config parameter
       # Usage: self.lib $CONFIG
       hmLib = config: config.lib;
-
-      # Create custom nixpkgs import with module-scoped unfree predicate
-      # Usage: self . pkgs { overlays = [...]; }
-      # WARNING: Creates a new pkgs instance on every call, heavily impacting evaluation performance.
-      # Prefer using on.overlays or on.linux.overlays / on.darwin.overlays instead.
-      pkgs = createPkgsImport moduleContext.inputs.nixpkgs;
 
       # Create a dummy package usable for creating home-manager config without installing the package
       # Usage: self.dummyPackage pkgs $NAME
@@ -447,12 +411,6 @@ rec {
             touch $out/bin/${name}
             chmod +x $out/bin/${name}
           '';
-
-      # Create custom nixpkgs-unstable import with module-scoped unfree predicate
-      # Usage: self . pkgs-unstable { overlays = [...]; }
-      # WARNING: Creates a new pkgs instance on every call, heavily impacting evaluation performance.
-      # Prefer using on.overlays or on.linux.overlays / on.darwin.overlays instead.
-      pkgs-unstable = createPkgsImport moduleContext.inputs.nixpkgs-unstable;
 
       host = if moduleContext ? host && moduleContext.host != null then moduleContext.host else { };
       user = if moduleContext ? user && moduleContext.user != null then moduleContext.user else { };
@@ -488,18 +446,16 @@ rec {
         // (lib.mapAttrs (
           _name: func: if builtins.isFunction func then func finalContext else func
         ) commonFuncs)
-        // (rec {
+        // {
           inherit
             hmLib
-            pkgs
-            pkgs-unstable
             dummyPackage
             host
             user
             importFileData
             importFileCustom
             ;
-        })
+        }
         // inputSpecificFunctions
         // {
           inherit (moduleContext)
