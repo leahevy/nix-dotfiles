@@ -118,6 +118,14 @@
         system = "darwin";
       };
 
+      configure-nix = {
+        description = "Configure system for Nix";
+        group = "switch";
+        options = {
+          check-only = option "Run checks only without making changes";
+        };
+      };
+
       dry = {
         description = "Test configuration without deploying";
         group = "switch";
