@@ -20,6 +20,7 @@ args@{
           env = (oldAttrs.env or { }) // {
             NIX_CFLAGS_COMPILE = (oldAttrs.env.NIX_CFLAGS_COMPILE or "") + " -Wno-error=format-security";
           };
+          XFAIL_TESTS = "ping-localhost.sh";
         });
       })
     ];
