@@ -136,6 +136,7 @@ args@{
           directories = [
             ".config/Bitwarden"
             ".config/Bitwarden-CLI"
+            ".cache/com.bitwarden.desktop"
           ];
         };
 
