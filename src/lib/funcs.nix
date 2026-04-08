@@ -408,30 +408,28 @@ rec {
   validateOn =
     modulePath: on:
     let
-      allowedTopLevel = [
+      l1FnNames = [
         "init"
         "enabled"
         "home"
         "system"
         "standalone"
         "integrated"
+      ];
+      l1BaseAllowed = l1FnNames ++ [ "overlays" ];
+      l1CondAllowed = [
+        "enabled"
+        "home"
+        "system"
+        "standalone"
+        "integrated"
+      ];
+      condStructuralKeys = l1CondAllowed ++ [
         "linux"
         "darwin"
-        "overlays"
+        "x86_64"
+        "aarch64"
       ];
-
-      allowedNested = [
-        "init"
-        "enabled"
-        "home"
-        "system"
-        "standalone"
-        "integrated"
-        "overlays"
-      ];
-
-      topLevelAttrs = builtins.attrNames on;
-      invalidTopLevel = builtins.filter (attr: !(builtins.elem attr allowedTopLevel)) topLevelAttrs;
 
       validateFn =
         path: name: value:
@@ -440,58 +438,222 @@ rec {
         else
           [ ];
 
-      validatePlatform =
-        platformName: platformOn:
+      checkInvalid =
+        containerName: allowed: attrset:
         let
-          attrs = builtins.attrNames platformOn;
-          invalidAttrs = builtins.filter (attr: !(builtins.elem attr allowedNested)) attrs;
-          invalidAttrErrors =
-            if invalidAttrs != [ ] then
-              [
-                "on.${platformName} contains invalid attributes: ${builtins.concatStringsSep ", " invalidAttrs}. Allowed: ${builtins.concatStringsSep ", " allowedNested}"
-              ]
-            else
-              [ ];
-          fnAttrsNested = builtins.filter (attr: attr != "overlays") attrs;
-          fnErrors = lib.concatMap (
-            name: validateFn "${platformName}." name platformOn.${name}
-          ) fnAttrsNested;
+          invalid = builtins.filter (a: !(builtins.elem a allowed)) (builtins.attrNames attrset);
         in
-        invalidAttrErrors ++ fnErrors;
-
-      topLevelErrors =
-        if invalidTopLevel != [ ] then
+        if invalid != [ ] then
           [
-            "on contains invalid attributes: ${builtins.concatStringsSep ", " invalidTopLevel}. Allowed: ${builtins.concatStringsSep ", " allowedTopLevel}"
+            "${containerName} contains invalid attributes: ${builtins.concatStringsSep ", " invalid}. Allowed: ${builtins.concatStringsSep ", " allowed}"
           ]
         else
           [ ];
 
-      fnAttrs = builtins.filter (
-        attr: attr != "linux" && attr != "darwin" && attr != "overlays"
-      ) topLevelAttrs;
+      checkFns =
+        pathPrefix: names: attrset:
+        lib.concatMap (
+          name: if attrset ? ${name} then validateFn pathPrefix name attrset.${name} else [ ]
+        ) names;
 
-      fnErrors = lib.concatMap (name: validateFn "" name on.${name}) fnAttrs;
+      validatePlatformBase =
+        pathPrefix: platName: platOn:
+        checkInvalid "on.${pathPrefix}${platName}" l1BaseAllowed platOn
+        ++ checkFns "${pathPrefix}${platName}." l1FnNames platOn;
 
-      platformErrors =
-        (
-          if on ? linux && builtins.isAttrs on.linux then
-            validatePlatform "linux" on.linux
-          else if on ? linux then
-            [ "on.linux must be an attribute set, got ${builtins.typeOf on.linux}" ]
-          else
-            [ ]
-        )
-        ++ (
-          if on ? darwin && builtins.isAttrs on.darwin then
-            validatePlatform "darwin" on.darwin
-          else if on ? darwin then
-            [ "on.darwin must be an attribute set, got ${builtins.typeOf on.darwin}" ]
-          else
-            [ ]
-        );
+      validateArchBase =
+        pathPrefix: archName: archOn:
+        let
+          fullPath = "${pathPrefix}${archName}";
+        in
+        checkInvalid "on.${fullPath}" (
+          l1BaseAllowed
+          ++ [
+            "linux"
+            "darwin"
+          ]
+        ) archOn
+        ++ checkFns "${fullPath}." l1FnNames archOn
+        ++
+          lib.concatMap
+            (
+              platName:
+              if archOn ? ${platName} && builtins.isAttrs archOn.${platName} then
+                validatePlatformBase "${fullPath}." platName archOn.${platName}
+              else if archOn ? ${platName} then
+                [ "on.${fullPath}.${platName} must be an attribute set, got ${builtins.typeOf archOn.${platName}}" ]
+              else
+                [ ]
+            )
+            [
+              "linux"
+              "darwin"
+            ];
 
-      allErrors = topLevelErrors ++ fnErrors ++ platformErrors;
+      validatePlatformCond =
+        pathPrefix: platName: platOn:
+        checkInvalid "on.${pathPrefix}${platName}" l1CondAllowed platOn
+        ++ checkFns "${pathPrefix}${platName}." l1CondAllowed platOn;
+
+      validateArchCond =
+        pathPrefix: archName: archOn:
+        let
+          fullPath = "${pathPrefix}${archName}";
+        in
+        checkInvalid "on.${fullPath}" (
+          l1CondAllowed
+          ++ [
+            "linux"
+            "darwin"
+          ]
+        ) archOn
+        ++ checkFns "${fullPath}." l1CondAllowed archOn
+        ++
+          lib.concatMap
+            (
+              platName:
+              if archOn ? ${platName} && builtins.isAttrs archOn.${platName} then
+                validatePlatformCond "${fullPath}." platName archOn.${platName}
+              else if archOn ? ${platName} then
+                [ "on.${fullPath}.${platName} must be an attribute set" ]
+              else
+                [ ]
+            )
+            [
+              "linux"
+              "darwin"
+            ];
+
+      validateConditionalModule =
+        condName: modPath: modOn:
+        let
+          basePath = "${condName}.${modPath}";
+        in
+        checkInvalid "on.${basePath}" condStructuralKeys modOn
+        ++ checkFns "${basePath}." l1CondAllowed modOn
+        ++
+          lib.concatMap
+            (
+              platName:
+              if modOn ? ${platName} && builtins.isAttrs modOn.${platName} then
+                validatePlatformCond "${basePath}." platName modOn.${platName}
+              else if modOn ? ${platName} then
+                [ "on.${basePath}.${platName} must be an attribute set" ]
+              else
+                [ ]
+            )
+            [
+              "linux"
+              "darwin"
+            ]
+        ++
+          lib.concatMap
+            (
+              archName:
+              if modOn ? ${archName} && builtins.isAttrs modOn.${archName} then
+                validateArchCond "${basePath}." archName modOn.${archName}
+              else if modOn ? ${archName} then
+                [ "on.${basePath}.${archName} must be an attribute set" ]
+              else
+                [ ]
+            )
+            [
+              "x86_64"
+              "aarch64"
+            ];
+
+      validateConditional =
+        condName: condOn:
+        if !(builtins.isAttrs condOn) then
+          [ "on.${condName} must be an attribute set" ]
+        else
+          lib.flatten (
+            lib.mapAttrsToList (
+              inputName: groups:
+              if !(builtins.isAttrs groups) then
+                [
+                  "on.${condName}.${inputName} must be an attribute set (expected group names), got ${builtins.typeOf groups}"
+                ]
+              else
+                lib.flatten (
+                  lib.mapAttrsToList (
+                    groupName: modules:
+                    let
+                      path2 = "${condName}.${inputName}.${groupName}";
+                      shallowKeys = builtins.filter (k: builtins.elem k condStructuralKeys) (builtins.attrNames modules);
+                    in
+                    if !(builtins.isAttrs modules) then
+                      [
+                        "on.${path2} must be an attribute set (expected module names), got ${builtins.typeOf modules}"
+                      ]
+                    else if shallowKeys != [ ] then
+                      [
+                        "on.${path2} contains on-function keys (${builtins.concatStringsSep ", " shallowKeys}). Path must be INPUT.GROUP.MODULE (3 levels deep)"
+                      ]
+                    else
+                      lib.flatten (
+                        lib.mapAttrsToList (
+                          moduleName: subOn:
+                          if !(builtins.isAttrs subOn) then
+                            [ "on.${path2}.${moduleName} must be an attribute set" ]
+                          else
+                            validateConditionalModule condName "${inputName}.${groupName}.${moduleName}" subOn
+                        ) modules
+                      )
+                  ) groups
+                )
+            ) condOn
+          );
+
+      topAllowed = l1BaseAllowed ++ [
+        "linux"
+        "darwin"
+        "x86_64"
+        "aarch64"
+        "ifEnabled"
+        "ifNotEnabled"
+      ];
+
+      topErrors = checkInvalid "on" topAllowed on;
+      topFnErrors = checkFns "" l1FnNames on;
+
+      platErrors =
+        lib.concatMap
+          (
+            platName:
+            if on ? ${platName} && builtins.isAttrs on.${platName} then
+              validatePlatformBase "" platName on.${platName}
+            else if on ? ${platName} then
+              [ "on.${platName} must be an attribute set, got ${builtins.typeOf on.${platName}}" ]
+            else
+              [ ]
+          )
+          [
+            "linux"
+            "darwin"
+          ];
+
+      archErrors =
+        lib.concatMap
+          (
+            archName:
+            if on ? ${archName} && builtins.isAttrs on.${archName} then
+              validateArchBase "" archName on.${archName}
+            else if on ? ${archName} then
+              [ "on.${archName} must be an attribute set, got ${builtins.typeOf on.${archName}}" ]
+            else
+              [ ]
+          )
+          [
+            "x86_64"
+            "aarch64"
+          ];
+
+      conditionalErrors =
+        (if on ? ifEnabled then validateConditional "ifEnabled" on.ifEnabled else [ ])
+        ++ (if on ? ifNotEnabled then validateConditional "ifNotEnabled" on.ifNotEnabled else [ ]);
+
+      allErrors = topErrors ++ topFnErrors ++ platErrors ++ archErrors ++ conditionalErrors;
     in
     if allErrors != [ ] then
       throw "Module ${modulePath} has invalid 'on' configuration:\n  ${builtins.concatStringsSep "\n  " allErrors}"
@@ -508,36 +670,98 @@ rec {
     let
       isLinux = helpers.isLinuxArch architecture;
       isDarwin = helpers.isDarwinArch architecture;
-      platformOn =
-        if isLinux then
-          on.linux or { }
-        else if isDarwin then
-          on.darwin or { }
-        else
-          { };
+      isX86_64 = helpers.isX86_64Arch architecture;
+      isAARCH64 = helpers.isAARCH64Arch architecture;
 
       isHome = buildContext == "home-standalone" || buildContext == "home-integrated";
       isStandalone = buildContext == "home-standalone";
       isIntegrated = buildContext == "home-integrated";
 
-      tag = fn: type: { inherit fn type; };
+      tag = fn: type: wrap: { inherit fn type wrap; };
+
+      platformOf =
+        attrset:
+        if isLinux then
+          attrset.linux or { }
+        else if isDarwin then
+          attrset.darwin or { }
+        else
+          { };
+
+      archOf =
+        attrset:
+        if isX86_64 then
+          attrset.x86_64 or { }
+        else if isAARCH64 then
+          attrset.aarch64 or { }
+        else
+          { };
+
+      collectL1 =
+        excludeInit: wrap: attrset:
+        lib.optional (!excludeInit && includeInit && attrset ? init) (tag attrset.init "init" wrap)
+        ++ lib.optional (attrset ? enabled) (tag attrset.enabled "enabled" wrap)
+        ++ lib.optional (isHome && attrset ? home) (tag attrset.home "home" wrap)
+        ++ lib.optional (isHome && isStandalone && attrset ? standalone) (
+          tag attrset.standalone "standalone" wrap
+        )
+        ++ lib.optional (isHome && isIntegrated && attrset ? integrated) (
+          tag attrset.integrated "integrated" wrap
+        )
+        ++ lib.optional (!isHome && attrset ? system) (tag attrset.system "system" wrap);
+
+      collectLayers123 =
+        excludeInit: wrap: attrset:
+        let
+          platOn = platformOf attrset;
+          archOn = archOf attrset;
+          archPlatOn = platformOf archOn;
+        in
+        collectL1 excludeInit wrap attrset
+        ++ collectL1 excludeInit wrap platOn
+        ++ collectL1 excludeInit wrap archOn
+        ++ collectL1 excludeInit wrap archPlatOn;
+
+      makeWrap =
+        isEnabled: modulePath:
+        let
+          pathParts = lib.splitString "." modulePath;
+          enablePath = [ "nx" ] ++ pathParts ++ [ "enable" ];
+          condName = if isEnabled then "ifEnabled" else "ifNotEnabled";
+        in
+        fn: config:
+        lib.mkIf (
+          let
+            enableValue =
+              lib.attrByPath enablePath
+                (throw "${condName}: module '${modulePath}' not found at config.nx.${modulePath}.enable")
+                config;
+          in
+          if isEnabled then enableValue else !enableValue
+        ) (fn config);
+
+      collectConditional =
+        isEnabled: condAttrsets:
+        lib.flatten (
+          lib.mapAttrsToList (
+            inputName: groups:
+            lib.flatten (
+              lib.mapAttrsToList (
+                groupName: modules:
+                lib.flatten (
+                  lib.mapAttrsToList (
+                    moduleName: subOn:
+                    collectLayers123 true (makeWrap isEnabled "${inputName}.${groupName}.${moduleName}") subOn
+                  ) modules
+                )
+              ) groups
+            )
+          ) condAttrsets
+        );
     in
-    lib.optional (includeInit && on ? init) (tag on.init "init")
-    ++ lib.optional (includeInit && platformOn ? init) (tag platformOn.init "init")
-    ++ lib.optional (on ? enabled) (tag on.enabled "enabled")
-    ++ lib.optional (platformOn ? enabled) (tag platformOn.enabled "enabled")
-    ++ lib.optional (isHome && on ? home) (tag on.home "home")
-    ++ lib.optional (isHome && platformOn ? home) (tag platformOn.home "home")
-    ++ lib.optional (isHome && isStandalone && on ? standalone) (tag on.standalone "standalone")
-    ++ lib.optional (isHome && isStandalone && platformOn ? standalone) (
-      tag platformOn.standalone "standalone"
-    )
-    ++ lib.optional (isHome && isIntegrated && on ? integrated) (tag on.integrated "integrated")
-    ++ lib.optional (isHome && isIntegrated && platformOn ? integrated) (
-      tag platformOn.integrated "integrated"
-    )
-    ++ lib.optional (!isHome && on ? system) (tag on.system "system")
-    ++ lib.optional (!isHome && platformOn ? system) (tag platformOn.system "system");
+    collectLayers123 false null on
+    ++ collectConditional true (on.ifEnabled or { })
+    ++ collectConditional false (on.ifNotEnabled or { });
 
   mergeOnFunctions =
     moduleIdentifier: fns:
@@ -552,9 +776,13 @@ rec {
           "integrated"
         ];
         callAndValidate =
-          { fn, type }:
+          {
+            fn,
+            type,
+            wrap ? null,
+          }:
           let
-            result = fn config;
+            result = (if wrap != null then wrap fn else fn) config;
           in
           if (result ? nx) && (builtins.elem type contextSpecific) then
             throw "Module ${moduleIdentifier}: nx.* options cannot be set in on.${type}.\n\nUse on.init or on.enabled for shared options or on.standalone for home-manager only options (only works in home-manager only profiles)!"
@@ -671,50 +899,38 @@ rec {
         self = enhancedContext;
       };
 
-      isLinux = helpers.isLinuxArch architecture;
-      isDarwin = helpers.isDarwinArch architecture;
-      platformOn =
-        if isLinux then
-          on.linux or { }
-        else if isDarwin then
-          on.darwin or { }
-        else
-          { };
-
-      tag = fn: type: { inherit fn type; };
-      initFns =
-        lib.optional (on ? init) (tag on.init "init")
-        ++ lib.optional (platformOn ? init) (tag platformOn.init "init");
-
-      contextFns = selectApplicableOnFns {
+      allFns = selectApplicableOnFns {
         inherit on buildContext architecture;
+        includeInit = true;
       };
 
       applyArgs =
-        { fn, type }:
+        {
+          fn,
+          type,
+          wrap ? null,
+        }:
         {
           fn = (config: fn enhancedArgs config);
-          inherit type;
+          inherit type wrap;
         };
+
+      appliedFns = map applyArgs allFns;
+      initFns = builtins.filter (f: f.type == "init") appliedFns;
+      contextFns = builtins.filter (f: f.type != "init") appliedFns;
     in
     {
       initModules =
-        let
-          applied = map applyArgs initFns;
-        in
-        if applied == [ ] then
+        if initFns == [ ] then
           [ ]
         else
-          [ (mergeOnFunctions "profile:${profileType}/${profileName}" applied) ];
+          [ (mergeOnFunctions "profile:${profileType}/${profileName}" initFns) ];
 
       contextModules =
-        let
-          applied = map applyArgs contextFns;
-        in
-        if applied == [ ] then
+        if contextFns == [ ] then
           [ ]
         else
-          [ (mergeOnFunctions "profile:${profileType}/${profileName}" applied) ];
+          [ (mergeOnFunctions "profile:${profileType}/${profileName}" contextFns) ];
     };
 
   collectModuleAssertions =
@@ -1167,15 +1383,34 @@ rec {
     let
       isLinux = helpers.isLinuxArch system;
       isDarwin = helpers.isDarwinArch system;
-      platformOn =
+      isX86_64 = helpers.isX86_64Arch system;
+      isAARCH64 = helpers.isAARCH64Arch system;
+      platOn =
         if isLinux then
           on.linux or { }
         else if isDarwin then
           on.darwin or { }
         else
           { };
+      archOn =
+        if isX86_64 then
+          on.x86_64 or { }
+        else if isAARCH64 then
+          on.aarch64 or { }
+        else
+          { };
+      archPlatOn =
+        if isLinux then
+          archOn.linux or { }
+        else if isDarwin then
+          archOn.darwin or { }
+        else
+          { };
     in
-    (on.overlays or [ ]) ++ (platformOn.overlays or [ ]);
+    (on.overlays or [ ])
+    ++ (platOn.overlays or [ ])
+    ++ (archOn.overlays or [ ])
+    ++ (archPlatOn.overlays or [ ]);
 
   collectModuleOverlays =
     system:
@@ -1440,8 +1675,6 @@ rec {
     args:
     let
       architecture = resolveArchitecture args;
-      isLinux = helpers.isLinuxArch architecture;
-      isDarwin = helpers.isDarwinArch architecture;
 
       scanInput =
         inputName:
@@ -1489,19 +1722,16 @@ rec {
                 moduleResult = builtins.tryEval (import spec.modulePath consolidatedArgs);
 
                 on = if moduleResult.success then moduleResult.value.on or { } else { };
-                platformOn =
-                  if isLinux then
-                    on.linux or { }
-                  else if isDarwin then
-                    on.darwin or { }
-                  else
-                    { };
 
                 wrapInit = initFn: { config, ... }: initFn config;
 
-                initFns =
-                  (if on ? init then [ (wrapInit on.init) ] else [ ])
-                  ++ (if platformOn ? init then [ (wrapInit platformOn.init) ] else [ ]);
+                initFns = map (f: wrapInit f.fn) (
+                  builtins.filter (f: f.type == "init") (selectApplicableOnFns {
+                    inherit on architecture;
+                    buildContext = "system";
+                    includeInit = true;
+                  })
+                );
               in
               initFns
             ) moduleSpecs

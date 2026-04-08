@@ -54,7 +54,7 @@ args@{
 
   on = {
     # All modules, both contexts, only config.nx.*, no self.settings
-    # init = config: lib.mkIf self.isEnabled { };
+    # init = config: { };
 
     # Enabled only, both contexts
     # enabled = config: { };
@@ -91,5 +91,29 @@ args@{
     #   integrated = config: { };
     # };
     # darwin = { ... };
+
+    # x86_64 = {
+    #   overlays = [ (final: prev: { ... }) ];
+    #   init = config: { };
+    #   enabled = config: { };
+    #   home = config: { };
+    #   system = config: { };
+    #   linux = { init = config: { }; home = config: { }; ... };
+    #   darwin = { ... };
+    # };
+    # aarch64 = { ... };
+
+    # ifEnabled.INPUT.GROUP.MODULE = {
+    #   enabled = config: { };
+    #   home = config: { };
+    #   system = config: { };
+    #   standalone = config: { };
+    #   integrated = config: { };
+    #   linux = { enabled = config: { }; home = config: { }; ... };
+    #   darwin = { ... };
+    #   x86_64 = { home = config: { }; linux = { ... }; ... };
+    #   aarch64 = { ... };
+    # };
+    # ifNotEnabled.INPUT.GROUP.MODULE = { ... };
   };
 }
