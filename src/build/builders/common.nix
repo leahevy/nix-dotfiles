@@ -63,7 +63,7 @@ let
 
       nixImplOverlay =
         if nixImpl == "nix" then
-          (final: prev: { nix = pkgs-nix.nix; })
+          (final: prev: { inherit (pkgs-nix) nix; })
         else if nixImpl == "lix" then
           (final: prev: {
             lixPackageSets = pkgs-nix.lixPackageSets;
@@ -78,6 +78,18 @@ let
         else
           throw "setupPackages: unknown nix-implementation '${nixImpl}', must be 'nix' or 'lix'";
 
+      nixToolsOverlay = (
+        final: prev: {
+          inherit (pkgs-nix)
+            nix-diff
+            nix-search-tv
+            nix-search
+            nix-index
+            nh
+            ;
+        }
+      );
+
       buildPkgs =
         nixpkgs:
         import nixpkgs {
@@ -85,6 +97,7 @@ let
           overlays = overlays ++ [
             (final: prev: unstableOverrides)
             nixImplOverlay
+            nixToolsOverlay
           ];
           config.allowUnfreePredicate = pkg: true;
         };
