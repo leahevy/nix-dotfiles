@@ -71,11 +71,17 @@ let
         ++ hardwareModule
         ++ diskoModule
         ++ [
+          (lib.mkIf (variables."nix-implementation" == "lix") {
+            nix.package = lib.mkForce pkgs.lix;
+          })
           inputs.home-manager.nixosModules.home-manager
           {
             home-manager.sharedModules = [
               inputs.sops-nix.homeManagerModules.sops
               inputs.nixvim.homeModules.nixvim
+              (lib.mkIf (variables."nix-implementation" == "lix") {
+                nix.package = lib.mkForce pkgs.lix;
+              })
             ]
             ++ (
               if !(hostConfig.host.impermanence or false) then

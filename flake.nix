@@ -132,6 +132,10 @@
       url = "github:NixOS/nixpkgs/nixos-25.11";
     };
 
+    nixpkgs-nix = {
+      url = "github:NixOS/nixpkgs/nixos-25.11";
+    };
+
     nixpkgs-darwin = {
       url = "github:NixOS/nixpkgs/nixpkgs-25.11-darwin";
     };

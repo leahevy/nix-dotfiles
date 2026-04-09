@@ -41,6 +41,9 @@ let
         inherit pkgs;
         modules = [
           (import (build + "/config/home/home-standalone.nix") buildArgs)
+          (lib.mkIf (variables."nix-implementation" == "lix") {
+            nix.package = lib.mkForce pkgs.lix;
+          })
           inputs.sops-nix.homeManagerModules.sops
           inputs.stylix.homeModules.stylix
           inputs.nixvim.homeModules.nixvim

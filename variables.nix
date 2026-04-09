@@ -12,6 +12,8 @@
     "flakes"
   ];
 
+  nix-implementation = "nix"; # "nix" | "lix"
+
   coreRepoIsoUrl = "https://github.com/leahevy/nix-dotfiles";
 
   allowedUnfreePackages = [ ];

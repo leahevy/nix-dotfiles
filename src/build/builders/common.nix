@@ -34,6 +34,7 @@ let
       nixpkgs ? inputs.nixpkgs,
       nixpkgs-unstable ? inputs.nixpkgs-unstable,
       nixpkgs-darwin ? inputs.nixpkgs-darwin,
+      nixpkgs-nix ? inputs.nixpkgs-nix,
     }:
     let
       moduleOverlays = funcs.collectModuleOverlays system;
@@ -56,23 +57,43 @@ let
         }) unstablePackages
       );
 
+      nixImpl = variables."nix-implementation";
+
+      pkgs-nix = import nixpkgs-nix { inherit system; };
+
+      nixImplOverlay =
+        if nixImpl == "nix" then
+          (final: prev: { nix = pkgs-nix.nix; })
+        else if nixImpl == "lix" then
+          (final: prev: {
+            lixPackageSets = pkgs-nix.lixPackageSets;
+            inherit (pkgs-nix.lixPackageSets.stable)
+              lix
+              nixpkgs-review
+              nix-eval-jobs
+              nix-fast-build
+              colmena
+              ;
+          })
+        else
+          throw "setupPackages: unknown nix-implementation '${nixImpl}', must be 'nix' or 'lix'";
+
+      buildPkgs =
+        nixpkgs:
+        import nixpkgs {
+          inherit system;
+          overlays = overlays ++ [
+            (final: prev: unstableOverrides)
+            nixImplOverlay
+          ];
+          config.allowUnfreePredicate = pkg: true;
+        };
+
       pkgs =
         if helpers.isLinuxArch system then
-          import nixpkgs {
-            inherit system;
-            overlays = overlays ++ [
-              (final: prev: unstableOverrides)
-            ];
-            config.allowUnfreePredicate = pkg: true;
-          }
+          buildPkgs nixpkgs
         else if helpers.isDarwinArch system then
-          import nixpkgs-darwin {
-            inherit system;
-            overlays = overlays ++ [
-              (final: prev: unstableOverrides)
-            ];
-            config.allowUnfreePredicate = pkg: true;
-          }
+          buildPkgs nixpkgs-darwin
         else
           throw "builder: cannot determine system architecture!";
     in
