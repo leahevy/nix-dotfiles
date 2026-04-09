@@ -10,16 +10,7 @@
   common,
   nixosArchitectures,
 }:
-
 let
-  inherit (common)
-    evalConfigModule
-    setupPackages
-    buildSpecialArgs
-    getHardwareModule
-    getDiskoModule
-    ;
-
   buildIsoConfiguration =
     { arch }:
     let
