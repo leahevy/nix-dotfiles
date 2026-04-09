@@ -32,6 +32,8 @@ export AUTO_UPDATE_INPUTS=(
 
 export REBOOT_CHECK_INPUTS=(
     "nixpkgs"
+    "nixpkgs-darwin"
+    "nixpkgs-nix"
 )
 
 export THIRD_PARTY_INPUTS=(
