@@ -15,7 +15,7 @@
 
 ## About
 
-My personal NixOS, macOS, and Home-Manager configuration using a dual-repository setup. See the template for the private repository layout in `src/nxconfig/`.
+My personal NixOS, macOS, and Home-Manager configuration using a dual-repository setup. See the template for the private repository layout at [GitHub](https://github.com/leahevy/nix-dotfiles-config-template).
 
 <div align="center">
     <img src="assets/desktop-screenshot.jpg" alt="Desktop" width="100%" />
@@ -38,7 +38,7 @@ My personal NixOS, macOS, and Home-Manager configuration using a dual-repository
 
 1. Install Nix: <https://nixos.org/download/>
 2. Run `mkdir -p ~/.config/nx && git clone https://github.com/leahevy/nix-dotfiles ~/.config/nx/nxcore`
-3. Run `cp -r ~/.config/nx/nxcore/src/nxconfig ~/.config/nx/nxconfig`
+3. Run `git clone https://github.com/leahevy/nix-dotfiles-config-template.git ~/.config/nx/nxconfig`
 4. Edit `~/.config/nx/nxconfig/.sops.yaml` with your keys.
 5. Create encrypted secrets in `~/.config/nx/nxconfig/secrets/`
 6. Add profiles in `~/.config/nx/nxconfig/profiles/` - examples can be found in templates/*

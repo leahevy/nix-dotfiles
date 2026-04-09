@@ -68,18 +68,6 @@
         "type": "github"
       }
     },
-    "build": {
-      "flake": false,
-      "locked": {
-        "path": "./src/build",
-        "type": "path"
-      },
-      "original": {
-        "path": "./src/build",
-        "type": "path"
-      },
-      "parent": []
-    },
     "cl-nix-lite": {
       "inputs": {
         "flake-parts": [
@@ -110,18 +98,6 @@
         "type": "github"
       }
     },
-    "common": {
-      "flake": false,
-      "locked": {
-        "path": "./src/common",
-        "type": "path"
-      },
-      "original": {
-        "path": "./src/common",
-        "type": "path"
-      },
-      "parent": []
-    },
     "config": {
       "inputs": {
         "nixpkgs": [
@@ -132,14 +108,19 @@
         ]
       },
       "locked": {
-        "path": "./src/nxconfig",
-        "type": "path"
+        "lastModified": 1775740330,
+        "narHash": "sha256-7pva5mZA5zIi/um2REXICr/GSWlfmRr/GwJUl9oVEUI=",
+        "owner": "leahevy",
+        "repo": "nix-dotfiles-config-template",
+        "rev": "b1044c3c5ecce2b49d59ee82a5f6ef00c9b678c1",
+        "type": "github"
       },
       "original": {
-        "path": "./src/nxconfig",
-        "type": "path"
-      },
-      "parent": []
+        "owner": "leahevy",
+        "ref": "main",
+        "repo": "nix-dotfiles-config-template",
+        "type": "github"
+      }
     },
     "crane": {
       "locked": {
@@ -155,18 +136,6 @@
         "repo": "crane",
         "type": "github"
       }
-    },
-    "darwin": {
-      "flake": false,
-      "locked": {
-        "path": "./src/darwin",
-        "type": "path"
-      },
-      "original": {
-        "path": "./src/darwin",
-        "type": "path"
-      },
-      "parent": []
     },
     "disko": {
       "inputs": {
@@ -318,18 +287,6 @@
         "type": "gitlab"
       }
     },
-    "groups": {
-      "flake": false,
-      "locked": {
-        "path": "./src/groups",
-        "type": "path"
-      },
-      "original": {
-        "path": "./src/groups",
-        "type": "path"
-      },
-      "parent": []
-    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -425,30 +382,6 @@
         "repo": "lanzaboote",
         "type": "github"
       }
-    },
-    "lib": {
-      "flake": false,
-      "locked": {
-        "path": "./src/lib",
-        "type": "path"
-      },
-      "original": {
-        "path": "./src/lib",
-        "type": "path"
-      },
-      "parent": []
-    },
-    "linux": {
-      "flake": false,
-      "locked": {
-        "path": "./src/linux",
-        "type": "path"
-      },
-      "original": {
-        "path": "./src/linux",
-        "type": "path"
-      },
-      "parent": []
     },
     "mac-app-util": {
       "inputs": {
@@ -788,18 +721,6 @@
         "type": "github"
       }
     },
-    "overlays": {
-      "flake": false,
-      "locked": {
-        "path": "./src/overlays",
-        "type": "path"
-      },
-      "original": {
-        "path": "./src/overlays",
-        "type": "path"
-      },
-      "parent": []
-    },
     "pre-commit": {
       "inputs": {
         "flake-compat": [
@@ -828,31 +749,30 @@
     "profile": {
       "flake": false,
       "locked": {
-        "path": "./src/profile",
-        "type": "path"
+        "lastModified": 1775740330,
+        "narHash": "sha256-7pva5mZA5zIi/um2REXICr/GSWlfmRr/GwJUl9oVEUI=",
+        "owner": "leahevy",
+        "repo": "nix-dotfiles-config-template",
+        "rev": "b1044c3c5ecce2b49d59ee82a5f6ef00c9b678c1",
+        "type": "github"
       },
       "original": {
-        "path": "./src/profile",
-        "type": "path"
-      },
-      "parent": []
+        "owner": "leahevy",
+        "ref": "main",
+        "repo": "nix-dotfiles-config-template",
+        "type": "github"
+      }
     },
     "root": {
       "inputs": {
-        "build": "build",
-        "common": "common",
         "config": "config",
-        "darwin": "darwin",
         "disko": "disko",
         "flake-compat": "flake-compat",
         "flake-parts": "flake-parts",
         "flake-utils": "flake-utils",
-        "groups": "groups",
         "home-manager": "home-manager",
         "impermanence": "impermanence",
         "lanzaboote": "lanzaboote",
-        "lib": "lib",
-        "linux": "linux",
         "mac-app-util": "mac-app-util",
         "niri-flake": "niri-flake",
         "nix-darwin": "nix-darwin",
@@ -866,11 +786,9 @@
         "nixpkgs-nix": "nixpkgs-nix",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",
-        "overlays": "overlays",
         "profile": "profile",
         "sops-nix": "sops-nix",
-        "stylix": "stylix",
-        "themes": "themes"
+        "stylix": "stylix"
       }
     },
     "rust-overlay": {
@@ -952,18 +870,6 @@
         "repo": "stylix",
         "type": "github"
       }
-    },
-    "themes": {
-      "flake": false,
-      "locked": {
-        "path": "./src/themes",
-        "type": "path"
-      },
-      "original": {
-        "path": "./src/themes",
-        "type": "path"
-      },
-      "parent": []
     },
     "tinted-foot": {
       "flake": false,
