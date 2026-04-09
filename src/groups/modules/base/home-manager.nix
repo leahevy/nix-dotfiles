@@ -27,6 +27,7 @@ let
         "nodejs"
         "typescript-lsp"
         "vscodium"
+        "jujutsu"
       ];
       services = [
         "ollama"
