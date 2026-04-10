@@ -16,6 +16,8 @@ if [[ "${RAW_LOG:-false}" == "true" ]]; then
 fi
 
 if [[ -e /etc/NIXOS ]]; then
+  export_nixos_label
+
   # shellcheck disable=SC2086
   NEW_SYSTEM=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN $LOG_FORMAT ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
 
