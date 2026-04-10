@@ -67,6 +67,7 @@ let
         else if nixImpl == "lix" then
           (final: prev: {
             lixPackageSets = pkgs-nix.lixPackageSets;
+            inherit (pkgs-nix) nix;
             inherit (pkgs-nix.lixPackageSets.stable)
               lix
               nixpkgs-review
