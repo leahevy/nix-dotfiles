@@ -28,7 +28,7 @@ args@{
       nx.linux.desktop.common.graphicalSessionServices = [ "swayidle" ];
     };
 
-    ifEnabled.linux.desktop.niri.home =
+    moduleEnabled.linux.desktop.niri.home =
       config:
       let
         toggleSwayidleScript = pkgs.writeShellScript "toggle-swayidle" ''

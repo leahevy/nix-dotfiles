@@ -610,8 +610,8 @@ rec {
         "darwin"
         "x86_64"
         "aarch64"
-        "ifEnabled"
-        "ifNotEnabled"
+        "moduleEnabled"
+        "moduleDisabled"
       ];
 
       topErrors = checkInvalid "on" topAllowed on;
@@ -650,8 +650,8 @@ rec {
           ];
 
       conditionalErrors =
-        (if on ? ifEnabled then validateConditional "ifEnabled" on.ifEnabled else [ ])
-        ++ (if on ? ifNotEnabled then validateConditional "ifNotEnabled" on.ifNotEnabled else [ ]);
+        (if on ? moduleEnabled then validateConditional "moduleEnabled" on.moduleEnabled else [ ])
+        ++ (if on ? moduleDisabled then validateConditional "moduleDisabled" on.moduleDisabled else [ ]);
 
       allErrors = topErrors ++ topFnErrors ++ platErrors ++ archErrors ++ conditionalErrors;
     in
@@ -727,7 +727,7 @@ rec {
         let
           pathParts = lib.splitString "." modulePath;
           enablePath = [ "nx" ] ++ pathParts ++ [ "enable" ];
-          condName = if isEnabled then "ifEnabled" else "ifNotEnabled";
+          condName = if isEnabled then "moduleEnabled" else "moduleDisabled";
         in
         fn: config:
         lib.mkIf (
@@ -760,8 +760,8 @@ rec {
         );
     in
     collectLayers123 false null on
-    ++ collectConditional true (on.ifEnabled or { })
-    ++ collectConditional false (on.ifNotEnabled or { });
+    ++ collectConditional true (on.moduleEnabled or { })
+    ++ collectConditional false (on.moduleDisabled or { });
 
   mergeOnFunctions =
     moduleIdentifier: fns:

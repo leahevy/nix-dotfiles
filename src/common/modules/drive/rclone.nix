@@ -1238,7 +1238,7 @@ args@{
         };
       };
 
-    ifEnabled.linux.desktop.niri.home = config: {
+    moduleEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           binds = with config.lib.niri.actions; {

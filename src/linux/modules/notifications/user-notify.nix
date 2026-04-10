@@ -255,7 +255,7 @@ args@{
 
       };
 
-    ifEnabled.linux.desktop.niri.home =
+    moduleEnabled.linux.desktop.niri.home =
       config:
       let
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;

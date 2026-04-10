@@ -34,7 +34,7 @@ args@{
 
   on = {
 
-    ifEnabled.linux.desktop.niri.home = config: {
+    moduleEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           window-rules = [
