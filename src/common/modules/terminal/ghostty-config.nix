@@ -89,7 +89,10 @@ args@{
           background = lib.mkForce (
             lib.removePrefix "#" (config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html)
           );
-          working-directory = "inherit";
+          working-directory = "home";
+          window-inherit-working-directory = true;
+          tab-inherit-working-directory = true;
+          split-inherit-working-directory = true;
 
           custom-shader =
             let
