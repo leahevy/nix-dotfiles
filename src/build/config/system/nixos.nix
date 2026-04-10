@@ -94,6 +94,7 @@ in
       settings = {
         experimental-features = variables.experimental-features;
         trusted-users = [ host.mainUser.username ];
+        allowed-users = lib.mkForce [ ];
         http-connections = variables.httpConnections;
         keep-outputs = true;
         keep-derivations = true;
