@@ -117,6 +117,12 @@ args@{
           user = true;
         }
         {
+          tag = "systemd";
+          string = "Failed to enqueue SYSTEMD_USER_WANTS job, ignoring: Transaction for (sound|smartcard)\\.target/start is destructive";
+          user = true;
+          unitless = true;
+        }
+        {
           string = "Source ID [0-9]+ was not found when attempting to remove it";
           user = true;
         }
