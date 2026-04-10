@@ -103,7 +103,7 @@ args@{
     # };
     # aarch64 = { ... };
 
-    # ifEnabled.INPUT.GROUP.MODULE = {
+    # moduleEnabled.INPUT.GROUP.MODULE = {
     #   enabled = config: { };
     #   home = config: { };
     #   system = config: { };
@@ -114,6 +114,14 @@ args@{
     #   x86_64 = { home = config: { }; linux = { ... }; ... };
     #   aarch64 = { ... };
     # };
-    # ifNotEnabled.INPUT.GROUP.MODULE = { ... };
+    # moduleDisabled.INPUT.GROUP.MODULE = { ... };
+
+    # when = {                       # Single predicate
+    #   condition = config: config.some.option == "value";
+    #   home = config: { };
+    #   linux = { home = config: { }; ... };
+    #   x86_64.linux.home = config: { };
+    # };
+    # when = [ { condition = config: ...; home = config: { }; } ];  # List of predicates
   };
 }

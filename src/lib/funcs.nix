@@ -524,21 +524,18 @@ rec {
               "darwin"
             ];
 
-      validateConditionalModule =
-        condName: modPath: modOn:
-        let
-          basePath = "${condName}.${modPath}";
-        in
-        checkInvalid "on.${basePath}" condStructuralKeys modOn
-        ++ checkFns "${basePath}." l1CondAllowed modOn
+      validateCondBody =
+        path: attrset:
+        checkInvalid "on.${path}" condStructuralKeys attrset
+        ++ checkFns "${path}." l1CondAllowed attrset
         ++
           lib.concatMap
             (
               platName:
-              if modOn ? ${platName} && builtins.isAttrs modOn.${platName} then
-                validatePlatformCond "${basePath}." platName modOn.${platName}
-              else if modOn ? ${platName} then
-                [ "on.${basePath}.${platName} must be an attribute set" ]
+              if attrset ? ${platName} && builtins.isAttrs attrset.${platName} then
+                validatePlatformCond "${path}." platName attrset.${platName}
+              else if attrset ? ${platName} then
+                [ "on.${path}.${platName} must be an attribute set" ]
               else
                 [ ]
             )
@@ -550,10 +547,10 @@ rec {
           lib.concatMap
             (
               archName:
-              if modOn ? ${archName} && builtins.isAttrs modOn.${archName} then
-                validateArchCond "${basePath}." archName modOn.${archName}
-              else if modOn ? ${archName} then
-                [ "on.${basePath}.${archName} must be an attribute set" ]
+              if attrset ? ${archName} && builtins.isAttrs attrset.${archName} then
+                validateArchCond "${path}." archName attrset.${archName}
+              else if attrset ? ${archName} then
+                [ "on.${path}.${archName} must be an attribute set" ]
               else
                 [ ]
             )
@@ -561,6 +558,25 @@ rec {
               "x86_64"
               "aarch64"
             ];
+
+      validateConditionalModule =
+        condName: modPath: modOn:
+        validateCondBody "${condName}.${modPath}" modOn;
+
+      validatePredicateItem =
+        path: item:
+        if !(builtins.isAttrs item) then
+          [ "on.${path} must be an attribute set, got ${builtins.typeOf item}" ]
+        else if !(item ? condition) then
+          [ "on.${path} is missing required 'condition' field" ]
+        else if !(builtins.isFunction item.condition) then
+          [ "on.${path}.condition must be a function (config: bool), got ${builtins.typeOf item.condition}" ]
+        else if (builtins.removeAttrs item [ "condition" ]) == { } then
+          [
+            "on.${path} has 'condition' but no on-function fields. Add at least one of: ${builtins.concatStringsSep ", " condStructuralKeys}"
+          ]
+        else
+          validateCondBody path (builtins.removeAttrs item [ "condition" ]);
 
       validateConditional =
         condName: condOn:
@@ -612,6 +628,7 @@ rec {
         "aarch64"
         "moduleEnabled"
         "moduleDisabled"
+        "when"
       ];
 
       topErrors = checkInvalid "on" topAllowed on;
@@ -653,7 +670,26 @@ rec {
         (if on ? moduleEnabled then validateConditional "moduleEnabled" on.moduleEnabled else [ ])
         ++ (if on ? moduleDisabled then validateConditional "moduleDisabled" on.moduleDisabled else [ ]);
 
-      allErrors = topErrors ++ topFnErrors ++ platErrors ++ archErrors ++ conditionalErrors;
+      whenErrors =
+        if on ? when then
+          let
+            val = on.when;
+          in
+          if builtins.isList val then
+            if val == [ ] then
+              [ "on.when must not be an empty list" ]
+            else
+              lib.flatten (lib.imap0 (i: item: validatePredicateItem "when[${toString i}]" item) val)
+          else if builtins.isAttrs val then
+            validatePredicateItem "when" val
+          else
+            [
+              "on.when must be a predicate attrset or a list of predicate attrsets, got ${builtins.typeOf val}"
+            ]
+        else
+          [ ];
+
+      allErrors = topErrors ++ topFnErrors ++ platErrors ++ archErrors ++ conditionalErrors ++ whenErrors;
     in
     if allErrors != [ ] then
       throw "Module ${modulePath} has invalid 'on' configuration:\n  ${builtins.concatStringsSep "\n  " allErrors}"
@@ -666,6 +702,7 @@ rec {
       buildContext,
       architecture,
       includeInit ? false,
+      sourceModule ? "unknown",
     }:
     let
       isLinux = helpers.isLinuxArch architecture;
@@ -734,10 +771,15 @@ rec {
           let
             enableValue =
               lib.attrByPath enablePath
-                (throw "${condName}: module '${modulePath}' not found at config.nx.${modulePath}.enable")
+                (throw "${sourceModule}: ${condName}: module '${modulePath}' not found at config.nx.${modulePath}.enable")
                 config;
+            checkedValue =
+              if !builtins.isBool enableValue then
+                throw "${sourceModule}: ${condName}: config.nx.${modulePath}.enable must be a boolean, got ${builtins.typeOf enableValue}"
+              else
+                enableValue;
           in
-          if isEnabled then enableValue else !enableValue
+          if isEnabled then checkedValue else !checkedValue
         ) (fn config);
 
       collectConditional =
@@ -758,10 +800,40 @@ rec {
             )
           ) condAttrsets
         );
+      makePredWrap =
+        label: condition: fn: config:
+        lib.mkIf (
+          let
+            result = condition config;
+          in
+          if !builtins.isBool result then
+            throw "${sourceModule}: on.${label}: condition must return a boolean, got ${builtins.typeOf result}"
+          else
+            result
+        ) (fn config);
+
+      whenFns =
+        let
+          collect =
+            label: item:
+            collectLayers123 true (makePredWrap label item.condition) (
+              builtins.removeAttrs item [ "condition" ]
+            );
+          val = on.when or null;
+        in
+        if val == null then
+          [ ]
+        else if builtins.isList val then
+          lib.flatten (lib.imap0 (i: item: collect "when[${toString i}]" item) val)
+        else if builtins.isAttrs val then
+          collect "when" val
+        else
+          [ ];
     in
     collectLayers123 false null on
     ++ collectConditional true (on.moduleEnabled or { })
-    ++ collectConditional false (on.moduleDisabled or { });
+    ++ collectConditional false (on.moduleDisabled or { })
+    ++ whenFns;
 
   mergeOnFunctions =
     moduleIdentifier: fns:
@@ -848,6 +920,7 @@ rec {
 
       applicableFns = selectApplicableOnFns {
         inherit on buildContext architecture;
+        sourceModule = toString modulePath;
       };
 
       configFn = mergeOnFunctions (toString modulePath) applicableFns;
@@ -902,6 +975,7 @@ rec {
       allFns = selectApplicableOnFns {
         inherit on buildContext architecture;
         includeInit = true;
+        sourceModule = "profile:${profileType}/${profileName}";
       };
 
       applyArgs =
@@ -1730,6 +1804,7 @@ rec {
                     inherit on architecture;
                     buildContext = "system";
                     includeInit = true;
+                    sourceModule = toString spec.modulePath;
                   })
                 );
               in
