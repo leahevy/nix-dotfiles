@@ -286,6 +286,7 @@ args@{
         "usb.*clear tt [0-9]+ \\([0-9a-fA-F]+\\) error -[0-9]+"
         "usbhid.*can't add hid device: -[0-9]+"
         "usbhid.*probe with driver usbhid failed with error -[0-9]+"
+        "hid-generic [0-9a-fA-F]{4}:[0-9a-fA-F]{4}:[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}: unknown main item tag 0x[0-9a-f]+"
         "^[^a-zA-Z]*$"
         "^-+\\[ cut here \\]-+$"
         "^---\\[ end trace [0-9a-f]+ \\]---$"
