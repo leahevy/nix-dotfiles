@@ -991,7 +991,7 @@ check_deployment_conflicts() {
 
 diff_store_paths() {
     local exact_names_to_ignore=("man-cache")
-    local changed_prefixes_to_ignore=("nixos-system-")
+    local changed_prefixes_to_ignore=("nixos-system-" "manifest-for-users.json" "manifest.json" "sops-nix.service" "sops-nix-user")
     local add_removal_prefixes_to_ignore=("nixos-system-")
 
     local old="$1" new="$2"
