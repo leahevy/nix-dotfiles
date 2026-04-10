@@ -1095,13 +1095,37 @@ diff_store_paths() {
         [[ "$name" =~ -[0-9]+\.[0-9]+([.][0-9]+)*([a-zA-Z]+[0-9]*)?(-[0-9A-Za-z]+)*$ ]] && continue
         [[ "$name" =~ (-wrapped|-fish-completions|\.manpath)$ ]] && continue
 
-        local oh nh
-        oh="$(grep -m1 "	${name}$" "$old_file" | cut -f1)"
-        nh="$(grep -m1 "	${name}$" "$new_file" | cut -f1)"
+        local old_hashes=() new_hashes=()
 
-        if [[ "$oh" != "$nh" ]]; then
-          echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
-          echo -e "    ${GRAY}/nix/store/${oh}-${name}${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
+        while IFS= read -r h; do
+            old_hashes+=("$h")
+        done < <(awk -F $'\t' -v n="$name" '$2 == n { print $1 }' "$old_file" | sort -u)
+
+        while IFS= read -r h; do
+            new_hashes+=("$h")
+        done < <(awk -F $'\t' -v n="$name" '$2 == n { print $1 }' "$new_file" | sort -u)
+
+        if (( ${#old_hashes[@]} == 0 || ${#new_hashes[@]} == 0 )); then
+            continue
+        fi
+
+        if (( ${#old_hashes[@]} == ${#new_hashes[@]} && ${#old_hashes[@]} > 1 )); then
+            echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
+            for oh in "${old_hashes[@]}"; do
+                echo -e "    ${RED}old${RESET} ${GRAY}/nix/store/${oh}-${name}${RESET}"
+            done
+            for nh in "${new_hashes[@]}"; do
+                echo -e "    ${GREEN}new${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
+            done
+        else
+            local oh nh
+            oh="${old_hashes[0]}"
+            nh="${new_hashes[0]}"
+
+            if [[ "$oh" != "$nh" ]]; then
+                echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
+                echo -e "    ${GRAY}/nix/store/${oh}-${name}${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
+            fi
         fi
     done < "$changed_file" >> "$out_file"
 
