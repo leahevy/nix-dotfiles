@@ -21,8 +21,8 @@ args@{
   };
 
   on = {
-    linux.enabled = config: {
-      nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.isModuleEnabled "desktop.niri") [
+    moduleEnabled.linux.desktop.niri.linux.enabled = config: {
+      nx.linux.desktop.niri.autostartPrograms = [
         "beeper"
       ];
     };

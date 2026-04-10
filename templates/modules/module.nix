@@ -116,12 +116,19 @@ args@{
     # };
     # moduleDisabled.INPUT.GROUP.MODULE = { ... };
 
-    # when = {                       # Single predicate
+    # when = {
     #   condition = config: config.some.option == "value";
-    #   home = config: { };
-    #   linux = { home = config: { }; ... };
-    #   x86_64.linux.home = config: { };
+    #   modules.linux.notifications.pushover = true;        # true=enabled, false=disabled
+    #   modules.linux.notifications = [ "pushover" ];       # list = all must be enabled
+    #   host.hostname = "host";                             # deep paths: host.kernel.variant = "lts"
+    #   user.username = "user";
+    #   isNixOS = true;                                     # isLinux isDarwin isX86_64 isAARCH64 isStandalone isIntegrated
+    #   do = {
+    #     home = config: { };
+    #     linux = { home = config: { }; ... };
+    #     x86_64.linux.home = config: { };
+    #   };
     # };
-    # when = [ { condition = config: ...; home = config: { }; } ];  # List of predicates
+    # when = [ { host.hostname = "host"; do.home = config: { }; } ];
   };
 }

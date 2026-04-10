@@ -405,6 +405,16 @@ rec {
     else
       throw "No architecture found in args - cannot determine platform";
 
+  isProfileKeys = [
+    "isNixOS"
+    "isLinux"
+    "isDarwin"
+    "isX86_64"
+    "isAARCH64"
+    "isStandalone"
+    "isIntegrated"
+  ];
+
   validateOn =
     modulePath: on:
     let
@@ -563,20 +573,137 @@ rec {
         condName: modPath: modOn:
         validateCondBody "${condName}.${modPath}" modOn;
 
+      validateModulesField =
+        path: modulesAttr:
+        if !(builtins.isAttrs modulesAttr) then
+          [ "on.${path}.modules must be an attrset, got ${builtins.typeOf modulesAttr}" ]
+        else if modulesAttr == { } then
+          [ "on.${path}.modules must not be empty" ]
+        else
+          lib.flatten (
+            lib.mapAttrsToList (
+              inputName: groups:
+              if !(builtins.isAttrs groups) then
+                [ "on.${path}.modules.${inputName} must be an attrset, got ${builtins.typeOf groups}" ]
+              else
+                lib.flatten (
+                  lib.mapAttrsToList (
+                    groupName: modules:
+                    if builtins.isList modules then
+                      let
+                        nonStrings = builtins.filter (x: !(builtins.isString x)) modules;
+                      in
+                      if nonStrings != [ ] then
+                        [ "on.${path}.modules.${inputName}.${groupName} list must contain only strings" ]
+                      else
+                        [ ]
+                    else if builtins.isAttrs modules then
+                      lib.flatten (
+                        lib.mapAttrsToList (
+                          moduleName: v:
+                          if !builtins.isBool v then
+                            [
+                              "on.${path}.modules.${inputName}.${groupName}.${moduleName} must be true or false, got ${builtins.typeOf v}"
+                            ]
+                          else
+                            [ ]
+                        ) modules
+                      )
+                    else
+                      [
+                        "on.${path}.modules.${inputName}.${groupName} must be an attrset or list, got ${builtins.typeOf modules}"
+                      ]
+                  ) groups
+                )
+            ) modulesAttr
+          );
+
       validatePredicateItem =
         path: item:
         if !(builtins.isAttrs item) then
           [ "on.${path} must be an attribute set, got ${builtins.typeOf item}" ]
-        else if !(item ? condition) then
-          [ "on.${path} is missing required 'condition' field" ]
-        else if !(builtins.isFunction item.condition) then
-          [ "on.${path}.condition must be a function (config: bool), got ${builtins.typeOf item.condition}" ]
-        else if (builtins.removeAttrs item [ "condition" ]) == { } then
-          [
-            "on.${path} has 'condition' but no on-function fields. Add at least one of: ${builtins.concatStringsSep ", " condStructuralKeys}"
-          ]
         else
-          validateCondBody path (builtins.removeAttrs item [ "condition" ]);
+          let
+            allowedKeys = [
+              "condition"
+              "modules"
+              "host"
+              "user"
+              "do"
+            ]
+            ++ isProfileKeys;
+            unknownKeys = builtins.filter (k: !(builtins.elem k allowedKeys)) (builtins.attrNames item);
+            unknownErrors =
+              if unknownKeys != [ ] then
+                [
+                  "on.${path} has unknown fields: ${builtins.concatStringsSep ", " unknownKeys}. Allowed: ${builtins.concatStringsSep ", " allowedKeys}"
+                ]
+              else
+                [ ];
+            hasCondition = item ? condition;
+            hasModules = item ? modules;
+            hasHost = item ? host;
+            hasUser = item ? user;
+            hasIsKey = builtins.any (k: item ? ${k}) isProfileKeys;
+            condErrors =
+              if hasCondition && !(builtins.isFunction item.condition) then
+                [ "on.${path}.condition must be a function (config: bool), got ${builtins.typeOf item.condition}" ]
+              else
+                [ ];
+            modulesErrors = if hasModules then validateModulesField path item.modules else [ ];
+            moduleChecksPresent = hasModules && builtins.isAttrs item.modules && item.modules != { };
+            hostErrors =
+              if hasHost && !(builtins.isAttrs item.host) then
+                [ "on.${path}.host must be an attribute set, got ${builtins.typeOf item.host}" ]
+              else
+                [ ];
+            userErrors =
+              if hasUser && !(builtins.isAttrs item.user) then
+                [ "on.${path}.user must be an attribute set, got ${builtins.typeOf item.user}" ]
+              else
+                [ ];
+            isKeyErrors = lib.flatten (
+              map (
+                k:
+                if item ? ${k} && !builtins.isBool item.${k} then
+                  [ "on.${path}.${k} must be a boolean, got ${builtins.typeOf item.${k}}" ]
+                else
+                  [ ]
+              ) isProfileKeys
+            );
+            hasAnyCheck =
+              hasCondition
+              || moduleChecksPresent
+              || (hasHost && builtins.isAttrs item.host)
+              || (hasUser && builtins.isAttrs item.user)
+              || hasIsKey;
+            missingError =
+              if !hasAnyCheck then
+                [
+                  "on.${path} must have at least one check field: condition, modules, host, user, or a profile flag (${builtins.concatStringsSep ", " isProfileKeys})"
+                ]
+              else
+                [ ];
+            doErrors =
+              if !(item ? do) then
+                [ "on.${path} is missing required 'do' field" ]
+              else if !(builtins.isAttrs item.do) then
+                [ "on.${path}.do must be an attribute set, got ${builtins.typeOf item.do}" ]
+              else if item.do == { } then
+                [
+                  "on.${path}.do must not be empty. Add at least one of: ${builtins.concatStringsSep ", " condStructuralKeys}"
+                ]
+              else
+                validateCondBody "${path}.do" item.do;
+          in
+          unknownErrors
+          ++ condErrors
+          ++ modulesErrors
+          ++ hostErrors
+          ++ userErrors
+          ++ isKeyErrors
+          ++ missingError
+          ++ doErrors;
 
       validateConditional =
         condName: condOn:
@@ -770,8 +897,7 @@ rec {
         lib.mkIf (
           let
             enableValue =
-              lib.attrByPath enablePath
-                (throw "${sourceModule}: ${condName}: module '${modulePath}' not found at config.nx.${modulePath}.enable")
+              lib.attrByPath enablePath (throw "${sourceModule}: ${condName}: module '${modulePath}' not found")
                 config;
             checkedValue =
               if !builtins.isBool enableValue then
@@ -812,13 +938,140 @@ rec {
             result
         ) (fn config);
 
+      parseModuleChecks =
+        modulesAttr:
+        lib.flatten (
+          lib.mapAttrsToList (
+            inputName: groups:
+            lib.flatten (
+              lib.mapAttrsToList (
+                groupName: modules:
+                if builtins.isList modules then
+                  map (moduleName: {
+                    path = [
+                      inputName
+                      groupName
+                      moduleName
+                    ];
+                    required = true;
+                  }) modules
+                else
+                  lib.mapAttrsToList (moduleName: required: {
+                    path = [
+                      inputName
+                      groupName
+                      moduleName
+                    ];
+                    inherit required;
+                  }) modules
+              ) groups
+            )
+          ) modulesAttr
+        );
+
+      buildItemCondition =
+        label: item:
+        let
+          condition = item.condition or null;
+          moduleChecks = if item ? modules then parseModuleChecks item.modules else [ ];
+          flattenAttrs =
+            prefix: attrs:
+            lib.flatten (
+              lib.mapAttrsToList (
+                k: v:
+                if builtins.isAttrs v then
+                  flattenAttrs (prefix ++ [ k ]) v
+                else
+                  [
+                    {
+                      path = prefix ++ [ k ];
+                      expected = v;
+                    }
+                  ]
+              ) attrs
+            );
+          requireAttrByPath =
+            context: fullPathStr: remainingPath: obj:
+            if remainingPath == [ ] then
+              obj
+            else if !builtins.isAttrs obj then
+              throw "${sourceModule}: on.${label}.${context}: path '${fullPathStr}' does not exist"
+            else if !(obj ? ${builtins.head remainingPath}) then
+              throw "${sourceModule}: on.${label}.${context}: path '${fullPathStr}' does not exist"
+            else
+              requireAttrByPath context fullPathStr (builtins.tail remainingPath)
+                obj.${builtins.head remainingPath};
+          hostChecks = if item ? host then flattenAttrs [ ] item.host else [ ];
+          userChecks = if item ? user then flattenAttrs [ ] item.user else [ ];
+          isChecks = builtins.filter (k: item ? ${k}) isProfileKeys;
+        in
+        config:
+        (if condition != null then condition config else true)
+        && lib.all (
+          { path, required }:
+          let
+            modulePath = builtins.concatStringsSep "." path;
+            v = lib.attrByPath (
+              [ "nx" ] ++ path ++ [ "enable" ]
+            ) (throw "${sourceModule}: on.${label}.modules: module '${modulePath}' not found") config;
+          in
+          if required then v else !v
+        ) moduleChecks
+        && (
+          if hostChecks == [ ] then
+            true
+          else
+            let
+              hostVal = config.nx.profile.host;
+            in
+            if hostVal == null then
+              false
+            else
+              lib.all (
+                { path, expected }:
+                let
+                  pathStr = builtins.concatStringsSep "." path;
+                  actual = requireAttrByPath "host" pathStr path hostVal;
+                in
+                if actual == null || expected == null then
+                  actual == expected
+                else if builtins.typeOf actual != builtins.typeOf expected then
+                  throw "${sourceModule}: on.${label}.host: path '${pathStr}' is of type '${builtins.typeOf actual}' but check value has type '${builtins.typeOf expected}'"
+                else
+                  actual == expected
+              ) hostChecks
+        )
+        && (
+          if userChecks == [ ] then
+            true
+          else
+            let
+              userVal = config.nx.profile.user;
+            in
+            if userVal == null then
+              false
+            else
+              lib.all (
+                { path, expected }:
+                let
+                  pathStr = builtins.concatStringsSep "." path;
+                  actual = requireAttrByPath "user" pathStr path userVal;
+                in
+                if actual == null || expected == null then
+                  actual == expected
+                else if builtins.typeOf actual != builtins.typeOf expected then
+                  throw "${sourceModule}: on.${label}.user: path '${pathStr}' is of type '${builtins.typeOf actual}' but check value has type '${builtins.typeOf expected}'"
+                else
+                  actual == expected
+              ) userChecks
+        )
+        && lib.all (k: config.nx.profile.${k} == item.${k}) isChecks;
+
       whenFns =
         let
           collect =
             label: item:
-            collectLayers123 true (makePredWrap label item.condition) (
-              builtins.removeAttrs item [ "condition" ]
-            );
+            collectLayers123 true (makePredWrap label (buildItemCondition label item)) (item.do or { });
           val = on.when or null;
         in
         if val == null then

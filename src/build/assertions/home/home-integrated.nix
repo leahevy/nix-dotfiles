@@ -18,10 +18,13 @@ let
       inputName:
       lib.mapAttrsToList (
         groupName: groupModules:
-        lib.mapAttrsToList (
-          moduleName: moduleConfig:
-          if (config.nx.${inputName}.${groupName}.${moduleName}.enable or false) then 1 else 0
-        ) groupModules
+        if !builtins.isAttrs groupModules then
+          [ ]
+        else
+          lib.mapAttrsToList (
+            moduleName: moduleConfig:
+            if (config.nx.${inputName}.${groupName}.${moduleName}.enable or false) then 1 else 0
+          ) groupModules
       ) (config.nx.${inputName} or { })
     ))
     lib.flatten
