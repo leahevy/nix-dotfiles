@@ -25,6 +25,7 @@ args@{
         "path"
         "preferences"
         "homebrew"
+        "profile"
       ];
       desktop = [
         "desktop"

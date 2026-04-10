@@ -31,6 +31,7 @@ args@{
         "firmware"
         "sysctl"
         "homebrew"
+        "profile"
       ];
       desktop = [ "desktop" ];
       programs = [ "programs" ];
