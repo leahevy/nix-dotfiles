@@ -1179,6 +1179,7 @@ rec {
           "home"
           "system"
           "integrated"
+          "standalone"
         ];
         callAndValidate =
           {
