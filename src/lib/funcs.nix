@@ -1169,7 +1169,7 @@ rec {
     ++ whenFns;
 
   mergeOnFunctions =
-    moduleIdentifier: fns:
+    moduleIdentifier: moduleNxPath: fns:
     if fns == [ ] then
       { }
     else
@@ -1181,6 +1181,21 @@ rec {
           "integrated"
           "standalone"
         ];
+        normalizeStyle =
+          fn:
+          if moduleNxPath != null && builtins.functionArgs fn != { } then
+            let
+              moduleArgNames = builtins.filter (a: a != "config") (builtins.attrNames (builtins.functionArgs fn));
+            in
+            c:
+            fn (
+              {
+                config = c;
+              }
+              // lib.genAttrs moduleArgNames (name: (lib.attrByPath ([ "nx" ] ++ moduleNxPath) { } c).${name})
+            )
+          else
+            fn;
         callAndValidate =
           {
             fn,
@@ -1188,7 +1203,15 @@ rec {
             wrap ? null,
           }:
           let
-            result = (if wrap != null then wrap fn else fn) config;
+            isNewStyle = moduleNxPath != null && builtins.functionArgs fn != { };
+            normalizedFn =
+              if builtins.elem type contextSpecific then
+                normalizeStyle fn
+              else if isNewStyle then
+                throw "Module ${moduleIdentifier}: the { config, opt, ... } signature is disallowed for on.${type}. Use on.${type} = config: { ... } and access options via config.nx directly."
+              else
+                fn;
+            result = (if wrap != null then wrap normalizedFn else normalizedFn) config;
           in
           if (result ? nx) && (builtins.elem type contextSpecific) then
             throw "Module ${moduleIdentifier}: nx.* options cannot be set in on.${type}.\n\nUse on.init or on.enabled for shared options or on.standalone for home-manager only options (only works in home-manager only profiles)!"
@@ -1262,7 +1285,11 @@ rec {
         ];
       };
 
-      configFn = mergeOnFunctions (toString modulePath) applicableFns;
+      configFn = mergeOnFunctions (toString modulePath) [
+        moduleSpec.inputName
+        moduleSpec.group
+        moduleSpec.name
+      ] applicableFns;
     in
     {
       configuration = configFn;
@@ -1337,13 +1364,13 @@ rec {
         if initFns == [ ] then
           [ ]
         else
-          [ (mergeOnFunctions "profile:${profileType}/${profileName}" initFns) ];
+          [ (mergeOnFunctions "profile:${profileType}/${profileName}" null initFns) ];
 
       contextModules =
         if contextFns == [ ] then
           [ ]
         else
-          [ (mergeOnFunctions "profile:${profileType}/${profileName}" contextFns) ];
+          [ (mergeOnFunctions "profile:${profileType}/${profileName}" null contextFns) ];
     };
 
   collectModuleAssertions =

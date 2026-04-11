@@ -54,29 +54,31 @@ args@{
 
   on = {
     # All modules, both contexts, only config.nx.*, no self.settings
-    # init = config: { };
+    # init = config: { };  # only config: allowed, not { config, ... }
 
-    # Enabled only, both contexts
+    # Enabled only, both contexts (only config: allowed, not { config, ... })
     # enabled = config: { };
 
-    # Enabled, home context
-    home = config: {
-      home.persistence."${self.persist}" = {
-        directories = [ ];
-        files = [ ];
+    # Enabled, home context (prefer { config, opt, ... } for direct option access; config: also allowed)
+    home =
+      { config, ... }:
+      {
+        home.persistence."${self.persist}" = {
+          directories = [ ];
+          files = [ ];
+        };
       };
-    };
 
     # Enabled, system context
-    # system = config: {
+    # system = { config, ... }: {
     #   environment.persistence."${self.persist}" = {
     #     directories = [ ];
     #     files = [ ];
     #   };
     # };
 
-    # standalone = config: { };
-    # integrated = config: { };
+    # standalone = { config, ... }: { };
+    # integrated = { config, ... }: { };
 
     # Before pkgs creation, no pkgs access
     # overlays = [ (final: prev: { ... }) ];
