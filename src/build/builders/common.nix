@@ -63,11 +63,31 @@ let
 
       nixImplOverlay =
         if nixImpl == "nix" then
-          (final: prev: { inherit (pkgs-nix) nix; })
+          (final: prev: {
+            inherit (pkgs-nix)
+              nix
+              nix-cmd
+              nix-expr
+              nix-fetchers
+              nix-flake
+              nix-main
+              nix-store
+              nix-util
+              ;
+          })
         else if nixImpl == "lix" then
           (final: prev: {
             lixPackageSets = pkgs-nix.lixPackageSets;
-            inherit (pkgs-nix) nix;
+            inherit (pkgs-nix)
+              nix
+              nix-cmd
+              nix-expr
+              nix-fetchers
+              nix-flake
+              nix-main
+              nix-store
+              nix-util
+              ;
             inherit (pkgs-nix.lixPackageSets.stable)
               lix
               nixpkgs-review
