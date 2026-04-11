@@ -118,11 +118,17 @@ args@{
 
     # when = {
     #   condition = config: config.some.option == "value";
-    #   modules.linux.notifications.pushover = true;        # true=enabled, false=disabled
-    #   modules.linux.notifications = [ "pushover" ];       # list = all must be enabled
-    #   host.hostname = "host";                             # deep paths: host.kernel.variant = "lts"
+    #   modules.linux.notifications.pushover = true;                              # true=enabled, false=disabled
+    #   modules.linux.notifications = [ "pushover" ];                             # list = all must be enabled
+    #   modules.linux.notifications.pushover = { threshold = 3; };                # option checks (no implicit enable)
+    #   modules.linux.notifications.pushover = { enable = true; threshold = 3; }; # explicit enable + options
+    #   host.hostname = "host";                                                   # deep paths: host.kernel.variant = "lts"
+    #   host.hostname = helpers.mkNot "host";                                     # invert: hostname != "host"
     #   user.username = "user";
-    #   isNixOS = true;                                     # isLinux isDarwin isX86_64 isAARCH64 isStandalone isIntegrated
+    #   user.username = helpers.mkNot "user";                                     # invert: username != "user"
+    #   option.threshold = 5;                                                     # this module's own option at config.nx.INPUT.GROUP.MODULE.*
+    #   option.threshold = helpers.mkNot 0;                                       # invert: threshold != 0
+    #   isNixOS = true;                                                           # isLinux isDarwin isX86_64 isAARCH64 isStandalone isIntegrated
     #   do = {
     #     home = config: { };
     #     linux = { home = config: { }; ... };

@@ -601,12 +601,12 @@ rec {
                       lib.flatten (
                         lib.mapAttrsToList (
                           moduleName: v:
-                          if !builtins.isBool v then
-                            [
-                              "on.${path}.modules.${inputName}.${groupName}.${moduleName} must be true or false, got ${builtins.typeOf v}"
-                            ]
-                          else
+                          if builtins.isBool v || builtins.isAttrs v then
                             [ ]
+                          else
+                            [
+                              "on.${path}.modules.${inputName}.${groupName}.${moduleName} must be true, false, or an attrset of option checks"
+                            ]
                         ) modules
                       )
                     else
@@ -629,6 +629,7 @@ rec {
               "modules"
               "host"
               "user"
+              "option"
               "do"
             ]
             ++ isProfileKeys;
@@ -644,6 +645,7 @@ rec {
             hasModules = item ? modules;
             hasHost = item ? host;
             hasUser = item ? user;
+            hasOption = item ? option;
             hasIsKey = builtins.any (k: item ? ${k}) isProfileKeys;
             condErrors =
               if hasCondition && !(builtins.isFunction item.condition) then
@@ -662,11 +664,19 @@ rec {
                 [ "on.${path}.user must be an attribute set, got ${builtins.typeOf item.user}" ]
               else
                 [ ];
+            optionErrors =
+              if hasOption && !(builtins.isAttrs item.option) then
+                [ "on.${path}.option must be an attribute set, got ${builtins.typeOf item.option}" ]
+              else if hasOption && item.option == { } then
+                [ "on.${path}.option must not be empty" ]
+              else
+                [ ];
+            isValidMkNot = v: builtins.isAttrs v && v ? __nxNot;
             isKeyErrors = lib.flatten (
               map (
                 k:
-                if item ? ${k} && !builtins.isBool item.${k} then
-                  [ "on.${path}.${k} must be a boolean, got ${builtins.typeOf item.${k}}" ]
+                if item ? ${k} && !builtins.isBool item.${k} && !(isValidMkNot item.${k}) then
+                  [ "on.${path}.${k} must be a boolean or helpers.mkNot bool, got ${builtins.typeOf item.${k}}" ]
                 else
                   [ ]
               ) isProfileKeys
@@ -676,11 +686,12 @@ rec {
               || moduleChecksPresent
               || (hasHost && builtins.isAttrs item.host)
               || (hasUser && builtins.isAttrs item.user)
+              || (hasOption && builtins.isAttrs item.option && item.option != { })
               || hasIsKey;
             missingError =
               if !hasAnyCheck then
                 [
-                  "on.${path} must have at least one check field: condition, modules, host, user, or a profile flag (${builtins.concatStringsSep ", " isProfileKeys})"
+                  "on.${path} must have at least one check field: condition, modules, host, user, option, or a profile flag (${builtins.concatStringsSep ", " isProfileKeys})"
                 ]
               else
                 [ ];
@@ -701,6 +712,7 @@ rec {
           ++ modulesErrors
           ++ hostErrors
           ++ userErrors
+          ++ optionErrors
           ++ isKeyErrors
           ++ missingError
           ++ doErrors;
@@ -830,6 +842,7 @@ rec {
       architecture,
       includeInit ? false,
       sourceModule ? "unknown",
+      moduleNxPath ? null,
     }:
     let
       isLinux = helpers.isLinuxArch architecture;
@@ -938,6 +951,23 @@ rec {
             result
         ) (fn config);
 
+      flattenAttrs =
+        prefix: attrs:
+        lib.flatten (
+          lib.mapAttrsToList (
+            k: v:
+            if builtins.isAttrs v && !(v ? __nxNot) then
+              flattenAttrs (prefix ++ [ k ]) v
+            else
+              [
+                {
+                  path = prefix ++ [ k ];
+                  expected = v;
+                }
+              ]
+          ) attrs
+        );
+
       parseModuleChecks =
         modulesAttr:
         lib.flatten (
@@ -953,17 +983,33 @@ rec {
                       groupName
                       moduleName
                     ];
+                    type = "enable";
                     required = true;
                   }) modules
                 else
-                  lib.mapAttrsToList (moduleName: required: {
-                    path = [
-                      inputName
-                      groupName
-                      moduleName
-                    ];
-                    inherit required;
-                  }) modules
+                  lib.mapAttrsToList (
+                    moduleName: value:
+                    if builtins.isBool value then
+                      {
+                        path = [
+                          inputName
+                          groupName
+                          moduleName
+                        ];
+                        type = "enable";
+                        required = value;
+                      }
+                    else
+                      {
+                        path = [
+                          inputName
+                          groupName
+                          moduleName
+                        ];
+                        type = "options";
+                        optionPairs = flattenAttrs [ ] value;
+                      }
+                  ) modules
               ) groups
             )
           ) modulesAttr
@@ -974,22 +1020,6 @@ rec {
         let
           condition = item.condition or null;
           moduleChecks = if item ? modules then parseModuleChecks item.modules else [ ];
-          flattenAttrs =
-            prefix: attrs:
-            lib.flatten (
-              lib.mapAttrsToList (
-                k: v:
-                if builtins.isAttrs v then
-                  flattenAttrs (prefix ++ [ k ]) v
-                else
-                  [
-                    {
-                      path = prefix ++ [ k ];
-                      expected = v;
-                    }
-                  ]
-              ) attrs
-            );
           requireAttrByPath =
             context: fullPathStr: remainingPath: obj:
             if remainingPath == [ ] then
@@ -1001,21 +1031,52 @@ rec {
             else
               requireAttrByPath context fullPathStr (builtins.tail remainingPath)
                 obj.${builtins.head remainingPath};
+          compareValues =
+            context: pathStr: actual: expected:
+            let
+              isNot = builtins.isAttrs expected && expected ? __nxNot;
+              checkVal = if isNot then expected.value else expected;
+              result =
+                if actual == null || checkVal == null then
+                  actual == checkVal
+                else if builtins.typeOf actual != builtins.typeOf checkVal then
+                  throw "${sourceModule}: on.${label}.${context}: path '${pathStr}' is of type '${builtins.typeOf actual}' but check value has type '${builtins.typeOf checkVal}'"
+                else
+                  actual == checkVal;
+            in
+            if isNot then !result else result;
           hostChecks = if item ? host then flattenAttrs [ ] item.host else [ ];
           userChecks = if item ? user then flattenAttrs [ ] item.user else [ ];
+          optionChecks = if item ? option then flattenAttrs [ ] item.option else [ ];
           isChecks = builtins.filter (k: item ? ${k}) isProfileKeys;
         in
         config:
         (if condition != null then condition config else true)
         && lib.all (
-          { path, required }:
+          check:
           let
-            modulePath = builtins.concatStringsSep "." path;
-            v = lib.attrByPath (
-              [ "nx" ] ++ path ++ [ "enable" ]
-            ) (throw "${sourceModule}: on.${label}.modules: module '${modulePath}' not found") config;
+            modulePath = builtins.concatStringsSep "." check.path;
           in
-          if required then v else !v
+          if check.type == "enable" then
+            let
+              v = lib.attrByPath (
+                [ "nx" ] ++ check.path ++ [ "enable" ]
+              ) (throw "${sourceModule}: on.${label}.modules: module '${modulePath}' not found") config;
+            in
+            if check.required then v else !v
+          else
+            lib.all (
+              { path, expected }:
+              let
+                fullPath = [ "nx" ] ++ check.path ++ path;
+                pathStr = modulePath + "." + builtins.concatStringsSep "." path;
+                actual =
+                  lib.attrByPath fullPath
+                    (throw "${sourceModule}: on.${label}.modules.${modulePath}: option '${builtins.concatStringsSep "." path}' not found")
+                    config;
+              in
+              compareValues "modules.${modulePath}" pathStr actual expected
+            ) check.optionPairs
         ) moduleChecks
         && (
           if hostChecks == [ ] then
@@ -1033,12 +1094,7 @@ rec {
                   pathStr = builtins.concatStringsSep "." path;
                   actual = requireAttrByPath "host" pathStr path hostVal;
                 in
-                if actual == null || expected == null then
-                  actual == expected
-                else if builtins.typeOf actual != builtins.typeOf expected then
-                  throw "${sourceModule}: on.${label}.host: path '${pathStr}' is of type '${builtins.typeOf actual}' but check value has type '${builtins.typeOf expected}'"
-                else
-                  actual == expected
+                compareValues "host" pathStr actual expected
               ) hostChecks
         )
         && (
@@ -1057,15 +1113,39 @@ rec {
                   pathStr = builtins.concatStringsSep "." path;
                   actual = requireAttrByPath "user" pathStr path userVal;
                 in
-                if actual == null || expected == null then
-                  actual == expected
-                else if builtins.typeOf actual != builtins.typeOf expected then
-                  throw "${sourceModule}: on.${label}.user: path '${pathStr}' is of type '${builtins.typeOf actual}' but check value has type '${builtins.typeOf expected}'"
-                else
-                  actual == expected
+                compareValues "user" pathStr actual expected
               ) userChecks
         )
-        && lib.all (k: config.nx.profile.${k} == item.${k}) isChecks;
+        && (
+          if optionChecks == [ ] then
+            true
+          else if moduleNxPath == null then
+            throw "${sourceModule}: on.${label}.option: option checks are not available in this context"
+          else
+            lib.all (
+              { path, expected }:
+              let
+                fullPath = [ "nx" ] ++ moduleNxPath ++ path;
+                pathStr = builtins.concatStringsSep "." (moduleNxPath ++ path);
+                actual =
+                  lib.attrByPath fullPath
+                    (throw "${sourceModule}: on.${label}.option: path '${pathStr}' does not exist")
+                    config;
+              in
+              compareValues "option" pathStr actual expected
+            ) optionChecks
+        )
+        && lib.all (
+          k:
+          let
+            actual = config.nx.profile.${k};
+            expected = item.${k};
+            isNot = builtins.isAttrs expected && expected ? __nxNot;
+            checkVal = if isNot then expected.value else expected;
+            result = actual == checkVal;
+          in
+          if isNot then !result else result
+        ) isChecks;
 
       whenFns =
         let
@@ -1174,6 +1254,11 @@ rec {
       applicableFns = selectApplicableOnFns {
         inherit on buildContext architecture;
         sourceModule = toString modulePath;
+        moduleNxPath = [
+          moduleSpec.inputName
+          moduleSpec.group
+          moduleSpec.name
+        ];
       };
 
       configFn = mergeOnFunctions (toString modulePath) applicableFns;

@@ -15,6 +15,13 @@ rec {
   # Usage: ifSet $VALUE $DEFAULT
   ifSet = value: default: if value != null then value else default;
 
+  # Wraps a when-condition check value to invert the comparison.
+  # Usage: helpers.mkNot value
+  mkNot = value: {
+    __nxNot = true;
+    inherit value;
+  };
+
   # Resolve flake input path from input name
   # Usage: resolveInputFromInput $INPUT
   resolveInputFromInput =
