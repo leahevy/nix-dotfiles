@@ -44,19 +44,21 @@ args@{
   };
 
   on = {
-    home = config: {
-      systemd.user.services = lib.listToAttrs (
-        map (
-          name:
-          lib.nameValuePair name {
-            Unit = {
-              PartOf = [ "graphical-session.target" ];
-              After = [ "graphical-session.target" ];
-            };
-          }
-        ) (self.options config).graphicalSessionServices
-      );
-    };
+    home =
+      { config, graphicalSessionServices, ... }:
+      {
+        systemd.user.services = lib.listToAttrs (
+          map (
+            name:
+            lib.nameValuePair name {
+              Unit = {
+                PartOf = [ "graphical-session.target" ];
+                After = [ "graphical-session.target" ];
+              };
+            }
+          ) graphicalSessionServices
+        );
+      };
 
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
