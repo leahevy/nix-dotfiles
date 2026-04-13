@@ -98,10 +98,6 @@ installed system during the live ISO installation process.
 - `nx package <pkg>`: Get store path for package(s). Use `--unstable` for nixpkgs-unstable.
 - `nx version`: Show the current NixOS version.
 
-### Home-Manager only:
-
-- `nx news`: Shows recent news.
-
 ### Folder Commands:
 
 - `nx config`: Open a shell in the config directory.

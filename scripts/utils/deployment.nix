@@ -179,12 +179,6 @@
         };
       };
 
-      news = {
-        description = "Show recent news";
-        group = "switch";
-        scope = "standalone";
-      };
-
       eval = {
         description = "Evaluate a flake path with config override";
         group = "evaluation";
