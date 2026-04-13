@@ -24,6 +24,7 @@ let
         "utils"
         "direnv"
         "claude"
+        "codex"
         "nodejs"
         "typescript-lsp"
         "vscodium"
