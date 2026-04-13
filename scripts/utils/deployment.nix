@@ -104,6 +104,10 @@
         group = "switch";
         arguments = [ (argVariadic "inputs" "Flake input name(s) to update" "string") ];
       };
+      bump = {
+        description = "Bump the core input to the latest remote commit";
+        group = "switch";
+      };
 
       dist-upgrade = {
         description = "Bump NixOS version and migrate packages";
