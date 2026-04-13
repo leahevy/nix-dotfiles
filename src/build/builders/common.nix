@@ -7,12 +7,22 @@
   helpers,
   defs,
   funcs,
+  additionalInputs,
   nixosArchitectures,
   darwinArchitectures,
   allArchitectures,
 }:
 
 let
+  makeFuncs =
+    profilePath:
+    import (additionalInputs.lib + "/funcs.nix") {
+      inherit lib defs;
+      additionalInputs = additionalInputs // {
+        profile = profilePath;
+      };
+    };
+
   evalConfigModule =
     {
       configPath,
@@ -228,6 +238,7 @@ in
   processHostProfile =
     { profileName, arch }:
     let
+      funcs = makeFuncs (config + "/profiles/nixos/${profileName}");
       hostConfigPath = config + "/profiles/nixos/${profileName}/${profileName}.nix";
 
       system = arch;
@@ -434,6 +445,7 @@ in
   processStandaloneUserProfile =
     { profileName, arch }:
     let
+      funcs = makeFuncs (config + "/profiles/home-standalone/${profileName}");
       userConfigPath = config + "/profiles/home-standalone/${profileName}/${profileName}.nix";
 
       system = arch;

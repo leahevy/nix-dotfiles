@@ -31,18 +31,19 @@ rec {
     else
       throw "Unknown input '${input}'. Available inputs: ${builtins.toString (builtins.attrNames additionalInputs)}";
 
-  # Check if input is local development input for live editing
+  # Check if input is local development input for live editing.
+  # Only valid when called from within the module evaluation context (funcs.nix / moduleFuncs.nix),
+  # not on the global helpers instance.
   # Usage: isLocalDevelopmentInput $INPUTPATH $INPUT
-  isLocalDevelopmentInput =
-    inputPath: input: defs.localDevelopmentInputs ? ${input} || input == "profile";
+  isLocalDevelopmentInput = inputPath: input: defs.localDevelopmentInputs ? ${input};
 
-  # Get local filesystem source path for development input
+  # Get local filesystem source path for development input.
+  # Only valid when called from within the module evaluation context (funcs.nix / moduleFuncs.nix),
+  # not on the global helpers instance.
   # Usage: getLocalSourcePath $INPUT
   getLocalSourcePath =
     input:
-    if input == "profile" then
-      toString additionalInputs.profile
-    else if defs.localDevelopmentInputs ? ${input} then
+    if defs.localDevelopmentInputs ? ${input} then
       defs.localDevelopmentInputs.${input}
     else
       throw "Input '${input}' is not a local development input and has no source path";

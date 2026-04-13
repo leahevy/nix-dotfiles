@@ -79,11 +79,6 @@
       inputs.nixpkgs-unstable.follows = "nixpkgs-unstable";
     };
 
-    profile = {
-      url = "github:leahevy/nix-dotfiles-config-template/main";
-      flake = false;
-    };
-
     # -----------------------------------------------------------------------------
     # Core inputs
     # -----------------------------------------------------------------------------
@@ -189,7 +184,6 @@
 
       additionalInputs = {
         config = nxinputs.config;
-        profile = nxinputs.profile;
       }
       // localInputs
       // configInputs;
@@ -224,6 +218,7 @@
           helpers
           defs
           funcs
+          additionalInputs
           nixosArchitectures
           darwinArchitectures
           allArchitectures

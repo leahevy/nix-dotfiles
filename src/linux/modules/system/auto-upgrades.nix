@@ -775,8 +775,6 @@ args@{
           } system rebuild"}
           cd "${nxcoreDir}"
 
-          PROFILE_PATH="${nxconfigDir}/profiles/nixos/${self.host.profileName}"
-
           export NIXOS_LABEL="auto-$(${pkgs.coreutils}/bin/date +%d%m.%H%M)"
 
           ${
@@ -788,7 +786,7 @@ args@{
                     REBUILD_ACTION="boot"
                   fi
                 ''}
-                ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild $REBUILD_ACTION --flake '.#${profileName}' --impure --override-input config 'path:${nxconfigDir}' --override-input profile 'path:$PROFILE_PATH' --print-build-logs"
+                ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild $REBUILD_ACTION --flake '.#${profileName}' --impure --override-input config 'path:${nxconfigDir}' --print-build-logs"
                 ${logScript "info" "System rebuild command prepared"}
               ''
             else
@@ -808,7 +806,6 @@ args@{
                   --impure \
                   --no-update-lock-file \
                   --override-input config "path:${nxconfigDir}" \
-                  --override-input profile "path:$PROFILE_PATH" \
                   --print-build-logs \
                   --show-trace; then
                   exit 1
