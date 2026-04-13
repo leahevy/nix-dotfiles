@@ -15,6 +15,28 @@ args@{
   input = "linux";
 
   on = {
+    linux.overlays = [
+      (final: prev: {
+        logseq =
+          let
+            orig = prev.logseq;
+          in
+          final.runCommand orig.name
+            {
+              inherit (orig) meta;
+              nativeBuildInputs = [ final.jq ];
+            }
+            ''
+              cp -r ${orig}/. $out
+              chmod -R u+w $out
+              pkgJson=$out/share/logseq/resources/app/package.json
+              jq '. + {"desktopName": "Logseq"}' "$pkgJson" > "$pkgJson.tmp"
+              mv "$pkgJson.tmp" "$pkgJson"
+              sed -i "s|${orig}/share/logseq/resources/app|$out/share/logseq/resources/app|" $out/bin/logseq
+            '';
+      })
+    ];
+
     moduleEnabled.linux.desktop.niri.linux.enabled = config: {
       nx.linux.desktop.niri.autostartPrograms = [
         "logseq"
@@ -48,7 +70,7 @@ args@{
       };
     };
 
-    home = config: {
+    linux.home = config: {
       home.packages = with pkgs; [
         logseq
       ];
