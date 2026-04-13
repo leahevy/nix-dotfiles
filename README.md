@@ -68,4 +68,6 @@ installed system during the live ISO installation process.
 
 The configuration is managed with the provided `nx` utility. To see all available commands, run:
 
-        `nx --help`
+        nx --help
+
+All commands are also described programmatically in the file: `scripts/utils/deployment.nix`.
