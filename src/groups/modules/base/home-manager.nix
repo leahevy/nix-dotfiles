@@ -126,6 +126,7 @@ let
         "better-display"
         "ovim"
       ];
+      graphics = [ "gimp" ];
       music = [ "spotify" ];
       organising = [ "logseq" ];
       passwords = [ "keepassxc" ];
