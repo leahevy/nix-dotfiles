@@ -59,7 +59,11 @@ with lib;
     };
 
     modules = mkOption {
-      type = types.attrsOf (types.attrsOf (types.attrsOf (types.either types.bool types.attrs)));
+      type = types.attrsOf (
+        types.attrsOf (
+          types.either (types.listOf types.str) (types.attrsOf (types.either types.bool types.attrs))
+        )
+      );
       default = { };
       description = "Modules to enable for the user, organized by input and group";
     };
