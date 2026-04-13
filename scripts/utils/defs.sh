@@ -36,6 +36,10 @@ export REBOOT_CHECK_INPUTS=(
     "nixpkgs-nix"
 )
 
+export TRUNCATE_INPUTS=(
+    "nixpkgs-unstable"
+)
+
 export THIRD_PARTY_INPUTS=(
     "mac-app-util"
     "nix-plist-manager"

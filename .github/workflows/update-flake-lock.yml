@@ -16,6 +16,7 @@ jobs:
           source scripts/utils/defs.sh
           echo "UPDATE_INPUTS=$(IFS=,; echo "${AUTO_UPDATE_INPUTS[*]}")" >> $GITHUB_ENV
           echo "EXCLUDE_FROM_REBOOT_CHECK=$(printf '%s\n' "${AUTO_UPDATE_INPUTS[@]}" | grep -vxF -f <(printf '%s\n' "${REBOOT_CHECK_INPUTS[@]}") | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_ENV
+          echo "TRUNCATE_INPUTS=$(IFS=,; echo "${TRUNCATE_INPUTS[*]}")" >> $GITHUB_ENV
           echo "UPDATE_AUTO_MERGE_ENABLED=$UPDATE_AUTO_MERGE_ENABLED" >> $GITHUB_ENV
           echo "UPDATE_MERGE_DAYS=$(IFS=,; echo "${UPDATE_MERGE_DAYS[*]}")" >> $GITHUB_ENV
 
@@ -219,6 +220,11 @@ jobs:
                     else
                       echo "Input $input is excluded from reboot checks - truncation ignored for auto-merge decision"
                     fi
+                  fi
+
+                  if echo ",$TRUNCATE_INPUTS," | grep -q ",$input,"; then
+                    commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($total_commits commits, details omitted)"
+                    continue
                   fi
 
                   all_commits=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
