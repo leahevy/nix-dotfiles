@@ -98,30 +98,6 @@
         "type": "github"
       }
     },
-    "config": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "nixpkgs-unstable": [
-          "nixpkgs-unstable"
-        ]
-      },
-      "locked": {
-        "lastModified": 1775740330,
-        "narHash": "sha256-7pva5mZA5zIi/um2REXICr/GSWlfmRr/GwJUl9oVEUI=",
-        "owner": "leahevy",
-        "repo": "nix-dotfiles-config-template",
-        "rev": "b1044c3c5ecce2b49d59ee82a5f6ef00c9b678c1",
-        "type": "github"
-      },
-      "original": {
-        "owner": "leahevy",
-        "ref": "main",
-        "repo": "nix-dotfiles-config-template",
-        "type": "github"
-      }
-    },
     "crane": {
       "locked": {
         "lastModified": 1765145449,
@@ -748,7 +724,6 @@
     },
     "root": {
       "inputs": {
-        "config": "config",
         "disko": "disko",
         "flake-compat": "flake-compat",
         "flake-parts": "flake-parts",

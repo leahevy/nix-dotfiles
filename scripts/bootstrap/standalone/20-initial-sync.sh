@@ -4,7 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../" && pwd)"
-cd "$REPO_ROOT"
 export BOOTSTRAP_NEEDS_NIX=true
 source "$REPO_ROOT/scripts/utils/common.sh"
 
@@ -18,12 +17,13 @@ if [[ "$UID" = 0 ]]; then
   exit 1
 fi
 
-if [[ "$(pwd)" != "$HOME/.config/nx/nxcore" ]]; then
-  echo -e "${RED}Error: the repository has to be cloned to ${WHITE}$HOME/.config/nx/nxcore${RESET}" >&2
+check_config_directory "standalone-sync" "deployment"
+cd "$CONFIG_DIR"
+
+if [[ "$(pwd)" != "$HOME/.config/nx/nxconfig" ]]; then
+  echo -e "${RED}Error: the config repository has to be cloned to ${WHITE}$HOME/.config/nx/nxconfig${RESET}" >&2
   exit 1
 fi
-
-check_config_directory "standalone-sync" "deployment"
 
 TARGET_FILE="$HOME/.config/sops/age/keys.txt"
 if [[ ! -f "$TARGET_FILE" ]]; then
@@ -55,7 +55,7 @@ trap cleanup EXIT ERR
 
 nix build --extra-experimental-features flakes --extra-experimental-features nix-command \
   ".#homeConfigurations.$FULL_PROFILE.activationPackage" \
-  --override-input config "path:$CONFIG_DIR" >&2
+  --override-input core "path:$NXCORE_DIR" >&2
 
 echo -e "${GREEN}Activating Home Manager configuration${RESET}" >&2
 if ./result/activate; then

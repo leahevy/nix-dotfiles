@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR/../../"
+cd "$HOME/.config/nx/nxconfig"
 REPO_ROOT="$(pwd)"
 
 export BOOTSTRAP_NEEDS_NIX=true
@@ -13,8 +13,8 @@ if [[ "$UID" == 0 ]]; then
   exit 1
 fi
 
-if [[ "$PWD" != "$HOME/.config/nx/nxcore" ]]; then
-  echo -e "${RED}Enclosing configuration directory must be placed at ${WHITE}$HOME/.config/nx/nxcore${RESET}" >&2
+if [[ "$PWD" != "$HOME/.config/nx/nxconfig" ]]; then
+  echo -e "${RED}Enclosing configuration directory must be placed at ${WHITE}$HOME/.config/nx/nxconfig${RESET}" >&2
   exit 1
 fi
 
@@ -29,23 +29,10 @@ if [[ ! -d $PWD || $perm != drwx------* || $owner != "$USER" ]]; then
 fi
 # ===================================================== #
 
-CONFIG_DIR=""
-if [[ -d "$HOME/.config/nx/nxconfig" ]]; then
-    CONFIG_DIR="$HOME/.config/nx/nxconfig"
-    export CONFIG_DIR
-    check_git_worktrees_clean
-    verify_commits
-else
-    if [[ "$(git status --porcelain)" != "" ]]; then
-        echo -e "${RED}!!! Git worktree is dirty!${RESET}" >&2
-        echo >&2
-        echo -e "Main repository ${WHITE}(.config/nx/nxcore)${RESET}:" >&2
-        git status --porcelain >&2
-        echo >&2
-        exit 1
-    fi
-    verify_commits
-fi
+NXCORE_DIR="$HOME/.config/nx/nxcore"
+export NXCORE_DIR
+check_git_worktrees_clean
+verify_commits
 
 EXTRA_ARGS=()
 SKIP_VERIFICATION=false
@@ -118,9 +105,9 @@ export SKIP_VERIFICATION
 TEMP_DIR="$(mktemp -d)"
 cleanup() {
   rm -rf "$TEMP_DIR"
-  if [[ -n "${CONFIG_DIR:-}" ]] && [[ -f "$CONFIG_DIR/.git-crypt-key" ]]; then
+  if [[ -f "$REPO_ROOT/.git-crypt-key" ]]; then
     echo -e "${YELLOW}Cleaning up git-crypt key...${RESET}"
-    rm -f "$CONFIG_DIR/.git-crypt-key"
+    rm -f "$REPO_ROOT/.git-crypt-key"
   fi
 }
 trap cleanup EXIT
@@ -132,22 +119,19 @@ echo ""
 
 ISO_NAME="nxcore-${SYSTEM}-$(date +"%d-%m-%y_%H-%M").iso"
 
-if [[ -n "$CONFIG_DIR" ]]; then
-    echo -e "Using config directory: ${WHITE}$CONFIG_DIR${RESET}"
-    EXTRA_ARGS+=("--override-input" "config" "path:$CONFIG_DIR")
+if [[ -n "$NXCORE_DIR" ]]; then
+    echo -e "Using core directory: ${WHITE}$NXCORE_DIR${RESET}"
+    EXTRA_ARGS+=("--override-input" "core" "path:$NXCORE_DIR")
 
-    if [[ -d "$CONFIG_DIR/.git/git-crypt" ]]; then
+    if [[ -d "$REPO_ROOT/.git/git-crypt" ]]; then
         echo -e "${GREEN}Detected git-crypt encryption in config repository${RESET}"
         echo -e "Exporting git-crypt key for ISO..."
 
-        cd "$CONFIG_DIR"
-        if git-crypt export-key "$CONFIG_DIR/.git-crypt-key"; then
+        if git-crypt export-key "$REPO_ROOT/.git-crypt-key"; then
             echo -e "${GREEN}Git-crypt key exported successfully${RESET}"
-            cd "$REPO_ROOT"
         else
             echo -e "${RED}Error: Failed to export git-crypt key${RESET}" >&2
             echo -e "Make sure the repository is unlocked and you have ${WHITE}git-crypt${RESET} installed" >&2
-            cd "$REPO_ROOT"
             exit 1
         fi
     else

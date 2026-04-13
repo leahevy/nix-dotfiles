@@ -27,6 +27,7 @@ if [[ "$HOSTNAME" = "" ]]; then
 fi
 
 check_config_directory "nixos-create-sops-key" "bootstrap"
+cd "$CONFIG_DIR"
 
 if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME" ]]; then
   echo -e "${RED}Host ${WHITE}$HOSTNAME${RED} does not exist in ${WHITE}$CONFIG_DIR/profiles/nixos${RED}!${RESET}" >&2
@@ -40,7 +41,7 @@ fi
 
 echo -e "${GREEN}Evaluating configuration to find main user...${RESET}"
 FULL_PROFILE="$(construct_profile_name "$HOSTNAME")"
-USERNAME="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
+USERNAME="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
 if [[ -z "$USERNAME" || "$USERNAME" == "null" || "$USERNAME" == "\"null\"" ]]; then
   echo -e "${RED}Error: Could not determine main user from host configuration for ${WHITE}$HOSTNAME${RESET}" >&2
   echo -e "${RED}Make sure ${WHITE}mainUser${RED} is set in ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix${RESET}" >&2
@@ -52,15 +53,15 @@ echo -e "${MAGENTA}You are about to create SOPS keys and prepare for NixOS insta
 read -p "Continue? [y|N]: " -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo -e "\n"
-  
+
   if ! mountpoint -q /mnt; then
     echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted${RESET}" >&2
     echo -e "${RED}Please mount your target filesystem to ${WHITE}/mnt${RED} before creating SOPS keys${RESET}" >&2
     exit 1
   fi
-  
+
   FULL_PROFILE_NAME="$(construct_profile_name "$HOSTNAME")"
-  HOME="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.home")"
+  HOME="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.home")"
   if [[ -z "$HOME" || "$HOME" == "null" ]]; then
     echo -e "${RED}Error: Failed to extract valid home directory for ${WHITE}$USERNAME${RESET}" >&2
     exit 1
@@ -73,7 +74,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   fi
 
   USER_SOPS_DIR="/mnt/$HOME/.config/sops/age"
-  
+
   if [[ -f "/mnt/etc/sops/age/keys.txt" && -f "$USER_SOPS_DIR/keys.txt" ]]; then
     echo -e "${GREEN}SOPS keys already exist, skipping creation.${RESET}"
   else
@@ -87,22 +88,22 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     else
       echo -e "${GREEN}Root SOPS key already exists at ${WHITE}/mnt/etc/sops/age/keys.txt${RESET}"
     fi
-    
+
     if [[ ! -f "$USER_SOPS_DIR/keys.txt" ]]; then
       echo -e "${GREEN}Installing user SOPS key for home-manager...${RESET}"
-      
+
       mkdir -p "$USER_SOPS_DIR"
       mkdir -p "/mnt/$HOME/.config"
-      
+
       cp "/mnt/etc/sops/age/keys.txt" "$USER_SOPS_DIR/keys.txt"
-      
+
       chmod 400 "$USER_SOPS_DIR/keys.txt"
-      
+
       echo -e "${GREEN}User SOPS key installed successfully at ${WHITE}$USER_SOPS_DIR/keys.txt${RESET}"
 
       echo -e "${GREEN}Fixing permissions of home folder now...${RESET}"
-      USER_UID="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.uid")"
-      GROUP_NAME="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.group")"
+      USER_UID="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.uid")"
+      GROUP_NAME="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.group")"
 
       if [[ -z "$USER_UID" || "$USER_UID" == "null" || -z "$GROUP_NAME" || "$GROUP_NAME" == "null" ]]; then
         echo -e "${RED}Error: Failed to extract valid user information for ${WHITE}$USERNAME${RESET}" >&2
@@ -110,8 +111,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
       else
         USER_UID="${USER_UID//\"/}"
         GROUP_NAME="${GROUP_NAME//\"/}"
-        
-        USER_GID="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.groups.$GROUP_NAME.gid")"
+
+        USER_GID="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.groups.$GROUP_NAME.gid")"
         if [[ -z "$USER_GID" || "$USER_GID" == "null" ]]; then
           echo -e "${RED}Error: Failed to extract valid group GID for group ${WHITE}$GROUP_NAME${RESET}" >&2
           echo -e "${YELLOW}You might have to fix the permissions of /mnt/$HOME yourself before installing!${RESET}" >&2
@@ -124,11 +125,11 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
       echo -e "${GREEN}User SOPS key already exists at ${WHITE}$USER_SOPS_DIR/keys.txt${RESET}"
     fi
   fi
-  
+
   echo
   echo -e "${WHITE}🔑 Age public key:${RESET}"
   age-keygen -y /mnt/etc/sops/age/keys.txt
-  
+
   echo
   echo -e "${GREEN}SOPS keys preparation completed successfully.${RESET}"
   echo

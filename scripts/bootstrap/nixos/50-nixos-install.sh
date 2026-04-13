@@ -27,6 +27,7 @@ if [[ "$HOSTNAME" = "" ]]; then
 fi
 
 check_config_directory "nixos-install" "bootstrap"
+cd "$CONFIG_DIR"
 
 if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME" ]]; then
   echo -e "${RED}Host ${WHITE}$HOSTNAME${RED} does not exist in ${WHITE}$CONFIG_DIR/profiles/nixos${RED}!${RESET}" >&2
@@ -39,7 +40,7 @@ if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix" ]]; then
 fi
 
 FULL_PROFILE="$(construct_profile_name "$HOSTNAME")"
-USERNAME="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
+USERNAME="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
 if [[ -z "$USERNAME" || "$USERNAME" == "null" || "$USERNAME" == "\"null\"" ]]; then
   echo -e "${RED}Error: Could not determine main user from host configuration for ${WHITE}$HOSTNAME${RESET}" >&2
   echo -e "${RED}Make sure ${WHITE}mainUser${RED} is set in ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix${RESET}" >&2
@@ -51,9 +52,9 @@ echo -e "Using full profile name: ${WHITE}$FULL_PROFILE${RESET}"
 
 echo
 echo -e "${WHITE}Checking if impermanence is enabled for this host...${RESET}"
-IMPERMANENCE_ENABLED="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
+IMPERMANENCE_ENABLED="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
 
-HOME="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
+HOME="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
 if [[ -z "$HOME" || "$HOME" == "null" ]]; then
   echo -e "${RED}Error: Failed to extract valid home directory for ${WHITE}$USERNAME${RESET}" >&2
   exit 1
@@ -89,8 +90,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     exit 1
   fi
 
-  USER_UID="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.uid")"
-  GROUP_NAME="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.group")"
+  USER_UID="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.uid")"
+  GROUP_NAME="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.group")"
 
   if [[ -z "$USER_UID" || "$USER_UID" == "null" || -z "$GROUP_NAME" || "$GROUP_NAME" == "null" ]]; then
     echo -e "${RED}Error: Failed to extract valid user information for ${WHITE}$USERNAME${RESET}" >&2
@@ -100,7 +101,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   USER_UID="${USER_UID//\"/}"
   GROUP_NAME="${GROUP_NAME//\"/}"
 
-  USER_GID="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.groups.$GROUP_NAME.gid")"
+  USER_GID="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.groups.$GROUP_NAME.gid")"
   if [[ -z "$USER_GID" || "$USER_GID" == "null" ]]; then
     echo -e "${RED}Error: Failed to extract valid group GID for group ${WHITE}$GROUP_NAME${RESET}" >&2
     exit 1
@@ -124,8 +125,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     cp -a /mnt/etc/sops/age/keys.txt /mnt/persist/etc/sops/age
 
     echo
-    echo -e "Running: ${WHITE}nixos-install --flake .#$FULL_PROFILE --no-root-password --override-input config path:$CONFIG_DIR${RESET}"
-    nixos-install --flake ".#$FULL_PROFILE" --no-root-password --override-input config "path:$CONFIG_DIR"
+    echo -e "Running: ${WHITE}nixos-install --flake .#$FULL_PROFILE --no-root-password --override-input core path:$NXCORE_DIR${RESET}"
+    nixos-install --flake ".#$FULL_PROFILE" --no-root-password --override-input core "path:$NXCORE_DIR"
 
     if [ $? -ne 0 ]; then
       echo -e "${RED}Error: nixos-install failed! See above for error details.${RESET}" >&2
@@ -162,7 +163,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
     echo -e "${WHITE}Copying core repository to target system...${RESET}"
     mkdir -p "/mnt/$HOME/.config/nx"
-    cp -R --verbose -T . "$CORE_DIR"
+    cp -R --verbose -T "$NXCORE_DIR" "$CORE_DIR"
     chown -R "$USER_UID:$USER_GID" "$CORE_DIR"
 
     echo -e "${WHITE}Copying config repository to target system...${RESET}"

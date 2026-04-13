@@ -92,7 +92,7 @@ deployment_script_setup() {
     else
         SCRIPT_DIR="${NX_INSTALL_PATH}/scripts/deployment"
     fi
-    cd "${NXCORE_DIR:-$HOME/.config/nx/nxcore}" || exit 1
+    cd "${CONFIG_DIR:-$HOME/.config/nx/nxconfig}" || exit 1
 
     if [[ "$UID" == 0 ]]; then
         echo -e "${RED}Do NOT run as root!${RESET}" >&2
@@ -115,14 +115,14 @@ deployment_script_setup() {
 }
 
 parse_common_deployment_args() {
-    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR")
+    EXTRA_ARGS=("--override-input" "core" "path:$NXCORE_DIR")
     ALLOW_DIRTY_GIT=false
     SKIP_VERIFICATION=false
 
     echo -e "${CYAN}Active branches:${RESET}"
-    echo -e "  ${WHITE}nxcore:${RESET} ${YELLOW}$(git branch --show-current)${RESET}"
-    if [[ -n "${CONFIG_DIR:-}" ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
-        echo -e "  ${WHITE}nxconfig:${RESET} ${YELLOW}$(cd "$CONFIG_DIR" && git branch --show-current)${RESET}"
+    echo -e "  ${WHITE}nxconfig:${RESET} ${YELLOW}$(git branch --show-current)${RESET}"
+    if [[ -n "${NXCORE_DIR:-}" ]] && [[ -d "$NXCORE_DIR/.git" ]]; then
+        echo -e "  ${WHITE}nxcore:${RESET} ${YELLOW}$(cd "$NXCORE_DIR" && git branch --show-current)${RESET}"
     fi
     echo
 
@@ -159,7 +159,7 @@ parse_common_deployment_args() {
 }
 
 parse_build_deployment_args() {
-    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR")
+    EXTRA_ARGS=("--override-input" "core" "path:$NXCORE_DIR")
     TIMEOUT=7200
     DRY_RUN=""
     BUILD_DIFF=false
@@ -167,9 +167,9 @@ parse_build_deployment_args() {
     RAW_LOG=false
 
     echo -e "${CYAN}Active branches:${RESET}"
-    echo -e "  ${WHITE}nxcore:${RESET} ${YELLOW}$(git branch --show-current)${RESET}"
-    if [[ -n "${CONFIG_DIR:-}" ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
-        echo -e "  ${WHITE}nxconfig:${RESET} ${YELLOW}$(cd "$CONFIG_DIR" && git branch --show-current)${RESET}"
+    echo -e "  ${WHITE}nxconfig:${RESET} ${YELLOW}$(git branch --show-current)${RESET}"
+    if [[ -n "${NXCORE_DIR:-}" ]] && [[ -d "$NXCORE_DIR/.git" ]]; then
+        echo -e "  ${WHITE}nxcore:${RESET} ${YELLOW}$(cd "$NXCORE_DIR" && git branch --show-current)${RESET}"
     fi
     echo
 
@@ -273,7 +273,7 @@ simple_deployment_script_setup() {
     else
         SCRIPT_DIR="${NX_INSTALL_PATH}/scripts/deployment"
     fi
-    cd "${NXCORE_DIR:-$HOME/.config/nx/nxcore}" || exit 1
+    cd "${CONFIG_DIR:-$HOME/.config/nx/nxconfig}" || exit 1
 
     if [[ "$UID" == 0 ]]; then
         echo -e "${RED}Do NOT run as root!${RESET}" >&2
@@ -309,32 +309,32 @@ if [[ "${BOOTSTRAP_NEEDS_NIX:-false}" == "true" ]]; then
 fi
 
 check_git_worktrees_clean() {
-    local main_dirty=false
     local config_dirty=false
+    local core_dirty=false
 
     if [[ "$(git status --porcelain)" != "" ]]; then
-        main_dirty=true
+        config_dirty=true
     fi
 
-    if [[ -n "${CONFIG_DIR:-}" ]] && [[ -d "$CONFIG_DIR" ]]; then
-        if [[ "$(cd "$CONFIG_DIR" && git status --porcelain 2>/dev/null)" != "" ]]; then
-            config_dirty=true
+    if [[ -n "${NXCORE_DIR:-}" ]] && [[ -d "$NXCORE_DIR" ]]; then
+        if [[ "$(cd "$NXCORE_DIR" && git status --porcelain 2>/dev/null)" != "" ]]; then
+            core_dirty=true
         fi
     fi
 
-    if [[ "$main_dirty" == true ]] || [[ "$config_dirty" == true ]]; then
+    if [[ "$config_dirty" == true ]] || [[ "$core_dirty" == true ]]; then
         echo -e "${YELLOW}!!! Git worktree(s) are dirty!${RESET}" >&2
         echo >&2
 
-        if [[ "$main_dirty" == true ]]; then
-            echo -e "${RED}Main repository (.config/nx/nxcore):${RESET}" >&2
+        if [[ "$config_dirty" == true ]]; then
+            echo -e "${RED}Config repository (.config/nx/nxconfig):${RESET}" >&2
             git status --porcelain >&2
             echo >&2
         fi
 
-        if [[ "$config_dirty" == true ]]; then
-            echo -e "${RED}Config repository (.config/nx/nxconfig):${RESET}" >&2
-            (cd "$CONFIG_DIR" && git status --porcelain) >&2
+        if [[ "$core_dirty" == true ]]; then
+            echo -e "${RED}Core repository (.config/nx/nxcore):${RESET}" >&2
+            (cd "$NXCORE_DIR" && git status --porcelain) >&2
             echo >&2
         fi
 
@@ -656,7 +656,7 @@ get_main_username() {
 
     if [[ -d "$CONFIG_DIR" ]]; then
         local username
-        username="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+        username="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
         if [[ -n "$username" && "$username" != "null" && "$username" != "\"null\"" ]]; then
             echo "${username//\"/}"
             return 0
@@ -702,15 +702,15 @@ configure_target_git_remotes() {
     local CORE_INSTALL_URL
     local CONFIG_INSTALL_URL
 
-    CORE_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
+    CORE_INSTALL_URL="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CORE_INSTALL_URL" == "null" || "$CORE_INSTALL_URL" == "\"null\"" ]]; then
-        CORE_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
+        CORE_INSTALL_URL="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
     fi
     CORE_INSTALL_URL="${CORE_INSTALL_URL//\"/}"
 
-    CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
+    CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CONFIG_INSTALL_URL" == "null" || "$CONFIG_INSTALL_URL" == "\"null\"" ]]; then
-        CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#variables.configRepoIsoUrl" 2>/dev/null)"
+        CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#variables.configRepoIsoUrl" 2>/dev/null)"
     fi
     CONFIG_INSTALL_URL="${CONFIG_INSTALL_URL//\"/}"
 

@@ -99,7 +99,7 @@ else
   FULL_EVAL_PATH="homeConfigurations.${PROFILE}.config.${EVAL_PATH}"
 fi
 
-EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR")
+EXTRA_ARGS=("--override-input" "core" "path:$NXCORE_DIR")
 
 # shellcheck disable=SC2016
 nix eval --impure ".#${FULL_EVAL_PATH}" "${EXTRA_ARGS[@]}" --apply '

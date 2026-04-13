@@ -773,7 +773,7 @@ args@{
           ${logScript "info" "INFO: ${
             if self.settings.dryRun then "Would start" else "Starting"
           } system rebuild"}
-          cd "${nxcoreDir}"
+          cd "${nxconfigDir}"
 
           export NIXOS_LABEL="auto-$(${pkgs.coreutils}/bin/date +%d%m.%H%M)"
 
@@ -786,7 +786,7 @@ args@{
                     REBUILD_ACTION="boot"
                   fi
                 ''}
-                ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild $REBUILD_ACTION --flake '.#${profileName}' --impure --override-input config 'path:${nxconfigDir}' --print-build-logs"
+                ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild $REBUILD_ACTION --flake '.#${profileName}' --impure --override-input core 'path:${nxcoreDir}' --print-build-logs"
                 ${logScript "info" "System rebuild command prepared"}
               ''
             else
@@ -805,7 +805,7 @@ args@{
                   --flake ".#${profileName}" \
                   --impure \
                   --no-update-lock-file \
-                  --override-input config "path:${nxconfigDir}" \
+                  --override-input core "path:${nxcoreDir}" \
                   --print-build-logs \
                   --show-trace; then
                   exit 1

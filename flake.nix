@@ -70,16 +70,6 @@
     };
 
     # -----------------------------------------------------------------------------
-    # Local inputs
-    # -----------------------------------------------------------------------------
-
-    config = {
-      url = "github:leahevy/nix-dotfiles-config-template/main";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.nixpkgs-unstable.follows = "nixpkgs-unstable";
-    };
-
-    # -----------------------------------------------------------------------------
     # Core inputs
     # -----------------------------------------------------------------------------
 
@@ -153,148 +143,159 @@
     };
   };
 
-  outputs =
-    inputs:
-    let
-      srcDirs = builtins.attrNames (builtins.readDir ./src);
+  outputs = inputs: {
+    configure =
+      {
+        config,
+        additionalInputs ? { },
+      }:
+      let
+        srcDirs = builtins.attrNames (builtins.readDir ./src);
 
-      localInputs = builtins.listToAttrs (
-        map (name: {
-          name = name;
-          value = builtins.toPath ./src/${name};
-        }) srcDirs
-      );
+        localInputs = builtins.listToAttrs (
+          map (name: {
+            name = name;
+            value = builtins.toPath ./src/${name};
+          }) srcDirs
+        );
 
-      nxinputs = inputs // localInputs;
+        nxinputs =
+          inputs
+          // localInputs
+          // {
+            config = if builtins.typeOf config == "path" then config else builtins.toPath config;
+          };
 
-      lib = nxinputs.nixpkgs.lib;
+        lib = nxinputs.nixpkgs.lib;
 
-      variables-base = import ./variables.nix { inherit lib; };
-      variables-config = import (nxinputs.config + "/variables.nix") { inherit lib; };
-      variables = lib.recursiveUpdate variables-base (
-        variables-config
-        // {
-          allowedUnfreePackages =
-            variables-base.allowedUnfreePackages ++ (variables-config.allowedUnfreePackages or [ ]);
+        variables-base = import ./variables.nix { inherit lib; };
+        variables-config = import (nxinputs.config + "/variables.nix") { inherit lib; };
+        variables = lib.recursiveUpdate variables-base (
+          variables-config
+          // {
+            allowedUnfreePackages =
+              variables-base.allowedUnfreePackages ++ (variables-config.allowedUnfreePackages or [ ]);
+          }
+        );
+
+        defs = import (nxinputs.lib + "/defs.nix") { inherit lib; };
+
+        extraInputs = {
+          config = nxinputs.config;
         }
-      );
-      configInputs = nxinputs.config.configInputs or { };
+        // localInputs
+        // additionalInputs;
 
-      defs = import (nxinputs.lib + "/defs.nix") { inherit lib; };
+        funcs = import (nxinputs.lib + "/funcs.nix") {
+          inherit lib defs;
+          additionalInputs = extraInputs;
+        };
 
-      additionalInputs = {
-        config = nxinputs.config;
-      }
-      // localInputs
-      // configInputs;
+        helpers = import (nxinputs.lib + "/helpers.nix") {
+          inherit lib defs;
+          additionalInputs = extraInputs;
+          buildSystem = builtins.currentSystem;
+        };
 
-      funcs = import (nxinputs.lib + "/funcs.nix") {
-        inherit lib defs additionalInputs;
-      };
+        standalone-user-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (
+          builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/home-standalone"))
+        );
+        host-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (
+          builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/nixos"))
+        );
 
-      helpers = import (nxinputs.lib + "/helpers.nix") {
-        inherit lib defs additionalInputs;
-        buildSystem = builtins.currentSystem;
-      };
+        nixosArchitectures = import nxinputs.nix-systems-linux;
+        darwinArchitectures = import nxinputs.nix-systems-darwin;
+        allArchitectures = import nxinputs.nix-systems;
 
-      standalone-user-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (
-        builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/home-standalone"))
-      );
-      host-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (
-        builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/nixos"))
-      );
+        common = import (nxinputs.build + "/builders/common.nix") {
+          inherit lib;
+          inputs = nxinputs;
+          config = nxinputs.config;
+          build = nxinputs.build;
+          additionalInputs = extraInputs;
+          inherit
+            variables
+            helpers
+            defs
+            funcs
+            nixosArchitectures
+            darwinArchitectures
+            allArchitectures
+            ;
+        };
 
-      nixosArchitectures = import nxinputs.nix-systems-linux;
-      darwinArchitectures = import nxinputs.nix-systems-darwin;
-      allArchitectures = import nxinputs.nix-systems;
+        nixosBuilder = import (nxinputs.build + "/builders/system/nixos.nix") {
+          inherit lib;
+          inputs = nxinputs;
+          config = nxinputs.config;
+          build = nxinputs.build;
+          inherit
+            variables
+            helpers
+            defs
+            funcs
+            common
+            host-files
+            nixosArchitectures
+            ;
+        };
 
-      common = import (nxinputs.build + "/builders/common.nix") {
-        inherit lib;
-        inputs = nxinputs;
-        config = nxinputs.config;
-        build = nxinputs.build;
+        homeManagerBuilder = import (nxinputs.build + "/builders/home/home-standalone.nix") {
+          inherit lib;
+          inputs = nxinputs;
+          config = nxinputs.config;
+          build = nxinputs.build;
+          inherit
+            variables
+            helpers
+            defs
+            funcs
+            common
+            standalone-user-files
+            allArchitectures
+            ;
+        };
+
+        isoBuilder = import (nxinputs.build + "/builders/iso/iso.nix") {
+          inherit lib;
+          inputs = nxinputs;
+          config = nxinputs.config;
+          build = nxinputs.build;
+          inherit
+            variables
+            helpers
+            defs
+            funcs
+            common
+            nixosArchitectures
+            ;
+        };
+
+        hosts = nixosBuilder.extractHosts;
+        users = homeManagerBuilder.extractUsers;
+
+        packages = lib.genAttrs allArchitectures (system: {
+          default = nxinputs.nixpkgs.legacyPackages.${system}.emptyDirectory;
+        });
+      in
+      {
         inherit
+          hosts
+          users
+          packages
           variables
-          helpers
-          defs
-          funcs
-          additionalInputs
+          allArchitectures
           nixosArchitectures
           darwinArchitectures
-          allArchitectures
-          ;
-      };
-
-      nixosBuilder = import (nxinputs.build + "/builders/system/nixos.nix") {
-        inherit lib;
-        inputs = nxinputs;
-        config = nxinputs.config;
-        build = nxinputs.build;
-        inherit
-          variables
-          helpers
           defs
-          funcs
-          common
-          host-files
-          nixosArchitectures
           ;
+
+        inherit (nxinputs) nixpkgs nixpkgs-unstable;
+
+        isoConfigurations = isoBuilder.buildIsoConfigurations;
+        nixosConfigurations = nixosBuilder.buildNixOSConfigurations;
+        homeConfigurations = homeManagerBuilder.buildHomeConfigurations;
       };
-
-      homeManagerBuilder = import (nxinputs.build + "/builders/home/home-standalone.nix") {
-        inherit lib;
-        inputs = nxinputs;
-        config = nxinputs.config;
-        build = nxinputs.build;
-        inherit
-          variables
-          helpers
-          defs
-          funcs
-          common
-          standalone-user-files
-          allArchitectures
-          ;
-      };
-
-      isoBuilder = import (nxinputs.build + "/builders/iso/iso.nix") {
-        inherit lib;
-        inputs = nxinputs;
-        config = nxinputs.config;
-        build = nxinputs.build;
-        inherit
-          variables
-          helpers
-          defs
-          funcs
-          common
-          nixosArchitectures
-          ;
-      };
-
-      hosts = nixosBuilder.extractHosts;
-      users = homeManagerBuilder.extractUsers;
-
-      packages = lib.genAttrs allArchitectures (system: {
-        default = nxinputs.nixpkgs.legacyPackages.${system}.emptyDirectory;
-      });
-    in
-    {
-      inherit
-        hosts
-        users
-        packages
-        variables
-        allArchitectures
-        nixosArchitectures
-        darwinArchitectures
-        defs
-        ;
-
-      inherit (nxinputs) nixpkgs nixpkgs-unstable;
-
-      isoConfigurations = isoBuilder.buildIsoConfigurations;
-      nixosConfigurations = nixosBuilder.buildNixOSConfigurations;
-      homeConfigurations = homeManagerBuilder.buildHomeConfigurations;
-    };
+  };
 }

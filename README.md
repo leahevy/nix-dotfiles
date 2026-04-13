@@ -24,7 +24,7 @@ My personal NixOS, macOS, and Home-Manager configuration using a dual-repository
 ## Features
 
 - Platform-independent configuration with platform-specific modules for NixOS, macOS, and Home-Manager.
-- Personal configuration flake which is not part of the main repository and is injected in all builds.
+- Personal configuration flake acts as the root flake, pulling in this repository as a library input.
 - Various local flake inputs for clear separation included in a custom module system.
 - Very modular approach that allows activating configurations per profile.
 - Custom module format following the dendritic pattern with `on.*` event functions for context-specific NixOS/Home-Manager configuration.
@@ -68,14 +68,15 @@ installed system during the live ISO installation process.
 
 ### Configuration:
 
-- `nx profile <$1>`: Configures to use profile <$1>. To revert it remove the file .nx-profile.conf in the nxcore directory.
+- `nx profile <$1>`: Configures to use profile <$1>. To revert it remove the file .nx-profile.conf in the config directory.
 
 ### Switch Commands:
 
 - `nx sync`: Sync/deploys the system state.
 - `nx build`: Test build configuration without deploying.
 - `nx gc`: Run the garbage collection.
-- `nx update`: Updates the flake in git (without switching).
+- `nx update`: Updates the core flake inputs (without switching).
+- `nx bump`: Bumps the core input to the latest remote commit.
 - `nx dist-upgrade <version>`: Bump NixOS version.
 - `nx brew`: Sync Homebrew packages (Darwin only).
 

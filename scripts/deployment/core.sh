@@ -4,7 +4,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 simple_deployment_script_setup "core"
 
-TARGET_DIR="$(pwd)"
+TARGET_DIR="$NXCORE_DIR"
 
 if [[ -x "$HOME/.nix-profile/bin/fish" ]] && [[ -f "$HOME/.config/fish/config.fish" ]]; then
   CURRENT_SHELL="fish"
