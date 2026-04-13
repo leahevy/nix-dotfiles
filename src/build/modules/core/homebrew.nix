@@ -139,6 +139,7 @@ in
         brewfileContent = lib.concatStringsSep "\n" (
           [ headerLine ] ++ map renderTap cfg.taps ++ map renderBrew cfg.brews ++ map renderCask cfg.casks
         );
+        brewfile = pkgs.writeText "Brewfile" brewfileContent;
       in
       lib.mkIf hasContent {
         assertions = [
@@ -176,7 +177,8 @@ in
               MAGENTA='\033[1;35m'
               RESET='\033[0m'
 
-              BREWFILE="$HOME/.config/homebrew/Brewfile"
+              BREWFILE="${brewfile}"
+              NEW_BREWFILE="$HOME/.local/state/homebrew/Brewfile.active"
 
               if [[ $EUID -eq 0 ]]; then
                 echo -e "''${WHITE}Do not run this script as root!''${RESET}" >&2
@@ -186,11 +188,6 @@ in
               if ! command -v brew &> /dev/null; then
                 echo -e "''${RED}Homebrew not found!''${RESET}" >&2
                 echo -e "''${WHITE}Run ''${GREEN}brew-install''${WHITE} first to set up Homebrew.''${RESET}" >&2
-                exit 1
-              fi
-
-              if [[ ! -f "$BREWFILE" ]]; then
-                echo -e "''${RED}Brewfile not found at $BREWFILE!''${RESET}" >&2
                 exit 1
               fi
 
@@ -265,7 +262,7 @@ in
               GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew upgrade -g
               echo
 
-              cp "$BREWFILE" "$BREWFILE.active"
+              cp "$BREWFILE" "$NEW_BREWFILE"
 
               echo -e "''${GREEN}Brew environment synced.''${RESET}"
               ${lib.concatStringsSep "\n" (
@@ -302,12 +299,12 @@ in
             executable = true;
           };
 
-          ".config/homebrew/Brewfile".text = brewfileContent;
+          ".local/state/homebrew/Brewfile".source = brewfile;
         };
 
         home.persistence."${self.persist}" = {
           directories = [
-            ".config/homebrew"
+            ".local/state/homebrew"
           ];
         };
       };

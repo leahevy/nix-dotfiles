@@ -21,10 +21,10 @@ else
 fi
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
-  BREWFILE="$HOME/.config/homebrew/Brewfile"
-  BREWFILE_ACTIVE="$HOME/.config/homebrew/Brewfile.active"
+  BREWFILE="$HOME/.local/state/homebrew/Brewfile"
+  BREWFILE_ACTIVE="$HOME/.local/state/homebrew/Brewfile.active"
 
-  if [[ -f "$BREWFILE" ]]; then
+  if [[ -e "$BREWFILE" ]]; then
     if [[ ! -f "$BREWFILE_ACTIVE" ]]; then
       echo
       echo -e "${YELLOW}Brewfile created, you should run: ${GREEN}nx brew${YELLOW} to sync Homebrew packages${RESET}"
