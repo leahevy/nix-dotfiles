@@ -5,8 +5,6 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "eval"
 check_deployment_conflicts "eval"
 
-PROFILE_PATH="$(retrieve_active_profile_path)"
-
 HOME_MODE=false
 override_profile=""
 override_arch=""
@@ -101,7 +99,7 @@ else
   FULL_EVAL_PATH="homeConfigurations.${PROFILE}.config.${EVAL_PATH}"
 fi
 
-EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
+EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR")
 
 # shellcheck disable=SC2016
 nix eval --impure ".#${FULL_EVAL_PATH}" "${EXTRA_ARGS[@]}" --apply '

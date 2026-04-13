@@ -134,13 +134,12 @@ ISO_NAME="nxcore-${SYSTEM}-$(date +"%d-%m-%y_%H-%M").iso"
 
 if [[ -n "$CONFIG_DIR" ]]; then
     echo -e "Using config directory: ${WHITE}$CONFIG_DIR${RESET}"
-    PROFILE_PATH="$(retrieve_active_profile_path)"
-    EXTRA_ARGS+=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
-    
+    EXTRA_ARGS+=("--override-input" "config" "path:$CONFIG_DIR")
+
     if [[ -d "$CONFIG_DIR/.git/git-crypt" ]]; then
         echo -e "${GREEN}Detected git-crypt encryption in config repository${RESET}"
         echo -e "Exporting git-crypt key for ISO..."
-        
+
         cd "$CONFIG_DIR"
         if git-crypt export-key "$CONFIG_DIR/.git-crypt-key"; then
             echo -e "${GREEN}Git-crypt key exported successfully${RESET}"

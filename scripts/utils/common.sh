@@ -115,8 +115,7 @@ deployment_script_setup() {
 }
 
 parse_common_deployment_args() {
-    PROFILE_PATH="$(retrieve_active_profile_path)"
-    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
+    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR")
     ALLOW_DIRTY_GIT=false
     SKIP_VERIFICATION=false
 
@@ -156,12 +155,11 @@ parse_common_deployment_args() {
         esac
     done
 
-    export EXTRA_ARGS ALLOW_DIRTY_GIT SKIP_VERIFICATION PROFILE_PATH
+    export EXTRA_ARGS ALLOW_DIRTY_GIT SKIP_VERIFICATION
 }
 
 parse_build_deployment_args() {
-    PROFILE_PATH="$(retrieve_active_profile_path)"
-    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR" "--override-input" "profile" "path:$PROFILE_PATH")
+    EXTRA_ARGS=("--override-input" "config" "path:$CONFIG_DIR")
     TIMEOUT=7200
     DRY_RUN=""
     BUILD_DIFF=false
@@ -216,7 +214,7 @@ parse_build_deployment_args() {
         esac
     done
 
-    export EXTRA_ARGS TIMEOUT DRY_RUN PROFILE_PATH BUILD_DIFF SKIP_VERIFICATION RAW_LOG
+    export EXTRA_ARGS TIMEOUT DRY_RUN BUILD_DIFF SKIP_VERIFICATION RAW_LOG
 }
 
 ensure_nixos_only() {
@@ -655,12 +653,10 @@ get_main_username() {
     hostname="$(hostname)"
     local full_profile
     full_profile="$(construct_profile_name "$hostname")"
-    local profile_path
-    profile_path="$(retrieve_active_profile_path 2>/dev/null | tail -1)"
 
     if [[ -d "$CONFIG_DIR" ]]; then
         local username
-        username="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$profile_path" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+        username="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
         if [[ -n "$username" && "$username" != "null" && "$username" != "\"null\"" ]]; then
             echo "${username//\"/}"
             return 0
@@ -700,24 +696,21 @@ configure_target_git_remotes() {
         exit 1
     fi
 
-    local PROFILE_PATH
-    PROFILE_PATH="$(retrieve_active_profile_path)"
-
     local TARGET_CORE="/mnt$TARGET_HOME/.config/nx/nxcore"
     local TARGET_CONFIG="/mnt$TARGET_HOME/.config/nx/nxconfig"
 
     local CORE_INSTALL_URL
     local CONFIG_INSTALL_URL
 
-    CORE_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
+    CORE_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CORE_INSTALL_URL" == "null" || "$CORE_INSTALL_URL" == "\"null\"" ]]; then
-        CORE_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
+        CORE_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
     fi
     CORE_INSTALL_URL="${CORE_INSTALL_URL//\"/}"
 
-    CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
+    CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CONFIG_INSTALL_URL" == "null" || "$CONFIG_INSTALL_URL" == "\"null\"" ]]; then
-        CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" ".#variables.configRepoIsoUrl" 2>/dev/null)"
+        CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" ".#variables.configRepoIsoUrl" 2>/dev/null)"
     fi
     CONFIG_INSTALL_URL="${CONFIG_INSTALL_URL//\"/}"
 

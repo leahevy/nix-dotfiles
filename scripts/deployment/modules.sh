@@ -5,8 +5,6 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "modules"
 check_deployment_conflicts "modules"
 
-PROFILE_PATH="$(retrieve_active_profile_path)"
-
 get_config_path() {
   local profile="$1"
   local context="$2"
@@ -119,7 +117,7 @@ subcommand_list() {
 
   local modules_json
   # shellcheck disable=SC2016
-  modules_json="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" "${config_path}.nx" --apply '
+  modules_json="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" "${config_path}.nx" --apply '
     nx:
     let
       moduleInputs = builtins.attrNames nx;
@@ -167,7 +165,7 @@ subcommand_list() {
   ' 2>/dev/null || {
     echo -e "${YELLOW}Main eval failed, running diagnostic on full nx tree...${RESET}" >&2
     # shellcheck disable=SC2016
-    nix eval --show-trace --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" "${config_path}.nx" --apply '
+    nix eval --show-trace --impure --json --override-input config "path:$CONFIG_DIR" "${config_path}.nx" --apply '
       nx: let
         sanitize = v:
           if builtins.isFunction v then "<function>"
@@ -286,11 +284,13 @@ subcommand_info() {
   local group_name="${rest%%.*}"
   local module_name="${rest#*.}"
 
+  local profile_path
+  profile_path="$(retrieve_active_profile_path)"
   local base_path
   if [[ "$input_name" == "config" ]]; then
     base_path="$CONFIG_DIR"
   elif [[ "$input_name" == "profile" ]]; then
-    base_path="$PROFILE_PATH"
+    base_path="$profile_path"
   else
     base_path="$PWD/src/$input_name"
   fi
@@ -339,7 +339,7 @@ subcommand_info() {
 
   local module_info
   # shellcheck disable=SC2016
-  module_info="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" "${config_path}.nx.${input_name}.${group_name}.${module_name}" --apply '
+  module_info="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" "${config_path}.nx.${input_name}.${group_name}.${module_name}" --apply '
     moduleData:
     let
       sanitize = v:
@@ -354,7 +354,7 @@ subcommand_info() {
   ' 2>/dev/null || {
     echo -e "${YELLOW}Main eval failed, running diagnostic on full nx tree...${RESET}" >&2
     # shellcheck disable=SC2016
-    nix eval --show-trace --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" "${config_path}.nx" --apply '
+    nix eval --show-trace --impure --json --override-input config "path:$CONFIG_DIR" "${config_path}.nx" --apply '
       nx: let
         sanitize = v:
           if builtins.isFunction v then "<function>"
@@ -472,11 +472,13 @@ subcommand_edit() {
     exit 1
   }
 
+  local profile_path
+  profile_path="$(retrieve_active_profile_path)"
   local base_path
   if [[ "$input_name" == "config" ]]; then
     base_path="$CONFIG_DIR"
   elif [[ "$input_name" == "profile" ]]; then
-    base_path="$PROFILE_PATH"
+    base_path="$profile_path"
   else
     base_path="$PWD/src/$input_name"
   fi
@@ -562,7 +564,7 @@ subcommand_config() {
 
   local config_json
   # shellcheck disable=SC2016
-  config_json="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" "${config_path}.nx" --apply '
+  config_json="$(nix eval --impure --json --override-input config "path:$CONFIG_DIR" "${config_path}.nx" --apply '
     nx:
     let
       moduleInputs = builtins.attrNames nx;
@@ -606,7 +608,7 @@ subcommand_config() {
   ' 2>/dev/null || {
     echo -e "${YELLOW}Main eval failed, running diagnostic on full nx tree...${RESET}" >&2
     # shellcheck disable=SC2016
-    nix eval --show-trace --impure --json --override-input config "path:$CONFIG_DIR" --override-input profile "path:$PROFILE_PATH" "${config_path}.nx" --apply '
+    nix eval --show-trace --impure --json --override-input config "path:$CONFIG_DIR" "${config_path}.nx" --apply '
       nx: let
         sanitize = v:
           if builtins.isFunction v then "<function>"
