@@ -286,47 +286,85 @@ args@{
     home =
       config:
       let
-        nirimationSrc = pkgs.fetchFromGitHub {
-          owner = "leahevy";
-          repo = "nirimation";
-          rev = "17dda540a040ca501982418c436fd5c77a572392";
-          sha256 = "sha256-J6f02QKi8ggoEOtxK8RhLGSq4IkRh+LRahXcY/ReE18=";
-        };
-
-        nirimationShaders = pkgs.runCommand "nirimation-shaders" { } ''
-          mkdir -p $out
-          for kdl in ${nirimationSrc}/animations/*.kdl; do
-            name="$(basename "$kdl" .kdl)"
-            mkdir -p "$out/$name"
-            ${pkgs.gawk}/bin/awk '
-              /^[[:space:]]*(window-open|window-close|window-resize|workspace-switch)[[:space:]]*\{/ {
-                section = $1
-                gsub(/[[:space:]]*\{.*/, "", section)
-              }
-              /custom-shader r"/ {
-                capturing = 1
-                shader = ""
-                sub(/.*custom-shader r"/, "", $0)
-              }
-              /custom-shader "/ && !/custom-shader r"/ {
-                capturing = 1
-                shader = ""
-                sub(/.*custom-shader "/, "", $0)
-              }
-              capturing {
-                if (match($0, /^(.*)"[[:space:]]*$/, m)) {
-                  shader = shader m[1] "\n"
-                  outfile = OUTDIR "/" section ".glsl"
-                  printf "%s", shader > outfile
-                  close(outfile)
-                  capturing = 0
-                } else {
-                  shader = shader $0 "\n"
+        parseKdlShader =
+          kdlContent: sectionName:
+          let
+            lines = lib.splitString "\n" kdlContent;
+            countChar = c: s: (builtins.length (lib.splitString c s)) - 1;
+            result =
+              builtins.foldl'
+                (
+                  acc: line:
+                  if acc.done then
+                    acc
+                  else if acc.capturing then
+                    let
+                      m = builtins.match ''(.*)"[[:space:]]*'' line;
+                    in
+                    if m != null then
+                      acc
+                      // {
+                        done = true;
+                        shader = acc.shader + (builtins.elemAt m 0);
+                        capturing = false;
+                      }
+                    else
+                      acc // { shader = acc.shader + line + "\n"; }
+                  else if acc.inSection then
+                    let
+                      newDepth = acc.depth + (countChar "{" line) - (countChar "}" line);
+                      rawMatch = builtins.match ''.*custom-shader[[:space:]]+r"(.*)'' line;
+                      strMatch = builtins.match ''.*custom-shader[[:space:]]+"(.*)'' line;
+                      shaderMatch = if rawMatch != null then rawMatch else strMatch;
+                    in
+                    if shaderMatch != null then
+                      let
+                        rest = builtins.elemAt shaderMatch 0;
+                        endMatch = builtins.match ''(.*)"[[:space:]]*'' rest;
+                      in
+                      if endMatch != null then
+                        acc
+                        // {
+                          done = true;
+                          shader = builtins.elemAt endMatch 0;
+                        }
+                      else
+                        acc
+                        // {
+                          capturing = true;
+                          shader = if rest != "" then rest + "\n" else "";
+                        }
+                    else if newDepth <= 0 then
+                      acc
+                      // {
+                        inSection = false;
+                        depth = 0;
+                      }
+                    else
+                      acc // { depth = newDepth; }
+                  else
+                    let
+                      m = builtins.match ("[[:space:]]*" + sectionName + "[[:space:]]*[{].*") line;
+                    in
+                    if m != null then
+                      acc
+                      // {
+                        inSection = true;
+                        depth = 1;
+                      }
+                    else
+                      acc
+                )
+                {
+                  inSection = false;
+                  capturing = false;
+                  shader = "";
+                  done = false;
+                  depth = 0;
                 }
-              }
-            ' OUTDIR="$out/$name" "$kdl"
-          done
-        '';
+                lines;
+          in
+          result.shader;
 
         getShader =
           name:
@@ -334,9 +372,8 @@ args@{
             parts = lib.splitString "/" name;
             animation = builtins.elemAt parts 0;
             section = builtins.elemAt parts 1;
-            path = "${nirimationShaders}/${animation}/${section}.glsl";
           in
-          builtins.readFile path;
+          parseKdlShader (builtins.readFile "${self.inputs.nirimation}/animations/${animation}.kdl") section;
 
         lateRules = (self.options config).lateWindowRules;
         hasLateRules = lateRules != [ ];
@@ -779,7 +816,6 @@ args@{
       {
         home.packages = [
           pkgs.jq
-          nirimationShaders
         ]
         ++ autostartDummies;
 

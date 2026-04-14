@@ -28,6 +28,8 @@ export AUTO_UPDATE_INPUTS=(
     "flake-parts"
     "flake-utils"
     "flake-compat"
+    "nirimation"
+    "solarized-everything-css"
 )
 
 export REBOOT_CHECK_INPUTS=(

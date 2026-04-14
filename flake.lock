@@ -450,6 +450,23 @@
         "type": "github"
       }
     },
+    "nirimation": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1772313747,
+        "narHash": "sha256-J6f02QKi8ggoEOtxK8RhLGSq4IkRh+LRahXcY/ReE18=",
+        "owner": "leahevy",
+        "repo": "nirimation",
+        "rev": "17dda540a040ca501982418c436fd5c77a572392",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leahevy",
+        "ref": "main",
+        "repo": "nirimation",
+        "type": "github"
+      }
+    },
     "nix-darwin": {
       "inputs": {
         "nixpkgs": [
@@ -733,6 +750,7 @@
         "lanzaboote": "lanzaboote",
         "mac-app-util": "mac-app-util",
         "niri-flake": "niri-flake",
+        "nirimation": "nirimation",
         "nix-darwin": "nix-darwin",
         "nix-plist-manager": "nix-plist-manager",
         "nix-systems": "nix-systems",
@@ -744,6 +762,7 @@
         "nixpkgs-nix": "nixpkgs-nix",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",
+        "solarized-everything-css": "solarized-everything-css",
         "sops-nix": "sops-nix",
         "stylix": "stylix"
       }
@@ -766,6 +785,23 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "solarized-everything-css": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1580283332,
+        "narHash": "sha256-pwl2B0hYrzGGsSicVs/amu+N0Txd1e3+4+LKyWpyTeI=",
+        "owner": "leahevy",
+        "repo": "solarized-everything-css",
+        "rev": "bea989070bbb1389ca05e67118786beb55321e55",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leahevy",
+        "ref": "master",
+        "repo": "solarized-everything-css",
         "type": "github"
       }
     },

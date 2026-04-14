@@ -69,6 +69,16 @@
       url = "github:leahevy/nixos-hardware/master";
     };
 
+    nirimation = {
+      url = "github:leahevy/nirimation/main";
+      flake = false;
+    };
+
+    solarized-everything-css = {
+      url = "github:leahevy/solarized-everything-css/master";
+      flake = false;
+    };
+
     # -----------------------------------------------------------------------------
     # Core inputs
     # -----------------------------------------------------------------------------

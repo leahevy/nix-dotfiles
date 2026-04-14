@@ -582,112 +582,89 @@ args@{
 
         mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings) keepassxcKeyBindings) dmenuKeyBindings) bitwardenKeyBindings;
 
-        themedCSS = pkgs.stdenv.mkDerivation rec {
-          pname = "themed-css";
-          version = "0.1";
+        themedCSS = pkgs.writeText "themed-css.css" (
+          builtins.replaceStrings
+            [
+              "#000"
+              "#262626"
+              "#2a2a2a"
+              "#2e2e2e"
+              "#323232"
+              "#363636"
+              "#2c4125"
 
-          src = pkgs.fetchFromGitHub {
-            owner = "alphapapa";
-            repo = "solarized-everything-css";
-            rev = "bea989070bbb1389ca05e67118786beb55321e55";
-            sha256 = "sha256-pwl2B0hYrzGGsSicVs/amu+N0Txd1e3+4+LKyWpyTeI=";
-          };
+              "#5e6263"
+              "#797fd4"
+              "#909396"
+              "#a6aaab"
+              "#b8bbbd"
+              "#c7c9ca"
+              "#d2d8d9"
 
-          buildPhase = ''
-            cat ${
-              pkgs.writeText "patched.css" (
-                builtins.replaceStrings
-                  [
-                    "#000"
-                    "#262626"
-                    "#2a2a2a"
-                    "#2e2e2e"
-                    "#323232"
-                    "#363636"
-                    "#2c4125"
+              "#fff"
+              "#fba"
+              "#aba"
 
-                    "#5e6263"
-                    "#797fd4"
-                    "#909396"
-                    "#a6aaab"
-                    "#b8bbbd"
-                    "#c7c9ca"
-                    "#d2d8d9"
+              "#2f7bde"
+              "#639ce6"
 
-                    "#fff"
-                    "#fba"
-                    "#aba"
+              "#15968d"
+              "#436237"
+              "#598249"
 
-                    "#2f7bde"
-                    "#639ce6"
+              "#b68800"
 
-                    "#15968d"
-                    "#436237"
-                    "#598249"
+              "#e05f27"
 
-                    "#b68800"
+              "#5e1c19"
+              "#bd3832"
+              "#ce4139"
+              "#a8366b"
+            ]
+            [
+              config.nx.preferences.theme.colors.main.backgrounds.primary.html
+              config.nx.preferences.theme.colors.main.backgrounds.primary.html
+              config.nx.preferences.theme.colors.main.backgrounds.primary.html
+              config.nx.preferences.theme.colors.main.backgrounds.primary.html
+              config.nx.preferences.theme.colors.main.backgrounds.secondary.html
+              config.nx.preferences.theme.colors.main.backgrounds.tertiary.html
+              config.nx.preferences.theme.colors.main.backgrounds.themed.html
 
-                    "#e05f27"
+              config.nx.preferences.theme.colors.main.foregrounds.subtle.html
+              config.nx.preferences.theme.colors.main.foregrounds.secondary.html
+              config.nx.preferences.theme.colors.main.foregrounds.subtle.html
+              config.nx.preferences.theme.colors.main.foregrounds.secondary.html
+              config.nx.preferences.theme.colors.main.foregrounds.strong.html
+              config.nx.preferences.theme.colors.main.foregrounds.strong.html
+              config.nx.preferences.theme.colors.main.foregrounds.strong.html
 
-                    "#5e1c19"
-                    "#bd3832"
-                    "#ce4139"
-                    "#a8366b"
-                  ]
-                  [
-                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.secondary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.tertiary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.themed.html
+              config.nx.preferences.theme.colors.main.foregrounds.primary.html
+              config.nx.preferences.theme.colors.main.foregrounds.emphasized.html
+              config.nx.preferences.theme.colors.main.foregrounds.strong.html
 
-                    config.nx.preferences.theme.colors.main.foregrounds.subtle.html
-                    config.nx.preferences.theme.colors.main.foregrounds.secondary.html
-                    config.nx.preferences.theme.colors.main.foregrounds.subtle.html
-                    config.nx.preferences.theme.colors.main.foregrounds.secondary.html
-                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
-                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
-                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
+              config.nx.preferences.theme.colors.semantic.modifiedDarker.html
+              config.nx.preferences.theme.colors.semantic.removedDarker.html
 
-                    config.nx.preferences.theme.colors.main.foregrounds.primary.html
-                    config.nx.preferences.theme.colors.main.foregrounds.emphasized.html
-                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
+              config.nx.preferences.theme.colors.semantic.success.html
+              config.nx.preferences.theme.colors.semantic.successDarker.html
+              config.nx.preferences.theme.colors.semantic.success.html
 
-                    config.nx.preferences.theme.colors.semantic.modifiedDarker.html
-                    config.nx.preferences.theme.colors.semantic.removedDarker.html
+              config.nx.preferences.theme.colors.semantic.warning.html
 
-                    config.nx.preferences.theme.colors.semantic.success.html
-                    config.nx.preferences.theme.colors.semantic.successDarker.html
-                    config.nx.preferences.theme.colors.semantic.success.html
+              config.nx.preferences.theme.colors.semantic.error.html
 
-                    config.nx.preferences.theme.colors.semantic.warning.html
-
-                    config.nx.preferences.theme.colors.semantic.error.html
-
-                    config.nx.preferences.theme.colors.semantic.errorDarker.html
-                    config.nx.preferences.theme.colors.semantic.info.html
-                    config.nx.preferences.theme.colors.semantic.info.html
-                    config.nx.preferences.theme.colors.semantic.selected.html
-                  ]
-                  (builtins.readFile "${src}/css/darculized/darculized-all-sites.css")
-              )
-            } > patched.css
-          '';
-
-          installPhase = ''
-            mkdir -p $out
-            cp patched.css $out/themed-css.css
-          '';
-        };
+              config.nx.preferences.theme.colors.semantic.errorDarker.html
+              config.nx.preferences.theme.colors.semantic.info.html
+              config.nx.preferences.theme.colors.semantic.info.html
+              config.nx.preferences.theme.colors.semantic.selected.html
+            ]
+            (
+              builtins.readFile "${self.inputs.solarized-everything-css}/css/darculized/darculized-all-sites.css"
+            )
+        );
       in
       {
-        home.packages =
-          lib.optionals self.settings.useThemedUserCSS [
-            themedCSS
-          ]
-          ++ lib.optionals (dmenuKeyBindings != { }) [ pkgs.sqlite ];
+        home.packages = lib.optionals (dmenuKeyBindings != { }) [ pkgs.sqlite ];
 
         programs.qutebrowser = {
           enable = true;
@@ -833,7 +810,7 @@ args@{
                 webgl = true;
                 dns_prefetch = false;
                 user_stylesheets = lib.mkIf self.settings.useThemedUserCSS [
-                  "${themedCSS}/themed-css.css"
+                  "${themedCSS}"
                 ];
               };
               downloads = {
