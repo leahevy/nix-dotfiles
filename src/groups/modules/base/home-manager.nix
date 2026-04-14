@@ -91,6 +91,7 @@ let
       todo = [ "todoist" ];
       xdg = [ "user-dirs" ];
       music = [ "spotify" ];
+      desktop-modules = [ "desktop-files" ];
     };
   };
 

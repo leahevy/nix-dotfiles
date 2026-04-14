@@ -14,30 +14,87 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
-  settings = {
-    entries = { };
+  options = {
+    entries = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            exec = lib.mkOption {
+              type = lib.types.str;
+              description = "Command to execute";
+            };
+            name = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Display name (defaults to capitalized entry key)";
+            };
+            genericName = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+            };
+            comment = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+            };
+            icon = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Icon name (defaults to entry key)";
+            };
+            terminal = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+            };
+            type = lib.mkOption {
+              type = lib.types.str;
+              default = "Application";
+            };
+            categories = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ "Other" ];
+            };
+            mimeType = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+            };
+            startupNotify = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+            };
+            noDisplay = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+            };
+            settings = lib.mkOption {
+              type = lib.types.attrsOf lib.types.str;
+              default = { };
+            };
+          };
+        }
+      );
+      default = { };
+      description = "Desktop file entries";
+    };
   };
 
   on = {
     home =
-      config:
+      { config, entries, ... }:
       let
         scriptEntries = lib.mapAttrs (
           name: entry:
           let
-            entryConfig = if builtins.isString entry then { exec = entry; } else entry;
-            expandedExec = lib.replaceStrings [ "~/" ] [ "${config.home.homeDirectory}/" ] entryConfig.exec;
-            scriptContent = ''
+            expandedExec = lib.replaceStrings [ "~/" ] [ "${config.home.homeDirectory}/" ] entry.exec;
+          in
+          {
+            executable = true;
+            text = ''
               #!/bin/sh
               set -e
               ${expandedExec}
             '';
-          in
-          {
-            executable = true;
-            text = scriptContent;
           }
-        ) self.settings.entries;
+        ) entries;
       in
       {
         home.file = lib.mapAttrs' (
@@ -47,25 +104,23 @@ args@{
         xdg.desktopEntries = lib.mapAttrs (
           name: entry:
           let
-            entryConfig = if builtins.isString entry then { exec = entry; } else entry;
             defaultName = lib.toUpper (lib.substring 0 1 name) + lib.substring 1 (-1) name;
-            scriptPath = "${config.home.homeDirectory}/.local/bin/scripts/desktop-files/${name}.sh";
           in
           {
-            name = entryConfig.name or defaultName;
-            genericName = entryConfig.genericName or null;
-            comment = entryConfig.comment or null;
-            exec = scriptPath;
-            icon = entryConfig.icon or name;
-            terminal = entryConfig.terminal or false;
-            type = entryConfig.type or "Application";
-            categories = entryConfig.categories or [ "Other" ];
-            mimeType = entryConfig.mimeType or [ ];
-            startupNotify = entryConfig.startupNotify or true;
-            noDisplay = entryConfig.noDisplay or false;
-            settings = entryConfig.settings or { };
+            name = if entry.name != null then entry.name else defaultName;
+            genericName = entry.genericName;
+            comment = entry.comment;
+            exec = "${config.home.homeDirectory}/.local/bin/scripts/desktop-files/${name}.sh";
+            icon = if entry.icon != null then entry.icon else name;
+            terminal = entry.terminal;
+            type = entry.type;
+            categories = entry.categories;
+            mimeType = entry.mimeType;
+            startupNotify = entry.startupNotify;
+            noDisplay = entry.noDisplay;
+            settings = entry.settings;
           }
-        ) self.settings.entries;
+        ) entries;
       };
   };
 }
