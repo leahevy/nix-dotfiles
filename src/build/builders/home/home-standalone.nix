@@ -21,9 +21,13 @@ let
     ;
 
   buildHomeConfiguration =
-    { profileName, arch }:
+    {
+      profileName,
+      arch,
+      buildArch ? arch,
+    }:
     let
-      processResult = processStandaloneUserProfile { inherit profileName arch; };
+      processResult = processStandaloneUserProfile { inherit profileName arch buildArch; };
       inherit (processResult) userConfig buildContext;
       inherit (buildContext)
         system
@@ -36,7 +40,8 @@ let
         ;
     in
     {
-      name = "${profileName}--${arch}";
+      name =
+        if buildArch == arch then "${profileName}--${arch}" else "${profileName}--${arch}--${buildArch}";
       value = inputs.home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [
@@ -86,7 +91,16 @@ in
   buildHomeConfigurations = builtins.listToAttrs (
     lib.flatten (
       map (
-        profileName: map (arch: buildHomeConfiguration { inherit profileName arch; }) allArchitectures
+        profileName:
+        (map (arch: buildHomeConfiguration { inherit profileName arch; }) allArchitectures)
+        ++ (lib.flatten (
+          map (
+            arch:
+            map (buildArch: buildHomeConfiguration { inherit profileName arch buildArch; }) (
+              lib.filter (b: b != arch) allArchitectures
+            )
+          ) allArchitectures
+        ))
       ) standalone-user-files
     )
   );

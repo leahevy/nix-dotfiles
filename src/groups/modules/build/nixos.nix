@@ -32,6 +32,7 @@ args@{
         "sysctl"
         "homebrew"
         "profile"
+        "nixos-label"
       ];
       desktop = [ "desktop" ];
       programs = [ "programs" ];

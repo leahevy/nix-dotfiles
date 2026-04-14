@@ -494,6 +494,8 @@ rec {
   # Generate file access functions for specific input and module path
   # Usage: generateFileFunctions $INPUTNAME $MODULEBASEPATH
   generateFileFunctions = inputName: moduleBasePath: {
+    rootPath = subPath: additionalInputs.${inputName} + "/" + subPath;
+
     file =
       subPath:
       let

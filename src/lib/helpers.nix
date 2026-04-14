@@ -2,14 +2,10 @@
   lib,
   defs,
   additionalInputs,
-  buildSystem ? null,
 }:
 rec {
-  inherit buildSystem;
-
-  # Check if building for native or compatible architecture
-  # Usage: isHostArchitecture pkgs
-  isHostArchitecture = pkgs: buildSystem != null && pkgs.stdenv.hostPlatform.system == buildSystem;
+  # Returns if building for native or compatible architecture
+  isHostArchitecture = throw "isHostArchitecture must be overridden by localHelpers (processHostProfile/processStandaloneUserProfile)";
 
   # Null-safe value selection
   # Usage: ifSet $VALUE $DEFAULT

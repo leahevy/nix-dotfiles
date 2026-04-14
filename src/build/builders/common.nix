@@ -185,6 +185,7 @@ let
       users ? { },
       user ? { },
       configInputs ? { },
+      helpers ? helpers,
     }:
     {
       inherit pkgs-unstable;
@@ -236,8 +237,15 @@ in
     );
 
   processHostProfile =
-    { profileName, arch }:
+    {
+      profileName,
+      arch,
+      buildArch ? arch,
+    }:
     let
+      localHelpers = helpers // {
+        isHostArchitecture = arch == buildArch;
+      };
       funcs = makeFuncs (config + "/profiles/nixos/${profileName}");
       hostConfigPath = config + "/profiles/nixos/${profileName}/${profileName}.nix";
 
@@ -370,10 +378,10 @@ in
           pkgs-unstable
           inputs
           variables
-          helpers
           defs
           funcs
           ;
+        helpers = localHelpers;
         host = resolvedHost;
         user = mainUser;
         users = userAttrSet;
@@ -416,6 +424,7 @@ in
           configInputs = config.configInputs or { };
           host = hostConfig.host;
           users = hostConfig.users;
+          helpers = localHelpers;
         };
         buildArgs = {
           inherit
@@ -424,10 +433,10 @@ in
             pkgs-unstable
             inputs
             funcs
-            helpers
             defs
             variables
             ;
+          helpers = localHelpers;
           host = hostConfig.host;
           users = hostConfig.users;
           processedModules = processedModules;
@@ -443,8 +452,15 @@ in
     };
 
   processStandaloneUserProfile =
-    { profileName, arch }:
+    {
+      profileName,
+      arch,
+      buildArch ? arch,
+    }:
     let
+      localHelpers = helpers // {
+        isHostArchitecture = arch == buildArch;
+      };
       funcs = makeFuncs (config + "/profiles/home-standalone/${profileName}");
       userConfigPath = config + "/profiles/home-standalone/${profileName}/${profileName}.nix";
 
@@ -516,10 +532,10 @@ in
           pkgs-unstable
           inputs
           funcs
-          helpers
           defs
           variables
           ;
+        helpers = localHelpers;
         user = resolvedUser;
         host = { };
         configInputs = config.configInputs or { };
@@ -550,6 +566,7 @@ in
             ;
           configInputs = config.configInputs or { };
           user = finalUserConfig;
+          helpers = localHelpers;
         };
         buildArgs = {
           inherit
@@ -558,10 +575,10 @@ in
             pkgs-unstable
             inputs
             funcs
-            helpers
             defs
             variables
             ;
+          helpers = localHelpers;
           user = finalUserConfig;
           host = { };
           configInputs = config.configInputs or { };

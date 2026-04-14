@@ -728,9 +728,7 @@ in
     {
       enabled = config: {
         nx.lib.iconResolveScript = lib.mkDefault (mkScript config);
-        nx.cache.icons = lib.mkDefault (
-          if helpers.isHostArchitecture pkgs then buildIconCache config else null
-        );
+        nx.cache.icons = lib.mkDefault (if helpers.isHostArchitecture then buildIconCache config else null);
       };
       standalone = config: {
         home.packages = [ config.nx.lib.iconResolveScript ];

@@ -536,28 +536,6 @@ get_latest_commit_timestamp() {
     fi
 }
 
-export_nixos_label() {
-    local use_dir="$CONFIG_DIR"
-
-    if [[ -n "${CONFIG_DIR:-}" && -n "${NXCORE_DIR:-}" && -d "$CONFIG_DIR/.git" && -d "$NXCORE_DIR/.git" ]]; then
-        local config_timestamp
-        config_timestamp=$(get_latest_commit_timestamp "$CONFIG_DIR")
-        local core_timestamp
-        core_timestamp=$(get_latest_commit_timestamp "$NXCORE_DIR")
-
-        if [[ "$core_timestamp" -gt "$config_timestamp" ]]; then
-            use_dir="$NXCORE_DIR"
-        fi
-    elif [[ -n "${NXCORE_DIR:-}" && -d "$NXCORE_DIR/.git" ]]; then
-        use_dir="$NXCORE_DIR"
-    fi
-
-    local commit_msg
-    commit_msg=$(cd "$use_dir" && git log -1 --pretty=format:"%s" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9-]//g' | awk '{if(length($0)>25) print substr($0,1,24)"-"; else print $0}' | sed 's/--$/-/')
-    NIXOS_LABEL="$(cd "$use_dir" && git log -1 --pretty=format:"$(git branch --show-current).%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
-    export NIXOS_LABEL
-}
-
 detect_system_architecture() {
     local uname_system
     uname_system="$(uname -s)"
@@ -602,8 +580,13 @@ detect_system_architecture() {
 
 construct_profile_name() {
     local base_profile="$1"
-    local architecture="${2:-$(detect_system_architecture)}"
-    echo "${base_profile}--${architecture}"
+    local target_arch="${2:-$(detect_system_architecture)}"
+    local build_arch="${3:-$(detect_system_architecture)}"
+    if [[ "$target_arch" == "$build_arch" ]]; then
+        echo "${base_profile}--${target_arch}"
+    else
+        echo "${base_profile}--${target_arch}--${build_arch}"
+    fi
 }
 
 retrieve_active_profile() {

@@ -23,9 +23,13 @@ let
     ;
 
   buildNixOSConfiguration =
-    { profileName, arch }:
+    {
+      profileName,
+      arch,
+      buildArch ? arch,
+    }:
     let
-      processResult = processHostProfile { inherit profileName arch; };
+      processResult = processHostProfile { inherit profileName arch buildArch; };
       inherit (processResult) hostConfig buildContext;
       inherit (buildContext)
         system
@@ -39,7 +43,8 @@ let
         ;
     in
     {
-      name = "${profileName}--${arch}";
+      name =
+        if buildArch == arch then "${profileName}--${arch}" else "${profileName}--${arch}--${buildArch}";
       value = inputs.nixpkgs.lib.nixosSystem {
         inherit system pkgs;
         specialArgs = specialArgs;
@@ -124,7 +129,16 @@ in
   buildNixOSConfigurations = builtins.listToAttrs (
     lib.flatten (
       map (
-        profileName: map (arch: buildNixOSConfiguration { inherit profileName arch; }) nixosArchitectures
+        profileName:
+        (map (arch: buildNixOSConfiguration { inherit profileName arch; }) nixosArchitectures)
+        ++ (lib.flatten (
+          map (
+            arch:
+            map (buildArch: buildNixOSConfiguration { inherit profileName arch buildArch; }) (
+              lib.filter (b: b != arch) nixosArchitectures
+            )
+          ) nixosArchitectures
+        ))
       ) host-files
     )
   );
