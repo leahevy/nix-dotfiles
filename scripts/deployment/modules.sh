@@ -117,7 +117,7 @@ subcommand_list() {
 
   local modules_json
   # shellcheck disable=SC2016
-  modules_json="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx" --apply '
+  modules_json="$(nix eval --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx" --apply '
     nx:
     let
       moduleInputs = builtins.attrNames nx;
@@ -165,7 +165,7 @@ subcommand_list() {
   ' 2>/dev/null || {
     echo -e "${YELLOW}Main eval failed, running diagnostic on full nx tree...${RESET}" >&2
     # shellcheck disable=SC2016
-    nix eval --show-trace --impure --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx" --apply '
+    nix eval --show-trace --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx" --apply '
       nx: let
         sanitize = v:
           if builtins.isFunction v then "<function>"
@@ -339,7 +339,7 @@ subcommand_info() {
 
   local module_info
   # shellcheck disable=SC2016
-  module_info="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx.${input_name}.${group_name}.${module_name}" --apply '
+  module_info="$(nix eval --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx.${input_name}.${group_name}.${module_name}" --apply '
     moduleData:
     let
       sanitize = v:
@@ -354,7 +354,7 @@ subcommand_info() {
   ' 2>/dev/null || {
     echo -e "${YELLOW}Main eval failed, running diagnostic on full nx tree...${RESET}" >&2
     # shellcheck disable=SC2016
-    nix eval --show-trace --impure --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx" --apply '
+    nix eval --show-trace --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx" --apply '
       nx: let
         sanitize = v:
           if builtins.isFunction v then "<function>"
@@ -564,7 +564,7 @@ subcommand_config() {
 
   local config_json
   # shellcheck disable=SC2016
-  config_json="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx" --apply '
+  config_json="$(nix eval --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx" --apply '
     nx:
     let
       moduleInputs = builtins.attrNames nx;
@@ -608,7 +608,7 @@ subcommand_config() {
   ' 2>/dev/null || {
     echo -e "${YELLOW}Main eval failed, running diagnostic on full nx tree...${RESET}" >&2
     # shellcheck disable=SC2016
-    nix eval --show-trace --impure --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx" --apply '
+    nix eval --show-trace --json --override-input core "path:$NXCORE_DIR" "${config_path}.nx" --apply '
       nx: let
         sanitize = v:
           if builtins.isFunction v then "<function>"

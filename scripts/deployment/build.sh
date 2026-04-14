@@ -16,10 +16,8 @@ if [[ "${RAW_LOG:-false}" == "true" ]]; then
 fi
 
 if [[ -e /etc/NIXOS ]]; then
-  export_nixos_label
-
   # shellcheck disable=SC2086
-  NEW_SYSTEM=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN $LOG_FORMAT ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
+  NEW_SYSTEM=$(timeout "${TIMEOUT}s" nix build --no-link $DRY_RUN $LOG_FORMAT ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
 
   if [[ "${BUILD_DIFF:-false}" == "true" ]]; then
     echo -e "${CYAN}Comparing new build with current active system...${RESET}"
@@ -32,7 +30,7 @@ if [[ -e /etc/NIXOS ]]; then
   fi
 else
   # shellcheck disable=SC2086
-  NEW_HOME=$(timeout "${TIMEOUT}s" nix build --no-link --impure $DRY_RUN $LOG_FORMAT ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
+  NEW_HOME=$(timeout "${TIMEOUT}s" nix build --no-link $DRY_RUN $LOG_FORMAT ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
 
   if [[ "${BUILD_DIFF:-false}" == "true" ]]; then
     echo -e "${CYAN}Comparing new build with current active home configuration...${RESET}"

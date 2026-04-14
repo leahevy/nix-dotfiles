@@ -639,7 +639,7 @@ get_main_username() {
 
     if [[ -d "$CONFIG_DIR" ]]; then
         local username
-        username="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+        username="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
         if [[ -n "$username" && "$username" != "null" && "$username" != "\"null\"" ]]; then
             echo "${username//\"/}"
             return 0
@@ -685,15 +685,15 @@ configure_target_git_remotes() {
     local CORE_INSTALL_URL
     local CONFIG_INSTALL_URL
 
-    CORE_INSTALL_URL="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
+    CORE_INSTALL_URL="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CORE_INSTALL_URL" == "null" || "$CORE_INSTALL_URL" == "\"null\"" ]]; then
-        CORE_INSTALL_URL="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
+        CORE_INSTALL_URL="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
     fi
     CORE_INSTALL_URL="${CORE_INSTALL_URL//\"/}"
 
-    CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
+    CONFIG_INSTALL_URL="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
     if [[ "$CONFIG_INSTALL_URL" == "null" || "$CONFIG_INSTALL_URL" == "\"null\"" ]]; then
-        CONFIG_INSTALL_URL="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#variables.configRepoIsoUrl" 2>/dev/null)"
+        CONFIG_INSTALL_URL="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#variables.configRepoIsoUrl" 2>/dev/null)"
     fi
     CONFIG_INSTALL_URL="${CONFIG_INSTALL_URL//\"/}"
 

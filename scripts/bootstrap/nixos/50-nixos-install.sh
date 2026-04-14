@@ -40,7 +40,7 @@ if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix" ]]; then
 fi
 
 FULL_PROFILE="$(construct_profile_name "$HOSTNAME")"
-USERNAME="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
+USERNAME="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
 if [[ -z "$USERNAME" || "$USERNAME" == "null" || "$USERNAME" == "\"null\"" ]]; then
   echo -e "${RED}Error: Could not determine main user from host configuration for ${WHITE}$HOSTNAME${RESET}" >&2
   echo -e "${RED}Make sure ${WHITE}mainUser${RED} is set in ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix${RESET}" >&2
@@ -52,9 +52,9 @@ echo -e "Using full profile name: ${WHITE}$FULL_PROFILE${RESET}"
 
 echo
 echo -e "${WHITE}Checking if impermanence is enabled for this host...${RESET}"
-IMPERMANENCE_ENABLED="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
+IMPERMANENCE_ENABLED="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
 
-HOME="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
+HOME="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
 if [[ -z "$HOME" || "$HOME" == "null" ]]; then
   echo -e "${RED}Error: Failed to extract valid home directory for ${WHITE}$USERNAME${RESET}" >&2
   exit 1
@@ -90,8 +90,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     exit 1
   fi
 
-  USER_UID="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.uid")"
-  GROUP_NAME="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.group")"
+  USER_UID="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.uid")"
+  GROUP_NAME="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.group")"
 
   if [[ -z "$USER_UID" || "$USER_UID" == "null" || -z "$GROUP_NAME" || "$GROUP_NAME" == "null" ]]; then
     echo -e "${RED}Error: Failed to extract valid user information for ${WHITE}$USERNAME${RESET}" >&2
@@ -101,7 +101,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   USER_UID="${USER_UID//\"/}"
   GROUP_NAME="${GROUP_NAME//\"/}"
 
-  USER_GID="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.groups.$GROUP_NAME.gid")"
+  USER_GID="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.groups.$GROUP_NAME.gid")"
   if [[ -z "$USER_GID" || "$USER_GID" == "null" ]]; then
     echo -e "${RED}Error: Failed to extract valid group GID for group ${WHITE}$GROUP_NAME${RESET}" >&2
     exit 1

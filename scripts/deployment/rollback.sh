@@ -10,6 +10,4 @@ ensure_nixos_only "rollback"
 check_git_worktrees_clean
 check_deployment_conflicts "rollback"
 
-export_nixos_label
-
 nh os rollback "${EXTRA_ARGS[@]:-}"

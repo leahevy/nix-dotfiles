@@ -13,6 +13,4 @@ check_deployment_conflicts "boot"
 
 PROFILE="$(retrieve_active_profile)"
 
-export_nixos_label
-
-nh os boot -H "$PROFILE" . -- --impure "${EXTRA_ARGS[@]:-}"
+nh os boot -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"

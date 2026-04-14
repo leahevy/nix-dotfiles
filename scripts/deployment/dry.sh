@@ -10,6 +10,4 @@ check_deployment_conflicts "dry"
 
 PROFILE="$(retrieve_active_profile)"
 
-export_nixos_label
-
-nh os switch --dry -H "$PROFILE" . -- --impure "${EXTRA_ARGS[@]:-}"
+nh os switch --dry -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"

@@ -102,7 +102,7 @@ fi
 EXTRA_ARGS=("--override-input" "core" "path:$NXCORE_DIR")
 
 # shellcheck disable=SC2016
-nix eval --impure ".#${FULL_EVAL_PATH}" "${EXTRA_ARGS[@]}" --apply '
+nix eval ".#${FULL_EVAL_PATH}" "${EXTRA_ARGS[@]}" --apply '
 x: let
   lib = builtins;
   sanitize = v:

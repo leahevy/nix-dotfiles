@@ -135,7 +135,7 @@ EOF
   cp "$HARDWARE_CONFIG" /tmp/nixconfig-hardware-config.nix
 
   echo -e "${WHITE}Extracting hardware information...${RESET}"
-  if ! HARDWARE_JSON=$(cd "$REPO_ROOT" && nix eval --json --impure -f "$EVAL_WRAPPER" 2>/dev/null); then
+  if ! HARDWARE_JSON=$(cd "$REPO_ROOT" && nix eval --json --pure-eval -f "$EVAL_WRAPPER" 2>/dev/null); then
     echo -e "${RED}Error: Failed to parse hardware configuration. The generated config may be invalid.${RESET}" >&2
     echo -e "Hardware config location: ${WHITE}$HARDWARE_CONFIG${RESET}" >&2
     exit 1

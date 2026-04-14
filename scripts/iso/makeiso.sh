@@ -140,7 +140,7 @@ if [[ -n "$NXCORE_DIR" ]]; then
 fi
 
 echo -e "${YELLOW}Building ISO image (this may take a while)...${RESET}"
-timeout "${TIMEOUT}s" nix build --impure ".#isoConfigurations.$SYSTEM.config.system.build.isoImage" "${EXTRA_ARGS[@]:-}" -o "$TEMP_DIR/result"
+timeout "${TIMEOUT}s" nix build ".#isoConfigurations.$SYSTEM.config.system.build.isoImage" "${EXTRA_ARGS[@]:-}" -o "$TEMP_DIR/result"
 
 if [[ ! -L "$TEMP_DIR/result" ]]; then
   echo -e "${RED}Error: Build failed - no store symlink created${RESET}" >&2

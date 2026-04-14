@@ -42,7 +42,7 @@ HAS_ERRORS=false
 for PACKAGE in "${PACKAGES[@]}"; do
   EVAL_PATH="${NIXPKGS_INPUT}.legacyPackages.${ARCHITECTURE}.${PACKAGE}.drvPath"
 
-  if DRV_PATH=$(nix eval --impure ".#${EVAL_PATH}" --raw 2>/dev/null); then
+  if DRV_PATH=$(nix eval ".#${EVAL_PATH}" --raw 2>/dev/null); then
     if STORE_PATH=$(nix-store -q --outputs "$DRV_PATH" 2>/dev/null); then
       echo "$STORE_PATH"
     else

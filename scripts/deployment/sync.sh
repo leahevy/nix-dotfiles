@@ -13,11 +13,9 @@ PROFILE="$(retrieve_active_profile)"
 
 
 if [[ -e /etc/NIXOS ]]; then
-  export_nixos_label
-
-  nh os switch -H "$PROFILE" . -- --impure "${EXTRA_ARGS[@]:-}"
+  nh os switch -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"
 else
-  nh home switch . -c "$PROFILE" -b nix-rebuild.backup -- --impure "${EXTRA_ARGS[@]:-}"
+  nh home switch . -c "$PROFILE" -b nix-rebuild.backup -- "${EXTRA_ARGS[@]:-}"
 fi
 
 if [[ "$(uname -s)" == "Darwin" ]]; then

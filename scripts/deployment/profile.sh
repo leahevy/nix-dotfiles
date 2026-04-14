@@ -27,7 +27,7 @@ resolve_user_profile_dir() {
     local full_profile
     local username
     full_profile="$(retrieve_active_profile 2>/dev/null | tail -1)"
-    username="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+    username="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
     username="${username//\"/}"
 
     if [[ "$username" == "null" || -z "$username" ]]; then
@@ -52,7 +52,7 @@ resolve_user_config_file() {
     local full_profile
     local username
     full_profile="$(retrieve_active_profile 2>/dev/null | tail -1)"
-    username="$(nix eval --impure --json --override-input core "path:$NXCORE_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+    username="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
     username="${username//\"/}"
     echo "$user_dir/$username.nix"
 }
