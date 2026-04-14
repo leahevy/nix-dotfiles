@@ -86,6 +86,7 @@
           show-trace = option "Show detailed Nix error traces";
           skip-verification = option "Skip commit signature verification";
           raw = option "Use raw log format";
+          allow-ifd = option "Allow import-from-derivation";
         };
       };
 

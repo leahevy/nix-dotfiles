@@ -95,6 +95,7 @@ let
       show-trace = option "Show detailed Nix error traces";
       allow-dirty-git = option "Allow proceeding with uncommitted changes";
       skip-verification = option "Skip commit signature verification";
+      allow-ifd = option "Allow import-from-derivation";
     };
 
     gitOptions = {

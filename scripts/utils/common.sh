@@ -144,6 +144,10 @@ parse_common_deployment_args() {
                 SKIP_VERIFICATION=true
                 shift
                 ;;
+            --allow-ifd)
+                EXTRA_ARGS+=("--option" "allow-import-from-derivation" "true")
+                shift
+                ;;
             -*)
                 echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
                 exit 1
@@ -201,6 +205,10 @@ parse_build_deployment_args() {
                 ;;
             --raw)
                 RAW_LOG=true
+                shift
+                ;;
+            --allow-ifd)
+                EXTRA_ARGS+=("--option" "allow-import-from-derivation" "true")
                 shift
                 ;;
             -*)

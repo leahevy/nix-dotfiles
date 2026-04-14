@@ -98,6 +98,7 @@ in
         http-connections = variables.httpConnections;
         keep-outputs = true;
         keep-derivations = true;
+        allow-import-from-derivation = false;
       };
     };
   };
