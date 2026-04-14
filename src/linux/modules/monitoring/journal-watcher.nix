@@ -186,7 +186,18 @@ args@{
 
   on =
     let
-      baseIgnorePatterns = [ ];
+      baseIgnorePatterns = [
+        {
+          service = "init.scope";
+          tag = "systemd";
+          string = "nix-daemon\\.service: Found left-over process [0-9]+ \\(nix-daemon\\) in control group while starting unit\\.";
+        }
+        {
+          service = "init.scope";
+          tag = "systemd";
+          string = "nix-daemon\\.service: This usually indicates unclean termination of a previous run, or service implementation deficiencies\\.";
+        }
+      ];
       baseHighlightPatterns = [
         {
           tag = "nixos";
