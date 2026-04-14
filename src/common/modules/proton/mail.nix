@@ -23,6 +23,20 @@ args@{
   requiredArchitectures = [ "x86_64" ];
 
   on = {
+    linux.home = config: {
+      xdg.desktopEntries.proton-mail = {
+        name = "Proton Mail";
+        exec = "${config.home.homeDirectory}/.local/bin/proton-mail %U";
+        icon = "proton-mail";
+        type = "Application";
+        categories = [
+          "Network"
+          "Email"
+        ];
+        startupNotify = true;
+      };
+    };
+
     linux.enabled = config: {
       nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
         "proton-mail"
