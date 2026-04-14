@@ -22,8 +22,9 @@ if [[ ${#EXTRA_ARGS[@]} -gt 1 ]]; then
   exit 1
 fi
 
+cd "$NXCORE_DIR"
 if [[ "$ONLY_CONFIG" != true ]]; then
-    echo -e "${GREEN}Commit files in main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
+    echo -e "${GREEN}Commit files in core repository ${WHITE}(.config/nx/nxcore)${RESET}..."
     git commit -m "$COMMIT_MESSAGE" || true
 fi
 

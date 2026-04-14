@@ -5,8 +5,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "status"
 parse_git_args "$@"
 
+cd "$NXCORE_DIR"
 if [[ "$ONLY_CONFIG" != true ]]; then
-    echo -e "${GREEN}Status of main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
+    echo -e "${GREEN}Status of core repository ${WHITE}(.config/nx/nxcore)${RESET}..."
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
         git status --porcelain "${EXTRA_ARGS[@]}"
     else

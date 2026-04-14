@@ -5,8 +5,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "push"
 parse_git_args "$@"
 
+cd "$NXCORE_DIR"
 if [[ "$ONLY_CONFIG" != true ]]; then
-    echo -e "${GREEN}Pushing main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
+    echo -e "${GREEN}Pushing core repository ${WHITE}(.config/nx/nxcore)${RESET}..."
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
         git push "${EXTRA_ARGS[@]}"
     else
@@ -36,5 +37,5 @@ elif [[ "$ONLY_CORE" != true ]] && [[ "$ONLY_CONFIG" != true ]]; then
     echo -e "${YELLOW}Warning: Config directory is not a git repository, skipping push.${RESET}"
 elif [[ "$ONLY_CORE" == true ]]; then
     echo
-    echo -e "${GREEN}Main repository pushed successfully.${RESET}"
+    echo -e "${GREEN}Core repository pushed successfully.${RESET}"
 fi

@@ -4,6 +4,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "switch-branch"
 parse_git_args "$@"
+cd "$NXCORE_DIR"
 
 BRANCH_TO_SWITCH=""
 for arg in "${EXTRA_ARGS[@]}"; do

@@ -5,8 +5,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "pull"
 parse_git_args "$@"
 
+cd "$NXCORE_DIR"
 if [[ "$ONLY_CONFIG" != true ]]; then
-    echo -e "${GREEN}Pulling main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
+    echo -e "${GREEN}Pulling core repository ${WHITE}(.config/nx/nxcore)${RESET}..."
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
         git pull "${EXTRA_ARGS[@]}"
     else
@@ -36,5 +37,5 @@ elif [[ "$ONLY_CORE" != true ]] && [[ "$ONLY_CONFIG" != true ]]; then
     echo -e "${YELLOW}Warning: Config directory does not exist or is no directory.${RESET}"
 elif [[ "$ONLY_CORE" == true ]]; then
     echo
-    echo -e "${GREEN}Main repository pulled successfully.${RESET}"
+    echo -e "${GREEN}Core repository pulled successfully.${RESET}"
 fi
