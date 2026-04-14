@@ -34,6 +34,16 @@ args@{
       })
     ];
 
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = lib.optionals self.settings.withAvahi [
+        {
+          service = "avahi-daemon.service";
+          tag = "avahi-daemon";
+          string = "Host name conflict, retrying with ";
+        }
+      ];
+    };
+
     linux.home = config: {
       home.persistence."${self.persist}" = {
         directories = [

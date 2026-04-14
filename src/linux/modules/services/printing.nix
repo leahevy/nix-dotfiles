@@ -79,6 +79,13 @@ args@{
           tag = "systemctl";
           unitless = true;
         }
+      ]
+      ++ lib.optionals self.settings.withAvahi [
+        {
+          service = "avahi-daemon.service";
+          tag = "avahi-daemon";
+          string = "Host name conflict, retrying with ";
+        }
       ];
     };
 
