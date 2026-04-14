@@ -592,38 +592,36 @@ rec {
     else
       [ ];
 
-  # Functions to search for icons in the icons cache (Linux only)
-  # When cache is null (cross-platform evaluation), returns icon name without validation
   icons = {
-    # Returns the absolute path to an icon from the icons cache, or throws an error if not found.
+    # Checks that the icon name is registered in config.nx.lib.icons and returns it.
+    # When no icons are declared, returns name without validation.
     # Usage: getIcon config "icon-name"
     getIcon =
       config: name:
       let
-        cache = config.nx.cache.icons;
+        declared = config.nx.lib.icons;
+        flat = lib.concatMap (e: if builtins.isList e then e else [ e ]) declared;
       in
-      if cache == null then
+      if declared == [ ] || builtins.elem name flat then
         name
-      else if cache ? ${name} then
-        cache.${name}
       else
-        builtins.throw "nx icons: '${name}' not found in icon cache";
+        builtins.throw "nx icons: '${name}' not found in config.nx.lib.icons";
 
-    # Returns the absolute path to an icon from the icons cache that matches the given pattern, or throws an error if not found.
+    # Splits pattern on '|', returns the pattern if any icon was found in config.nx.lib.icons.
+    # When no icons are declared, returns the first name in the pattern.
     # Usage: searchIcon config "icon-pattern"
     searchIcon =
       config: pattern:
       let
-        cache = config.nx.cache.icons;
+        declared = config.nx.lib.icons;
+        flat = lib.concatMap (e: if builtins.isList e then e else [ e ]) declared;
         names = lib.splitString "|" pattern;
-        result = lib.findFirst (name: cache ? ${name}) null names;
+        result = lib.findFirst (name: builtins.elem name flat) null names;
       in
-      if cache == null then
-        lib.head names
-      else if result != null then
-        cache.${result}
+      if declared == [ ] || result != null then
+        pattern
       else
-        builtins.throw "nx icons: no icon found for '${pattern}' in icon cache";
+        builtins.throw "nx icons: no icon found for '${pattern}' in config.nx.lib.icons";
   };
 
   # Converts a systemlog logger level to a notify-send level.

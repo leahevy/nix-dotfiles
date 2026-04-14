@@ -193,13 +193,15 @@ rec {
         icon =
           let
             v = args.icon or "dialog-information";
+            isValid = (builtins.isString v && v != "") || (builtins.isList v && v != [ ]);
+            iconStr = if builtins.isString v then v else lib.concatStringsSep "|" v;
           in
-          if !(builtins.isString v && v != "") then
-            throw "notifyUser: icon must be a non-empty string"
-          else if validation != null && !self.isDarwin && !(lib.hasPrefix "/" v) then
-            helpers.icons.getIcon validation.config v
+          if !isValid then
+            throw "notifyUser: icon must be a non-empty string or list of strings"
+          else if validation != null && !self.isDarwin && !(lib.hasPrefix "/" iconStr) then
+            helpers.icons.searchIcon validation.config iconStr
           else
-            v;
+            iconStr;
         autoFormat =
           let
             v = args.autoFormat or true;

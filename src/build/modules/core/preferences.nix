@@ -296,10 +296,10 @@ in
       description = "nx-resolve-icon script for resolving icon names to store paths at runtime";
     };
 
-    nx.cache.icons = lib.mkOption {
-      type = lib.types.nullOr (lib.types.attrsOf lib.types.str);
-      default = null;
-      description = "Cache mapping icon names to nix store paths, built from the active icon themes (null when cross-evaluating)";
+    nx.lib.icons = lib.mkOption {
+      type = lib.types.listOf (lib.types.either lib.types.str (lib.types.listOf lib.types.str));
+      default = [ ];
+      description = "Icon names or patterns declared for runtime use via nx-resolve-icon. Each entry is either a single name or a list of names tried in order (first found wins).";
     };
 
     nx.preferences = {
@@ -633,53 +633,40 @@ in
         in
         "${pkgs.${lib.head parts}}/share/icons/${lib.concatStringsSep "/" (lib.tail parts)}";
 
-      buildIconCache =
-        config:
+      mkIconValidation =
+        config: usedIcons:
         let
-          primaryBase = buildThemeBasePath config.nx.preferences.theme.icons.primary;
-          fallbackBase = buildThemeBasePath config.nx.preferences.theme.icons.fallback;
-          cacheScript = pkgs.writeText "nx-build-icon-cache.py" ''
-            import json, os, sys
-
-            def scan_size(base, key, size, cache):
-                size_dir = os.path.join(base, size)
-                if not os.path.isdir(size_dir):
-                    return
-                try:
-                    categories = sorted(os.scandir(size_dir), key=lambda e: e.name)
-                except OSError:
-                    return
-                for cat in categories:
-                    if not cat.is_dir(follow_symlinks=True):
-                        continue
-                    try:
-                        files = sorted(os.scandir(cat.path), key=lambda e: e.name)
-                    except OSError:
-                        continue
-                    for f in files:
-                        if f.name.endswith('.svg') or f.name.endswith('.png'):
-                            cache[f.name[:-4]] = [key, os.path.relpath(f.path, base)]
-
-            primary_base, fallback_base = sys.argv[1], sys.argv[2]
-            sizes = ["scalable", "64x64", "48x48", "32x32", "24x24", "22x22", "16x16"]
-            cache = {}
-            for size in reversed(sizes):
-                scan_size(fallback_base, "f", size, cache)
-                scan_size(primary_base, "p", size, cache)
-            sys.stdout.write(json.dumps(cache))
-          '';
-          cacheDrv = pkgs.runCommand "nx-icon-cache" { } ''
-            ${pkgs.python3}/bin/python3 ${cacheScript} ${primaryBase} ${fallbackBase} > $out
-          '';
-          rawCache = builtins.fromJSON (builtins.readFile cacheDrv);
+          primary = buildThemeBasePath config.nx.preferences.theme.icons.primary;
+          fallback = buildThemeBasePath config.nx.preferences.theme.icons.fallback;
+          entryNames = entry: if builtins.isString entry then [ entry ] else entry;
+          entryLabel = entry: lib.concatStringsSep "|" (entryNames entry);
+          checkEntry =
+            entry:
+            let
+              names = entryNames entry;
+              label = entryLabel entry;
+            in
+            ''
+              _found=false
+              ${lib.concatMapStrings (name: ''
+                if ! $_found; then
+                  for _size in scalable 64x64 48x48 32x32 24x24 22x22 16x16; do
+                    for _f in ${primary}/$_size/*/${name}.svg ${fallback}/$_size/*/${name}.svg; do
+                      [[ -f "$_f" ]] && _found=true && break 2
+                    done
+                  done
+                fi
+              '') names}
+              if ! $_found; then
+                echo "nx-icon-validation: icon '${label}' not found in icon themes" >&2
+                exit 1
+              fi
+            '';
         in
-        lib.mapAttrs (
-          _: v:
-          if builtins.elemAt v 0 == "p" then
-            "${primaryBase}/${builtins.elemAt v 1}"
-          else
-            "${fallbackBase}/${builtins.elemAt v 1}"
-        ) rawCache;
+        pkgs.runCommand "nx-icon-validation" { } ''
+          ${lib.concatMapStrings checkEntry usedIcons}
+          mkdir $out
+        '';
 
       mkScript =
         config:
@@ -708,18 +695,23 @@ in
           icon_name="$1"
           if [[ "$icon_name" == /* ]]; then echo "$icon_name"; exit 0; fi
           found=false
-          for size in scalable 64x64 48x48 32x32 24x24 22x22 16x16; do
-            for iconfile in "${primary}/$size"/*/"$icon_name.svg"; do
-              if [[ -f "$iconfile" ]]; then
-                echo "$iconfile"
-                if $all; then found=true; else exit 0; fi
-              fi
-            done
-            for iconfile in "${fallback}/$size"/*/"$icon_name.svg"; do
-              if [[ -f "$iconfile" ]]; then
-                echo "$iconfile"
-                if $all; then found=true; else exit 0; fi
-              fi
+          _remaining="$icon_name"
+          while [[ -n "$_remaining" ]]; do
+            _name="''${_remaining%%|*}"
+            if [[ "$_remaining" == *"|"* ]]; then _remaining="''${_remaining#*|}"; else _remaining=""; fi
+            for size in scalable 64x64 48x48 32x32 24x24 22x22 16x16; do
+              for iconfile in "${primary}/$size"/*/"$_name.svg"; do
+                if [[ -f "$iconfile" ]]; then
+                  echo "$iconfile"
+                  if $all; then found=true; else exit 0; fi
+                fi
+              done
+              for iconfile in "${fallback}/$size"/*/"$_name.svg"; do
+                if [[ -f "$iconfile" ]]; then
+                  echo "$iconfile"
+                  if $all; then found=true; else exit 0; fi
+                fi
+              done
             done
           done
           $found && exit 0 || exit 1
@@ -728,14 +720,56 @@ in
     {
       enabled = config: {
         nx.lib.iconResolveScript = lib.mkDefault (mkScript config);
-        nx.cache.icons = lib.mkDefault (if helpers.isHostArchitecture then buildIconCache config else null);
+        nx.lib.icons = [
+          "dialog-information"
+          "dialog-warning"
+          "dialog-error"
+          "preferences-desktop-notification"
+          "emblem-synchronizing"
+          "emblem-ok-symbolic"
+          "email"
+          "chat-symbolic"
+          "syncthing"
+          "com.valvesoftware.Steam"
+          "system-suspend"
+          "system-lock-screen"
+          "audio-volume-medium"
+          "audio-volume-muted"
+          "application-certificate"
+          "list-add"
+          "list-remove"
+          "go-down"
+          "checkmark"
+          "folder-sync"
+          "system-reboot"
+          "archive"
+          "applications-science"
+          "drive-harddisk"
+          "computer-fail"
+        ];
       };
-      standalone = config: {
-        home.packages = [ config.nx.lib.iconResolveScript ];
-      };
-      system = config: {
-        environment.systemPackages = [ config.nx.lib.iconResolveScript ];
-      };
+      standalone =
+        config:
+        let
+          usedIcons = config.nx.lib.icons;
+        in
+        {
+          home.packages = [
+            config.nx.lib.iconResolveScript
+          ]
+          ++ lib.optionals helpers.isHostArchitecture [ (mkIconValidation config usedIcons) ];
+        };
+      system =
+        config:
+        let
+          usedIcons = config.nx.lib.icons;
+        in
+        {
+          environment.systemPackages = [ config.nx.lib.iconResolveScript ];
+          system.extraDependencies = lib.optionals helpers.isHostArchitecture [
+            (mkIconValidation config usedIcons)
+          ];
+        };
     };
 
   on.darwin.enabled = config: {
