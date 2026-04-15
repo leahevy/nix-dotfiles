@@ -20,9 +20,13 @@ args@{
 
   on = {
     home = config: {
-      home.packages = with pkgs; [
-        discord
-      ];
+      programs.discord = {
+        enable = true;
+        package = pkgs.discord;
+        settings = {
+          SKIP_HOST_UPDATE = true;
+        };
+      };
 
       home.persistence."${self.persist}" = {
         directories = [
