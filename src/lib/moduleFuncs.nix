@@ -527,7 +527,13 @@ rec {
         fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
       in
       if builtins.pathExists fullPath then
-        fullPath
+        if lib.hasSuffix ".nix" subPath then
+          fullPath
+        else
+          builtins.path {
+            path = fullPath;
+            name = builtins.baseNameOf subPath;
+          }
       else
         throw "Secret file not found: ${inputName}/${relativePath}";
 
@@ -537,7 +543,13 @@ rec {
         fullPath = helpers.getInputFilePath additionalInputs.${inputName} ("files/" + subPath);
       in
       if builtins.pathExists fullPath then
-        fullPath
+        if lib.hasSuffix ".nix" subPath then
+          fullPath
+        else
+          builtins.path {
+            path = fullPath;
+            name = builtins.baseNameOf subPath;
+          }
       else
         throw "Root file not found: ${inputName}/files/${subPath}";
 
@@ -547,7 +559,13 @@ rec {
         fullPath = helpers.getInputFilePath additionalInputs.${inputName} ("secrets/" + subPath);
       in
       if builtins.pathExists fullPath then
-        fullPath
+        if lib.hasSuffix ".nix" subPath then
+          fullPath
+        else
+          builtins.path {
+            path = fullPath;
+            name = builtins.baseNameOf subPath;
+          }
       else
         throw "Root secret not found: ${inputName}/secrets/${subPath}";
 
