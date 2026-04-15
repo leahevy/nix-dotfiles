@@ -302,6 +302,12 @@ in
       description = "Icon names or patterns declared for runtime use via nx-resolve-icon. Each entry is either a single name or a list of names tried in order (first found wins).";
     };
 
+    nx.lib.primaryIcons = lib.mkOption {
+      type = lib.types.listOf (lib.types.either lib.types.str (lib.types.listOf lib.types.str));
+      default = [ ];
+      description = "Icon names validated against the primary icon theme only.";
+    };
+
     nx.preferences = {
       theme = {
         name = lib.mkOption {
@@ -634,14 +640,15 @@ in
         "${pkgs.${lib.head parts}}/share/icons/${lib.concatStringsSep "/" (lib.tail parts)}";
 
       mkIconValidation =
-        config: usedIcons:
+        config:
+        { icons, primaryIcons }:
         let
           primary = buildThemeBasePath config.nx.preferences.theme.icons.primary;
           fallback = buildThemeBasePath config.nx.preferences.theme.icons.fallback;
           entryNames = entry: if builtins.isString entry then [ entry ] else entry;
           entryLabel = entry: lib.concatStringsSep "|" (entryNames entry);
           checkEntry =
-            entry:
+            searchPaths: entry:
             let
               names = entryNames entry;
               label = entryLabel entry;
@@ -651,7 +658,7 @@ in
               ${lib.concatMapStrings (name: ''
                 if ! $_found; then
                   for _size in scalable 64x64 48x48 32x32 24x24 22x22 16x16; do
-                    for _f in ${primary}/$_size/*/${name}.svg ${fallback}/$_size/*/${name}.svg; do
+                    for _f in ${lib.concatMapStrings (p: "${p}/$_size/*/${name}.svg ") searchPaths}; do
                       [[ -f "$_f" ]] && _found=true && break 2
                     done
                   done
@@ -664,7 +671,11 @@ in
             '';
         in
         pkgs.runCommand "nx-icon-validation" { } ''
-          ${lib.concatMapStrings checkEntry usedIcons}
+          ${lib.concatMapStrings (checkEntry [
+            primary
+            fallback
+          ]) icons}
+          ${lib.concatMapStrings (checkEntry [ primary ]) primaryIcons}
           mkdir $out
         '';
 
@@ -677,13 +688,28 @@ in
         pkgs.writeScriptBin "nx-resolve-icon" ''
           #!${pkgs.bash}/bin/bash
           all=false
-          if [[ "$1" == "--all" ]]; then
-            all=true
+          search=false
+          app=false
+          themes="both"
+          while [[ "$1" == -* ]]; do
+            case "$1" in
+              --all) all=true ;;
+              --search) search=true ;;
+              --app) app=true ;;
+              --primary)
+                if [[ "$themes" == "secondary" ]]; then
+                  echo "nx-resolve-icon: --primary and --secondary are mutually exclusive" >&2; exit 1
+                fi
+                themes="primary" ;;
+              --secondary)
+                if [[ "$themes" == "primary" ]]; then
+                  echo "nx-resolve-icon: --primary and --secondary are mutually exclusive" >&2; exit 1
+                fi
+                themes="secondary" ;;
+              *) echo "nx-resolve-icon: unknown option '$1'" >&2; exit 1 ;;
+            esac
             shift
-          elif [[ "$1" == -* ]]; then
-            echo "nx-resolve-icon: unknown option '$1'" >&2
-            exit 1
-          fi
+          done
           if [[ $# -eq 0 ]]; then
             echo "nx-resolve-icon: icon name required" >&2
             exit 1
@@ -695,25 +721,61 @@ in
           icon_name="$1"
           if [[ "$icon_name" == /* ]]; then echo "$icon_name"; exit 0; fi
           found=false
-          _remaining="$icon_name"
-          while [[ -n "$_remaining" ]]; do
-            _name="''${_remaining%%|*}"
-            if [[ "$_remaining" == *"|"* ]]; then _remaining="''${_remaining#*|}"; else _remaining=""; fi
-            for size in scalable 64x64 48x48 32x32 24x24 22x22 16x16; do
-              for iconfile in "${primary}/$size"/*/"$_name.svg"; do
-                if [[ -f "$iconfile" ]]; then
-                  echo "$iconfile"
-                  if $all; then found=true; else exit 0; fi
-                fi
-              done
-              for iconfile in "${fallback}/$size"/*/"$_name.svg"; do
-                if [[ -f "$iconfile" ]]; then
-                  echo "$iconfile"
-                  if $all; then found=true; else exit 0; fi
-                fi
+          _check_theme() {
+            local f="$1"
+            [[ "$themes" == "both" ]] && return 0
+            [[ "$themes" == "primary" && "$f" == ${primary}/* ]] && return 0
+            [[ "$themes" == "secondary" && "$f" == ${fallback}/* ]] && return 0
+            return 1
+          }
+          _check_app() {
+            local f="$1"
+            $app || return 0
+            local dir="''${f%/*}"
+            local cat="''${dir##*/}"
+            [[ "$cat" == "apps" || "$cat" == "categories" ]] && return 0
+            return 1
+          }
+          if $search; then
+            _remaining="$icon_name"
+            while [[ -n "$_remaining" ]]; do
+              _pattern="''${_remaining%%|*}"
+              if [[ "$_remaining" == *"|"* ]]; then _remaining="''${_remaining#*|}"; else _remaining=""; fi
+              for size in scalable 64x64 48x48 32x32 24x24 22x22 16x16; do
+                for iconfile in "${primary}/$size"/*/*.svg "${fallback}/$size"/*/*.svg; do
+                  [[ -f "$iconfile" ]] || continue
+                  _check_theme "$iconfile" || continue
+                  _check_app "$iconfile" || continue
+                  base="''${iconfile##*/}"
+                  base="''${base%.svg}"
+                  if [[ "$base" == *"$_pattern"* ]]; then
+                    echo "$iconfile"
+                    if $all; then found=true; else exit 0; fi
+                  fi
+                done
               done
             done
-          done
+          else
+            _remaining="$icon_name"
+            while [[ -n "$_remaining" ]]; do
+              _name="''${_remaining%%|*}"
+              if [[ "$_remaining" == *"|"* ]]; then _remaining="''${_remaining#*|}"; else _remaining=""; fi
+              for size in scalable 64x64 48x48 32x32 24x24 22x22 16x16; do
+                for iconfile in "${primary}/$size"/*/"$_name.svg"; do
+                  if [[ -f "$iconfile" ]] && _check_theme "$iconfile" && _check_app "$iconfile"; then
+                    echo "$iconfile"
+                    if $all; then found=true; else exit 0; fi
+                  fi
+                done
+                for iconfile in "${fallback}/$size"/*/"$_name.svg"; do
+                  if [[ -f "$iconfile" ]] && _check_theme "$iconfile" && _check_app "$iconfile"; then
+                    echo "$iconfile"
+                    if $all; then found=true; else exit 0; fi
+                  fi
+                done
+              done
+            done
+          fi
           $found && exit 0 || exit 1
         '';
     in
@@ -748,28 +810,26 @@ in
           "computer-fail"
         ];
       };
-      standalone =
-        config:
-        let
-          usedIcons = config.nx.lib.icons;
-        in
-        {
-          home.packages = [
-            config.nx.lib.iconResolveScript
-          ]
-          ++ lib.optionals helpers.isHostArchitecture [ (mkIconValidation config usedIcons) ];
-        };
-      system =
-        config:
-        let
-          usedIcons = config.nx.lib.icons;
-        in
-        {
-          environment.systemPackages = [ config.nx.lib.iconResolveScript ];
-          system.extraDependencies = lib.optionals helpers.isHostArchitecture [
-            (mkIconValidation config usedIcons)
-          ];
-        };
+      standalone = config: {
+        home.packages = [
+          config.nx.lib.iconResolveScript
+        ]
+        ++ lib.optionals helpers.isHostArchitecture [
+          (mkIconValidation config {
+            icons = config.nx.lib.icons;
+            primaryIcons = config.nx.lib.primaryIcons;
+          })
+        ];
+      };
+      system = config: {
+        environment.systemPackages = [ config.nx.lib.iconResolveScript ];
+        system.extraDependencies = lib.optionals helpers.isHostArchitecture [
+          (mkIconValidation config {
+            icons = config.nx.lib.icons;
+            primaryIcons = config.nx.lib.primaryIcons;
+          })
+        ];
+      };
     };
 
   on.darwin.enabled = config: {

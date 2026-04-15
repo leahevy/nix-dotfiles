@@ -23,17 +23,15 @@ args@{
   requiredArchitectures = [ "x86_64" ];
 
   on = {
-    linux.home = config: {
-      xdg.desktopEntries.proton-mail = {
+    moduleEnabled.linux.desktop-modules.desktop-files.enabled = config: {
+      nx.linux.desktop-modules.desktop-files.entries.proton-mail = {
+        exec = "~/.local/bin/proton-mail";
         name = "Proton Mail";
-        exec = "${config.home.homeDirectory}/.local/bin/proton-mail %U";
-        icon = "proton-mail";
-        type = "Application";
+        icon = "mail-archive-symbolic";
         categories = [
           "Network"
           "Email"
         ];
-        startupNotify = true;
       };
     };
 

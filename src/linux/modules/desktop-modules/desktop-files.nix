@@ -78,6 +78,14 @@ args@{
   };
 
   on = {
+    enabled = config: {
+      nx.lib.primaryIcons = lib.filter (icon: icon != null && icon != "") (
+        lib.mapAttrsToList (
+          name: entry: if entry.icon != null && entry.icon != "" then entry.icon else name
+        ) (self.options config).entries
+      );
+    };
+
     home =
       { config, entries, ... }:
       let
