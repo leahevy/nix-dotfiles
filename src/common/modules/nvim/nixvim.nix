@@ -582,12 +582,13 @@ args@{
                       once = true,
                       callback = function()
                         vim.defer_fn(function()
-                          local socket_name = vim.v.servername
-                          if socket_name and socket_name ~= "" then
-                            local absolute_socket = vim.fn.fnamemodify(socket_name, ":p")
-                            local socket_exists = vim.fn.filereadable(absolute_socket) == 1
-                            if socket_exists then
-                              vim.notify("Server started", vim.log.levels.INFO, {
+                          local cwd = vim.fn.getcwd()
+                          local in_home = string.match(cwd, "^/home/") or string.match(cwd, "^/Users/")
+                          if in_home then
+                            local socket_name = vim.v.servername
+                            local has_socket = socket_name and socket_name ~= "" and vim.fn.filereadable(socket_name) == 1
+                            if not has_socket then
+                              vim.notify("No server socket active", vim.log.levels.WARN, {
                                 icon = "🖥️",
                                 title = "Neovim Server",
                                 timeout = 3000
