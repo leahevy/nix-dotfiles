@@ -573,6 +573,8 @@ args@{
               normal = {
                 "o" = "spawn --userscript launcher-open";
                 "O" = "spawn --userscript launcher-open -t";
+                "k" = "spawn --userscript launcher-history";
+                "K" = "spawn --userscript launcher-history -t";
                 "<Alt+Space>" = "spawn --userscript launcher-bookmark-group-fg";
                 "<Ctrl+Space>" = "spawn --userscript launcher-bookmark-group-bg";
               };
@@ -1101,6 +1103,37 @@ args@{
                   [ -z "''${url// }" ] && exit
 
                   echo "open" "$@" "$url" >> "$QUTE_FIFO" || qutebrowser "$url"
+                '';
+              executable = true;
+            };
+
+        home.file.".local/share/qutebrowser/userscripts/launcher-history" =
+          lib.mkIf (dmenuKeyBindings != { })
+            {
+              text =
+                let
+                  launcherCmd = lib.escapeShellArgs (
+                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                      prompt = "History: ";
+                      placeholder = "Select a URL from history";
+                      width = 80;
+                      lines = 15;
+                    }
+                  );
+                in
+                ''
+                  #!/usr/bin/env bash
+
+                  history_urls=$(
+                    ${pkgs.sqlite}/bin/sqlite3 "$QUTE_DATA_DIR/history.sqlite" 'select url from CompletionHistory order by last_atime desc' \
+                      | grep -E '^https?://'
+                  )
+
+                  selection=$(printf "%s\n" "$history_urls" | ${launcherCmd})
+
+                  [ -z "''${selection// }" ] && exit
+
+                  echo "open" "$@" "$selection" >> "$QUTE_FIFO" || qutebrowser "$selection"
                 '';
               executable = true;
             };
