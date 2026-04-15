@@ -585,16 +585,13 @@ args@{
                           local socket_name = vim.v.servername
                           if socket_name and socket_name ~= "" then
                             local absolute_socket = vim.fn.fnamemodify(socket_name, ":p")
-                            local buf_path = vim.fn.expand("%:p")
-                            if not string.match(absolute_socket, "^/tmp/") and not string.match(absolute_socket, "^/var/") and absolute_socket ~= "${self.user.home}/.nvim.socket" and not string.match(buf_path, "^/tmp/") then
-                              local socket_exists = vim.fn.filereadable(absolute_socket) == 1
-                              if socket_exists then
-                                vim.notify("Server started at " .. absolute_socket, vim.log.levels.INFO, {
-                                  icon = "🖥️",
-                                  title = "Neovim Server",
-                                  timeout = 3000
-                                })
-                              end
+                            local socket_exists = vim.fn.filereadable(absolute_socket) == 1
+                            if socket_exists then
+                              vim.notify("Server started", vim.log.levels.INFO, {
+                                icon = "🖥️",
+                                title = "Neovim Server",
+                                timeout = 3000
+                              })
                             end
                           end
                         end, 500)
@@ -1353,55 +1350,18 @@ args@{
             ''}
 
             ${lib.optionalString self.settings.withSocket ''
-              SOCKET_NAME=""
-              SOCKET_TO_CLEANUP=""
-              USE_TMP_SOCKET=false
-              ${
-                if self.isLinux then
-                  ''
-                    if [[ "$PWD" == /home/* ]]; then
-                      SOCKET_NAME="./.nvim.socket"
-                    fi
-                  ''
-                else if self.isDarwin then
-                  ''
-                    if [[ "$PWD" == /Users/* ]]; then
-                      SOCKET_NAME="./.nvim.socket"
-                    fi
-                  ''
-                else
-                  ''
-                    SOCKET_NAME="/tmp/nvim-${self.user.username}.socket"
-                    USE_TMP_SOCKET=true
-                  ''
-              }
-              ${lib.optionalString (!self.user.isStandalone && self.settings.withData) ''
-                if [[ "$PWD" == ${self.settings.dataPath}/* ]]; then
-                  SOCKET_NAME="./.nvim.socket"
-                fi
-              ''}
+              if [[ "$PWD" == /home/* || "$PWD" == /Users/* ]]; then
+                SOCKET_DIR="''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}}/nvim-sockets"
+                mkdir -p "$SOCKET_DIR"
+                SOCKET_NAME="$SOCKET_DIR/$(echo "$PWD" | ${pkgs.coreutils}/bin/sha256sum | cut -c1-12).socket"
 
-              if [[ -z "$SOCKET_NAME" || ! -e "$(dirname "$SOCKET_NAME")" || ! -w "$(dirname "$SOCKET_NAME")" ]]; then
-                SOCKET_NAME="/tmp/nvim-${self.user.username}.socket"
-                USE_TMP_SOCKET=true
-              fi
-
-              if [[ -e "$SOCKET_NAME" ]]; then
-                if [[ "$USE_TMP_SOCKET" != "true" ]]; then
+                if [[ -e "$SOCKET_NAME" ]]; then
                   rm -f "$SOCKET_NAME"
-                  ADDITIONAL_ARGS+=("--listen" "$SOCKET_NAME")
-                  SOCKET_TO_CLEANUP="$SOCKET_NAME"
                 fi
-              else
                 ADDITIONAL_ARGS+=("--listen" "$SOCKET_NAME")
-                SOCKET_TO_CLEANUP="$SOCKET_NAME"
-              fi
 
-              if [[ -n "$SOCKET_TO_CLEANUP" ]]; then
                 cleanup_socket() {
-                  if [[ -e "$SOCKET_TO_CLEANUP" ]]; then
-                    rm -f "$SOCKET_TO_CLEANUP"
-                  fi
+                  rm -f "$SOCKET_NAME"
                 }
                 trap cleanup_socket EXIT INT TERM
               fi

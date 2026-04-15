@@ -82,6 +82,12 @@ args@{
               fi
             }
 
+            nvim_socket_for_dir() {
+              local dir="$1"
+              local socket_dir="''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}}/nvim-sockets"
+              echo "$socket_dir/$(echo "$dir" | ${pkgs.coreutils}/bin/sha256sum | cut -c1-12).socket"
+            }
+
             find_nvim_socket() {
               local current_dir="$PWD"
 
@@ -89,16 +95,18 @@ args@{
                 local expanded_key=$(expand_tilde "$key")
                 if [[ "$current_dir" == "$expanded_key" ]]; then
                   local mapped_dir=$(expand_tilde "''${DIR_MAPPINGS[$key]}")
-                  if [[ -S "$mapped_dir/.nvim.socket" ]]; then
-                    echo "$mapped_dir/.nvim.socket"
+                  local socket=$(nvim_socket_for_dir "$mapped_dir")
+                  if [[ -S "$socket" ]]; then
+                    echo "$socket"
                     return 0
                   fi
                 fi
               done
 
               while [[ "$current_dir" != "/" ]]; do
-                if [[ -S "$current_dir/.nvim.socket" ]]; then
-                  echo "$current_dir/.nvim.socket"
+                local socket=$(nvim_socket_for_dir "$current_dir")
+                if [[ -S "$socket" ]]; then
+                  echo "$socket"
                   return 0
                 fi
                 current_dir=$(dirname "$current_dir")
