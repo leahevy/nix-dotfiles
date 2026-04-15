@@ -108,6 +108,10 @@
       bump = {
         description = "Bump the core input to the latest remote commit";
         group = "switch";
+        options = {
+          commit = option "Commit flake.lock and .label after bumping";
+          push = option "Push config after committing (implies --commit)";
+        };
       };
 
       dist-upgrade = {
