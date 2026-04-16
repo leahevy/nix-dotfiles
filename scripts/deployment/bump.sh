@@ -59,8 +59,10 @@ if [[ "$COMMIT" == "true" ]] && ! git diff --quiet HEAD -- flake.lock .label; th
     fi
 fi
 
-echo -e "Bumping ${WHITE}core${RESET} input of config repository ${WHITE}(.config/nx/nxconfig)${RESET}..."
+echo -e "${CYAN}Bumping core input...${RESET}"
 nix flake update core 2> >(grep -v "warning: Git tree.*is dirty" >&2)
+echo -e "Updated ${WHITE}core${RESET} flake lock"
+echo
 
 use_dir="$CONFIG_DIR"
 if [[ -d "$CONFIG_DIR/.git" && -d "$NXCORE_DIR/.git" ]]; then
@@ -83,6 +85,7 @@ commit_msg=$(git -C "$use_dir" log -1 --pretty=format:"%s" | sed 's/ /-/g' | sed
 label="$(git -C "$use_dir" log -1 --pretty=format:"$(git -C "$use_dir" branch --show-current).%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
 echo "$label" > "$CONFIG_DIR/.label"
 echo -e "Generated label ${WHITE}$label${RESET}"
+echo
 
 if [[ "$COMMIT" == "true" ]] && ! git diff --quiet HEAD -- flake.lock .label; then
     if git diff --cached --quiet -- flake.lock .label; then
@@ -91,17 +94,25 @@ if [[ "$COMMIT" == "true" ]] && ! git diff --quiet HEAD -- flake.lock .label; th
         STASH_POP="git stash pop"
     fi
     pre_stash=$(git rev-parse --verify refs/stash 2>/dev/null || echo "none")
+    echo -e "${CYAN}Stashing other changes...${RESET}"
     git stash push --include-untracked -- ':(exclude)flake.lock' ':(exclude).label'
     post_stash=$(git rev-parse --verify refs/stash 2>/dev/null || echo "none")
     if [[ "$pre_stash" != "$post_stash" ]]; then
         # shellcheck disable=SC2064
         trap "$STASH_POP; cleanup_deployment_lock" EXIT
     fi
+    echo
+
+    echo -e "${CYAN}Committing bump...${RESET}"
     git add "$CONFIG_DIR/flake.lock" "$CONFIG_DIR/.label"
     git commit -m "Bump core at: $label"
     echo -e "Committed ${WHITE}flake.lock${RESET} and ${WHITE}.label${RESET}"
+    echo
+
     if [[ "$PUSH" == "true" ]]; then
+        echo -e "${CYAN}Pushing config...${RESET}"
         git push
         echo -e "Pushed ${WHITE}config${RESET}"
+        echo
     fi
 fi
