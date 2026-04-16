@@ -202,20 +202,20 @@ args@{
         gitEnv = "GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null";
 
         rebootMarker = lib.trim (
-          if builtins.pathExists "${defs.rootPath}/.nx-auto-upgrade-reboot-required" then
-            builtins.readFile "${defs.rootPath}/.nx-auto-upgrade-reboot-required"
+          if builtins.pathExists (defs.rootPath + "/.nx-auto-upgrade-reboot-required") then
+            builtins.readFile (defs.rootPath + "/.nx-auto-upgrade-reboot-required")
           else
             ""
         );
 
         desktopRebootMarker = lib.trim (
-          if builtins.pathExists "${defs.rootPath}/.nx-auto-upgrade-desktop-reboot-required" then
-            builtins.readFile "${defs.rootPath}/.nx-auto-upgrade-desktop-reboot-required"
+          if builtins.pathExists (defs.rootPath + "/.nx-auto-upgrade-desktop-reboot-required") then
+            builtins.readFile (defs.rootPath + "/.nx-auto-upgrade-desktop-reboot-required")
           else
             ""
         );
 
-        nxcoreStorePath = "${defs.rootPath}";
+        nxcoreStorePath = builtins.toString defs.rootPath;
 
         logScript =
           level: message:
