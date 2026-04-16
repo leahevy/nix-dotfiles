@@ -974,7 +974,18 @@ check_deployment_conflicts() {
 }
 
 diff_store_paths() {
-    local exact_names_to_ignore=("man-cache" "manifest-for-users.json" "manifest.json" "sops-nix.service" "sops-nix-user" "source")
+    local exact_names_to_ignore=(
+      "man-cache"
+      "manifest-for-users.json"
+      "manifest.json"
+      "sops-nix.service"
+      "sops-nix-user"
+      "source"
+      "hm_fontconfigconf.d10hmfonts.conf"
+      "hm_.localsharenvimtemplatesnixnixmoduleraw.md"
+      "hm_.localsharenvimtemplatesnixnixmodule.tpl"
+    )
+    local suffixes_to_ignore=("-source")
     local changed_prefixes_to_ignore=("nixos-system-")
     local add_removal_prefixes_to_ignore=("nixos-system-")
 
@@ -1019,6 +1030,9 @@ diff_store_paths() {
         for p in "${exact_names_to_ignore[@]+"${exact_names_to_ignore[@]}"}"; do
           [[ "$name" == "$p" ]] && continue 2
         done
+        for s in "${suffixes_to_ignore[@]+"${suffixes_to_ignore[@]}"}"; do
+          [[ "$name" == *"$s" ]] && continue 2
+        done
 
         [[ "$name" =~ -[0-9]+\.[0-9]+([.][0-9]+)*([a-zA-Z]+[0-9]*)?(-[0-9A-Za-z]+)*$ ]] && continue
         [[ "$name" =~ (-wrapped|-fish-completions|\.manpath)$ ]] && continue
@@ -1035,6 +1049,9 @@ diff_store_paths() {
         done
         for p in "${exact_names_to_ignore[@]+"${exact_names_to_ignore[@]}"}"; do
           [[ "$name" == "$p" ]] && continue 2
+        done
+        for s in "${suffixes_to_ignore[@]+"${suffixes_to_ignore[@]}"}"; do
+          [[ "$name" == *"$s" ]] && continue 2
         done
 
         [[ "$name" =~ -[0-9]+\.[0-9]+([.][0-9]+)*([a-zA-Z]+[0-9]*)?(-[0-9A-Za-z]+)*$ ]] && continue
@@ -1073,6 +1090,9 @@ diff_store_paths() {
         done
         for p in "${exact_names_to_ignore[@]+"${exact_names_to_ignore[@]}"}"; do
           [[ "$name" == "$p" ]] && continue 2
+        done
+        for s in "${suffixes_to_ignore[@]+"${suffixes_to_ignore[@]}"}"; do
+          [[ "$name" == *"$s" ]] && continue 2
         done
         $only_issue_etc && [[ "$name" == "etc" ]] && continue
 
