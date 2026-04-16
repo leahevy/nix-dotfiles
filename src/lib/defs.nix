@@ -17,16 +17,19 @@ rec {
     overlays = "${nxConfigPath}/${coreDirName}/src/overlays";
   };
 
-  moduleInputsToScan = [
+  coreInputs = [
     "common"
     "linux"
     "darwin"
     "themes"
     "build"
     "groups"
+    "overlays"
+  ];
+
+  moduleInputsToScan = coreInputs ++ [
     "config"
     "profile"
-    "overlays"
   ];
 
   allowedLinuxDesktops = [

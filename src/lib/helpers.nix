@@ -129,11 +129,13 @@ rec {
     else
       throw "Cannot get relative path for non-local input '${inputName}'";
 
-  # Create symlink to file in any input
+  # Create symlink to file in any input; not allowed for core inputs
   # Usage: symlinkInputFile $CONFIG $INPUTNAME $SUBPATH
   symlinkInputFile =
     config: inputName: subPath:
-    if isLocalDevelopmentInput null inputName then
+    if builtins.elem inputName defs.coreInputs then
+      throw "Symlinks to core inputs are not allowed (input '${inputName}')."
+    else if isLocalDevelopmentInput null inputName then
       symlink config ((getLocalSourcePath inputName) + "/" + subPath)
     else
       throw "Cannot create symlink for non-local input '${inputName}'";
