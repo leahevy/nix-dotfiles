@@ -284,6 +284,7 @@ args@{
               unstage = "reset";
               untrack = "rm --cache --";
               conflicts = "diff --name-only --diff-filter=U";
+              merge-show-conflicts = "!f() { git merge-tree --write-tree HEAD \"\$1\" | grep CONFLICT; } ; f";
             };
           };
         };
