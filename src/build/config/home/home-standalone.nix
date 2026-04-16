@@ -45,7 +45,7 @@ let
     else
       [ ];
 
-  userProfileOn = funcs.processProfileOn {
+  userProfileModule = funcs.processProfileModule {
     profile = user;
     profileType = "home-standalone";
     profileName = user.profileName;
@@ -54,8 +54,8 @@ let
     buildContext = "home-standalone";
   };
 
-  profileInitModules = userProfileOn.initModules;
-  profileContextModules = userProfileOn.contextModules;
+  profileInitModules = userProfileModule.initModules;
+  profileContextModules = userProfileModule.contextModules;
 
   nxDef = import (inputs.lib + "/cmds.nix") {
     inherit lib;

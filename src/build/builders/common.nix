@@ -265,8 +265,8 @@ in
           pkgs-unstable = { };
         };
       };
-      profileOverlays = funcs.extractOverlaysFromOn {
-        on = preEval.config.host.on or { };
+      profileOverlays = funcs.extractOverlaysFromModule {
+        module = preEval.config.host.module or { };
         inherit system;
       };
 
@@ -480,8 +480,8 @@ in
           pkgs-unstable = { };
         };
       };
-      profileOverlays = funcs.extractOverlaysFromOn {
-        on = preEval.config.user.on or { };
+      profileOverlays = funcs.extractOverlaysFromModule {
+        module = preEval.config.user.module or { };
         inherit system;
       };
 

@@ -426,7 +426,7 @@ with lib;
       description = "Additional untyped settings to add to the host configuration";
     };
 
-    module = mkOption {
+    profile = mkOption {
       type = types.attrs;
       default = { };
       description = "Event functions (init, enabled, home, system, standalone, integrated + linux/darwin variants). Signature: args -> config -> { }";

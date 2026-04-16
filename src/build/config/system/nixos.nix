@@ -41,7 +41,7 @@ let
     };
   }) host.specialisations;
 
-  hostProfileOn = funcs.processProfileOn {
+  hostProfileModule = funcs.processProfileModule {
     profile = host;
     profileType = "nixos";
     profileName = host.profileName;
@@ -50,7 +50,7 @@ let
     buildContext = "system";
   };
 
-  userProfileOn = funcs.processProfileOn {
+  userProfileModule = funcs.processProfileModule {
     profile = host.mainUser;
     profileType = "home-integrated";
     profileName = host.mainUser.profileName;
@@ -59,8 +59,8 @@ let
     buildContext = "system";
   };
 
-  profileInitModules = hostProfileOn.initModules ++ userProfileOn.initModules;
-  profileContextModules = hostProfileOn.contextModules ++ userProfileOn.contextModules;
+  profileInitModules = hostProfileModule.initModules ++ userProfileModule.initModules;
+  profileContextModules = hostProfileModule.contextModules ++ userProfileModule.contextModules;
 in
 { config, options, ... }:
 {

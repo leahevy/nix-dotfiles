@@ -61,7 +61,7 @@ rec {
         "settings"
         "assertions"
         "custom"
-        "on"
+        "module"
         "unfree"
         "warning"
         "error"
@@ -415,8 +415,8 @@ rec {
     "isIntegrated"
   ];
 
-  validateOn =
-    modulePath: on:
+  validateInnerModule =
+    prefix: modulePath: module:
     let
       l1FnNames = [
         "init"
@@ -444,7 +444,7 @@ rec {
       validateFn =
         path: name: value:
         if !(builtins.isFunction value) then
-          [ "on.${path}${name} must be a function (config: { ... }), got ${builtins.typeOf value}" ]
+          [ "${prefix}.${path}${name} must be a function (config: { ... }), got ${builtins.typeOf value}" ]
         else
           [ ];
 
@@ -467,31 +467,35 @@ rec {
         ) names;
 
       validatePlatformBase =
-        pathPrefix: platName: platOn:
-        checkInvalid "on.${pathPrefix}${platName}" l1BaseAllowed platOn
-        ++ checkFns "${pathPrefix}${platName}." l1FnNames platOn;
+        pathPrefix: platName: platModule:
+        checkInvalid "${prefix}.${pathPrefix}${platName}" l1BaseAllowed platModule
+        ++ checkFns "${pathPrefix}${platName}." l1FnNames platModule;
 
       validateArchBase =
-        pathPrefix: archName: archOn:
+        pathPrefix: archName: archModule:
         let
           fullPath = "${pathPrefix}${archName}";
         in
-        checkInvalid "on.${fullPath}" (
+        checkInvalid "${prefix}.${fullPath}" (
           l1BaseAllowed
           ++ [
             "linux"
             "darwin"
           ]
-        ) archOn
-        ++ checkFns "${fullPath}." l1FnNames archOn
+        ) archModule
+        ++ checkFns "${fullPath}." l1FnNames archModule
         ++
           lib.concatMap
             (
               platName:
-              if archOn ? ${platName} && builtins.isAttrs archOn.${platName} then
-                validatePlatformBase "${fullPath}." platName archOn.${platName}
-              else if archOn ? ${platName} then
-                [ "on.${fullPath}.${platName} must be an attribute set, got ${builtins.typeOf archOn.${platName}}" ]
+              if archModule ? ${platName} && builtins.isAttrs archModule.${platName} then
+                validatePlatformBase "${fullPath}." platName archModule.${platName}
+              else if archModule ? ${platName} then
+                [
+                  "${prefix}.${fullPath}.${platName} must be an attribute set, got ${
+                    builtins.typeOf archModule.${platName}
+                  }"
+                ]
               else
                 [ ]
             )
@@ -501,31 +505,31 @@ rec {
             ];
 
       validatePlatformCond =
-        pathPrefix: platName: platOn:
-        checkInvalid "on.${pathPrefix}${platName}" l1CondAllowed platOn
-        ++ checkFns "${pathPrefix}${platName}." l1CondAllowed platOn;
+        pathPrefix: platName: platModule:
+        checkInvalid "${prefix}.${pathPrefix}${platName}" l1CondAllowed platModule
+        ++ checkFns "${pathPrefix}${platName}." l1CondAllowed platModule;
 
       validateArchCond =
-        pathPrefix: archName: archOn:
+        pathPrefix: archName: archModule:
         let
           fullPath = "${pathPrefix}${archName}";
         in
-        checkInvalid "on.${fullPath}" (
+        checkInvalid "${prefix}.${fullPath}" (
           l1CondAllowed
           ++ [
             "linux"
             "darwin"
           ]
-        ) archOn
-        ++ checkFns "${fullPath}." l1CondAllowed archOn
+        ) archModule
+        ++ checkFns "${fullPath}." l1CondAllowed archModule
         ++
           lib.concatMap
             (
               platName:
-              if archOn ? ${platName} && builtins.isAttrs archOn.${platName} then
-                validatePlatformCond "${fullPath}." platName archOn.${platName}
-              else if archOn ? ${platName} then
-                [ "on.${fullPath}.${platName} must be an attribute set" ]
+              if archModule ? ${platName} && builtins.isAttrs archModule.${platName} then
+                validatePlatformCond "${fullPath}." platName archModule.${platName}
+              else if archModule ? ${platName} then
+                [ "${prefix}.${fullPath}.${platName} must be an attribute set" ]
               else
                 [ ]
             )
@@ -536,7 +540,7 @@ rec {
 
       validateCondBody =
         path: attrset:
-        checkInvalid "on.${path}" condStructuralKeys attrset
+        checkInvalid "${prefix}.${path}" condStructuralKeys attrset
         ++ checkFns "${path}." l1CondAllowed attrset
         ++
           lib.concatMap
@@ -545,7 +549,7 @@ rec {
               if attrset ? ${platName} && builtins.isAttrs attrset.${platName} then
                 validatePlatformCond "${path}." platName attrset.${platName}
               else if attrset ? ${platName} then
-                [ "on.${path}.${platName} must be an attribute set" ]
+                [ "${prefix}.${path}.${platName} must be an attribute set" ]
               else
                 [ ]
             )
@@ -560,7 +564,7 @@ rec {
               if attrset ? ${archName} && builtins.isAttrs attrset.${archName} then
                 validateArchCond "${path}." archName attrset.${archName}
               else if attrset ? ${archName} then
-                [ "on.${path}.${archName} must be an attribute set" ]
+                [ "${prefix}.${path}.${archName} must be an attribute set" ]
               else
                 [ ]
             )
@@ -570,21 +574,21 @@ rec {
             ];
 
       validateConditionalModule =
-        condName: modPath: modOn:
-        validateCondBody "${condName}.${modPath}" modOn;
+        condName: modPath: modModule:
+        validateCondBody "${condName}.${modPath}" modModule;
 
       validateModulesField =
         path: modulesAttr:
         if !(builtins.isAttrs modulesAttr) then
-          [ "on.${path}.modules must be an attrset, got ${builtins.typeOf modulesAttr}" ]
+          [ "${prefix}.${path}.modules must be an attrset, got ${builtins.typeOf modulesAttr}" ]
         else if modulesAttr == { } then
-          [ "on.${path}.modules must not be empty" ]
+          [ "${prefix}.${path}.modules must not be empty" ]
         else
           lib.flatten (
             lib.mapAttrsToList (
               inputName: groups:
               if !(builtins.isAttrs groups) then
-                [ "on.${path}.modules.${inputName} must be an attrset, got ${builtins.typeOf groups}" ]
+                [ "${prefix}.${path}.modules.${inputName} must be an attrset, got ${builtins.typeOf groups}" ]
               else
                 lib.flatten (
                   lib.mapAttrsToList (
@@ -594,7 +598,7 @@ rec {
                         nonStrings = builtins.filter (x: !(builtins.isString x)) modules;
                       in
                       if nonStrings != [ ] then
-                        [ "on.${path}.modules.${inputName}.${groupName} list must contain only strings" ]
+                        [ "${prefix}.${path}.modules.${inputName}.${groupName} list must contain only strings" ]
                       else
                         [ ]
                     else if builtins.isAttrs modules then
@@ -605,13 +609,13 @@ rec {
                             [ ]
                           else
                             [
-                              "on.${path}.modules.${inputName}.${groupName}.${moduleName} must be true, false, or an attrset of option checks"
+                              "${prefix}.${path}.modules.${inputName}.${groupName}.${moduleName} must be true, false, or an attrset of option checks"
                             ]
                         ) modules
                       )
                     else
                       [
-                        "on.${path}.modules.${inputName}.${groupName} must be an attrset or list, got ${builtins.typeOf modules}"
+                        "${prefix}.${path}.modules.${inputName}.${groupName} must be an attrset or list, got ${builtins.typeOf modules}"
                       ]
                   ) groups
                 )
@@ -621,7 +625,7 @@ rec {
       validatePredicateItem =
         path: item:
         if !(builtins.isAttrs item) then
-          [ "on.${path} must be an attribute set, got ${builtins.typeOf item}" ]
+          [ "${prefix}.${path} must be an attribute set, got ${builtins.typeOf item}" ]
         else
           let
             allowedKeys = [
@@ -637,7 +641,7 @@ rec {
             unknownErrors =
               if unknownKeys != [ ] then
                 [
-                  "on.${path} has unknown fields: ${builtins.concatStringsSep ", " unknownKeys}. Allowed: ${builtins.concatStringsSep ", " allowedKeys}"
+                  "${prefix}.${path} has unknown fields: ${builtins.concatStringsSep ", " unknownKeys}. Allowed: ${builtins.concatStringsSep ", " allowedKeys}"
                 ]
               else
                 [ ];
@@ -649,26 +653,28 @@ rec {
             hasIsKey = builtins.any (k: item ? ${k}) isProfileKeys;
             condErrors =
               if hasCondition && !(builtins.isFunction item.condition) then
-                [ "on.${path}.condition must be a function (config: bool), got ${builtins.typeOf item.condition}" ]
+                [
+                  "${prefix}.${path}.condition must be a function (config: bool), got ${builtins.typeOf item.condition}"
+                ]
               else
                 [ ];
             modulesErrors = if hasModules then validateModulesField path item.modules else [ ];
             moduleChecksPresent = hasModules && builtins.isAttrs item.modules && item.modules != { };
             hostErrors =
               if hasHost && !(builtins.isAttrs item.host) then
-                [ "on.${path}.host must be an attribute set, got ${builtins.typeOf item.host}" ]
+                [ "${prefix}.${path}.host must be an attribute set, got ${builtins.typeOf item.host}" ]
               else
                 [ ];
             userErrors =
               if hasUser && !(builtins.isAttrs item.user) then
-                [ "on.${path}.user must be an attribute set, got ${builtins.typeOf item.user}" ]
+                [ "${prefix}.${path}.user must be an attribute set, got ${builtins.typeOf item.user}" ]
               else
                 [ ];
             optionErrors =
               if hasOption && !(builtins.isAttrs item.option) then
-                [ "on.${path}.option must be an attribute set, got ${builtins.typeOf item.option}" ]
+                [ "${prefix}.${path}.option must be an attribute set, got ${builtins.typeOf item.option}" ]
               else if hasOption && item.option == { } then
-                [ "on.${path}.option must not be empty" ]
+                [ "${prefix}.${path}.option must not be empty" ]
               else
                 [ ];
             isValidMkNot = v: builtins.isAttrs v && v ? __nxNot;
@@ -676,7 +682,9 @@ rec {
               map (
                 k:
                 if item ? ${k} && !builtins.isBool item.${k} && !(isValidMkNot item.${k}) then
-                  [ "on.${path}.${k} must be a boolean or helpers.mkNot bool, got ${builtins.typeOf item.${k}}" ]
+                  [
+                    "${prefix}.${path}.${k} must be a boolean or helpers.mkNot bool, got ${builtins.typeOf item.${k}}"
+                  ]
                 else
                   [ ]
               ) isProfileKeys
@@ -691,18 +699,18 @@ rec {
             missingError =
               if !hasAnyCheck then
                 [
-                  "on.${path} must have at least one check field: condition, modules, host, user, option, or a profile flag (${builtins.concatStringsSep ", " isProfileKeys})"
+                  "${prefix}.${path} must have at least one check field: condition, modules, host, user, option, or a profile flag (${builtins.concatStringsSep ", " isProfileKeys})"
                 ]
               else
                 [ ];
             doErrors =
               if !(item ? do) then
-                [ "on.${path} is missing required 'do' field" ]
+                [ "${prefix}.${path} is missing required 'do' field" ]
               else if !(builtins.isAttrs item.do) then
-                [ "on.${path}.do must be an attribute set, got ${builtins.typeOf item.do}" ]
+                [ "${prefix}.${path}.do must be an attribute set, got ${builtins.typeOf item.do}" ]
               else if item.do == { } then
                 [
-                  "on.${path}.do must not be empty. Add at least one of: ${builtins.concatStringsSep ", " condStructuralKeys}"
+                  "${prefix}.${path}.do must not be empty. Add at least one of: ${builtins.concatStringsSep ", " condStructuralKeys}"
                 ]
               else
                 validateCondBody "${path}.do" item.do;
@@ -718,16 +726,16 @@ rec {
           ++ doErrors;
 
       validateConditional =
-        condName: condOn:
-        if !(builtins.isAttrs condOn) then
-          [ "on.${condName} must be an attribute set" ]
+        condName: condModule:
+        if !(builtins.isAttrs condModule) then
+          [ "${prefix}.${condName} must be an attribute set" ]
         else
           lib.flatten (
             lib.mapAttrsToList (
               inputName: groups:
               if !(builtins.isAttrs groups) then
                 [
-                  "on.${condName}.${inputName} must be an attribute set (expected group names), got ${builtins.typeOf groups}"
+                  "${prefix}.${condName}.${inputName} must be an attribute set (expected group names), got ${builtins.typeOf groups}"
                 ]
               else
                 lib.flatten (
@@ -739,25 +747,25 @@ rec {
                     in
                     if !(builtins.isAttrs modules) then
                       [
-                        "on.${path2} must be an attribute set (expected module names), got ${builtins.typeOf modules}"
+                        "${prefix}.${path2} must be an attribute set (expected module names), got ${builtins.typeOf modules}"
                       ]
                     else if shallowKeys != [ ] then
                       [
-                        "on.${path2} contains on-function keys (${builtins.concatStringsSep ", " shallowKeys}). Path must be INPUT.GROUP.MODULE (3 levels deep)"
+                        "${prefix}.${path2} contains module-function keys (${builtins.concatStringsSep ", " shallowKeys}). Path must be INPUT.GROUP.MODULE (3 levels deep)"
                       ]
                     else
                       lib.flatten (
                         lib.mapAttrsToList (
-                          moduleName: subOn:
-                          if !(builtins.isAttrs subOn) then
-                            [ "on.${path2}.${moduleName} must be an attribute set" ]
+                          moduleName: subModule:
+                          if !(builtins.isAttrs subModule) then
+                            [ "${prefix}.${path2}.${moduleName} must be an attribute set" ]
                           else
-                            validateConditionalModule condName "${inputName}.${groupName}.${moduleName}" subOn
+                            validateConditionalModule condName "${inputName}.${groupName}.${moduleName}" subModule
                         ) modules
                       )
                   ) groups
                 )
-            ) condOn
+            ) condModule
           );
 
       topAllowed = l1BaseAllowed ++ [
@@ -765,22 +773,22 @@ rec {
         "darwin"
         "x86_64"
         "aarch64"
-        "moduleEnabled"
-        "moduleDisabled"
+        "ifEnabled"
+        "ifDisabled"
         "when"
       ];
 
-      topErrors = checkInvalid "on" topAllowed on;
-      topFnErrors = checkFns "" l1FnNames on;
+      topErrors = checkInvalid "on" topAllowed module;
+      topFnErrors = checkFns "" l1FnNames module;
 
       platErrors =
         lib.concatMap
           (
             platName:
-            if on ? ${platName} && builtins.isAttrs on.${platName} then
-              validatePlatformBase "" platName on.${platName}
-            else if on ? ${platName} then
-              [ "on.${platName} must be an attribute set, got ${builtins.typeOf on.${platName}}" ]
+            if module ? ${platName} && builtins.isAttrs module.${platName} then
+              validatePlatformBase "" platName module.${platName}
+            else if module ? ${platName} then
+              [ "${prefix}.${platName} must be an attribute set, got ${builtins.typeOf module.${platName}}" ]
             else
               [ ]
           )
@@ -793,10 +801,10 @@ rec {
         lib.concatMap
           (
             archName:
-            if on ? ${archName} && builtins.isAttrs on.${archName} then
-              validateArchBase "" archName on.${archName}
-            else if on ? ${archName} then
-              [ "on.${archName} must be an attribute set, got ${builtins.typeOf on.${archName}}" ]
+            if module ? ${archName} && builtins.isAttrs module.${archName} then
+              validateArchBase "" archName module.${archName}
+            else if module ? ${archName} then
+              [ "${prefix}.${archName} must be an attribute set, got ${builtins.typeOf module.${archName}}" ]
             else
               [ ]
           )
@@ -806,24 +814,24 @@ rec {
           ];
 
       conditionalErrors =
-        (if on ? moduleEnabled then validateConditional "moduleEnabled" on.moduleEnabled else [ ])
-        ++ (if on ? moduleDisabled then validateConditional "moduleDisabled" on.moduleDisabled else [ ]);
+        (if module ? ifEnabled then validateConditional "ifEnabled" module.ifEnabled else [ ])
+        ++ (if module ? ifDisabled then validateConditional "ifDisabled" module.ifDisabled else [ ]);
 
       whenErrors =
-        if on ? when then
+        if module ? when then
           let
-            val = on.when;
+            val = module.when;
           in
           if builtins.isList val then
             if val == [ ] then
-              [ "on.when must not be an empty list" ]
+              [ "${prefix}.when must not be an empty list" ]
             else
               lib.flatten (lib.imap0 (i: item: validatePredicateItem "when[${toString i}]" item) val)
           else if builtins.isAttrs val then
             validatePredicateItem "when" val
           else
             [
-              "on.when must be a predicate attrset or a list of predicate attrsets, got ${builtins.typeOf val}"
+              "${prefix}.when must be a predicate attrset or a list of predicate attrsets, got ${builtins.typeOf val}"
             ]
         else
           [ ];
@@ -833,11 +841,12 @@ rec {
     if allErrors != [ ] then
       throw "Module ${modulePath} has invalid 'on' configuration:\n  ${builtins.concatStringsSep "\n  " allErrors}"
     else
-      on;
+      module;
 
-  selectApplicableOnFns =
+  selectApplicableModuleFns =
     {
-      on,
+      prefix,
+      module,
       buildContext,
       architecture,
       includeInit ? false,
@@ -890,21 +899,21 @@ rec {
       collectLayers123 =
         excludeInit: wrap: attrset:
         let
-          platOn = platformOf attrset;
-          archOn = archOf attrset;
-          archPlatOn = platformOf archOn;
+          platModule = platformOf attrset;
+          archModule = archOf attrset;
+          archPlatModule = platformOf archModule;
         in
         collectL1 excludeInit wrap attrset
-        ++ collectL1 excludeInit wrap platOn
-        ++ collectL1 excludeInit wrap archOn
-        ++ collectL1 excludeInit wrap archPlatOn;
+        ++ collectL1 excludeInit wrap platModule
+        ++ collectL1 excludeInit wrap archModule
+        ++ collectL1 excludeInit wrap archPlatModule;
 
       makeWrap =
         isEnabled: modulePath:
         let
           pathParts = lib.splitString "." modulePath;
           enablePath = [ "nx" ] ++ pathParts ++ [ "enable" ];
-          condName = if isEnabled then "moduleEnabled" else "moduleDisabled";
+          condName = if isEnabled then "ifEnabled" else "ifDisabled";
         in
         fn: config:
         lib.mkIf (
@@ -931,8 +940,8 @@ rec {
                 groupName: modules:
                 lib.flatten (
                   lib.mapAttrsToList (
-                    moduleName: subOn:
-                    collectLayers123 true (makeWrap isEnabled "${inputName}.${groupName}.${moduleName}") subOn
+                    moduleName: subModule:
+                    collectLayers123 true (makeWrap isEnabled "${inputName}.${groupName}.${moduleName}") subModule
                   ) modules
                 )
               ) groups
@@ -946,7 +955,7 @@ rec {
             result = condition config;
           in
           if !builtins.isBool result then
-            throw "${sourceModule}: on.${label}: condition must return a boolean, got ${builtins.typeOf result}"
+            throw "${sourceModule}: ${prefix}.${label}: condition must return a boolean, got ${builtins.typeOf result}"
           else
             result
         ) (fn config);
@@ -1025,9 +1034,9 @@ rec {
             if remainingPath == [ ] then
               obj
             else if !builtins.isAttrs obj then
-              throw "${sourceModule}: on.${label}.${context}: path '${fullPathStr}' does not exist"
+              throw "${sourceModule}: ${prefix}.${label}.${context}: path '${fullPathStr}' does not exist"
             else if !(obj ? ${builtins.head remainingPath}) then
-              throw "${sourceModule}: on.${label}.${context}: path '${fullPathStr}' does not exist"
+              throw "${sourceModule}: ${prefix}.${label}.${context}: path '${fullPathStr}' does not exist"
             else
               requireAttrByPath context fullPathStr (builtins.tail remainingPath)
                 obj.${builtins.head remainingPath};
@@ -1040,7 +1049,7 @@ rec {
                 if actual == null || checkVal == null then
                   actual == checkVal
                 else if builtins.typeOf actual != builtins.typeOf checkVal then
-                  throw "${sourceModule}: on.${label}.${context}: path '${pathStr}' is of type '${builtins.typeOf actual}' but check value has type '${builtins.typeOf checkVal}'"
+                  throw "${sourceModule}: ${prefix}.${label}.${context}: path '${pathStr}' is of type '${builtins.typeOf actual}' but check value has type '${builtins.typeOf checkVal}'"
                 else
                   actual == checkVal;
             in
@@ -1061,7 +1070,7 @@ rec {
             let
               v = lib.attrByPath (
                 [ "nx" ] ++ check.path ++ [ "enable" ]
-              ) (throw "${sourceModule}: on.${label}.modules: module '${modulePath}' not found") config;
+              ) (throw "${sourceModule}: ${prefix}.${label}.modules: module '${modulePath}' not found") config;
             in
             if check.required then v else !v
           else
@@ -1072,7 +1081,7 @@ rec {
                 pathStr = modulePath + "." + builtins.concatStringsSep "." path;
                 actual =
                   lib.attrByPath fullPath
-                    (throw "${sourceModule}: on.${label}.modules.${modulePath}: option '${builtins.concatStringsSep "." path}' not found")
+                    (throw "${sourceModule}: ${prefix}.${label}.modules.${modulePath}: option '${builtins.concatStringsSep "." path}' not found")
                     config;
               in
               compareValues "modules.${modulePath}" pathStr actual expected
@@ -1120,7 +1129,7 @@ rec {
           if optionChecks == [ ] then
             true
           else if moduleNxPath == null then
-            throw "${sourceModule}: on.${label}.option: option checks are not available in this context"
+            throw "${sourceModule}: ${prefix}.${label}.option: option checks are not available in this context"
           else
             lib.all (
               { path, expected }:
@@ -1129,7 +1138,7 @@ rec {
                 pathStr = builtins.concatStringsSep "." (moduleNxPath ++ path);
                 actual =
                   lib.attrByPath fullPath
-                    (throw "${sourceModule}: on.${label}.option: path '${pathStr}' does not exist")
+                    (throw "${sourceModule}: ${prefix}.${label}.option: path '${pathStr}' does not exist")
                     config;
               in
               compareValues "option" pathStr actual expected
@@ -1152,7 +1161,7 @@ rec {
           collect =
             label: item:
             collectLayers123 true (makePredWrap label (buildItemCondition label item)) (item.do or { });
-          val = on.when or null;
+          val = module.when or null;
         in
         if val == null then
           [ ]
@@ -1163,13 +1172,13 @@ rec {
         else
           [ ];
     in
-    collectLayers123 false null on
-    ++ collectConditional true (on.moduleEnabled or { })
-    ++ collectConditional false (on.moduleDisabled or { })
+    collectLayers123 false null module
+    ++ collectConditional true (module.ifEnabled or { })
+    ++ collectConditional false (module.ifDisabled or { })
     ++ whenFns;
 
-  mergeOnFunctions =
-    moduleIdentifier: moduleNxPath: fns:
+  mergeModuleFunctions =
+    prefix: moduleIdentifier: moduleNxPath: fns:
     if fns == [ ] then
       { }
     else
@@ -1208,13 +1217,13 @@ rec {
               if builtins.elem type contextSpecific then
                 normalizeStyle fn
               else if isNewStyle then
-                throw "Module ${moduleIdentifier}: the { config, opt, ... } signature is disallowed for on.${type}. Use on.${type} = config: { ... } and access options via config.nx directly."
+                throw "Module ${moduleIdentifier}: the { config, opt, ... } signature is disallowed for ${prefix}.${type}. Use ${prefix}.${type} = config: { ... } and access options via config.nx directly."
               else
                 fn;
             result = (if wrap != null then wrap normalizedFn else normalizedFn) config;
           in
           if (result ? nx) && (builtins.elem type contextSpecific) then
-            throw "Module ${moduleIdentifier}: nx.* options cannot be set in on.${type}.\n\nUse on.init or on.enabled for shared options or on.standalone for home-manager only options (only works in home-manager only profiles)!"
+            throw "Module ${moduleIdentifier}: nx.* options cannot be set in ${prefix}.${type}.\n\nUse ${prefix}.init or ${prefix}.enabled for shared options!"
           else
             result;
       in
@@ -1272,11 +1281,12 @@ rec {
         architecture = resolveArchitecture args;
       };
 
-      on = validateOn modulePath (moduleResult.on or { });
+      module = validateInnerModule "prefix" modulePath (moduleResult.module or { });
       architecture = resolveArchitecture args;
 
-      applicableFns = selectApplicableOnFns {
-        inherit on buildContext architecture;
+      applicableFns = selectApplicableModuleFns {
+        inherit module buildContext architecture;
+        prefix = "module";
         sourceModule = toString modulePath;
         moduleNxPath = [
           moduleSpec.inputName
@@ -1285,7 +1295,7 @@ rec {
         ];
       };
 
-      configFn = mergeOnFunctions (toString modulePath) [
+      configFn = mergeModuleFunctions "module" (toString modulePath) [
         moduleSpec.inputName
         moduleSpec.group
         moduleSpec.name
@@ -1306,7 +1316,7 @@ rec {
       submodules = lib.foldl lib.recursiveUpdate { } (map (result: result.submodules) moduleResults);
     };
 
-  processProfileOn =
+  processProfileModule =
     {
       profile,
       profileType,
@@ -1316,7 +1326,9 @@ rec {
       buildContext,
     }:
     let
-      on = validateOn "profile:${profileType}/${profileName}" (profile.on or { });
+      module = validateInnerModule "profile" "profile:${profileType}/${profileName}" (
+        profile.profile or { }
+      );
       architecture = resolveArchitecture args;
 
       moduleContext = {
@@ -1338,8 +1350,9 @@ rec {
         self = enhancedContext;
       };
 
-      allFns = selectApplicableOnFns {
-        inherit on buildContext architecture;
+      allFns = selectApplicableModuleFns {
+        inherit module buildContext architecture;
+        prefix = "profile";
         includeInit = true;
         sourceModule = "profile:${profileType}/${profileName}";
       };
@@ -1364,13 +1377,13 @@ rec {
         if initFns == [ ] then
           [ ]
         else
-          [ (mergeOnFunctions "profile:${profileType}/${profileName}" null initFns) ];
+          [ (mergeModuleFunctions "profile" "profile:${profileType}/${profileName}" null initFns) ];
 
       contextModules =
         if contextFns == [ ] then
           [ ]
         else
-          [ (mergeOnFunctions "profile:${profileType}/${profileName}" null contextFns) ];
+          [ (mergeModuleFunctions "profile" "profile:${profileType}/${profileName}" null contextFns) ];
     };
 
   collectModuleAssertions =
@@ -1818,39 +1831,39 @@ rec {
     else
       [ ];
 
-  extractOverlaysFromOn =
-    { on, system }:
+  extractOverlaysFromModule =
+    { module, system }:
     let
       isLinux = helpers.isLinuxArch system;
       isDarwin = helpers.isDarwinArch system;
       isX86_64 = helpers.isX86_64Arch system;
       isAARCH64 = helpers.isAARCH64Arch system;
-      platOn =
+      platModule =
         if isLinux then
-          on.linux or { }
+          module.linux or { }
         else if isDarwin then
-          on.darwin or { }
+          module.darwin or { }
         else
           { };
-      archOn =
+      archModule =
         if isX86_64 then
-          on.x86_64 or { }
+          module.x86_64 or { }
         else if isAARCH64 then
-          on.aarch64 or { }
+          module.aarch64 or { }
         else
           { };
-      archPlatOn =
+      archPlatModule =
         if isLinux then
-          archOn.linux or { }
+          archModule.linux or { }
         else if isDarwin then
-          archOn.darwin or { }
+          archModule.darwin or { }
         else
           { };
     in
-    (on.overlays or [ ])
-    ++ (platOn.overlays or [ ])
-    ++ (archOn.overlays or [ ])
-    ++ (archPlatOn.overlays or [ ]);
+    (module.overlays or [ ])
+    ++ (platModule.overlays or [ ])
+    ++ (archModule.overlays or [ ])
+    ++ (archPlatModule.overlays or [ ]);
 
   collectModuleOverlays =
     system:
@@ -1878,8 +1891,8 @@ rec {
               moduleResult = builtins.tryEval (import spec.modulePath minimalArgs);
             in
             if moduleResult.success then
-              extractOverlaysFromOn {
-                on = moduleResult.value.on or { };
+              extractOverlaysFromModule {
+                module = moduleResult.value.module or { };
                 inherit system;
               }
             else
@@ -2161,13 +2174,14 @@ rec {
 
                 moduleResult = builtins.tryEval (import spec.modulePath consolidatedArgs);
 
-                on = if moduleResult.success then moduleResult.value.on or { } else { };
+                module = if moduleResult.success then moduleResult.value.module or { } else { };
 
                 wrapInit = initFn: { config, ... }: initFn config;
 
                 initFns = map (f: wrapInit f.fn) (
-                  builtins.filter (f: f.type == "init") (selectApplicableOnFns {
-                    inherit on architecture;
+                  builtins.filter (f: f.type == "init") (selectApplicableModuleFns {
+                    inherit module architecture;
+                    prefix = "module";
                     buildContext = "system";
                     includeInit = true;
                     sourceModule = toString spec.modulePath;

@@ -42,7 +42,7 @@ let
     else
       [ ];
 
-  hostProfileOn = funcs.processProfileOn {
+  hostProfileModule = funcs.processProfileModule {
     profile = host;
     profileType = "nixos";
     profileName = host.profileName;
@@ -51,7 +51,7 @@ let
     buildContext = "home-integrated";
   };
 
-  userProfileOn = funcs.processProfileOn {
+  userProfileModule = funcs.processProfileModule {
     profile = user;
     profileType = "home-integrated";
     profileName = user.profileName;
@@ -60,8 +60,8 @@ let
     buildContext = "home-integrated";
   };
 
-  profileInitModules = hostProfileOn.initModules ++ userProfileOn.initModules;
-  profileContextModules = hostProfileOn.contextModules ++ userProfileOn.contextModules;
+  profileInitModules = hostProfileModule.initModules ++ userProfileModule.initModules;
+  profileContextModules = hostProfileModule.contextModules ++ userProfileModule.contextModules;
 
   nxDef = import (inputs.lib + "/cmds.nix") {
     inherit lib;

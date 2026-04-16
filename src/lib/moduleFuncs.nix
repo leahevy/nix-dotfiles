@@ -124,7 +124,7 @@ rec {
       in
       fileData.custom or { };
 
-    # Import nix file from same module and return its on.* functions
+    # Import nix file from same module and return its module.* functions
     # Usage: self.importFile args "file.nix"
     importFile =
       self: args: subpath:
@@ -140,7 +140,7 @@ rec {
         };
         imported = import filePath importArgs;
       in
-      if imported ? on then imported.on else { };
+      if imported ? module then imported.module else { };
 
     # Send a user notification, preferring nx-user-notify (logger) when enabled, else raw notify-send (osascript -e 'display notification...' on Darwin)
     # Usage: self.notifyUser { title = "..."; body = "..."; icon = "dialog-information"; urgency = "normal"; }
