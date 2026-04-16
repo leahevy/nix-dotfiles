@@ -110,6 +110,7 @@ let
   macosStandaloneModules = mergeModules baseModules {
     common.style = [ "stylix" ];
     darwin = {
+      core = [ "coreutils" ];
       browser = [
         "firefox"
         "qutebrowser"
