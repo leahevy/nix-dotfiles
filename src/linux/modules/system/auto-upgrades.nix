@@ -201,6 +201,22 @@ args@{
 
         gitEnv = "GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null";
 
+        rebootMarker = lib.trim (
+          if builtins.pathExists "${defs.rootPath}/.nx-auto-upgrade-reboot-required" then
+            builtins.readFile "${defs.rootPath}/.nx-auto-upgrade-reboot-required"
+          else
+            ""
+        );
+
+        desktopRebootMarker = lib.trim (
+          if builtins.pathExists "${defs.rootPath}/.nx-auto-upgrade-desktop-reboot-required" then
+            builtins.readFile "${defs.rootPath}/.nx-auto-upgrade-desktop-reboot-required"
+          else
+            ""
+        );
+
+        nxcoreStorePath = "${defs.rootPath}";
+
         logScript =
           level: message:
           let
@@ -564,7 +580,9 @@ args@{
             fi
           }
 
-          check_repo_exists "${nxcoreDir}" "nxcore"
+          if [[ -d "${nxcoreDir}/.git" ]]; then
+            check_repo_exists "${nxcoreDir}" "nxcore"
+          fi
           check_repo_exists "${nxconfigDir}" "nxconfig"
         '';
 
@@ -580,7 +598,9 @@ args@{
             fi
           }
 
-          check_git_clean "${nxcoreDir}" "nxcore"
+          if [[ -d "${nxcoreDir}/.git" ]]; then
+            check_git_clean "${nxcoreDir}" "nxcore"
+          fi
           check_git_clean "${nxconfigDir}" "nxconfig"
         '';
 
@@ -598,7 +618,9 @@ args@{
             fi
           }
 
-          check_on_main_branch "${nxcoreDir}" "nxcore"
+          if [[ -d "${nxcoreDir}/.git" ]]; then
+            check_on_main_branch "${nxcoreDir}" "nxcore"
+          fi
           check_on_main_branch "${nxconfigDir}" "nxconfig"
         '';
 
@@ -630,7 +652,9 @@ args@{
                     } .git/config
                   }
 
-                  setup_nx_auto_upgrade_remote "${nxcoreDir}" "nxcore" "${self.variables.coreRepoIsoUrl}"
+                  if [[ -d "${nxcoreDir}/.git" ]]; then
+                    setup_nx_auto_upgrade_remote "${nxcoreDir}" "nxcore" "${self.variables.coreRepoIsoUrl}"
+                  fi
                   setup_nx_auto_upgrade_remote "${nxconfigDir}" "nxconfig" "${self.variables.configRepoIsoUrl}"
         '';
 
@@ -665,16 +689,22 @@ args@{
           nxcore_changed=false
           nxconfig_changed=false
 
-          if check_for_changes "${nxcoreDir}" "nxcore"; then
-            nxcore_changed=true
+          if [[ -d "${nxcoreDir}/.git" ]]; then
+            if check_for_changes "${nxcoreDir}" "nxcore"; then
+              nxcore_changed=true
+            fi
           fi
 
           if check_for_changes "${nxconfigDir}" "nxconfig"; then
             nxconfig_changed=true
           fi
 
-          if [[ "$nxcore_changed" == "false" && "$nxconfig_changed" == "false" ]]; then
-            ${logScript "info" "INFO: No remote changes detected, skipping upgrade"}
+          if [[ "$nxconfig_changed" == "false" ]]; then
+            if [[ "$nxcore_changed" == "true" ]]; then
+              ${logScript "info" "INFO: nxcore has remote changes but no config bump, skipping upgrade"}
+            else
+              ${logScript "info" "INFO: No remote changes detected, skipping upgrade"}
+            fi
             exit 0
           fi
         '';
@@ -721,45 +751,58 @@ args@{
             }
           }
 
-          cd "${nxcoreDir}"
-          OLD_REBOOT_MARKER=$(${pkgs.coreutils}/bin/cat .nx-auto-upgrade-reboot-required 2>/dev/null || echo "")
-          OLD_DESKTOP_REBOOT_MARKER=$(${pkgs.coreutils}/bin/cat .nx-auto-upgrade-desktop-reboot-required 2>/dev/null || echo "")
-
-          pull_repo "${nxcoreDir}" "nxcore"
           pull_repo "${nxconfigDir}" "nxconfig"
 
-          cd "${nxcoreDir}"
-          FORCE_REBOOT=false
-          isHeadless=${lib.boolToString ((self.host.settings.system.desktop or null) == null)}
-
-          if [[ -f ".nx-auto-upgrade-reboot-required" ]]; then
-            NEW_REBOOT_MARKER=$(${pkgs.coreutils}/bin/cat .nx-auto-upgrade-reboot-required 2>/dev/null || echo "")
-            if [[ -n "$NEW_REBOOT_MARKER" && "$OLD_REBOOT_MARKER" != "$NEW_REBOOT_MARKER" ]]; then
-              CURRENT_FLAKE_HASH=$(${pkgs.coreutils}/bin/sha256sum flake.lock | ${pkgs.coreutils}/bin/cut -d' ' -f1)
-              if [[ "$CURRENT_FLAKE_HASH" == "$NEW_REBOOT_MARKER" ]]; then
-                ${logScript "info" "INFO: Remote changes indicate system reboot required for current flake.lock state"}
-                FORCE_REBOOT=true
-              fi
-            fi
-          fi
-
-          if [[ "$isHeadless" == "false" && -f ".nx-auto-upgrade-desktop-reboot-required" ]]; then
-            NEW_DESKTOP_REBOOT_MARKER=$(${pkgs.coreutils}/bin/cat .nx-auto-upgrade-desktop-reboot-required 2>/dev/null || echo "")
-            if [[ -n "$NEW_DESKTOP_REBOOT_MARKER" && "$OLD_DESKTOP_REBOOT_MARKER" != "$NEW_DESKTOP_REBOOT_MARKER" ]]; then
-              CURRENT_FLAKE_HASH=$(${pkgs.coreutils}/bin/sha256sum flake.lock | ${pkgs.coreutils}/bin/cut -d' ' -f1)
-              if [[ "$CURRENT_FLAKE_HASH" == "$NEW_DESKTOP_REBOOT_MARKER" ]]; then
-                ${logScript "info" "INFO: Remote changes indicate desktop reboot required for current flake.lock state"}
-                FORCE_REBOOT=true
-              fi
-            fi
+          if [[ -d "${nxcoreDir}/.git" ]]; then
+            pull_repo "${nxcoreDir}" "nxcore"
           fi
         '';
 
+        checkForceRebootScript =
+          let
+            hasRebootMarker = rebootMarker != "";
+            hasDesktopMarker = desktopRebootMarker != "" && (self.host.settings.system.desktop or null) != null;
+            hasAnyMarker = hasRebootMarker || hasDesktopMarker;
+          in
+          ''
+            FORCE_REBOOT=false
+
+            ${lib.optionalString hasAnyMarker ''
+              CORE_STORE_PATH_FILE="${nxconfigDir}/.core-store-path"
+              LAST_NXCORE_STORE_PATH=$(${pkgs.coreutils}/bin/cat "$CORE_STORE_PATH_FILE" 2>/dev/null || echo "")
+              CURRENT_NXCORE_STORE_PATH="${nxcoreStorePath}"
+
+              if [[ "$LAST_NXCORE_STORE_PATH" != "$CURRENT_NXCORE_STORE_PATH" ]]; then
+                CURRENT_FLAKE_HASH=$(${pkgs.coreutils}/bin/sha256sum "${nxcoreStorePath}/flake.lock" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+
+                ${lib.optionalString hasRebootMarker ''
+                  if [[ "${rebootMarker}" == "$CURRENT_FLAKE_HASH" ]]; then
+                    ${logScript "info" "INFO: Remote changes indicate system reboot required for current flake.lock state"}
+                    FORCE_REBOOT=true
+                  fi
+                ''}
+
+                ${lib.optionalString hasDesktopMarker ''
+                  if [[ "$FORCE_REBOOT" == "false" && "${desktopRebootMarker}" == "$CURRENT_FLAKE_HASH" ]]; then
+                    ${logScript "info" "INFO: Remote changes indicate desktop reboot required for current flake.lock state"}
+                    FORCE_REBOOT=true
+                  fi
+                ''}
+              fi
+
+              ${lib.optionalString (!self.settings.dryRun) ''
+                ${pkgs.coreutils}/bin/echo "$CURRENT_NXCORE_STORE_PATH" > "$CORE_STORE_PATH_FILE"
+              ''}
+            ''}
+          '';
+
         setupGitSafeDirectoriesScript = ''
           setup_git_safe_directories() {
-            if ! ${pkgs.git}/bin/git config --global --get-all safe.directory | ${pkgs.gnugrep}/bin/grep -q "^${nxcoreDir}$"; then
-              ${pkgs.git}/bin/git config --global --add safe.directory "${nxcoreDir}"
-              ${logScript "info" "INFO: Added ${nxcoreDir} to git safe directories"}
+            if [[ -d "${nxcoreDir}/.git" ]]; then
+              if ! ${pkgs.git}/bin/git config --global --get-all safe.directory | ${pkgs.gnugrep}/bin/grep -q "^${nxcoreDir}$"; then
+                ${pkgs.git}/bin/git config --global --add safe.directory "${nxcoreDir}"
+                ${logScript "info" "INFO: Added ${nxcoreDir} to git safe directories"}
+              fi
             fi
 
             if ! ${pkgs.git}/bin/git config --global --get-all safe.directory | ${pkgs.gnugrep}/bin/grep -q "^${nxconfigDir}$"; then
@@ -786,7 +829,7 @@ args@{
                     REBUILD_ACTION="boot"
                   fi
                 ''}
-                ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild $REBUILD_ACTION --flake '.#${profileName}' --impure --override-input core 'path:${nxcoreDir}' --print-build-logs"
+                ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild $REBUILD_ACTION --flake '.#${profileName}' --impure --print-build-logs"
                 ${logScript "info" "System rebuild command prepared"}
               ''
             else
@@ -805,7 +848,6 @@ args@{
                   --flake ".#${profileName}" \
                   --impure \
                   --no-update-lock-file \
-                  --override-input core "path:${nxcoreDir}" \
                   --print-build-logs \
                   --show-trace; then
                   exit 1
@@ -1148,13 +1190,16 @@ args@{
               ${lib.optionalString self.settings.verifySignatures ''
                 setup_verification_keyring
 
-                verify_commit_signature "${nxcoreDir}" "nxcore" "$(cd ${nxcoreDir} && ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)"
+                if [[ -d "${nxcoreDir}/.git" ]]; then
+                  verify_commit_signature "${nxcoreDir}" "nxcore" "$(cd ${nxcoreDir} && ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)"
+                fi
                 verify_commit_signature "${nxconfigDir}" "nxconfig" "$(cd ${nxconfigDir} && ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)"
               ''}
 
               ${checkForChangesScript}
               ${logScript "info" "STARTED: Auto-upgrade beginning"}
               ${pullRepositoriesScript}
+              ${checkForceRebootScript}
               ${upgradeScript}
               ${rebootScript}
             '';
