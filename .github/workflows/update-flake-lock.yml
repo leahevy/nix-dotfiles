@@ -222,17 +222,10 @@ jobs:
                     fi
                   fi
 
+                  truncate_this_input="false"
                   if echo ",$TRUNCATE_INPUTS," | grep -q ",$input,"; then
-                    commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($total_commits commits, details omitted)"
-                    continue
+                    truncate_this_input="true"
                   fi
-
-                  all_commits=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
-
-                  regular_commits=$(echo "$all_commits" | grep -vE '^(backport:|Backport:)|\[(backport|Backport)-[0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]|- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release)-[0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]' || true)
-
-                  backport_count=$(printf '%s\n' "$all_commits" | grep -cE '^(backport:|Backport:)|\[(backport|Backport)-[0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]' || true)
-                  staging_count=$(printf '%s\n' "$all_commits" | grep -cE '^- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release)-[0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]' || true)
 
                   if ! echo ",$EXCLUDE_FROM_REBOOT_CHECK," | grep -q ",$input,"; then
                     if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_PATTERNS" > /dev/null 2>&1; then
@@ -262,29 +255,40 @@ jobs:
                     fi
                   fi
 
-                  if [ -n "$regular_commits" ]; then
-                    commit_count=$(echo "$regular_commits" | wc -l)
-                    commits_to_show="$regular_commits"
-
-                    if [ "$commit_count" -gt 500 ]; then
-                      commits_to_show=$(echo "$regular_commits" | head -500)
-                      commits_to_show="$commits_to_show"$'\n'"- ... and $(($commit_count - 500)) more commits"
-                    fi
-
-                    commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"$commits_to_show"
-
-                    if [ "$backport_count" -gt 0 ]; then
-                      commit_lists="$commit_lists"$'\n'"- ($backport_count backport commits filtered out)"
-                    fi
-                    if [ "$staging_count" -gt 0 ]; then
-                      commit_lists="$commit_lists"$'\n'"- ($staging_count staging/release merge commits filtered out)"
-                    fi
+                  if [ "$truncate_this_input" = "true" ]; then
+                    commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($total_commits commits, details omitted)"
                   else
-                    filtered_total=$((backport_count + staging_count))
-                    if [ "$filtered_total" -gt 0 ]; then
-                      commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($backport_count backport commits filtered out)"
+                    all_commits=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+
+                    regular_commits=$(echo "$all_commits" | grep -vE '^(backport:|Backport:)|\[(backport|Backport)-[0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]|- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release)-[0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]' || true)
+
+                    backport_count=$(printf '%s\n' "$all_commits" | grep -cE '^(backport:|Backport:)|\[(backport|Backport)-[0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]' || true)
+                    staging_count=$(printf '%s\n' "$all_commits" | grep -cE '^- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release)-[0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]' || true)
+
+                    if [ -n "$regular_commits" ]; then
+                      commit_count=$(echo "$regular_commits" | wc -l)
+                      commits_to_show="$regular_commits"
+
+                      if [ "$commit_count" -gt 500 ]; then
+                        commits_to_show=$(echo "$regular_commits" | head -500)
+                        commits_to_show="$commits_to_show"$'\n'"- ... and $(($commit_count - 500)) more commits"
+                      fi
+
+                      commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"$commits_to_show"
+
+                      if [ "$backport_count" -gt 0 ]; then
+                        commit_lists="$commit_lists"$'\n'"- ($backport_count backport commits filtered out)"
+                      fi
                       if [ "$staging_count" -gt 0 ]; then
                         commit_lists="$commit_lists"$'\n'"- ($staging_count staging/release merge commits filtered out)"
+                      fi
+                    else
+                      filtered_total=$((backport_count + staging_count))
+                      if [ "$filtered_total" -gt 0 ]; then
+                        commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($backport_count backport commits filtered out)"
+                        if [ "$staging_count" -gt 0 ]; then
+                          commit_lists="$commit_lists"$'\n'"- ($staging_count staging/release merge commits filtered out)"
+                        fi
                       fi
                     fi
                   fi
