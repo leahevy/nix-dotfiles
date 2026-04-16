@@ -14,7 +14,7 @@ args@{
   group = "games";
   input = "linux";
 
-  on = {
+  module = {
     linux.system = config: {
       boot.kernelModules = lib.mkIf (self.host.kernel.variant != "lts") [ "ntsync" ];
     };

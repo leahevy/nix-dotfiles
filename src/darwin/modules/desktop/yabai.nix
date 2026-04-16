@@ -143,7 +143,7 @@ args@{
     ];
   };
 
-  on = {
+  module = {
     darwin.enabled = config: {
       nx.homebrew.taps = [
         "koekeishiya/formulae"

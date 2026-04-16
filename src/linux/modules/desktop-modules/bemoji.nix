@@ -14,8 +14,8 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
-  on = {
-    moduleEnabled.linux.desktop.niri.home = config: {
+  module = {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           binds = with config.lib.niri.actions; {

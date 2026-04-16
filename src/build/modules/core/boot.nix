@@ -16,7 +16,7 @@ in
   group = "core";
   input = "build";
 
-  on = {
+  module = {
     system = config: {
       boot = {
         kernelModules = host.kernel.nixModules or [ ];

@@ -18,7 +18,7 @@ args@{
     autoMount = true;
   };
 
-  on = {
+  module = {
     home =
       config:
       let

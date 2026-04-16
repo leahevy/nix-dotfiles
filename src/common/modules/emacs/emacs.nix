@@ -14,7 +14,7 @@ args@{
   group = "emacs";
   input = "common";
 
-  on = {
+  module = {
     home =
       config:
       let

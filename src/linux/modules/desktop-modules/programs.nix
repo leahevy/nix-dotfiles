@@ -567,7 +567,7 @@ in
     additionalIconThemes = [ ];
   };
 
-  on = {
+  module = {
     linux.enabled =
       config:
       let
@@ -975,7 +975,7 @@ in
       };
     };
 
-    moduleEnabled.linux.desktop.niri.home = config: {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           window-rules = [

@@ -22,7 +22,7 @@ args@{
     showKeyboardLayout = true;
   };
 
-  on = {
+  module = {
     linux.home = config: {
       programs.swaylock = lib.mkIf (!self.settings.useFancy && !self.settings.useEffects) {
         enable = true;

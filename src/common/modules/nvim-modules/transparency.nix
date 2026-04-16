@@ -18,7 +18,7 @@ args@{
     activeTabColor = null;
   };
 
-  on = {
+  module = {
     home =
       config:
       let

@@ -24,7 +24,7 @@ args@{
     pushoverNotifications = true;
   };
 
-  on = {
+  module = {
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         { service = "smartd.service"; }

@@ -13,7 +13,7 @@ args@{
   group = "style";
   input = "linux";
 
-  on = {
+  module = {
     standalone = config: {
       stylix.targets.kde.enable = lib.mkForce true;
     };

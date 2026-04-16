@@ -21,7 +21,7 @@ args@{
     withBackground = true;
   };
 
-  on = {
+  module = {
     linux.enabled = config: {
       nx.linux.desktop.common.graphicalSessionServices = [
         "nx-nwg-wrapper-1"

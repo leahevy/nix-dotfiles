@@ -24,7 +24,7 @@ args@{
     isolateConfig = true;
   };
 
-  on = {
+  module = {
     home =
       config:
       let

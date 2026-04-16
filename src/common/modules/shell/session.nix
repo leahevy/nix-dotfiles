@@ -19,7 +19,7 @@ args@{
     additionalAliases = { };
   };
 
-  on = {
+  module = {
     home = config: {
       home = {
         sessionVariables = {

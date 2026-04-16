@@ -14,7 +14,7 @@ args@{
   group = "services";
   input = "linux";
 
-  on = {
+  module = {
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {

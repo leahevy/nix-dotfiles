@@ -14,7 +14,7 @@ args@{
   group = "services";
   input = "linux";
 
-  on = {
+  module = {
     linux.system = config: {
       services.fail2ban = {
         enable = true;

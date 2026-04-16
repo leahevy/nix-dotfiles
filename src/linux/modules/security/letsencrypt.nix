@@ -22,7 +22,7 @@ args@{
     monitoringSchedule = "*-*-* 23:30:00";
   };
 
-  on = {
+  module = {
     system =
       config:
       let

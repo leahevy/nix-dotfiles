@@ -23,12 +23,12 @@ args@{
     turnOffMonitorsCommand = "true";
   };
 
-  on = {
+  module = {
     linux.enabled = config: {
       nx.linux.desktop.common.graphicalSessionServices = [ "swayidle" ];
     };
 
-    moduleEnabled.linux.desktop.niri.home =
+    ifEnabled.linux.desktop.niri.home =
       config:
       let
         toggleSwayidleScript = pkgs.writeShellScript "toggle-swayidle" ''

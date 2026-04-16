@@ -30,7 +30,7 @@ args@{
     fontFamily = "DejaVuSansM Nerd Font Mono";
   };
 
-  on = {
+  module = {
     home = config: {
       programs.alacritty = {
         enable = true;

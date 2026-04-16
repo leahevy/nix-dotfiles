@@ -21,7 +21,7 @@ args@{
     changeDirGlobally = true;
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.project-nvim = {

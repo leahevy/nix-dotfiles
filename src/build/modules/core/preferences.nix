@@ -630,7 +630,7 @@ in
     };
   };
 
-  on.linux =
+  module.linux =
     let
       buildThemeBasePath =
         themeString:
@@ -832,7 +832,7 @@ in
       };
     };
 
-  on.darwin.enabled = config: {
+  module.darwin.enabled = config: {
     nx.lib.iconResolveScript = self.dummyPackage pkgs "iconResolveScript";
   };
 }

@@ -14,7 +14,7 @@ args@{
   group = "media";
   input = "common";
 
-  on = {
+  module = {
     enabled = config: {
       nx.preferences.desktop.programs.videoPlayer = {
         name = "vlc";

@@ -18,7 +18,7 @@ args@{
     defaultSink = null;
   };
 
-  on = {
+  module = {
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {

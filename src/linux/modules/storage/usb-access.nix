@@ -13,7 +13,7 @@ args@{
   group = "storage";
   input = "linux";
 
-  on = {
+  module = {
     linux.system = config: {
       users.groups.usb-disk = { };
 

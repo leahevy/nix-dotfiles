@@ -19,7 +19,7 @@ args@{
     markAlignment = "left-fit";
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         extraPlugins = with pkgs.vimPlugins; [

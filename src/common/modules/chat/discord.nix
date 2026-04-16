@@ -18,7 +18,7 @@ args@{
     "discord"
   ];
 
-  on = {
+  module = {
     home = config: {
       programs.discord = {
         enable = true;

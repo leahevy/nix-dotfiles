@@ -66,7 +66,7 @@ args@{
     ];
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.auto-save = {

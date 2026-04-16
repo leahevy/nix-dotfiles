@@ -64,7 +64,7 @@ args@{
     ];
   };
 
-  on = {
+  module = {
     home = config: {
       # Modified version of nvim-cursorline with filetype exclusions
       #  Original: https://github.com/ya2s/nvim-cursorline

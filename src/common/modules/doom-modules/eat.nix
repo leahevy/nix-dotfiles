@@ -14,7 +14,7 @@ args@{
   group = "doom-modules";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.file.".config/doom/config/40-eat.el".text = ''
         (use-package! eat

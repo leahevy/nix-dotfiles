@@ -14,7 +14,7 @@ args@{
   group = "system";
   input = "linux";
 
-  on = {
+  module = {
     linux.system = config: {
       services.timesyncd = {
         enable = lib.mkForce true;

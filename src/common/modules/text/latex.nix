@@ -14,7 +14,7 @@ args@{
   group = "text";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       programs.texlive = {
         enable = true;

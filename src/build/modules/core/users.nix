@@ -22,7 +22,7 @@ in
   group = "core";
   input = "build";
 
-  on = {
+  module = {
     system = config: {
       sops = {
         secrets = {

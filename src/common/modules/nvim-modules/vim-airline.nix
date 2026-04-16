@@ -19,7 +19,7 @@ args@{
     themeOverride = true;
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.airline = {

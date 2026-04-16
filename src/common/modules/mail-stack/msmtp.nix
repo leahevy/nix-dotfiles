@@ -25,7 +25,7 @@ args@{
     service = "mail-stack";
   };
 
-  on = {
+  module = {
     home =
       config:
       let

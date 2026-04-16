@@ -14,7 +14,7 @@ args@{
   group = "utils";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.packages = with pkgs; [
         zstd

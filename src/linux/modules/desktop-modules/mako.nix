@@ -14,7 +14,7 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
-  on = {
+  module = {
     linux.enabled = config: {
       nx.linux.desktop.common.graphicalSessionServices = [ "mako" ];
     };

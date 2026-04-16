@@ -22,7 +22,7 @@ args@{
     acceptRoutes = false;
   };
 
-  on = {
+  module = {
     system =
       config:
       let

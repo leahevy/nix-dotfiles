@@ -14,7 +14,7 @@ args@{
   group = "services";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       services = {
         ssh-agent.enable = true;

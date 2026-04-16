@@ -18,7 +18,7 @@ args@{
     persistCache = false;
   };
 
-  on = {
+  module = {
     linux.home = config: {
       home.packages = with pkgs; [
         tor-browser

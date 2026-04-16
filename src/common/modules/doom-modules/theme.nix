@@ -14,7 +14,7 @@ args@{
   group = "doom-modules";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.file.".config/doom/themes/doom-coastal-theme.el".source = self.file "doom-coastal-theme.el";
 

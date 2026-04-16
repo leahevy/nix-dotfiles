@@ -14,7 +14,7 @@ args@{
   group = "doom-modules";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.file.".config/doom/config/20-nix-doom-logo.el".text = ''
         (defun my-main-menu-banner ()

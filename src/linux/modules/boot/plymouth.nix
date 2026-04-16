@@ -14,7 +14,7 @@ args@{
   group = "boot";
   input = "linux";
 
-  on = {
+  module = {
     linux.system = config: {
       boot = {
         initrd = {

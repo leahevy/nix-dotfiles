@@ -32,7 +32,7 @@ args@{
     borgCheckIntervalMinutes = 15;
   };
 
-  on = {
+  module = {
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         { service = "nx-auto-upgrade.service"; }
@@ -164,7 +164,7 @@ args@{
         };
       };
 
-    moduleEnabled.linux.desktop.niri.home =
+    ifEnabled.linux.desktop.niri.home =
       config:
       let
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;

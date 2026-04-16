@@ -14,7 +14,7 @@ args@{
   group = "core";
   input = "build";
 
-  on = {
+  module = {
     system = config: {
       services.journald.extraConfig = ''
         ForwardToWall=no

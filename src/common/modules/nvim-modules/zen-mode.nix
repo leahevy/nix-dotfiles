@@ -21,7 +21,7 @@ args@{
     enableTwilight = true;
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.zen-mode = {

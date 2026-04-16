@@ -16,7 +16,7 @@ in
   group = "core";
   input = "build";
 
-  on = {
+  module = {
     system = config: {
       time.timeZone = host.settings.system.timezone;
       i18n.defaultLocale = host.settings.system.locale.main;

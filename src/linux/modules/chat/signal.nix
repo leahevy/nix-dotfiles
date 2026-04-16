@@ -14,7 +14,7 @@ args@{
   group = "chat";
   input = "linux";
 
-  on = {
+  module = {
     linux.home = config: {
       home.packages = with pkgs; [
         signal-desktop

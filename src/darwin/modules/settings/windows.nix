@@ -22,7 +22,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     darwin.home = config: {
       programs.nix-plist-manager = {
         options = {

@@ -14,7 +14,7 @@ args@{
   group = "settings";
   input = "darwin";
 
-  on = {
+  module = {
     darwin.home = config: {
       programs.nix-plist-manager = {
         enable = true;

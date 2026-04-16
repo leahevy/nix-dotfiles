@@ -525,7 +525,7 @@ in
   group = "themes";
   input = "themes";
 
-  on = {
+  module = {
     enabled = config: {
       nx.preferences.theme = themeData;
     };

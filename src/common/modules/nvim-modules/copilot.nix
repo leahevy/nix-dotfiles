@@ -65,7 +65,7 @@ args@{
     additionalFiletypesToEnable = [ ];
   };
 
-  on = {
+  module = {
     home = config: {
       home.packages = with pkgs; [
         (lib.lowPrio nodejs)

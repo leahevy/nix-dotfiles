@@ -43,7 +43,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     home =
       { config, graphicalSessionServices, ... }:
       {

@@ -13,7 +13,7 @@ args@{
   group = "base";
   input = "themes";
 
-  on = {
+  module = {
     home =
       config:
       (lib.mkIf self.user.isStandalone {

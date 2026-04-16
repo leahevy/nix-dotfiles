@@ -35,7 +35,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     linux.system = config: {
       sops.secrets."smtp-password" = {
         format = "binary";

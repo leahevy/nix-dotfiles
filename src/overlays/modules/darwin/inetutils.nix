@@ -13,7 +13,7 @@ args@{
   group = "darwin";
   input = "overlays";
 
-  on = {
+  module = {
     darwin.overlays = [
       (final: prev: {
         inetutils = prev.inetutils.overrideAttrs (oldAttrs: {

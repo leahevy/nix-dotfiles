@@ -22,7 +22,7 @@ args@{
     showBattery = false;
   };
 
-  on = {
+  module = {
     linux.enabled = config: {
       nx.linux.desktop.common.graphicalSessionServices = [ "waybar" ];
     };

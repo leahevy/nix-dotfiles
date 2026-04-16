@@ -62,7 +62,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     enabled = config: {
       nx.profile.user = self.user;
       nx.profile.host = self.host;

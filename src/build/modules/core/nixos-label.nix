@@ -13,7 +13,7 @@ args@{
   group = "core";
   input = "build";
 
-  on = {
+  module = {
     linux.system = config: {
       system.nixos.label =
         let

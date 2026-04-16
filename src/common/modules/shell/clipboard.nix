@@ -14,7 +14,7 @@ args@{
   group = "shell";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.file.".local/bin/x" = {
         text = ''

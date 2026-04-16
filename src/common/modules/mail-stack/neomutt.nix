@@ -233,7 +233,7 @@ args@{
     colors = null;
   };
 
-  on = {
+  module = {
     overlays = [
       (final: prev: {
         neomutt = prev.neomutt.overrideAttrs (oldAttrs: {

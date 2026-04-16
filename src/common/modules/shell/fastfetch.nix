@@ -21,7 +21,7 @@ args@{
     addToShell = false;
   };
 
-  on = {
+  module = {
     home =
       config:
       lib.mkMerge [

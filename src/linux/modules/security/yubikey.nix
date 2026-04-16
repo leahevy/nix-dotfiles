@@ -22,7 +22,7 @@ args@{
     useU2fAuthForLogin = true;
   };
 
-  on = {
+  module = {
     linux.system = config: {
       services.pcscd.enable = true;
       hardware.gpgSmartcards.enable = true;

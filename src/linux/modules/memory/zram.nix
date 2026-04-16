@@ -26,7 +26,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     linux.system = config: {
       zramSwap = {
         enable = true;

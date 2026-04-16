@@ -62,7 +62,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     enabled = config: {
       nx.linux.desktop.niri.powerMenuChecks = lib.mkIf (self.isModuleEnabled "desktop.niri") [
         {
@@ -342,7 +342,7 @@ args@{
         };
       };
 
-    moduleEnabled.linux.desktop.niri.home =
+    ifEnabled.linux.desktop.niri.home =
       config:
       let
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;

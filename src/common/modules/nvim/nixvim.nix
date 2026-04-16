@@ -126,7 +126,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     enabled = config: {
       nx.preferences.desktop.programs.textEditor = {
         name = "nvim";

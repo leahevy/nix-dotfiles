@@ -19,7 +19,7 @@ args@{
     releaseSoftBlock = true;
   };
 
-  on = {
+  module = {
     linux.system = config: {
       hardware.bluetooth = {
         enable = true;

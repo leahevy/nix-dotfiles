@@ -14,7 +14,7 @@ args@{
   group = "fonts";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       fonts = {
         fontconfig = {

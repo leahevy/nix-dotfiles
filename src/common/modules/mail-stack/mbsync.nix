@@ -27,7 +27,7 @@ args@{
     withNotifications = true;
   };
 
-  on = {
+  module = {
     home =
       config:
       let

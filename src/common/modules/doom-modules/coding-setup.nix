@@ -14,7 +14,7 @@ args@{
   group = "doom-modules";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.file.".config/doom/config/70-coding-setup.el".text = ''
         (add-hook 'rjsx-mode-hook

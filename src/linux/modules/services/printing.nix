@@ -45,7 +45,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         { string = "CreateDevice failed: org\\.freedesktop\\.DBus\\.Error\\.ServiceUnknown"; }

@@ -89,7 +89,7 @@ in
     };
   };
 
-  on = {
+  module = {
     linux.home =
       config:
       let

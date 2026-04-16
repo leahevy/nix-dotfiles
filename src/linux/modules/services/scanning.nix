@@ -25,7 +25,7 @@ args@{
     withUtsushiDriver = false;
   };
 
-  on = {
+  module = {
     linux.overlays = [
       (final: prev: {
         xsane = prev.xsane.override {

@@ -14,7 +14,7 @@ args@{
   group = "email";
   input = "common";
 
-  on = {
+  module = {
     enabled = config: {
       nx.preferences.desktop.programs.emailClient = {
         name = "thunderbird";
@@ -39,7 +39,7 @@ args@{
       };
     };
 
-    moduleEnabled.linux.desktop.niri.home = config: {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           binds =

@@ -14,7 +14,7 @@ args@{
   group = "core";
   input = "darwin";
 
-  on = {
+  module = {
     darwin.standalone =
       { config, ... }:
       {

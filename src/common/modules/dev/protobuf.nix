@@ -18,7 +18,7 @@ args@{
     useLatest = false;
   };
 
-  on = {
+  module = {
     home = config: {
       home.packages =
         if self.settings.useLatest then

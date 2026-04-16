@@ -31,7 +31,7 @@ args@{
     "symbola"
   ];
 
-  on = {
+  module = {
     home = config: {
       home.packages =
         (with pkgs; [

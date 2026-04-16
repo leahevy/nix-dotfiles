@@ -20,7 +20,7 @@ args@{
     approveOnSave = false;
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.autosource = {

@@ -31,7 +31,7 @@ args@{
     catSize = 75;
   };
 
-  on = {
+  module = {
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {

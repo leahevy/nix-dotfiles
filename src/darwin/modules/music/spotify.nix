@@ -14,7 +14,7 @@ args@{
   group = "music";
   input = "darwin";
 
-  on = {
+  module = {
     darwin.enabled = config: {
       nx.homebrew.casks = [ "spotify" ];
     };

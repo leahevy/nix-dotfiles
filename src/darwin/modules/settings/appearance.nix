@@ -26,7 +26,7 @@ args@{
     sidebarIconSize = "Medium";
   };
 
-  on = {
+  module = {
     darwin.home = config: {
       programs.nix-plist-manager = {
         options = {

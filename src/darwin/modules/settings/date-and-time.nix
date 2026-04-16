@@ -28,7 +28,7 @@ args@{
     use24HourTime = false;
   };
 
-  on = {
+  module = {
     darwin.home = config: {
       programs.nix-plist-manager = {
         options = {

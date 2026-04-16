@@ -47,7 +47,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     linux.home = config: {
       home.file = (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings).homeFiles;
       xdg.desktopEntries =

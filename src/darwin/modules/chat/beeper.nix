@@ -14,7 +14,7 @@ args@{
   group = "chat";
   input = "darwin";
 
-  on = {
+  module = {
     darwin.enabled = config: {
       nx.homebrew.casks = [ "beeper" ];
     };

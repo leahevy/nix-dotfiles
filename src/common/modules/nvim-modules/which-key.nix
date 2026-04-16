@@ -46,7 +46,7 @@ in
     showKeys = true;
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim.plugins.which-key = {
         enable = true;

@@ -14,7 +14,7 @@ args@{
   group = "games";
   input = "linux";
 
-  on = {
+  module = {
     linux.home = config: {
       home.packages = with pkgs; [
         jstest-gtk

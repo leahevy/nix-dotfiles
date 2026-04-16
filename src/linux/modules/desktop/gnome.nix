@@ -25,7 +25,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     linux.system = config: {
       services.displayManager.gdm.enable = true;
       services.desktopManager.gnome.enable = true;

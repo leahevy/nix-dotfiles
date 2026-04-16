@@ -17,7 +17,7 @@ in
   group = "core";
   input = "build";
 
-  on = {
+  module = {
     system = config: {
       networking.hostName = host.hostname;
       networking.wireless.enable = ifSet host.settings.networking.wifi.enabled false;

@@ -64,7 +64,7 @@ args@{
     viewportBGColor = null;
   };
 
-  on = {
+  module = {
     home =
       config:
       let

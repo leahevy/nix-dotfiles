@@ -13,7 +13,7 @@ args@{
   group = "core";
   input = "build";
 
-  on = {
+  module = {
     home = config: {
       home.packages = with pkgs; [
         coreutils

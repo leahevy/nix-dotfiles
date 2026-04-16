@@ -24,7 +24,7 @@ args@{
     useSwitcher = true;
   };
 
-  on = {
+  module = {
     linux.enabled = config: {
       nx.linux.desktop.common.graphicalSessionServices = [ "nx-swaybg" ];
       nx.linux.desktop.niri.nextWallpaperCommand =

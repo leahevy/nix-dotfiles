@@ -18,7 +18,7 @@ args@{
     enableTransience = true;
   };
 
-  on = {
+  module = {
     home =
       config:
       let

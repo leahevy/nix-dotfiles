@@ -14,7 +14,7 @@ args@{
   group = "dev";
   input = "darwin";
 
-  on = {
+  module = {
     darwin.enabled = config: {
       nx.homebrew.casks = [ "docker-desktop" ];
     };

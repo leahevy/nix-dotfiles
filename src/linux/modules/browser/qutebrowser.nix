@@ -34,7 +34,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     linux.enabled =
       config:
       let

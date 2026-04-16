@@ -29,7 +29,7 @@ args@{
     additionalPatterns = { };
   };
 
-  on = {
+  module = {
     home =
       config:
       let

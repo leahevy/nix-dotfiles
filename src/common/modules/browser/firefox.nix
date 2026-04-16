@@ -14,7 +14,7 @@ args@{
   group = "browser";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       programs.firefox = {
         enable = true;

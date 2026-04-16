@@ -14,7 +14,7 @@ args@{
   group = "video-conferencing";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.packages = with pkgs; [
         teams-for-linux

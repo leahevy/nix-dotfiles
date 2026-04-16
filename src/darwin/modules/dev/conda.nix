@@ -22,7 +22,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     darwin.enabled = config: {
       nx.homebrew.casks = [ "miniconda" ];
     };

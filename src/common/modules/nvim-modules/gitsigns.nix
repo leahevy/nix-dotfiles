@@ -21,7 +21,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.gitsigns = {

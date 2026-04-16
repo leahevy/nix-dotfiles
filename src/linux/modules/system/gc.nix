@@ -18,7 +18,7 @@ args@{
     useNH = true;
   };
 
-  on = {
+  module = {
     linux.system = config: {
       programs.nh = lib.mkIf self.settings.useNH {
         enable = true;

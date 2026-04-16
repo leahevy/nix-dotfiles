@@ -28,7 +28,7 @@ args@{
     includeSurroundingWhitespace = true;
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.treesitter-textobjects = {

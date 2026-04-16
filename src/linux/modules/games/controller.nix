@@ -18,7 +18,7 @@ args@{
     enableXone = true;
   };
 
-  on = {
+  module = {
     linux.system = config: {
       hardware.xone.enable = self.settings.enableXone;
     };

@@ -14,7 +14,7 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
-  on = {
+  module = {
     linux.system = config: {
       programs.gamemode = {
         enable = true;

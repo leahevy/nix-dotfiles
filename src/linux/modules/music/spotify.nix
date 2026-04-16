@@ -16,7 +16,7 @@ args@{
 
   unfree = [ "spotify" ];
 
-  on = {
+  module = {
     linux.home = config: {
       home.packages = with pkgs; [
         spotify

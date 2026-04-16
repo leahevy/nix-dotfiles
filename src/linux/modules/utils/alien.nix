@@ -14,7 +14,7 @@ args@{
   group = "utils";
   input = "linux";
 
-  on = {
+  module = {
     linux.home = config: {
       home = {
         shellAliases =

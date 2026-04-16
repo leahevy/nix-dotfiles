@@ -32,9 +32,9 @@ args@{
     dataPath = null;
   };
 
-  on = {
+  module = {
 
-    moduleEnabled.linux.desktop.niri.home = config: {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           window-rules = [

@@ -49,7 +49,7 @@ args@{
     vim_ui_input = true;
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.goto-preview = {

@@ -20,7 +20,7 @@ args@{
     serverURL = "https://vault.bitwarden.eu";
   };
 
-  on = {
+  module = {
     system =
       config:
       let

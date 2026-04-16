@@ -46,7 +46,7 @@ args@{
     projects = { };
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.neotest = {

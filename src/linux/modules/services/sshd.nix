@@ -26,7 +26,7 @@ args@{
     port = 22;
   };
 
-  on = {
+  module = {
     linux.system = config: {
       services = {
         openssh = {

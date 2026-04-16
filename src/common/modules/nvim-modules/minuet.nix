@@ -82,7 +82,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     home =
       config:
       let

@@ -13,7 +13,7 @@ args@{
   group = "programs";
   input = "build";
 
-  on = {
+  module = {
     system = config: {
       environment.systemPackages =
         with pkgs;

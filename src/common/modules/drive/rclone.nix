@@ -20,7 +20,7 @@ args@{
     remotes = { };
   };
 
-  on = {
+  module = {
     linux.enabled =
       config:
       let
@@ -1238,7 +1238,7 @@ args@{
         };
       };
 
-    moduleEnabled.linux.desktop.niri.home = config: {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           binds = with config.lib.niri.actions; {

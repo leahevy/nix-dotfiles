@@ -20,7 +20,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     home = config: {
       programs.jujutsu = {
         enable = true;

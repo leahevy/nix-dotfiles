@@ -18,7 +18,7 @@ args@{
     monitoringEnabled = true;
   };
 
-  on = {
+  module = {
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
@@ -255,7 +255,7 @@ args@{
 
       };
 
-    moduleEnabled.linux.desktop.niri.home =
+    ifEnabled.linux.desktop.niri.home =
       config:
       let
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;

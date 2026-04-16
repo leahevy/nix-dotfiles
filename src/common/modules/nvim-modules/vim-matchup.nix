@@ -26,7 +26,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.vim-matchup = {

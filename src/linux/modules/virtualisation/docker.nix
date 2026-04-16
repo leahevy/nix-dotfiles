@@ -21,7 +21,7 @@ args@{
     additionalSettings = { };
   };
 
-  on = {
+  module = {
     linux.system = config: {
       virtualisation.docker = {
         enable = true;

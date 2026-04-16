@@ -42,7 +42,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     enabled = config: {
       nx.global = self.variables.nx.config;
     };

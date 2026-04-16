@@ -14,7 +14,7 @@ args@{
   group = "git";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       programs.lazygit = {
         enable = true;

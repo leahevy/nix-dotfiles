@@ -13,7 +13,7 @@ args@{
   group = "system";
   input = "build";
 
-  on = {
+  module = {
     home = config: {
       home.file.".config/gnome-initial-setup-done".text = "yes";
       home.file.".hushlogin".text = "";

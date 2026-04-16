@@ -14,7 +14,7 @@ args@{
   group = "photos";
   input = "common";
 
-  on = {
+  module = {
     linux.enabled = config: {
       nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
         "ente-desktop"
@@ -45,7 +45,7 @@ args@{
       };
     };
 
-    moduleEnabled.linux.desktop.niri.home = config: {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings.binds = with config.lib.niri.actions; {
           "Mod+Ctrl+Alt+8" = {

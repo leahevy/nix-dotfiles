@@ -46,7 +46,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     linux.home = config: {
       systemd.user.services.nx-luks-data-drive-ready = {
         Unit = {

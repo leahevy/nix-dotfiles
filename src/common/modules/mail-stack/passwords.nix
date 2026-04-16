@@ -34,7 +34,7 @@ args@{
         throw "Unsupported platform for keyring authentication";
   };
 
-  on = {
+  module = {
     home =
       config:
       let

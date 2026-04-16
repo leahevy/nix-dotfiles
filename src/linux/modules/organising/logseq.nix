@@ -14,7 +14,7 @@ args@{
   group = "organising";
   input = "linux";
 
-  on = {
+  module = {
     linux.overlays = [
       (final: prev: {
         logseq =
@@ -37,13 +37,13 @@ args@{
       })
     ];
 
-    moduleEnabled.linux.desktop.niri.linux.enabled = config: {
+    ifEnabled.linux.desktop.niri.linux.enabled = config: {
       nx.linux.desktop.niri.autostartPrograms = [
         "logseq"
       ];
     };
 
-    moduleEnabled.linux.desktop.niri.home = config: {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           binds = with config.lib.niri.actions; {

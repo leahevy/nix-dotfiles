@@ -30,7 +30,7 @@ args@{
     useDifftastic = true;
   };
 
-  on = {
+  module = {
     home =
       config:
       let

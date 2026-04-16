@@ -53,7 +53,7 @@ in
     relativeSSHAuthSockPath = null;
   };
 
-  on = {
+  module = {
     home = config: {
       services = {
         gpg-agent = {

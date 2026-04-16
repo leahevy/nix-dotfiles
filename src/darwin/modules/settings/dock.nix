@@ -34,7 +34,7 @@ args@{
     magnificationSize = 70;
   };
 
-  on = {
+  module = {
     darwin.home = config: {
       programs.nix-plist-manager = {
         options = {

@@ -21,7 +21,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     darwin.enabled = config: {
       nx.homebrew.casks = [ "keyboard-cowboy" ];
     };

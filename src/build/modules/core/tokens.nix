@@ -13,7 +13,7 @@ args@{
   group = "core";
   input = "build";
 
-  on = {
+  module = {
     home = config: {
       sops.secrets.github_token = {
         sopsFile = self.config.secretsPath "global-secrets.yaml";

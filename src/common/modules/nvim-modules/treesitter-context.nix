@@ -77,7 +77,7 @@ args@{
     ];
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.treesitter-context = {

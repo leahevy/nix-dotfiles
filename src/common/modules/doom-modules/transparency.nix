@@ -14,7 +14,7 @@ args@{
   group = "doom-modules";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.file.".config/doom/config/60-transparency.el".text = ''
         (defun my/set-transparency (alpha-bg)

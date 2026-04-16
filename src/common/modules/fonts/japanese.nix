@@ -22,7 +22,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     home = config: {
       home.packages = with pkgs; [
         noto-fonts-cjk-sans

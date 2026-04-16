@@ -35,7 +35,7 @@ args@{
     tmuxinatorPackage = helpers.requireMinimumPackageVersion args "tmuxinator" "3.3.7";
   };
 
-  on = {
+  module = {
     linux = {
       enabled = config: {
         nx.linux.desktop.niri.scratchpadCommand = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") "tx";

@@ -29,7 +29,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         extraPlugins = [

@@ -18,7 +18,7 @@ args@{
     "zoom"
   ];
 
-  on = {
+  module = {
     home =
       config:
       let

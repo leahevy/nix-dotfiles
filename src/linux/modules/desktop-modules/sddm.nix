@@ -25,7 +25,7 @@ args@{
     autologin = false;
   };
 
-  on = {
+  module = {
     system =
       config:
       let

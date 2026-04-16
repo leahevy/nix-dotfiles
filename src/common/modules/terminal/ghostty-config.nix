@@ -33,7 +33,7 @@ args@{
     fontFamily = "DejaVuSansM Nerd Font Mono";
   };
 
-  on = {
+  module = {
     enabled = config: {
       nx.preferences.desktop.programs.terminal = {
         name = "ghostty";

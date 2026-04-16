@@ -24,7 +24,7 @@ args@{
     saveKey = "git_root";
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.arrow = {

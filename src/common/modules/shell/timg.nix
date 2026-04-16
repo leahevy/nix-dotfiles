@@ -14,7 +14,7 @@ args@{
   group = "shell";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.packages = with pkgs; [
         timg

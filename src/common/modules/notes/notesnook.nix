@@ -14,8 +14,8 @@ args@{
   group = "notes";
   input = "common";
 
-  on = {
-    moduleEnabled.linux.desktop.niri.home = config: {
+  module = {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = lib.mkIf (!(self.linux.isModuleEnabled "organising.logseq")) {
         settings = {
           binds = with config.lib.niri.actions; {

@@ -151,7 +151,7 @@ rec {
       };
   };
 
-  on = {
+  module = {
     home =
       config:
       let

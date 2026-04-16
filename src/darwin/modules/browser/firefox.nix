@@ -14,7 +14,7 @@ args@{
   group = "browser";
   input = "darwin";
 
-  on = {
+  module = {
     darwin.enabled = config: {
       nx.homebrew.casks = [ "firefox" ];
     };

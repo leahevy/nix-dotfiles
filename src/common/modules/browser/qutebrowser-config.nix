@@ -436,7 +436,7 @@ args@{
     darwinFileManager = [ "open" ];
   };
 
-  on = {
+  module = {
     enabled = config: {
       nx.preferences.desktop.programs.webBrowser = {
         name = "qutebrowser";

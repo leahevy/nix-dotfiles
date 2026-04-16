@@ -47,7 +47,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     home =
       config:
       let
@@ -1078,7 +1078,7 @@ args@{
         };
       };
 
-    moduleEnabled.linux.desktop.niri.home =
+    ifEnabled.linux.desktop.niri.home =
       config:
       let
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;

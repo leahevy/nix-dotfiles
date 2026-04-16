@@ -22,7 +22,7 @@ args@{
     };
   };
 
-  on =
+  module =
     let
       stylixConfig =
         config:

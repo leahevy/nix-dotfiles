@@ -53,7 +53,7 @@ args@{
     additionalLibraries = [ ];
   };
 
-  on = {
+  module = {
     system =
       config:
       let

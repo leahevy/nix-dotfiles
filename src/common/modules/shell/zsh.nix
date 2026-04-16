@@ -14,7 +14,7 @@ args@{
   group = "shell";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       programs = {
         nix-index.enableZshIntegration = true;

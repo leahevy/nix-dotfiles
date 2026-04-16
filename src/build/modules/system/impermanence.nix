@@ -222,7 +222,7 @@ in
   group = "system";
   input = "build";
 
-  on = {
+  module = {
     system =
       config:
       lib.mkIf (self.host.impermanence or false) {

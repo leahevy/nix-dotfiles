@@ -14,7 +14,7 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
-  on = {
+  module = {
     linux.system = config: {
       environment.systemPackages = with pkgs; [
         xwayland-satellite

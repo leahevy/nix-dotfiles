@@ -14,7 +14,7 @@ args@{
   group = "git";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.packages = with pkgs; [
         git-credential-manager

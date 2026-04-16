@@ -13,7 +13,7 @@ args@{
   group = "core";
   input = "build";
 
-  on = {
+  module = {
     darwin.overlays = [
       (final: prev: {
         pre-commit = prev.pre-commit.overridePythonAttrs (oldAttrs: {

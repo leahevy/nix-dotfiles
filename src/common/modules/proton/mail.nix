@@ -22,8 +22,8 @@ args@{
 
   requiredArchitectures = [ "x86_64" ];
 
-  on = {
-    moduleEnabled.linux.desktop-modules.desktop-files.enabled = config: {
+  module = {
+    ifEnabled.linux.desktop-modules.desktop-files.enabled = config: {
       nx.linux.desktop-modules.desktop-files.entries.proton-mail = {
         exec = "~/.local/bin/proton-mail";
         name = "Proton Mail";
@@ -97,7 +97,7 @@ args@{
         };
       };
 
-    moduleEnabled.linux.desktop.niri.home = config: {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           binds = lib.mkIf (!(self.isModuleEnabled "mail-stack.neomutt")) (

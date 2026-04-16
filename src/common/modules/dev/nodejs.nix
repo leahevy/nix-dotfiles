@@ -21,7 +21,7 @@ args@{
     additionalPackages = [ ];
   };
 
-  on = {
+  module = {
     home =
       config:
       let

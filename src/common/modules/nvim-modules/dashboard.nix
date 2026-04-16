@@ -22,7 +22,7 @@ args@{
     ensureProjects = [ ];
   };
 
-  on = {
+  module = {
     home =
       config:
       let

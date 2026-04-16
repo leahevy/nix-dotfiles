@@ -22,7 +22,7 @@ args@{
     additionalMCPServers = { };
   };
 
-  on = {
+  module = {
     home =
       config:
       let

@@ -26,7 +26,7 @@ args@{
     disableDisplayAudio = true;
   };
 
-  on = {
+  module = {
     linux.home = config: {
       home.persistence."${self.persist}" = {
         directories = [

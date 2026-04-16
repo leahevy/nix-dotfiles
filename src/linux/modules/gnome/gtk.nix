@@ -14,7 +14,7 @@ args@{
   group = "gnome";
   input = "linux";
 
-  on = {
+  module = {
     linux.home = config: {
       home.persistence."${self.persist}" = {
         directories = [

@@ -14,7 +14,7 @@ args@{
   group = "doom-modules";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.file.".config/doom/config/20-doom-dashboard.el".text = ''
         (defun my/goto-doom-dashboard ()

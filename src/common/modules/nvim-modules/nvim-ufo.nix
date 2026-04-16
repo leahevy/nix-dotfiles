@@ -33,7 +33,7 @@ args@{
     enableTreesitterProvider = true;
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         plugins.nvim-ufo = {

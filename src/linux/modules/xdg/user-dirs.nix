@@ -25,7 +25,7 @@ args@{
     templates = "templates";
   };
 
-  on = {
+  module = {
     home =
       config:
       if !(self.linux.isModuleEnabled "storage.luks-data-drive") then

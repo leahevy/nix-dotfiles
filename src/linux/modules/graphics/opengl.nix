@@ -18,7 +18,7 @@ args@{
     withIntel = false;
   };
 
-  on = {
+  module = {
     linux.home = config: {
       home.persistence."${self.persist}" = {
         directories = [

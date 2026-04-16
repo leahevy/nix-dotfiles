@@ -28,7 +28,7 @@ args@{
     staticAccuracy = 100;
   };
 
-  on = {
+  module = {
     system =
       config:
       let

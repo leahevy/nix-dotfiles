@@ -145,7 +145,7 @@ args@{
     };
   };
 
-  on =
+  module =
     let
       generateBashArray =
         name: attrset: field:

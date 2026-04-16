@@ -20,7 +20,7 @@ args@{
     additionalUDPPortRanges = [ ]; # List of { from = INT; to = INT; }
   };
 
-  on = {
+  module = {
     linux.system = config: {
       networking.firewall = {
         enable = true;

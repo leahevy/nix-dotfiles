@@ -17,7 +17,7 @@ rec {
 
   unfree = [ "aic8800" ];
 
-  on = {
+  module = {
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {

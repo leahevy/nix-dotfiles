@@ -14,7 +14,7 @@ args@{
   group = "nvim";
   input = "darwin";
 
-  on = {
+  module = {
     darwin.enabled = config: {
       nx.homebrew.brews = [ "neovide" ];
     };

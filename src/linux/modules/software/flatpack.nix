@@ -14,7 +14,7 @@ args@{
   group = "software";
   input = "linux";
 
-  on = {
+  module = {
     home =
       config:
       let

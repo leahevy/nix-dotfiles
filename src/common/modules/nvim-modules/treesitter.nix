@@ -111,7 +111,7 @@ args@{
     extraGrammars = [ ];
   };
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim.plugins.treesitter = {
         enable = true;

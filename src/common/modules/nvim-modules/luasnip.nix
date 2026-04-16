@@ -14,7 +14,7 @@ args@{
   group = "nvim-modules";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim = {
         extraPlugins = lib.optionals (self.isModuleEnabled "nvim-modules.telescope") [

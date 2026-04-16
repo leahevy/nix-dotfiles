@@ -14,7 +14,7 @@ args@{
   group = "organising";
   input = "darwin";
 
-  on = {
+  module = {
     darwin.enabled = config: {
       nx.homebrew.casks = [ "logseq" ];
     };

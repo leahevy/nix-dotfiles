@@ -14,14 +14,14 @@ args@{
   group = "passwords";
   input = "common";
 
-  on = {
-    moduleEnabled.darwin.passwords.keepassxc.darwin.home = config: {
+  module = {
+    ifEnabled.darwin.passwords.keepassxc.darwin.home = config: {
       programs.keepassxc = {
         package = null;
       };
     };
 
-    moduleDisabled.darwin.passwords.keepassxc.darwin.home = config: {
+    ifDisabled.darwin.passwords.keepassxc.darwin.home = config: {
       assertions = [
         {
           assertion = false;
@@ -89,7 +89,7 @@ args@{
       };
     };
 
-    moduleEnabled.linux.desktop.niri.home = config: {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           binds = with config.lib.niri.actions; {

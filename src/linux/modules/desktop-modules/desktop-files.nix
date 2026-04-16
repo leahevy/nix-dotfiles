@@ -77,7 +77,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     enabled = config: {
       nx.lib.primaryIcons = lib.filter (icon: icon != null && icon != "") (
         lib.mapAttrsToList (

@@ -20,14 +20,14 @@ args@{
     waylandQuirks = false;
   };
 
-  on = {
-    moduleEnabled.linux.desktop.niri.linux.enabled = config: {
+  module = {
+    ifEnabled.linux.desktop.niri.linux.enabled = config: {
       nx.linux.desktop.niri.autostartPrograms = [
         "beeper"
       ];
     };
 
-    moduleEnabled.linux.desktop.niri.home = config: {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           binds = with config.lib.niri.actions; {

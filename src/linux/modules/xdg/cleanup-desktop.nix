@@ -14,7 +14,7 @@ args@{
   group = "xdg";
   input = "linux";
 
-  on = {
+  module = {
     linux.home = config: {
       xdg.desktopEntries = {
         "nvidia-settings" = lib.mkIf (self.isModuleEnabled "graphics.nvidia-setup") {

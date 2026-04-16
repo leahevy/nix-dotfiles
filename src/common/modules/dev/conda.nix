@@ -18,7 +18,7 @@ args@{
     withPkgInstall = false;
   };
 
-  on = {
+  module = {
     home = config: {
       home.file."${config.xdg.configHome}/fish-init/60-conda.fish".text = ''
         if command -q conda

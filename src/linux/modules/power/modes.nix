@@ -21,7 +21,7 @@ args@{
     hybridSleep = true;
   };
 
-  on = {
+  module = {
     linux.system = config: {
       systemd.targets = {
         sleep.enable = self.settings.sleep;

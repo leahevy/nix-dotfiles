@@ -29,7 +29,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     overlays = [
       (final: prev: {
         vimPlugins = prev.vimPlugins // {

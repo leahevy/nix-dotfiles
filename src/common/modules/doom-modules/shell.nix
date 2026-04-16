@@ -14,7 +14,7 @@ args@{
   group = "doom-modules";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       home.file.".config/doom/config/10-shell.el".text = ''
         (setq shell-file-name (executable-find "bash"))

@@ -31,7 +31,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     system =
       config:
       let

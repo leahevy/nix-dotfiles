@@ -14,7 +14,7 @@ args@{
   group = "graphics";
   input = "darwin";
 
-  on = {
+  module = {
     darwin.enabled = config: {
       nx.homebrew.casks = [ "gimp" ];
     };

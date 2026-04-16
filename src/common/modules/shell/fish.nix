@@ -28,7 +28,7 @@ args@{
     additionalFishFunctions = { };
   };
 
-  on = {
+  module = {
     home = config: {
       home.packages =
         with pkgs;

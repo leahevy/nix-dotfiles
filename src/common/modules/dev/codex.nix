@@ -14,7 +14,7 @@ args@{
   group = "dev";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       programs.codex = {
         enable = true;

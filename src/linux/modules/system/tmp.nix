@@ -14,7 +14,7 @@ args@{
   group = "system";
   input = "linux";
 
-  on = {
+  module = {
     linux.system = config: {
       boot.tmp.useTmpfs = true;
       boot.tmp.tmpfsSize = self.host.settings.system.tmpSize;

@@ -26,7 +26,7 @@ args@{
     ];
   };
 
-  on =
+  module =
     let
       package = self.settings.package;
       program = self.settings.program;

@@ -29,7 +29,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     linux.home = config: {
       services.wlsunset = {
         enable = true;

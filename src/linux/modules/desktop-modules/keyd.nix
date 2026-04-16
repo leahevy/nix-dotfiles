@@ -21,7 +21,7 @@ args@{
     additionalIdsToIgnore = [ ];
   };
 
-  on = {
+  module = {
     linux.home = config: {
       home.packages = with pkgs; [
         keyd

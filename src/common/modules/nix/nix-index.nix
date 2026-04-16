@@ -14,7 +14,7 @@ args@{
   group = "nix";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       programs = {
         nix-index.enable = true;

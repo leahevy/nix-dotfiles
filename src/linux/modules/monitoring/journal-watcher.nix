@@ -184,7 +184,7 @@ args@{
       };
     };
 
-  on =
+  module =
     let
       baseIgnorePatterns = [
         {

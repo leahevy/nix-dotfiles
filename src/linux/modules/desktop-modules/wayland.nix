@@ -14,7 +14,7 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
-  on = {
+  module = {
     linux.system = config: {
       environment.sessionVariables = {
         ELECTRON_OZONE_PLATFORM_HINT = "x11";

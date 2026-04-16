@@ -26,7 +26,7 @@ args@{
     ];
   };
 
-  on = {
+  module = {
     linux.home = config: {
       services.udiskie = {
         enable = true;

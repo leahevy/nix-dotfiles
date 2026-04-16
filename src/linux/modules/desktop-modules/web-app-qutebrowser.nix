@@ -37,7 +37,7 @@ args@{
     }
   ];
 
-  on =
+  module =
     let
       enableKeepassxc = (
         self.user.gpg != null

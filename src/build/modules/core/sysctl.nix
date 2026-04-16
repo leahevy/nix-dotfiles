@@ -21,7 +21,7 @@ args@{
     };
   };
 
-  on = {
+  module = {
     system = config: {
       boot.kernel.sysctl = {
         "fs.inotify.max_user_watches" = self.settings.inotify.maxUserWatches;

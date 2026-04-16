@@ -14,7 +14,7 @@ args@{
   group = "style";
   input = "linux";
 
-  on = {
+  module = {
     standalone = config: {
       stylix.targets.gnome.enable = lib.mkForce true;
     };

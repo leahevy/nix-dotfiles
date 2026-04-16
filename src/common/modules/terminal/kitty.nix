@@ -18,7 +18,7 @@ args@{
     setEnv = false;
   };
 
-  on = {
+  module = {
     home = config: {
       programs.kitty = {
         enable = true;

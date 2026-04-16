@@ -24,7 +24,7 @@ args@{
     enableSSHAgent = true;
   };
 
-  on = {
+  module = {
     overlays = [
       (final: prev: {
         bitwarden-cli = prev.bitwarden-cli.overrideAttrs (oldAttrs: {
@@ -594,7 +594,7 @@ args@{
       };
     };
 
-    moduleEnabled.linux.desktop.niri.home = config: {
+    ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
           binds = with config.lib.niri.actions; {

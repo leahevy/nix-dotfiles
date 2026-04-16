@@ -15,7 +15,7 @@ args@{
   group = "nvim-modules";
   input = "common";
 
-  on = {
+  module = {
     home = config: {
       programs.nixvim.extraConfigLua = ''
         _G.nx_modules = _G.nx_modules or {}
