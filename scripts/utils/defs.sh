@@ -34,11 +34,12 @@ export AUTO_UPDATE_INPUTS=(
 
 export REBOOT_CHECK_INPUTS=(
     "nixpkgs"
-    "nixpkgs-darwin"
     "nixpkgs-nix"
 )
 
 export TRUNCATE_INPUTS=(
+    "nixpkgs-darwin"
+    "nixpkgs-nix"
     "nixpkgs-unstable"
 )
 
