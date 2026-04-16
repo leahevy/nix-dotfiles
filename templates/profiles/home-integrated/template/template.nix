@@ -44,7 +44,7 @@
 
     extraSettings = { };
 
-    on = {
+    module = {
       # Runs for ALL modules (even disabled) in BOTH contexts.
       # Only set config.nx.* options here.
       # init = args@{ lib, self, ... }: context@{ config, options, ... }: { };

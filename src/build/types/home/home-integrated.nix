@@ -174,7 +174,7 @@ with lib;
       description = "Additional untyped settings to add to the user configuration";
     };
 
-    on = mkOption {
+    module = mkOption {
       type = types.attrs;
       default = { };
       description = "Event functions (init, enabled, home, system, standalone, integrated + linux/darwin variants). Signature: args -> config -> { }";

@@ -52,7 +52,7 @@ args@{
     }
   ];
 
-  on = {
+  module = {
     # All modules, both contexts, only config.nx.*, no self.settings
     # init = config: { };  # only config: allowed, not { config, ... }
 

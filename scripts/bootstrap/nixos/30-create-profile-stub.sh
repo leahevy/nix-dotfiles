@@ -312,7 +312,7 @@ fi
 
     extraSettings = { };
 
-    on = {
+    module = {
       system = args@{
         lib,
         pkgs,
