@@ -15,6 +15,21 @@ args@{
   input = "common";
 
   on = {
+    moduleEnabled.darwin.passwords.keepassxc.darwin.home = config: {
+      programs.keepassxc = {
+        package = null;
+      };
+    };
+
+    moduleDisabled.darwin.passwords.keepassxc.darwin.home = config: {
+      assertions = [
+        {
+          assertion = false;
+          message = "The common.passwords.keepassxc module needs the darwin.passwords.keepassxc module to be enabled on Darwin!";
+        }
+      ];
+    };
+
     home = config: {
       programs.keepassxc = {
         enable = true;
