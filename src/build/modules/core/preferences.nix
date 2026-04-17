@@ -292,7 +292,8 @@ in
 
   rawOptions = {
     nx.lib.iconResolveScript = lib.mkOption {
-      type = lib.types.package;
+      type = lib.types.nullOr lib.types.package;
+      default = null;
       description = "nx-resolve-icon script for resolving icon names to store paths at runtime";
     };
 

@@ -17,6 +17,7 @@ args@{
     nx.global = {
       minEnabledModules = lib.mkOption {
         type = lib.types.int;
+        default = 10000;
         description = "Minimum number of modules that must be enabled to ensure configuration integrity";
       };
       security = {
@@ -27,6 +28,7 @@ args@{
               "last"
               "none"
             ];
+            default = "last";
             description = "Commit verification level for nxcore repository";
           };
           nxconfig = lib.mkOption {
@@ -35,6 +37,7 @@ args@{
               "last"
               "none"
             ];
+            default = "last";
             description = "Commit verification level for nxconfig repository";
           };
         };
