@@ -55,6 +55,11 @@ check_config_directory() {
     local CONTEXT="${2:-deployment}"
     local REQUIRED="${3:-true}"
 
+    if [[ "${WORKFLOW_RUN:-}" == "1" && -n "${NXCORE_DIR:-}" && -n "${CONFIG_DIR:-}" ]]; then
+        export NXCORE_DIR CONFIG_DIR
+        return
+    fi
+
     if [[ -f /etc/NIXOS && "$CONTEXT" != "deployment" ]]; then
         NXCORE_DIR="/nxcore"
         CONFIG_DIR="/nxconfig"

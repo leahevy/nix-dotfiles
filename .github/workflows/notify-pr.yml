@@ -62,3 +62,12 @@ jobs:
             --form-string "url=${{ github.event.pull_request.html_url }}" \
             --form-string "url_title=View Pull Request" \
             https://api.pushover.net/1/messages.json
+
+      - name: Trigger nxconfig bump on manual merge
+        if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'update-flake-inputs'
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: token ${{ secrets.NXCONFIG_PAT }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository_owner }}/nx-personal-config/dispatches" \
+            -d '{"event_type":"nxcore-merged"}'
