@@ -14,9 +14,6 @@
 
 let
   inherit (common)
-    evalConfigModule
-    setupPackages
-    buildSpecialArgs
     processStandaloneUserProfile
     ;
 
@@ -28,13 +25,10 @@ let
     }:
     let
       processResult = processStandaloneUserProfile { inherit profileName arch buildArch; };
-      inherit (processResult) userConfig buildContext;
+      inherit (processResult) buildContext;
       inherit (buildContext)
-        system
         pkgs
-        pkgs-unstable
         lib
-        specialArgs
         buildArgs
         extraUserModule
         ;

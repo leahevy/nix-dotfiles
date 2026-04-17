@@ -362,7 +362,6 @@ rec {
 
         moduleDefaults = moduleResult.settings or { };
         moduleOptions = moduleResult.options or { };
-        moduleRawOptions = moduleResult.rawOptions or { };
         moduleUnfree = moduleResult.unfree or [ ];
 
         hasSettings = moduleDefaults != { };

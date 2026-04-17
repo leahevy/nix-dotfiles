@@ -14,11 +14,6 @@
 
 let
   inherit (common)
-    evalConfigModule
-    setupPackages
-    buildSpecialArgs
-    getHardwareModule
-    getDiskoModule
     processHostProfile
     ;
 
@@ -34,7 +29,6 @@ let
       inherit (buildContext)
         system
         pkgs
-        pkgs-unstable
         lib
         specialArgs
         buildArgs
