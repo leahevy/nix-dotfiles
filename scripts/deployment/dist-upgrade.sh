@@ -29,7 +29,7 @@ echo
 check_git_worktrees_clean
 
 echo -e "Updating version references in ${WHITE}nxcore/flake.nix${RESET}..."
-sed -i "s/[0-9][0-9]\.[0-9][0-9]/$NIXOS_VERSION/g" flake.nix
+sed -i "s/[0-9][0-9]\.[0-9][0-9]/$NIXOS_VERSION/g" "$NXCORE_DIR/flake.nix"
 
 if [[ -d "$CONFIG_DIR/.git" ]]; then
     echo -e "Updating version references in ${WHITE}nxconfig/flake.nix${RESET}..."
@@ -39,9 +39,9 @@ fi
 echo
 echo -e "Migrating packages from unstable to stable in ${WHITE}nxcore/src${RESET}..."
 
-find src -name "*.nix" -type f -exec sed -i 's/with pkgs-unstable/with pkgs/g' {} \;
-find src -name "*.nix" -type f -exec sed -i 's/pkgs-unstable\./pkgs\./g' {} \;
-find src -name "*.nix" -type f -exec sed -i 's/self\.pkgs-unstable/self\.pkgs/g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f -exec sed -i 's/with pkgs-unstable/with pkgs/g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f -exec sed -i 's/pkgs-unstable\./pkgs\./g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f -exec sed -i 's/self\.pkgs-unstable/self\.pkgs/g' {} \;
 
 if [[ -d "$CONFIG_DIR/.git" ]]; then
     echo -e "Migrating packages from unstable to stable in ${WHITE}nxconfig/modules${RESET}..."
@@ -53,7 +53,7 @@ fi
 
 echo
 echo -e "Updating flake inputs for ${WHITE}nxcore${RESET}..."
-nix flake update "${AUTO_UPDATE_INPUTS[@]}" || true
+(cd "$NXCORE_DIR" && nix flake update "${AUTO_UPDATE_INPUTS[@]}" || true)
 
 if [[ -d "$CONFIG_DIR/.git" ]]; then
     echo
