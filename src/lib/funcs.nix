@@ -1607,8 +1607,6 @@ rec {
     in
     lib.foldl lib.recursiveUpdate { } moduleResults;
 
-  mergeSubModules = submodulesList: lib.foldl lib.recursiveUpdate { } submodulesList;
-
   mergeModuleValue =
     a: b:
     let
