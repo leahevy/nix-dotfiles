@@ -32,14 +32,7 @@ rec {
     "profile"
   ];
 
-  modulesOnlyInputs = [
-    "common"
-    "linux"
-    "darwin"
-    "overlays"
-    "themes"
-    "groups"
-  ];
+  modulesOnlyInputs = lib.lists.remove "build" coreInputs;
 
   allowedLinuxDesktops = [
     "gnome"
