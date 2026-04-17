@@ -285,6 +285,8 @@ args@{
               untrack = "rm --cache --";
               conflicts = "diff --name-only --diff-filter=U";
               merge-show-conflicts = "!f() { git merge-tree --write-tree HEAD \"\$1\" | grep CONFLICT; } ; f";
+              tree-list = "!f() { git ls-files | tree --fromfile; } ; f";
+              tree-search = "!f() { git ls-files | grep \"\$1\" | tree --fromfile; } ; f";
             };
           };
         };
