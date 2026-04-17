@@ -51,7 +51,7 @@ args@{
         tmuxline = false;
         vim-tmux-navigator = true;
         copilot = false;
-        minuet = true;
+        minuet = false;
         arrow = true;
         searchbox = true;
         grug-far = true;

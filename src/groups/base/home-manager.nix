@@ -68,6 +68,9 @@ let
       spell = [ "ispell" ];
       tmux = [ "tmux" ];
       nvim = [ "nixvim" ];
+      nvim-modules = {
+        minuet = true;
+      };
       chat = [ "fluffychat" ];
     };
     groups.shell = [ "shell" ];
