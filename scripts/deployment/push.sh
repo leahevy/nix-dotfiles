@@ -3,7 +3,22 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "push"
-parse_git_args "$@"
+
+BUMP=false
+FILTERED_ARGS=()
+for arg in "$@"; do
+    if [[ "$arg" == "--bump" ]]; then
+        BUMP=true
+    else
+        FILTERED_ARGS+=("$arg")
+    fi
+done
+parse_git_args "${FILTERED_ARGS[@]+"${FILTERED_ARGS[@]}"}"
+
+if [[ "$BUMP" == "true" && "$ONLY_CORE" == "true" ]]; then
+    echo -e "${RED}Error: Cannot use ${WHITE}--bump${RED} together with ${WHITE}--only-core${RESET}" >&2
+    exit 1
+fi
 
 cd "$NXCORE_DIR"
 if [[ "$ONLY_CONFIG" != true ]]; then
@@ -15,7 +30,20 @@ if [[ "$ONLY_CONFIG" != true ]]; then
     fi
 fi
 
-if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
+if [[ "$BUMP" == "true" ]]; then
+    if [[ "$ONLY_CONFIG" != true ]]; then
+        echo
+        echo -e "${CYAN}Waiting for remote to propagate...${RESET}"
+        sleep 3
+        echo
+    fi
+    echo -e "${CYAN}Bumping nxconfig to pushed nxcore...${RESET}"
+    echo
+    cd "$CONFIG_DIR"
+    run_bump "true" "true"
+    echo
+    echo -e "${GREEN}Done. Both repositories pushed successfully (with bump).${RESET}"
+elif [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
     if [[ "$ONLY_CONFIG" != true ]]; then
         echo
     fi

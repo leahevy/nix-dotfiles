@@ -331,7 +331,9 @@
       push = {
         description = "Run git push command";
         group = "git";
-        options = gitOptions;
+        options = gitOptions // {
+          bump = option "Push nxcore first, then bump and push nxconfig (implies --commit on config)";
+        };
       };
       add = {
         description = "Run git add command";
