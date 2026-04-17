@@ -155,6 +155,7 @@ jobs:
 
           DESKTOP_REBOOT_PACKAGES=(
             "^niri"
+            "^xwayland"
             "^uwsm"
           )
 
