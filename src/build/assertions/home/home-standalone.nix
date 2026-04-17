@@ -10,7 +10,7 @@ args@{
 }:
 { config, ... }:
 let
-  moduleInputs = defs.moduleInputsToScan;
+  moduleInputs = helpers.allModuleInputsToScan;
 
   countEnabledModules = lib.pipe moduleInputs [
     (map (

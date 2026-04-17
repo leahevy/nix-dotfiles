@@ -642,6 +642,14 @@ rec {
 
   isModulesOnlyInput = inputName: builtins.elem inputName defs.modulesOnlyInputs;
 
+  allModuleInputsToScan =
+    let
+      extraInputNames = builtins.filter (name: !(builtins.elem name defs.moduleInputsToScan)) (
+        builtins.attrNames additionalInputs
+      );
+    in
+    defs.moduleInputsToScan ++ extraInputNames;
+
   buildModuleDir =
     inputName: groupName: moduleName:
     if isModulesOnlyInput inputName then

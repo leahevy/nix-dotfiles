@@ -1948,7 +1948,7 @@ rec {
         else
           [ ];
     in
-    lib.concatMap scanInput defs.moduleInputsToScan;
+    lib.concatMap scanInput helpers.allModuleInputsToScan;
 
   collectAllModuleData =
     args:
@@ -2011,7 +2011,7 @@ rec {
         else
           [ ];
 
-      allModuleData = lib.flatten (map scanInput defs.moduleInputsToScan);
+      allModuleData = lib.flatten (map scanInput helpers.allModuleInputsToScan);
     in
     allModuleData;
 
@@ -2241,5 +2241,5 @@ rec {
         else
           [ ];
     in
-    lib.flatten (map scanInput defs.moduleInputsToScan);
+    lib.flatten (map scanInput helpers.allModuleInputsToScan);
 }
