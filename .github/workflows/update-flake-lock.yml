@@ -326,14 +326,17 @@ jobs:
             echo "EOF"
           } >> $GITHUB_ENV
 
-          if [ "$requires_reboot" = "true" ]; then
-            echo "Creating system reboot marker file for auto-upgrade detection"
-            sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-reboot-required
-          fi
-
-          if [ "$requires_desktop_reboot" = "true" ]; then
-            echo "Creating desktop reboot marker file for auto-upgrade detection"
-            sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-desktop-reboot-required
+          if [ "$requires_reboot" = "true" ] || [ "$requires_desktop_reboot" = "true" ]; then
+            core_flake_hash=$(sha256sum flake.lock | cut -d' ' -f1)
+            mkdir -p .core-state
+            if [ "$requires_reboot" = "true" ]; then
+              echo "Creating system reboot marker file for auto-upgrade detection"
+              echo "$core_flake_hash" > .core-state/reboot-required
+            fi
+            if [ "$requires_desktop_reboot" = "true" ]; then
+              echo "Creating desktop reboot marker file for auto-upgrade detection"
+              echo "$core_flake_hash" > .core-state/desktop-reboot-required
+            fi
           fi
 
       - name: Check if merge day

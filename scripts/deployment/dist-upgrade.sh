@@ -63,9 +63,11 @@ fi
 
 echo
 echo -e "Regenerating auto-upgrade reboot marker files..."
-sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-reboot-required
-sha256sum flake.lock | cut -d' ' -f1 > .nx-auto-upgrade-desktop-reboot-required
-echo -e "Created marker files with hash: $(cat .nx-auto-upgrade-reboot-required)"
+mkdir -p "$NXCORE_DIR/.core-state"
+core_flake_hash=$(sha256sum "$NXCORE_DIR/flake.lock" | cut -d' ' -f1)
+echo "$core_flake_hash" > "$NXCORE_DIR/.core-state/reboot-required"
+echo "$core_flake_hash" > "$NXCORE_DIR/.core-state/desktop-reboot-required"
+echo -e "Created marker files with hash: ${WHITE}$core_flake_hash${RESET}"
 
 echo
 echo -e "${GREEN}NixOS version bump to $NIXOS_VERSION completed successfully!${RESET}"

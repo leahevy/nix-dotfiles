@@ -1012,6 +1012,11 @@ run_bump() {
     echo -e "Updated ${WHITE}core${RESET} flake lock"
     echo
 
+    rm -rf "$CONFIG_DIR/.core-state"
+    if [[ -d "$NXCORE_DIR/.core-state" ]]; then
+        cp -r "$NXCORE_DIR/.core-state" "$CONFIG_DIR/.core-state"
+    fi
+
     local use_dir="$CONFIG_DIR"
     if [[ -d "$CONFIG_DIR/.git" && -d "$NXCORE_DIR/.git" ]]; then
         local config_timestamp core_timestamp
@@ -1048,7 +1053,7 @@ run_bump() {
         local pre_stash post_stash
         pre_stash=$(git rev-parse --verify refs/stash 2>/dev/null || echo "none")
         echo -e "${CYAN}Stashing other changes...${RESET}"
-        git stash push --include-untracked -- ':(exclude)flake.lock' ':(exclude).label'
+        git stash push --include-untracked -- ':(exclude)flake.lock' ':(exclude).label' ':(exclude).core-state'
         post_stash=$(git rev-parse --verify refs/stash 2>/dev/null || echo "none")
         if [[ "$pre_stash" != "$post_stash" ]]; then
             if [[ -n "$exit_cleanup" ]]; then
@@ -1063,6 +1068,11 @@ run_bump() {
 
         echo -e "${CYAN}Committing bump...${RESET}"
         git add "$CONFIG_DIR/flake.lock" "$CONFIG_DIR/.label"
+        if [[ -d "$CONFIG_DIR/.core-state" ]]; then
+            git add "$CONFIG_DIR/.core-state"
+        else
+            git rm -r --cached --ignore-unmatch "$CONFIG_DIR/.core-state" >/dev/null 2>&1 || true
+        fi
         git commit -m "Bump core at: $label"
         echo -e "Committed ${WHITE}flake.lock${RESET} and ${WHITE}.label${RESET}"
         echo

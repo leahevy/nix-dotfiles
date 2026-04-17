@@ -47,8 +47,9 @@ echo
 new_flake_hash=$(sha256sum "$NXCORE_DIR/flake.lock" | cut -d' ' -f1)
 if [[ "$new_flake_hash" != "$old_flake_hash" ]]; then
     echo -e "${GREEN}NXCore flake lock changed, creating auto-upgrade reboot marker files...${RESET}"
-    echo "$new_flake_hash" > "$NXCORE_DIR/.nx-auto-upgrade-reboot-required"
-    echo "$new_flake_hash" > "$NXCORE_DIR/.nx-auto-upgrade-desktop-reboot-required"
+    mkdir -p "$NXCORE_DIR/.core-state"
+    echo "$new_flake_hash" > "$NXCORE_DIR/.core-state/reboot-required"
+    echo "$new_flake_hash" > "$NXCORE_DIR/.core-state/desktop-reboot-required"
     echo -e "Created marker files with hash: ${WHITE}$new_flake_hash${RESET}"
 else
     echo -e "${YELLOW}NXCore flake lock unchanged, skipping marker file creation.${RESET}"

@@ -201,22 +201,6 @@ args@{
 
         gitEnv = "GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null";
 
-        rebootMarker = lib.trim (
-          if builtins.pathExists (defs.rootPath + "/.nx-auto-upgrade-reboot-required") then
-            builtins.readFile (defs.rootPath + "/.nx-auto-upgrade-reboot-required")
-          else
-            ""
-        );
-
-        desktopRebootMarker = lib.trim (
-          if builtins.pathExists (defs.rootPath + "/.nx-auto-upgrade-desktop-reboot-required") then
-            builtins.readFile (defs.rootPath + "/.nx-auto-upgrade-desktop-reboot-required")
-          else
-            ""
-        );
-
-        nxcoreStorePath = builtins.toString defs.rootPath;
-
         logScript =
           level: message:
           let
@@ -760,41 +744,40 @@ args@{
 
         checkForceRebootScript =
           let
-            hasRebootMarker = rebootMarker != "";
-            hasDesktopMarker = desktopRebootMarker != "" && (self.host.settings.system.desktop or null) != null;
-            hasAnyMarker = hasRebootMarker || hasDesktopMarker;
+            hasDesktopCheck = (self.host.settings.system.desktop or null) != null;
           in
           ''
             FORCE_REBOOT=false
+            CURRENT_HASH=""
+            LAST_CORE_STATE_HASH=$(${pkgs.coreutils}/bin/cat /var/lib/nx-auto-upgrade/last-core-state-hash 2>/dev/null || ${pkgs.coreutils}/bin/echo "")
 
-            ${lib.optionalString hasAnyMarker ''
-              CORE_STORE_PATH_FILE="${nxconfigDir}/.core-store-path"
-              LAST_NXCORE_STORE_PATH=$(${pkgs.coreutils}/bin/cat "$CORE_STORE_PATH_FILE" 2>/dev/null || echo "")
-              CURRENT_NXCORE_STORE_PATH="${nxcoreStorePath}"
-
-              if [[ "$LAST_NXCORE_STORE_PATH" != "$CURRENT_NXCORE_STORE_PATH" ]]; then
-                CURRENT_FLAKE_HASH=$(${pkgs.coreutils}/bin/sha256sum "${nxcoreStorePath}/flake.lock" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
-
-                ${lib.optionalString hasRebootMarker ''
-                  if [[ "${rebootMarker}" == "$CURRENT_FLAKE_HASH" ]]; then
-                    ${logScript "info" "INFO: Remote changes indicate system reboot required for current flake.lock state"}
-                    FORCE_REBOOT=true
-                  fi
-                ''}
-
-                ${lib.optionalString hasDesktopMarker ''
-                  if [[ "$FORCE_REBOOT" == "false" && "${desktopRebootMarker}" == "$CURRENT_FLAKE_HASH" ]]; then
-                    ${logScript "info" "INFO: Remote changes indicate desktop reboot required for current flake.lock state"}
-                    FORCE_REBOOT=true
-                  fi
-                ''}
+            if [[ -f "${nxconfigDir}/.core-state/reboot-required" ]]; then
+              CURRENT_HASH=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
+              if [[ -n "$CURRENT_HASH" && "$CURRENT_HASH" != "$LAST_CORE_STATE_HASH" ]]; then
+                ${logScript "info" "INFO: Remote changes indicate system reboot required"}
+                FORCE_REBOOT=true
               fi
+            fi
 
-              ${lib.optionalString (!self.settings.dryRun) ''
-                ${pkgs.coreutils}/bin/echo "$CURRENT_NXCORE_STORE_PATH" > "$CORE_STORE_PATH_FILE"
-              ''}
+            ${lib.optionalString hasDesktopCheck ''
+              if [[ "$FORCE_REBOOT" == "false" && -f "${nxconfigDir}/.core-state/desktop-reboot-required" ]]; then
+                CURRENT_HASH=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/desktop-reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
+                if [[ -n "$CURRENT_HASH" && "$CURRENT_HASH" != "$LAST_CORE_STATE_HASH" ]]; then
+                  ${logScript "info" "INFO: Remote changes indicate desktop reboot required"}
+                  FORCE_REBOOT=true
+                fi
+              fi
             ''}
           '';
+
+        saveMarkerStateScript = lib.optionalString (!self.settings.dryRun) ''
+          if [[ -n "$CURRENT_HASH" ]]; then
+            ${pkgs.coreutils}/bin/mkdir -p /var/lib/nx-auto-upgrade
+            ${pkgs.coreutils}/bin/echo "$CURRENT_HASH" > /var/lib/nx-auto-upgrade/last-core-state-hash
+            ${pkgs.coreutils}/bin/chown root:root /var/lib/nx-auto-upgrade/last-core-state-hash
+            ${pkgs.coreutils}/bin/chmod 600 /var/lib/nx-auto-upgrade/last-core-state-hash
+          fi
+        '';
 
         setupGitSafeDirectoriesScript = ''
           setup_git_safe_directories() {
@@ -1201,6 +1184,7 @@ args@{
               ${pullRepositoriesScript}
               ${checkForceRebootScript}
               ${upgradeScript}
+              ${saveMarkerStateScript}
               ${rebootScript}
             '';
 
