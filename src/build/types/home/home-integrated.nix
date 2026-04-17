@@ -10,6 +10,12 @@ with lib;
       description = "The username";
     };
 
+    addBaseGroup = mkOption {
+      type = types.bool;
+      default = true;
+      description = "Automatically add the base group to the profile";
+    };
+
     fullname = mkOption {
       type = types.nullOr types.str;
       default = null;

@@ -13,9 +13,19 @@ args@{
 }:
 let
   initialModules = user.modules or { };
-  buildModules = {
-    groups.build.home-standalone = true;
-  };
+  buildModules =
+    lib.recursiveUpdate
+      {
+        groups.build.home-standalone = true;
+      }
+      (
+        if user.addBaseGroup then
+          {
+            groups.base.home-manager = true;
+          }
+        else
+          { }
+      );
   allModules = funcs.collectAllModulesWithSettings args initialModules buildModules;
 
   moduleSpecs = funcs.processModules allModules;

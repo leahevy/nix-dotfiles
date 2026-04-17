@@ -10,6 +10,12 @@ with lib;
       description = "The hostname of the system";
     };
 
+    addBaseGroup = mkOption {
+      type = types.bool;
+      default = true;
+      description = "Automatically add the base group to the profile";
+    };
+
     ethernetDeviceName = mkOption {
       type = types.nullOr types.str;
       default = null;

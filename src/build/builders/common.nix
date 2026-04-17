@@ -366,10 +366,30 @@ in
         ]
       );
 
-      buildModules = {
-        groups.build.nixos = true;
-        groups.build.home-integrated = true;
-      };
+      buildModules =
+        lib.recursiveUpdate
+          (lib.recursiveUpdate
+            {
+              groups.build.nixos = true;
+              groups.build.home-integrated = true;
+            }
+            (
+              if resolvedHost.addBaseGroup then
+                {
+                  groups.base.nixos = true;
+                }
+              else
+                { }
+            )
+          )
+          (
+            if (mainUser.addBaseGroup && resolvedHost.settings.system.desktop != null) then
+              {
+                groups.base.home-manager = true;
+              }
+            else
+              { }
+          );
 
       unifiedArgs = {
         inherit
@@ -521,9 +541,19 @@ in
         };
       };
 
-      buildModules = {
-        groups.build.home-standalone = true;
-      };
+      buildModules =
+        lib.recursiveUpdate
+          {
+            groups.build.home-standalone = true;
+          }
+          (
+            if resolvedUser.addBaseGroup then
+              {
+                groups.base.home-manager = true;
+              }
+            else
+              { }
+          );
 
       unifiedArgs = {
         inherit
