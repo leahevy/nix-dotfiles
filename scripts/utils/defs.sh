@@ -48,5 +48,14 @@ export THIRD_PARTY_INPUTS=(
     "nix-plist-manager"
 )
 
+export MODULES_ONLY_INPUTS=(
+    "common"
+    "linux"
+    "darwin"
+    "overlays"
+    "themes"
+    "groups"
+)
+
 export UPDATE_AUTO_MERGE_ENABLED=false
 export UPDATE_MERGE_DAYS=(1 2 3 4 5 6 7)  # 1=Monday, 7=Sunday

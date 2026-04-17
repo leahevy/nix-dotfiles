@@ -285,11 +285,11 @@ rec {
 
         filePath =
           if subpath == null then
-            inputPath + "/modules/${groupName}/${moduleName}.nix"
+            helpers.buildModuleFilePath inputPath self.moduleInputName groupName moduleName
           else
-            inputPath + "/modules/${groupName}/${moduleName}.nix.d/${subpath}";
+            helpers.buildModuleFilePath inputPath self.moduleInputName groupName moduleName + ".d/${subpath}";
 
-        moduleDir = "modules/${groupName}/${moduleName}";
+        moduleDir = helpers.buildModuleDir self.moduleInputName groupName moduleName;
         baseModuleContext = {
           inputs = self.inputs;
           variables = self.variables;
@@ -336,11 +336,11 @@ rec {
 
         filePath =
           if subpath == null then
-            inputPath + "/modules/${groupName}/${moduleName}.nix"
+            helpers.buildModuleFilePath inputPath inputName groupName moduleName
           else
-            inputPath + "/modules/${groupName}/${moduleName}.nix.d/${subpath}";
+            helpers.buildModuleFilePath inputPath inputName groupName moduleName + ".d/${subpath}";
 
-        moduleDir = "modules/${groupName}/${moduleName}";
+        moduleDir = helpers.buildModuleDir inputName groupName moduleName;
         baseModuleContext = {
           inputs = self.inputs;
           variables = self.variables;
@@ -388,8 +388,20 @@ rec {
       currentInputName = moduleContext.moduleInputName;
 
       pathParts = lib.splitString "/" moduleBasePath;
-      moduleGroupName = if builtins.length pathParts >= 2 then builtins.elemAt pathParts 1 else null;
-      moduleModuleName = if builtins.length pathParts >= 3 then builtins.elemAt pathParts 2 else null;
+      moduleGroupName =
+        if builtins.length pathParts >= 3 then
+          builtins.elemAt pathParts 1
+        else if builtins.length pathParts >= 2 then
+          builtins.elemAt pathParts 0
+        else
+          null;
+      moduleModuleName =
+        if builtins.length pathParts >= 3 then
+          builtins.elemAt pathParts 2
+        else if builtins.length pathParts >= 2 then
+          builtins.elemAt pathParts 1
+        else
+          null;
 
       contextDefaults = createContextFunctions currentInputName moduleContext moduleBasePath;
 
@@ -678,7 +690,7 @@ rec {
 
       availableThemes =
         let
-          themesDir = moduleContext.inputs.themes + "/modules/themes";
+          themesDir = moduleContext.inputs.themes + "/themes";
         in
         if builtins.pathExists themesDir then
           builtins.filter (name: name != "base") (

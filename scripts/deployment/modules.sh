@@ -292,10 +292,11 @@ subcommand_info() {
   elif [[ "$input_name" == "profile" ]]; then
     base_path="$profile_path"
   else
-    base_path="$PWD/src/$input_name"
+    base_path="$NXCORE_DIR/src/$input_name"
   fi
 
-  local module_file="$base_path/modules/$group_name/$module_name.nix"
+  local module_file
+  module_file="$(module_file_path "$base_path" "$input_name" "$group_name" "$module_name")"
   if [[ ! -f "$module_file" ]]; then
     echo -e "${RED}Error: Module file not found: ${WHITE}$module_file${RESET}" >&2
     echo -e "${YELLOW}Hint: Check the module path for typos. Expected format: INPUT.GROUP.MODULE${RESET}" >&2
@@ -387,7 +388,12 @@ subcommand_info() {
   local meta_name
   meta_name=$(echo "$module_info" | jq -r '.meta.name // "unknown"')
 
-  local module_path="src/${input_name}/modules/${group_name}/${module_name}.nix"
+  local module_path
+  if is_modules_only_input "$input_name"; then
+    module_path="src/${input_name}/${group_name}/${module_name}.nix"
+  else
+    module_path="src/${input_name}/modules/${group_name}/${module_name}.nix"
+  fi
 
   echo -e "  ${GREEN}name:${RESET} ${RED}\"$meta_name\"${RESET}"
   echo -e "  ${GREEN}description:${RESET} ${RED}\"$description\"${RESET}"
@@ -480,10 +486,11 @@ subcommand_edit() {
   elif [[ "$input_name" == "profile" ]]; then
     base_path="$profile_path"
   else
-    base_path="$PWD/src/$input_name"
+    base_path="$NXCORE_DIR/src/$input_name"
   fi
 
-  local target_file="$base_path/modules/$group_name/$module_name.nix"
+  local target_file
+  target_file="$(module_file_path "$base_path" "$input_name" "$group_name" "$module_name")"
 
   local editor="${EDITOR:-nano}"
   echo -e "Opening ${WHITE}$target_file${RESET} with ${WHITE}$editor${RESET}..."

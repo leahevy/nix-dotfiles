@@ -639,4 +639,20 @@ rec {
       "critical"
     else
       throw "loggerLevelToNotifyLevel: unknown level '${level}'";
+
+  isModulesOnlyInput = inputName: builtins.elem inputName defs.modulesOnlyInputs;
+
+  buildModuleDir =
+    inputName: groupName: moduleName:
+    if isModulesOnlyInput inputName then
+      "${groupName}/${moduleName}"
+    else
+      "modules/${groupName}/${moduleName}";
+
+  buildModuleFilePath =
+    inputPath: inputName: groupName: moduleName:
+    if isModulesOnlyInput inputName then
+      inputPath + "/${groupName}/${moduleName}.nix"
+    else
+      inputPath + "/modules/${groupName}/${moduleName}.nix";
 }

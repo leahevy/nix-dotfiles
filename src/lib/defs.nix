@@ -32,6 +32,15 @@ rec {
     "profile"
   ];
 
+  modulesOnlyInputs = [
+    "common"
+    "linux"
+    "darwin"
+    "overlays"
+    "themes"
+    "groups"
+  ];
+
   allowedLinuxDesktops = [
     "gnome"
     "niri"

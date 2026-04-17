@@ -2,6 +2,26 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/defs.sh"
 
+is_modules_only_input() {
+    local input_name="$1"
+    for entry in "${MODULES_ONLY_INPUTS[@]}"; do
+        [[ "$input_name" == "$entry" ]] && return 0
+    done
+    return 1
+}
+
+module_file_path() {
+    local base_path="$1"
+    local input_name="$2"
+    local group_name="$3"
+    local module_name="$4"
+    if is_modules_only_input "$input_name"; then
+        echo "$base_path/$group_name/$module_name.nix"
+    else
+        echo "$base_path/modules/$group_name/$module_name.nix"
+    fi
+}
+
 get_nx_default() {
     local key="$1"
     case "$key" in

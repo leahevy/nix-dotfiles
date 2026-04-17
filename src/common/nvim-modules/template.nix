@@ -172,6 +172,17 @@ args@{
                 return absolute:gsub("^" .. vim.pesc(home_dir), "~")
               end
 
+              local modules_only_inputs = { ${
+                lib.concatMapStringsSep ", " (n: "\"${n}\"") defs.modulesOnlyInputs
+              } }
+
+              local function is_modules_only_input(name)
+                for _, v in ipairs(modules_only_inputs) do
+                  if v == name then return true end
+                end
+                return false
+              end
+
               local function extract_path_components()
                 local path = get_current_file_path()
                 local parts = vim.split(path, '/')
@@ -184,36 +195,58 @@ args@{
                   end
                 end
 
-                if not modules_index then
-                  error("Module file not in correct location - missing 'modules' in path")
+                if modules_index then
+                  local input_name = "unknown"
+                  for i = 1, modules_index - 1 do
+                    if parts[i] == "nxcore" and i + 1 < modules_index and parts[i + 1] == "src" and i + 2 < modules_index then
+                      input_name = parts[i + 2]
+                      break
+                    elseif parts[i] == "nxconfig" then
+                      if i + 1 < modules_index and parts[i + 1] == "profiles" then
+                        input_name = "profile"
+                      elseif i + 1 == modules_index then
+                        input_name = "config"
+                      end
+                      break
+                    end
+                  end
+                  if modules_index + 2 > #parts then
+                    error("Invalid module path structure - expected modules/GROUP/MODULE.nix")
+                  end
+                  return {
+                    input = input_name,
+                    group = parts[modules_index + 1],
+                  }
                 end
 
-                local input_name = "unknown"
-
-                for i = 1, modules_index - 1 do
-                  if parts[i] == "nxcore" and i + 1 < modules_index and parts[i + 1] == "src" and i + 2 < modules_index then
-                    input_name = parts[i + 2]
-                    break
-                  elseif parts[i] == "nxconfig" then
-                    if i + 1 < modules_index and parts[i + 1] == "profiles" then
-                      input_name = "profile"
-                    elseif i + 1 == modules_index then
-                      input_name = "config"
-                    end
+                local nxcore_src_index = nil
+                for i = 1, #parts - 1 do
+                  if parts[i] == "nxcore" and parts[i + 1] == "src" then
+                    nxcore_src_index = i
                     break
                   end
                 end
 
-                if modules_index + 2 > #parts then
-                  error("Invalid module path structure - expected modules/GROUP/MODULE.nix")
+                if nxcore_src_index and nxcore_src_index + 2 <= #parts then
+                  local input_name = parts[nxcore_src_index + 2]
+                  if is_modules_only_input(input_name) then
+                    if nxcore_src_index + 3 > #parts then
+                      error("Invalid module path structure - expected INPUT/GROUP/MODULE.nix")
+                    end
+                    return {
+                      input = input_name,
+                      group = parts[nxcore_src_index + 3],
+                    }
+                  end
                 end
 
-                local group = parts[modules_index + 1]
+                error("Module file not in correct location. Missing 'modules' in path or not a modules-only input")
+              end
 
-                return {
-                  input = input_name,
-                  group = group,
-                }
+              local function is_valid_module_path(path)
+                if path:find("/modules/") then return true end
+                local input_name = path:match(".*/nxcore/src/([^/]+)/")
+                return input_name ~= nil and is_modules_only_input(input_name)
               end
 
               function extract_input()
@@ -258,7 +291,7 @@ args@{
                                 matches_path = true
                               end
                             '') normalizedPathFilters}
-                            if matches_path then
+                            if matches_path and is_valid_module_path(absolute_file) then
                               vim.schedule(function()
                                 vim.api.nvim_set_option_value('filetype', '${template.extension}', { buf = args.buf })
                                 local current_buf = vim.api.nvim_get_current_buf()

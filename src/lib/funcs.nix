@@ -15,10 +15,11 @@ let
   buildModulePath =
     {
       input,
+      inputName,
       group,
       name,
     }:
-    input + "/modules/${group}/${name}.nix";
+    helpers.buildModuleFilePath input inputName group name;
 in
 rec {
   inherit moduleFuncs;
@@ -33,19 +34,31 @@ rec {
       cleanRelativePath = lib.removePrefix "/" relativePath;
       parts = lib.splitString "/" cleanRelativePath;
 
-      moduleIndex = lib.findFirst (i: builtins.elemAt parts i == "modules") null (
-        lib.range 0 (builtins.length parts - 1)
-      );
+      actualFilename = builtins.baseNameOf pathStr;
     in
-    if moduleIndex == null || moduleIndex + 2 >= builtins.length parts then
-      null
+    if helpers.isModulesOnlyInput inputName then
+      if builtins.length parts < 2 then
+        null
+      else
+        let
+          group = builtins.elemAt parts 0;
+          module = lib.removeSuffix ".nix" actualFilename;
+        in
+        if lib.hasSuffix ".nix" actualFilename then { inherit group module; } else null
     else
       let
-        group = builtins.elemAt parts (moduleIndex + 1);
-        actualFilename = builtins.baseNameOf pathStr;
-        module = lib.removeSuffix ".nix" actualFilename;
+        moduleIndex = lib.findFirst (i: builtins.elemAt parts i == "modules") null (
+          lib.range 0 (builtins.length parts - 1)
+        );
       in
-      if lib.hasSuffix ".nix" actualFilename then { inherit group module; } else null;
+      if moduleIndex == null || moduleIndex + 2 >= builtins.length parts then
+        null
+      else
+        let
+          group = builtins.elemAt parts (moduleIndex + 1);
+          module = lib.removeSuffix ".nix" actualFilename;
+        in
+        if lib.hasSuffix ".nix" actualFilename then { inherit group module; } else null;
 
   validateModule =
     moduleResult: filePath: moduleContext:
@@ -91,10 +104,15 @@ rec {
           null;
 
       pathComponents = extractPathComponents filePath (moduleContext.inputName or "unknown");
+      expectedLayout =
+        if helpers.isModulesOnlyInput (moduleContext.inputName or "") then
+          "GROUP/MODULE.nix"
+        else
+          "modules/GROUP/MODULE.nix";
       pathValidationErrors =
         if pathComponents == null then
           [
-            "Could not extract path components from module path. Ensure module is in correct location: modules/GROUP/MODULE.nix"
+            "Could not extract path components from module path. Ensure module is in correct location: ${expectedLayout}"
           ]
         else
           let
@@ -233,18 +251,36 @@ rec {
           let
             pathStr = toString filePath;
             parts = lib.splitString "/" pathStr;
-            moduleIndex = lib.findFirst (i: builtins.elemAt parts i == "modules") null (
-              lib.range 0 (builtins.length parts - 1)
-            );
+            inputName = moduleContext.inputName or "";
           in
-          if moduleIndex != null && moduleIndex + 2 < builtins.length parts then
+          if helpers.isModulesOnlyInput inputName then
             let
-              group = builtins.elemAt parts (moduleIndex + 1);
-              module = lib.removeSuffix ".nix" (builtins.elemAt parts (moduleIndex + 2));
+              inputPath = toString (helpers.resolveInputFromInput inputName);
+              relative = lib.removePrefix (inputPath + "/") pathStr;
+              relParts = lib.splitString "/" relative;
             in
-            "${group}.${module}"
+            if builtins.length relParts >= 2 then
+              let
+                group = builtins.elemAt relParts 0;
+                module = lib.removeSuffix ".nix" (builtins.last relParts);
+              in
+              "${group}.${module}"
+            else
+              lib.removeSuffix ".nix" (builtins.baseNameOf pathStr)
           else
-            lib.removeSuffix ".nix" (builtins.baseNameOf pathStr);
+            let
+              moduleIndex = lib.findFirst (i: builtins.elemAt parts i == "modules") null (
+                lib.range 0 (builtins.length parts - 1)
+              );
+            in
+            if moduleIndex != null && moduleIndex + 2 < builtins.length parts then
+              let
+                group = builtins.elemAt parts (moduleIndex + 1);
+                module = lib.removeSuffix ".nix" (builtins.elemAt parts (moduleIndex + 2));
+              in
+              "${group}.${module}"
+            else
+              lib.removeSuffix ".nix" (builtins.baseNameOf pathStr);
       in
       if moduleError != null then
         throw "${getCleanPath null}: ${moduleError}"
@@ -283,13 +319,20 @@ rec {
   mergeModuleDefaults =
     lib: helpers: args: inputName: groupName: moduleName: moduleSettings:
     let
-      modulePath = helpers.resolveInputFromInput inputName + "/modules/${groupName}/${moduleName}.nix";
+      modulePath =
+        helpers.resolveInputFromInput inputName
+        + (
+          if helpers.isModulesOnlyInput inputName then
+            "/${groupName}/${moduleName}.nix"
+          else
+            "/modules/${groupName}/${moduleName}.nix"
+        );
     in
     if !builtins.pathExists modulePath then
       if moduleSettings == true then { } else moduleSettings
     else
       let
-        moduleDir = "modules/${groupName}/${moduleName}";
+        moduleDir = helpers.buildModuleDir inputName groupName moduleName;
 
         moduleContext = {
           inputs = args.inputs;
@@ -1234,10 +1277,11 @@ rec {
     let
       modulePath = buildModulePath {
         input = moduleSpec.input;
+        inputName = moduleSpec.inputName;
         group = moduleSpec.group;
         name = moduleSpec.name;
       };
-      moduleDir = "modules/${moduleSpec.group}/${moduleSpec.name}";
+      moduleDir = helpers.buildModuleDir moduleSpec.inputName moduleSpec.group moduleSpec.name;
 
       basicModuleResult = import modulePath {
         lib = args.lib;
@@ -1408,6 +1452,7 @@ rec {
                   };
                   modulePath = buildModulePath {
                     input = moduleSpec.input;
+                    inputName = moduleSpec.inputName;
                     group = moduleSpec.group;
                     name = moduleSpec.name;
                   };
@@ -1452,7 +1497,9 @@ rec {
         users = args.users or { };
         variables = args.variables;
         configInputs = args.configInputs or { };
-        moduleBasePath = "modules/${assertion.moduleSpec.group}/${assertion.moduleSpec.name}";
+        moduleBasePath =
+          helpers.buildModuleDir assertion.moduleSpec.inputName assertion.moduleSpec.group
+            assertion.moduleSpec.name;
         moduleInput = assertion.moduleSpec.input;
         moduleInputName = assertion.moduleSpec.inputName;
         settings = assertion.moduleSpec.settings;
@@ -1508,10 +1555,11 @@ rec {
         let
           modulePath = buildModulePath {
             input = moduleSpec.input;
+            inputName = moduleSpec.inputName;
             group = moduleSpec.group;
             name = moduleSpec.name;
           };
-          moduleDir = "modules/${moduleSpec.group}/${moduleSpec.name}";
+          moduleDir = helpers.buildModuleDir moduleSpec.inputName moduleSpec.group moduleSpec.name;
 
           moduleContext = {
             inputs = args.inputs or args.self.inputs;
@@ -1793,16 +1841,16 @@ rec {
   scanAllModulesForInput =
     inputName: input:
     let
-      modulesPath = input + "/modules";
+      scanRoot = if helpers.isModulesOnlyInput inputName then input else input + "/modules";
     in
-    if builtins.pathExists modulesPath then
+    if builtins.pathExists scanRoot then
       let
-        groups = builtins.readDir modulesPath;
+        groups = builtins.readDir scanRoot;
         scanGroup =
           groupName: groupType:
           if groupType == "directory" then
             let
-              groupPath = modulesPath + "/${groupName}";
+              groupPath = scanRoot + "/${groupName}";
               entries = builtins.readDir groupPath;
             in
             lib.mapAttrsToList (
@@ -2140,7 +2188,7 @@ rec {
             map (
               spec:
               let
-                moduleDir = "modules/${spec.groupName}/${spec.moduleName}";
+                moduleDir = helpers.buildModuleDir spec.inputName spec.groupName spec.moduleName;
 
                 moduleContext = {
                   inputs = args.inputs;
