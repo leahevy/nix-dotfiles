@@ -59,7 +59,7 @@ fi
 echo -e "Checking if impermanence is enabled for $HOSTNAME..."
 FULL_PROFILE="$(construct_profile_name "$HOSTNAME")"
 
-IMPERMANENCE_ENABLED="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#hosts.$FULL_PROFILE.host.impermanence" 2>/dev/null || echo "false")"
+IMPERMANENCE_ENABLED="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.nx.profile.host.impermanence" 2>/dev/null || echo "false")"
 
 if [[ "$IMPERMANENCE_ENABLED" != "true" ]]; then
   echo -e "Info: Impermanence is disabled for ${WHITE}$HOSTNAME${RESET}"
@@ -75,7 +75,7 @@ if [[ ! -e "/mnt/etc/NIXOS" && ! -e "/mnt/persist/etc/NIXOS" ]]; then
   exit 1
 fi
 
-USERNAME="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#hosts.$FULL_PROFILE.host.mainUser.username" 2>/dev/null || echo "null")"
+USERNAME="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.nx.profile.host.mainUser.username" 2>/dev/null || echo "null")"
 if [[ -z "$USERNAME" || "$USERNAME" == "null" || "$USERNAME" == "\"null\"" ]]; then
   echo -e "${RED}Error: Could not determine main user from host configuration for ${WHITE}$HOSTNAME${RESET}" >&2
   exit 1

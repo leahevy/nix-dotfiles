@@ -672,7 +672,7 @@ get_main_username() {
 
     if [[ -d "$CONFIG_DIR" ]]; then
         local username
-        username="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#hosts.$full_profile.host.mainUser.username" 2>/dev/null || echo "null")"
+        username="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$full_profile.config.nx.profile.host.mainUser.username" 2>/dev/null || echo "null")"
         if [[ -n "$username" && "$username" != "null" && "$username" != "\"null\"" ]]; then
             echo "${username//\"/}"
             return 0

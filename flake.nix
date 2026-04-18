@@ -281,17 +281,12 @@
             ;
         };
 
-        hosts = nixosBuilder.extractHosts;
-        users = homeManagerBuilder.extractUsers;
-
         packages = lib.genAttrs allArchitectures (system: {
           default = nxinputs.nixpkgs.legacyPackages.${system}.emptyDirectory;
         });
       in
       {
         inherit
-          hosts
-          users
           packages
           variables
           allArchitectures

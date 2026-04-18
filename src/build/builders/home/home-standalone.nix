@@ -99,18 +99,4 @@ in
     )
   );
 
-  extractUsers =
-    lib.genAttrs
-      (lib.flatten (
-        map (profileName: map (arch: "${profileName}--${arch}") allArchitectures) standalone-user-files
-      ))
-      (
-        key:
-        let
-          parts = lib.splitString "--" key;
-          profileName = builtins.head parts;
-          arch = lib.last parts;
-        in
-        (processStandaloneUserProfile { inherit profileName arch; }).userConfig
-      );
 }

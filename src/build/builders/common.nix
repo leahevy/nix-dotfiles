@@ -541,43 +541,8 @@ in
         };
       };
 
-      buildModules =
-        lib.recursiveUpdate
-          {
-            groups.build.home-standalone = true;
-          }
-          (
-            if resolvedUser.addBaseGroup then
-              {
-                groups.base.home-manager = true;
-              }
-            else
-              { }
-          );
-
-      unifiedArgs = {
-        inherit
-          lib
-          pkgs
-          pkgs-unstable
-          inputs
-          funcs
-          defs
-          variables
-          ;
-        helpers = localHelpers;
-        user = resolvedUser;
-        host = { };
-        configInputs = config.configInputs or { };
-        isMainUser = true;
-      };
-
-      processedModules = funcs.collectAllModulesWithSettings unifiedArgs (resolvedUser.modules or { }
-      ) buildModules;
-
       finalUserConfig = resolvedUser // {
-        modules = processedModules;
-        configuredModules = resolvedUser.modules or { };
+        modules = resolvedUser.modules or { };
       };
 
       buildContext = {

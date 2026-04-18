@@ -137,18 +137,4 @@ in
     )
   );
 
-  extractHosts =
-    lib.genAttrs
-      (lib.flatten (
-        map (profileName: map (arch: "${profileName}--${arch}") nixosArchitectures) host-files
-      ))
-      (
-        key:
-        let
-          parts = lib.splitString "--" key;
-          profileName = builtins.head parts;
-          arch = lib.last parts;
-        in
-        (processHostProfile { inherit profileName arch; }).hostConfig
-      );
 }
