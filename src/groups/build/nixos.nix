@@ -20,6 +20,7 @@ args@{
       core = [
         "boot"
         "journal"
+        "hardware"
         "sudo"
         "i18n"
         "network"

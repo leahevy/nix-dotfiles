@@ -126,6 +126,30 @@ with lib;
       description = "Kernel settings";
     };
 
+    hardware = mkOption {
+      type = types.submodule {
+        options = {
+          cpu = mkOption {
+            type = types.nullOr (types.enum [ "intel" ]);
+            default = null;
+            description = "CPU type for microcode and CPU-specific configuration";
+          };
+          gpu = mkOption {
+            type = types.nullOr (types.enum [ "nvidia" ]);
+            default = null;
+            description = "GPU type for driver and graphics configuration";
+          };
+          board = mkOption {
+            type = types.nullOr (types.enum [ ]);
+            default = null;
+            description = "Board type for SBC and embedded system configuration";
+          };
+        };
+      };
+      default = { };
+      description = "Hardware configuration";
+    };
+
     mainUser = mkOption {
       type = types.either types.str types.attrs;
       description = "The main user (profile name or processed config)";

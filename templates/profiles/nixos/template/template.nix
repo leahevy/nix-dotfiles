@@ -28,6 +28,12 @@
       extraModulePackages = [ ];
     };
 
+    hardware = {
+      cpu = null;
+      gpu = null;
+      board = null;
+    };
+
     mainUser = null;
 
     additionalUsers = [ ];

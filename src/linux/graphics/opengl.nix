@@ -14,10 +14,6 @@ args@{
   group = "graphics";
   input = "linux";
 
-  settings = {
-    withIntel = false;
-  };
-
   module = {
     linux.home = config: {
       home.persistence."${self.persist}" = {
@@ -38,9 +34,9 @@ args@{
             libva-vdpau-driver
             libvdpau-va-gl
           ]
-          ++ lib.optionals self.settings.withIntel [
+          ++ lib.optionals (self.host.hardware.cpu == "intel") [
             intel-media-driver
-            vaapiIntel
+            intel-vaapi-driver
           ];
         extraPackages32 = with pkgs.pkgsi686Linux; [
           libvdpau

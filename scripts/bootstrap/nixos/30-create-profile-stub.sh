@@ -256,6 +256,12 @@ fi
     cat >> "$PROFILE_DIR/$HOSTNAME.nix" << EOF
     };
 
+    hardware = {
+      cpu = null;
+      gpu = null;
+      board = null;
+    };
+
     modules = {
       core = { };
 
