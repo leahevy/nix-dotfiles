@@ -144,12 +144,20 @@ parse_common_deployment_args() {
     ALLOW_DIRTY_GIT=false
     SKIP_VERIFICATION=false
 
-    echo -e "${CYAN}Active branches:${RESET}"
-    echo -e "  ${WHITE}nxconfig:${RESET} ${YELLOW}$(git branch --show-current)${RESET}"
+    local _branch_config _branch_core
+    _branch_config="$(git branch --show-current)"
+    _branch_core=""
     if [[ -n "${NXCORE_DIR:-}" ]] && [[ -d "$NXCORE_DIR/.git" ]]; then
-        echo -e "  ${WHITE}nxcore:${RESET} ${YELLOW}$(cd "$NXCORE_DIR" && git branch --show-current)${RESET}"
+        _branch_core="$(cd "$NXCORE_DIR" && git branch --show-current)"
     fi
-    echo
+    if [[ "$_branch_config" != "main" || ( -n "$_branch_core" && "$_branch_core" != "main" ) ]]; then
+        echo -e "${CYAN}Active branches:${RESET}"
+        echo -e "  ${WHITE}nxconfig:${RESET} ${YELLOW}${_branch_config}${RESET}"
+        if [[ -n "$_branch_core" ]]; then
+            echo -e "  ${WHITE}nxcore:${RESET} ${YELLOW}${_branch_core}${RESET}"
+        fi
+        echo
+    fi
 
     while [[ $# -gt 0 ]]; do
         case "${1:-}" in
@@ -195,12 +203,20 @@ parse_build_deployment_args() {
     SKIP_VERIFICATION=false
     RAW_LOG=false
 
-    echo -e "${CYAN}Active branches:${RESET}"
-    echo -e "  ${WHITE}nxconfig:${RESET} ${YELLOW}$(git branch --show-current)${RESET}"
+    local _branch_config _branch_core
+    _branch_config="$(git branch --show-current)"
+    _branch_core=""
     if [[ -n "${NXCORE_DIR:-}" ]] && [[ -d "$NXCORE_DIR/.git" ]]; then
-        echo -e "  ${WHITE}nxcore:${RESET} ${YELLOW}$(cd "$NXCORE_DIR" && git branch --show-current)${RESET}"
+        _branch_core="$(cd "$NXCORE_DIR" && git branch --show-current)"
     fi
-    echo
+    if [[ "$_branch_config" != "main" || ( -n "$_branch_core" && "$_branch_core" != "main" ) ]]; then
+        echo -e "${CYAN}Active branches:${RESET}"
+        echo -e "  ${WHITE}nxconfig:${RESET} ${YELLOW}${_branch_config}${RESET}"
+        if [[ -n "$_branch_core" ]]; then
+            echo -e "  ${WHITE}nxcore:${RESET} ${YELLOW}${_branch_core}${RESET}"
+        fi
+        echo
+    fi
 
     while [[ $# -gt 0 ]]; do
         case "${1:-}" in
