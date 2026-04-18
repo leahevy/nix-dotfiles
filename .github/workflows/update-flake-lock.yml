@@ -21,7 +21,7 @@ jobs:
           echo "UPDATE_MERGE_DAYS=$(IFS=,; echo "${UPDATE_MERGE_DAYS[*]}")" >> $GITHUB_ENV
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v14
+        uses: DeterminateSystems/nix-installer-action@v22
 
       - name: Extract commit hashes before update
         run: |
