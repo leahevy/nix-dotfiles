@@ -87,6 +87,10 @@
           skip-verification = option "Skip commit signature verification";
           raw = option "Use raw log format";
           allow-ifd = option "Allow import-from-derivation";
+          profile = optionWith "Use specific profile" "profile" "string";
+          nixos = option "Force NixOS mode";
+          standalone = option "Force standalone mode";
+          arch = optionWithEnum "Use specific architecture" "architecture" architectures;
         };
       };
 

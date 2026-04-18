@@ -202,6 +202,10 @@ parse_build_deployment_args() {
     BUILD_DIFF=false
     SKIP_VERIFICATION=false
     RAW_LOG=false
+    BUILD_OVERRIDE_PROFILE=""
+    BUILD_OVERRIDE_ARCH=""
+    BUILD_FORCE_NIXOS=false
+    BUILD_FORCE_STANDALONE=false
 
     local _branch_config _branch_core
     _branch_config="$(git branch --show-current)"
@@ -252,6 +256,24 @@ parse_build_deployment_args() {
                 EXTRA_ARGS+=("--option" "allow-import-from-derivation" "true")
                 shift
                 ;;
+            --profile)
+                [[ $# -lt 2 ]] && { echo -e "${RED}Error: --profile requires a profile name${RESET}" >&2; exit 1; }
+                BUILD_OVERRIDE_PROFILE="$2"
+                shift 2
+                ;;
+            --arch)
+                [[ $# -lt 2 ]] && { echo -e "${RED}Error: --arch requires an architecture${RESET}" >&2; exit 1; }
+                BUILD_OVERRIDE_ARCH="$2"
+                shift 2
+                ;;
+            --nixos)
+                BUILD_FORCE_NIXOS=true
+                shift
+                ;;
+            --standalone)
+                BUILD_FORCE_STANDALONE=true
+                shift
+                ;;
             -*)
                 echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
                 exit 1
@@ -263,7 +285,21 @@ parse_build_deployment_args() {
         esac
     done
 
+    [[ "$BUILD_FORCE_NIXOS" == "true" && "$BUILD_FORCE_STANDALONE" == "true" ]] && {
+        echo -e "${RED}Error: --nixos and --standalone cannot be used together${RESET}" >&2
+        exit 1
+    }
+
+    BUILD_HAS_OVERRIDE=false
+    [[ -n "$BUILD_OVERRIDE_PROFILE" || -n "$BUILD_OVERRIDE_ARCH" || "$BUILD_FORCE_NIXOS" == "true" || "$BUILD_FORCE_STANDALONE" == "true" ]] && BUILD_HAS_OVERRIDE=true
+
+    if [[ "$BUILD_HAS_OVERRIDE" == "true" && "$BUILD_DIFF" == "true" ]]; then
+        echo -e "${RED}Error: --diff cannot be used together with --profile, --arch, --nixos, or --standalone${RESET}" >&2
+        exit 1
+    fi
+
     export EXTRA_ARGS TIMEOUT DRY_RUN BUILD_DIFF SKIP_VERIFICATION RAW_LOG
+    export BUILD_OVERRIDE_PROFILE BUILD_OVERRIDE_ARCH BUILD_FORCE_NIXOS BUILD_FORCE_STANDALONE BUILD_HAS_OVERRIDE
 }
 
 ensure_nixos_only() {
