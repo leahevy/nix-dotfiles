@@ -1316,23 +1316,36 @@ diff_store_paths() {
             continue
         fi
 
-        if (( ${#old_hashes[@]} == ${#new_hashes[@]} && ${#old_hashes[@]} > 1 )); then
-            echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
+        local only_old=() only_new=()
+        for oh in "${old_hashes[@]}"; do
+            local found=false
+            for nh in "${new_hashes[@]}"; do
+                [[ "$oh" == "$nh" ]] && { found=true; break; }
+            done
+            $found || only_old+=("$oh")
+        done
+        for nh in "${new_hashes[@]}"; do
+            local found=false
             for oh in "${old_hashes[@]}"; do
+                [[ "$nh" == "$oh" ]] && { found=true; break; }
+            done
+            $found || only_new+=("$nh")
+        done
+
+        if (( ${#only_old[@]} == 0 && ${#only_new[@]} == 0 )); then
+            continue
+        fi
+
+        echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
+        if (( ${#only_old[@]} == 1 && ${#only_new[@]} == 1 )); then
+            echo -e "    ${GRAY}/nix/store/${only_old[0]}-${name}${RESET} ${GRAY}/nix/store/${only_new[0]}-${name}${RESET}"
+        else
+            for oh in "${only_old[@]}"; do
                 echo -e "    ${RED}old${RESET} ${GRAY}/nix/store/${oh}-${name}${RESET}"
             done
-            for nh in "${new_hashes[@]}"; do
+            for nh in "${only_new[@]}"; do
                 echo -e "    ${GREEN}new${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
             done
-        else
-            local oh nh
-            oh="${old_hashes[0]}"
-            nh="${new_hashes[0]}"
-
-            if [[ "$oh" != "$nh" ]]; then
-                echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
-                echo -e "    ${GRAY}/nix/store/${oh}-${name}${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
-            fi
         fi
     done < "$changed_file" >> "$out_file"
 
