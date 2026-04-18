@@ -69,7 +69,10 @@ let
     rootPath = defs.rootPath;
     scope = "integrated";
     system = if pkgs.stdenv.isDarwin then "darwin" else "linux";
+    mode = host.deploymentMode or "develop";
   };
+
+  nxCliEnabled = (host.deploymentMode or "develop") != "managed";
 in
 { config, options, ... }:
 
@@ -97,7 +100,7 @@ in
     packages =
       (user.additionalPackages or [ ])
       ++ (
-        if user.isMainUser then
+        if user.isMainUser && nxCliEnabled then
           [
             (pkgs.stdenv.mkDerivation {
               name = "nx";
@@ -152,7 +155,7 @@ in
           [ ]
       );
 
-    file = lib.optionalAttrs user.isMainUser (
+    file = lib.optionalAttrs (user.isMainUser && nxCliEnabled) (
       lib.optionalAttrs (config.programs.fish.enable or false) {
         ".config/fish/completions/nx.fish".text = nxDef.fish;
       }
@@ -165,7 +168,7 @@ in
     );
 
     sessionVariables = (
-      if user.isMainUser then
+      if user.isMainUser && nxCliEnabled then
         {
           NXCORE_DIR = "$HOME/.config/nx/nxcore";
           NXCONFIG_DIR = "$HOME/.config/nx/nxconfig";

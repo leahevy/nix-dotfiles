@@ -43,6 +43,7 @@ args@{
     home = config: {
       home = {
         packages = with pkgs; [
+          jq
           tree
           git
           htop

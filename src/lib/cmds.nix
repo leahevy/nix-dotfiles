@@ -4,6 +4,7 @@
   scope,
   system,
   architectures,
+  mode ? "develop",
 }:
 
 let
@@ -179,6 +180,13 @@ let
       "both"
     ];
 
+    validModes = [
+      "managed"
+      "server"
+      "local"
+      "develop"
+    ];
+
     allowedCommandFields = [
       "description"
       "options"
@@ -188,6 +196,7 @@ let
       "scope"
       "system"
       "group"
+      "modes"
     ];
 
     allowedOptionFields = [
@@ -197,6 +206,7 @@ let
       "repeatable"
       "scope"
       "system"
+      "modes"
     ];
 
     allowedOptionValueFields = [
@@ -215,6 +225,7 @@ let
       "variadic"
       "scope"
       "system"
+      "modes"
     ];
 
     assertKnownFields =
@@ -261,12 +272,29 @@ let
           true
       );
 
+    assertValidModes =
+      path: obj:
+      if obj ? modes then
+        if !(isList obj.modes) then
+          throw "${path}.modes: must be a list"
+        else
+          let
+            invalid = filter (m: !(elem m validModes)) obj.modes;
+          in
+          if invalid != [ ] then
+            throw "${path}.modes: invalid values [${concatStringsSep ", " invalid}], allowed: [${concatStringsSep ", " validModes}]"
+          else
+            true
+      else
+        true;
+
     assertValidOption =
       path: opt:
       assertKnownFields allowedOptionFields opt path
       && assertRequiredFields [ "description" ] opt path
       && assertFieldEnum "scope" validScopes opt path
       && assertFieldEnum "system" validSystems opt path
+      && assertValidModes path opt
       && (if opt ? argument then assertValidOptionValue "${path}.argument" opt.argument else true);
 
     assertValidArgument =
@@ -276,6 +304,7 @@ let
       && assertFieldEnum "type" validTypes a path
       && assertFieldEnum "scope" validScopes a path
       && assertFieldEnum "system" validSystems a path
+      && assertValidModes path a
       && (
         if (a.type or "") == "enum" then
           if !(a ? values) then
@@ -296,6 +325,7 @@ let
       && assertRequiredFields [ "description" ] cmd path
       && assertFieldEnum "scope" validScopes cmd path
       && assertFieldEnum "system" validSystems cmd path
+      && assertValidModes path cmd
       && all (x: x) (
         mapAttrsToList (n: o: assertValidOption "${path}.options.${n}" o) (cmd.options or { })
       )
@@ -312,6 +342,7 @@ let
       && assertRequiredFields [ "description" ] cmd path
       && assertFieldEnum "scope" validScopes cmd path
       && assertFieldEnum "system" validSystems cmd path
+      && assertValidModes path cmd
       && all (x: x) (
         mapAttrsToList (n: o: assertValidOption "${path}.options.${n}" o) (cmd.options or { })
       )
@@ -456,8 +487,9 @@ let
         let
           s = cmd.scope or "both";
           p = cmd.system or "both";
+          m = cmd.modes or [ ];
         in
-        (s == "both" || s == scope) && (p == "both" || p == system)
+        (s == "both" || s == scope) && (p == "both" || p == system) && (m == [ ] || elem mode m)
       ) cmds;
 
     optArgEnumValues =
@@ -485,8 +517,9 @@ let
           let
             s = a.scope or "both";
             p = a.system or "both";
+            m = a.modes or [ ];
           in
-          (s == "both" || s == scope) && (p == "both" || p == system)
+          (s == "both" || s == scope) && (p == "both" || p == system) && (m == [ ] || elem mode m)
         ) (getArgs cmd);
       };
 

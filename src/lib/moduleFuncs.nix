@@ -82,6 +82,8 @@ rec {
       self: config: input: subpath:
       if builtins.elem self.moduleInputName defs.coreInputs then
         throw "Symlinks are not allowed in core input '${self.moduleInputName}' (module: ${self.moduleBasePath})."
+      else if (self.host.deploymentMode or "develop") == "managed" then
+        throw "Symlinks are not allowed in managed deployment mode (module: ${self.moduleBasePath})!"
       else
         let
           inputPath = helpers.resolveInputFromInput input;
@@ -374,7 +376,14 @@ rec {
   createContextFunctions =
     inputName: moduleContext: moduleBasePath:
     let
-      fileFunctions = generateFileFunctions inputName moduleBasePath;
+      deploymentMode =
+        if moduleContext ? host && moduleContext.host != null then
+          moduleContext.host.deploymentMode or "develop"
+        else if moduleContext ? user && moduleContext.user != null then
+          moduleContext.user.deploymentMode or "develop"
+        else
+          "develop";
+      fileFunctions = generateFileFunctions inputName moduleBasePath deploymentMode;
       moduleFunctions = generateModuleFunctions inputName moduleContext;
       sameModuleFunctions = generateSameModuleFunctions inputName moduleContext moduleBasePath;
     in
@@ -509,8 +518,8 @@ rec {
     moduleContext: moduleBasePath: buildHierarchicalFunctions moduleContext moduleBasePath;
 
   # Generate file access functions for specific input and module path
-  # Usage: generateFileFunctions $INPUTNAME $MODULEBASEPATH
-  generateFileFunctions = inputName: moduleBasePath: {
+  # Usage: generateFileFunctions $INPUTNAME $MODULEBASEPATH $DEPLOYMENTMODE
+  generateFileFunctions = inputName: moduleBasePath: deploymentMode: {
     rootPath = subPath: additionalInputs.${inputName} + "/" + subPath;
 
     file =
@@ -609,6 +618,8 @@ rec {
       config: subPath:
       if builtins.elem inputName defs.coreInputs then
         throw "Symlinks are not allowed in core input '${inputName}' (module: ${moduleBasePath})."
+      else if deploymentMode == "managed" then
+        throw "Symlinks are not allowed in managed deployment mode (module: ${moduleBasePath})!"
       else
         let
           relativePath =
@@ -628,6 +639,8 @@ rec {
       config: subPath:
       if builtins.elem inputName defs.coreInputs then
         throw "Symlinks are not allowed in core input '${inputName}' (module: ${moduleBasePath})."
+      else if deploymentMode == "managed" then
+        throw "Symlinks are not allowed in managed deployment mode (module: ${moduleBasePath})!"
       else
         let
           relativePath =

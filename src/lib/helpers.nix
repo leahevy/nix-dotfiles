@@ -135,6 +135,8 @@ rec {
     config: inputName: subPath:
     if builtins.elem inputName defs.coreInputs then
       throw "Symlinks to core inputs are not allowed (input '${inputName}')."
+    else if (config.nx.global.deploymentMode or "develop") == "managed" then
+      throw "Symlinks are not allowed in managed deployment mode!"
     else if isLocalDevelopmentInput null inputName then
       symlink config ((getLocalSourcePath inputName) + "/" + subPath)
     else

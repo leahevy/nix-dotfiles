@@ -31,6 +31,9 @@ get_nx_default() {
         "security.commitVerification.nxconfig")
             echo "all"
             ;;
+        "deploymentMode")
+            echo "develop"
+            ;;
         *)
             echo ""
             ;;
@@ -98,6 +101,14 @@ check_config_directory() {
         if [[ ! -d "$CONFIG_DIR" ]]; then
             CONFIG_DIR=""
         fi
+
+        if [[ ! -d "$NXCORE_DIR" ]]; then
+            if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "develop" && "$REQUIRED" == "true" ]]; then
+                echo -e "${RED}Error: Core directory not found (required in develop mode)!${RESET}" >&2
+                exit 1
+            fi
+            NXCORE_DIR=""
+        fi
     fi
 
     export NXCORE_DIR CONFIG_DIR
@@ -135,12 +146,27 @@ deployment_script_setup() {
     fi
 
     check_config_directory "$script_name" "deployment"
+    load_nx_config
+
+    if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "server" ]]; then
+        echo -e "${YELLOW}WARNING: This machine is in server mode!${RESET}" >&2
+        echo -en "${WHITE}Run manual deployment? ${RESET}[y/N]: " >&2
+        read -r response
+        case "$response" in
+            [yY]|[yY][eE][sS]) ;;
+            *) echo -e "${RED}Aborted${RESET}" >&2; exit 1 ;;
+        esac
+    fi
 
     export SCRIPT_DIR
 }
 
 parse_common_deployment_args() {
-    EXTRA_ARGS=("--override-input" "core" "path:$NXCORE_DIR")
+    if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "develop" ]]; then
+        EXTRA_ARGS=("--override-input" "core" "path:$NXCORE_DIR")
+    else
+        EXTRA_ARGS=()
+    fi
     ALLOW_DIRTY_GIT=false
     SKIP_VERIFICATION=false
 
@@ -196,7 +222,11 @@ parse_common_deployment_args() {
 }
 
 parse_build_deployment_args() {
-    EXTRA_ARGS=("--override-input" "core" "path:$NXCORE_DIR")
+    if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "develop" ]]; then
+        EXTRA_ARGS=("--override-input" "core" "path:$NXCORE_DIR")
+    else
+        EXTRA_ARGS=()
+    fi
     TIMEOUT=7200
     DRY_RUN=""
     BUILD_DIFF=false
@@ -374,6 +404,8 @@ simple_deployment_script_setup() {
         echo -e "${RED}Permissions of enclosing configuration directory are too open!${RESET}" >&2
         exit 1
     fi
+
+    load_nx_config
 
     export SCRIPT_DIR
 }
@@ -603,6 +635,10 @@ parse_git_args() {
                 ;;
         esac
     done
+
+    if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "local" ]]; then
+        ONLY_CONFIG=true
+    fi
 
     if [[ "$ONLY_CORE" == true && "$ONLY_CONFIG" == true ]]; then
         echo -e "${RED}Error: Cannot specify both ${WHITE}--only-core${RED} and ${WHITE}--only-config${RED} at the same time${RESET}" >&2
@@ -1007,8 +1043,9 @@ load_nx_config() {
     NX_CONFIG_LOADED=1
     COMMIT_VERIFICATION_NXCORE=$(get_config_value "security.commitVerification.nxcore" "$config_json")
     COMMIT_VERIFICATION_NXCONFIG=$(get_config_value "security.commitVerification.nxconfig" "$config_json")
+    NX_DEPLOYMENT_MODE=$(get_config_value "deploymentMode" "$config_json")
 
-    export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG
+    export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE
 }
 
 check_brew_activity() {

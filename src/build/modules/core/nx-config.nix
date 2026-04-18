@@ -15,6 +15,15 @@ args@{
 
   rawOptions = {
     nx.global = {
+      deploymentMode = lib.mkOption {
+        type = lib.types.enum [
+          "managed"
+          "server"
+          "local"
+          "develop"
+        ];
+        description = "Deployment mode for this machine";
+      };
       minEnabledModules = lib.mkOption {
         type = lib.types.int;
         default = 10000;
@@ -47,7 +56,15 @@ args@{
 
   module = {
     enabled = config: {
-      nx.global = self.variables.nx.config;
+      nx.global = self.variables.nx.config // {
+        deploymentMode =
+          if self ? host then
+            self.host.deploymentMode or "develop"
+          else if self ? user then
+            self.user.deploymentMode or "develop"
+          else
+            "develop";
+      };
     };
 
     standalone = config: {

@@ -191,6 +191,8 @@ args@{
         pushover = config.nx.linux.notifications.pushover;
         nxcoreDir = "${self.host.mainUser.home}/.config/nx/nxcore";
         nxconfigDir = "${self.host.mainUser.home}/.config/nx/nxconfig";
+        isDevelopMode = self.host.deploymentMode == "develop";
+        effectiveDryRun = self.settings.dryRun || isDevelopMode;
 
         profileName = "${self.host.hostname}--${self.host.architecture}";
 
@@ -386,7 +388,7 @@ args@{
 
         createPersistentRebootMarkerScript =
           rebootType:
-          if self.settings.dryRun then
+          if effectiveDryRun then
             ''${pkgs.coreutils}/bin/echo "Would create persistent marker: /var/lib/nx-auto-upgrade/last-reboot (${rebootType})"''
           else
             ''
@@ -564,9 +566,11 @@ args@{
             fi
           }
 
-          if [[ -d "${nxcoreDir}/.git" ]]; then
-            check_repo_exists "${nxcoreDir}" "nxcore"
-          fi
+          ${lib.optionalString isDevelopMode ''
+            if [[ -d "${nxcoreDir}/.git" ]]; then
+              check_repo_exists "${nxcoreDir}" "nxcore"
+            fi
+          ''}
           check_repo_exists "${nxconfigDir}" "nxconfig"
         '';
 
@@ -582,9 +586,11 @@ args@{
             fi
           }
 
-          if [[ -d "${nxcoreDir}/.git" ]]; then
-            check_git_clean "${nxcoreDir}" "nxcore"
-          fi
+          ${lib.optionalString isDevelopMode ''
+            if [[ -d "${nxcoreDir}/.git" ]]; then
+              check_git_clean "${nxcoreDir}" "nxcore"
+            fi
+          ''}
           check_git_clean "${nxconfigDir}" "nxconfig"
         '';
 
@@ -602,9 +608,11 @@ args@{
             fi
           }
 
-          if [[ -d "${nxcoreDir}/.git" ]]; then
-            check_on_main_branch "${nxcoreDir}" "nxcore"
-          fi
+          ${lib.optionalString isDevelopMode ''
+            if [[ -d "${nxcoreDir}/.git" ]]; then
+              check_on_main_branch "${nxcoreDir}" "nxcore"
+            fi
+          ''}
           check_on_main_branch "${nxconfigDir}" "nxconfig"
         '';
 
@@ -636,9 +644,11 @@ args@{
                     } .git/config
                   }
 
-                  if [[ -d "${nxcoreDir}/.git" ]]; then
-                    setup_nx_auto_upgrade_remote "${nxcoreDir}" "nxcore" "${self.variables.coreRepoIsoUrl}"
-                  fi
+                  ${lib.optionalString isDevelopMode ''
+                    if [[ -d "${nxcoreDir}/.git" ]]; then
+                      setup_nx_auto_upgrade_remote "${nxcoreDir}" "nxcore" "${self.variables.coreRepoIsoUrl}"
+                    fi
+                  ''}
                   setup_nx_auto_upgrade_remote "${nxconfigDir}" "nxconfig" "${self.variables.configRepoIsoUrl}"
         '';
 
@@ -673,22 +683,26 @@ args@{
           nxcore_changed=false
           nxconfig_changed=false
 
-          if [[ -d "${nxcoreDir}/.git" ]]; then
-            if check_for_changes "${nxcoreDir}" "nxcore"; then
-              nxcore_changed=true
+          ${lib.optionalString isDevelopMode ''
+            if [[ -d "${nxcoreDir}/.git" ]]; then
+              if check_for_changes "${nxcoreDir}" "nxcore"; then
+                nxcore_changed=true
+              fi
             fi
-          fi
+          ''}
 
           if check_for_changes "${nxconfigDir}" "nxconfig"; then
             nxconfig_changed=true
           fi
 
           if [[ "$nxconfig_changed" == "false" ]]; then
-            if [[ "$nxcore_changed" == "true" ]]; then
-              ${logScript "info" "INFO: nxcore has remote changes but no config bump, skipping upgrade"}
-            else
+            ${lib.optionalString isDevelopMode ''
+              if [[ "$nxcore_changed" == "true" ]]; then
+                ${logScript "info" "INFO: nxcore has remote changes but no config bump, skipping upgrade"}
+              else
+            ''}
               ${logScript "info" "INFO: No remote changes detected, skipping upgrade"}
-            fi
+            ${lib.optionalString isDevelopMode "fi"}
             exit 0
           fi
         '';
@@ -703,11 +717,11 @@ args@{
             local old_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)
 
             ${logScript "info" "INFO: ${
-              if self.settings.dryRun then "Would pull" else "Pulling"
+              if effectiveDryRun then "Would pull" else "Pulling"
             } latest changes for $repo_name"}
 
             ${
-              if self.settings.dryRun then
+              if effectiveDryRun then
                 ''
                   ${pkgs.coreutils}/bin/echo "Would execute: git pull from nx-auto-upgrade remote"
                 ''
@@ -737,9 +751,11 @@ args@{
 
           pull_repo "${nxconfigDir}" "nxconfig"
 
-          if [[ -d "${nxcoreDir}/.git" ]]; then
-            pull_repo "${nxcoreDir}" "nxcore"
-          fi
+          ${lib.optionalString isDevelopMode ''
+            if [[ -d "${nxcoreDir}/.git" ]]; then
+              pull_repo "${nxcoreDir}" "nxcore"
+            fi
+          ''}
         '';
 
         checkForceRebootScript =
@@ -770,7 +786,7 @@ args@{
             ''}
           '';
 
-        saveMarkerStateScript = lib.optionalString (!self.settings.dryRun) ''
+        saveMarkerStateScript = lib.optionalString (!effectiveDryRun) ''
           if [[ -n "$CURRENT_HASH" ]]; then
             ${pkgs.coreutils}/bin/mkdir -p /var/lib/nx-auto-upgrade
             ${pkgs.coreutils}/bin/echo "$CURRENT_HASH" > /var/lib/nx-auto-upgrade/last-core-state-hash
@@ -781,13 +797,14 @@ args@{
 
         setupGitSafeDirectoriesScript = ''
           setup_git_safe_directories() {
-            if [[ -d "${nxcoreDir}/.git" ]]; then
-              if ! ${pkgs.git}/bin/git config --global --get-all safe.directory | ${pkgs.gnugrep}/bin/grep -q "^${nxcoreDir}$"; then
-                ${pkgs.git}/bin/git config --global --add safe.directory "${nxcoreDir}"
-                ${logScript "info" "INFO: Added ${nxcoreDir} to git safe directories"}
+            ${lib.optionalString isDevelopMode ''
+              if [[ -d "${nxcoreDir}/.git" ]]; then
+                if ! ${pkgs.git}/bin/git config --global --get-all safe.directory | ${pkgs.gnugrep}/bin/grep -q "^${nxcoreDir}$"; then
+                  ${pkgs.git}/bin/git config --global --add safe.directory "${nxcoreDir}"
+                  ${logScript "info" "INFO: Added ${nxcoreDir} to git safe directories"}
+                fi
               fi
-            fi
-
+            ''}
             if ! ${pkgs.git}/bin/git config --global --get-all safe.directory | ${pkgs.gnugrep}/bin/grep -q "^${nxconfigDir}$"; then
               ${pkgs.git}/bin/git config --global --add safe.directory "${nxconfigDir}"
               ${logScript "info" "INFO: Added ${nxconfigDir} to git safe directories"}
@@ -796,15 +813,13 @@ args@{
         '';
 
         upgradeScript = ''
-          ${logScript "info" "INFO: ${
-            if self.settings.dryRun then "Would start" else "Starting"
-          } system rebuild"}
+          ${logScript "info" "INFO: ${if effectiveDryRun then "Would start" else "Starting"} system rebuild"}
           cd "${nxconfigDir}"
 
           export NIXOS_LABEL="auto-$(${pkgs.coreutils}/bin/date +%d%m.%H%M)"
 
           ${
-            if self.settings.dryRun then
+            if effectiveDryRun then
               ''
                 REBUILD_ACTION="switch"
                 ${lib.optionalString self.settings.allowReboot ''
@@ -886,7 +901,7 @@ args@{
                     if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
                       ${logScript "info" "SUCCESS-REBOOT-LATER: Auto-upgrade completed successfully! Reboot needed and within window but borg backup is running - scheduling reboot in window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper})"}
                       ${
-                        if self.settings.dryRun then
+                        if effectiveDryRun then
                           ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
                         else
                           ''
@@ -897,11 +912,11 @@ args@{
                       }
                     else
                       ${logScript "info" "SUCCESS-REBOOT-NOW: Auto-upgrade completed successfully! Reboot needed and within window - ${
-                        if self.settings.dryRun then "would reboot" else "rebooting"
+                        if effectiveDryRun then "would reboot" else "rebooting"
                       } in +1 minute"}
                       ${createPersistentRebootMarkerScript "immediate-window"}
                       ${
-                        if self.settings.dryRun then
+                        if effectiveDryRun then
                           ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1 --no-wall"''
                         else
                           "${pkgs.systemd}/bin/systemd-run --on-active=1m ${config.systemd.package}/bin/shutdown -r now --no-wall"
@@ -910,7 +925,7 @@ args@{
                   else
                     ${logScript "info" "SUCCESS-REBOOT-LATER: Auto-upgrade completed successfully! Reboot needed and scheduled in window (${self.settings.rebootWindow.lower}-${self.settings.rebootWindow.upper})"}
                     ${
-                      if self.settings.dryRun then
+                      if effectiveDryRun then
                         ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
                       else
                         ''
@@ -926,7 +941,7 @@ args@{
                   if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
                     ${logScript "info" "SUCCESS-REBOOT-LATER: Auto-upgrade completed successfully! Reboot needed but borg backup is running - scheduling reboot"}
                     ${
-                      if self.settings.dryRun then
+                      if effectiveDryRun then
                         ''${pkgs.coreutils}/bin/echo "Would create marker file: /run/nx-auto-upgrade-reboot-needed"''
                       else
                         ''
@@ -937,11 +952,11 @@ args@{
                     }
                   else
                     ${logScript "info" "SUCCESS-REBOOT-NOW: Auto-upgrade completed successfully! Reboot needed - ${
-                      if self.settings.dryRun then "would reboot" else "rebooting"
+                      if effectiveDryRun then "would reboot" else "rebooting"
                     } in +1 minute"}
                     ${createPersistentRebootMarkerScript "immediate-no-window"}
                     ${
-                      if self.settings.dryRun then
+                      if effectiveDryRun then
                         ''${pkgs.coreutils}/bin/echo "Would execute: shutdown -r +1 --no-wall"''
                       else
                         "${pkgs.systemd}/bin/systemd-run --on-active=1m ${config.systemd.package}/bin/shutdown -r now --no-wall"
@@ -969,7 +984,7 @@ args@{
           fi
 
           ${
-            if self.settings.dryRun then
+            if effectiveDryRun then
               ''
                 ${logScript "info" "Would check reboot marker and reboot if in window"}
                 ${pkgs.coreutils}/bin/echo "Would check marker file: $reboot_marker"
@@ -994,6 +1009,13 @@ args@{
 
       in
       {
+        assertions = [
+          {
+            assertion = self.host.deploymentMode != "managed";
+            message = "Auto-upgrades cannot be enabled in managed deployment mode!";
+          }
+        ];
+
         sops.secrets.nx-github-access-token = {
           sopsFile = self.config.secretsPath "global-secrets.yaml";
           mode = "0440";
@@ -1173,9 +1195,11 @@ args@{
               ${lib.optionalString self.settings.verifySignatures ''
                 setup_verification_keyring
 
-                if [[ -d "${nxcoreDir}/.git" ]]; then
-                  verify_commit_signature "${nxcoreDir}" "nxcore" "$(cd ${nxcoreDir} && ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)"
-                fi
+                ${lib.optionalString isDevelopMode ''
+                  if [[ -d "${nxcoreDir}/.git" ]]; then
+                    verify_commit_signature "${nxcoreDir}" "nxcore" "$(cd ${nxcoreDir} && ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)"
+                  fi
+                ''}
                 verify_commit_signature "${nxconfigDir}" "nxconfig" "$(cd ${nxconfigDir} && ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)"
               ''}
 

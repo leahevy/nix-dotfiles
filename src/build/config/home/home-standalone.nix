@@ -73,7 +73,10 @@ let
     rootPath = defs.rootPath;
     scope = "standalone";
     system = if pkgs.stdenv.isDarwin then "darwin" else "linux";
+    mode = user.deploymentMode or "develop";
   };
+
+  nxCliEnabled = (user.deploymentMode or "develop") != "managed";
 in
 { config, options, ... }:
 
@@ -100,7 +103,7 @@ in
 
     packages =
       (user.additionalPackages or [ ])
-      ++ [
+      ++ lib.optionals nxCliEnabled [
         (pkgs.stdenv.mkDerivation {
           name = "nx";
           src = builtins.path {
@@ -148,10 +151,10 @@ in
                       cp ${pkgs.writeText "nx-spec.json" nxDef.json} $out/share/nx/nx-spec.json
           '';
         })
-      ]
-      ++ (with pkgs; [ jq ]);
+        pkgs.jq
+      ];
 
-    file =
+    file = lib.optionalAttrs nxCliEnabled (
       lib.optionalAttrs (config.programs.fish.enable or false) {
         ".config/fish/completions/nx.fish".text = nxDef.fish;
       }
@@ -160,9 +163,10 @@ in
       }
       // lib.optionalAttrs (config.programs.zsh.enable or false) {
         ".local/share/zsh/site-functions/_nx".text = nxDef.zsh;
-      };
+      }
+    );
 
-    sessionVariables = {
+    sessionVariables = lib.optionalAttrs nxCliEnabled {
       NXCORE_DIR = "$HOME/.config/nx/nxcore";
       NXCONFIG_DIR = "$HOME/.config/nx/nxconfig";
     };

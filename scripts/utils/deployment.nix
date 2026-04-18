@@ -104,14 +104,24 @@
         description = "Run the garbage collection";
         group = "switch";
       };
+
       update = {
         description = "Update the flake in git (without switching)";
         group = "switch";
+        modes = [
+          "local"
+          "develop"
+        ];
         arguments = [ (argVariadic "inputs" "Flake input name(s) to update" "string") ];
       };
+
       bump = {
         description = "Bump the core input to the latest remote commit";
         group = "switch";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = {
           commit = option "Commit flake.lock and .label after bumping";
           push = option "Push config after committing (implies --commit)";
@@ -122,12 +132,17 @@
         description = "Bump NixOS version and migrate packages";
         group = "switch";
         scope = "integrated";
+        modes = [ "develop" ];
         arguments = [ (arg "version" "Target NixOS version (XX.XX)" "nixVersion") ];
       };
 
       brew = {
         description = "Sync Homebrew packages";
         group = "switch";
+        modes = [
+          "local"
+          "develop"
+        ];
         system = "darwin";
       };
 
@@ -145,18 +160,21 @@
         scope = "integrated";
         options = commonDeploymentOptions;
       };
+
       test = {
         description = "Activate without adding to bootloader";
         group = "switch";
         scope = "integrated";
         options = commonDeploymentOptions;
       };
+
       boot = {
         description = "Add to bootloader without switching";
         group = "switch";
         scope = "integrated";
         options = commonDeploymentOptions;
       };
+
       rollback = {
         description = "Rollback to previous configuration";
         group = "switch";
@@ -165,6 +183,7 @@
           allow-dirty-git = option "Allow proceeding with uncommitted changes";
         };
       };
+
       impermanence = {
         description = "Manage ephemeral root filesystems";
         group = "switch";
@@ -204,6 +223,7 @@
         };
         arguments = [ (arg "path" "Nix eval path" "string") ];
       };
+
       package = {
         description = "Get store path for package(s)";
         group = "evaluation";
@@ -212,6 +232,7 @@
         };
         arguments = [ (argVariadic "packages" "Package name(s)" "string") ];
       };
+
       version = {
         description = "Show the current NixOS version";
         group = "evaluation";
@@ -221,14 +242,22 @@
         description = "Open a shell in the config directory";
         group = "folder";
       };
+
       core = {
         description = "Open a shell in the core directory";
         group = "folder";
+        modes = [ "develop" ];
       };
+
       format = {
         description = "Format directories with treefmt";
         group = "folder";
+        modes = [
+          "local"
+          "develop"
+        ];
       };
+
       exec = {
         description = "Run any command in the directory";
         group = "folder";
@@ -299,64 +328,124 @@
       log = {
         description = "Run git log command";
         group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = gitOptions;
       };
+
       head = {
         description = "Run git show HEAD command";
         group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = gitOptions;
       };
+
       diff = {
         description = "Run git diff command";
         group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = gitOptions;
       };
+
       diffc = {
         description = "Run git diff --cached command";
         group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = gitOptions;
       };
+
       status = {
         description = "Run git status command";
         group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = gitOptions;
       };
+
       commit = {
         description = "Run git commit command";
         group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = gitOptions;
         arguments = [ (arg "message" "Commit message" "string") ];
       };
+
       pull = {
         description = "Run git pull command";
         group = "git";
+        modes = [
+          "server"
+          "local"
+          "develop"
+        ];
         options = gitOptions;
       };
+
       push = {
         description = "Run git push command";
         group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = gitOptions // {
           bump = option "Push nxcore first, then bump and push nxconfig (implies --commit on config)";
         };
       };
+
       add = {
         description = "Run git add command";
         group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = gitOptions;
       };
+
       addp = {
         description = "Run git add --patch command";
         group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = gitOptions;
       };
+
       stash = {
         description = "Run git stash command";
         group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = gitOptions;
       };
+
       switch-branch = {
         description = "Switch git branches with safety checks";
         group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
         options = gitOptions;
         arguments = [ (arg "branch" "Branch to switch to" "gitBranch") ];
       };

@@ -432,6 +432,17 @@ with lib;
       description = "Additional untyped settings to add to the host configuration";
     };
 
+    deploymentMode = mkOption {
+      type = types.enum [
+        "managed"
+        "server"
+        "local"
+        "develop"
+      ];
+      default = "develop";
+      description = "How this machine consumes the NX configuration";
+    };
+
     profile = mkOption {
       type = types.attrs;
       default = { };

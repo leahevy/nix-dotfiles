@@ -4,6 +4,11 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 simple_deployment_script_setup "profile"
 
+NX_OVERRIDE_ARGS=()
+if [[ -n "${NXCORE_DIR:-}" && "${NX_DEPLOYMENT_MODE:-develop}" == "develop" ]]; then
+    NX_OVERRIDE_ARGS=("--override-input" "core" "path:$NXCORE_DIR")
+fi
+
 resolve_active_profile_base() {
     local full_profile
     full_profile="$(retrieve_active_profile 2>/dev/null | tail -1)"
@@ -27,7 +32,7 @@ resolve_user_profile_dir() {
     local full_profile
     local username
     full_profile="$(retrieve_active_profile 2>/dev/null | tail -1)"
-    username="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$full_profile.config.nx.profile.host.mainUser.username" 2>/dev/null || echo "null")"
+    username="$(nix eval --json "${NX_OVERRIDE_ARGS[@]}" ".#nixosConfigurations.$full_profile.config.nx.profile.host.mainUser.username" 2>/dev/null || echo "null")"
     username="${username//\"/}"
 
     if [[ "$username" == "null" || -z "$username" ]]; then
@@ -52,7 +57,7 @@ resolve_user_config_file() {
     local full_profile
     local username
     full_profile="$(retrieve_active_profile 2>/dev/null | tail -1)"
-    username="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$full_profile.config.nx.profile.host.mainUser.username" 2>/dev/null || echo "null")"
+    username="$(nix eval --json "${NX_OVERRIDE_ARGS[@]}" ".#nixosConfigurations.$full_profile.config.nx.profile.host.mainUser.username" 2>/dev/null || echo "null")"
     username="${username//\"/}"
     echo "$user_dir/$username.nix"
 }

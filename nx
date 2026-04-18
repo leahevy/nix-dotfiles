@@ -15,8 +15,14 @@ SCRIPTS_PATH="$SCRIPT_DIR/scripts/deployment"
 
 source "$SCRIPTS_PATH/../utils/common.sh"
 check_config_directory "help" "deployment"
+load_nx_config
 
 if [[ -n "${NX_INSTALL_PATH:-}" && "$SCRIPT_DIR" != "$NX_INSTALL_PATH" ]]; then
+    if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "managed" || "${NX_DEPLOYMENT_MODE:-develop}" == "server" ]]; then
+        echo -e "${RED}Error: Running nx directly from source is not allowed in managed or server mode!${RESET}" >&2
+        echo -e "${CYAN}Current deployment mode: ${WHITE}${NX_DEPLOYMENT_MODE:-develop}${RESET}" >&2
+        exit 1
+    fi
     unset NX_INSTALL_PATH
 fi
 

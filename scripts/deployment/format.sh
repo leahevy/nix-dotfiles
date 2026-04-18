@@ -4,9 +4,11 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "format"
 
-cd "$NXCORE_DIR"
-echo -e "${GREEN}Formatting main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
-treefmt . "$@"
+if [[ -n "${NXCORE_DIR:-}" && -d "$NXCORE_DIR/.git" ]]; then
+    cd "$NXCORE_DIR"
+    echo -e "${GREEN}Formatting main repository ${WHITE}(.config/nx/nxcore)${RESET}..."
+    treefmt . "$@"
+fi
 
 if [[ -d "$CONFIG_DIR/.git" ]]; then
     echo
