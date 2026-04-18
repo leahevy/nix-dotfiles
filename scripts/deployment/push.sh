@@ -37,6 +37,9 @@ if [[ "$BUMP" == "true" ]]; then
         sleep 3
         echo
     fi
+    echo -e "${CYAN}Pulling config repository before bump...${RESET}"
+    (cd "$CONFIG_DIR" && git pull)
+    echo
     echo -e "${CYAN}Bumping nxconfig to pushed nxcore...${RESET}"
     echo
     cd "$CONFIG_DIR"
