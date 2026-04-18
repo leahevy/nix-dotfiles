@@ -505,7 +505,6 @@ verify_repo_commits() {
             return 0
             ;;
         "last")
-            echo -e "${CYAN}Verifying last commit in $repo_name...${RESET}" >&2
             verify_commit_range "$repo_path" "$repo_name" "HEAD~1..HEAD"
             ;;
         "all")
@@ -549,15 +548,6 @@ verify_commit_range() {
         echo
         return 1
     fi
-
-    local num_commits
-    num_commits=$(echo "$commits" | wc -l | tr -d ' ')
-    if [[ "$num_commits" -eq 1 ]]; then
-        echo -e "${BLUE}Commit verification: ${GREEN}Last commit verified in $repo_name${RESET}" >&2
-    else
-        echo -e "${BLUE}Commit verification: ${GREEN}$num_commits commits verified in $repo_name${RESET}" >&2
-    fi
-    echo
     return 0
     )
 }
@@ -724,9 +714,19 @@ retrieve_active_profile() {
         fi
     fi
 
+    local default_profile
+    if [[ -e /etc/nixos ]]; then
+        default_profile="$HOSTNAME"
+    else
+        default_profile="$USER"
+    fi
+
     target_profile="$(construct_profile_name "$base_profile")"
     local arch="${target_profile#"$base_profile"--}"
-    echo -e "${GREEN}Selected profile: ${YELLOW}$base_profile ${RED}(${arch})${RESET}\n" >&2
+    if [[ "$base_profile" != "$default_profile" ]]; then
+        echo -e "${GREEN}Selected profile: ${YELLOW}$base_profile ${RED}(${arch})${RESET}\n" >&2
+        echo >&2
+    fi
     echo "$target_profile"
 }
 
@@ -944,7 +944,6 @@ check_nix_daemon_activity() {
     build_processes=$(ps ax -o stat,command | tail -n +2 | grep "nix-daemon" | grep -v -- "--daemon" | grep -v grep | awk '$1 ~ /^(R|Rs|Rl|Ssl|S\+)$/' | wc -l) || build_processes=0
 
     if [[ "$build_processes" -gt 0 ]]; then
-        echo
         echo -en "${GREEN}Nix-daemon is active, continue anyway? ${RESET}[Y/n]: " >&2
         read -r response
         case "$response" in
@@ -1028,17 +1027,14 @@ load_nx_config() {
 
     if [[ -f "/etc/nx/config.json" ]]; then
         config_file="/etc/nx/config.json"
-        echo -e "${GREEN}Using system config: ${WHITE}/etc/nx/config.json${RESET}" >&2
         config_json=$(cat "$config_file")
     elif [[ -f "$HOME/.config/nx/config.json" ]]; then
         config_file="$HOME/.config/nx/config.json"
-        echo -e "${GREEN}Using user config: ${WHITE}$HOME/.config/nx/config.json${RESET}" >&2
         config_json=$(cat "$config_file")
     else
         echo -e "${YELLOW}No nx config found, using defaults${RESET}" >&2
         config_json=""
     fi
-    echo
 
     NX_CONFIG_LOADED=1
     COMMIT_VERIFICATION_NXCORE=$(get_config_value "security.commitVerification.nxcore" "$config_json")
