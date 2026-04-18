@@ -15,7 +15,7 @@ PROFILE="$(retrieve_active_profile)"
 if [[ -e /etc/NIXOS ]]; then
   nh os switch -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"
 else
-  nh home switch . -c "$PROFILE" -b nix-rebuild.backup -- "${EXTRA_ARGS[@]:-}"
+  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null nh home switch . -c "$PROFILE" -b nix-rebuild.backup -- "${EXTRA_ARGS[@]:-}"
 fi
 
 if [[ "$(uname -s)" == "Darwin" ]]; then

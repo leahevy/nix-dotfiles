@@ -30,7 +30,7 @@ if [[ -e /etc/NIXOS ]]; then
   fi
 else
   # shellcheck disable=SC2086
-  NEW_HOME=$(timeout "${TIMEOUT}s" nix build --no-link $DRY_RUN $LOG_FORMAT ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
+  NEW_HOME=$(GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nix build --no-link $DRY_RUN $LOG_FORMAT ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
 
   if [[ "${BUILD_DIFF:-false}" == "true" ]]; then
     echo -e "${CYAN}Comparing new build with current active home configuration...${RESET}"
