@@ -21,7 +21,7 @@ args@{
   ];
 
   settings = {
-    withPowerManagement = true;
+    withPowerManagement = false;
     disableGspFirmware = false;
     disableDisplayAudio = true;
   };
