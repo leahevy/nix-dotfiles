@@ -19,9 +19,9 @@ args@{
     keyboardName = null;
     useKeydVirtual = false;
     output =
-      if self.host ? displays && self.host.displays ? main then
+      if self ? host && self.host ? displays && self.host.displays ? main then
         self.host.displays.main
-      else if self.user ? displays && self.user.displays ? main then
+      else if self ? user && self.user ? displays && self.user.displays ? main then
         self.user.displays.main
       else
         null;

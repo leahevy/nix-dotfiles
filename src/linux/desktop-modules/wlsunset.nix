@@ -15,7 +15,13 @@ args@{
   input = "linux";
 
   settings = {
-    location = if self.user.isStandalone then self.user.location else self.host.location;
+    location =
+      if self ? user && self.user.isStandalone then
+        self.user.location
+      else if self ? host then
+        self.host.location
+      else
+        null;
   };
 
   assertions = [

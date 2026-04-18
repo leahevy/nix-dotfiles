@@ -25,7 +25,13 @@ args@{
     protocol = "https";
     subdomain = "paperless";
     args = "";
-    domain = if self.user.isStandalone then self.user.homeserverDomain else self.host.homeserverDomain;
+    domain =
+      if self ? user && self.user.isStandalone then
+        self.user.homeserverDomain
+      else if self ? host then
+        self.host.homeserverDomain
+      else
+        null;
   };
 
   submodules = {
