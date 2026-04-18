@@ -9,6 +9,7 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     steps:
       - name: Notify PR Status via Pushover
         env:
