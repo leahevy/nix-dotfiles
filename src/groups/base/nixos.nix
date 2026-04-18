@@ -25,7 +25,6 @@ args@{
           storage = [ "smartd" ];
           system = [
             "gc"
-            "auto-upgrades"
             "timesyncd"
             "tmp"
           ];
