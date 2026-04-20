@@ -262,6 +262,7 @@ in
               GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew upgrade -g
               echo
 
+              rm -f "$NEW_BREWFILE" || true
               cp "$BREWFILE" "$NEW_BREWFILE"
 
               echo -e "''${GREEN}Brew environment synced.''${RESET}"
