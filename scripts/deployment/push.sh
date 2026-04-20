@@ -45,7 +45,11 @@ if [[ "$BUMP" == "true" ]]; then
     cd "$CONFIG_DIR"
     run_bump "true" "true"
     echo
-    echo -e "${GREEN}Done. Both repositories pushed successfully (with bump).${RESET}"
+    if [[ "$ONLY_CONFIG" == true ]]; then
+      echo -e "${GREEN}Done. Config repository pushed successfully (with bump).${RESET}"
+    else
+      echo -e "${GREEN}Done. Both repositories pushed successfully (with bump).${RESET}"
+    fi
 elif [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
     if [[ "$ONLY_CONFIG" != true ]]; then
         echo
