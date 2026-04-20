@@ -76,7 +76,18 @@ let
     groups.shell = [ "shell" ];
   };
 
-  mergeModules = base: extra: lib.recursiveUpdate base extra;
+  mergeModules =
+    base: extra:
+    lib.recursiveUpdate base extra
+    // (lib.mapAttrs (
+      name: value:
+      if builtins.isAttrs value && builtins.isAttrs (base.${name} or null) then
+        mergeModules base.${name} value
+      else if builtins.isList value && builtins.isList (base.${name} or null) then
+        base.${name} ++ value
+      else
+        value
+    ) extra);
 
   baseLinuxModules = {
     linux = {
