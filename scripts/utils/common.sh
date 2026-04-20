@@ -1120,24 +1120,34 @@ run_bump() {
     local use_dir="$CONFIG_DIR"
     if [[ -d "$CONFIG_DIR/.git" && -d "$NXCORE_DIR/.git" ]]; then
         local config_timestamp core_timestamp
-        config_timestamp=$(get_latest_commit_timestamp "$CONFIG_DIR")
+
+        config_timestamp=$(
+            git -C "$CONFIG_DIR" log --pretty=format:'%ct%x09%s' |
+            awk -F'\t' '$2 !~ /^Bump core at: / { print $1; exit }' || true
+        )
+
         core_timestamp=$(get_latest_commit_timestamp "$NXCORE_DIR")
-        if [[ "$core_timestamp" -gt "$config_timestamp" ]]; then
+        if [[ -n "${config_timestamp:-}" && "$core_timestamp" -gt "$config_timestamp" ]]; then
             use_dir="$NXCORE_DIR"
         fi
     elif [[ -d "$NXCORE_DIR/.git" ]]; then
         use_dir="$NXCORE_DIR"
     fi
-    if [[ "$use_dir" == "$CONFIG_DIR" && -d "$NXCORE_DIR/.git" ]]; then
-        local config_last_msg
-        config_last_msg=$(git -C "$CONFIG_DIR" log -1 --pretty=format:"%s")
-        if [[ "$config_last_msg" == "Bump core at: "* ]]; then
-            use_dir="$NXCORE_DIR"
-        fi
+
+    local commit_ref="HEAD"
+    if [[ "$use_dir" == "$CONFIG_DIR" ]]; then
+        commit_ref=$(
+            git -C "$CONFIG_DIR" log --pretty=format:'%H%x09%s' |
+            awk -F'\t' '$2 !~ /^Bump core at: / { print $1; exit }' || true
+        )
+    fi
+
+    if [[ "$commit_ref" == "" ]]; then
+      commit_ref="HEAD"
     fi
 
     local commit_msg label
-    commit_msg=$(git -C "$use_dir" log -1 --pretty=format:"%s" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9-]//g' | awk '{if(length($0)>25) print substr($0,1,24)"-"; else print $0}' | sed 's/--$/-/')
+    commit_msg=$(git -C "$use_dir" log -1 --pretty=format:"%s" "$commit_ref" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9-]//g' | awk '{if(length($0)>25) print substr($0,1,24)"-"; else print $0}' | sed 's/--$/-/')
     label="$(git -C "$use_dir" log -1 --pretty=format:"$(git -C "$use_dir" branch --show-current).%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
     echo "$label" > "$CONFIG_DIR/.label"
     echo -e "Generated label ${WHITE}$label${RESET}"
