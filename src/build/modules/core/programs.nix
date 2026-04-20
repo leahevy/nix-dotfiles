@@ -14,16 +14,6 @@ args@{
   input = "build";
 
   module = {
-    darwin.overlays = [
-      (final: prev: {
-        pre-commit = prev.pre-commit.overridePythonAttrs (oldAttrs: {
-          disabledTests = (oldAttrs.disabledTests or [ ]) ++ [
-            "test_output_isatty"
-          ];
-        });
-      })
-    ];
-
     standalone = config: {
       home.file = {
         ".local/bin/nix".source = config.nix.package.out + "/bin/nix";
@@ -58,9 +48,20 @@ args@{
           ssh-to-age
           ssh-to-pgp
           nvd
+        ];
+      };
+    };
+
+    linux.home = config: {
+      home = {
+        packages = with pkgs; [
           pre-commit
         ];
       };
+    };
+
+    darwin.enabled = config: {
+      nx.homebrew.brews = [ "pre-commit" ];
     };
   };
 }
