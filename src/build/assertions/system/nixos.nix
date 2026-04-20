@@ -74,7 +74,7 @@ in
     architecture = host.architecture;
     context = "system";
   })
-  ++ (
+  ++ lib.optionals (host.impermanence or false) (
     let
       allowedSystemPersistPath = variables.persist;
       persistKeys = builtins.attrNames (config.environment.persistence or { });

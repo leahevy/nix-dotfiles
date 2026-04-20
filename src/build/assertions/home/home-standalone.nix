@@ -69,18 +69,5 @@ in
     config = config;
     architecture = user.architecture;
     context = "user";
-  })
-  ++ (
-    let
-      allowedHomePersistPath = "${variables.persist}";
-      persistKeys = builtins.attrNames (config.home.persistence or { });
-      invalidKeys = builtins.filter (key: key != allowedHomePersistPath) persistKeys;
-    in
-    [
-      {
-        assertion = invalidKeys == [ ];
-        message = "home.persistence contains invalid mount points: ${builtins.concatStringsSep ", " invalidKeys}. Only '${allowedHomePersistPath}' is allowed (use self.persist).";
-      }
-    ]
-  );
+  });
 }

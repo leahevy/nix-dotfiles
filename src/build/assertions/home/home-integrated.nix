@@ -72,7 +72,7 @@ in
     context = "user";
     osConfig = osConfig;
   })
-  ++ (
+  ++ lib.optionals (host.impermanence or false) (
     let
       allowedHomePersistPath = "${variables.persist}";
       persistKeys = builtins.attrNames (config.home.persistence or { });
