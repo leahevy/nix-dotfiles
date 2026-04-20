@@ -433,7 +433,18 @@ rec {
       hierarchicalFuncs = moduleFuncs.hierarchicalInputFuncs moduleContext moduleContext.moduleBasePath;
 
       persistShortcut = {
-        persist = moduleContext.variables.persist;
+        persist =
+          if (moduleContext.host.impermanence or false) then moduleContext.variables.persist else "/";
+
+        persistPath =
+          subpath:
+          let
+            cleanPath = lib.removePrefix "/" subpath;
+          in
+          if (moduleContext.host.impermanence or false) then
+            "${moduleContext.variables.persist}/${cleanPath}"
+          else
+            "/${cleanPath}";
       };
     in
     moduleContext // appliedCommonFuncs // contextFuncs // hierarchicalFuncs // persistShortcut;

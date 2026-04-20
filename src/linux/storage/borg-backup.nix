@@ -91,30 +91,9 @@ args@{
           export BORG_REPO="${repoUrl}"
         '';
 
-        translatePath = ''
-          translate_path() {
-            local path="$1"
-            if [[ "$path" =~ ^/persist(/.*) ]]; then
-              echo "persist/.snapshots/persist''${BASH_REMATCH[1]}"
-            elif [[ "$path" == "/persist" ]]; then
-              echo "persist/.snapshots/persist"
-            elif [[ "$path" =~ ^/data(/.*) ]]; then
-              echo "data/.snapshots/data''${BASH_REMATCH[1]}"
-            elif [[ "$path" == "/data" ]]; then
-              echo "data/.snapshots/data"
-            elif [[ "$path" =~ ^/nix(/.*) ]]; then
-              echo "persist/.snapshots/nix''${BASH_REMATCH[1]}"
-            elif [[ "$path" == "/nix" ]]; then
-              echo "persist/.snapshots/nix"
-            elif [[ "$path" =~ ^/boot(/.*) ]]; then
-              echo "boot''${BASH_REMATCH[1]}"
-            elif [[ "$path" == "/boot" ]]; then
-              echo "boot"
-            else
-              echo "$path"
-            fi
-          }
+        impermanence = self.host.impermanence or false;
 
+        makePatternFn = ''
           make_pattern() {
             local path="$1"
             local translated=$(translate_path "$path")
@@ -125,6 +104,62 @@ args@{
             fi
           }
         '';
+
+        translatePath =
+          (
+            if impermanence then
+              ''
+                translate_path() {
+                  local path="$1"
+                  if [[ "$path" =~ ^/persist(/.*) ]]; then
+                    echo "persist/.snapshots/persist''${BASH_REMATCH[1]}"
+                  elif [[ "$path" == "/persist" ]]; then
+                    echo "persist/.snapshots/persist"
+                  elif [[ "$path" =~ ^/data(/.*) ]]; then
+                    echo "data/.snapshots/data''${BASH_REMATCH[1]}"
+                  elif [[ "$path" == "/data" ]]; then
+                    echo "data/.snapshots/data"
+                  elif [[ "$path" =~ ^/nix(/.*) ]]; then
+                    echo "persist/.snapshots/nix''${BASH_REMATCH[1]}"
+                  elif [[ "$path" == "/nix" ]]; then
+                    echo "persist/.snapshots/nix"
+                  elif [[ "$path" =~ ^/boot(/.*) ]]; then
+                    echo "boot''${BASH_REMATCH[1]}"
+                  elif [[ "$path" == "/boot" ]]; then
+                    echo "boot"
+                  else
+                    echo "$path"
+                  fi
+                }
+              ''
+            else
+              ''
+                translate_path() {
+                  local path="$1"
+                  if [[ "$path" =~ ^/data(/.*) ]]; then
+                    echo "data/.snapshots/data''${BASH_REMATCH[1]}"
+                  elif [[ "$path" == "/data" ]]; then
+                    echo "data/.snapshots/data"
+                  elif [[ "$path" =~ ^/nix(/.*) ]]; then
+                    echo ".snapshots/nix''${BASH_REMATCH[1]}"
+                  elif [[ "$path" == "/nix" ]]; then
+                    echo ".snapshots/nix"
+                  elif [[ "$path" =~ ^/boot(/.*) ]]; then
+                    echo "boot''${BASH_REMATCH[1]}"
+                  elif [[ "$path" == "/boot" ]]; then
+                    echo "boot"
+                  elif [[ "$path" =~ ^/(.+) ]]; then
+                    echo ".snapshots/root/''${BASH_REMATCH[1]}"
+                  elif [[ "$path" == "/" ]]; then
+                    echo ".snapshots/root"
+                  else
+                    echo "$path"
+                  fi
+                }
+              ''
+          )
+          + "\n"
+          + makePatternFn;
       in
       {
 
@@ -368,6 +403,7 @@ args@{
       let
         pushover = config.nx.linux.notifications.pushover;
         repoUrl = "ssh://${self.settings.repository.user}@${self.settings.repository.server}:${toString self.settings.repository.port}${self.settings.repository.path}";
+        snapshotBase = self.persistPath ".snapshots";
 
         pingTarget =
           if self.settings.pingTarget != null then
@@ -542,16 +578,20 @@ args@{
             echo "${message}" ${if level == "err" then ">&2" else ""}
           '';
 
+        impermanence = self.host.impermanence or false;
+
+        rootSnapshotName = if impermanence then "persist" else "root";
+
         backupPaths = [
-          "/persist/.snapshots/persist"
-          "/persist/.snapshots/nix"
+          "${snapshotBase}/${rootSnapshotName}"
+          "${snapshotBase}/nix"
           "/boot"
         ]
         ++ lib.optional self.settings.withData "${self.settings.dataPath}/.snapshots/data";
 
         allExcludes =
-          (map (exclude: "/persist/.snapshots/persist/${exclude}") self.settings.excludes.persist)
-          ++ (map (exclude: "/persist/.snapshots/nix/${exclude}") self.settings.excludes.nix)
+          (map (exclude: "${snapshotBase}/${rootSnapshotName}/${exclude}") self.settings.excludes.persist)
+          ++ (map (exclude: "${snapshotBase}/nix/${exclude}") self.settings.excludes.nix)
           ++ (map (exclude: "/boot/${exclude}") self.settings.excludes.boot)
           ++ lib.optionals self.settings.withData (
             map (exclude: "${self.settings.dataPath}/.snapshots/data/${exclude}") self.settings.excludes.data
@@ -620,14 +660,14 @@ args@{
             ${networkWaitScript}
             ${logScript "info" "STARTED: System backup starting"}
             ${createSnapshotScript {
-              volume = "/persist";
-              snapshotName = "persist";
-              snapshotDir = "/persist/.snapshots";
+              volume = if impermanence then self.persist else "/";
+              snapshotName = rootSnapshotName;
+              snapshotDir = snapshotBase;
             }}
             ${createSnapshotScript {
               volume = "/nix";
               snapshotName = "nix";
-              snapshotDir = "/persist/.snapshots";
+              snapshotDir = snapshotBase;
             }}
             ${lib.optionalString self.settings.withData (createSnapshotScript {
               volume = self.settings.dataPath;
@@ -643,13 +683,13 @@ args@{
           postHook = ''
             ${pkgs.coreutils}/bin/touch /tmp/nx-backup-completed
             ${cleanupSnapshotScript {
-              snapshotName = "persist";
-              snapshotDir = "/persist/.snapshots";
+              snapshotName = rootSnapshotName;
+              snapshotDir = snapshotBase;
               canFail = true;
             }}
             ${cleanupSnapshotScript {
               snapshotName = "nix";
-              snapshotDir = "/persist/.snapshots";
+              snapshotDir = snapshotBase;
               canFail = true;
             }}
             ${lib.optionalString self.settings.withData (cleanupSnapshotScript {
@@ -700,7 +740,7 @@ args@{
             Restart = "on-failure";
             RestartSec = "5m";
             ReadWritePaths = [
-              "/persist/.snapshots"
+              snapshotBase
               "/tmp"
             ]
             ++ lib.optional self.settings.withData "${self.settings.dataPath}/.snapshots";
@@ -724,7 +764,7 @@ args@{
 
         system.activationScripts.borg-backup-setup = {
           text = ''
-            ${pkgs.coreutils}/bin/mkdir -p /persist/.snapshots || true
+            ${pkgs.coreutils}/bin/mkdir -p ${snapshotBase} || true
             ${lib.optionalString self.settings.withData ''
               ${pkgs.coreutils}/bin/mkdir -p ${self.settings.dataPath}/.snapshots || true
             ''}
