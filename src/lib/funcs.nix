@@ -262,7 +262,7 @@ rec {
             if builtins.length relParts >= 2 then
               let
                 group = builtins.elemAt relParts 0;
-                module = lib.removeSuffix ".nix" (builtins.last relParts);
+                module = lib.removeSuffix ".nix" (lib.last relParts);
               in
               "${group}.${module}"
             else
