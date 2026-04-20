@@ -1150,7 +1150,7 @@ run_bump() {
     commit_msg=$(git -C "$use_dir" log -1 --pretty=format:"%s" "$commit_ref" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9-]//g' | awk '{if(length($0)>25) print substr($0,1,24)"-"; else print $0}' | sed 's/--$/-/')
     label="$(git -C "$use_dir" log -1 --pretty=format:"$(git -C "$use_dir" branch --show-current).%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
     echo "$label" > "$CONFIG_DIR/.label"
-    echo -e "Generated label ${WHITE}$label${RESET}"
+    echo -e "Generated label ${GREEN}$label${RESET}"
     echo
 
     if [[ "$commit" == "true" ]] && ! git diff --quiet HEAD -- flake.lock .label; then
