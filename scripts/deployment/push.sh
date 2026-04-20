@@ -22,7 +22,7 @@ fi
 
 cd "$NXCORE_DIR"
 if [[ "$ONLY_CONFIG" != true ]]; then
-    echo -e "${GREEN}Pushing core repository ${WHITE}(.config/nx/nxcore)${RESET}..."
+    echo -e "${GREEN}Pushing core repository ${YELLOW}(Authentication required)${GREEN}...${RESET}"
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
         git push "${EXTRA_ARGS[@]}"
     else
@@ -34,10 +34,10 @@ if [[ "$BUMP" == "true" ]]; then
     if [[ "$ONLY_CONFIG" != true ]]; then
         echo
         echo -e "${CYAN}Waiting for remote to propagate...${RESET}"
-        sleep 3
+        sleep 1
         echo
     fi
-    echo -e "${CYAN}Pulling config repository before bump...${RESET}"
+    echo -e "${CYAN}Pulling config repository before bump ${YELLOW}(Authentication required)${CYAN}...${RESET}"
     (cd "$CONFIG_DIR" && git pull)
     echo
     echo -e "${CYAN}Bumping nxconfig to pushed nxcore...${RESET}"
@@ -54,7 +54,7 @@ elif [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
     if [[ "$ONLY_CONFIG" != true ]]; then
         echo
     fi
-    echo -e "${GREEN}Pushing config repository ${WHITE}(.config/nx/nxconfig)${RESET}..."
+    echo -e "${GREEN}Pushing config repository ${YELLOW}(Authentication required)${GREEN}...${RESET}"
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
         (cd "$CONFIG_DIR" && git push "${EXTRA_ARGS[@]}")
     else

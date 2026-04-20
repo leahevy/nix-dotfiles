@@ -1188,7 +1188,7 @@ run_bump() {
         echo
 
         if [[ "$push" == "true" ]]; then
-            echo -e "${CYAN}Pushing config...${RESET}"
+            echo -e "${CYAN}Pushing config ${YELLOW}(Authentication required)${CYAN}...${RESET}"
             git push
             echo -e "Pushed ${WHITE}config${RESET}"
             echo

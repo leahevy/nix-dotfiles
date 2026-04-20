@@ -7,7 +7,7 @@ parse_git_args "$@"
 
 cd "$NXCORE_DIR"
 if [[ "$ONLY_CONFIG" != true ]]; then
-    echo -e "${GREEN}Pulling core repository ${WHITE}(.config/nx/nxcore)${RESET}..."
+    echo -e "${GREEN}Pulling core repository ${YELLOW}(Authentication required)${GREEN}...${RESET}"
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
         git pull "${EXTRA_ARGS[@]}"
     else
@@ -19,7 +19,7 @@ if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
     if [[ "$ONLY_CONFIG" != true ]]; then
         echo
     fi
-    echo -e "${GREEN}Pulling config repository ${WHITE}(.config/nx/nxconfig)${RESET}..."
+    echo -e "${GREEN}Pulling config repository ${YELLOW}(Authentication required)${GREEN}...${RESET}"
     if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
         (cd "$CONFIG_DIR" && git pull "${EXTRA_ARGS[@]}")
     else
