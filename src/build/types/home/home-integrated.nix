@@ -6,7 +6,7 @@ with lib;
   options.user = {
     home-manager = mkOption {
       type = types.bool;
-      default = false;
+      default = true;
       description = "Whether to use home-manager for the user";
     };
 
