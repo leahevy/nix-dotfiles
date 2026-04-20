@@ -26,12 +26,34 @@ let
   evalConfigModule =
     {
       configPath,
-      optionsPath,
+      optionPaths,
       specialArgs ? { },
     }:
+    let
+      mergedOptionsModule =
+        args:
+        let
+          raw = lib.foldl lib.recursiveUpdate { } (map (path: import path args) optionPaths);
+          allOpts = raw.options.all or { };
+          mainOpts = raw.options.main or { };
+          relocated = lib.recursiveUpdate allOpts mainOpts;
+          baseOptions = removeAttrs raw.options [
+            "all"
+            "main"
+          ];
+          target = if baseOptions ? host then "host" else "user";
+          targetOptions = baseOptions.${target} or { };
+        in
+        raw
+        // {
+          options = baseOptions // {
+            ${target} = lib.recursiveUpdate relocated targetOptions;
+          };
+        };
+    in
     inputs.nixpkgs.lib.evalModules {
       modules = [
-        optionsPath
+        mergedOptionsModule
         configPath
       ];
       inherit specialArgs;
@@ -252,7 +274,11 @@ in
       system = arch;
 
       preEval = evalConfigModule {
-        optionsPath = build + "/types/system/nixos.nix";
+        optionPaths = [
+          (build + "/types/shared/all.nix")
+          (build + "/types/shared/main.nix")
+          (build + "/types/system/nixos.nix")
+        ];
         configPath = hostConfigPath;
         specialArgs = {
           inherit
@@ -280,7 +306,11 @@ in
         ;
 
       hostEval = evalConfigModule {
-        optionsPath = build + "/types/system/nixos.nix";
+        optionPaths = [
+          (build + "/types/shared/all.nix")
+          (build + "/types/shared/main.nix")
+          (build + "/types/system/nixos.nix")
+        ];
         configPath = hostConfigPath;
         specialArgs = {
           inherit
@@ -306,7 +336,11 @@ in
           userConfigPath = config + "/profiles/home-integrated/${userProfileName}/${userProfileName}.nix";
 
           userEval = evalConfigModule {
-            optionsPath = build + "/types/home/home-integrated.nix";
+            optionPaths = [
+              (build + "/types/shared/all.nix")
+              (build + "/types/shared/user.nix")
+              (build + "/types/home/home-integrated.nix")
+            ];
             configPath = userConfigPath;
             specialArgs = {
               inherit
@@ -487,7 +521,12 @@ in
       system = arch;
 
       preEval = evalConfigModule {
-        optionsPath = build + "/types/home/home-standalone.nix";
+        optionPaths = [
+          (build + "/types/shared/all.nix")
+          (build + "/types/shared/user.nix")
+          (build + "/types/shared/main.nix")
+          (build + "/types/home/home-standalone.nix")
+        ];
         configPath = userConfigPath;
         specialArgs = {
           inherit
@@ -515,7 +554,12 @@ in
         ;
 
       userEval = evalConfigModule {
-        optionsPath = build + "/types/home/home-standalone.nix";
+        optionPaths = [
+          (build + "/types/shared/all.nix")
+          (build + "/types/shared/user.nix")
+          (build + "/types/shared/main.nix")
+          (build + "/types/home/home-standalone.nix")
+        ];
         configPath = userConfigPath;
         specialArgs = {
           inherit

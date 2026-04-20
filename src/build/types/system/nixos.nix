@@ -10,12 +10,6 @@ with lib;
       description = "The hostname of the system";
     };
 
-    addBaseGroup = mkOption {
-      type = types.bool;
-      default = true;
-      description = "Automatically add the base group to the profile";
-    };
-
     ethernetDeviceName = mkOption {
       type = types.nullOr types.str;
       default = null;
@@ -28,65 +22,10 @@ with lib;
       description = "The default wifi device name (not configured per default)";
     };
 
-    additionalPackages = mkOption {
-      type = types.listOf types.package;
-      default = [ ];
-      description = "Additional packages for the host";
-    };
-
     nixHardwareModule = mkOption {
       type = types.nullOr types.str;
       default = null;
       description = "Hardware module to be imported from this list: https://raw.githubusercontent.com/NixOS/nixos-hardware/refs/heads/master/flake.nix";
-    };
-
-    displays = mkOption {
-      type = types.submodule {
-        options = {
-          main = mkOption {
-            type = types.nullOr types.str;
-            default = null;
-            description = "Main display";
-          };
-          secondary = mkOption {
-            type = types.nullOr types.str;
-            default = null;
-            description = "Secondary display";
-          };
-        };
-      };
-      default = { };
-      description = "Display configuration";
-    };
-
-    location = mkOption {
-      type = types.submodule {
-        options = {
-          latitude = mkOption {
-            type = types.nullOr types.float;
-            default = null;
-            description = "Latitude of user's location";
-          };
-          longitude = mkOption {
-            type = types.nullOr types.float;
-            default = null;
-            description = "Longitude of user's location";
-          };
-          altitude = mkOption {
-            type = types.float;
-            default = 0.0;
-            description = "Altitude of user's location in meters";
-          };
-        };
-      };
-      default = { };
-      description = "User's location";
-    };
-
-    homeserverDomain = mkOption {
-      type = types.nullOr types.str;
-      default = null;
-      description = "Domain name of the home server (without protocol)";
     };
 
     kernel = mkOption {
@@ -186,274 +125,209 @@ with lib;
       description = "Default settings for users";
     };
 
-    stateVersion = mkOption {
-      type = types.nullOr types.str;
-      default = null;
-      description = "The NixOS state version";
-    };
-
-    allowedUnfreePackages = mkOption {
-      type = types.listOf types.str;
-      default = [ ];
-      description = "Unfree packages allowed for the host";
-    };
-
-    modules = mkOption {
-      type = types.attrsOf (
-        types.attrsOf (
-          types.either (types.listOf types.str) (types.attrsOf (types.either types.bool types.attrs))
-        )
-      );
-      default = { };
-      description = "System modules to enable, organized by input and group";
-    };
-
-    specialisations = mkOption {
-      type = types.attrsOf (
-        types.attrsOf (types.attrsOf (types.attrsOf (types.either types.bool types.attrs)))
-      );
-      default = { };
-      description = "Named system specialisations with additional system modules to import";
-    };
-
-    profileName = mkOption {
-      type = types.str;
-      description = "The profile directory name";
-    };
-
-    settings = mkOption {
-      type = types.submodule {
-        options = {
-
-          theme = mkOption {
-            type = types.nullOr (
-              types.enum [
-                "red"
-                "green"
-              ]
-            );
-            default = null;
-            description = "Theme to use for the host";
-          };
-
-          networking = mkOption {
-            type = types.submodule {
-              options = {
-                wifi = mkOption {
-                  type = types.submodule {
-                    options = {
-                      enabled = mkOption {
-                        type = types.nullOr types.bool;
-                        default = null;
-                        description = "Whether WiFi is enabled";
-                      };
-                    };
+    settings = {
+      networking = mkOption {
+        type = types.submodule {
+          options = {
+            wifi = mkOption {
+              type = types.submodule {
+                options = {
+                  enabled = mkOption {
+                    type = types.nullOr types.bool;
+                    default = null;
+                    description = "Whether WiFi is enabled";
                   };
-                  default = { };
-                  description = "WiFi settings";
-                };
-                useNetworkManager = mkOption {
-                  type = types.bool;
-                  default = true;
-                  description = "Whether to enable networkmanager";
                 };
               };
+              default = { };
+              description = "WiFi settings";
             };
-            default = { };
-            description = "Networking settings";
+            useNetworkManager = mkOption {
+              type = types.bool;
+              default = true;
+              description = "Whether to enable networkmanager";
+            };
           };
+        };
+        default = { };
+        description = "Networking settings";
+      };
 
-          system = mkOption {
-            type = types.submodule {
-              options = {
-                tmpSize = mkOption {
-                  type = types.str;
-                  default = "2G";
-                  description = "Tmpfs size of /tmp if system/tmp module is enabled";
-                };
+      system = {
+        tmpSize = mkOption {
+          type = types.str;
+          default = "2G";
+          description = "Tmpfs size of /tmp if system/tmp module is enabled";
+        };
 
-                timezone = mkOption {
-                  type = types.str;
-                  default = "Europe/Berlin";
-                  description = "System timezone";
-                };
+        timezone = mkOption {
+          type = types.str;
+          default = "Europe/Berlin";
+          description = "System timezone";
+        };
 
-                locale = mkOption {
-                  type = types.submodule {
-                    options = {
-                      main = mkOption {
-                        type = types.str;
-                        default = "en_GB.UTF-8";
-                        description = "Main system locale";
-                      };
-                      extra = mkOption {
-                        type = types.str;
-                        default = "de_DE.UTF-8";
-                        description = "Additional system locale";
-                      };
-                    };
-                  };
-                  default = { };
-                  description = "System locale settings";
-                };
-
-                keymap = mkOption {
-                  type = types.submodule {
-                    options = {
-                      x11 = mkOption {
-                        type = types.submodule {
-                          options = {
-                            layout = mkOption {
-                              type = types.str;
-                              default = "us";
-                              description = "X11 keyboard layout";
-                            };
-                            variant = mkOption {
-                              type = types.str;
-                              default = "";
-                              description = "X11 keyboard variant";
-                            };
-                            options = mkOption {
-                              type = types.str;
-                              default = "";
-                              description = "X11 keyboard options";
-                            };
-                          };
-                        };
-                        default = { };
-                        description = "X11 keyboard settings";
-                      };
-                      console = mkOption {
-                        type = types.str;
-                        default = "us";
-                        description = "Console keyboard layout";
-                      };
-                    };
-                  };
-                  default = { };
-                  description = "Keyboard layout settings";
-                };
-
-                sound = mkOption {
-                  type = types.submodule {
-                    options = {
-                      pulse = mkOption {
-                        type = types.submodule {
-                          options = {
-                            enabled = mkOption {
-                              type = types.bool;
-                              default = false;
-                              description = "Whether PulseAudio is enabled";
-                            };
-                          };
-                        };
-                        default = { };
-                        description = "PulseAudio settings";
-                      };
-                    };
-                  };
-                  default = { };
-                  description = "Sound settings";
-                };
-
-                touchpad = mkOption {
-                  type = types.submodule {
-                    options = {
-                      enabled = mkOption {
-                        type = types.bool;
-                        default = false;
-                        description = "Whether touchpad support is enabled";
-                      };
-                    };
-                  };
-                  default = { };
-                  description = "Touchpad settings";
-                };
-
-                desktop = mkOption {
-                  type = types.nullOr (
-                    types.enum [
-                      "gnome"
-                      "niri"
-                    ]
-                  );
-                  default = null;
-                  description = "Active desktop environment (or headless)";
-                };
-
-                firmware = mkOption {
-                  type = types.submodule {
-                    options = {
-                      redistributable = mkOption {
-                        type = types.bool;
-                        default = true;
-                        description = "Whether to enable redistributable firmware";
-                      };
-                      unfree = mkOption {
-                        type = types.bool;
-                        default = false;
-                        description = "Whether to enable unfree firmware";
-                      };
-                      modeSwitchDevices = mkOption {
-                        type = types.listOf (
-                          types.submodule {
-                            options = {
-                              device = mkOption {
-                                type = types.str;
-                                description = "USB device to mode-switch (format: vendor:product)";
-                              };
-                              flags = mkOption {
-                                type = types.str;
-                                default = "-K -Q";
-                                description = "USB mode switch flags";
-                              };
-                            };
-                          }
-                        );
-                        default = [ ];
-                        description = "USB devices requiring mode switching";
-                      };
-                    };
-                  };
-                  default = { };
-                  description = "Firmware settings";
-                };
+        locale = mkOption {
+          type = types.submodule {
+            options = {
+              main = mkOption {
+                type = types.str;
+                default = "en_GB.UTF-8";
+                description = "Main system locale";
+              };
+              extra = mkOption {
+                type = types.str;
+                default = "de_DE.UTF-8";
+                description = "Additional system locale";
               };
             };
-            default = { };
-            description = "System settings";
           };
+          default = { };
+          description = "System locale settings";
+        };
 
-          sshd = mkOption {
-            type = types.submodule {
-              options = {
-                authorizedKeys = mkOption {
-                  type = types.listOf types.str;
-                  default = [ ];
-                  description = "SSH authorized keys for users";
+        keymap = mkOption {
+          type = types.submodule {
+            options = {
+              x11 = mkOption {
+                type = types.submodule {
+                  options = {
+                    layout = mkOption {
+                      type = types.str;
+                      default = "us";
+                      description = "X11 keyboard layout";
+                    };
+                    variant = mkOption {
+                      type = types.str;
+                      default = "";
+                      description = "X11 keyboard variant";
+                    };
+                    options = mkOption {
+                      type = types.str;
+                      default = "";
+                      description = "X11 keyboard options";
+                    };
+                  };
                 };
+                default = { };
+                description = "X11 keyboard settings";
+              };
+              console = mkOption {
+                type = types.str;
+                default = "us";
+                description = "Console keyboard layout";
               };
             };
-            default = { };
-            description = "SSH daemon settings";
           };
+          default = { };
+          description = "Keyboard layout settings";
+        };
 
+        sound = mkOption {
+          type = types.submodule {
+            options = {
+              pulse = mkOption {
+                type = types.submodule {
+                  options = {
+                    enabled = mkOption {
+                      type = types.bool;
+                      default = false;
+                      description = "Whether PulseAudio is enabled";
+                    };
+                  };
+                };
+                default = { };
+                description = "PulseAudio settings";
+              };
+            };
+          };
+          default = { };
+          description = "Sound settings";
+        };
+
+        touchpad = mkOption {
+          type = types.submodule {
+            options = {
+              enabled = mkOption {
+                type = types.bool;
+                default = false;
+                description = "Whether touchpad support is enabled";
+              };
+            };
+          };
+          default = { };
+          description = "Touchpad settings";
+        };
+
+        desktop = mkOption {
+          type = types.nullOr (
+            types.enum [
+              "gnome"
+              "niri"
+            ]
+          );
+          default = null;
+          description = "Active desktop environment (or headless)";
+        };
+
+        firmware = mkOption {
+          type = types.submodule {
+            options = {
+              redistributable = mkOption {
+                type = types.bool;
+                default = true;
+                description = "Whether to enable redistributable firmware";
+              };
+              unfree = mkOption {
+                type = types.bool;
+                default = false;
+                description = "Whether to enable unfree firmware";
+              };
+              modeSwitchDevices = mkOption {
+                type = types.listOf (
+                  types.submodule {
+                    options = {
+                      device = mkOption {
+                        type = types.str;
+                        description = "USB device to mode-switch (format: vendor:product)";
+                      };
+                      flags = mkOption {
+                        type = types.str;
+                        default = "-K -Q";
+                        description = "USB mode switch flags";
+                      };
+                    };
+                  }
+                );
+                default = [ ];
+                description = "USB devices requiring mode switching";
+              };
+            };
+          };
+          default = { };
+          description = "Firmware settings";
         };
       };
-      default = { };
-      description = "Host settings";
+
+      sshd = mkOption {
+        type = types.submodule {
+          options = {
+            authorizedKeys = mkOption {
+              type = types.listOf types.str;
+              default = [ ];
+              description = "SSH authorized keys for users";
+            };
+          };
+        };
+        default = { };
+        description = "SSH daemon settings";
+      };
+
     };
 
     impermanence = mkOption {
       type = types.bool;
       default = false;
       description = "Whether to enable impermanence (ephemeral root filesystem)";
-    };
-
-    extraSettings = mkOption {
-      type = types.attrs;
-      default = { };
-      description = "Additional untyped settings to add to the host configuration";
     };
 
     deploymentMode = mkOption {
@@ -465,12 +339,6 @@ with lib;
       ];
       default = "develop";
       description = "How this machine consumes the NX configuration";
-    };
-
-    profile = mkOption {
-      type = types.attrs;
-      default = { };
-      description = "Event functions (init, enabled, home, system, standalone, integrated + linux/darwin variants). Signature: args -> config -> { }";
     };
   };
 }
