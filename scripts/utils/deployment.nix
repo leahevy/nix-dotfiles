@@ -189,6 +189,7 @@
         description = "Manage ephemeral root filesystems";
         group = "switch";
         scope = "integrated";
+        impermanence = "enabled";
         subcommands = {
           check = {
             description = "List files/directories in ephemeral root";

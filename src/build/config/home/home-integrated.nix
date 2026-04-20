@@ -70,6 +70,7 @@ let
     scope = "integrated";
     system = if pkgs.stdenv.isDarwin then "darwin" else "linux";
     mode = host.deploymentMode or "develop";
+    hasImpermanence = host.impermanence or false;
   };
 
   nxCliEnabled = (host.deploymentMode or "develop") != "managed";
