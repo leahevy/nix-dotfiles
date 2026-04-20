@@ -93,8 +93,8 @@ in
     nix = {
       settings = {
         experimental-features = variables.experimental-features;
-        trusted-users = [ host.mainUser.username ];
-        allowed-users = lib.mkForce [ ];
+        trusted-users = lib.mkForce [ ];
+        allowed-users = lib.mkForce [ host.mainUser.username ];
         http-connections = variables.httpConnections;
         keep-outputs = true;
         keep-derivations = true;

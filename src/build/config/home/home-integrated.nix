@@ -190,9 +190,7 @@ in
 
   nix = {
     settings = {
-      http-connections = variables.httpConnections;
       experimental-features = variables.experimental-features;
     };
-
   };
 }
