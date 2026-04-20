@@ -84,6 +84,7 @@
           offline = option "Build without network access";
           diff = option "Compare built config with current active system";
           show-trace = option "Show detailed Nix error traces";
+          show-derivation = option "Show the output derivation in JSON format";
           skip-verification = option "Skip commit signature verification";
           raw = option "Use raw log format";
           allow-ifd = option "Allow import-from-derivation";

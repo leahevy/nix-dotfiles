@@ -236,6 +236,7 @@ parse_build_deployment_args() {
     BUILD_OVERRIDE_ARCH=""
     BUILD_FORCE_NIXOS=false
     BUILD_FORCE_STANDALONE=false
+    SHOW_DERIVATION=false
 
     local _branch_config _branch_core
     _branch_config="$(git branch --show-current)"
@@ -272,6 +273,10 @@ parse_build_deployment_args() {
                 ;;
             --diff)
                 BUILD_DIFF=true
+                shift
+                ;;
+            --show-derivation)
+                SHOW_DERIVATION=true
                 shift
                 ;;
             --skip-verification)
@@ -320,6 +325,11 @@ parse_build_deployment_args() {
         exit 1
     }
 
+    [[ "$SHOW_DERIVATION" == "true" && "$BUILD_DIFF" == "true" ]] && {
+        echo -e "${RED}Error: --show-derivation and --diff cannot be used together${RESET}" >&2
+        exit 1
+    }
+
     BUILD_HAS_OVERRIDE=false
     [[ -n "$BUILD_OVERRIDE_PROFILE" || -n "$BUILD_OVERRIDE_ARCH" || "$BUILD_FORCE_NIXOS" == "true" || "$BUILD_FORCE_STANDALONE" == "true" ]] && BUILD_HAS_OVERRIDE=true
 
@@ -328,7 +338,7 @@ parse_build_deployment_args() {
         exit 1
     fi
 
-    export EXTRA_ARGS TIMEOUT DRY_RUN BUILD_DIFF SKIP_VERIFICATION RAW_LOG
+    export EXTRA_ARGS TIMEOUT DRY_RUN BUILD_DIFF SKIP_VERIFICATION RAW_LOG SHOW_DERIVATION
     export BUILD_OVERRIDE_PROFILE BUILD_OVERRIDE_ARCH BUILD_FORCE_NIXOS BUILD_FORCE_STANDALONE BUILD_HAS_OVERRIDE
 }
 

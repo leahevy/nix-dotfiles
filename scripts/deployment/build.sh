@@ -39,6 +39,15 @@ else
   context="home"
 fi
 
+if [[ "${SHOW_DERIVATION:-false}" == "true" ]]; then
+  if [[ "$context" == "nixos" ]]; then
+    timeout "${TIMEOUT}s" nix derivation show ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" | jq
+  else
+    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nix derivation show ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" | jq
+  fi
+  exit 0
+fi
+
 if [[ "$context" == "nixos" ]]; then
   # shellcheck disable=SC2086
   NEW_SYSTEM=$(timeout "${TIMEOUT}s" nix build --no-link $DRY_RUN $LOG_FORMAT ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths)
