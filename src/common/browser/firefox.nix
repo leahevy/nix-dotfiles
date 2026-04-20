@@ -14,6 +14,8 @@ args@{
   group = "browser";
   input = "common";
 
+  requiredPlatforms = [ "linux" ];
+
   module = {
     home = config: {
       programs.firefox = {

@@ -20,6 +20,7 @@ args@{
     package = pkgs-unstable.protonmail-desktop;
   };
 
+  requiredPlatforms = [ "linux" ];
   requiredArchitectures = [ "x86_64" ];
 
   module = {

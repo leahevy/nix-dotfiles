@@ -14,6 +14,8 @@ args@{
   group = "dev";
   input = "common";
 
+  requiredPlatforms = [ "linux" ];
+
   module = {
     home = config: {
       home.packages = with pkgs; [

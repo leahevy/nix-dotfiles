@@ -14,6 +14,8 @@ args@{
   group = "photos";
   input = "common";
 
+  requiredPlatforms = [ "linux" ];
+
   module = {
     linux.enabled = config: {
       nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [

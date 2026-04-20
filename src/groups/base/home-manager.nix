@@ -11,10 +11,7 @@ args@{
 let
   baseModules = {
     common = {
-      proton = [ "mail" ];
-      photos = [ "ente" ];
       utils = [ "archive-tools" ];
-      browser = [ "firefox" ];
       dev = [
         "conda"
         "poetry"
@@ -27,7 +24,6 @@ let
         "codex"
         "nodejs"
         "typescript-lsp"
-        "vscodium"
         "jujutsu"
       ];
       services = [
@@ -43,7 +39,6 @@ let
       git = [
         "git"
         "lazygit"
-        "git-credential-manager"
       ];
       gpg = [ "gpg" ];
       nix = [
@@ -71,7 +66,6 @@ let
       nvim-modules = {
         minuet = true;
       };
-      chat = [ "fluffychat" ];
     };
     groups.shell = [ "shell" ];
   };
@@ -90,6 +84,16 @@ let
     ) extra);
 
   baseLinuxModules = {
+    common = {
+      proton = [ "mail" ];
+      photos = [ "ente" ];
+      chat = [ "fluffychat" ];
+      browser = [ "firefox" ];
+      dev = [ "vscodium" ];
+      git = [
+        "git-credential-manager"
+      ];
+    };
     linux = {
       chat = [
         "beeper"
@@ -136,6 +140,7 @@ let
       dev = [
         "docker-desktop"
         "conda"
+        "vscode"
       ];
       desktop = [
         "yabai"
