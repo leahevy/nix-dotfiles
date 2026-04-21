@@ -1209,7 +1209,13 @@ diff_store_paths() {
       "hm_.localsharenvimtemplatesnixnixmodule.tpl"
       "hm_LibraryFonts.homemanagerfontsversion"
       "home-manager-generation"
+      "home-manager-path"
+      "home-manager-files"
+      "home-manager-applications"
       "home-manager-fonts"
+      "system-units"
+      "user-environment"
+      "etc"
     )
     local suffixes_to_ignore=("-source")
     local changed_prefixes_to_ignore=("nixos-system-")
