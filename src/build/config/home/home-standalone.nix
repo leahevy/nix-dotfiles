@@ -187,9 +187,6 @@ in
   nix = {
     settings = {
       experimental-features = variables.experimental-features;
-      http-connections = variables.httpConnections;
-      keep-outputs = true;
-      keep-derivations = true;
       allow-import-from-derivation = false;
     };
 
