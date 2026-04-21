@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 export RED='\033[1;31m'
+export ORANGE='\033[38;5;208m'
 export YELLOW='\033[1;33m'
 export GREEN='\033[1;32m'
 export WHITE='\033[1;37m'
@@ -9,6 +10,15 @@ export BLUE='\033[1;34m'
 export CYAN='\033[1;36m'
 export GRAY='\033[1;90m'
 export RESET='\033[0m'
+
+export RAINBOW_COLOURS=(
+  "${RED}"
+  "${ORANGE}"
+  "${YELLOW}"
+  "${GREEN}"
+  "${BLUE}"
+  "${MAGENTA}"
+)
 
 export AUTO_UPDATE_INPUTS=(
     "nixpkgs"

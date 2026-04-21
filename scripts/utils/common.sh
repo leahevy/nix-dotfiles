@@ -1292,7 +1292,20 @@ diff_store_paths() {
     # shellcheck disable=SC2064
     trap "rm -f '$old_file' '$new_file' '$old_names' '$new_names' '$out_file' '$changed_file'" RETURN
 
+    echo_counter_max=50
+    echo_counter=$echo_counter_max
+    num_entries=0
+    colour_counter=0
     while IFS= read -r name; do
+        if (( echo_counter == echo_counter_max )); then
+          echo -ne "${RAINBOW_COLOURS[$colour_counter]}.${RESET}"
+          echo_counter=0
+          colour_counter=$(( (colour_counter+1) % ${#RAINBOW_COLOURS[@]} ))
+        else
+          echo_counter=$((echo_counter+1))
+        fi
+        num_entries=$((num_entries+1))
+
         local old_hash new_hash
         old_hash="$(grep "	${name}$" "$old_file" | cut -f1 | sort | tr '\n' ' ')"
         new_hash="$(grep "	${name}$" "$new_file" | cut -f1 | sort | tr '\n' ' ')"
@@ -1363,18 +1376,32 @@ diff_store_paths() {
         if (( ${#only_old[@]} == 1 && ${#only_new[@]} == 1 )); then
             echo -e "    ${GRAY}/nix/store/${only_old[0]}-${name}${RESET} ${GRAY}/nix/store/${only_new[0]}-${name}${RESET}"
         else
-            for oh in "${only_old[@]}"; do
+            for oh in "${only_old[@]+"${only_old[@]}"}"; do
                 echo -e "    ${RED}old${RESET} ${GRAY}/nix/store/${oh}-${name}${RESET}"
             done
-            for nh in "${only_new[@]}"; do
+            for nh in "${only_new[@]+"${only_new[@]}"}"; do
                 echo -e "    ${GREEN}new${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
             done
         fi
     done < "$changed_file" >> "$out_file"
 
+    echo -en " ${CYAN}(${YELLOW}$num_entries${CYAN} store paths${CYAN})${RESET} "
     if [[ -s "$out_file" ]]; then
+        echo -e "${ORANGE}-> Store closures differ.${RESET}"
+        echo
         cat "$out_file"
     else
-        echo -e "${GREEN}Store closures are identical.${RESET}"
+        echo -e "${WHITE}-> Store closures are identical.${RESET}"
+    fi
+}
+
+diff_packages() {
+    local old="$1" new="$2"
+    DIFF_OUTPUT="$(nvd --color=always --version-highlight=xmas diff "$old" "$new" 2>&1)"
+
+    if echo "$DIFF_OUTPUT" | grep -Eq 'Closure size: ([0-9]+) -> \1 \(([0-9]+) paths added, \2 paths removed, delta \+0,'; then
+      echo -e "${WHITE}Packages are identical.${RESET}"
+    else
+      echo "$DIFF_OUTPUT"
     fi
 }

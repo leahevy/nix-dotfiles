@@ -62,7 +62,7 @@ if [[ "$context" == "nixos" ]]; then
     diff_store_paths /run/current-system "$NEW_SYSTEM" || echo -e "${YELLOW}Store path diff failed${RESET}"
     echo
     echo -e "${GREEN}=== Package Diff ===${RESET}"
-    nvd --color=always --version-highlight=xmas diff /run/current-system "$NEW_SYSTEM"
+    diff_packages /run/current-system "$NEW_SYSTEM" || echo -e "${YELLOW}Package diff failed${RESET}"
   fi
 else
   # shellcheck disable=SC2086
@@ -79,6 +79,6 @@ else
     diff_store_paths "$CURRENT_HOME" "$NEW_HOME" || echo -e "${YELLOW}Store path diff failed${RESET}"
     echo
     echo -e "${GREEN}=== Package Diff ===${RESET}"
-    nvd --color=always --version-highlight=xmas diff "$CURRENT_HOME" "$NEW_HOME"
+    diff_packages "$CURRENT_HOME" "$NEW_HOME" || echo -e "${YELLOW}Package diff failed${RESET}"
   fi
 fi
