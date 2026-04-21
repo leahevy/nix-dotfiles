@@ -70,6 +70,11 @@ args@{
         { string = "Notifier for subscription .* went away, retrying"; }
         { string = "Raw queues are deprecated and will stop working in a future version of CUPS\\."; }
         {
+          service = "cups.service";
+          tag = "cupsd";
+          string = "Missing value on line [0-9]+ of /var/cache/cups/job\\.cache\\.";
+        }
+        {
           string = "^cups\\.socket$";
           service = "ensure-printers.service";
           tag = "systemctl";
