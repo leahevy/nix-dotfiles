@@ -1298,27 +1298,29 @@ diff_store_paths() {
     # shellcheck disable=SC2064
     trap "rm -f '$old_file' '$new_file' '$old_names' '$new_names' '$out_file' '$changed_file'" RETURN
 
-    echo_counter_max=50
-    echo_counter=$echo_counter_max
     num_entries=0
-    colour_counter=0
-    while IFS= read -r name; do
-        if (( echo_counter == echo_counter_max )); then
-          echo -ne "${RAINBOW_COLOURS[$colour_counter]}.${RESET}"
-          echo_counter=0
-          colour_counter=$(( (colour_counter+1) % ${#RAINBOW_COLOURS[@]} ))
-        else
-          echo_counter=$((echo_counter+1))
-        fi
+    while IFS=$'\t' read -r name old_hash new_hash; do
         num_entries=$((num_entries+1))
 
-        local old_hash new_hash
-        old_hash="$(grep "	${name}$" "$old_file" | cut -f1 | sort | tr '\n' ' ')"
-        new_hash="$(grep "	${name}$" "$new_file" | cut -f1 | sort | tr '\n' ' ')"
         if [[ "$old_hash" != "$new_hash" ]]; then
             echo "$name" >> "$changed_file"
         fi
-    done < <(comm -12 "$old_names" "$new_names")
+    done < <(awk -F'\t' '
+        NR==FNR {
+            if ($2 in old) old[$2] = old[$2] " " $1; else old[$2] = $1
+            next
+        }
+        {
+            if (prev != "" && $2 != prev && prev in old) {
+                print prev "\t" old[prev] "\t" cur[prev]
+            }
+            if ($2 in cur) cur[$2] = cur[$2] " " $1; else cur[$2] = $1
+            prev = $2
+        }
+        END {
+            if (prev != "" && prev in old) print prev "\t" old[prev] "\t" cur[prev]
+        }
+    ' <(sort -t$'\t' -k2,2 -k1,1 "$old_file") <(sort -t$'\t' -k2,2 -k1,1 "$new_file"))
 
     local only_issue_etc=true
     while IFS= read -r name; do
@@ -1391,7 +1393,7 @@ diff_store_paths() {
         fi
     done < "$changed_file" >> "$out_file"
 
-    echo -en " ${CYAN}(${YELLOW}$num_entries${CYAN} store paths${CYAN})${RESET} "
+    echo -en "${CYAN}${YELLOW}$num_entries${CYAN} store paths${CYAN}${RESET} "
     if [[ -s "$out_file" ]]; then
         echo -e "${ORANGE}-> Store closures differ.${RESET}"
         echo
