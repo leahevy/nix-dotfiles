@@ -1207,6 +1207,9 @@ diff_store_paths() {
       "hm_fontconfigconf.d10hmfonts.conf"
       "hm_.localsharenvimtemplatesnixnixmoduleraw.md"
       "hm_.localsharenvimtemplatesnixnixmodule.tpl"
+      "hm_LibraryFonts.homemanagerfontsversion"
+      "home-manager-generation"
+      "home-manager-fonts"
     )
     local suffixes_to_ignore=("-source")
     local changed_prefixes_to_ignore=("nixos-system-")
