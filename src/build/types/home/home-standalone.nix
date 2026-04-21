@@ -44,7 +44,7 @@ with lib;
         "develop"
       ];
       default = "develop";
-      description = "How this machine consumes the NX configuration";
+      description = "How this machine consumes the NX configuration: 1) local: local nxconfig, local edits allowed, auto-upgrades; 2) develop: local nxcore + nxconfig via --override-input, auto-upgrades dry-run only";
     };
   };
 }
