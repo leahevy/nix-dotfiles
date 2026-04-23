@@ -209,7 +209,12 @@ if [[ -z "${AGE_SYSTEM_FILE}" && -n "${AGE_USER_FILE}" ]]; then
     exit 1
 fi
 
-if [[ "${NO_RUN}" != "true" ]]; then
+WILL_RUN_VM=false
+if [[ "${NO_RUN}" != "true" && "${LIST_VERSIONS}" != "true" && "${CLEANUP}" != "true" && "${CLEANUP_ALL}" != "true" ]]; then
+    WILL_RUN_VM=true
+fi
+
+if [[ "${WILL_RUN_VM}" == "true" ]]; then
     if [[ -n "${AGE_FILE}" ]]; then
         [[ -f "${AGE_FILE}" ]] || { print_error "Age key file does not exist: ${AGE_FILE}"; exit 1; }
     elif [[ -n "${AGE_SYSTEM_FILE}" ]]; then
