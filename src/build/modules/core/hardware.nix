@@ -36,5 +36,16 @@ args@{
     }
   ];
 
-  module = { };
+  module = {
+    system =
+      config:
+      lib.mkMerge [
+        (lib.mkIf (self.host.hardware.cpu == "intel") {
+          hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+        })
+        (lib.mkIf (self.host.hardware.cpu == "amd") {
+          hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+        })
+      ];
+  };
 }
