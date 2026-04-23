@@ -25,7 +25,9 @@
 
   httpConnections = 15;
 
-  unstablePackages = [ ];
+  unstablePackages = [
+    "claude-code"
+  ];
   unstableLinuxPackages = [ "protonmail-desktop" ];
   unstableDarwinPackages = [ ];
 

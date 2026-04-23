@@ -17,8 +17,6 @@ args@{
   unfree = [ "claude-code" ];
 
   settings = {
-    package = pkgs.claude-code;
-    blockSSH = true;
     additionalMCPServers = { };
   };
 
@@ -26,10 +24,24 @@ args@{
     home =
       config:
       let
+        gitUrl = (config.programs.git.settings.url or { });
+        githubEnforceSSH =
+          gitUrl ? "git@github.com:"
+          && (
+            let
+              entry = gitUrl."git@github.com:";
+              insteadOf = entry.insteadOf or null;
+            in
+            if lib.isList insteadOf then
+              lib.any (v: lib.hasPrefix "https://github.com/" v) insteadOf
+            else
+              lib.isString insteadOf && lib.hasPrefix "https://github.com/" insteadOf
+          );
+
         fake-ssh = pkgs.writeShellScriptBin "ssh" "exit 1";
         claude-code-wrapped = pkgs.symlinkJoin {
           name = "claude-code-wrapped";
-          paths = [ self.settings.package ];
+          paths = [ pkgs.claude-code ];
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postBuild = ''
             wrapProgram $out/bin/claude \
@@ -39,7 +51,11 @@ args@{
               --set GIT_CONFIG_VALUE_0 "git@github.com:"
           '';
         };
-        claude-package = if self.settings.blockSSH then claude-code-wrapped else self.settings.package;
+        claude-package =
+          if githubEnforceSSH && config.nx.linux.security.yubikey.enable then
+            claude-code-wrapped
+          else
+            pkgs.claude-code;
       in
       {
         home = {
