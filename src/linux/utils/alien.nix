@@ -14,6 +14,8 @@ args@{
   group = "utils";
   input = "linux";
 
+  disableOnVM = true;
+
   module = {
     linux.home = config: {
       home = {

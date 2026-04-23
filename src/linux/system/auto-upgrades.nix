@@ -14,6 +14,8 @@ args@{
   group = "system";
   input = "linux";
 
+  disableOnVM = true;
+
   settings = {
     schedule = "18:45:10";
     allowReboot = true;

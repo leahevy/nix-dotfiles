@@ -44,6 +44,10 @@ args@{
       assertion = self.settings.uuid != null;
       message = "UUID for crypted device must be set!";
     }
+    {
+      assertion = self.isPhysical;
+      message = "Configuration cannot be build as VM as it uses module luks-data-drive";
+    }
   ];
 
   module = {

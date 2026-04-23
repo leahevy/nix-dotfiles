@@ -14,6 +14,8 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
+  disableOnVM = true;
+
   module = {
     linux.system = config: {
       programs.gamemode = {

@@ -14,6 +14,8 @@ args@{
   group = "power";
   input = "linux";
 
+  disableOnVM = true;
+
   settings = {
     sleep = true;
     suspend = true;

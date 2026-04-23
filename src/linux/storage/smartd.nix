@@ -14,6 +14,8 @@ args@{
   group = "storage";
   input = "linux";
 
+  disableOnVM = true;
+
   settings = {
     autodetect = true;
     devices = [ ];

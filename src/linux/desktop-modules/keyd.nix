@@ -14,6 +14,8 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
+  disableOnVM = true;
+
   settings = {
     baseIdsToIgnore = [
       "1050" # Yubikeys

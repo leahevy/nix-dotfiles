@@ -14,6 +14,8 @@ args@{
   group = "security";
   input = "linux";
 
+  disableOnVM = true;
+
   settings = {
     modelId = null;
     lockSessionOnUnplug = false;

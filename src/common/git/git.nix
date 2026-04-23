@@ -50,12 +50,6 @@ args@{
               email = helpers.ifSet (self.settings.email or null) self.user.email;
             };
 
-            signing = {
-              key = gpgKey;
-              signByDefault = gpgKey != null;
-              format = "openpgp";
-            };
-
             init = {
               defaultBranch = "main";
             };
@@ -287,6 +281,13 @@ args@{
               merge-show-conflicts = "!f() { git merge-tree --write-tree HEAD \"\$1\" | grep CONFLICT; } ; f";
               tree-list = "!f() { git ls-files | tree --fromfile; } ; f";
               tree-search = "!f() { git ls-files | grep \"\$1\" | tree --fromfile; } ; f";
+            };
+          }
+          // lib.optionalAttrs (gpgKey != null) {
+            signing = {
+              key = gpgKey;
+              signByDefault = gpgKey != null;
+              format = "openpgp";
             };
           };
         };

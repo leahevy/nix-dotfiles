@@ -14,6 +14,8 @@ args@{
   group = "memory";
   input = "linux";
 
+  disableOnVM = true;
+
   settings = {
     algorithm = "zstd";
     memoryPercent = 50;

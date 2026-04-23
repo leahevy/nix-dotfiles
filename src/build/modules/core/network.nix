@@ -8,72 +8,76 @@ args@{
   self,
   ...
 }:
-let
-  host = self.host;
-  ifSet = helpers.ifSet;
-in
 {
   name = "network";
   group = "core";
   input = "build";
 
   module = {
-    system = config: {
-      networking.hostName = host.hostname;
-      networking.wireless.enable = ifSet host.settings.networking.wifi.enabled false;
-      networking.useDHCP = !host.settings.networking.useNetworkManager;
-      networking.nftables.enable = true;
-      networking.search = lib.mkIf (self.host.homeserverDomain != null) [
-        self.host.homeserverDomain
-      ];
+    system =
+      config:
+      let
+        host = self.host;
+        ifSet = helpers.ifSet;
+      in
+      {
+        networking.hostName = host.hostname;
+        networking.wireless.enable = ifSet host.settings.networking.wifi.enabled false;
+        networking.useDHCP = lib.mkForce (!host.settings.networking.useNetworkManager);
+        networking.nftables.enable = true;
+        networking.search = lib.mkIf (self.host.homeserverDomain != null) [
+          self.host.homeserverDomain
+        ];
 
-      networking.networkmanager = (
-        if host.settings.networking.useNetworkManager then
-          {
-            enable = true;
-            settings = {
-              main = {
-                no-auto-default = "*";
+        networking.networkmanager = (
+          if host.settings.networking.useNetworkManager then
+            {
+              enable = true;
+              settings = {
+                main = {
+                  no-auto-default = "*";
+                };
               };
-            };
-            ensureProfiles.profiles = (
-              if host.ethernetDeviceName != null then
-                {
-                  "Ethernet" = {
-                    connection = {
-                      id = "Ethernet";
-                      type = "ethernet";
-                      interface-name = ifSet host.ethernetDeviceName "";
-                      uuid = helpers.generateUUID "ethernet-${host.ethernetDeviceName}";
-                      autoconnect = true;
+              ensureProfiles.profiles = (
+                if host.ethernetDeviceName != null then
+                  {
+                    "Ethernet" = {
+                      connection = {
+                        id = "Ethernet";
+                        type = "ethernet";
+                        interface-name = ifSet host.ethernetDeviceName "";
+                        uuid = helpers.generateUUID "ethernet-${host.ethernetDeviceName}";
+                        autoconnect = true;
+                      };
+
+                      ipv4 = {
+                        method = "auto";
+                      };
+
+                      ipv6 = {
+                        method = "auto";
+                        addr-gen-mode = "default";
+                      };
+
                     };
+                  }
+                else
+                  { }
+              );
+            }
+          else
+            {
+              enable = false;
+            }
+        );
 
-                    ipv4 = {
-                      method = "auto";
-                    };
-
-                    ipv6 = {
-                      method = "auto";
-                      addr-gen-mode = "default";
-                    };
-
-                  };
-                }
-              else
-                { }
-            );
-          }
-        else
-          { }
-      );
-
-      services.resolved = {
-        enable = true;
-        extraConfig = lib.mkIf config.services.avahi.enable ''
-          [Resolve]
-          MulticastDNS=no
-        '';
+        services.resolved = {
+          enable = true;
+          extraConfig = lib.mkIf config.services.avahi.enable ''
+            [Resolve]
+            MulticastDNS=no
+          '';
+        };
       };
-    };
   };
 }

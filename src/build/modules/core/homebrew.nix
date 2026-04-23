@@ -54,6 +54,8 @@ in
   group = "core";
   input = "build";
 
+  disableOnVM = true;
+
   rawOptions = {
     nx.homebrew = {
       taps = lib.mkOption {

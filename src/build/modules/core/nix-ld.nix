@@ -13,6 +13,8 @@ args@{
   group = "core";
   input = "build";
 
+  disableOnVM = true;
+
   module = {
     system = config: {
       programs.nix-ld.enable = true;

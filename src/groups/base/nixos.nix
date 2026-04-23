@@ -30,10 +30,10 @@ args@{
           ];
           services = [
             "sshd"
-            "printing"
-            "scanning"
           ];
           networking = [ "firewall" ];
+        }
+        // lib.optionalAttrs (self.host.settings.system.desktop != null) {
           boot = [ "plymouth" ];
         };
       }

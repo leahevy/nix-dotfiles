@@ -14,6 +14,8 @@ args@{
   group = "system";
   input = "linux";
 
+  disableOnVM = true;
+
   settings = {
     useNH = true;
   };
