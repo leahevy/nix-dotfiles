@@ -250,6 +250,22 @@
             ;
         };
 
+        vmBuilder = import (nxinputs.build + "/builders/vm/vm.nix") {
+          inherit lib;
+          inputs = nxinputs;
+          config = nxinputs.config;
+          build = nxinputs.build;
+          inherit
+            variables
+            helpers
+            defs
+            funcs
+            common
+            host-files
+            nixosArchitectures
+            ;
+        };
+
         homeManagerBuilder = import (nxinputs.build + "/builders/home/home-standalone.nix") {
           inherit lib;
           inputs = nxinputs;
@@ -298,7 +314,7 @@
         inherit (nxinputs) nixpkgs nixpkgs-unstable;
 
         isoConfigurations = isoBuilder.buildIsoConfigurations;
-        nixosConfigurations = nixosBuilder.buildNixOSConfigurations;
+        nixosConfigurations = nixosBuilder.buildNixOSConfigurations // vmBuilder.buildVmConfigurations;
         homeConfigurations = homeManagerBuilder.buildHomeConfigurations;
       };
   };

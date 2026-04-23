@@ -34,6 +34,7 @@ args@{
         "homebrew"
         "profile"
         "nixos-label"
+        "vm-host"
       ];
       desktop = [ "desktop" ];
       programs = [ "programs" ];

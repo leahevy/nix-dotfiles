@@ -88,5 +88,11 @@ in
         message = "environment.persistence contains invalid mount points: ${builtins.concatStringsSep ", " invalidKeys}. Only '${allowedSystemPersistPath}' is allowed (use self.persist).";
       }
     ]
-  );
+  )
+  ++ [
+    {
+      assertion = (config.disko.devices or { }) == { } -> config.nx.profile.isVirtual;
+      message = "Disko devices not found on a physical machine! (File disk.nix in nixos profile folder)";
+    }
+  ];
 }

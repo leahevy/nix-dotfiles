@@ -59,6 +59,11 @@ with lib;
             default = [ ];
             description = "Additional packages supplying kernel modules (boot.extraModulePackages)";
           };
+          resumeDevice = mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "Explicit kernel resume device path (boot.kernelParams resume=...). When null, auto-detected from disko swap LVs";
+          };
         };
       };
       default = { };
@@ -69,7 +74,12 @@ with lib;
       type = types.submodule {
         options = {
           cpu = mkOption {
-            type = types.nullOr (types.enum [ "intel" ]);
+            type = types.nullOr (
+              types.enum [
+                "intel"
+                "amd"
+              ]
+            );
             default = null;
             description = "CPU type for microcode and CPU-specific configuration";
           };
@@ -306,6 +316,20 @@ with lib;
           default = { };
           description = "Firmware settings";
         };
+
+        virtualisation = mkOption {
+          type = types.submodule {
+            options = {
+              enableKVM = mkOption {
+                type = types.bool;
+                default = false;
+                description = "Whether to enable KVM hardware virtualisation support";
+              };
+            };
+          };
+          default = { };
+          description = "Virtualisation settings";
+        };
       };
 
       sshd = mkOption {
@@ -339,6 +363,36 @@ with lib;
       ];
       default = "develop";
       description = "How this machine consumes the NX configuration: 1) managed: no local repos, updates pushed from outside; 2) server: local nxconfig, no local edits, auto-upgrades; 3) local: local nxconfig, local edits allowed, auto-upgrades; 4) develop: local nxcore + nxconfig via --override-input, auto-upgrades dry-run only";
+    };
+
+    allowVMBuild = mkOption {
+      type = types.bool;
+      default = true;
+      description = "Allow running this NixOS configuration inside a VM";
+    };
+
+    vm = mkOption {
+      type = types.submodule {
+        options = {
+          memorySize = mkOption {
+            type = types.int;
+            default = 2048;
+            description = "VM memory size in MiB";
+          };
+          cores = mkOption {
+            type = types.int;
+            default = 2;
+            description = "Number of virtual CPU cores";
+          };
+          graphics = mkOption {
+            type = types.bool;
+            default = true;
+            description = "Whether to enable graphical output";
+          };
+        };
+      };
+      default = { };
+      description = "VM resource configuration for nx vm builds";
     };
   };
 }

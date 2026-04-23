@@ -249,6 +249,27 @@ rec {
             "systemd-tmpfiles-setup.service"
           ];
 
+          excludeForVMUnits = [
+            "acpid.service"
+            "autovt@tty1.service"
+            "rc-local.service"
+            "systemd-machined.service"
+            "suspend.target"
+            "hibernate.target"
+            "hybrid-sleep.target"
+            "sleep.target"
+          ];
+
+          activeExcludes =
+            (if isVM then excludeForVMUnits else [ ])
+            ++ lib.optionals (host == null || !host.settings.networking.useNetworkManager) [
+              "resolvconf.service"
+            ]
+            ++ lib.optionals (!(config.boot.plymouth.enable or false)) [
+              "plymouth-quit.service"
+              "plymouth-start.service"
+            ];
+
           userServices =
             if context == "system" then
               map (user: "user@${toString user.uid}.service") (builtins.attrValues (config.users.users or { }))
@@ -283,10 +304,11 @@ rec {
               true;
 
           invalidRefs = builtins.filter (ref: !(checkReference ref)) references;
+          invalidRefsWithoutExcludes = builtins.filter (ref: !(lib.elem ref activeExcludes)) invalidRefs;
         in
         {
-          assertion = invalidRefs == [ ];
-          message = "SystemD ${context} units referenced but not found: ${builtins.concatStringsSep ", " invalidRefs}";
+          assertion = invalidRefsWithoutExcludes == [ ];
+          message = "SystemD ${context} units referenced but not found: ${builtins.concatStringsSep ", " invalidRefsWithoutExcludes}";
         };
 
       systemdRefs = extractSystemdReferences config;
@@ -667,4 +689,22 @@ rec {
       inputPath + "/${groupName}/${moduleName}.nix"
     else
       inputPath + "/modules/${groupName}/${moduleName}.nix";
+
+  getDiskoResumeDevices =
+    diskoDevices:
+    let
+      lvmVgs = diskoDevices.lvm_vg or { };
+    in
+    lib.flatten (
+      lib.mapAttrsToList (
+        vgName: vg:
+        lib.mapAttrsToList (
+          lvName: lv:
+          if (lv.content.type or "") == "swap" && (lv.content.resumeDevice or false) == true then
+            [ "/dev/${vgName}/${lvName}" ]
+          else
+            [ ]
+        ) (vg.lvs or { })
+      ) lvmVgs
+    );
 }

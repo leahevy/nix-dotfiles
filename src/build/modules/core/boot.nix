@@ -17,11 +17,23 @@ in
   input = "build";
 
   module = {
+    physical.system =
+      { config, ... }:
+      {
+        boot.kernelParams =
+          let
+            resumeDevices =
+              if host.kernel.resumeDevice != null then
+                [ host.kernel.resumeDevice ]
+              else
+                helpers.getDiskoResumeDevices (config.disko.devices or { });
+          in
+          map (dev: "resume=${dev}") resumeDevices;
+      };
     system = config: {
       boot = {
         kernelModules = host.kernel.nixModules or [ ];
         extraModulePackages = host.kernel.extraModulePackages or [ ];
-        kernelParams = [ "resume=/dev/vgmain/swap" ];
         initrd = {
           availableKernelModules = host.kernel.bootModules or [ ];
           kernelModules = host.kernel.initrdModules or [ ];
