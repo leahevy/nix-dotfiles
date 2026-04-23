@@ -64,7 +64,14 @@ with lib;
         type = types.nullOr (
           types.enum [
             "red"
+            "orange"
+            "yellow"
             "green"
+            "cyan"
+            "blue"
+            "magenta"
+            "purple"
+            "white"
           ]
         );
         default = null;
