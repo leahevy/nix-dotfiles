@@ -776,7 +776,7 @@ retrieve_active_profile_path() {
 
 get_main_username() {
     local hostname
-    hostname="$(hostname)"
+    hostname="${1:-"$(hostname)"}"
     local full_profile
     full_profile="$(construct_profile_name "$hostname")"
 

@@ -8,6 +8,8 @@ check_deployment_conflicts "eval"
 HOME_MODE=false
 override_profile=""
 override_arch=""
+vm_mode=false
+EVAL_PATH=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -30,8 +32,17 @@ while [[ $# -gt 0 ]]; do
       force_standalone=true
       shift
       ;;
+    --vm)
+      vm_mode=true
+      force_nixos=true
+      shift
+      ;;
     --*) echo -e "${RED}Unknown option ${WHITE}${1}${RESET}" >&2; exit 1 ;;
-    *) break ;;
+    *)
+      [[ -n "$EVAL_PATH" ]] && { echo -e "${RED}Error: Unexpected argument: ${WHITE}$1${RESET}" >&2; exit 1; }
+      EVAL_PATH="$1"
+      shift
+      ;;
   esac
 done
 
@@ -39,8 +50,6 @@ done
   echo -e "${RED}Error: --nixos and --standalone cannot be used together${RESET}" >&2
   exit 1
 }
-
-EVAL_PATH="${1:-}"
 
 if [[ "$EVAL_PATH" == "" ]]; then
   echo -e "${RED}Eval path missing for flake evaluation!${RESET}" >&2
@@ -84,12 +93,15 @@ if [[ -n "$override_arch" ]]; then
   fi
 fi
 
+NIXOS_PROFILE="${PROFILE}"
+[[ "$vm_mode" == "true" ]] && NIXOS_PROFILE="${PROFILE}--VIRTUAL"
+
 if [[ "$context" == "nixos" ]]; then
   if [[ "$HOME_MODE" == "true" ]]; then
-    MAIN_USER="$(get_main_username)"
-    FULL_EVAL_PATH="nixosConfigurations.${PROFILE}.config.home-manager.users.${MAIN_USER}.${EVAL_PATH}"
+    MAIN_USER="$(get_main_username "$base_profile")"
+    FULL_EVAL_PATH="nixosConfigurations.${NIXOS_PROFILE}.config.home-manager.users.${MAIN_USER}.${EVAL_PATH}"
   else
-    FULL_EVAL_PATH="nixosConfigurations.${PROFILE}.config.${EVAL_PATH}"
+    FULL_EVAL_PATH="nixosConfigurations.${NIXOS_PROFILE}.config.${EVAL_PATH}"
   fi
 else
   if [[ "$HOME_MODE" == "true" ]]; then

@@ -248,6 +248,7 @@
           nixos = option "Force NixOS mode";
           standalone = option "Force standalone mode";
           arch = optionWithEnum "Use specific architecture" "architecture" architectures;
+          vm = option "Use VM variant of the configuration";
         };
         arguments = [ (arg "path" "Nix eval path" "string") ];
       };
