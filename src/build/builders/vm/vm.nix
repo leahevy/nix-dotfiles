@@ -72,6 +72,17 @@ let
       isNiriDesktop = hostConfig.host.settings.system.desktop == "niri";
       mainUser = hostConfig.host.mainUser or null;
       mainUsername = if builtins.isAttrs mainUser then mainUser.username or null else null;
+      shredVmKeyScript = pkgs.writeShellScript "nx-vm-shred-age-key" ''
+        set -euo pipefail
+        key_file="$1"
+        if [ -f "$key_file" ] && [ ! -L "$key_file" ]; then
+          if [ -x "${pkgs.coreutils}/bin/shred" ]; then
+            "${pkgs.coreutils}/bin/shred" -u -- "$key_file" 2>/dev/null || "${pkgs.coreutils}/bin/rm" -f -- "$key_file"
+          else
+            "${pkgs.coreutils}/bin/rm" -f -- "$key_file"
+          fi
+        fi
+      '';
     in
     {
       name =
@@ -160,15 +171,42 @@ let
               sops.age.sshKeyPaths = lib.mkForce [ ];
             }
             // lib.optionalAttrs (mainUsername != null) {
-              home-manager.users.${mainUsername}.sops.age = {
-                keyFile = lib.mkForce "/tmp/shared/nx-vm/user/keys.txt";
-                sshKeyPaths = lib.mkForce [ ];
+              home-manager.users.${mainUsername} = {
+                sops.age = {
+                  keyFile = lib.mkForce "/tmp/shared/nx-vm/user/keys.txt";
+                  sshKeyPaths = lib.mkForce [ ];
+                };
+
+                systemd.user.services.nx-vm-shred-user-age-key = {
+                  Unit = {
+                    Description = "Shred VM user age key from shared directory";
+                    After = [ "sops-nix.service" ];
+                    Requires = [ "sops-nix.service" ];
+                  };
+                  Service = {
+                    Type = "oneshot";
+                    ExecStart = "${shredVmKeyScript} /tmp/shared/nx-vm/user/keys.txt";
+                  };
+                  Install = {
+                    WantedBy = [ "sops-nix.service" ];
+                  };
+                };
               };
             }
             // {
               virtualisation.memorySize = vmConfig.memorySize or 2048;
               virtualisation.cores = vmConfig.cores or 2;
               virtualisation.graphics = vmConfig.graphics or true;
+            };
+
+            systemd.services.nx-vm-shred-system-age-key = {
+              description = "Shred VM system age key from shared directory";
+              wantedBy = [ "multi-user.target" ];
+              after = [ "multi-user.target" ];
+              serviceConfig = {
+                Type = "oneshot";
+                ExecStart = "${shredVmKeyScript} /tmp/shared/nx-vm/system/keys.txt";
+              };
             };
           }
         ]

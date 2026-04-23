@@ -2,7 +2,10 @@
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
+INVOCATION_DIR="$(pwd)"
 deployment_script_setup "vm"
+
+umask 077
 
 if [[ "$(uname)" != "Linux" ]]; then
     print_error "nx vm is only supported on Linux!"
@@ -17,9 +20,81 @@ CLEANUP_ALL=false
 SELECT_VERSION=""
 LIST_VERSIONS=false
 
+DANGEROUSLY_USE_HOST_SOPS=false
+NO_USER_AGE=false
+AGE_FILE=""
+AGE_SYSTEM_FILE=""
+AGE_USER_FILE=""
+
+NX_VM_LOCK="${NX_VM_LOCK:-/tmp/.nx-vm-lock}"
+NX_VM_RUNTIME_SHARE="${NX_VM_RUNTIME_SHARE:-/tmp/nx-vm}"
+NX_VM_RUNTIME="${NX_VM_RUNTIME_SHARE}/nx-vm"
+
+LOCK_ACQUIRED=false
+RUNTIME_CREATED=false
+
+EPHEMERAL_CLEANUP=false
+EPHEMERAL_VM_FOLDER=""
+EPHEMERAL_VM_RESULT=""
+EPHEMERAL_VM_IMAGE=""
+
+cleanup() {
+    set +e
+
+    if [[ "${RUNTIME_CREATED}" == "true" && -n "${NX_VM_RUNTIME:-}" && -d "${NX_VM_RUNTIME}" ]]; then
+        for key_file in "${NX_VM_RUNTIME}/system/keys.txt" "${NX_VM_RUNTIME}/user/keys.txt"; do
+            if [[ -f "${key_file}" && ! -L "${key_file}" ]]; then
+                if command -v shred >/dev/null 2>&1; then
+                    shred -u -- "${key_file}" 2>/dev/null || rm -f -- "${key_file}"
+                else
+                    rm -f -- "${key_file}"
+                fi
+            fi
+        done
+    fi
+
+    if [[ "${EPHEMERAL_CLEANUP}" == "true" ]]; then
+        rm -f -- "${EPHEMERAL_VM_IMAGE}" "${EPHEMERAL_VM_RESULT}" 2>/dev/null || true
+        rm -rf -- "${EPHEMERAL_VM_FOLDER}" 2>/dev/null || true
+    fi
+
+    if [[ "${RUNTIME_CREATED}" == "true" && -n "${NX_VM_RUNTIME_SHARE:-}" && "${NX_VM_RUNTIME_SHARE:-}" != "/" ]]; then
+        rm -rf -- "${NX_VM_RUNTIME_SHARE}" 2>/dev/null || true
+    fi
+
+    if [[ "${LOCK_ACQUIRED}" == "true" && -n "${NX_VM_LOCK:-}" && "${NX_VM_LOCK:-}" != "/" ]]; then
+        rm -rf -- "${NX_VM_LOCK}" 2>/dev/null || true
+    fi
+}
+
+trap cleanup EXIT INT TERM HUP QUIT
+
 build_args=()
 while [[ $# -gt 0 ]]; do
     case "${1:-}" in
+        --age-file)
+            [[ $# -lt 2 ]] && { print_error "--age-file requires a file path"; exit 1; }
+            AGE_FILE="$2"
+            shift 2
+            ;;
+        --age-system-file)
+            [[ $# -lt 2 ]] && { print_error "--age-system-file requires a file path"; exit 1; }
+            AGE_SYSTEM_FILE="$2"
+            shift 2
+            ;;
+        --age-user-file)
+            [[ $# -lt 2 ]] && { print_error "--age-user-file requires a file path"; exit 1; }
+            AGE_USER_FILE="$2"
+            shift 2
+            ;;
+        --dangerously-use-host-sops)
+            DANGEROUSLY_USE_HOST_SOPS=true
+            shift
+            ;;
+        --no-user-age)
+            NO_USER_AGE=true
+            shift
+            ;;
         --keep)
             KEEP=true
             shift
@@ -73,19 +148,134 @@ if [[ "${KEEP}" == "true" && ("${REUSE_LATEST}" == "true" || "${SELECT_VERSION}"
     exit 1
 fi
 
-NX_VM_LOCK="/tmp/.nx-vm-lock"
-if ! mkdir "${NX_VM_LOCK}" 2>/dev/null; then
-    lock_info=""
-    [[ -f "${NX_VM_LOCK}/info" ]] && lock_info=" ($(cat "${NX_VM_LOCK}/info"))"
-    print_error "Another nx vm process is already running!${lock_info}"
+resolve_arg_path() {
+    local p="${1:-}"
+    if [[ -z "${p}" ]]; then
+        echo ""
+        return 0
+    fi
+    if [[ "${p}" == /* ]]; then
+        echo "${p}"
+        return 0
+    fi
+    if [[ "${p}" == "~" ]]; then
+        echo "${HOME}"
+        return 0
+    fi
+    if [[ "${p}" == "~/"* ]]; then
+        echo "${HOME}/${p#~/}"
+        return 0
+    fi
+    if command -v realpath >/dev/null 2>&1; then
+        realpath -m -- "${INVOCATION_DIR}/${p}"
+        return 0
+    fi
+    if command -v readlink >/dev/null 2>&1; then
+        readlink -f -- "${INVOCATION_DIR}/${p}" 2>/dev/null || echo "${INVOCATION_DIR}/${p}"
+        return 0
+    fi
+    echo "${INVOCATION_DIR}/${p}"
+}
+
+AGE_FILE="$(resolve_arg_path "${AGE_FILE}")"
+AGE_SYSTEM_FILE="$(resolve_arg_path "${AGE_SYSTEM_FILE}")"
+AGE_USER_FILE="$(resolve_arg_path "${AGE_USER_FILE}")"
+
+if [[ "${NO_RUN}" == "true" ]]; then
+    if [[ -n "${AGE_FILE}" || -n "${AGE_SYSTEM_FILE}" || -n "${AGE_USER_FILE}" || "${NO_USER_AGE}" == "true" || "${DANGEROUSLY_USE_HOST_SOPS}" == "true" ]]; then
+        print_error "--no-run cannot be used with age key options (keys are only needed when running the VM)"
+        exit 1
+    fi
+fi
+
+if [[ -n "${AGE_FILE}" && ( -n "${AGE_SYSTEM_FILE}" || -n "${AGE_USER_FILE}" ) ]]; then
+    print_error "--age-file is mutually exclusive with --age-system-file/--age-user-file"
     exit 1
 fi
+if [[ "${NO_USER_AGE}" == "true" && -n "${AGE_USER_FILE}" ]]; then
+    print_error "--no-user-age is mutually exclusive with --age-user-file"
+    exit 1
+fi
+if [[ "${NO_USER_AGE}" == "true" && -n "${AGE_FILE}" ]]; then
+    print_error "--no-user-age is mutually exclusive with --age-file (use --age-system-file instead)"
+    exit 1
+fi
+if [[ -n "${AGE_SYSTEM_FILE}" && -z "${AGE_USER_FILE}" && "${NO_USER_AGE}" != "true" ]]; then
+    print_error "--age-user-file must be provided unless --no-user-age is set"
+    exit 1
+fi
+if [[ -z "${AGE_SYSTEM_FILE}" && -n "${AGE_USER_FILE}" ]]; then
+    print_error "--age-user-file requires --age-system-file"
+    exit 1
+fi
+
+if [[ "${NO_RUN}" != "true" ]]; then
+    if [[ -n "${AGE_FILE}" ]]; then
+        [[ -f "${AGE_FILE}" ]] || { print_error "Age key file does not exist: ${AGE_FILE}"; exit 1; }
+    elif [[ -n "${AGE_SYSTEM_FILE}" ]]; then
+        [[ -f "${AGE_SYSTEM_FILE}" ]] || { print_error "System age key file does not exist: ${AGE_SYSTEM_FILE}"; exit 1; }
+        if [[ "${NO_USER_AGE}" != "true" ]]; then
+            [[ -f "${AGE_USER_FILE}" ]] || { print_error "User age key file does not exist: ${AGE_USER_FILE}"; exit 1; }
+        fi
+    else
+        if [[ "${DANGEROUSLY_USE_HOST_SOPS}" != "true" ]]; then
+            print_error "Missing age key input."
+            echo
+            echo -e "${WHITE}Provide either:${RESET}"
+            echo -e "  ${GREEN}--age-file <path>${RESET}  (sets both system+user)"
+            echo -e "  ${GREEN}--age-system-file <path> --age-user-file <path>${RESET}"
+            echo -e "  ${GREEN}--age-system-file <path> --no-user-age${RESET}"
+            echo
+            echo -e "Or explicitly opt into host key copying with: ${ORANGE}--dangerously-use-host-sops${RESET}"
+            exit 1
+        fi
+
+        system_key_found=""
+        if [[ -f "/persist/etc/sops/age/keys.txt" ]]; then
+            system_key_found="/persist/etc/sops/age/keys.txt"
+        elif [[ -f "/etc/sops/age/keys.txt" ]]; then
+            system_key_found="/etc/sops/age/keys.txt"
+        fi
+        [[ -n "${system_key_found}" ]] || { print_error "No system SOPS age key found on host"; exit 1; }
+
+        if [[ "${NO_USER_AGE}" != "true" ]]; then
+            user_key_found=""
+            if [[ -f "/persist${HOME}/.config/sops/age/keys.txt" ]]; then
+                user_key_found="/persist${HOME}/.config/sops/age/keys.txt"
+            elif [[ -f "${HOME}/.config/sops/age/keys.txt" ]]; then
+                user_key_found="${HOME}/.config/sops/age/keys.txt"
+            fi
+            [[ -n "${user_key_found}" ]] || { print_error "No user SOPS age key found on host (use --no-user-age to skip)"; exit 1; }
+        fi
+    fi
+fi
+
+if [[ -L "${NX_VM_LOCK}" ]]; then
+    print_error "Refusing to use symlink lock path: ${NX_VM_LOCK}"
+    exit 1
+fi
+if ! mkdir -m 700 "${NX_VM_LOCK}" 2>/dev/null; then
+    stale_pid=""
+    if [[ -f "${NX_VM_LOCK}/info" ]]; then
+        stale_pid="$(cut -d: -f1 "${NX_VM_LOCK}/info" 2>/dev/null || true)"
+    fi
+    if [[ -n "${stale_pid}" && "${stale_pid}" =~ ^[0-9]+$ ]] && ! kill -0 "${stale_pid}" 2>/dev/null; then
+        rm -rf -- "${NX_VM_LOCK}" 2>/dev/null || true
+        if ! mkdir -m 700 "${NX_VM_LOCK}" 2>/dev/null; then
+            print_error "Failed to acquire lock at ${NX_VM_LOCK}"
+            exit 1
+        fi
+    else
+        lock_info=""
+        [[ -f "${NX_VM_LOCK}/info" ]] && lock_info=" ($(cat "${NX_VM_LOCK}/info"))"
+        print_error "Another nx vm process is already running!${lock_info}"
+        exit 1
+    fi
+fi
+LOCK_ACQUIRED=true
 echo "$$:vm:$(date +%s)" > "${NX_VM_LOCK}/info"
-trap 'rm -rf -- "${NX_VM_LOCK}" || true' EXIT
 
 VM_CACHE="${HOME}/.cache/nx/vms"
-NX_VM_RUNTIME_SHARE="/tmp/nx-vm"
-NX_VM_RUNTIME="${NX_VM_RUNTIME_SHARE}/nx-vm"
 
 shopt -s nullglob
 stale_removed=()
@@ -242,6 +432,7 @@ else
     echo
 
     GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nh os build-vm "${nh_args[@]}" . -- "${EXTRA_ARGS[@]:-}"
+    echo
 fi
 
 if [[ "${NO_RUN}" != "true" ]]; then
@@ -249,39 +440,84 @@ if [[ "${NO_RUN}" != "true" ]]; then
         print_error "A VM is already running!"
         exit 1
     fi
-    mkdir -m 700 "${NX_VM_RUNTIME_SHARE}"
-    mkdir -m 700 "${NX_VM_RUNTIME}"
-    mkdir "${NX_VM_RUNTIME}/system" "${NX_VM_RUNTIME}/user"
-    trap 'rm -rf -- "${NX_VM_RUNTIME_SHARE}" || true; rm -rf -- "${NX_VM_LOCK}" || true' EXIT
-    echo "${VM_VERSION}" > "${NX_VM_RUNTIME}/version"
-
-    system_key=""
-    if [[ -f "/persist/etc/sops/age/keys.txt" ]]; then
-        system_key="/persist/etc/sops/age/keys.txt"
-    elif [[ -f "/etc/sops/age/keys.txt" ]]; then
-        system_key="/etc/sops/age/keys.txt"
-    fi
-    if [[ -z "${system_key}" ]]; then
-        print_error "No system SOPS age key found!"
+    if [[ -L "${NX_VM_RUNTIME_SHARE}" ]]; then
+        print_error "Refusing to use symlink shared dir path: ${NX_VM_RUNTIME_SHARE}"
         exit 1
     fi
+    mkdir -m 700 "${NX_VM_RUNTIME_SHARE}"
+    RUNTIME_CREATED=true
+    mkdir -m 700 "${NX_VM_RUNTIME}"
+    mkdir -m 700 "${NX_VM_RUNTIME}/system" "${NX_VM_RUNTIME}/user"
+    echo "${VM_VERSION}" > "${NX_VM_RUNTIME}/version"
+
+    system_key_src=""
+    user_key_src=""
+
+    if [[ -n "${AGE_FILE}" ]]; then
+        system_key_src="${AGE_FILE}"
+        user_key_src="${AGE_FILE}"
+    elif [[ -n "${AGE_SYSTEM_FILE}" ]]; then
+        system_key_src="${AGE_SYSTEM_FILE}"
+        if [[ "${NO_USER_AGE}" != "true" ]]; then
+            user_key_src="${AGE_USER_FILE}"
+        fi
+	    else
+	        if [[ "${DANGEROUSLY_USE_HOST_SOPS}" != "true" ]]; then
+	            print_error "Missing age key input!"
+	            exit 1
+	        fi
+	        if [[ -f "/persist/etc/sops/age/keys.txt" ]]; then
+	            system_key_src="/persist/etc/sops/age/keys.txt"
+	        elif [[ -f "/etc/sops/age/keys.txt" ]]; then
+            system_key_src="/etc/sops/age/keys.txt"
+        fi
+        if [[ -f "/persist${HOME}/.config/sops/age/keys.txt" ]]; then
+            user_key_src="/persist${HOME}/.config/sops/age/keys.txt"
+        elif [[ -f "${HOME}/.config/sops/age/keys.txt" ]]; then
+            user_key_src="${HOME}/.config/sops/age/keys.txt"
+        fi
+    fi
+
+    if [[ -z "${system_key_src}" ]]; then
+        print_error "No system age key file found."
+        exit 1
+    fi
+
+    if [[ ! -f "${system_key_src}" ]]; then
+        print_error "System age key file does not exist: ${system_key_src}"
+        exit 1
+    fi
+
     echo
-    print_info "Copying system SOPS age key with sudo ${ORANGE}(requires elevated privileges)"
-    sudo install -m 600 -o "$(id -u)" -g "$(id -g)" "${system_key}" "${NX_VM_RUNTIME}/system/keys.txt"
+    if [[ "${DANGEROUSLY_USE_HOST_SOPS}" == "true" && -z "${AGE_FILE}" && -z "${AGE_SYSTEM_FILE}" ]]; then
+        print_info "Copying system SOPS age key with sudo ${ORANGE}(requires elevated privileges)"
+        sudo install -m 600 -o "$(id -u)" -g "$(id -g)" "${system_key_src}" "${NX_VM_RUNTIME}/system/keys.txt"
+    else
+        print_info "Copying system age key from ${WHITE}${system_key_src}${RESET}"
+        install -m 600 "${system_key_src}" "${NX_VM_RUNTIME}/system/keys.txt"
+    fi
     echo
 
-    user_key=""
-    if [[ -f "/persist${HOME}/.config/sops/age/keys.txt" ]]; then
-        user_key="/persist${HOME}/.config/sops/age/keys.txt"
-    elif [[ -f "${HOME}/.config/sops/age/keys.txt" ]]; then
-        user_key="${HOME}/.config/sops/age/keys.txt"
-    fi
-    if [[ -n "${user_key}" ]]; then
-        install -m 600 "${user_key}" "${NX_VM_RUNTIME}/user/keys.txt"
+    if [[ "${NO_USER_AGE}" == "true" ]]; then
+        print_info "Skipping user age key due to ${ORANGE}--no-user-age${RESET}"
+    else
+        if [[ -z "${user_key_src}" ]]; then
+            print_error "No user age key file found. Provide --age-user-file or set --no-user-age"
+            exit 1
+        fi
+        if [[ ! -f "${user_key_src}" ]]; then
+            print_error "User age key file does not exist: ${user_key_src}"
+            exit 1
+        fi
+        print_info "Copying user age key from ${WHITE}${user_key_src}${RESET}"
+        install -m 600 "${user_key_src}" "${NX_VM_RUNTIME}/user/keys.txt"
     fi
 
     if [[ "${KEEP}" != "true" && "${REUSE_LATEST}" != "true" && "${SELECT_VERSION}" == "" ]]; then
-        trap 'rm -rf -- "${NX_VM_RUNTIME_SHARE}" || true; rm -f -- "${VM_IMAGE}" "${VM_RESULT}" || true; rm -rf -- "${VM_FOLDER}" || true; rm -rf -- "${NX_VM_LOCK}" || true' EXIT
+        EPHEMERAL_CLEANUP=true
+        EPHEMERAL_VM_FOLDER="${VM_FOLDER}"
+        EPHEMERAL_VM_RESULT="${VM_RESULT}"
+        EPHEMERAL_VM_IMAGE="${VM_IMAGE}"
     fi
     export NIX_DISK_IMAGE="${VM_IMAGE}"
     export SHARED_DIR="${NX_VM_RUNTIME_SHARE}"

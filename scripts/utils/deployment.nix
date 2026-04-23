@@ -199,6 +199,11 @@
           list = option "List all saved VM images for the current profile";
           cleanup = option "Remove all cached VM images for the current profile";
           cleanup-all = option "Remove all cached VM images for all profiles";
+          age-system-file = optionWith "Use system age key from file path (no sudo)" "system_path" "filepath";
+          age-user-file = optionWith "Use user age key from file path (no sudo)" "user_path" "filepath";
+          age-file = optionWith "Use same age key file for both system+user (no sudo)" "path" "filepath";
+          no-user-age = option "Skip passing a user age key to the VM";
+          dangerously-use-host-sops = option "Allow copying host SOPS age key into VM share via sudo";
         };
       };
 
