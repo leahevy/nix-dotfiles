@@ -1228,6 +1228,10 @@ diff_store_paths() {
       "system-units"
       "user-environment"
       "etc"
+      "X-Restart-Triggers-systemd-modules-load"
+      "unit-systemd-modules-load.service"
+      "hm_.configfishcompletionsnx.fish"
+      "hm_.localsharebashcompletioncompletionsnx"
     )
     local suffixes_to_ignore=("-source")
     local changed_prefixes_to_ignore=("nixos-system-")
