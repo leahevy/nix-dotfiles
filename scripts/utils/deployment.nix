@@ -326,6 +326,7 @@
               nixos = option "Force NixOS mode";
               standalone = option "Force standalone mode";
               arch = optionWithEnum "Use specific architecture" "architecture" architectures;
+              vm = option "Use VM variant of the configuration";
             };
           };
           config = {
@@ -335,6 +336,7 @@
               arch = optionWithEnum "Use specific architecture" "architecture" architectures;
               nixos = option "Force NixOS mode";
               standalone = option "Force standalone mode";
+              vm = option "Use VM variant of the configuration";
             };
           };
           info = {
@@ -345,6 +347,7 @@
               arch = optionWithEnum "Use specific architecture" "architecture" architectures;
               nixos = option "Force NixOS mode";
               standalone = option "Force standalone mode";
+              vm = option "Use VM variant of the configuration";
             };
           };
           edit = {

@@ -38,6 +38,7 @@ subcommand_list() {
   local show_inactive_only=false
   local override_profile=""
   local override_arch=""
+  local vm_mode=false
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -67,9 +68,14 @@ subcommand_list() {
         force_standalone=true
         shift
         ;;
+      --vm)
+        vm_mode=true
+        force_nixos=true
+        shift
+        ;;
       *)
         echo -e "${RED}Error: Unknown option: ${WHITE}$1${RESET}" >&2
-        echo -e "Usage: ${WHITE}nx modules list [--active] [--inactive] [--profile <profile>] [--arch <arch>] [--nixos] [--standalone]${RESET}" >&2
+        echo -e "Usage: ${WHITE}nx modules list [--active] [--inactive] [--profile <profile>] [--arch <arch>] [--nixos] [--standalone] [--vm]${RESET}" >&2
         exit 1
         ;;
     esac
@@ -113,6 +119,8 @@ subcommand_list() {
       exit 1
     fi
   fi
+
+  [[ "$vm_mode" == "true" ]] && profile="${profile}--VIRTUAL"
 
   local config_path
   config_path="$(get_config_path "$profile" "$context")"
@@ -234,6 +242,7 @@ subcommand_info() {
   local override_profile=""
   local override_arch=""
   local module_id=""
+  local vm_mode=false
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -255,9 +264,14 @@ subcommand_info() {
         force_standalone=true
         shift
         ;;
+      --vm)
+        vm_mode=true
+        force_nixos=true
+        shift
+        ;;
       -*)
         echo -e "${RED}Error: Unknown option: ${WHITE}$1${RESET}" >&2
-        echo -e "Usage: ${WHITE}nx modules info [--profile <profile>] [--arch <arch>] [--nixos] [--standalone] INPUT.GROUP.MODULE${RESET}" >&2
+        echo -e "Usage: ${WHITE}nx modules info [--profile <profile>] [--arch <arch>] [--nixos] [--standalone] [--vm] INPUT.GROUP.MODULE${RESET}" >&2
         exit 1
         ;;
       *)
@@ -336,6 +350,8 @@ subcommand_info() {
       exit 1
     fi
   fi
+
+  [[ "$vm_mode" == "true" ]] && profile="${profile}--VIRTUAL"
 
   local config_path
   config_path="$(get_config_path "$profile" "$context")"
@@ -505,6 +521,7 @@ subcommand_edit() {
 subcommand_config() {
   local override_profile=""
   local override_arch=""
+  local vm_mode=false
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -526,9 +543,14 @@ subcommand_config() {
         force_standalone=true
         shift
         ;;
+      --vm)
+        vm_mode=true
+        force_nixos=true
+        shift
+        ;;
       *)
         echo -e "${RED}Error: Unknown option: ${WHITE}$1${RESET}" >&2
-        echo -e "Usage: ${WHITE}nx modules config [--profile <profile>] [--arch <arch>] [--nixos] [--standalone]${RESET}" >&2
+        echo -e "Usage: ${WHITE}nx modules config [--profile <profile>] [--arch <arch>] [--nixos] [--standalone] [--vm]${RESET}" >&2
         exit 1
         ;;
     esac
@@ -567,6 +589,8 @@ subcommand_config() {
       exit 1
     fi
   fi
+
+  [[ "$vm_mode" == "true" ]] && profile="${profile}--VIRTUAL"
 
   local config_path
   config_path="$(get_config_path "$profile" "$context")"
