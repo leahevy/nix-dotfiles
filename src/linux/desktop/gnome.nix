@@ -35,7 +35,10 @@ args@{
         welcome-dialog-last-shown-version='999.999'
       '';
 
-      services.desktopManager.plasma5.excludePackages = with pkgs.libsForQt5; [
+      stylix.targets.qt.platform = lib.mkForce "qtct";
+      qt.platformTheme = lib.mkForce "gnome";
+
+      environment.plasma6.excludePackages = with pkgs.kdePackages; [
         plasma-welcome
       ];
     };
