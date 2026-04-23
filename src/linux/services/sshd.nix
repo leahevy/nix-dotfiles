@@ -24,6 +24,7 @@ args@{
 
   settings = {
     port = 22;
+    vmPort = 2323;
   };
 
   module = {
@@ -43,6 +44,18 @@ args@{
 
       # Already configured in system module as ssh keys should always be persisted!
       environment.persistence.${self.persist} = { };
+    };
+
+    virtual.linux.system = config: {
+      virtualisation.vmVariant = {
+        virtualisation.forwardPorts = [
+          {
+            from = "host";
+            host.port = self.settings.vmPort;
+            guest.port = self.settings.port;
+          }
+        ];
+      };
     };
   };
 }
