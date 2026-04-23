@@ -176,6 +176,32 @@
         options = commonDeploymentOptions;
       };
 
+      vm = {
+        description = "Build and run a NixOS VM";
+        group = "switch";
+        scope = "integrated";
+        system = "linux";
+        modes = [
+          "develop"
+          "local"
+        ];
+        options = {
+          timeout = optionWithDefault "Set timeout in seconds" "seconds" "int" "7200";
+          profile = optionWith "Use specific profile" "profile" "string";
+          arch = optionWithEnum "Target architecture for cross-arch builds" "architecture" architectures;
+          show-trace = option "Show detailed Nix error traces";
+          allow-ifd = option "Allow import-from-derivation";
+          skip-verification = option "Skip commit signature verification";
+          keep = option "Save VM image with timestamp instead of using ephemeral storage";
+          no-run = option "Build VM image without starting it";
+          reuse-latest = option "Run the most recently saved image without rebuilding";
+          select = optionWith "Run a specific saved image by version name" "version" "string";
+          list = option "List all saved VM images for the current profile";
+          cleanup = option "Remove all cached VM images for the current profile";
+          cleanup-all = option "Remove all cached VM images for all profiles";
+        };
+      };
+
       rollback = {
         description = "Rollback to previous configuration";
         group = "switch";

@@ -2,6 +2,18 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/defs.sh"
 
+print_info() {
+  echo -e "${WHITE}" "$@" "${RESET}"
+}
+
+print_success() {
+  echo -e "${GREEN}" "$@" "${RESET}"
+}
+
+print_error() {
+  echo -e "${RED}" "$@" "${RESET}"
+}
+
 is_modules_only_input() {
     local input_name="$1"
     for entry in "${MODULES_ONLY_INPUTS[@]}"; do
