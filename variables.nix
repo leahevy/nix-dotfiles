@@ -12,7 +12,7 @@
     "flakes"
   ];
 
-  nix-implementation = "lix"; # "nix" | "lix"
+  nix-implementation = "nix"; # "nix" | "lix"
 
   coreRepoIsoUrl = "https://github.com/leahevy/nix-dotfiles";
   coreRepoInstallUrl = "git@github.com:leahevy/nix-dotfiles.git";
