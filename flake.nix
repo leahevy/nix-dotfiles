@@ -180,13 +180,6 @@
 
         variables-base = import ./variables.nix { inherit lib; };
         variables-config = import (nxinputs.config + "/variables.nix") { inherit lib; };
-        variables = lib.recursiveUpdate variables-base (
-          variables-config
-          // {
-            allowedUnfreePackages =
-              variables-base.allowedUnfreePackages ++ (variables-config.allowedUnfreePackages or [ ]);
-          }
-        );
 
         defs = import (nxinputs.lib + "/defs.nix") { inherit lib; };
 
@@ -204,6 +197,12 @@
         helpers = import (nxinputs.lib + "/helpers.nix") {
           inherit lib defs;
           additionalInputs = extraInputs;
+        };
+
+        variables = helpers.deepMergeComplex {
+          base = variables-base;
+          override = variables-config;
+          forbidNewAny = true;
         };
 
         standalone-user-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (

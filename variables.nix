@@ -15,6 +15,9 @@
   nix-implementation = "lix"; # "nix" | "lix"
 
   coreRepoIsoUrl = "https://github.com/leahevy/nix-dotfiles";
+  coreRepoInstallUrl = "git@github.com:leahevy/nix-dotfiles.git";
+  configRepoIsoUrl = "";
+  configRepoInstallUrl = "";
 
   allowedUnfreePackages = [ ];
 
@@ -23,7 +26,7 @@
   httpConnections = 15;
 
   unstablePackages = [ ];
-  unstableLinuxPackages = [ ];
+  unstableLinuxPackages = [ "protonmail-desktop" ];
   unstableDarwinPackages = [ ];
 
   nx.config = {

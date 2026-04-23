@@ -17,7 +17,6 @@ args@{
   settings = {
     forceX11 = true;
     isolateConfig = true;
-    package = pkgs-unstable.protonmail-desktop;
   };
 
   requiredPlatforms = [ "linux" ];
@@ -69,20 +68,20 @@ args@{
           if needsWrapper then
             (pkgs.symlinkJoin {
               name = "protonmail-desktop-wrapped";
-              paths = [ self.settings.package ];
+              paths = [ pkgs.protonmail-desktop ];
               buildInputs = [ pkgs.makeWrapper ];
               postBuild = ''
                 wrapProgram $out/bin/proton-mail ${wrapperArgs}
 
                 rm -f $out/share/applications/proton-mail.desktop
                 mkdir -p $out/share/applications
-                substitute ${self.settings.package}/share/applications/proton-mail.desktop \
+                substitute ${pkgs.protonmail-desktop}/share/applications/proton-mail.desktop \
                   $out/share/applications/proton-mail.desktop \
                   --replace-fail "Exec=proton-mail" "Exec=$out/bin/proton-mail"
               '';
             })
           else
-            self.settings.package;
+            pkgs.protonmail-desktop;
       in
       {
         home.file.".local/bin/proton-mail" = {

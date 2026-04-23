@@ -11,6 +11,68 @@ rec {
   # Usage: ifSet $VALUE $DEFAULT
   ifSet = value: default: if value != null then value else default;
 
+  # Deep-merge values with list concatenation and type checks.
+  # Usage: deepMergeComplex { base = $BASE; override = $OVERRIDE; forbidNewRoot = $BOOL; forbidNewAny = $BOOL; }
+  deepMergeComplex =
+    {
+      base,
+      override,
+      forbidNewRoot ? false,
+      forbidNewAny ? false,
+    }:
+    let
+      forbidRoot = forbidNewRoot || forbidNewAny;
+
+      typeTag =
+        value:
+        if value == null then
+          "null"
+        else if lib.isDerivation value then
+          "derivation"
+        else
+          builtins.typeOf value;
+
+      renderPath = path: if path == [ ] then "<root>" else lib.concatStringsSep "." path;
+
+      mergeAt =
+        path: a: b:
+        if a == null && b == null then
+          null
+        else if a == null then
+          b
+        else if b == null then
+          a
+        else if typeTag a != typeTag b then
+          throw "Type mismatch while deep-merging at '${renderPath path}': ${typeTag a} vs ${typeTag b}!"
+        else if lib.isDerivation a then
+          b
+        else if builtins.isList a then
+          a ++ b
+        else if builtins.isAttrs a then
+          let
+            newKeys = lib.filter (key: !(builtins.hasAttr key a)) (builtins.attrNames b);
+            mustRejectNewKeys = forbidNewAny || (forbidRoot && path == [ ]);
+          in
+          if mustRejectNewKeys && newKeys != [ ] then
+            throw "New attribute(s) introduced while deep-merging at '${renderPath path}': ${lib.concatStringsSep ", " newKeys}!"
+          else
+            lib.foldl' (
+              acc: key:
+              acc
+              // {
+                ${key} =
+                  if builtins.hasAttr key acc then mergeAt (path ++ [ key ]) acc.${key} b.${key} else b.${key};
+              }
+            ) a (builtins.attrNames b)
+        else
+          b;
+    in
+    mergeAt [ ] base override;
+
+  # Deep-merge values with list concatenation and type checks.
+  # Usage: deepMerge $BASE $OVERRIDE
+  deepMerge = base: override: deepMergeComplex { inherit base override; };
+
   # Wraps a when-condition check value to invert the comparison.
   # Usage: helpers.mkNot value
   mkNot = value: {
