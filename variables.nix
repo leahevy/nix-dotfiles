@@ -26,6 +26,7 @@
   httpConnections = 15;
 
   unstablePackages = [
+    "codex"
     "claude-code"
   ];
   unstableLinuxPackages = [ "protonmail-desktop" ];
