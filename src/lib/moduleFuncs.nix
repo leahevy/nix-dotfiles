@@ -70,6 +70,10 @@ rec {
       in
       helpers.isAARCH64Arch architecture;
 
+    isVirtual = self: self.isVirtual or false;
+
+    isPhysical = self: !(commonFuncs.isVirtual self);
+
     # Get absolute path to file in any input's module directory
     # Usage: fileFromInput $SELF $INPUT $SUBPATH
     fileFromInput =
@@ -304,6 +308,7 @@ rec {
           user = self.user or null;
           users = self.users or { };
           processedModules = self.processedModules or { };
+          isVirtual = self.isVirtual or false;
         };
 
         enhancedContext = buildHierarchicalFunctions baseModuleContext moduleDir;
@@ -355,6 +360,7 @@ rec {
           user = self.user or null;
           users = self.users or { };
           processedModules = self.processedModules or { };
+          isVirtual = self.isVirtual or false;
         };
 
         enhancedContext = buildHierarchicalFunctions baseModuleContext moduleDir;
@@ -493,6 +499,8 @@ rec {
             variables
             configInputs
             ;
+
+          isVirtual = moduleContext.isVirtual or false;
 
           options =
             config:

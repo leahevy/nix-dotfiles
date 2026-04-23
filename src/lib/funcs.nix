@@ -20,6 +20,11 @@ let
       name,
     }:
     helpers.buildModuleFilePath input inputName group name;
+
+  systemManagedAttrs = [
+    "nx_unfree"
+    "nx_disableOnVM"
+  ];
 in
 rec {
   inherit moduleFuncs;
@@ -85,6 +90,8 @@ rec {
         "requiredPlatforms"
         "architectures"
         "requiredArchitectures"
+        "disableOnVM"
+        "enableOnVM"
       ];
 
       actualAttrs = builtins.attrNames moduleResult;
@@ -306,7 +313,6 @@ rec {
     let
       defaultAttrs = builtins.attrNames moduleDefaults;
       userAttrs = builtins.attrNames userSettings;
-      systemManagedAttrs = [ "nx_unfree" ];
       allowedAttrs = defaultAttrs ++ systemManagedAttrs;
       invalidAttrs = builtins.filter (attr: !(builtins.elem attr allowedAttrs)) userAttrs;
       modulePath = "${inputName}.${groupName}.${moduleName}";
@@ -363,6 +369,7 @@ rec {
         moduleDefaults = moduleResult.settings or { };
         moduleOptions = moduleResult.options or { };
         moduleUnfree = moduleResult.unfree or [ ];
+        moduleDisableOnVM = moduleResult.disableOnVM or false;
 
         hasSettings = moduleDefaults != { };
         hasStandardOptions = moduleOptions != { };
@@ -382,8 +389,11 @@ rec {
             validatedUserSettings // { nx_unfree = moduleUnfree; }
           else
             validatedUserSettings;
+
+        settingsWithDisableOnVM =
+          if moduleDisableOnVM then settingsWithUnfree // { nx_disableOnVM = true; } else settingsWithUnfree;
       in
-      lib.recursiveUpdate moduleDefaults settingsWithUnfree;
+      lib.recursiveUpdate moduleDefaults settingsWithDisableOnVM;
 
   processModules =
     modules:
@@ -466,6 +476,8 @@ rec {
     "isAARCH64"
     "isStandalone"
     "isIntegrated"
+    "isVirtual"
+    "isPhysical"
   ];
 
   validateInnerModule =
@@ -492,6 +504,8 @@ rec {
         "darwin"
         "x86_64"
         "aarch64"
+        "virtual"
+        "physical"
       ];
 
       validateFn =
@@ -591,6 +605,105 @@ rec {
               "darwin"
             ];
 
+      validateVirtualPhysicalBase =
+        pathPrefix: buildTypeName: buildTypeModule:
+        let
+          vplAllowed = l1CondAllowed ++ [
+            "overlays"
+            "linux"
+            "darwin"
+            "x86_64"
+            "aarch64"
+          ];
+          fullPath = "${pathPrefix}${buildTypeName}";
+        in
+        checkInvalid "${prefix}.${fullPath}" vplAllowed buildTypeModule
+        ++ checkFns "${fullPath}." l1CondAllowed buildTypeModule
+        ++
+          lib.concatMap
+            (
+              platName:
+              if buildTypeModule ? ${platName} && builtins.isAttrs buildTypeModule.${platName} then
+                validatePlatformBase "${fullPath}." platName buildTypeModule.${platName}
+              else if buildTypeModule ? ${platName} then
+                [
+                  "${prefix}.${fullPath}.${platName} must be an attribute set, got ${
+                    builtins.typeOf buildTypeModule.${platName}
+                  }"
+                ]
+              else
+                [ ]
+            )
+            [
+              "linux"
+              "darwin"
+            ]
+        ++
+          lib.concatMap
+            (
+              archName:
+              if buildTypeModule ? ${archName} && builtins.isAttrs buildTypeModule.${archName} then
+                validateArchBase "${fullPath}." archName buildTypeModule.${archName}
+              else if buildTypeModule ? ${archName} then
+                [
+                  "${prefix}.${fullPath}.${archName} must be an attribute set, got ${
+                    builtins.typeOf buildTypeModule.${archName}
+                  }"
+                ]
+              else
+                [ ]
+            )
+            [
+              "x86_64"
+              "aarch64"
+            ];
+
+      validateVirtualPhysicalCond =
+        pathPrefix: buildTypeName: buildTypeModule:
+        let
+          fullPath = "${pathPrefix}${buildTypeName}";
+        in
+        checkInvalid "${prefix}.${fullPath}" (
+          l1CondAllowed
+          ++ [
+            "linux"
+            "darwin"
+            "x86_64"
+            "aarch64"
+          ]
+        ) buildTypeModule
+        ++ checkFns "${fullPath}." l1CondAllowed buildTypeModule
+        ++
+          lib.concatMap
+            (
+              platName:
+              if buildTypeModule ? ${platName} && builtins.isAttrs buildTypeModule.${platName} then
+                validatePlatformCond "${fullPath}." platName buildTypeModule.${platName}
+              else if buildTypeModule ? ${platName} then
+                [ "${prefix}.${fullPath}.${platName} must be an attribute set" ]
+              else
+                [ ]
+            )
+            [
+              "linux"
+              "darwin"
+            ]
+        ++
+          lib.concatMap
+            (
+              archName:
+              if buildTypeModule ? ${archName} && builtins.isAttrs buildTypeModule.${archName} then
+                validateArchCond "${fullPath}." archName buildTypeModule.${archName}
+              else if buildTypeModule ? ${archName} then
+                [ "${prefix}.${fullPath}.${archName} must be an attribute set" ]
+              else
+                [ ]
+            )
+            [
+              "x86_64"
+              "aarch64"
+            ];
+
       validateCondBody =
         path: attrset:
         checkInvalid "${prefix}.${path}" condStructuralKeys attrset
@@ -624,6 +737,21 @@ rec {
             [
               "x86_64"
               "aarch64"
+            ]
+        ++
+          lib.concatMap
+            (
+              buildTypeName:
+              if attrset ? ${buildTypeName} && builtins.isAttrs attrset.${buildTypeName} then
+                validateVirtualPhysicalCond "${path}." buildTypeName attrset.${buildTypeName}
+              else if attrset ? ${buildTypeName} then
+                [ "${prefix}.${path}.${buildTypeName} must be an attribute set" ]
+              else
+                [ ]
+            )
+            [
+              "virtual"
+              "physical"
             ];
 
       validateConditionalModule =
@@ -829,6 +957,8 @@ rec {
         "ifEnabled"
         "ifDisabled"
         "when"
+        "virtual"
+        "physical"
       ];
 
       topErrors = checkInvalid "on" topAllowed module;
@@ -889,7 +1019,34 @@ rec {
         else
           [ ];
 
-      allErrors = topErrors ++ topFnErrors ++ platErrors ++ archErrors ++ conditionalErrors ++ whenErrors;
+      buildTypeErrors =
+        lib.concatMap
+          (
+            buildTypeName:
+            if module ? ${buildTypeName} && builtins.isAttrs module.${buildTypeName} then
+              validateVirtualPhysicalBase "" buildTypeName module.${buildTypeName}
+            else if module ? ${buildTypeName} then
+              [
+                "${prefix}.${buildTypeName} must be an attribute set, got ${
+                  builtins.typeOf module.${buildTypeName}
+                }"
+              ]
+            else
+              [ ]
+          )
+          [
+            "virtual"
+            "physical"
+          ];
+
+      allErrors =
+        topErrors
+        ++ topFnErrors
+        ++ platErrors
+        ++ archErrors
+        ++ conditionalErrors
+        ++ whenErrors
+        ++ buildTypeErrors;
     in
     if allErrors != [ ] then
       throw "Module ${modulePath} has invalid 'on' configuration:\n  ${builtins.concatStringsSep "\n  " allErrors}"
@@ -902,6 +1059,7 @@ rec {
       module,
       buildContext,
       architecture,
+      isVirtual ? false,
       includeInit ? false,
       sourceModule ? "unknown",
       moduleNxPath ? null,
@@ -935,6 +1093,13 @@ rec {
           attrset.aarch64 or { }
         else
           { };
+
+      buildTypeOf = attrset: if isVirtual then attrset.virtual or { } else attrset.physical or { };
+
+      collectAllBuildTypeLayers =
+        excludeInit: wrap: attrset:
+        collectLayers123 excludeInit wrap attrset
+        ++ collectLayers123 excludeInit wrap (buildTypeOf attrset);
 
       collectL1 =
         excludeInit: wrap: attrset:
@@ -994,7 +1159,8 @@ rec {
                 lib.flatten (
                   lib.mapAttrsToList (
                     moduleName: subModule:
-                    collectLayers123 true (makeWrap isEnabled "${inputName}.${groupName}.${moduleName}") subModule
+                    collectAllBuildTypeLayers true (makeWrap isEnabled "${inputName}.${groupName}.${moduleName}")
+                      subModule
                   ) modules
                 )
               ) groups
@@ -1213,7 +1379,9 @@ rec {
         let
           collect =
             label: item:
-            collectLayers123 true (makePredWrap label (buildItemCondition label item)) (item.do or { });
+            collectAllBuildTypeLayers true (makePredWrap label (buildItemCondition label item)) (
+              item.do or { }
+            );
           val = module.when or null;
         in
         if val == null then
@@ -1225,7 +1393,7 @@ rec {
         else
           [ ];
     in
-    collectLayers123 false null module
+    collectAllBuildTypeLayers false null module
     ++ collectConditional true (module.ifEnabled or { })
     ++ collectConditional false (module.ifDisabled or { })
     ++ whenFns;
@@ -1316,6 +1484,7 @@ rec {
         settings = moduleSpec.settings or { };
         unfree = basicModuleResult.unfree or [ ];
         processedModules = allProcessedModules;
+        isVirtual = args.isVirtual or false;
       };
 
       enhancedModuleContext = injectModuleFuncs moduleContext;
@@ -1340,6 +1509,7 @@ rec {
 
       applicableFns = selectApplicableModuleFns {
         inherit module buildContext architecture;
+        isVirtual = args.isVirtual or false;
         prefix = "module";
         sourceModule = toString modulePath;
         moduleNxPath = [
@@ -1396,6 +1566,7 @@ rec {
         user = args.user or null;
         users = args.users or { };
         processedModules = processedModules;
+        isVirtual = args.isVirtual or false;
       };
 
       enhancedContext = injectModuleFuncs moduleContext;
@@ -1406,6 +1577,7 @@ rec {
 
       allFns = selectApplicableModuleFns {
         inherit module buildContext architecture;
+        isVirtual = args.isVirtual or false;
         prefix = "profile";
         includeInit = true;
         sourceModule = "profile:${profileType}/${profileName}";
@@ -1514,6 +1686,7 @@ rec {
         moduleInputName = assertion.moduleSpec.inputName;
         settings = assertion.moduleSpec.settings;
         processedModules = moduleContext.processedModules or { };
+        isVirtual = args.isVirtual or false;
       };
 
       enhancedContext = injectModuleFuncs fullModuleContext;
@@ -1583,6 +1756,7 @@ rec {
             user = args.user or args.self.user or null;
             users = args.users or args.self.users or { };
             processedModules = args.processedModules or { };
+            isVirtual = args.isVirtual or false;
           };
 
           enhancedModuleContext = injectModuleFuncs moduleContext;
@@ -1725,7 +1899,18 @@ rec {
           normalizedSubmodules = normalizeModules filteredSubmodules;
           collectedSubmodulesWithDefaults = applyDefaultsToModules normalizedSubmodules;
 
-          nextModules = mergeModulesWithPrecedence collectedSubmodulesWithDefaults currentModules;
+          vmFilteredSubmodules =
+            if args.isVirtual or false then
+              lib.mapAttrs (
+                _: inputGroups:
+                lib.mapAttrs (
+                  _: groupModules: lib.filterAttrs (_: s: !(s.nx_disableOnVM or false)) groupModules
+                ) inputGroups
+              ) collectedSubmodulesWithDefaults
+            else
+              collectedSubmodulesWithDefaults;
+
+          nextModules = mergeModulesWithPrecedence vmFilteredSubmodules currentModules;
 
           hasNewModules =
             let
@@ -2002,6 +2187,7 @@ rec {
                 rawOptions = moduleResult.value.rawOptions or { };
                 settings = moduleResult.value.settings or { };
                 description = moduleResult.value.description or "";
+                enableOnVM = moduleResult.value.enableOnVM or false;
               }
             else
               {
@@ -2015,6 +2201,7 @@ rec {
                 rawOptions = { };
                 settings = { };
                 description = "";
+                enableOnVM = false;
               }
           ) moduleSpecs
         else
@@ -2026,6 +2213,19 @@ rec {
 
   collectAllModuleOptions =
     args: builtins.filter (m: m.options != { } || m.rawOptions != { }) (collectAllModuleData args);
+
+  collectVmEnabledModules =
+    args:
+    let
+      allData = collectAllModuleData args;
+      vmEnabled = builtins.filter (m: m.enableOnVM) allData;
+    in
+    lib.foldl (
+      acc: m:
+      lib.recursiveUpdate acc {
+        ${m.inputName}.${m.groupName}.${m.moduleName} = true;
+      }
+    ) { } vmEnabled;
 
   generateOptionsModules =
     allModuleData:
@@ -2107,7 +2307,6 @@ rec {
       settingsOnlyModules = builtins.filter (
         m: m.settings != { } && m.options == { } && m.rawOptions == { }
       ) allModuleData;
-      systemManagedAttrs = [ "nx_unfree" ];
     in
     map (
       m:
@@ -2125,7 +2324,6 @@ rec {
     allModuleData: processedModules:
     let
       optionsOnlyModules = builtins.filter (m: m.options != { } && m.settings == { }) allModuleData;
-      systemManagedAttrs = [ "nx_unfree" ];
     in
     map (
       m:
@@ -2210,6 +2408,7 @@ rec {
                   users = args.users or { };
                   user = args.user or null;
                   processedModules = args.processedModules or { };
+                  isVirtual = args.isVirtual or false;
                 };
 
                 enhancedModuleContext = injectModuleFuncs moduleContext;
@@ -2237,6 +2436,7 @@ rec {
                 initFns = map (f: wrapInit f.fn) (
                   builtins.filter (f: f.type == "init") (selectApplicableModuleFns {
                     inherit module architecture;
+                    isVirtual = args.isVirtual or false;
                     prefix = "module";
                     buildContext = "system";
                     includeInit = true;

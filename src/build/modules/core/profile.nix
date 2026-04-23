@@ -60,6 +60,16 @@ args@{
       default = false;
       description = "Whether the profile is on NixOS";
     };
+    nx.profile.isVirtual = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Whether the profile is a virtual (VM) build";
+    };
+    nx.profile.isPhysical = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Whether the profile is a physical (bare-metal) build";
+    };
   };
 
   module = {
@@ -73,6 +83,8 @@ args@{
       nx.profile.isX86_64 = self.isX86_64;
       nx.profile.isAARCH64 = self.isAARCH64;
       nx.profile.isNixOS = (self.user.isIntegrated or false) && self.isLinux;
+      nx.profile.isVirtual = self.isVirtual;
+      nx.profile.isPhysical = self.isPhysical;
     };
   };
 }

@@ -35,6 +35,7 @@ let
         diskoModule
         hardwareModule
         ;
+      isNiriDesktop = hostConfig.host.settings.system.desktop == "niri";
     in
     {
       name =
@@ -47,8 +48,11 @@ let
           inputs.sops-nix.nixosModules.sops
           inputs.stylix.nixosModules.stylix
           inputs.nixvim.nixosModules.nixvim
+        ]
+        ++ lib.optionals isNiriDesktop [
           inputs.niri-flake.nixosModules.niri
           {
+            programs.niri.package = lib.mkDefault pkgs.niri;
             niri-flake.cache.enable = false;
           }
         ]
@@ -81,6 +85,14 @@ let
               (lib.mkIf (variables."nix-implementation" == "lix") {
                 nix.package = lib.mkForce pkgs.lix;
               })
+            ]
+            ++ lib.optionals (!isNiriDesktop) [
+              {
+                options.programs.niri = lib.mkOption {
+                  type = lib.types.attrs;
+                  default = { };
+                };
+              }
             ]
             ++ (
               if !(hostConfig.host.impermanence or false) then

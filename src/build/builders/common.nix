@@ -179,13 +179,7 @@ let
     let
       diskoPath = config + "/profiles/nixos/${profileName}/disk.nix";
     in
-    if builtins.pathExists diskoPath then
-      [
-        inputs.disko.nixosModules.disko
-        diskoPath
-      ]
-    else
-      [ ];
+    [ inputs.disko.nixosModules.disko ] ++ lib.optional (builtins.pathExists diskoPath) diskoPath;
 
   resolveHomePath =
     { user, arch }:
@@ -263,6 +257,8 @@ in
       profileName,
       arch,
       buildArch ? arch,
+      overrides ? { },
+      isVirtual ? false,
     }:
     let
       localHelpers = helpers // {
@@ -387,11 +383,14 @@ in
         };
       additionalUsers = builtins.filter (u: !u.isMainUser) (builtins.attrValues userAttrSet);
 
-      resolvedHost = rawHost // {
-        inherit profileName;
-        mainUser = mainUser;
-        additionalUsers = additionalUsers;
-      };
+      resolvedHost = lib.recursiveUpdate (
+        rawHost
+        // {
+          inherit profileName;
+          mainUser = mainUser;
+          additionalUsers = additionalUsers;
+        }
+      ) overrides;
 
       mergedModules = funcs.mergeModulesWithPrecedence (helpers.ifSet (rawHost.modules or { }) { }) (
         lib.foldl lib.recursiveUpdate { } [
@@ -434,6 +433,7 @@ in
           variables
           defs
           funcs
+          isVirtual
           ;
         helpers = localHelpers;
         host = resolvedHost;
@@ -442,7 +442,25 @@ in
         configInputs = config.configInputs or { };
       };
 
-      processedModules = funcs.collectAllModulesWithSettings unifiedArgs mergedModules buildModules;
+      vmExtraModules = if isVirtual then funcs.collectVmEnabledModules unifiedArgs else { };
+
+      buildModulesForCollection = lib.recursiveUpdate buildModules vmExtraModules;
+
+      processedModulesRaw =
+        funcs.collectAllModulesWithSettings unifiedArgs mergedModules
+          buildModulesForCollection;
+
+      processedModules =
+        if isVirtual then
+          lib.mapAttrs (
+            _inputName: groups:
+            lib.mapAttrs (
+              _groupName: modules:
+              lib.filterAttrs (_moduleName: settings: !(settings.nx_disableOnVM or false)) modules
+            ) groups
+          ) processedModulesRaw
+        else
+          processedModulesRaw;
 
       hostConfig = {
         inherit profileName;
@@ -495,6 +513,7 @@ in
           users = hostConfig.users;
           processedModules = processedModules;
           configInputs = config.configInputs or { };
+          inherit isVirtual;
         };
         diskoModule = getDiskoModule { inherit profileName; };
         hardwareModule = getHardwareModule hostConfig.host;

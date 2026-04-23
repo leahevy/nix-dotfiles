@@ -45,6 +45,10 @@ args@{
   # requiredPlatforms = [ "linux" "darwin" ];
   # requiredArchitectures = [ "x86_64" "aarch64" ];
 
+  # VM build control
+  # disableOnVM = true;
+  # enableOnVM = true;
+
   assertions = [
     {
       assertion = true;
@@ -103,6 +107,15 @@ args@{
     #   linux = { init = config: { }; home = config: { }; ... };
     #   darwin = { ... };
     # };
+
+    # virtual = {                        # VM builds only (no init, when, ifEnabled, ifDisabled)
+    #   overlays = [ (final: prev: { ... }) ];
+    #   home = config: { };
+    #   system = config: { };
+    #   linux = { home = config: { }; ... };
+    #   x86_64 = { home = config: { }; linux = { ... }; ... };
+    # };
+    # physical = { ... };                # Physical (bare-metal) builds only; same structure as virtual
     # aarch64 = { ... };
 
     # moduleEnabled.INPUT.GROUP.MODULE = {
@@ -130,7 +143,7 @@ args@{
     #   user.username = helpers.mkNot "user";                                     # invert: username != "user"
     #   option.threshold = 5;                                                     # this module's own option at config.nx.INPUT.GROUP.MODULE.*
     #   option.threshold = helpers.mkNot 0;                                       # invert: threshold != 0
-    #   isNixOS = true;                                                           # isLinux isDarwin isX86_64 isAARCH64 isStandalone isIntegrated
+    #   isNixOS = true;                                                           # isLinux isDarwin isX86_64 isAARCH64 isStandalone isIntegrated isVirtual isPhysical
     #   do = {
     #     home = config: { };
     #     linux = { home = config: { }; ... };

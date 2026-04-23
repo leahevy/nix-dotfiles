@@ -149,6 +149,8 @@ rec {
       config,
       architecture,
       context,
+      isVM ? false,
+      host ? false,
       osConfig ? { },
     }:
     let

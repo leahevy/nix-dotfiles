@@ -70,8 +70,10 @@ in
     map evaluateModuleAssertions systemModuleAssertions
   )
   ++ (helpers.validateSystemdReferences {
+    inherit host;
     config = config;
     architecture = host.architecture;
+    isVM = config.nx.profile.isVirtual;
     context = "system";
   })
   ++ lib.optionals (host.impermanence or false) (

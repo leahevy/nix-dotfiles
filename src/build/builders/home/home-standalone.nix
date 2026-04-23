@@ -25,13 +25,15 @@ let
     }:
     let
       processResult = processStandaloneUserProfile { inherit profileName arch buildArch; };
-      inherit (processResult) buildContext;
+      inherit (processResult) userConfig buildContext;
       inherit (buildContext)
         pkgs
         lib
         buildArgs
         extraUserModule
         ;
+
+      isNiriDesktop = userConfig.settings.desktop == "niri";
     in
     {
       name =
@@ -47,11 +49,14 @@ let
           inputs.stylix.homeModules.stylix
           inputs.nixvim.homeModules.nixvim
         ]
-        ++ (lib.optionals (helpers.isLinuxArch arch) [
+        ++ (lib.optionals (helpers.isLinuxArch arch && isNiriDesktop) [
           inputs.niri-flake.homeModules.niri
           inputs.niri-flake.homeModules.stylix
+          {
+            programs.niri.package = lib.mkDefault pkgs.niri;
+          }
         ])
-        ++ (lib.optionals (helpers.isDarwinArch arch) [
+        ++ (lib.optionals (helpers.isDarwinArch arch || !isNiriDesktop) [
           {
             options.programs.niri = lib.mkOption {
               type = lib.types.attrs;
