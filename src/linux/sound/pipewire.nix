@@ -74,6 +74,12 @@ args@{
           user = true;
         }
         {
+          tag = "wireplumber";
+          string = "spa\\.bluez5: BlueZ system service is not available";
+          user = true;
+          unitless = true;
+        }
+        {
           string = "pw\\.node:.*suspended -> error \\(Start error: Device or resource busy\\)";
           user = true;
         }
