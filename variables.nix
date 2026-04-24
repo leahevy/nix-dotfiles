@@ -42,5 +42,5 @@
     };
   };
 
-  defaultTheme = "green";
+  defaultTheme = "season";
 }

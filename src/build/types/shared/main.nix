@@ -77,6 +77,8 @@ with lib;
             "magenta"
             "purple"
             "white"
+            "season"
+            "daily"
           ]
         );
         default = null;
