@@ -202,7 +202,7 @@
         variables = helpers.deepMergeComplex {
           base = variables-base;
           override = variables-config;
-          forbidNewAny = true;
+          forbidNewDeep = true;
         };
 
         standalone-user-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (

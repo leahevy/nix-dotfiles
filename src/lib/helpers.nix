@@ -12,13 +12,14 @@ rec {
   ifSet = value: default: if value != null then value else default;
 
   # Deep-merge values with list concatenation and type checks.
-  # Usage: deepMergeComplex { base = $BASE; override = $OVERRIDE; forbidNewRoot = $BOOL; forbidNewAny = $BOOL; }
+  # Usage: deepMergeComplex { base = $BASE; override = $OVERRIDE; forbidNewRoot = $BOOL; forbidNewAny = $BOOL;  forbidNewDeep = $BOOL;}
   deepMergeComplex =
     {
       base,
       override,
       forbidNewRoot ? false,
       forbidNewAny ? false,
+      forbidNewDeep ? false,
     }:
     let
       forbidRoot = forbidNewRoot || forbidNewAny;
@@ -51,7 +52,7 @@ rec {
         else if builtins.isAttrs a then
           let
             newKeys = lib.filter (key: !(builtins.hasAttr key a)) (builtins.attrNames b);
-            mustRejectNewKeys = forbidNewAny || (forbidRoot && path == [ ]);
+            mustRejectNewKeys = forbidNewAny || (forbidRoot && path == [ ]) || (forbidNewDeep && path != [ ]);
           in
           if mustRejectNewKeys && newKeys != [ ] then
             throw "New attribute(s) introduced while deep-merging at '${renderPath path}': ${lib.concatStringsSep ", " newKeys}!"
