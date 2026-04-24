@@ -162,6 +162,7 @@ resolve_arg_path() {
         echo "${HOME}"
         return 0
     fi
+    # shellcheck disable=SC2088
     if [[ "${p}" == "~/"* ]]; then
         echo "${HOME}/${p#~/}"
         return 0
