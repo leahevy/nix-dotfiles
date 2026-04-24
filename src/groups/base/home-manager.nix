@@ -11,6 +11,7 @@ args@{
 let
   baseModules = {
     common = {
+      graphics = [ "imagemagick" ];
       utils = [ "archive-tools" ];
       dev = [
         "conda"
