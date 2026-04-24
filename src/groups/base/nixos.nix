@@ -19,7 +19,7 @@ args@{
   submodules =
     if self ? isLinux && self.isLinux then
       {
-        common.style = [ "stylix" ];
+        common.style = lib.optionals (self.host.settings.system.desktop != null) [ "stylix" ];
         linux = {
           memory = [ "zram" ];
           storage = [ "smartd" ];
