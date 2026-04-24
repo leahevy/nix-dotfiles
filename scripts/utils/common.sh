@@ -1289,15 +1289,46 @@ diff_store_paths() {
       "home-manager-fonts"
       "system-units"
       "user-environment"
-      "etc"
       "X-Restart-Triggers-systemd-modules-load"
       "unit-systemd-modules-load.service"
       "hm_.configfishcompletionsnx.fish"
       "hm_.localsharebashcompletioncompletionsnx"
+      "wallpaper.jpg"
+      "hm_wallpaper.jpg"
+      "plymouth-initrd-themes"
+      "flattenedGtkTheme"
+      "ghostty-stylix-theme"
+      "gtk.css"
+      "stylix-plymouth"
+      "themed-nix-snowflake"
+      "X-Restart-Triggers-dbus-broker"
+      "X-Restart-Triggers-polkit"
+      "hm_autostartstylixactivatekde.desktop"
+      "hm-dconf.ini"
+      "system_fish-completions"
     )
-    local suffixes_to_ignore=("-source")
-    local changed_prefixes_to_ignore=("nixos-system-")
-    local add_removal_prefixes_to_ignore=("nixos-system-")
+    local suffixes_to_ignore=(
+      "-source"
+      "_themeStylix.xml"
+      "theme.css"
+      "-theme"
+      "-themes"
+      "-style.css"
+      "-css.css"
+    )
+    local changed_prefixes_to_ignore=(
+      "nixos-system-"
+      "etc-nx-theme-active-"
+      "widescreen-"
+      "base16-"
+      "etc-nx-theme-"
+      "nixos-icons-"
+      ".Xresources"
+    )
+    local add_removal_prefixes_to_ignore=(
+      "nixos-system-"
+      "etc-nx-theme-active-"
+    )
 
     local old="$1" new="$2"
 
