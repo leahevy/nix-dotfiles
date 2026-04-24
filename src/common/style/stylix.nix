@@ -172,5 +172,18 @@ args@{
             };
           };
         };
+
+      darwin.home =
+        config:
+        let
+          shared = stylixConfig config;
+          image = shared.stylixAttrs.image;
+        in
+        lib.mkIf (image != null && image != "") {
+          home.activation.setWallpaper = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
+            export _NX_WALLPAPER=${lib.escapeShellArg (toString image)}
+            /usr/bin/osascript -e 'tell application "System Events" to set picture of every desktop to (POSIX file (system attribute "_NX_WALLPAPER"))' || true
+          '';
+        };
     };
 }
