@@ -178,11 +178,42 @@
           }) srcDirs
         );
 
+        configSelf =
+          if builtins.typeOf config == "set" then
+            config
+          else
+            throw "configure: config must be a flake self object!";
+
+        configPath = builtins.toPath configSelf.outPath;
+
+        coreSelf = inputs.self;
+        coreIsNewer = coreSelf.lastModified >= configSelf.lastModified;
+        newestFlakeSelf = if coreIsNewer then coreSelf else configSelf;
+        newestFlake = {
+          self = newestFlakeSelf;
+          name = if coreIsNewer then "core" else "config";
+          date =
+            let
+              toInt =
+                s:
+                if builtins.substring 0 1 s == "0" then
+                  builtins.fromJSON (builtins.substring 1 1 s)
+                else
+                  builtins.fromJSON s;
+            in
+            {
+              year = toInt (builtins.substring 0 4 newestFlakeSelf.lastModifiedDate);
+              month = toInt (builtins.substring 4 2 newestFlakeSelf.lastModifiedDate);
+              day = toInt (builtins.substring 6 2 newestFlakeSelf.lastModifiedDate);
+            };
+        };
+
         nxinputs =
           inputs
           // localInputs
           // {
-            config = if builtins.typeOf config == "path" then config else builtins.toPath config;
+            config = configPath;
+            inherit newestFlake;
           };
 
         lib = nxinputs.nixpkgs.lib;
