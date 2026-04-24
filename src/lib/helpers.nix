@@ -11,6 +11,17 @@ rec {
   # Usage: ifSet $VALUE $DEFAULT
   ifSet = value: default: if value != null then value else default;
 
+  # Resolve a nested attribute path from config.host first, then config.user, then a default.
+  # Usage: resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true
+  resolveFromHostOrUser =
+    config: attrPath: default:
+    if config ? host && lib.hasAttrByPath attrPath config.host then
+      lib.getAttrFromPath attrPath config.host
+    else if config ? user && lib.hasAttrByPath attrPath config.user then
+      lib.getAttrFromPath attrPath config.user
+    else
+      default;
+
   # Deep-merge values with list concatenation and type checks.
   # Usage: deepMergeComplex { base = $BASE; override = $OVERRIDE; forbidNewRoot = $BOOL; forbidNewAny = $BOOL;  forbidNewDeep = $BOOL;}
   deepMergeComplex =
