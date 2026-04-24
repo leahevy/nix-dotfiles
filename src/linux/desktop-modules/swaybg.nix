@@ -432,6 +432,9 @@ args@{
 
           Service = {
             ExecStart = "${config.home.homeDirectory}/.local/bin/scripts/swaybg-start";
+            Environment = [
+              "STYLIX_WALLPAPER=${stylixWallpaperPath}"
+            ];
             Restart = "no";
             Type = "simple";
           };
