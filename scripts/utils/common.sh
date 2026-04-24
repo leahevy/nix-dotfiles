@@ -14,6 +14,68 @@ print_error() {
   echo -e "${RED}" "$@" "${RESET}"
 }
 
+strip_html() {
+  echo "$1" | sed 's/<[^>]*>//g'
+}
+
+notify_user() {
+    local title message urgency icon
+    title="${1:-}"
+    message="${2:-}"
+    urgency="${3:-}"
+    icon="${4:-}"
+
+    if [[ "$title" == "" || "$message" == "" ]]; then
+      print_error "Invalid usage of notify_user deployment function: title or message missing!"
+      return
+    fi
+
+    if [[ "$(uname -s)" == "Linux" ]]; then
+      if systemctl --user cat nx-user-notify-monitor >/dev/null 2>&1; then
+        logger -p "user.${urgency}" -t nx-user-notify "$title|$icon: $message" || true
+      else
+        if command -v notify-send >/dev/null 2>&1; then
+          local args
+          args=("$title" "$message")
+          if [[ "$icon" != "" ]]; then
+            args+=("--icon" "$icon")
+          fi
+          if [[ "$urgency" != "" ]]; then
+            args+=("--urgency")
+            if [[ "$urgency" == "info" ]]; then
+              args+=("normal")
+            elif [[ "$urgency" == "error" ]]; then
+              args+=("critical")
+            else
+              args+=("low")
+            fi
+          fi
+          notify-send "${args[@]}" || true
+        fi
+      fi
+    elif [[ "$(uname -s)" == "Darwin" ]]; then
+      local clean_message
+      clean_message="$(strip_html "$message")"
+      title="$title" message="$clean_message" /usr/bin/osascript -e 'display notification (system attribute "message") with title (system attribute "title")' || true
+    fi
+}
+
+notify_success() {
+  command="${1:-}"
+
+  if [[ "$command" != "" ]]; then
+    notify_user "Nix Deployment Command" "Successfully completed <b>$command</b>" info "$SUCCESS_ICON"
+  fi
+}
+
+notify_error() {
+  command="${1:-}"
+
+  if [[ "$command" != "" ]]; then
+    notify_user "Nix Deployment Command" "<b>$command</b> failed!" error "$ERROR_ICON"
+  fi
+}
+
 is_modules_only_input() {
     local input_name="$1"
     for entry in "${MODULES_ONLY_INPUTS[@]}"; do

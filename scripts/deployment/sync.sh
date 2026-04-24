@@ -13,9 +13,19 @@ PROFILE="$(retrieve_active_profile)"
 
 
 if [[ -e /etc/NIXOS ]]; then
-  nh os switch -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"
+  if nh os switch -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
+    notify_success "Sync"
+  else
+    notify_error "Sync"
+    exit 1
+  fi
 else
-  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null nh home switch . -c "$PROFILE" -b nix-rebuild.backup -- "${EXTRA_ARGS[@]:-}"
+  if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null nh home switch . -c "$PROFILE" -b nix-rebuild.backup -- "${EXTRA_ARGS[@]:-}"; then
+    notify_success "Sync"
+  else
+    notify_error "Sync"
+    exit 1
+  fi
 fi
 
 if [[ "$(uname -s)" == "Darwin" ]]; then

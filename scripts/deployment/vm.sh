@@ -437,7 +437,12 @@ else
     print_info "Building image at ${YELLOW}$VM_RESULT"
     echo
 
-    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nh os build-vm "${nh_args[@]}" . -- "${EXTRA_ARGS[@]:-}"
+    if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nh os build-vm "${nh_args[@]}" . -- "${EXTRA_ARGS[@]:-}"; then
+      notify_success "VM (build)"
+    else
+      notify_error "VM (build)"
+      exit 1
+    fi
     echo
 fi
 

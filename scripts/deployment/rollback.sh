@@ -10,4 +10,9 @@ ensure_nixos_only "rollback"
 check_git_worktrees_clean
 check_deployment_conflicts "rollback"
 
-nh os rollback "${EXTRA_ARGS[@]:-}"
+if nh os rollback "${EXTRA_ARGS[@]:-}"; then
+  notify_success "Rollback"
+else
+  notify_error "Rollback"
+  exit 1
+fi

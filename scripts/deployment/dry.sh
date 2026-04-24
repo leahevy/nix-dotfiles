@@ -10,4 +10,9 @@ check_deployment_conflicts "dry"
 
 PROFILE="$(retrieve_active_profile)"
 
-nh os switch --dry -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"
+if nh os switch --dry -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
+  notify_success "Dry"
+else
+  notify_error "Dry"
+  exit 1
+fi

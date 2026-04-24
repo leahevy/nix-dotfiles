@@ -41,19 +41,19 @@ cmd_list() {
     echo -e "${RED}No $SPEC_TYPE specialisations found (directory does not exist: ${WHITE}$SPECIALISATION_DIR${RED})${RESET}" >&2
     exit 1
   fi
-  
+
   if [[ -z "$(ls -A "$SPECIALISATION_DIR" 2>/dev/null)" ]]; then
     echo -e "${YELLOW}No $SPEC_TYPE specialisations available${RESET}"
     exit 0
   fi
-  
+
   echo -e "Available ${WHITE}$SPEC_TYPE${RESET} specialisations:"
   ls "$SPECIALISATION_DIR"
 }
 
 cmd_switch() {
   local spec_name="${1:-}"
-  
+
   if [[ -z "$spec_name" ]]; then
     echo -e "${RED}Usage: ${WHITE}$0 ${HOME_MODE:+--home }switch <specialisation-name>${RESET}" >&2
     echo >&2
@@ -65,9 +65,9 @@ cmd_switch() {
     fi
     exit 1
   fi
-  
+
   local spec_path="$SPECIALISATION_DIR/$spec_name"
-  
+
   if [[ ! -d "$spec_path" ]]; then
     echo -e "${RED}Error: $SPEC_TYPE specialisation '${WHITE}$spec_name${RED}' does not exist${RESET}" >&2
     echo >&2
@@ -79,33 +79,43 @@ cmd_switch() {
     fi
     exit 1
   fi
-  
+
   if [[ "$HOME_MODE" = true ]]; then
     local activate_script="$spec_path/activate"
   else
     local activate_script="$spec_path/bin/switch-to-configuration"
     local nixos_activate_args=("test")
   fi
-  
+
   if [[ ! -x "$activate_script" ]]; then
     echo -e "${RED}Error: Activate script not found or not executable: ${WHITE}$activate_script${RESET}" >&2
     exit 1
   fi
-  
+
   if [[ "$HOME_MODE" = true ]]; then
     mkdir -p ~/.local/cache/nx
     original_generation="$(readlink -f "$HM_PROFILE")"
     echo "$original_generation" > ~/.local/cache/nx/hm-original-generation
   fi
-  
+
   echo -e "Switching to ${WHITE}$SPEC_TYPE${RESET} specialisation: ${WHITE}$spec_name${RESET}"
   if [[ "$HOME_MODE" = true ]]; then
-    "$activate_script"
+    if "$activate_script"; then
+      notify_success "Spec (switch)"
+    else
+      notify_error "Spec (switch)"
+      exit 1
+    fi
     echo ""
     echo "Note: Other home-manager specialisations may not be visible until you reset to base config."
     echo "Use '$0 --home reset' to return to base configuration."
   else
-    sudo "$activate_script" "${nixos_activate_args[@]}"
+    if sudo "$activate_script" "${nixos_activate_args[@]}"; then
+      notify_success "Spec (switch)"
+    else
+      notify_error "Spec (switch)"
+      exit 1
+    fi
   fi
 }
 
@@ -114,12 +124,12 @@ cmd_reset() {
     echo -e "${RED}Reset command only available for home-manager specialisations. Use ${WHITE}--home${RED} flag.${RESET}" >&2
     exit 1
   fi
-  
+
   local stored_generation=""
   if [[ -f ~/.local/cache/nx/hm-original-generation ]]; then
     stored_generation="$(cat ~/.local/cache/nx/hm-original-generation)"
   fi
-  
+
   if [[ -n "$stored_generation" && -x "$stored_generation/activate" ]]; then
     echo -e "Resetting to stored original home-manager generation..."
     "$stored_generation/activate"
@@ -128,15 +138,15 @@ cmd_reset() {
   else
     echo "No stored original generation found or invalid."
     echo "Falling back to current profile base (may not restore specialisations)..."
-    
+
     local base_activate="$HM_PROFILE/activate"
-    
+
     if [[ ! -x "$base_activate" ]]; then
       echo "Error: Base home-manager activate script not found: $base_activate" >&2
       echo "Try running 'nx sync' to rebuild home-manager." >&2
       exit 1
     fi
-    
+
     "$base_activate"
     echo "Reset to current base complete, but specialisations may not be visible."
     echo "Consider running 'nx sync' to fully rebuild and restore specialisations."

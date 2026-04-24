@@ -13,4 +13,9 @@ check_deployment_conflicts "boot"
 
 PROFILE="$(retrieve_active_profile)"
 
-nh os boot -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"
+if nh os boot -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
+  notify_success "Boot"
+else
+  notify_error "Boot"
+  exit 1
+fi

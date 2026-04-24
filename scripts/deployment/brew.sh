@@ -15,7 +15,10 @@ fi
 
 echo -e "${GREEN}Running Homebrew sync...${RESET}"
 
-if ! brew-sync; then
+if brew-sync; then
+  notify_success "Brew"
+else
+    notify_error "Brew"
     echo
     echo -e "${RED}Brew sync failed!${RESET}" >&2
     exit 1

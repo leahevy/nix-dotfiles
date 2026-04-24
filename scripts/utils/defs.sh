@@ -20,6 +20,9 @@ export RAINBOW_COLOURS=(
   "${MAGENTA}"
 )
 
+export SUCCESS_ICON="nix-snowflake"
+export ERROR_ICON="dialog-error"
+
 export AUTO_UPDATE_INPUTS=(
     "nixpkgs"
     "nixpkgs-darwin"
