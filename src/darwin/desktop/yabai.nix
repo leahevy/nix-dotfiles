@@ -372,6 +372,66 @@ args@{
         separatorYOffset = builtins.toString (
           (builtins.div paddingSpace 4) + (builtins.div fontSizeDiff 3)
         );
+
+        yabai-restart = pkgs.writeShellScript "yabai-restart" ''
+          /bin/launchctl kickstart -k gui/$(id -u)/com.koekeishiya.yabai
+        '';
+
+        skhd-restart = pkgs.writeShellScript "skhd-restart" ''
+          /bin/launchctl kickstart -k gui/$(id -u)/com.koekeishiya.skhd
+        '';
+
+        sketchybar-restart = pkgs.writeShellScript "sketchybar-restart" ''
+          /opt/homebrew/bin/brew services restart sketchybar
+        '';
+
+        borders-restart = pkgs.writeShellScript "borders-restart" ''
+          /opt/homebrew/bin/brew services restart borders
+        '';
+
+        yabai-desktop-restart = pkgs.writeShellScript "yabai-desktop-restart" ''
+          set -euo pipefail
+
+          EXIT_CODE=0
+          FAILED_COMPONENTS=()
+
+          echo "Restarting borders..."
+          if ! ${borders-restart}; then
+            echo "Error: Failed to restart borders" >&2
+            EXIT_CODE=1
+            FAILED_COMPONENTS+=("borders")
+          fi
+
+          echo "Restarting yabai..."
+          if ! ${yabai-restart}; then
+            echo "Error: Failed to restart yabai" >&2
+            EXIT_CODE=1
+            FAILED_COMPONENTS+=("yabai")
+          fi
+
+          echo "Restarting skhd..."
+          if ! ${skhd-restart}; then
+            echo "Error: Failed to restart skhd" >&2
+            EXIT_CODE=1
+            FAILED_COMPONENTS+=("skhd")
+          fi
+
+          echo "Restarting sketchybar..."
+          if ! ${sketchybar-restart}; then
+            echo "Error: Failed to restart sketchybar" >&2
+            EXIT_CODE=1
+            FAILED_COMPONENTS+=("sketchybar")
+          fi
+
+          echo
+          if [[ $EXIT_CODE -eq 0 ]]; then
+            echo "All components restarted successfully."
+            exit 0
+          else
+            echo "Failed to restart the following components: ''${FAILED_COMPONENTS[*]}" >&2
+            exit $EXIT_CODE
+          fi
+        '';
       in
       {
         home.packages = with pkgs; [
@@ -501,8 +561,8 @@ args@{
                 "mkdir -p ~/Pictures/screenshots && screencapture -iw ~/Pictures/screenshots/$(date +%Y_%m_%d_%H%M%S).png";
               "ctrl + alt - p" = "mkdir -p ~/Pictures/screenshots && open ~/Pictures/screenshots";
 
-              "shift + alt - q" = "yabai-restart";
-              "shift + alt - w" = "yabai-desktop-restart";
+              "shift + alt - q" = "${yabai-restart}";
+              "shift + alt - w" = "${yabai-desktop-restart}";
               "alt + ctrl - tab" = "open -a \"Mission Control\"";
 
               "ctrl + alt - b" = "pmset sleepnow";
@@ -569,85 +629,25 @@ args@{
           '';
         };
 
-        home.file.".local/bin/yabai-restart" = {
-          executable = true;
-          text = ''
-            #!/bin/bash
-            launchctl kickstart -k gui/$(id -u)/com.koekeishiya.yabai
-          '';
-        };
+        home.file.".local/bin/yabai-restart".source = yabai-restart;
+        home.file.".local/bin/skhd-restart".source = skhd-restart;
+        home.file.".local/bin/sketchybar-restart".source = sketchybar-restart;
+        home.file.".local/bin/borders-restart".source = borders-restart;
+        home.file.".local/bin/yabai-desktop-restart".source = yabai-desktop-restart;
 
-        home.file.".local/bin/skhd-restart" = {
-          executable = true;
-          text = ''
-            #!/bin/bash
-            launchctl kickstart -k gui/$(id -u)/com.koekeishiya.skhd
-          '';
-        };
-
-        home.file.".local/bin/sketchybar-restart" = {
-          executable = true;
-          text = ''
-            #!/bin/bash
-            brew services restart sketchybar
-          '';
-        };
-
-        home.file.".local/bin/borders-restart" = {
-          executable = true;
-          text = ''
-            #!/bin/bash
-            brew services restart borders
-          '';
-        };
-
-        home.file.".local/bin/yabai-desktop-restart" = {
-          executable = true;
-          text = ''
-            #!/bin/bash
-            set -euo pipefail
-
-            EXIT_CODE=0
-            FAILED_COMPONENTS=()
-
-            echo "Restarting borders..."
-            if ! borders-restart; then
-              echo "Error: Failed to restart borders" >&2
-              EXIT_CODE=1
-              FAILED_COMPONENTS+=("borders")
+        home.activation.restartYabaiDesktop = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
+          _yabai_changed=false
+          for _dir in .config/yabai .config/skhd .config/borders; do
+            if [[ "''${oldGenPath+set}" != "set" ]] || ! diff -rq "$oldGenPath/home-files/$_dir" "$newGenPath/home-files/$_dir" >/dev/null 2>&1; then
+              _yabai_changed=true
+              break
             fi
-
-            echo "Restarting yabai..."
-            if ! yabai-restart; then
-              echo "Error: Failed to restart yabai" >&2
-              EXIT_CODE=1
-              FAILED_COMPONENTS+=("yabai")
-            fi
-
-            echo "Restarting skhd..."
-            if ! skhd-restart; then
-              echo "Error: Failed to restart skhd" >&2
-              EXIT_CODE=1
-              FAILED_COMPONENTS+=("skhd")
-            fi
-
-            echo "Restarting sketchybar..."
-            if ! sketchybar-restart; then
-              echo "Error: Failed to restart sketchybar" >&2
-              EXIT_CODE=1
-              FAILED_COMPONENTS+=("sketchybar")
-            fi
-
-            echo
-            if [[ $EXIT_CODE -eq 0 ]]; then
-              echo "All components restarted successfully."
-              exit 0
-            else
-              echo "Failed to restart the following components: ''${FAILED_COMPONENTS[*]}" >&2
-              exit $EXIT_CODE
-            fi
-          '';
-        };
+          done
+          if [[ "$_yabai_changed" == "true" ]]; then
+            echo "Restarting yabai desktop..."
+            ${yabai-desktop-restart} || true
+          fi
+        '';
 
         home.file.".local/bin/scripts/yabai-get-columns.sh" = {
           executable = true;
