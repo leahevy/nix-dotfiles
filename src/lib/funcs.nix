@@ -486,6 +486,7 @@ rec {
       l1FnNames = [
         "init"
         "enabled"
+        "disabled"
         "home"
         "system"
         "standalone"
@@ -494,6 +495,7 @@ rec {
       l1BaseAllowed = l1FnNames ++ [ "overlays" ];
       l1CondAllowed = [
         "enabled"
+        "disabled"
         "home"
         "system"
         "standalone"
@@ -1061,6 +1063,7 @@ rec {
       architecture,
       isVirtual ? false,
       includeInit ? false,
+      includeDisabled ? false,
       sourceModule ? "unknown",
       moduleNxPath ? null,
     }:
@@ -1105,6 +1108,7 @@ rec {
         excludeInit: wrap: attrset:
         lib.optional (!excludeInit && includeInit && attrset ? init) (tag attrset.init "init" wrap)
         ++ lib.optional (attrset ? enabled) (tag attrset.enabled "enabled" wrap)
+        ++ lib.optional (includeDisabled && attrset ? disabled) (tag attrset.disabled "disabled" wrap)
         ++ lib.optional (isHome && attrset ? home) (tag attrset.home "home" wrap)
         ++ lib.optional (isHome && isStandalone && attrset ? standalone) (
           tag attrset.standalone "standalone" wrap
@@ -2446,6 +2450,86 @@ rec {
               in
               initFns
             ) moduleSpecs
+          )
+        else
+          [ ];
+    in
+    lib.flatten (map scanInput helpers.allModuleInputsToScan);
+
+  importAllModuleDisableds =
+    args:
+    let
+      architecture = resolveArchitecture args;
+      processedModules = args.processedModules or { };
+
+      isModuleDisabled =
+        spec:
+        !(
+          processedModules ? ${spec.inputName}
+          && processedModules.${spec.inputName} ? ${spec.groupName}
+          && processedModules.${spec.inputName}.${spec.groupName} ? ${spec.moduleName}
+        );
+
+      scanInput =
+        inputName:
+        if additionalInputs ? ${inputName} then
+          let
+            input = additionalInputs.${inputName};
+            allSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input);
+            disabledSpecs = builtins.filter isModuleDisabled allSpecs;
+          in
+          lib.flatten (
+            map (
+              spec:
+              let
+                moduleDir = helpers.buildModuleDir spec.inputName spec.groupName spec.moduleName;
+
+                moduleContext = {
+                  inputs = args.inputs;
+                  variables = args.variables;
+                  configInputs = args.configInputs or { };
+                  moduleBasePath = moduleDir;
+                  moduleInput = spec.input;
+                  moduleInputName = spec.inputName;
+                  settings = { };
+                  host = args.host or { };
+                  users = args.users or { };
+                  user = args.user or null;
+                  processedModules = processedModules;
+                  isVirtual = args.isVirtual or false;
+                };
+
+                enhancedModuleContext = injectModuleFuncs moduleContext;
+
+                consolidatedArgs = {
+                  lib = args.lib;
+                  pkgs = args.pkgs;
+                  pkgs-unstable = args.pkgs-unstable;
+                  funcs = args.funcs;
+                  helpers = args.helpers;
+                  defs = args.defs;
+                  self = enhancedModuleContext;
+                };
+
+                moduleResult = builtins.tryEval (import spec.modulePath consolidatedArgs);
+
+                module = if moduleResult.success then moduleResult.value.module or { } else { };
+
+                wrapDisabled = disabledFn: { config, ... }: disabledFn config;
+
+                disabledFns = map (f: wrapDisabled f.fn) (
+                  builtins.filter (f: f.type == "disabled") (selectApplicableModuleFns {
+                    inherit module architecture;
+                    isVirtual = args.isVirtual or false;
+                    prefix = "module";
+                    buildContext = "system";
+                    includeDisabled = true;
+                    sourceModule = toString spec.modulePath;
+                  })
+                );
+              in
+              disabledFns
+            ) disabledSpecs
           )
         else
           [ ];

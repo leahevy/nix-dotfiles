@@ -28,6 +28,7 @@ let
   metaValueModules = funcs.generateMetaValueModules allModuleData;
 
   initModules = funcs.importAllModuleInits args;
+  disabledModules = funcs.importAllModuleDisableds args;
 
   specialisationConfigs = builtins.mapAttrs (specName: specModules: {
     configuration = {
@@ -85,6 +86,7 @@ in
     ++ enableValueModules
     ++ metaValueModules
     ++ initModules
+    ++ disabledModules
     ++ profileInitModules
     ++ extraModules
     ++ extraUserModule

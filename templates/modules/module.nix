@@ -63,6 +63,9 @@ args@{
     # Enabled only, both contexts (only config: allowed, not { config, ... })
     # enabled = config: { };
 
+    # Disabled only, both contexts (only config: allowed, not { config, ... })
+    # disabled = config: { };
+
     # Enabled, home context (prefer { config, opt, ... } for direct option access; config: also allowed)
     home =
       { config, ... }:
@@ -91,6 +94,7 @@ args@{
     #   overlays = [ (final: prev: { ... }) ];
     #   init = config: { };
     #   enabled = config: { };
+    #   disabled = config: { };
     #   home = config: { };
     #   system = config: { };
     #   standalone = config: { };
@@ -102,9 +106,10 @@ args@{
     #   overlays = [ (final: prev: { ... }) ];
     #   init = config: { };
     #   enabled = config: { };
+    #   disabled = config: { };
     #   home = config: { };
     #   system = config: { };
-    #   linux = { init = config: { }; home = config: { }; ... };
+    #   linux = { init = config: { }; enabled = config: { }; disabled = config: { }; home = config: { }; ... };
     #   darwin = { ... };
     # };
 
@@ -120,11 +125,12 @@ args@{
 
     # moduleEnabled.INPUT.GROUP.MODULE = {
     #   enabled = config: { };
+    #   disabled = config: { };
     #   home = config: { };
     #   system = config: { };
     #   standalone = config: { };
     #   integrated = config: { };
-    #   linux = { enabled = config: { }; home = config: { }; ... };
+    #   linux = { enabled = config: { }; disabled = config: { }; home = config: { }; ... };
     #   darwin = { ... };
     #   x86_64 = { home = config: { }; linux = { ... }; ... };
     #   aarch64 = { ... };
