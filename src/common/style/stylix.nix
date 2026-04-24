@@ -179,11 +179,98 @@ args@{
           shared = stylixConfig config;
           image = shared.stylixAttrs.image;
         in
-        lib.mkIf (image != null && image != "") {
-          home.activation.setWallpaper = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
-            export _NX_WALLPAPER=${lib.escapeShellArg (toString image)}
-            /usr/bin/osascript -e 'tell application "System Events" to set picture of every desktop to (POSIX file (system attribute "_NX_WALLPAPER"))' || true
-          '';
-        };
+        lib.mkIf (image != null && image != "") (
+          let
+            set-wallpaper-all-spaces = pkgs.writeShellScript "set-wallpaper-all-spaces" ''
+              set -euo pipefail
+
+              wallpaper="$1"
+
+              if [ ! -f "$wallpaper" ]; then
+                exit 1
+              fi
+
+              index="$HOME/Library/Application Support/com.apple.wallpaper/Store/Index.plist"
+
+              if [ ! -f "$index" ]; then
+                echo "error: missing wallpaper plist: $index" >&2
+                exit 1
+              fi
+
+              cp "$index" "$index.bak"
+
+              ${pkgs.python3}/bin/python3 - "$index" "$wallpaper" <<'PY'
+              import plistlib
+              import sys
+              from urllib.parse import quote
+
+              index, path = sys.argv[1], sys.argv[2]
+
+              with open(index, "rb") as f:
+                  root = plistlib.load(f)
+
+              def expect_dict(obj, key, where):
+                  value = obj.get(key)
+                  if not isinstance(value, dict):
+                      raise SystemExit(
+                          f"error: expected dict at {where}:{key}, got {type(value).__name__}\n"
+                          “Open System Settings -> Wallpaper, set an image manually, “
+                          “enable 'Show on all Spaces', then run sync again.”
+                      )
+                  return value
+
+              def expect_list(obj, key, where):
+                  value = obj.get(key)
+                  if not isinstance(value, list) or not value:
+                      raise SystemExit(
+                          f"error: expected non-empty list at {where}:{key}, got {type(value).__name__}\n"
+                          “Open System Settings -> Wallpaper, set an image manually, “
+                          “enable 'Show on all Spaces', then run sync again.”
+                      )
+                  return value
+
+              all_spaces = expect_dict(root, "AllSpacesAndDisplays", "")
+              desktop = expect_dict(all_spaces, "Desktop", "AllSpacesAndDisplays")
+              content = expect_dict(desktop, "Content", "AllSpacesAndDisplays:Desktop")
+              choices = expect_list(content, "Choices", "AllSpacesAndDisplays:Desktop:Content")
+
+              choice = choices[0]
+              if not isinstance(choice, dict):
+                  raise SystemExit(
+                      f"error: expected dict at Choices:0, got {type(choice).__name__}"
+                  )
+
+              inner = {
+                  "type": "imageFile",
+                  "url": {
+                      "relative": "file://" + quote(path),
+                  },
+              }
+
+              choice["Configuration"] = plistlib.dumps(inner, fmt=plistlib.FMT_BINARY)
+
+              files = choice.get("Files")
+              if isinstance(files, list) and files and isinstance(files[0], dict):
+                  files[0]["relative"] = "file://" + quote(path)
+
+              with open(index, "wb") as f:
+                  plistlib.dump(root, f, fmt=plistlib.FMT_BINARY)
+              PY
+
+              /usr/bin/killall WallpaperAgent 2>/dev/null || true
+            '';
+          in
+          {
+            home.activation.setWallpaper = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
+              echo "Set wallpaper to ${toString image}"
+
+              export _NX_WALLPAPER=${lib.escapeShellArg (toString image)}
+
+              ${set-wallpaper-all-spaces} ${lib.escapeShellArg (toString image)} \
+                || /usr/bin/osascript -e 'tell application "System Events" to set picture of every desktop to (POSIX file (system attribute "_NX_WALLPAPER"))' \
+                || true
+            '';
+          }
+        );
     };
 }
