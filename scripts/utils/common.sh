@@ -1306,6 +1306,9 @@ diff_store_paths() {
       "hm_autostartstylixactivatekde.desktop"
       "hm-dconf.ini"
       "system_fish-completions"
+      "hm_gdugdu.yaml"
+      "etc-man_db.conf"
+      "etc"
     )
     local suffixes_to_ignore=(
       "-source"
