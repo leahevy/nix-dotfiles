@@ -23,8 +23,8 @@ args@{
           ".local/bin/uniq".source = "${pkgs.coreutils}/bin/uniq";
           ".local/bin/cut".source = "${pkgs.coreutils}/bin/cut";
           ".local/bin/tr".source = "${pkgs.coreutils}/bin/tr";
-          ".local/bin/date".source = "${pkgs.coreutils}/bin/date";
-          ".local/bin/stat".source = "${pkgs.coreutils}/bin/stat";
+          ".local/bin/scripts/date".source = "${pkgs.coreutils}/bin/date";
+          ".local/bin/scripts/stat".source = "${pkgs.coreutils}/bin/stat";
           ".local/bin/readlink".source = "${pkgs.coreutils}/bin/readlink";
           ".local/bin/realpath".source = "${pkgs.coreutils}/bin/realpath";
           ".local/bin/mktemp".source = "${pkgs.coreutils}/bin/mktemp";
