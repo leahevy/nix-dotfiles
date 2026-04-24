@@ -322,8 +322,8 @@ args@{
 
           ".config/tmux/20-keybindings.conf".text = ''
             unbind C-b
-            set-option -g prefix C-q
-            bind-key C-q send-prefix
+            set-option -g prefix C-s
+            bind-key C-s send-prefix
 
             bind-key 0 select-window -t :10
             bind-key - select-window -t :11
