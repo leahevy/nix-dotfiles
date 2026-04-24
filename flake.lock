@@ -512,6 +512,27 @@
         "type": "github"
       }
     },
+    "nix-season-wallpaper": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "wallpapers": "wallpapers"
+      },
+      "locked": {
+        "lastModified": 1777051116,
+        "narHash": "sha256-rMNmXr5Kszej2N4u3uXvv/ltiKVY7KQ6AYIL9ay3Euc=",
+        "owner": "leahevy",
+        "repo": "nix-season-wallpaper",
+        "rev": "80db12050f4927163ba6afaf7b73c99fa272a006",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leahevy",
+        "repo": "nix-season-wallpaper",
+        "type": "github"
+      }
+    },
     "nix-systems": {
       "locked": {
         "lastModified": 1681028828,
@@ -753,6 +774,7 @@
         "nirimation": "nirimation",
         "nix-darwin": "nix-darwin",
         "nix-plist-manager": "nix-plist-manager",
+        "nix-season-wallpaper": "nix-season-wallpaper",
         "nix-systems": "nix-systems",
         "nix-systems-darwin": "nix-systems-darwin",
         "nix-systems-linux": "nix-systems-linux",
@@ -962,6 +984,23 @@
       "original": {
         "owner": "numtide",
         "repo": "treefmt-nix",
+        "type": "github"
+      }
+    },
+    "wallpapers": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1777047889,
+        "narHash": "sha256-5fWYw7F3OvvSZwtP7VQAIgEsyovaNobSODgVegzizDs=",
+        "owner": "leahevy",
+        "repo": "wallpapers",
+        "rev": "a52cdbe7e8e3f64c00f4ba33f6aaebb4b04c26c6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leahevy",
+        "ref": "main",
+        "repo": "wallpapers",
         "type": "github"
       }
     },

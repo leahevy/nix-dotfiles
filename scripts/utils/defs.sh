@@ -43,6 +43,7 @@ export AUTO_UPDATE_INPUTS=(
     "flake-compat"
     "nirimation"
     "solarized-everything-css"
+    "nix-season-wallpaper"
 )
 
 export REBOOT_CHECK_INPUTS=(
