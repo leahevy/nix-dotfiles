@@ -53,6 +53,11 @@ with lib;
             default = null;
             description = "Secondary display";
           };
+          mainIsWidescreen = mkOption {
+            type = types.bool;
+            default = false;
+            description = "Whether the main display is widescreen";
+          };
         };
       };
       default = { };
