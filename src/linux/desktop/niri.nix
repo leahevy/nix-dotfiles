@@ -1110,10 +1110,13 @@ args@{
               hide-when-typing = true;
             }
             // (
-              if theme.cursor or null != null then
+              let
+                stylix = config.nx.common.style.stylix;
+              in
+              if stylix.resolvedCursor or null != null then
                 {
-                  theme = lib.last (lib.splitString "/" theme.cursor.style);
-                  size = theme.cursor.size;
+                  theme = stylix.resolvedCursor.name;
+                  size = stylix.resolvedCursor.size;
                 }
               else
                 { }

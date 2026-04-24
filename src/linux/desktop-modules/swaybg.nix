@@ -41,30 +41,20 @@ args@{
           opts:
           lib.escapeShellArgs (helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts);
 
-        getStylixWallpaper =
-          let
-            stylixConfig = self.common.getModuleConfig "style.stylix";
-
-            getStylixFile =
-              fileName:
-              helpers.getInputFilePath (helpers.resolveInputFromInput "common") "modules/style/stylix.nix.d/${fileName}";
-          in
-          if (stylixConfig.wallpaper.config or null) != null then
-            self.config.filesPath stylixConfig.wallpaper.config
-          else if
-            (stylixConfig.wallpaper.url or null) != null && (stylixConfig.wallpaper.url.url or null) != null
-          then
-            pkgs.fetchurl {
-              url = stylixConfig.wallpaper.url.url;
-              hash = stylixConfig.wallpaper.url.hash;
-            }
-          else if (stylixConfig.wallpaper.local or null) != null then
-            stylixConfig.wallpaper.local
-          else
-            getStylixFile "wallpaper.jpg";
+        getStylixWallpaper = config.nx.common.style.stylix.resolvedWallpaper;
 
         stylixWallpaperPath = toString getStylixWallpaper;
-        stylixExtension = lib.last (lib.splitString "." stylixWallpaperPath);
+        stylixExtension =
+          let
+            ext = lib.last (lib.splitString "." stylixWallpaperPath);
+          in
+          if
+            lib.hasPrefix "/nix/store/" stylixWallpaperPath
+            && (lib.hasSuffix "jpg" stylixWallpaperPath || lib.hasSuffix "png" stylixWallpaperPath)
+          then
+            builtins.unsafeDiscardStringContext ext
+          else
+            ext;
 
         wallpapersDir = "${config.home.homeDirectory}/.config/swaybg/wallpapers";
 

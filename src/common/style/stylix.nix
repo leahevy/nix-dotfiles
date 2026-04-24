@@ -14,22 +14,191 @@ args@{
   group = "style";
   input = "common";
 
-  settings = {
-    fonts = null;
-    cursor = null;
-    wallpaper = {
-      # Default will use self.file "wallpaper.jpg"
+  options =
+    let
+      fontType = lib.types.submodule {
+        options = {
+          path = lib.mkOption {
+            type = lib.types.str;
+            description = "Font path in format: package/FontName";
+          };
+          useUnstable = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Whether to use unstable package";
+          };
+        };
+      };
+      resolvedFontType = lib.types.submodule {
+        options = {
+          package = lib.mkOption {
+            type = lib.types.package;
+            description = "Package of the font";
+          };
+          name = lib.mkOption {
+            type = lib.types.str;
+            default = "";
+            description = "Name of the font";
+          };
+        };
+      };
+    in
+    {
+      fonts = lib.mkOption {
+        type = lib.types.submodule {
+          options = {
+            serif = lib.mkOption {
+              type = lib.types.nullOr fontType;
+              default = null;
+            };
+            sansSerif = lib.mkOption {
+              type = lib.types.nullOr fontType;
+              default = null;
+            };
+            monospace = lib.mkOption {
+              type = lib.types.nullOr fontType;
+              default = null;
+            };
+            emoji = lib.mkOption {
+              type = lib.types.nullOr fontType;
+              default = null;
+            };
+          };
+        };
+        default = { };
+        description = "Font settings";
+      };
+      resolvedFonts = lib.mkOption {
+        type = lib.types.submodule {
+          options = {
+            serif = lib.mkOption {
+              type = resolvedFontType;
+            };
+            sansSerif = lib.mkOption {
+              type = resolvedFontType;
+            };
+            monospace = lib.mkOption {
+              type = resolvedFontType;
+            };
+            emoji = lib.mkOption {
+              type = resolvedFontType;
+            };
+          };
+        };
+        default = { };
+        description = "Resolved font settings";
+      };
+      cursor = lib.mkOption {
+        type = lib.types.submodule {
+          options = {
+            style = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Cursor style (format: package/CursorName)";
+            };
+            size = lib.mkOption {
+              type = lib.types.nullOr lib.types.int;
+              default = null;
+              description = "Cursor size";
+            };
+          };
+        };
+        default = { };
+        description = "Cursor settings";
+      };
+      resolvedCursor = lib.mkOption {
+        type = lib.types.submodule {
+          options = {
+            package = lib.mkOption {
+              type = lib.types.package;
+              description = "Package of the cursor";
+            };
+            name = lib.mkOption {
+              type = lib.types.str;
+              description = "Name of the cursor";
+            };
+            size = lib.mkOption {
+              type = lib.types.int;
+              description = "Cursor size";
+            };
+          };
+        };
+        default = { };
+        description = "Resolved cursor settings";
+      };
+
+      wallpaper = lib.mkOption {
+        type = lib.types.submodule {
+          options = {
+            configPath = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Path to wallpaper from nxconfig root";
+            };
+            url = lib.mkOption {
+              type = lib.types.nullOr (
+                lib.types.submodule {
+                  options = {
+                    url = lib.mkOption {
+                      type = lib.types.str;
+                      default = "";
+                      description = "URL of the wallpaper";
+                    };
+                    hash = lib.mkOption {
+                      type = lib.types.str;
+                      default = "";
+                      description = "Hash of the wallpaper";
+                    };
+                  };
+                }
+              );
+              default = null;
+              description = "URL to fetch wallpaper";
+            };
+            localPath = lib.mkOption {
+              type = lib.types.nullOr lib.types.path;
+              default = null;
+              description = "Path to a wallpaper";
+            };
+          };
+        };
+        default = { };
+        description = "Wallpaper settings";
+      };
+      resolvedWallpaper = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Resolved wallpaper";
+      };
     };
-  };
 
   module =
     let
       stylixConfig =
         config:
         let
+          opts = config.nx.common.style.stylix;
           theme = config.nx.preferences.theme;
-          fonts = if self.settings.fonts != null then self.settings.fonts else theme.fonts;
-          cursor = if self.settings.cursor != null then self.settings.cursor else theme.cursor;
+          fonts =
+            if
+              opts.fonts != null
+              && opts.fonts.serif != null
+              && opts.fonts.serif.path != null
+              && opts.fonts.sansSerif != null
+              && opts.fonts.sansSerif.path != null
+              && opts.fonts.monospace != null
+              && opts.fonts.monospace.path != null
+              && opts.fonts.emoji != null
+              && opts.fonts.emoji.path != null
+            then
+              opts.fonts
+            else
+              theme.fonts;
+          cursor =
+            if opts.cursor != null && opts.cursor.size != null && opts.cursor.style != null then
+              opts.cursor
+            else
+              theme.cursor;
 
           themeYaml = ''
             system: "base16"
@@ -87,17 +256,22 @@ args@{
             base16Scheme = customSchemeFile;
 
             image =
-              if (self.settings.wallpaper.config or null) != null then
-                self.config.filesPath self.settings.wallpaper.config
+              let
+                wallpaper = config.nx.common.style.stylix.wallpaper;
+              in
+              if (wallpaper.configPath or null) != null then
+                self.config.filesPath wallpaper.configPath
               else if
-                (self.settings.wallpaper.url or null) != null && (self.settings.wallpaper.url.url or null) != null
+                (wallpaper.url or null) != null
+                && (wallpaper.url.url or null) != null
+                && (wallpaper.url.hash or null) != null
               then
                 pkgs.fetchurl {
-                  url = self.settings.wallpaper.url.url;
-                  hash = self.settings.wallpaper.url.hash;
+                  url = wallpaper.url.url;
+                  hash = wallpaper.url.hash;
                 }
-              else if (self.settings.wallpaper.local or null) != null then
-                self.settings.wallpaper.local
+              else if (wallpaper.localPath or null) != null then
+                wallpaper.localPath
               else
                 self.file "wallpaper.jpg";
 
@@ -148,6 +322,17 @@ args@{
         };
     in
     {
+      enabled =
+        config:
+        let
+          shared = stylixConfig config;
+        in
+        {
+          nx.common.style.stylix.resolvedWallpaper = shared.stylixAttrs.image;
+          nx.common.style.stylix.resolvedFonts = shared.stylixAttrs.fonts;
+          nx.common.style.stylix.resolvedCursor = shared.stylixAttrs.cursor;
+        };
+
       system =
         config:
         let
