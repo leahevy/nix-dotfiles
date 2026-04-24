@@ -16,7 +16,10 @@ args@{
 
   module = {
     home = config: {
-      home.packages = with pkgs; [ imagemagick ];
+      home.packages = with pkgs; [
+        imagemagick
+        exiftool
+      ];
     };
   };
 }
