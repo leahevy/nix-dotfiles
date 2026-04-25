@@ -28,7 +28,6 @@ args@{
       ]
       ++ lib.optionals self.settings.niriKeybindings [
         "nx-nwg-wrapper-2"
-        "nx-nwg-wrapper-3"
       ];
 
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
@@ -37,15 +36,16 @@ args@{
           string = "Failed with result 'exit-code'\.";
           user = true;
         }
+        {
+          tag = ".nwg-wrapper-wrapped";
+          string = "Failed to set text .* from markup due to error parsing markup";
+          user = true;
+          unitless = true;
+        }
       ]
       ++ lib.optionals self.settings.niriKeybindings [
         {
           service = "nx-nwg-wrapper-2.service";
-          string = "Failed with result 'exit-code'\.";
-          user = true;
-        }
-        {
-          service = "nx-nwg-wrapper-3.service";
           string = "Failed with result 'exit-code'\.";
           user = true;
         }
@@ -55,6 +55,17 @@ args@{
     home =
       config:
       let
+        seasonWallpaperInfo = self.inputs.nix-season-wallpaper.resolveWallpaperBySeason self.inputs.newestFlake.self;
+        dailyWallpaperInfo = self.inputs.nix-season-wallpaper.resolveDailyWallpaper self.inputs.newestFlake.self;
+        personPosition =
+          if config.nx.themes.themes.season.enable then
+            seasonWallpaperInfo.metadata.positionPerson
+          else if config.nx.themes.themes.daily.enable then
+            dailyWallpaperInfo.metadata.positionPerson
+          else
+            "center";
+        statusAnchor = if personPosition == "left" then "center" else "left";
+        keybindingsAnchor = if personPosition == "right" then "center" else "right";
         terminal = config.nx.preferences.desktop.programs.terminal;
         highlightMainColor = config.nx.preferences.theme.colors.main.foregrounds.primary.html;
         highlightSecondColor = config.nx.preferences.theme.colors.main.foregrounds.emphasized.html;
@@ -138,46 +149,90 @@ args@{
             right = secondHalf;
           };
 
-        generateKeybindingsContent =
-          bindings:
+        generateTwoColumnContent =
+          leftBindings: rightBindings:
           let
-            mappedBindings = map (bind: {
-              inherit (bind) desc;
-              mappedKey =
-                let
-                  keyWithoutMod =
-                    if lib.hasPrefix "Mod+" bind.key then lib.removePrefix "Mod+" bind.key else bind.key;
-                in
-                mapBind keyWithoutMod;
-            }) bindings;
+            columnGap = 4;
+
+            prepBind =
+              bind:
+              let
+                keyWithoutMod =
+                  if lib.hasPrefix "Mod+" bind.key then lib.removePrefix "Mod+" bind.key else bind.key;
+              in
+              {
+                inherit (bind) desc;
+                mappedKey = mapBind keyWithoutMod;
+              };
+
+            leftMapped = map prepBind leftBindings;
+            rightMapped = map prepBind rightBindings;
+            allMapped = leftMapped ++ rightMapped;
 
             maxKeyWidth = lib.foldl (
               max: bind:
               let
-                keyLength = builtins.stringLength bind.mappedKey;
+                kl = builtins.stringLength bind.mappedKey;
               in
-              if keyLength > max then keyLength else max
-            ) 0 mappedBindings;
+              if kl > max then kl else max
+            ) 0 allMapped;
+
+            maxLeftDescWidth = lib.foldl (
+              max: bind:
+              let
+                dl = builtins.stringLength bind.desc;
+              in
+              if dl > max then dl else max
+            ) 0 leftMapped;
 
             padToWidth =
               str: width:
               let
                 strLen = builtins.stringLength str;
                 padding = width - strLen;
-                spaces = lib.concatStrings (lib.genList (_: " ") padding);
+                spaces = lib.concatStrings (lib.genList (_: " ") (if padding > 0 then padding else 0));
               in
               str + spaces;
 
-            formatBinding =
+            formatLeft =
+              bind:
+              let
+                paddedKey = padToWidth bind.mappedKey maxKeyWidth;
+                paddedDesc = padToWidth bind.desc maxLeftDescWidth;
+              in
+              ''<span foreground="${highlightMainColor}">${paddedKey}</span>  <span foreground="${highlightSecondColor}">${paddedDesc}</span>'';
+
+            formatRight =
               bind:
               let
                 paddedKey = padToWidth bind.mappedKey maxKeyWidth;
               in
               ''<span foreground="${highlightMainColor}">${paddedKey}</span>  <span foreground="${highlightSecondColor}">${bind.desc}</span>'';
 
-            bindingLines = map formatBinding mappedBindings;
+            leftCount = builtins.length leftMapped;
+            rightCount = builtins.length rightMapped;
+            maxCount = if leftCount > rightCount then leftCount else rightCount;
+
+            emptyBind = {
+              mappedKey = "";
+              desc = "";
+            };
+            paddedLeft = leftMapped ++ lib.genList (_: emptyBind) (maxCount - leftCount);
+            paddedRight = rightMapped ++ lib.genList (_: emptyBind) (maxCount - rightCount);
+
+            gapSpaces = lib.concatStrings (lib.genList (_: " ") columnGap);
+
+            formatRow =
+              i:
+              let
+                l = builtins.elemAt paddedLeft i;
+                r = builtins.elemAt paddedRight i;
+              in
+              (formatLeft l) + gapSpaces + (formatRight r);
+
+            rows = lib.genList formatRow maxCount;
           in
-          lib.concatStringsSep "\n" bindingLines;
+          lib.concatStringsSep "\n" rows;
 
         dateTimeArgs = [
           "-s"
@@ -187,45 +242,33 @@ args@{
           "-r"
           "20000"
           "-p"
-          "left"
-          "-mr"
-          "66"
+          statusAnchor
           "-mt"
           "20"
           "-mb"
           "20"
+        ]
+        ++ lib.optionals (statusAnchor == "left") [
+          "-mr"
+          "66"
           "-ml"
           "20"
         ]
         ++ displayArgs;
 
-        keybindingsLeftArgs = [
+        keybindingsArgs = [
           "-s"
-          "%h/.local/bin/keybindings-left.sh"
+          "%h/.local/bin/keybindings-all.sh"
           "-c"
           "%h/.config/nwg-wrapper/keybindings.css"
           "-p"
-          "right"
+          keybindingsAnchor
           "-mt"
           "20"
           "-mb"
           "20"
-          "-mr"
-          "370"
         ]
-        ++ displayArgs;
-
-        keybindingsRightArgs = [
-          "-s"
-          "%h/.local/bin/keybindings-right.sh"
-          "-c"
-          "%h/.config/nwg-wrapper/keybindings.css"
-          "-p"
-          "right"
-          "-mt"
-          "20"
-          "-mb"
-          "20"
+        ++ lib.optionals (keybindingsAnchor == "right") [
           "-mr"
           "20"
         ]
@@ -284,26 +327,14 @@ args@{
           '';
         };
 
-        home.file.".local/bin/keybindings-left.sh" = lib.mkIf self.settings.niriKeybindings {
+        home.file.".local/bin/keybindings-all.sh" = lib.mkIf self.settings.niriKeybindings {
           executable = true;
           text = ''
             #!/usr/bin/env bash
             export LC_TIME=en_US.UTF-8
 
             cat << EOF
-            ${generateKeybindingsContent splitKeybindings.left}
-            EOF
-          '';
-        };
-
-        home.file.".local/bin/keybindings-right.sh" = lib.mkIf self.settings.niriKeybindings {
-          executable = true;
-          text = ''
-            #!/usr/bin/env bash
-            export LC_TIME=en_US.UTF-8
-
-            cat << EOF
-            ${generateKeybindingsContent splitKeybindings.right}
+            ${generateTwoColumnContent splitKeybindings.left splitKeybindings.right}
             EOF
           '';
         };
@@ -385,7 +416,6 @@ args@{
               if self.settings.niriKeybindings then
                 ''
                   systemctl --user restart nx-nwg-wrapper-2 || true
-                  systemctl --user restart nx-nwg-wrapper-3 || true
                 ''
               else
                 ""
@@ -415,7 +445,7 @@ args@{
 
         systemd.user.services.nx-nwg-wrapper-2 = lib.mkIf self.settings.niriKeybindings {
           Unit = {
-            Description = "Background window daemon 2 - Keybindings Left";
+            Description = "Background window daemon 2 - Keybindings";
             After = [
               "nx-swaybg.service"
               "nx-nwg-wrapper-1.service"
@@ -424,29 +454,7 @@ args@{
           };
 
           Service = {
-            ExecStart = "${pkgs.nwg-wrapper}/bin/nwg-wrapper ${lib.escapeShellArgs keybindingsLeftArgs}";
-            Restart = "always";
-            RestartSec = "30s";
-            Type = "simple";
-          };
-
-          Install = {
-            WantedBy = [ "graphical-session.target" ];
-          };
-        };
-
-        systemd.user.services.nx-nwg-wrapper-3 = lib.mkIf self.settings.niriKeybindings {
-          Unit = {
-            Description = "Background window daemon 3 - Keybindings Right";
-            After = [
-              "nx-swaybg.service"
-              "nx-nwg-wrapper-2.service"
-            ];
-            StartLimitIntervalSec = 0;
-          };
-
-          Service = {
-            ExecStart = "${pkgs.nwg-wrapper}/bin/nwg-wrapper ${lib.escapeShellArgs keybindingsRightArgs}";
+            ExecStart = "${pkgs.nwg-wrapper}/bin/nwg-wrapper ${lib.escapeShellArgs keybindingsArgs}";
             Restart = "always";
             RestartSec = "30s";
             Type = "simple";
