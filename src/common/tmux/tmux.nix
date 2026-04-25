@@ -318,12 +318,15 @@ args@{
             set -g visual-silence off
             setw -g monitor-activity off
             set -g bell-action none
+
+            set -g extended-keys on
+            set -as terminal-features 'xterm*:extkeys'
           '';
 
           ".config/tmux/20-keybindings.conf".text = ''
             unbind C-b
-            set-option -g prefix C-s
-            bind-key C-s send-prefix
+            set-option -g prefix C-S-a
+            bind-key C-S-a send-prefix
 
             bind-key 0 select-window -t :10
             bind-key - select-window -t :11
