@@ -15,10 +15,18 @@ rec {
   # Usage: resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true
   resolveFromHostOrUser =
     config: attrPath: default:
-    if config ? host && lib.hasAttrByPath attrPath config.host then
-      lib.getAttrFromPath attrPath config.host
-    else if config ? user && lib.hasAttrByPath attrPath config.user then
-      lib.getAttrFromPath attrPath config.user
+    if
+      config.nx.profile ? host
+      && config.nx.profile.host != null
+      && lib.hasAttrByPath attrPath config.nx.profile.host
+    then
+      lib.getAttrFromPath attrPath config.nx.profile.host
+    else if
+      config.nx.profile ? user
+      && config.nx.profile.user != null
+      && lib.hasAttrByPath attrPath config.nx.profile.user
+    then
+      lib.getAttrFromPath attrPath config.nx.profile.user
     else
       default;
 
