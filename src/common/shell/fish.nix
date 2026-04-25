@@ -54,6 +54,8 @@ args@{
           enable = true;
 
           interactiveShellInit = ''
+            set -gx __SHELL_BOOTSTRAPPED 1
+
             set -g fish_color_normal ${
               builtins.substring 1 6 config.nx.preferences.theme.colors.terminal.foregrounds.primary.html
             }
