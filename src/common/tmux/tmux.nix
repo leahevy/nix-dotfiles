@@ -267,6 +267,7 @@ args@{
           ".local/bin/tx" = {
             text = ''
               #!/usr/bin/env bash
+              unset __SHELL_BOOTSTRAPPED || true
               if [ $# -eq 0 ]; then
                 exec ${tmuxinatorPackage}/bin/tmuxinator start main
               else
@@ -279,6 +280,7 @@ args@{
           ".local/bin/tmux" = {
             text = ''
               #!/usr/bin/env bash
+              unset __SHELL_BOOTSTRAPPED || true
               if [ $# -eq 0 ]; then
                 exec ${tmuxinatorPackage}/bin/tmuxinator start main
               else
@@ -291,6 +293,7 @@ args@{
           ".local/bin/tmuxinator" = {
             text = ''
               #!/usr/bin/env bash
+              unset __SHELL_BOOTSTRAPPED || true
               if [ $# -eq 0 ]; then
                 exec ${tmuxinatorPackage}/bin/tmuxinator start main
               else
