@@ -324,15 +324,24 @@ args@{
             set -g visual-silence off
             setw -g monitor-activity off
             set -g bell-action none
-
-            set -g extended-keys on
-            set -as terminal-features 'xterm*:extkeys'
-          '';
+          ''
+          + (
+            if self.user.settings.terminal != "ghostty" then
+              ''
+                set -g extended-keys on
+                set -as terminal-features 'xterm*:extkeys'
+              ''
+            else
+              ""
+          );
 
           ".config/tmux/20-keybindings.conf".text = ''
             unbind C-b
-            set-option -g prefix C-S-a
-            bind-key C-S-a send-prefix
+            set-option -g prefix C-n
+            set-option -g prefix2 C-p
+            bind-key C-n send-prefix
+            bind-key -T prefix2 C-p send-prefix -2
+
 
             bind-key 0 select-window -t :10
             bind-key - select-window -t :11
