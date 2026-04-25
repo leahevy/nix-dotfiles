@@ -50,8 +50,7 @@ args@{
 
       home.persistence."${self.persist}" = {
         files = [
-          # Already included in impermanence.nix
-          # ".zsh_history"
+          # ".zsh_history" # We cannot persist this as it is replaced atomically by zsh
         ];
         directories = [
           ".config/zsh"

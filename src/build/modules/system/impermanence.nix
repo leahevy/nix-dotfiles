@@ -331,7 +331,6 @@ in
 
           files = [
             ".bash_history"
-            ".zsh_history"
           ];
         };
       };
