@@ -123,7 +123,7 @@ args@{
     # physical = { ... };                # Physical (bare-metal) builds only; same structure as virtual
     # aarch64 = { ... };
 
-    # moduleEnabled.INPUT.GROUP.MODULE = {
+    # ifEnabled.INPUT.GROUP.MODULE = {
     #   enabled = config: { };
     #   disabled = config: { };
     #   home = config: { };
@@ -135,7 +135,7 @@ args@{
     #   x86_64 = { home = config: { }; linux = { ... }; ... };
     #   aarch64 = { ... };
     # };
-    # moduleDisabled.INPUT.GROUP.MODULE = { ... };
+    # ifDisabled.INPUT.GROUP.MODULE = { ... };
 
     # when = {
     #   condition = config: config.some.option == "value";
