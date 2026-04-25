@@ -258,6 +258,12 @@ args@{
             image =
               let
                 wallpaper = config.nx.common.style.stylix.wallpaper;
+                isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true;
+                fallbackWallpaper =
+                  if isWidescreen then
+                    self.inputs.nix-season-wallpaper.fallback.widescreen.path
+                  else
+                    self.inputs.nix-season-wallpaper.fallback.normal.path;
               in
               if (wallpaper.configPath or null) != null then
                 self.config.filesPath wallpaper.configPath
@@ -273,7 +279,7 @@ args@{
               else if (wallpaper.localPath or null) != null then
                 wallpaper.localPath
               else
-                self.file "wallpaper.jpg";
+                fallbackWallpaper;
 
             polarity = theme.variant;
 

@@ -520,11 +520,11 @@
         "wallpapers": "wallpapers"
       },
       "locked": {
-        "lastModified": 1777051116,
-        "narHash": "sha256-rMNmXr5Kszej2N4u3uXvv/ltiKVY7KQ6AYIL9ay3Euc=",
+        "lastModified": 1777115439,
+        "narHash": "sha256-gdguoSbzohvK7wqsV9iB7OXsyROtEGq0MJhsJll6sqo=",
         "owner": "leahevy",
         "repo": "nix-season-wallpaper",
-        "rev": "80db12050f4927163ba6afaf7b73c99fa272a006",
+        "rev": "148a2812b5ff8c303e65667df36e3e94adbc2049",
         "type": "github"
       },
       "original": {
