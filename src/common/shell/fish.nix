@@ -29,6 +29,14 @@ args@{
   };
 
   module = {
+    ifEnabled.common.shell.starship = {
+      home = config: {
+        programs.starship.enableFishIntegration = true;
+        programs.starship.enableZshIntegration = false;
+        programs.starship.enableBashIntegration = false;
+      };
+    };
+
     home = config: {
       home.packages =
         with pkgs;
