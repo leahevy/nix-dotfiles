@@ -65,6 +65,9 @@ args@{
                 lib.escapeShellArgs (
                   helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openShellCommand cmd
                 );
+              terminalOpenPrefix = lib.escapeShellArgs (
+                helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openRunPrefix [ ]
+              );
             in
             {
               home.file.".local/bin/tmux-session-manager" = {
@@ -122,12 +125,15 @@ args@{
 
                     if [[ "$selection" == "+ New session" ]]; then
                       exec ${terminalShellCmd "${pkgs.tmux}/bin/tmux new-session"}
-                    elif [[ "$selection" =~ ^○\ (.+)\ \(start\)$ ]]; then
-                      session_name="''${BASH_REMATCH[1]}"
-                      exec ${terminalShellCmd "${tmuxinatorPackage}/bin/tmuxinator start \"$session_name\""}
+                    ${lib.concatStringsSep "" (
+                      map (name: ''
+                        elif [[ "$selection" == "○ ${name} (start)" ]]; then
+                          exec ${terminalShellCmd "${tmuxinatorPackage}/bin/tmuxinator start ${name}"}
+                      '') sessionNames
+                    )}
                     elif [[ "$selection" =~ ^●\ (.+)\ \(running\)$ ]]; then
                       session_name="''${BASH_REMATCH[1]}"
-                      exec ${terminalShellCmd "${pkgs.tmux}/bin/tmux attach-session -t \"$session_name\""}
+                      exec ${terminalOpenPrefix} ${pkgs.tmux}/bin/tmux attach-session -t "$session_name"
                     fi
                   ''}
                 '';
