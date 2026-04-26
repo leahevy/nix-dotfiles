@@ -1202,7 +1202,7 @@ run_bump() {
         )
 
         core_timestamp=$(get_latest_commit_timestamp "$NXCORE_DIR")
-        if [[ -n "${config_timestamp:-}" && "$core_timestamp" -gt "$config_timestamp" ]]; then
+        if [[ -z "${config_timestamp:-}" || "$core_timestamp" -gt "$config_timestamp" ]]; then
             use_dir="$NXCORE_DIR"
         fi
     elif [[ -d "$NXCORE_DIR/.git" ]]; then
