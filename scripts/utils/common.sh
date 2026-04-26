@@ -1335,8 +1335,28 @@ diff_store_paths() {
     )
     local paths_require_attention=()
     local prefixes_require_attention=("unit-home-manager-")
-    local paths_require_reboot=()
-    local prefixes_require_reboot=()
+    local paths_require_reboot=(
+      "unit-generate-shutdown-ramfs.service"
+      "unit-systemd-sysctl.service"
+      "unit-systemd-tmpfiles-resetup.service"
+      "shutdown-ramfs-contents.json"
+      "graphics-drivers"
+      "graphics-drivers-32bit"
+      "graphics-driver.conf"
+      "etc-nix-registry.json"
+      "etc-os-release"
+      "etc-sysctl.d-60-nixos.conf"
+      "etc-modprobe.d-firmware.conf"
+      "firmware"
+    )
+    local prefixes_require_reboot=(
+      "nvidia-"
+      "unit-plymouth-"
+      "unit-dbus-"
+      "initrd-"
+      "kmod-"
+      "nixos-"
+    )
     local paths_look_suspicious=()
     local prefixes_look_suspicious=()
 
