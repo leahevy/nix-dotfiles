@@ -15,6 +15,7 @@ print_error() {
 }
 
 strip_html() {
+  # shellcheck disable=SC2001
   echo "$1" | sed 's/<[^>]*>//g'
 }
 
