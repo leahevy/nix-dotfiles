@@ -41,20 +41,8 @@ args@{
           opts:
           lib.escapeShellArgs (helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts);
 
-        getStylixWallpaper = config.nx.common.style.stylix.resolvedWallpaper;
-
-        stylixWallpaperPath = toString getStylixWallpaper;
-        stylixExtension =
-          let
-            ext = lib.last (lib.splitString "." stylixWallpaperPath);
-          in
-          if
-            lib.hasPrefix "/nix/store/" stylixWallpaperPath
-            && (lib.hasSuffix "jpg" stylixWallpaperPath || lib.hasSuffix "png" stylixWallpaperPath)
-          then
-            builtins.unsafeDiscardStringContext ext
-          else
-            ext;
+        stylixWallpaper = config.nx.common.style.stylix.resolvedWallpaper;
+        stylixWallpaperPath = toString stylixWallpaper.source;
 
         wallpapersDir = "${config.home.homeDirectory}/.config/swaybg/wallpapers";
 
@@ -66,8 +54,8 @@ args@{
       {
         home.packages = [ pkgs.swaybg ];
 
-        home.file.".config/swaybg/wallpapers/stylix.${stylixExtension}" = {
-          source = getStylixWallpaper;
+        home.file.".config/swaybg/wallpapers/stylix.${stylixWallpaper.extension}" = {
+          source = stylixWallpaper.source;
         };
 
         home.file.".local/bin/swaybg-next-wallpaper" = {

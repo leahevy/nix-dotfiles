@@ -25,11 +25,11 @@ in
       config:
       let
         isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true;
+        wallpaper = if isWidescreen then wallpaperInfo.widescreen else wallpaperInfo.normal;
       in
       {
-        nx.common.style.stylix.wallpaper.localPath = lib.mkForce (
-          if isWidescreen then wallpaperInfo.widescreen.path else wallpaperInfo.normal.path
-        );
+        nx.common.style.stylix.wallpaper.source.localPath = lib.mkForce wallpaper.path;
+        nx.common.style.stylix.wallpaper.extension = lib.mkForce wallpaper.extension;
       };
   };
 }

@@ -130,35 +130,48 @@ args@{
       wallpaper = lib.mkOption {
         type = lib.types.submodule {
           options = {
-            configPath = lib.mkOption {
+            source = lib.mkOption {
+              type = lib.types.submodule {
+                options = {
+                  configPath = lib.mkOption {
+                    type = lib.types.nullOr lib.types.str;
+                    default = null;
+                    description = "Path to wallpaper from nxconfig root";
+                  };
+                  url = lib.mkOption {
+                    type = lib.types.nullOr (
+                      lib.types.submodule {
+                        options = {
+                          url = lib.mkOption {
+                            type = lib.types.str;
+                            default = "";
+                            description = "URL of the wallpaper";
+                          };
+                          hash = lib.mkOption {
+                            type = lib.types.str;
+                            default = "";
+                            description = "Hash of the wallpaper";
+                          };
+                        };
+                      }
+                    );
+                    default = null;
+                    description = "URL to fetch wallpaper";
+                  };
+                  localPath = lib.mkOption {
+                    type = lib.types.nullOr lib.types.path;
+                    default = null;
+                    description = "Path to a wallpaper";
+                  };
+                };
+              };
+              default = { };
+              description = "Different configuration ways to set the wallpaper";
+            };
+            extension = lib.mkOption {
               type = lib.types.nullOr lib.types.str;
               default = null;
-              description = "Path to wallpaper from nxconfig root";
-            };
-            url = lib.mkOption {
-              type = lib.types.nullOr (
-                lib.types.submodule {
-                  options = {
-                    url = lib.mkOption {
-                      type = lib.types.str;
-                      default = "";
-                      description = "URL of the wallpaper";
-                    };
-                    hash = lib.mkOption {
-                      type = lib.types.str;
-                      default = "";
-                      description = "Hash of the wallpaper";
-                    };
-                  };
-                }
-              );
-              default = null;
-              description = "URL to fetch wallpaper";
-            };
-            localPath = lib.mkOption {
-              type = lib.types.nullOr lib.types.path;
-              default = null;
-              description = "Path to a wallpaper";
+              description = "The extension of the wallpaper file. If null: derived from the file name (but will error if source is a /nix/store path).";
             };
           };
         };
@@ -166,9 +179,20 @@ args@{
         description = "Wallpaper settings";
       };
       resolvedWallpaper = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        default = null;
-        description = "Resolved wallpaper";
+        type = lib.types.submodule {
+          options = {
+            source = lib.mkOption {
+              type = lib.types.nullOr lib.types.path;
+              default = null;
+              description = "Resolved wallpaper";
+            };
+            extension = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Resolved wallpaper extension or null if it should be derived from file name";
+            };
+          };
+        };
       };
     };
 
@@ -257,7 +281,7 @@ args@{
 
             image =
               let
-                wallpaper = config.nx.common.style.stylix.wallpaper;
+                wallpaper = config.nx.common.style.stylix.wallpaper.source;
                 isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true;
                 fallbackWallpaper =
                   if isWidescreen then
@@ -332,9 +356,27 @@ args@{
         config:
         let
           shared = stylixConfig config;
+          isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true;
+          fallbackWallpaperData =
+            if isWidescreen then
+              self.inputs.nix-season-wallpaper.fallback.widescreen
+            else
+              self.inputs.nix-season-wallpaper.fallback.normal;
+          stylixExtension =
+            let
+              stylixExt = config.nx.common.style.stylix.wallpaper.extension;
+              derivedExt = lib.last (lib.splitString "." shared.stylixAttrs.image);
+            in
+            if stylixExt != null && stylixExt != "" then stylixExt else derivedExt;
         in
         {
-          nx.common.style.stylix.resolvedWallpaper = shared.stylixAttrs.image;
+          nx.common.style.stylix.resolvedWallpaper.source = shared.stylixAttrs.image;
+          nx.common.style.stylix.resolvedWallpaper.extension =
+            if shared.stylixAttrs.image == fallbackWallpaperData.path then
+              fallbackWallpaperData.extension
+            else
+              stylixExtension;
+
           nx.common.style.stylix.resolvedFonts = shared.stylixAttrs.fonts;
           nx.common.style.stylix.resolvedCursor = shared.stylixAttrs.cursor;
         };
