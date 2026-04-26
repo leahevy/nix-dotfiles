@@ -1332,6 +1332,103 @@ diff_store_paths() {
       "nixos-system-"
       "etc-nx-theme-active-"
     )
+    local paths_require_attention=()
+    local prefixes_require_attention=("unit-home-manager-")
+    local paths_require_reboot=()
+    local prefixes_require_reboot=()
+    local paths_look_suspicious=()
+    local prefixes_look_suspicious=()
+
+    _diff_store_paths_severity_for_name() {
+        local name="$1"
+
+        for p in "${paths_look_suspicious[@]+"${paths_look_suspicious[@]}"}"; do
+            [[ "$name" == "$p" ]] && { echo "suspicious"; return; }
+        done
+        for p in "${prefixes_look_suspicious[@]+"${prefixes_look_suspicious[@]}"}"; do
+            [[ "$name" == "$p"* ]] && { echo "suspicious"; return; }
+        done
+
+        for p in "${paths_require_reboot[@]+"${paths_require_reboot[@]}"}"; do
+            [[ "$name" == "$p" ]] && { echo "reboot"; return; }
+        done
+        for p in "${prefixes_require_reboot[@]+"${prefixes_require_reboot[@]}"}"; do
+            [[ "$name" == "$p"* ]] && { echo "reboot"; return; }
+        done
+
+        for p in "${paths_require_attention[@]+"${paths_require_attention[@]}"}"; do
+            [[ "$name" == "$p" ]] && { echo "attention"; return; }
+        done
+        for p in "${prefixes_require_attention[@]+"${prefixes_require_attention[@]}"}"; do
+            [[ "$name" == "$p"* ]] && { echo "attention"; return; }
+        done
+
+        echo ""
+    }
+
+    local matched_entries_require_attention=()
+    local matched_entries_require_reboot=()
+    local matched_entries_look_suspicious=()
+
+    _diff_store_paths_record_match() {
+        local severity="$1"
+        local entry="${3:-}"
+
+        [[ -z "$severity" ]] && return
+
+        if [[ "$severity" == "attention" ]]; then
+            [[ -n "$entry" ]] && matched_entries_require_attention+=("$entry")
+        elif [[ "$severity" == "reboot" ]]; then
+            [[ -n "$entry" ]] && matched_entries_require_reboot+=("$entry")
+        elif [[ "$severity" == "suspicious" ]]; then
+            [[ -n "$entry" ]] && matched_entries_look_suspicious+=("$entry")
+        fi
+    }
+
+    _diff_store_paths_print_matches() {
+        if [[ ! -f /etc/NIXOS ]]; then
+          matched_entries_require_reboot=()
+        fi
+
+        local print_warnings=0
+        if (( ${#matched_entries_require_attention[@]} > 0 || ${#matched_entries_require_reboot[@]} > 0 || ${#matched_entries_look_suspicious[@]} > 0 )); then
+          print_warnings=1
+        fi
+
+        if (( print_warnings )); then
+            echo
+            echo
+            echo -e "${CYAN}=== Attention! ===${RESET}"
+        fi
+
+        if (( ${#matched_entries_require_attention[@]} > 0 )); then
+            echo
+            echo -e "${YELLOW}== Requires review ==${RESET}"
+            for e in "${matched_entries_require_attention[@]+"${matched_entries_require_attention[@]}"}"; do
+                echo -e "  $e"
+            done
+        fi
+
+        if (( ${#matched_entries_require_reboot[@]} > 0 )); then
+            echo
+            echo -e "${ORANGE}== Requires reboot ==${RESET}"
+            for e in "${matched_entries_require_reboot[@]+"${matched_entries_require_reboot[@]}"}"; do
+                echo -e "  $e"
+            done
+        fi
+
+        if (( ${#matched_entries_look_suspicious[@]} > 0 )); then
+            echo
+            echo -e "${RED}== Looks suspicious (do NOT sync without checking first!) ==${RESET}"
+            for e in "${matched_entries_look_suspicious[@]+"${matched_entries_look_suspicious[@]}"}"; do
+                echo -e "  $e"
+            done
+        fi
+
+        if (( print_warnings )); then
+          echo
+        fi
+    }
 
     local old="$1" new="$2"
 
@@ -1367,6 +1464,7 @@ diff_store_paths() {
 
     while IFS= read -r name; do
         local hash
+        local severity full_path entry
 
         for p in "${add_removal_prefixes_to_ignore[@]+"${add_removal_prefixes_to_ignore[@]}"}"; do
           [[ "$name" == "$p"* ]] && continue 2
@@ -1382,11 +1480,16 @@ diff_store_paths() {
         [[ "$name" =~ (-wrapped|-fish-completions|\.manpath)$ ]] && continue
 
         hash="$(grep -m1 "	${name}$" "$new_file" | cut -f1)"
+        full_path="/nix/store/${hash}-${name}"
+        severity="$(_diff_store_paths_severity_for_name "$name")"
+        entry="${GREEN}[A]${RESET} ${WHITE}${name}${RESET}  ${GRAY}${full_path}${RESET}"
+        _diff_store_paths_record_match "$severity" "$full_path" "$entry"
         echo -e "${GREEN}[A]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
     done < <(comm -13 "$old_names" "$new_names") >> "$out_file"
 
     while IFS= read -r name; do
         local hash
+        local severity full_path entry
 
         for p in "${add_removal_prefixes_to_ignore[@]+"${add_removal_prefixes_to_ignore[@]}"}"; do
           [[ "$name" == "$p"* ]] && continue 2
@@ -1402,6 +1505,10 @@ diff_store_paths() {
         [[ "$name" =~ (-wrapped|-fish-completions|\.manpath)$ ]] && continue
 
         hash="$(grep -m1 "	${name}$" "$old_file" | cut -f1)"
+        full_path="/nix/store/${hash}-${name}"
+        severity="$(_diff_store_paths_severity_for_name "$name")"
+        entry="${RED}[R]${RESET} ${WHITE}${name}${RESET}  ${GRAY}${full_path}${RESET}"
+        _diff_store_paths_record_match "$severity" "$full_path" "$entry"
         echo -e "${RED}[R]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
     done < <(comm -23 "$old_names" "$new_names") >> "$out_file"
 
@@ -1492,14 +1599,21 @@ diff_store_paths() {
             continue
         fi
 
+        local severity
+        severity="$(_diff_store_paths_severity_for_name "$name")"
+        _diff_store_paths_record_match "$severity" "" "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
         echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
         if (( ${#only_old[@]} == 1 && ${#only_new[@]} == 1 )); then
+            _diff_store_paths_record_match "$severity" "/nix/store/${only_old[0]}-${name}" "    ${GRAY}/nix/store/${only_old[0]}-${name}${RESET} ${GRAY}/nix/store/${only_new[0]}-${name}${RESET}"
+            _diff_store_paths_record_match "$severity" "/nix/store/${only_new[0]}-${name}"
             echo -e "    ${GRAY}/nix/store/${only_old[0]}-${name}${RESET} ${GRAY}/nix/store/${only_new[0]}-${name}${RESET}"
         else
             for oh in "${only_old[@]+"${only_old[@]}"}"; do
+                _diff_store_paths_record_match "$severity" "/nix/store/${oh}-${name}" "    ${RED}old${RESET} ${GRAY}/nix/store/${oh}-${name}${RESET}"
                 echo -e "    ${RED}old${RESET} ${GRAY}/nix/store/${oh}-${name}${RESET}"
             done
             for nh in "${only_new[@]+"${only_new[@]}"}"; do
+                _diff_store_paths_record_match "$severity" "/nix/store/${nh}-${name}" "    ${GREEN}new${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
                 echo -e "    ${GREEN}new${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
             done
         fi
@@ -1510,6 +1624,7 @@ diff_store_paths() {
         echo -e "${ORANGE}-> Store closures differ.${RESET}"
         echo
         cat "$out_file"
+        _diff_store_paths_print_matches
     else
         echo -e "${WHITE}-> Store closures are identical.${RESET}"
     fi
