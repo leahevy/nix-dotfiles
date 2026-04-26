@@ -913,6 +913,7 @@ let
 
       in
       ''
+        #compdef ${name}
         _${name}() {
             local context state line
 
