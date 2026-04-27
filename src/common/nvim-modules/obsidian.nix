@@ -418,8 +418,8 @@ args@{
                     vim.keymap.set("n", "<leader>wn", "<cmd>ObsidianNew<cr>", { desc = "Go to note", buffer = true })
                     vim.keymap.set("n", "<leader>wc", "<cmd>ObsidianToggleCheckbox<cr>", { desc = "Toggle checkbox", buffer = true })
                     vim.keymap.set("n", "<CR>", function()
-                      return require("obsidian").util.gf_passthrough()
-                    end, { expr = true, desc = "Follow link", buffer = true })
+                      return require("obsidian.commands.follow_link")({})
+                    end, { desc = "Follow link", buffer = true })
 
                   end
                 end
