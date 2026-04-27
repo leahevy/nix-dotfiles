@@ -19,11 +19,6 @@ if [ ! -d /nxconfig/.git/git-crypt ]; then
   exit 0
 fi
 
-if ! git -C /nxconfig crypt status 2>/dev/null | grep -q "^encrypted:"; then
-  echo -e "${YELLOW}Config repository is already unlocked, nothing to do${RESET}"
-  exit 0
-fi
-
 CRYPT_KEY=""
 for pkg in /nix/store/*-nx-repositories*; do
   if [ -f "$pkg/keys/git-crypt-key" ]; then

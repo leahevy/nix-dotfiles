@@ -36,7 +36,6 @@ echo
 echo -e "${GREEN}This script fetches the latest config repository from remote.${RESET}"
 echo
 
-echo
 echo -e "${GREEN}Checking network connectivity...${RESET}"
 RETRY_COUNT=0
 MAX_RETRIES=10

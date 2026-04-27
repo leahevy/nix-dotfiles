@@ -163,10 +163,6 @@ EOF
 
   rm -f /tmp/nixconfig-hardware-config.nix
 
-  if echo "$HARDWARE_JSON" | jq -e '.hardwareSettings.hardware' >/dev/null 2>&1; then
-    extract_hardware_settings "hardware" ".hardwareSettings.hardware"
-  fi
-
   echo -e "Creating profile directory: ${WHITE}$PROFILE_DIR${RESET}"
   mkdir -p "$PROFILE_DIR"
 
@@ -328,7 +324,7 @@ fi
         defs,
         self,
         ...
-      }: context@{ config, options, ... }: {
+      }: context@{ config, ... }: {
 EOF
 
   if [[ -n "$HARDWARE_SETTINGS" ]]; then

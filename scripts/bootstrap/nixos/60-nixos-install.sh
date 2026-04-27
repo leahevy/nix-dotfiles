@@ -126,9 +126,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
     echo
     echo -e "Running: ${WHITE}nixos-install --flake .#$FULL_PROFILE --no-root-password --override-input core path:$NXCORE_DIR${RESET}"
-    nixos-install --flake ".#$FULL_PROFILE" --no-root-password --override-input core "path:$NXCORE_DIR"
-
-    if [ $? -ne 0 ]; then
+    if ! nixos-install --flake ".#$FULL_PROFILE" --no-root-password --override-input core "path:$NXCORE_DIR"; then
       echo -e "${RED}Error: nixos-install failed! See above for error details.${RESET}" >&2
       exit 1
     fi
