@@ -359,18 +359,18 @@ if [[ "${LIST_VERSIONS}" == "true" ]]; then
     fi
     running_version=""
     [[ -f "${NX_VM_RUNTIME}/version" ]] && running_version="$(cat "${NX_VM_RUNTIME}/version")"
-    echo "VM images for ${PROFILE}:"
+    echo -e "${WHITE}VM images for ${PROFILE}:${RESET}"
     for version_dir in "${version_dirs[@]}"; do
         [[ -d "${version_dir}" ]] || continue
         version="$(basename "${version_dir}")"
         running_tag=""
-        [[ "${version}" == "${running_version}" ]] && running_tag=" [RUNNING]"
+        [[ "${version}" == "${running_version}" ]] && running_tag="${GREEN} [RUNNING]${RESET}"
         status_parts=()
         [[ -L "${version_dir}/result" ]] && status_parts+=("result")
         [[ -f "${version_dir}/result.qcow2" ]] && status_parts+=("qcow2")
         status_str=""
         [[ ${#status_parts[@]} -gt 0 ]] && status_str=" ($(IFS=,; echo "${status_parts[*]}"))"
-        echo "  ${version}${running_tag}${status_str}"
+        echo -e "  ${YELLOW}${version}${RESET}${running_tag}${status_str}"
     done
     exit 0
 fi
