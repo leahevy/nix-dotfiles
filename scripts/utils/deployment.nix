@@ -39,6 +39,10 @@
       id = "git";
       label = "Git Commands";
     }
+    {
+      id = "bootstrap";
+      label = "Bootstrap";
+    }
   ];
 
   nx = {
@@ -485,6 +489,72 @@
         ];
         options = gitOptions;
         arguments = [ (arg "branch" "Branch to switch to" "gitBranch") ];
+      };
+
+      bootstrap = {
+        description = "Run bootstrap scripts for initial system setup";
+        group = "bootstrap";
+        modes = [
+          "local"
+          "develop"
+        ];
+        subcommands = {
+          nixos = {
+            description = "Run NixOS bootstrap scripts";
+            subcommands = {
+              decrypt = {
+                description = "Decrypt git-crypt repository";
+              };
+              fetch-latest-config = {
+                description = "Fetch latest config from remote";
+              };
+              disk-format = {
+                description = "Format target disk";
+                arguments = [ (arg "hostname" "Target hostname" "string") ];
+              };
+              mount = {
+                description = "Mount target filesystem";
+                arguments = [ (arg "hostname" "Target hostname" "string") ];
+              };
+              create-profile-stub = {
+                description = "Generate NixOS profile stub from hardware configuration";
+                arguments = [ (arg "hostname" "Target hostname" "string") ];
+                options = {
+                  no-root = option "Generate config for current system instead of /mnt";
+                };
+              };
+              nixos-create-sops-key = {
+                description = "Create SOPS age keys for host and user";
+                arguments = [ (arg "hostname" "Target hostname" "string") ];
+              };
+              nixos-install = {
+                description = "Install NixOS to /mnt";
+                arguments = [ (arg "hostname" "Target hostname" "string") ];
+              };
+              migrate-to-persistence = {
+                description = "Migrate files to persistence storage";
+                arguments = [ (arg "hostname" "Target hostname" "string") ];
+                options = {
+                  dry-run = option "Preview changes without applying them";
+                };
+              };
+            };
+          };
+          standalone = {
+            description = "Run standalone Home Manager bootstrap scripts";
+            subcommands = {
+              nix-installation = {
+                description = "Install Nix package manager";
+              };
+              create-sops-key = {
+                description = "Create SOPS age key";
+              };
+              initial-sync = {
+                description = "Apply initial Home Manager configuration";
+              };
+            };
+          };
+        };
       };
     };
   };
