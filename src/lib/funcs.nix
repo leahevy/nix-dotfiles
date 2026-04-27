@@ -24,6 +24,11 @@ let
   systemManagedAttrs = [
     "nx_unfree"
     "nx_disableOnVM"
+    "nx_disableOnPhysical"
+    "nx_disableOnLinux"
+    "nx_disableOnDarwin"
+    "nx_disableOnX86_64"
+    "nx_disableOnAARCH64"
   ];
 in
 rec {
@@ -92,6 +97,16 @@ rec {
         "requiredArchitectures"
         "disableOnVM"
         "enableOnVM"
+        "disableOnPhysical"
+        "enableOnPhysical"
+        "disableOnLinux"
+        "enableOnLinux"
+        "disableOnDarwin"
+        "enableOnDarwin"
+        "disableOnX86_64"
+        "enableOnX86_64"
+        "disableOnAARCH64"
+        "enableOnAARCH64"
       ];
 
       actualAttrs = builtins.attrNames moduleResult;
@@ -370,6 +385,11 @@ rec {
         moduleOptions = moduleResult.options or { };
         moduleUnfree = moduleResult.unfree or [ ];
         moduleDisableOnVM = moduleResult.disableOnVM or false;
+        moduleDisableOnPhysical = moduleResult.disableOnPhysical or false;
+        moduleDisableOnLinux = moduleResult.disableOnLinux or false;
+        moduleDisableOnDarwin = moduleResult.disableOnDarwin or false;
+        moduleDisableOnX86_64 = moduleResult.disableOnX86_64 or false;
+        moduleDisableOnAARCH64 = moduleResult.disableOnAARCH64 or false;
 
         hasSettings = moduleDefaults != { };
         hasStandardOptions = moduleOptions != { };
@@ -390,10 +410,16 @@ rec {
           else
             validatedUserSettings;
 
-        settingsWithDisableOnVM =
-          if moduleDisableOnVM then settingsWithUnfree // { nx_disableOnVM = true; } else settingsWithUnfree;
+        settingsWithFlags =
+          settingsWithUnfree
+          // lib.optionalAttrs moduleDisableOnVM { nx_disableOnVM = true; }
+          // lib.optionalAttrs moduleDisableOnPhysical { nx_disableOnPhysical = true; }
+          // lib.optionalAttrs moduleDisableOnLinux { nx_disableOnLinux = true; }
+          // lib.optionalAttrs moduleDisableOnDarwin { nx_disableOnDarwin = true; }
+          // lib.optionalAttrs moduleDisableOnX86_64 { nx_disableOnX86_64 = true; }
+          // lib.optionalAttrs moduleDisableOnAARCH64 { nx_disableOnAARCH64 = true; };
       in
-      lib.recursiveUpdate moduleDefaults settingsWithDisableOnVM;
+      lib.recursiveUpdate moduleDefaults settingsWithFlags;
 
   processModules =
     modules:
@@ -1903,18 +1929,29 @@ rec {
           normalizedSubmodules = normalizeModules filteredSubmodules;
           collectedSubmodulesWithDefaults = applyDefaultsToModules normalizedSubmodules;
 
-          vmFilteredSubmodules =
-            if args.isVirtual or false then
-              lib.mapAttrs (
-                _: inputGroups:
-                lib.mapAttrs (
-                  _: groupModules: lib.filterAttrs (_: s: !(s.nx_disableOnVM or false)) groupModules
-                ) inputGroups
-              ) collectedSubmodulesWithDefaults
-            else
-              collectedSubmodulesWithDefaults;
+          isVirtual = args.isVirtual or false;
+          isLinux = args.pkgs.stdenv.isLinux;
+          isDarwin = args.pkgs.stdenv.isDarwin;
+          isX86_64 = args.pkgs.stdenv.hostPlatform.isx86_64;
+          isAARCH64 = args.pkgs.stdenv.hostPlatform.isAarch64;
 
-          nextModules = mergeModulesWithPrecedence vmFilteredSubmodules currentModules;
+          contextFilteredSubmodules = lib.mapAttrs (
+            _: inputGroups:
+            lib.mapAttrs (
+              _: groupModules:
+              lib.filterAttrs (
+                _: s:
+                !(isVirtual && (s.nx_disableOnVM or false))
+                && !(!isVirtual && (s.nx_disableOnPhysical or false))
+                && !(isLinux && (s.nx_disableOnLinux or false))
+                && !(isDarwin && (s.nx_disableOnDarwin or false))
+                && !(isX86_64 && (s.nx_disableOnX86_64 or false))
+                && !(isAARCH64 && (s.nx_disableOnAARCH64 or false))
+              ) groupModules
+            ) inputGroups
+          ) collectedSubmodulesWithDefaults;
+
+          nextModules = mergeModulesWithPrecedence contextFilteredSubmodules currentModules;
 
           hasNewModules =
             let
@@ -2192,6 +2229,11 @@ rec {
                 settings = moduleResult.value.settings or { };
                 description = moduleResult.value.description or "";
                 enableOnVM = moduleResult.value.enableOnVM or false;
+                enableOnPhysical = moduleResult.value.enableOnPhysical or false;
+                enableOnLinux = moduleResult.value.enableOnLinux or false;
+                enableOnDarwin = moduleResult.value.enableOnDarwin or false;
+                enableOnX86_64 = moduleResult.value.enableOnX86_64 or false;
+                enableOnAARCH64 = moduleResult.value.enableOnAARCH64 or false;
               }
             else
               {
@@ -2206,6 +2248,11 @@ rec {
                 settings = { };
                 description = "";
                 enableOnVM = false;
+                enableOnPhysical = false;
+                enableOnLinux = false;
+                enableOnDarwin = false;
+                enableOnX86_64 = false;
+                enableOnAARCH64 = false;
               }
           ) moduleSpecs
         else
@@ -2218,18 +2265,31 @@ rec {
   collectAllModuleOptions =
     args: builtins.filter (m: m.options != { } || m.rawOptions != { }) (collectAllModuleData args);
 
-  collectVmEnabledModules =
+  collectContextEnabledModules =
     args:
     let
       allData = collectAllModuleData args;
-      vmEnabled = builtins.filter (m: m.enableOnVM) allData;
+      isVirtual = args.isVirtual or false;
+      isLinux = args.pkgs.stdenv.isLinux;
+      isDarwin = args.pkgs.stdenv.isDarwin;
+      isX86_64 = args.pkgs.stdenv.hostPlatform.isx86_64;
+      isAARCH64 = args.pkgs.stdenv.hostPlatform.isAarch64;
+      contextEnabled = builtins.filter (
+        m:
+        (isVirtual && m.enableOnVM)
+        || (!isVirtual && m.enableOnPhysical)
+        || (isLinux && m.enableOnLinux)
+        || (isDarwin && m.enableOnDarwin)
+        || (isX86_64 && m.enableOnX86_64)
+        || (isAARCH64 && m.enableOnAARCH64)
+      ) allData;
     in
     lib.foldl (
       acc: m:
       lib.recursiveUpdate acc {
         ${m.inputName}.${m.groupName}.${m.moduleName} = true;
       }
-    ) { } vmEnabled;
+    ) { } contextEnabled;
 
   generateOptionsModules =
     allModuleData:

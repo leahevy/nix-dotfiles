@@ -442,25 +442,34 @@ in
         configInputs = config.configInputs or { };
       };
 
-      vmExtraModules = if isVirtual then funcs.collectVmEnabledModules unifiedArgs else { };
+      extraContextModules = funcs.collectContextEnabledModules unifiedArgs;
 
-      buildModulesForCollection = lib.recursiveUpdate buildModules vmExtraModules;
+      buildModulesForCollection = lib.recursiveUpdate buildModules extraContextModules;
 
       processedModulesRaw =
         funcs.collectAllModulesWithSettings unifiedArgs mergedModules
           buildModulesForCollection;
 
-      processedModules =
-        if isVirtual then
-          lib.mapAttrs (
-            _inputName: groups:
-            lib.mapAttrs (
-              _groupName: modules:
-              lib.filterAttrs (_moduleName: settings: !(settings.nx_disableOnVM or false)) modules
-            ) groups
-          ) processedModulesRaw
-        else
-          processedModulesRaw;
+      isLinux = pkgs.stdenv.isLinux;
+      isDarwin = pkgs.stdenv.isDarwin;
+      isX86_64 = pkgs.stdenv.hostPlatform.isx86_64;
+      isAARCH64 = pkgs.stdenv.hostPlatform.isAarch64;
+
+      processedModules = lib.mapAttrs (
+        _inputName: groups:
+        lib.mapAttrs (
+          _groupName: modules:
+          lib.filterAttrs (
+            _moduleName: settings:
+            !(isVirtual && (settings.nx_disableOnVM or false))
+            && !(!isVirtual && (settings.nx_disableOnPhysical or false))
+            && !(isLinux && (settings.nx_disableOnLinux or false))
+            && !(isDarwin && (settings.nx_disableOnDarwin or false))
+            && !(isX86_64 && (settings.nx_disableOnX86_64 or false))
+            && !(isAARCH64 && (settings.nx_disableOnAARCH64 or false))
+          ) modules
+        ) groups
+      ) processedModulesRaw;
 
       hostConfig = {
         inherit profileName;

@@ -45,9 +45,19 @@ args@{
   # requiredPlatforms = [ "linux" "darwin" ];
   # requiredArchitectures = [ "x86_64" "aarch64" ];
 
-  # VM build control
+  # Build context control (disable/enable per context)
   # disableOnVM = true;
   # enableOnVM = true;
+  # disableOnPhysical = true;
+  # enableOnPhysical = true;
+  # disableOnLinux = true;
+  # enableOnLinux = true;
+  # disableOnDarwin = true;
+  # enableOnDarwin = true;
+  # disableOnX86_64 = true;
+  # enableOnX86_64 = true;
+  # disableOnAARCH64 = true;
+  # enableOnAARCH64 = true;
 
   assertions = [
     {
