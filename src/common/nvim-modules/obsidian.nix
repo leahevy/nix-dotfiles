@@ -699,6 +699,49 @@ args@{
                 ]])
               end
             ''}
+
+            ${lib.optionalString
+              (config.nx.linux.organising.logseq.enable || config.nx.darwin.organising.logseq.enable)
+              ''
+                _G.nx_modules["30-patch-obsidian-do-not-add-title"] = function()
+                  vim.schedule(function()
+                    local ok, Note = pcall(require, "obsidian.note")
+                    if not ok then
+                      return
+                    end
+
+                    if Note.__nx_no_auto_h1 then
+                      return
+                    end
+                    Note.__nx_no_auto_h1 = true
+
+                    local orig_save = Note.save
+
+                    Note.save = function(self, opts)
+                      opts = opts or {}
+
+                      local orig_update = opts.update_content
+
+                      opts.update_content = function(lines)
+                        local l = orig_update and orig_update(lines) or lines
+
+                        if self.title ~= nil and #l > 0 and l[1] == "# " .. self.title then
+                          table.remove(l, 1)
+
+                          if l[1] == "" then
+                            table.remove(l, 1)
+                          end
+                        end
+
+                        return l
+                      end
+
+                      return orig_save(self, opts)
+                    end
+                  end)
+                end
+              ''
+            }
           '';
         };
       };
