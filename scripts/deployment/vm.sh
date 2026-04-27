@@ -128,6 +128,10 @@ while [[ $# -gt 0 ]]; do
             print_error "Option $1 is not supported for 'nx vm'"
             exit 1
             ;;
+        --*)
+            print_error "Unknown option: $1"
+            exit 1
+            ;;
         *)
             build_args+=("$1")
             shift
