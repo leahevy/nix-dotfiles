@@ -201,6 +201,7 @@
           reuse-latest = option "Run the most recently saved image without rebuilding";
           select = optionWith "Run a specific saved image by version name" "version" "string";
           list = option "List all saved VM images for the current profile";
+          list-all = option "List all saved VM images for all profiles";
           cleanup = option "Remove all cached VM images for the current profile";
           cleanup-all = option "Remove all cached VM images for all profiles";
           age-system-file = optionWith "Use system age key from file path (no sudo)" "system_path" "filepath";

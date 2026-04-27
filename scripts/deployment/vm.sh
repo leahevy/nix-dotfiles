@@ -19,6 +19,7 @@ CLEANUP=false
 CLEANUP_ALL=false
 SELECT_VERSION=""
 LIST_VERSIONS=false
+LIST_ALL=false
 
 DANGEROUSLY_USE_HOST_SOPS=false
 NO_USER_AGE=false
@@ -124,6 +125,10 @@ while [[ $# -gt 0 ]]; do
             LIST_VERSIONS=true
             shift
             ;;
+        --list-all)
+            LIST_ALL=true
+            shift
+            ;;
         --diff|--show-derivation|--nixos|--standalone|--dry-run|--raw)
             print_error "Option $1 is not supported for 'nx vm'"
             exit 1
@@ -215,7 +220,7 @@ if [[ -z "${AGE_SYSTEM_FILE}" && -n "${AGE_USER_FILE}" ]]; then
 fi
 
 WILL_RUN_VM=false
-if [[ "${NO_RUN}" != "true" && "${LIST_VERSIONS}" != "true" && "${CLEANUP}" != "true" && "${CLEANUP_ALL}" != "true" ]]; then
+if [[ "${NO_RUN}" != "true" && "${LIST_VERSIONS}" != "true" && "${LIST_ALL}" != "true" && "${CLEANUP}" != "true" && "${CLEANUP_ALL}" != "true" ]]; then
     WILL_RUN_VM=true
 fi
 
@@ -321,6 +326,52 @@ if [[ "${CLEANUP_ALL}" == "true" ]]; then
         rm -rf -- "${to_remove[@]}"
     fi
     print_success "All VM image caches cleared"
+    exit 0
+fi
+
+if [[ "${LIST_ALL}" == "true" ]]; then
+    running_version=""
+    [[ -f "${NX_VM_RUNTIME}/version" ]] && running_version="$(cat "${NX_VM_RUNTIME}/version")"
+    running_profile=""
+    [[ -f "${NX_VM_RUNTIME}/version" ]] && running_profile="$(ls -1 "${VM_CACHE}" 2>/dev/null | while read -r p; do
+        if [[ -d "${VM_CACHE}/${p}/${running_version}" ]]; then
+            echo "${p}"
+            break
+        fi
+    done)"
+    shopt -s nullglob
+    profile_dirs=("${VM_CACHE}"/*)
+    shopt -u nullglob
+    if [[ ${#profile_dirs[@]} -eq 0 ]]; then
+        print_info "No VM images found"
+        exit 0
+    fi
+    found_any=false
+    for profile_dir in "${profile_dirs[@]}"; do
+        [[ -d "${profile_dir}" ]] || continue
+        shopt -s nullglob
+        version_dirs=("${profile_dir}"/*)
+        shopt -u nullglob
+        [[ ${#version_dirs[@]} -eq 0 ]] && continue
+        found_any=true
+        profile="$(basename "${profile_dir}")"
+        echo -e "${WHITE}VM images for ${profile}:${RESET}"
+        for version_dir in "${version_dirs[@]}"; do
+            [[ -d "${version_dir}" ]] || continue
+            version="$(basename "${version_dir}")"
+            running_tag=""
+            [[ "${version}" == "${running_version}" && "${profile}" == "${running_profile}" ]] && running_tag="${GREEN} [RUNNING]${RESET}"
+            status_parts=()
+            [[ -L "${version_dir}/result" ]] && status_parts+=("result")
+            [[ -f "${version_dir}/result.qcow2" ]] && status_parts+=("qcow2")
+            status_str=""
+            [[ ${#status_parts[@]} -gt 0 ]] && status_str=" ($(IFS=,; echo "${status_parts[*]}"))"
+            echo -e "  ${YELLOW}${version}${RESET}${running_tag}${status_str}"
+        done
+    done
+    if [[ "${found_any}" == "false" ]]; then
+        print_info "No VM images found"
+    fi
     exit 0
 fi
 
