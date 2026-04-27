@@ -400,7 +400,8 @@ args@{
             unbind %
             unbind '"'
 
-            bind a copy-mode
+            bind n copy-mode
+            bind p copy-mode
             unbind [
 
             bind u run-shell -b "${config.home.homeDirectory}/.local/bin/scripts/tmux-url-select"
