@@ -53,6 +53,11 @@ case "$SUBCOMMAND" in
       exit 1
     fi
 
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+      echo -e "${RED}Error: Use './nx bootstrap standalone' on MacOS.${RESET}" >&2
+      exit 1
+    fi
+
     if [[ -z "$SCRIPT_NAME" ]]; then
       echo -e "${CYAN}Available nixos bootstrap scripts:${RESET}"
       echo -e "   ${WHITE}decrypt${RESET}                   00-decrypt.sh"
@@ -83,6 +88,11 @@ case "$SUBCOMMAND" in
     BOOTSTRAP_DIR="$BOOTSTRAP_DIR_NIXOS"
     ;;
   standalone)
+    if [[ -e /etc/NIXOS ]]; then
+      echo -e "${RED}Error: Use './nx bootstrap nixos' on NixOS.${RESET}" >&2
+      exit 1
+    fi
+
     if [[ -z "$SCRIPT_NAME" ]]; then
       echo -e "${CYAN}Available standalone bootstrap scripts:${RESET}"
       echo -e "   ${WHITE}nix-installation${RESET}          00-nix-installation.sh"
