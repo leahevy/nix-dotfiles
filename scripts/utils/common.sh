@@ -1345,6 +1345,7 @@ diff_store_paths() {
     )
     local paths_require_attention=()
     local prefixes_require_attention=()
+    local suffixes_require_attention=()
     local paths_require_reboot=(
       "unit-generate-shutdown-ramfs.service"
       "unit-systemd-sysctl.service"
@@ -1359,6 +1360,7 @@ diff_store_paths() {
       "etc-modprobe.d-firmware.conf"
       "firmware"
     )
+    local suffixes_require_reboot=()
     local prefixes_require_reboot=(
       "nvidia-"
       "unit-plymouth-"
@@ -1367,18 +1369,38 @@ diff_store_paths() {
       "kmod-"
       "nixos-"
     )
-    local paths_look_suspicious=()
-    local prefixes_look_suspicious=()
+    local paths_changed_look_suspicious=()
+    local prefixes_changed_look_suspicious=()
+    local suffixes_changed_look_suspicious=()
+    local paths_removed_look_suspicious=()
+    local prefixes_removed_look_suspicious=()
+    local suffixes_removed_look_suspicious=()
 
     _diff_store_paths_severity_for_name() {
         local name="$1"
+        local op="$2"
 
-        for p in "${paths_look_suspicious[@]+"${paths_look_suspicious[@]}"}"; do
-            [[ "$name" == "$p" ]] && { echo "suspicious"; return; }
-        done
-        for p in "${prefixes_look_suspicious[@]+"${prefixes_look_suspicious[@]}"}"; do
-            [[ "$name" == "$p"* ]] && { echo "suspicious"; return; }
-        done
+        if [[ "$op" == "removed" ]]; then
+            for p in "${paths_removed_look_suspicious[@]+"${paths_removed_look_suspicious[@]}"}"; do
+                [[ "$name" == "$p" ]] && { echo "suspicious"; return; }
+            done
+            for p in "${prefixes_removed_look_suspicious[@]+"${prefixes_removed_look_suspicious[@]}"}"; do
+                [[ "$name" == "$p"* ]] && { echo "suspicious"; return; }
+            done
+            for s in "${suffixes_removed_look_suspicious[@]+"${suffixes_removed_look_suspicious[@]}"}"; do
+                [[ "$name" == *"$s" ]] && { echo "suspicious"; return; }
+            done
+        else
+            for p in "${paths_changed_look_suspicious[@]+"${paths_changed_look_suspicious[@]}"}"; do
+                [[ "$name" == "$p" ]] && { echo "suspicious"; return; }
+            done
+            for p in "${prefixes_changed_look_suspicious[@]+"${prefixes_changed_look_suspicious[@]}"}"; do
+                [[ "$name" == "$p"* ]] && { echo "suspicious"; return; }
+            done
+            for s in "${suffixes_changed_look_suspicious[@]+"${suffixes_changed_look_suspicious[@]}"}"; do
+                [[ "$name" == *"$s" ]] && { echo "suspicious"; return; }
+            done
+        fi
 
         for p in "${paths_require_reboot[@]+"${paths_require_reboot[@]}"}"; do
             [[ "$name" == "$p" ]] && { echo "reboot"; return; }
@@ -1386,12 +1408,18 @@ diff_store_paths() {
         for p in "${prefixes_require_reboot[@]+"${prefixes_require_reboot[@]}"}"; do
             [[ "$name" == "$p"* ]] && { echo "reboot"; return; }
         done
+        for s in "${suffixes_require_reboot[@]+"${suffixes_require_reboot[@]}"}"; do
+            [[ "$name" == *"$s" ]] && { echo "reboot"; return; }
+        done
 
         for p in "${paths_require_attention[@]+"${paths_require_attention[@]}"}"; do
             [[ "$name" == "$p" ]] && { echo "attention"; return; }
         done
         for p in "${prefixes_require_attention[@]+"${prefixes_require_attention[@]}"}"; do
             [[ "$name" == "$p"* ]] && { echo "attention"; return; }
+        done
+        for s in "${suffixes_require_attention[@]+"${suffixes_require_attention[@]}"}"; do
+            [[ "$name" == *"$s" ]] && { echo "attention"; return; }
         done
 
         echo ""
@@ -1512,7 +1540,7 @@ diff_store_paths() {
 
         hash="$(grep -m1 "	${name}$" "$new_file" | cut -f1)"
         full_path="/nix/store/${hash}-${name}"
-        severity="$(_diff_store_paths_severity_for_name "$name")"
+        severity="$(_diff_store_paths_severity_for_name "$name" "added")"
         entry="${GREEN}[A]${RESET} ${WHITE}${name}${RESET}  ${GRAY}${full_path}${RESET}"
         _diff_store_paths_record_match "$severity" "$full_path" "$entry"
         echo -e "${GREEN}[A]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
@@ -1537,7 +1565,7 @@ diff_store_paths() {
 
         hash="$(grep -m1 "	${name}$" "$old_file" | cut -f1)"
         full_path="/nix/store/${hash}-${name}"
-        severity="$(_diff_store_paths_severity_for_name "$name")"
+        severity="$(_diff_store_paths_severity_for_name "$name" "removed")"
         entry="${RED}[R]${RESET} ${WHITE}${name}${RESET}  ${GRAY}${full_path}${RESET}"
         _diff_store_paths_record_match "$severity" "$full_path" "$entry"
         echo -e "${RED}[R]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
@@ -1631,7 +1659,7 @@ diff_store_paths() {
         fi
 
         local severity
-        severity="$(_diff_store_paths_severity_for_name "$name")"
+        severity="$(_diff_store_paths_severity_for_name "$name" "changed")"
         _diff_store_paths_record_match "$severity" "" "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
         echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
         if (( ${#only_old[@]} == 1 && ${#only_new[@]} == 1 )); then
