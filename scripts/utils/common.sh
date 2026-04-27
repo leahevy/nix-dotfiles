@@ -1337,13 +1337,14 @@ diff_store_paths() {
       "etc-nx-theme-"
       "nixos-icons-"
       ".Xresources"
+      "unit-home-manager-"
     )
     local add_removal_prefixes_to_ignore=(
       "nixos-system-"
       "etc-nx-theme-active-"
     )
     local paths_require_attention=()
-    local prefixes_require_attention=("unit-home-manager-")
+    local prefixes_require_attention=()
     local paths_require_reboot=(
       "unit-generate-shutdown-ramfs.service"
       "unit-systemd-sysctl.service"
