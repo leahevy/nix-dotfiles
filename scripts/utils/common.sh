@@ -1521,10 +1521,13 @@ diff_store_paths() {
     # shellcheck disable=SC2064
     trap "rm -f '$old_file' '$new_file' '$old_names' '$new_names' '$out_file'" RETURN
 
+    local has_raw_diffs=false
+
     while IFS= read -r name; do
         local hash
         local severity full_path entry
 
+        has_raw_diffs=true
         for p in "${add_removal_prefixes_to_ignore[@]+"${add_removal_prefixes_to_ignore[@]}"}"; do
           [[ "$name" == "$p"* ]] && continue 2
         done
@@ -1550,6 +1553,7 @@ diff_store_paths() {
         local hash
         local severity full_path entry
 
+        has_raw_diffs=true
         for p in "${add_removal_prefixes_to_ignore[@]+"${add_removal_prefixes_to_ignore[@]}"}"; do
           [[ "$name" == "$p"* ]] && continue 2
         done
@@ -1609,6 +1613,7 @@ diff_store_paths() {
     done < "$changed_file"
 
     while IFS= read -r name; do
+        has_raw_diffs=true
         [[ "$name" == "issue" ]] && continue
         for p in ${changed_prefixes_to_ignore[@]+"${changed_prefixes_to_ignore[@]}"}; do
           [[ "$name" == "$p" || "$name" == "$p"* ]] && continue 2
@@ -1680,10 +1685,12 @@ diff_store_paths() {
 
     echo -en "${CYAN}${YELLOW}$num_entries${CYAN} store paths${CYAN}${RESET} "
     if [[ -s "$out_file" ]]; then
-        echo -e "${ORANGE}-> Store closures differ.${RESET}"
+        echo -e "${BLUE}-> Store closures differ.${RESET}"
         echo
         cat "$out_file"
         _diff_store_paths_print_matches
+    elif $has_raw_diffs; then
+        echo -e "${ORANGE}-> Store closures only contain minor changes.${RESET}"
     else
         echo -e "${WHITE}-> Store closures are identical.${RESET}"
     fi
