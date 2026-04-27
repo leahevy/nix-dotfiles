@@ -502,6 +502,7 @@ if [[ "${NO_RUN}" != "true" ]]; then
     echo
     if [[ "${DANGEROUSLY_USE_HOST_SOPS}" == "true" && -z "${AGE_FILE}" && -z "${AGE_SYSTEM_FILE}" ]]; then
         print_info "Copying system SOPS age key with sudo ${ORANGE}(requires elevated privileges)"
+        notify_info "vm" "Require authentication for copying sops keys..."
         sudo install -m 600 -o "$(id -u)" -g "$(id -g)" "${system_key_src}" "${NX_VM_RUNTIME}/system/keys.txt"
     else
         print_info "Copying system age key from ${WHITE}${system_key_src}${RESET}"
@@ -509,19 +510,28 @@ if [[ "${NO_RUN}" != "true" ]]; then
     fi
     echo
 
-    if [[ "${NO_USER_AGE}" == "true" ]]; then
-        print_info "Skipping user age key due to ${ORANGE}--no-user-age${RESET}"
-    else
-        if [[ -z "${user_key_src}" ]]; then
-            print_error "No user age key file found. Provide --age-user-file or set --no-user-age"
-            exit 1
-        fi
-        if [[ ! -f "${user_key_src}" ]]; then
-            print_error "User age key file does not exist: ${user_key_src}"
-            exit 1
-        fi
-        print_info "Copying user age key from ${WHITE}${user_key_src}${RESET}"
-        install -m 600 "${user_key_src}" "${NX_VM_RUNTIME}/user/keys.txt"
+    if [[ -f "${NX_VM_RUNTIME}/system/keys.txt" ]]; then
+      if [[ "${NO_USER_AGE}" == "true" ]]; then
+          print_info "Skipping user age key due to ${ORANGE}--no-user-age${RESET}"
+          touch "${NX_VM_RUNTIME}/user/keys.txt"
+      else
+          if [[ -z "${user_key_src}" ]]; then
+              print_error "No user age key file found. Provide --age-user-file or set --no-user-age"
+              exit 1
+          fi
+          if [[ ! -f "${user_key_src}" ]]; then
+              print_error "User age key file does not exist: ${user_key_src}"
+              exit 1
+          fi
+          print_info "Copying user age key from ${WHITE}${user_key_src}${RESET}"
+          install -m 600 "${user_key_src}" "${NX_VM_RUNTIME}/user/keys.txt"
+      fi
+    fi
+
+    if [[ ! -f "${NX_VM_RUNTIME}/system/keys.txt" || ! -f "${NX_VM_RUNTIME}/user/keys.txt" ]]; then
+      echo -e "\n${RED}Sops key copying did not work!${RESET}"
+      notify_error "VM (run)"
+      exit 1
     fi
 
     if [[ "${KEEP}" != "true" && "${REUSE_LATEST}" != "true" && "${SELECT_VERSION}" == "" ]]; then

@@ -61,6 +61,15 @@ notify_user() {
     fi
 }
 
+notify_info() {
+  command="${1:-}"
+  message="${2:-}"
+
+  if [[ "$command" != "" ]]; then
+    notify_user "Nix Deployment Command ($command)" "$message" info "$INFO_ICON"
+  fi
+}
+
 notify_success() {
   command="${1:-}"
 
