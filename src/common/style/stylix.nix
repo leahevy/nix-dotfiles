@@ -447,8 +447,8 @@ args@{
                   if not isinstance(value, dict):
                       raise SystemExit(
                           f"error: expected dict at {where}:{key}, got {type(value).__name__}\n"
-                          “Open System Settings -> Wallpaper, set an image manually, “
-                          “enable 'Show on all Spaces', then run sync again.”
+                          "Open System Settings -> Wallpaper, set an image manually, "
+                          "enable 'Show on all Spaces', then run sync again."
                       )
                   return value
 
@@ -457,8 +457,8 @@ args@{
                   if not isinstance(value, list) or not value:
                       raise SystemExit(
                           f"error: expected non-empty list at {where}:{key}, got {type(value).__name__}\n"
-                          “Open System Settings -> Wallpaper, set an image manually, “
-                          “enable 'Show on all Spaces', then run sync again.”
+                          "Open System Settings -> Wallpaper, set an image manually, "
+                          "enable 'Show on all Spaces', then run sync again."
                       )
                   return value
 
