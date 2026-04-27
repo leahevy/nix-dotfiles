@@ -136,5 +136,5 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo -e "${MAGENTA}Next steps:${RESET}"
   echo -e "${MAGENTA}1. Re-encrypt the config directory with the new SOPS key.${RESET}"
   echo -e "${MAGENTA}2. Pull the updated config directory on this host.${RESET}"
-  echo -e "${MAGENTA}3. You can then run ${WHITE}50-nixos-install.sh${MAGENTA} to proceed with the installation.${RESET}"
+  echo -e "${MAGENTA}3. You can then run ${WHITE}60-nixos-install.sh${MAGENTA} to proceed with the installation.${RESET}"
 fi

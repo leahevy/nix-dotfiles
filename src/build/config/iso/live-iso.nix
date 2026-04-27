@@ -43,14 +43,14 @@
 
     if [ "$USER" = "nixos" ] && [ -z "$NX_STARTUP_CHECKED" ]; then
       export NX_STARTUP_CHECKED=1
-      
+
       echo
       echo -e "\033[1;33mChecking NX Live setup status...\033[0m"
       echo
-      
+
       TIMEOUT=15
       ELAPSED=0
-      
+
       while [ $ELAPSED -lt $TIMEOUT ]; do
         SERVICES_READY=true
 
@@ -60,7 +60,7 @@
             break
           fi
         done
-        
+
         if [ "$SERVICES_READY" = "true" ]; then
           echo -e "\033[1;32mNX Live setup completed successfully!\033[0m"
           break
@@ -69,7 +69,7 @@
         sleep 1
         ELAPSED=$((ELAPSED + 1))
       done
-      
+
       if [ $ELAPSED -ge $TIMEOUT ]; then
         echo -e "\033[1;31m\033[1mWARNING: NX Live setup failed or timed out!\033[0m"
         echo
@@ -81,7 +81,7 @@
           if [ -z "$status" ]; then
             status="inactive"
           fi
-          
+
           if [ "$status" = "active" ]; then
             echo -e "  \033[1;37m$svc\033[0m: \033[1;32m$status\033[0m"
           else
@@ -131,6 +131,7 @@
     age
     gnupg
     git-crypt
+    openssl
     wpa_supplicant
     iw
     dig
@@ -167,14 +168,14 @@
 
       if [ -d "$REPO_PKG/nxcore" ]; then
         echo "Found nx-repositories at: $REPO_PKG"
-        
+
         mkdir -p /nxcore /nxconfig
         cp -r "$REPO_PKG/nxcore"/. /nxcore/
         cp -r "$REPO_PKG/nxconfig"/. /nxconfig/
-        
+
         chmod -R u+w /nxcore /nxconfig
         chown -R nixos:users /nxcore /nxconfig
-        
+
         echo "NX directories setup complete"
       else
         echo "Error: nx-repositories package not found at: $REPO_PKG"
@@ -325,7 +326,7 @@
         else
           echo "Found existing git repository for nxconfig"
         fi
-        
+
         echo "Configuring remote origin for live environment..."
         if ${pkgs.git}/bin/git remote get-url origin >/dev/null 2>&1; then
           ${pkgs.git}/bin/git remote set-url origin "${variables.configRepoIsoUrl}"
@@ -334,14 +335,14 @@
           ${pkgs.git}/bin/git remote add origin "${variables.configRepoIsoUrl}"
           echo "Added remote origin: ${variables.configRepoIsoUrl}"
         fi
-        
+
         echo "Attempting to fetch from remote repository..."
         if ${pkgs.git}/bin/git fetch origin main; then
           echo "Config git repository configured successfully with latest main branch!"
         else
           echo "Error: Git fetch failed for nxconfig repository."
           echo "This service requires network connectivity and valid repository access."
-          echo "Exiting with 0 as repository can be manually fetched with bootstrap script: 00-fetch-latest-config.sh"
+          echo "Exiting with 0 as repository can be manually fetched with bootstrap script: 10-fetch-latest-config.sh"
           exit 0
         fi
       else

@@ -79,14 +79,14 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
   if [[ ! -f "/mnt/etc/sops/age/keys.txt" ]]; then
     echo -e "${RED}Error: Root SOPS key not found at ${WHITE}/mnt/etc/sops/age/keys.txt${RESET}" >&2
-    echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/30-nixos-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
+    echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-nixos-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
     exit 1
   fi
 
   USER_SOPS_KEY="/mnt/$HOME/.config/sops/age/keys.txt"
   if [[ ! -f "$USER_SOPS_KEY" ]]; then
     echo -e "${RED}Error: User SOPS key not found at ${WHITE}$USER_SOPS_KEY${RESET}" >&2
-    echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/30-nixos-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
+    echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-nixos-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
     exit 1
   fi
 
@@ -180,7 +180,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo
   echo -e "${MAGENTA}Next steps:${RESET}"
   if [[ "$IMPERMANENCE_ENABLED" == "true" ]]; then
-    echo -e "${MAGENTA}  1) Run the script ${WHITE}60-migrate-to-persistence.sh${MAGENTA} (REQUIRED - impermanence is enabled)${RESET}"
+    echo -e "${MAGENTA}  1) Run the script ${WHITE}70-migrate-to-persistence.sh${MAGENTA} (REQUIRED - impermanence is enabled)${RESET}"
     echo -e "${MAGENTA}  2) Reboot to enter the new host...${RESET}"
   else
     echo -e "${MAGENTA}  - Reboot to enter the new host...${RESET}"

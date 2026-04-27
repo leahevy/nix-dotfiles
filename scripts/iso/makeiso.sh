@@ -103,11 +103,15 @@ done
 export SKIP_VERIFICATION
 
 TEMP_DIR="$(mktemp -d)"
+PLAIN_KEY_FILE=""
 cleanup() {
   rm -rf "$TEMP_DIR"
   if [[ -f "$REPO_ROOT/.git-crypt-key" ]]; then
     echo -e "${YELLOW}Cleaning up git-crypt key...${RESET}"
     rm -f "$REPO_ROOT/.git-crypt-key"
+  fi
+  if [[ -n "$PLAIN_KEY_FILE" && -f "$PLAIN_KEY_FILE" ]]; then
+    shred -u "$PLAIN_KEY_FILE" 2>/dev/null || rm -f "$PLAIN_KEY_FILE"
   fi
 }
 trap cleanup EXIT
@@ -125,11 +129,39 @@ if [[ -n "$NXCORE_DIR" ]]; then
 
     if [[ -d "$REPO_ROOT/.git/git-crypt" ]]; then
         echo -e "${GREEN}Detected git-crypt encryption in config repository${RESET}"
-        echo -e "Exporting git-crypt key for ISO..."
 
-        if git-crypt export-key "$REPO_ROOT/.git-crypt-key"; then
-            echo -e "${GREEN}Git-crypt key exported successfully${RESET}"
+        while true; do
+            echo -e "Enter a password to protect the git-crypt key in the ISO:"
+            read -rs GIT_CRYPT_PASS1
+            echo
+            if [[ -z "$GIT_CRYPT_PASS1" ]]; then
+                echo -e "${RED}Password must not be empty${RESET}"
+                continue
+            fi
+            echo -e "Confirm password:"
+            read -rs GIT_CRYPT_PASS2
+            echo
+            if [[ "$GIT_CRYPT_PASS1" == "$GIT_CRYPT_PASS2" ]]; then
+                break
+            fi
+            echo -e "${RED}Passwords do not match, please try again${RESET}"
+        done
+
+        echo -e "Exporting and encrypting git-crypt key for ISO..."
+        PLAIN_KEY_FILE="$(mktemp)"
+        if git-crypt export-key "$PLAIN_KEY_FILE"; then
+            if openssl enc -aes-256-cbc -pbkdf2 -in "$PLAIN_KEY_FILE" -out "$REPO_ROOT/.git-crypt-key" -pass stdin <<< "$GIT_CRYPT_PASS1"; then
+                shred -u "$PLAIN_KEY_FILE" 2>/dev/null || rm -f "$PLAIN_KEY_FILE"
+                PLAIN_KEY_FILE=""
+                unset GIT_CRYPT_PASS1 GIT_CRYPT_PASS2
+                echo -e "${GREEN}Git-crypt key exported and encrypted successfully${RESET}"
+            else
+                unset GIT_CRYPT_PASS1 GIT_CRYPT_PASS2
+                echo -e "${RED}Error: Failed to encrypt git-crypt key${RESET}" >&2
+                exit 1
+            fi
         else
+            unset GIT_CRYPT_PASS1 GIT_CRYPT_PASS2
             echo -e "${RED}Error: Failed to export git-crypt key${RESET}" >&2
             echo -e "Make sure the repository is unlocked and you have ${WHITE}git-crypt${RESET} installed" >&2
             exit 1

@@ -286,11 +286,11 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   if (( IS_DRY_RUN )); then
     echo "echo IMPERMANENCE_ENABLED=true > /mnt/persist/etc/IMPERMANENCE"
     echo -e "echo MIGRATION_DATE=$(date -Iseconds) >> /mnt/persist/etc/IMPERMANENCE"
-    echo "echo MIGRATION_SCRIPT=60-migrate-to-persistence.sh >> /mnt/persist/etc/IMPERMANENCE"
+    echo "echo MIGRATION_SCRIPT=70-migrate-to-persistence.sh >> /mnt/persist/etc/IMPERMANENCE"
   else
     echo "IMPERMANENCE_ENABLED=true" > /mnt/persist/etc/IMPERMANENCE
     echo -e "MIGRATION_DATE=$(date -Iseconds)" >> /mnt/persist/etc/IMPERMANENCE
-    echo "MIGRATION_SCRIPT=60-migrate-to-persistence.sh" >> /mnt/persist/etc/IMPERMANENCE
+    echo "MIGRATION_SCRIPT=70-migrate-to-persistence.sh" >> /mnt/persist/etc/IMPERMANENCE
   fi
   
   echo

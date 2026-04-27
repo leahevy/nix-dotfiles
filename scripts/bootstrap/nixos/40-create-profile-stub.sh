@@ -372,4 +372,4 @@ echo
 echo -e "${MAGENTA}Next steps:${RESET}"
 echo -e "${MAGENTA}   1. Edit ${WHITE}$PROFILE_DIR/$HOSTNAME.nix${MAGENTA} to set ${WHITE}mainUser${MAGENTA}, ${WHITE}additionalUsers${MAGENTA}, and ${WHITE}ethernetDeviceName${RESET}"
 echo -e "${MAGENTA}   2. Configure modules and settings as needed${RESET}"
-echo -e "${MAGENTA}   3. Run bootstrap scripts: ${WHITE}40-nixos-create-sops-key.sh${MAGENTA} then ${WHITE}50-nixos-install.sh${RESET} and if needed ${WHITE}50-migrate-to-persistence.sh${RESET}"
+echo -e "${MAGENTA}   3. Run bootstrap scripts: ${WHITE}50-nixos-create-sops-key.sh${MAGENTA} then ${WHITE}60-nixos-install.sh${RESET} and if needed ${WHITE}70-migrate-to-persistence.sh${RESET}"

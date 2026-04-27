@@ -36,14 +36,6 @@ echo
 echo -e "${GREEN}This script fetches the latest config repository from remote.${RESET}"
 echo
 
-USES_CRYPT=false
-if [ -d .git/git-crypt ]; then
-  USES_CRYPT=true
-  echo -e "${GREEN}Detected git-crypt encryption in config repository${RESET}"
-else
-  echo -e "${GREEN}Config repository is not encrypted (no git-crypt detected)${RESET}"
-fi
-
 echo
 echo -e "${GREEN}Checking network connectivity...${RESET}"
 RETRY_COUNT=0
@@ -95,36 +87,7 @@ done
 echo -e "${GREEN}Updating working directory to latest remote state...${RESET}"
 git reset --hard origin/main
 
-if [ "$USES_CRYPT" = "true" ]; then
-  echo -e "${GREEN}Repository uses git-crypt, attempting to unlock...${RESET}"
-  
-  CRYPT_KEY=""
-  for pkg in /nix/store/*-nx-repositories*; do
-    if [ -f "$pkg/keys/git-crypt-key" ]; then
-      CRYPT_KEY="$pkg/keys/git-crypt-key"
-      break
-    fi
-  done
-  
-  if [ -n "$CRYPT_KEY" ] && [ -f "$CRYPT_KEY" ]; then
-    echo -e "${GREEN}Found git-crypt key, unlocking repository...${RESET}"
-    if git-crypt unlock "$CRYPT_KEY"; then
-      echo -e "${GREEN}Repository unlocked successfully${RESET} - deleting local git-crypt-key"
-      rm -f .git-crypt-key
-    else
-      echo -e "${RED}Error: Failed to unlock repository with git-crypt${RESET}" >&2
-      echo -e "${RED}Files may still be encrypted${RESET}" >&2
-      exit 1
-    fi
-  else
-    echo -e "${RED}Error: git-crypt key not found in ${WHITE}nx-repositories${RED} package${RESET}" >&2
-    echo -e "${RED}The ISO was built without a git-crypt key - make sure the config repository${RESET}" >&2
-    echo -e "${RED}was unlocked when the ISO was built, then rebuild the ISO.${RESET}" >&2
-    exit 1
-  fi
-else
-  echo -e "${YELLOW}Skipping git-crypt unlock (repository is not encrypted)${RESET}"
-fi
+"$SCRIPT_DIR/00-decrypt.sh"
 
 echo
 echo -e "${GREEN}Config repository successfully updated!${RESET}"
