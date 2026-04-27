@@ -51,7 +51,7 @@ args@{
           dir:
           if lib.hasPrefix "~" dir then "${config.home.homeDirectory}${lib.removePrefix "~" dir}" else dir
         ) self.settings.additionalWallpaperDirectories;
-        isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true;
+        isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] false;
         seasonWallpaperFiles = builtins.listToAttrs (
           map (
             entry:

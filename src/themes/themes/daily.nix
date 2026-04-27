@@ -24,7 +24,7 @@ in
     enabled =
       config:
       let
-        isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true;
+        isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] false;
         wallpaper = if isWidescreen then wallpaperInfo.widescreen else wallpaperInfo.normal;
       in
       {

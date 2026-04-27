@@ -282,7 +282,7 @@ args@{
             image =
               let
                 wallpaper = config.nx.common.style.stylix.wallpaper.source;
-                isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true;
+                isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] false;
                 fallbackWallpaper =
                   if isWidescreen then
                     self.inputs.nix-season-wallpaper.fallback.widescreen.path
@@ -356,7 +356,7 @@ args@{
         config:
         let
           shared = stylixConfig config;
-          isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true;
+          isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] false;
           fallbackWallpaperData =
             if isWidescreen then
               self.inputs.nix-season-wallpaper.fallback.widescreen
