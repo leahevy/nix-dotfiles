@@ -66,6 +66,40 @@ args@{
             }
           ) (lib.concatLists (lib.attrValues self.inputs.nix-season-wallpaper.wallpapers))
         );
+
+        nameToDisplayName =
+          name:
+          let
+            noExt = lib.head (lib.splitString "." name);
+            parts = lib.splitString "_" noExt;
+            capitalize = s: (lib.toUpper (lib.substring 0 1 s)) + (lib.substring 1 (lib.stringLength s - 1) s);
+          in
+          lib.concatMapStringsSep " " capitalize parts;
+
+        seasonDisplayNames = builtins.listToAttrs (
+          map (
+            key:
+            let
+              filename = lib.removePrefix ".config/swaybg/wallpapers/" key;
+            in
+            {
+              name = filename;
+              value = nameToDisplayName filename;
+            }
+          ) (builtins.attrNames seasonWallpaperFiles)
+        );
+
+        seasonDisplayCases = lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (
+            filename: displayName: "        \"${filename}\") echo \"${displayName}\" ;;"
+          ) seasonDisplayNames
+        );
+
+        seasonFilenameCases = lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (
+            filename: displayName: "        \"${displayName}\") echo \"${filename}\" ;;"
+          ) seasonDisplayNames
+        );
       in
       lib.mkMerge [
         {
@@ -284,6 +318,20 @@ args@{
             text = ''
               #!/usr/bin/env bash
 
+              get_season_display_name() {
+                case "$1" in
+              ${seasonDisplayCases}
+                  *) echo "$1" ;;
+                esac
+              }
+
+              get_season_filename() {
+                case "$1" in
+              ${seasonFilenameCases}
+                  *) echo "$1" ;;
+                esac
+              }
+
               WALLPAPERS_DIR="${wallpapersDir}"
               STATE_FILE="${config.home.homeDirectory}/.local/state/swaybg/current-wallpaper"
               CURRENT_WALLPAPER=""
@@ -337,10 +385,12 @@ args@{
                   continue
                 fi
 
+                PRETTY_NAME="$(get_season_display_name "$BASENAME")"
+
                 if [[ "$BASENAME" == "$CURRENT_WALLPAPER" ]]; then
-                  DISPLAY_NAME="● $BASENAME"
+                  DISPLAY_NAME="● $PRETTY_NAME"
                 else
-                  DISPLAY_NAME="○ $BASENAME"
+                  DISPLAY_NAME="○ $PRETTY_NAME"
                 fi
 
                 if [[ -n "$FUZZEL_INPUT" ]]; then
@@ -362,8 +412,9 @@ args@{
                     exec "${config.home.homeDirectory}/.local/bin/swaybg-enable-wallpaper" "$(${pkgs.coreutils}/bin/basename "$STYLIX_FILE")"
                   fi
                 else
-                  echo "Selected wallpaper: $SELECTED_BASENAME"
-                  exec "${config.home.homeDirectory}/.local/bin/swaybg-enable-wallpaper" "$SELECTED_BASENAME"
+                  ACTUAL_FILENAME="$(get_season_filename "$SELECTED_BASENAME")"
+                  echo "Selected wallpaper: $ACTUAL_FILENAME"
+                  exec "${config.home.homeDirectory}/.local/bin/swaybg-enable-wallpaper" "$ACTUAL_FILENAME"
                 fi
               fi
             '';
