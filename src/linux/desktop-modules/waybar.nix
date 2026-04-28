@@ -388,7 +388,7 @@ args@{
               network = {
                 format-wifi = "󰤨 {signalStrength}%";
                 format-ethernet = "{ifname}";
-                format-linked = "󰤨 {ifname} (No IP)";
+                format-linked = "{ifname}";
                 format-disconnected = "󰤭 Disconnected";
                 tooltip-format-wifi = "SSID: {essid}\nStrength: {signalStrength}%";
                 on-click = terminalShellCmd ''echo && echo -e "\033[1;32mip addr\033[0m" && echo && ip addr && echo && echo && echo && echo "Press any key to exit..." && read -n 1'';
