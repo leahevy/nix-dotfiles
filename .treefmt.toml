@@ -1,0 +1,18 @@
+verbose = 0
+walk = "filesystem"
+
+[formatter.nix]
+command = "nixfmt"
+includes = [ "*.nix" ]
+excludes = []
+
+[formatter.python-black]
+command = "black"
+includes = [ "*.py" ]
+priority = 1
+
+[formatter.python-isort]
+command = "isort"
+includes = [ "*.py" ]
+options = [ "--profile", "black" ]
+priority = 0

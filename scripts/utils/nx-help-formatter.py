@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import sys
 import json
+import sys
+
 
 def format_command_groups(data):
     groups_map = {}
@@ -19,11 +20,13 @@ def format_command_groups(data):
             else:
                 args_str += f" [{arg['name']}]"
 
-        groups_map[group].append({
-            "name": cmd_name,
-            "args": args_str,
-            "desc": cmd_data.get("description", "")
-        })
+        groups_map[group].append(
+            {
+                "name": cmd_name,
+                "args": args_str,
+                "desc": cmd_data.get("description", ""),
+            }
+        )
 
     group_definitions = {g["id"]: g["label"] for g in data.get("groups", [])}
     group_order = [g["id"] for g in data.get("groups", [])] + [""]
@@ -46,6 +49,7 @@ def format_command_groups(data):
                 print(f"{' ' * 26}{cmd['desc']}")
 
         print()
+
 
 if __name__ == "__main__":
     data = json.load(sys.stdin)
