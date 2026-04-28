@@ -94,6 +94,7 @@ args@{
         '';
 
         impermanence = self.host.impermanence or false;
+        persistName = lib.removePrefix "/" self.persist;
 
         makePatternFn = ''
           make_pattern() {
@@ -113,18 +114,18 @@ args@{
               ''
                 translate_path() {
                   local path="$1"
-                  if [[ "$path" =~ ^/persist(/.*) ]]; then
-                    echo "persist/.snapshots/persist''${BASH_REMATCH[1]}"
-                  elif [[ "$path" == "/persist" ]]; then
-                    echo "persist/.snapshots/persist"
+                  if [[ "$path" =~ ^${self.persist}(/.*) ]]; then
+                    echo "${persistName}/.snapshots/${persistName}''${BASH_REMATCH[1]}"
+                  elif [[ "$path" == "${self.persist}" ]]; then
+                    echo "${persistName}/.snapshots/${persistName}"
                   elif [[ "$path" =~ ^/data(/.*) ]]; then
                     echo "data/.snapshots/data''${BASH_REMATCH[1]}"
                   elif [[ "$path" == "/data" ]]; then
                     echo "data/.snapshots/data"
                   elif [[ "$path" =~ ^/nix(/.*) ]]; then
-                    echo "persist/.snapshots/nix''${BASH_REMATCH[1]}"
+                    echo "${persistName}/.snapshots/nix''${BASH_REMATCH[1]}"
                   elif [[ "$path" == "/nix" ]]; then
-                    echo "persist/.snapshots/nix"
+                    echo "${persistName}/.snapshots/nix"
                   elif [[ "$path" =~ ^/boot(/.*) ]]; then
                     echo "boot''${BASH_REMATCH[1]}"
                   elif [[ "$path" == "/boot" ]]; then

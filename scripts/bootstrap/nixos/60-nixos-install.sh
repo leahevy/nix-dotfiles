@@ -50,6 +50,8 @@ USERNAME="${USERNAME//\"/}"
 
 echo -e "Using full profile name: ${WHITE}$FULL_PROFILE${RESET}"
 
+PERSIST_PATH=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist)
+
 echo
 echo -e "${WHITE}Checking if impermanence is enabled for this host...${RESET}"
 IMPERMANENCE_ENABLED="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.nx.profile.host.impermanence" 2>/dev/null || echo "false")"
@@ -120,9 +122,9 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     fi
 
     echo
-    echo -e "Copying sops file temporarily to ${WHITE}/persist${RESET}"
-    mkdir -p /mnt/persist/etc/sops/age
-    cp -a /mnt/etc/sops/age/keys.txt /mnt/persist/etc/sops/age
+    echo -e "Copying sops file temporarily to ${WHITE}$PERSIST_PATH${RESET}"
+    mkdir -p /mnt${PERSIST_PATH}/etc/sops/age
+    cp -a /mnt/etc/sops/age/keys.txt /mnt${PERSIST_PATH}/etc/sops/age
 
     echo
     echo -e "Running: ${WHITE}nixos-install --flake .#$FULL_PROFILE --no-root-password --override-input core path:$NXCORE_DIR${RESET}"
@@ -131,8 +133,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
       exit 1
     fi
 
-    echo -e "Clearing ${WHITE}/mnt/persist${RESET} directory for preparation of persistence"
-    rm -rf /mnt/persist/* || true
+    echo -e "Clearing ${WHITE}/mnt${PERSIST_PATH}${RESET} directory for preparation of persistence"
+    rm -rf /mnt${PERSIST_PATH}/* || true
 
     echo -e "${GREEN}NixOS installation completed successfully.${RESET}"
   fi

@@ -76,6 +76,9 @@ subcommand_check() {
     esac
   done
 
+  local persist_system
+  persist_system=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist)
+
   if [[ "$show_home_only" == "true" && "$show_system_only" == "true" ]]; then
     echo -e "${RED}Error: --home and --system cannot be used together${RESET}" >&2
     exit 1
@@ -107,7 +110,7 @@ subcommand_check() {
   if [[ "$show_home_only" == "true" ]]; then
     log_and_display "(filtering: /home paths only)"
   elif [[ "$show_system_only" == "true" ]]; then
-    log_and_display "(filtering: system paths only, excluding /home and /persist)"
+    log_and_display "(filtering: system paths only, excluding /home and $persist_system)"
     sudo="sudo"
   else
     sudo="sudo"
@@ -186,8 +189,7 @@ subcommand_check() {
 
   hostname="$(hostname)"
   username="$(get_main_username)"
-  local persist_system="/persist"
-  local persist_user_full="/persist/home/$username"
+  local persist_user_full="${persist_system}/home/$username"
 
   local user_home="/home/$username"
   if [[ -d "$CONFIG_DIR" ]]; then
@@ -248,7 +250,7 @@ subcommand_check() {
     fi
 
     if [[ "$show_system_only" == "true" ]]; then
-      if [[ "$full_path" =~ ^$user_home/ || "$full_path" =~ ^/persist/ ]]; then
+      if [[ "$full_path" =~ ^$user_home/ || "$full_path" =~ ^$persist_system/ ]]; then
         continue
       fi
     fi
@@ -393,7 +395,7 @@ subcommand_check() {
     done
 
     log_and_display ""
-    log_and_display "Add missing files and folders to /persist:"
+    log_and_display "Add missing files and folders to $persist_system:"
     log_and_display ""
     log_and_display " For home modules:"
     # shellcheck disable=SC2016
@@ -407,7 +409,7 @@ subcommand_check() {
     log_and_display "       Specifying directories for bind mounts is generally"
     log_and_display "       the recommended way."
     log_and_display ""
-    log_and_display " After that move the files and folders to /persist and then rebuild the system."
+    log_and_display " After that move the files and folders to $persist_system and then rebuild the system."
   else
     log_and_display "All files are properly persisted!"
   fi

@@ -69,7 +69,9 @@ fi
 
 echo -e "${GREEN}Impermanence enabled, proceeding with persistence migration...${RESET}"
 
-if [[ ! -e "/mnt/etc/NIXOS" && ! -e "/mnt/persist/etc/NIXOS" ]]; then
+PERSIST_SYSTEM=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist)
+
+if [[ ! -e "/mnt/etc/NIXOS" && ! -e "/mnt${PERSIST_SYSTEM}/etc/NIXOS" ]]; then
   echo -e "${RED}Error: NixOS installation not found at ${WHITE}/mnt${RESET}" >&2
   echo -e "${RED}Please run nixos-install first${RESET}" >&2
   exit 1
@@ -105,13 +107,12 @@ echo -e "${MAGENTA}Migrating nixos-install generated files to persistence storag
 echo -e "${MAGENTA}Main user: ${WHITE}$USERNAME${MAGENTA} (UID: ${WHITE}$USER_UID${MAGENTA}, GID: ${WHITE}$USER_GID${MAGENTA})${RESET}"
 read -p "Continue? [y|N]: " -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
+  PERSIST_USER_FULL="${PERSIST_SYSTEM}/home/$USERNAME"
+
   echo -e "${WHITE}Creating persistence directory structure...${RESET}"
-  $DRY_RUN mkdir -p /mnt/persist/home
+  $DRY_RUN mkdir -p /mnt${PERSIST_SYSTEM}/home
 
   echo -e "Extracting persistence requirements from NixOS configuration..."
-
-  PERSIST_SYSTEM="/persist"
-  PERSIST_USER_FULL="/persist/home/$USERNAME"
 
   IGNORE_SYSTEM_FILES=(
     "/etc/.clean"
@@ -129,27 +130,27 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
   migrate_system_directory() {
     local dir="$1"
-    if [[ -d "/mnt/persist$dir" ]]; then
+    if [[ -d "/mnt${PERSIST_SYSTEM}$dir" ]]; then
       echo -e "${YELLOW}  -> $dir (already migrated, skipping)${RESET}"
     elif [[ -d "/mnt$dir" ]]; then
       echo -e "${GREEN}  -> $dir (exists, migrating with permissions)${RESET}"
-      $DRY_RUN mkdir -p "/mnt/persist$(dirname "$dir")"
-      $DRY_RUN rsync -av "/mnt$dir/" "/mnt/persist$dir/"
+      $DRY_RUN mkdir -p "/mnt${PERSIST_SYSTEM}$(dirname "$dir")"
+      $DRY_RUN rsync -av "/mnt$dir/" "/mnt${PERSIST_SYSTEM}$dir/"
       $DRY_RUN rm -rf "/mnt$dir"
     else
       echo -e "${GREEN}  -> $dir (not found, creating empty directory)${RESET}"
-      $DRY_RUN mkdir -p "/mnt/persist$dir"
+      $DRY_RUN mkdir -p "/mnt${PERSIST_SYSTEM}$dir"
     fi
   }
 
   migrate_system_file() {
     local file="$1"
-    if [[ -f "/mnt/persist$file" ]]; then
+    if [[ -f "/mnt${PERSIST_SYSTEM}$file" ]]; then
       echo -e "${YELLOW}  -> $file (already migrated, skipping)${RESET}"
     elif [[ -f "/mnt$file" ]]; then
       echo -e "${GREEN}  -> $file (exists, migrating)${RESET}"
-      $DRY_RUN mkdir -p "/mnt/persist$(dirname "$file")"
-      $DRY_RUN rsync -av "/mnt$file" "/mnt/persist$file"
+      $DRY_RUN mkdir -p "/mnt${PERSIST_SYSTEM}$(dirname "$file")"
+      $DRY_RUN rsync -av "/mnt$file" "/mnt${PERSIST_SYSTEM}$file"
       $DRY_RUN rm "/mnt$file"
     fi
   }
@@ -158,17 +159,17 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     local dir="$1"
     local user="$2"
     local full_path="/mnt/home/$user/$dir"
-    if [[ -d "/mnt/persist/home/$user/$dir" ]]; then
+    if [[ -d "/mnt${PERSIST_SYSTEM}/home/$user/$dir" ]]; then
       echo -e "${YELLOW}  -> ~/$dir (already migrated, skipping)${RESET}"
     elif [[ -d "$full_path" ]]; then
       echo -e "${GREEN}  -> ~/$dir (exists, migrating with permissions)${RESET}"
-      $DRY_RUN mkdir -p "/mnt/persist/home/$user/$(dirname "$dir")"
-      $DRY_RUN rsync -av "$full_path/" "/mnt/persist/home/$user/$dir/"
+      $DRY_RUN mkdir -p "/mnt${PERSIST_SYSTEM}/home/$user/$(dirname "$dir")"
+      $DRY_RUN rsync -av "$full_path/" "/mnt${PERSIST_SYSTEM}/home/$user/$dir/"
       $DRY_RUN rm -rf "$full_path"
     else
       echo -e "${GREEN}  -> ~/$dir (not found, creating empty directory)${RESET}"
-      $DRY_RUN mkdir -p "/mnt/persist/home/$user/$dir"
-      $DRY_RUN chown "$USER_UID:$USER_GID" "/mnt/persist/home/$user/$dir"
+      $DRY_RUN mkdir -p "/mnt${PERSIST_SYSTEM}/home/$user/$dir"
+      $DRY_RUN chown "$USER_UID:$USER_GID" "/mnt${PERSIST_SYSTEM}/home/$user/$dir"
     fi
   }
 
@@ -176,12 +177,12 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     local file="$1"
     local user="$2"
     local full_path="/mnt/home/$user/$file"
-    if [[ -f "/mnt/persist/home/$user/$file" ]]; then
+    if [[ -f "/mnt${PERSIST_SYSTEM}/home/$user/$file" ]]; then
       echo -e "${YELLOW}  -> ~/$file (already migrated, skipping)${RESET}"
     elif [[ -f "$full_path" ]]; then
       echo -e "${GREEN}  -> ~/$file (exists, migrating)${RESET}"
-      $DRY_RUN mkdir -p "/mnt/persist/home/$user/$(dirname "$file")"
-      $DRY_RUN rsync -av "$full_path" "/mnt/persist/home/$user/$file"
+      $DRY_RUN mkdir -p "/mnt${PERSIST_SYSTEM}/home/$user/$(dirname "$file")"
+      $DRY_RUN rsync -av "$full_path" "/mnt${PERSIST_SYSTEM}/home/$user/$file"
       $DRY_RUN rm "$full_path"
     fi
   }
@@ -226,18 +227,18 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
   echo
   echo -e "${WHITE}Ensuring critical system files...${RESET}"
-  if [[ ! -f "/mnt/persist/etc/machine-id" ]]; then
+  if [[ ! -f "/mnt${PERSIST_SYSTEM}/etc/machine-id" ]]; then
     if [[ -f "/mnt/etc/machine-id" ]]; then
       echo -e "  -> /etc/machine-id (critical, migrating)"
-      $DRY_RUN mkdir -p "/mnt/persist/etc"
-      $DRY_RUN cp -p "/mnt/etc/machine-id" "/mnt/persist/etc/"
+      $DRY_RUN mkdir -p "/mnt${PERSIST_SYSTEM}/etc"
+      $DRY_RUN cp -p "/mnt/etc/machine-id" "/mnt${PERSIST_SYSTEM}/etc/"
     else
       echo -e "  -> /etc/machine-id (critical, generating)"
-      $DRY_RUN mkdir -p "/mnt/persist/etc"
+      $DRY_RUN mkdir -p "/mnt${PERSIST_SYSTEM}/etc"
       if (( IS_DRY_RUN )); then
-        echo "systemd-machine-id-setup --root=/mnt/persist || dbus-uuidgen > /mnt/persist/etc/machine-id"
+        echo "systemd-machine-id-setup --root=/mnt${PERSIST_SYSTEM} || dbus-uuidgen > /mnt${PERSIST_SYSTEM}/etc/machine-id"
       else
-        if ! systemd-machine-id-setup --root=/mnt/persist; then
+        if ! systemd-machine-id-setup --root=/mnt${PERSIST_SYSTEM}; then
           echo -e "${RED}Error: systemd-machine-id-setup failed, cannot generate ${WHITE}/etc/machine-id${RESET}" >&2
           exit 1
         fi
@@ -267,25 +268,25 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
   echo
   echo -e "${WHITE}Ensuring user home directory structure...${RESET}"
-  $DRY_RUN mkdir -p "/mnt/persist/home/$USERNAME"
+  $DRY_RUN mkdir -p "/mnt${PERSIST_SYSTEM}/home/$USERNAME"
 
   echo
   echo -e "${WHITE}Setting ownership for persistent data...${RESET}"
-  [[ -d "/mnt/persist/etc" ]] && $DRY_RUN chown -R 0:0 /mnt/persist/etc
-  [[ -d "/mnt/persist/var" ]] && $DRY_RUN chown -R 0:0 /mnt/persist/var
-  [[ -d "/mnt/persist/home/$USERNAME" ]] && $DRY_RUN chown -R "$USER_UID:$USER_GID" "/mnt/persist/home/$USERNAME"
-  [[ -d "/mnt/persist/home/$USERNAME" ]] && $DRY_RUN chmod 700 "/mnt/persist/home/$USERNAME"
+  [[ -d "/mnt${PERSIST_SYSTEM}/etc" ]] && $DRY_RUN chown -R 0:0 /mnt${PERSIST_SYSTEM}/etc
+  [[ -d "/mnt${PERSIST_SYSTEM}/var" ]] && $DRY_RUN chown -R 0:0 /mnt${PERSIST_SYSTEM}/var
+  [[ -d "/mnt${PERSIST_SYSTEM}/home/$USERNAME" ]] && $DRY_RUN chown -R "$USER_UID:$USER_GID" "/mnt${PERSIST_SYSTEM}/home/$USERNAME"
+  [[ -d "/mnt${PERSIST_SYSTEM}/home/$USERNAME" ]] && $DRY_RUN chmod 700 "/mnt${PERSIST_SYSTEM}/home/$USERNAME"
 
   echo
   echo -e "Creating impermanence marker file at ${WHITE}/etc/IMPERMANENCE${RESET}..."
   if (( IS_DRY_RUN )); then
-    echo "echo IMPERMANENCE_ENABLED=true > /mnt/persist/etc/IMPERMANENCE"
-    echo -e "echo MIGRATION_DATE=$(date -Iseconds) >> /mnt/persist/etc/IMPERMANENCE"
-    echo "echo MIGRATION_SCRIPT=70-migrate-to-persistence.sh >> /mnt/persist/etc/IMPERMANENCE"
+    echo "echo IMPERMANENCE_ENABLED=true > /mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE"
+    echo -e "echo MIGRATION_DATE=$(date -Iseconds) >> /mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE"
+    echo "echo MIGRATION_SCRIPT=70-migrate-to-persistence.sh >> /mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE"
   else
-    echo "IMPERMANENCE_ENABLED=true" > /mnt/persist/etc/IMPERMANENCE
-    echo -e "MIGRATION_DATE=$(date -Iseconds)" >> /mnt/persist/etc/IMPERMANENCE
-    echo "MIGRATION_SCRIPT=70-migrate-to-persistence.sh" >> /mnt/persist/etc/IMPERMANENCE
+    echo "IMPERMANENCE_ENABLED=true" > /mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE
+    echo -e "MIGRATION_DATE=$(date -Iseconds)" >> /mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE
+    echo "MIGRATION_SCRIPT=70-migrate-to-persistence.sh" >> /mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE
   fi
 
   echo
@@ -331,7 +332,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     if is_ephemeral "$item_path"; then
       EPHEMERAL_ITEMS+=("$item_path")
     fi
-  done < <(find /mnt -type f ! -lname "/nix/store/*" ! -path "/mnt/persist/*" ! -path "/mnt/boot/*" ! -path "/mnt/nix/*" ! -path "/mnt/dev/*" ! -path "/mnt/proc/*" ! -path "/mnt/run/*" ! -path "/mnt/sys/*" ! -path "/mnt/tmp/*" ! -path "/mnt/var/lib/nixos/*" ! -path "/mnt/var/log/*")
+  done < <(find /mnt -type f ! -lname "/nix/store/*" ! -path "/mnt${PERSIST_SYSTEM}/*" ! -path "/mnt/boot/*" ! -path "/mnt/nix/*" ! -path "/mnt/dev/*" ! -path "/mnt/proc/*" ! -path "/mnt/run/*" ! -path "/mnt/sys/*" ! -path "/mnt/tmp/*" ! -path "/mnt/var/lib/nixos/*" ! -path "/mnt/var/log/*")
 
   if [[ ${#EPHEMERAL_ITEMS[@]} -gt 0 ]]; then
     echo
@@ -348,8 +349,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo
   echo
   echo -e "${GREEN}Persistent structure created:${RESET}"
-  echo -e "  ${WHITE}/persist/${RESET}         - System files/directories"
-  echo -e "  ${WHITE}/persist/home/${RESET}    - User files/directories"
+  echo -e "  ${WHITE}${PERSIST_SYSTEM}/${RESET}         - System files/directories"
+  echo -e "  ${WHITE}${PERSIST_SYSTEM}/home/${RESET}    - User files/directories"
 else
   exit 0
 fi

@@ -86,7 +86,7 @@ let
 
         echo "Persistence mount phase:"
         echo "  - Successfully mounted persistence storage from $DEVICE_PATH"
-        echo "  - Log directory created at /persist/var/log/nx/impermanence/"
+        echo "  - Log directory created at ${self.persist}/var/log/nx/impermanence/"
 
         echo "Root filesystem mount phase:"
         mkdir -p /mnt

@@ -225,6 +225,12 @@ if [[ "${NO_RUN}" != "true" && "${LIST_VERSIONS}" != "true" && "${LIST_ALL}" != 
 fi
 
 if [[ "${WILL_RUN_VM}" == "true" ]]; then
+    if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "develop" ]]; then
+        PERSIST_PATH=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist)
+    else
+        PERSIST_PATH=$(nix eval --raw .#variables.persist)
+    fi
+
     if [[ -n "${AGE_FILE}" ]]; then
         [[ -f "${AGE_FILE}" ]] || { print_error "Age key file does not exist: ${AGE_FILE}"; exit 1; }
     elif [[ -n "${AGE_SYSTEM_FILE}" ]]; then
@@ -246,8 +252,8 @@ if [[ "${WILL_RUN_VM}" == "true" ]]; then
         fi
 
         system_key_found=""
-        if [[ -f "/persist/etc/sops/age/keys.txt" ]]; then
-            system_key_found="/persist/etc/sops/age/keys.txt"
+        if [[ -f "${PERSIST_PATH}/etc/sops/age/keys.txt" ]]; then
+            system_key_found="${PERSIST_PATH}/etc/sops/age/keys.txt"
         elif [[ -f "/etc/sops/age/keys.txt" ]]; then
             system_key_found="/etc/sops/age/keys.txt"
         fi
@@ -255,8 +261,8 @@ if [[ "${WILL_RUN_VM}" == "true" ]]; then
 
         if [[ "${NO_USER_AGE}" != "true" ]]; then
             user_key_found=""
-            if [[ -f "/persist${HOME}/.config/sops/age/keys.txt" ]]; then
-                user_key_found="/persist${HOME}/.config/sops/age/keys.txt"
+            if [[ -f "${PERSIST_PATH}${HOME}/.config/sops/age/keys.txt" ]]; then
+                user_key_found="${PERSIST_PATH}${HOME}/.config/sops/age/keys.txt"
             elif [[ -f "${HOME}/.config/sops/age/keys.txt" ]]; then
                 user_key_found="${HOME}/.config/sops/age/keys.txt"
             fi
@@ -532,13 +538,13 @@ if [[ "${NO_RUN}" != "true" ]]; then
 	            print_error "Missing age key input!"
 	            exit 1
 	        fi
-	        if [[ -f "/persist/etc/sops/age/keys.txt" ]]; then
-	            system_key_src="/persist/etc/sops/age/keys.txt"
+	        if [[ -f "${PERSIST_PATH}/etc/sops/age/keys.txt" ]]; then
+	            system_key_src="${PERSIST_PATH}/etc/sops/age/keys.txt"
 	        elif [[ -f "/etc/sops/age/keys.txt" ]]; then
             system_key_src="/etc/sops/age/keys.txt"
         fi
-        if [[ -f "/persist${HOME}/.config/sops/age/keys.txt" ]]; then
-            user_key_src="/persist${HOME}/.config/sops/age/keys.txt"
+        if [[ -f "${PERSIST_PATH}${HOME}/.config/sops/age/keys.txt" ]]; then
+            user_key_src="${PERSIST_PATH}${HOME}/.config/sops/age/keys.txt"
         elif [[ -f "${HOME}/.config/sops/age/keys.txt" ]]; then
             user_key_src="${HOME}/.config/sops/age/keys.txt"
         fi
