@@ -66,6 +66,7 @@ args@{
               "[└───](fg:${config.nx.preferences.theme.colors.separators.ultraDark.html})$directory$character"
             ];
             right_format = "";
+            scan_timeout = 50;
 
             time = {
               format = "[]($style)[ $time ]($style)";
