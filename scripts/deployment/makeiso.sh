@@ -129,6 +129,7 @@ if [[ -n "$NXCORE_DIR" ]]; then
 
     if [[ -d "$REPO_ROOT/.git/git-crypt" ]]; then
         echo -e "${GREEN}Detected git-crypt encryption in config repository${RESET}"
+        echo
 
         while true; do
             echo -e "Enter a password to protect the git-crypt key in the ISO:"
