@@ -5,29 +5,29 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../utils/common.sh"
 
 if [ ! -e /etc/NIXOS ]; then
-  echo -e "${RED}Error: This script must be run on a NixOS live system${RESET}" >&2
-  exit 1
+	echo -e "${RED}Error: This script must be run on a NixOS live system${RESET}" >&2
+	exit 1
 fi
 
 if [ ! -d /nxconfig ]; then
-  echo -e "${RED}Error: ${WHITE}/nxconfig${RED} directory not found${RESET}" >&2
-  echo -e "${RED}Make sure the ${WHITE}nx-setup${RED} service has run successfully${RESET}" >&2
-  exit 1
+	echo -e "${RED}Error: ${WHITE}/nxconfig${RED} directory not found${RESET}" >&2
+	echo -e "${RED}Make sure the ${WHITE}nx-setup${RED} service has run successfully${RESET}" >&2
+	exit 1
 fi
 
 cd /nxconfig
 
 if [ ! -d .git ]; then
-  echo -e "${RED}Error: ${WHITE}/nxconfig${RED} is not a git repository${RESET}" >&2
-  echo -e "${RED}Make sure the ${WHITE}nx-config-git-init${RED} service has run successfully${RESET}"
-  echo -e "This usually means ${WHITE}configRepoIsoUrl${RESET} is not configured in ${WHITE}variables.nix${RESET}" >&2
-  exit 1
+	echo -e "${RED}Error: ${WHITE}/nxconfig${RED} is not a git repository${RESET}" >&2
+	echo -e "${RED}Make sure the ${WHITE}nx-config-git-init${RED} service has run successfully${RESET}"
+	echo -e "This usually means ${WHITE}configRepoIsoUrl${RESET} is not configured in ${WHITE}variables.nix${RESET}" >&2
+	exit 1
 fi
 
 if ! git remote get-url origin >/dev/null 2>&1; then
-  echo -e "${RED}Error: No remote ${WHITE}'origin'${RED} configured in git repository${RESET}" >&2
-  echo -e "${RED}Make sure the ${WHITE}nx-config-git-init${RED} service has run successfully${RESET}"
-  exit 1
+	echo -e "${RED}Error: No remote ${WHITE}'origin'${RED} configured in git repository${RESET}" >&2
+	echo -e "${RED}Make sure the ${WHITE}nx-config-git-init${RED} service has run successfully${RESET}"
+	exit 1
 fi
 
 REMOTE_URL="$(git remote get-url origin)"
@@ -42,45 +42,45 @@ MAX_RETRIES=10
 NETWORK_OK=false
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  if curl -s --connect-timeout 5 --max-time 10 https://github.com >/dev/null 2>&1; then
-    echo -e "Network connectivity established (attempt $((RETRY_COUNT + 1)))"
-    NETWORK_OK=true
-    break
-  else
-    echo -e "Network not ready, waiting... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
-    RETRY_COUNT=$((RETRY_COUNT + 1))
-    sleep 3
-  fi
+	if curl -s --connect-timeout 5 --max-time 10 https://github.com >/dev/null 2>&1; then
+		echo -e "Network connectivity established (attempt $((RETRY_COUNT + 1)))"
+		NETWORK_OK=true
+		break
+	else
+		echo -e "Network not ready, waiting... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
+		RETRY_COUNT=$((RETRY_COUNT + 1))
+		sleep 3
+	fi
 done
 
 if [ "$NETWORK_OK" != "true" ]; then
-  echo -e "${RED}Error: Could not establish network connectivity after ${WHITE}$MAX_RETRIES${RED} attempts${RESET}" >&2
-  echo -e "${RED}Please check your network connection and try again${RESET}" >&2
-  exit 1
+	echo -e "${RED}Error: Could not establish network connectivity after ${WHITE}$MAX_RETRIES${RED} attempts${RESET}" >&2
+	echo -e "${RED}Please check your network connection and try again${RESET}" >&2
+	exit 1
 fi
 
 echo
 echo -e "${GREEN}Fetching latest config repository...${RESET}"
 while true; do
-  echo -e "${MAGENTA}You will be prompted for credentials if needed${RESET}"
-  
-  if git fetch origin main; then
-    echo -e "${GREEN}Fetch successful!${RESET}"
-    break
-  else
-    echo
-    echo -e "${YELLOW}Fetch failed. This could be due to:${RESET}"
-    echo -e "${YELLOW}- Authentication failure (wrong username/token)${RESET}"
-    echo -e "${YELLOW}- Network issues${RESET}"
-    echo -e "${YELLOW}- Repository access issues${RESET}"
-    echo
-    echo -e "${MAGENTA}Try again? (y/n)${RESET}"
-    read -r retry
-    if [[ "$retry" != "y" && "$retry" != "Y" ]]; then
-      echo -e "${YELLOW}Aborted by user${RESET}"
-      exit 1
-    fi
-  fi
+	echo -e "${MAGENTA}You will be prompted for credentials if needed${RESET}"
+
+	if git fetch origin main; then
+		echo -e "${GREEN}Fetch successful!${RESET}"
+		break
+	else
+		echo
+		echo -e "${YELLOW}Fetch failed. This could be due to:${RESET}"
+		echo -e "${YELLOW}- Authentication failure (wrong username/token)${RESET}"
+		echo -e "${YELLOW}- Network issues${RESET}"
+		echo -e "${YELLOW}- Repository access issues${RESET}"
+		echo
+		echo -e "${MAGENTA}Try again? (y/n)${RESET}"
+		read -r retry
+		if [[ "$retry" != "y" && "$retry" != "Y" ]]; then
+			echo -e "${YELLOW}Aborted by user${RESET}"
+			exit 1
+		fi
+	fi
 done
 
 echo -e "${GREEN}Updating working directory to latest remote state...${RESET}"

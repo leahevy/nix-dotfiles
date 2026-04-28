@@ -5,547 +5,545 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "impermanence"
 
 check_nixos() {
-  if [[ ! -f /etc/NIXOS ]]; then
-    echo -e "${RED}Error: This command only works on NixOS systems${RESET}" >&2
-    exit 1
-  fi
+	if [[ ! -f /etc/NIXOS ]]; then
+		echo -e "${RED}Error: This command only works on NixOS systems${RESET}" >&2
+		exit 1
+	fi
 }
 
 check_impermanence() {
-  if [[ ! -f /etc/IMPERMANENCE ]]; then
-    echo -e "${RED}Error: This system is not configured with impermanence${RESET}" >&2
-    echo -e "The ${WHITE}/etc/IMPERMANENCE${RESET} marker file is missing" >&2
-    echo "This usually means impermanence was not set up during installation" >&2
-    exit 1
-  fi
+	if [[ ! -f /etc/IMPERMANENCE ]]; then
+		echo -e "${RED}Error: This system is not configured with impermanence${RESET}" >&2
+		echo -e "The ${WHITE}/etc/IMPERMANENCE${RESET} marker file is missing" >&2
+		echo "This usually means impermanence was not set up during installation" >&2
+		exit 1
+	fi
 }
 
-
-
 setup_impermanence_logging() {
-  local check_type="$1"
-  local real_home
+	local check_type="$1"
+	local real_home
 
-  if [[ -n "${SUDO_USER:-}" ]]; then
-    real_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
-  else
-    real_home="$HOME"
-  fi
+	if [[ -n "${SUDO_USER:-}" ]]; then
+		real_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+	else
+		real_home="$HOME"
+	fi
 
-  local base_log_dir="$real_home/.local/logs/nx/impermanence"
-  local log_dir="$base_log_dir/$check_type"
+	local base_log_dir="$real_home/.local/logs/nx/impermanence"
+	local log_dir="$base_log_dir/$check_type"
 
-  setup_log_directory "$log_dir"
-  rotate_logs "$log_dir" 30
+	setup_log_directory "$log_dir"
+	rotate_logs "$log_dir" 30
 
-  local log_file
-  log_file="$(create_log_filename "$log_dir" "check")"
-  create_log_file "$log_file"
+	local log_file
+	log_file="$(create_log_filename "$log_dir" "check")"
+	create_log_file "$log_file"
 
-  echo "$log_file"
+	echo "$log_file"
 }
 
 subcommand_check() {
-  local show_home_only=false
-  local show_system_only=false
-  local filters=()
+	local show_home_only=false
+	local show_system_only=false
+	local filters=()
 
-  while [[ $# -gt 0 ]]; do
-    case $1 in
-      --home)
-        show_home_only=true
-        shift
-        ;;
-      --system)
-        show_system_only=true
-        shift
-        ;;
-      --filter)
-        if [[ $# -lt 2 ]]; then
-          echo -e "${RED}Error: --filter requires a keyword argument${RESET}" >&2
-          exit 1
-        fi
-        filters+=("$2")
-        shift 2
-        ;;
-      *)
-        echo -e "${RED}Error: Unknown option: ${WHITE}$1${RESET}" >&2
-        echo -e "Usage: ${WHITE}nx impermanence check [--home] [--system] [--filter <keyword>]...${RESET}" >&2
-        exit 1
-        ;;
-    esac
-  done
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		--home)
+			show_home_only=true
+			shift
+			;;
+		--system)
+			show_system_only=true
+			shift
+			;;
+		--filter)
+			if [[ $# -lt 2 ]]; then
+				echo -e "${RED}Error: --filter requires a keyword argument${RESET}" >&2
+				exit 1
+			fi
+			filters+=("$2")
+			shift 2
+			;;
+		*)
+			echo -e "${RED}Error: Unknown option: ${WHITE}$1${RESET}" >&2
+			echo -e "Usage: ${WHITE}nx impermanence check [--home] [--system] [--filter <keyword>]...${RESET}" >&2
+			exit 1
+			;;
+		esac
+	done
 
-  local persist_system
-  persist_system=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist)
+	local persist_system
+	persist_system=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist)
 
-  if [[ "$show_home_only" == "true" && "$show_system_only" == "true" ]]; then
-    echo -e "${RED}Error: --home and --system cannot be used together${RESET}" >&2
-    exit 1
-  fi
+	if [[ "$show_home_only" == "true" && "$show_system_only" == "true" ]]; then
+		echo -e "${RED}Error: --home and --system cannot be used together${RESET}" >&2
+		exit 1
+	fi
 
-  local check_type="all"
-  if [[ "$show_home_only" == "true" ]]; then
-    check_type="home"
-  elif [[ "$show_system_only" == "true" ]]; then
-    check_type="system"
-  fi
+	local check_type="all"
+	if [[ "$show_home_only" == "true" ]]; then
+		check_type="home"
+	elif [[ "$show_system_only" == "true" ]]; then
+		check_type="system"
+	fi
 
-  local log_file
-  log_file="$(setup_impermanence_logging "$check_type")"
+	local log_file
+	log_file="$(setup_impermanence_logging "$check_type")"
 
-  log_and_display() {
-    echo "$@" | tee -a "$log_file"
-  }
+	log_and_display() {
+		echo "$@" | tee -a "$log_file"
+	}
 
-  local sudo=""
-  log_and_display "=== $(date) ==="
-  log_and_display "Check: $check_type"
-  if [[ ${#filters[@]} -gt 0 ]]; then
-    log_and_display "Filters: ${filters[*]}"
-  fi
-  log_and_display ""
+	local sudo=""
+	log_and_display "=== $(date) ==="
+	log_and_display "Check: $check_type"
+	if [[ ${#filters[@]} -gt 0 ]]; then
+		log_and_display "Filters: ${filters[*]}"
+	fi
+	log_and_display ""
 
-  log_and_display "Checking for ephemeral files/directories..."
-  if [[ "$show_home_only" == "true" ]]; then
-    log_and_display "(filtering: /home paths only)"
-  elif [[ "$show_system_only" == "true" ]]; then
-    log_and_display "(filtering: system paths only, excluding /home and $persist_system)"
-    sudo="sudo"
-  else
-    sudo="sudo"
-  fi
+	log_and_display "Checking for ephemeral files/directories..."
+	if [[ "$show_home_only" == "true" ]]; then
+		log_and_display "(filtering: /home paths only)"
+	elif [[ "$show_system_only" == "true" ]]; then
+		log_and_display "(filtering: system paths only, excluding /home and $persist_system)"
+		sudo="sudo"
+	else
+		sudo="sudo"
+	fi
 
-  if [[ ${#filters[@]} -gt 0 ]]; then
-    log_and_display "(keyword filters: ${filters[*]})"
-  fi
-  log_and_display ""
+	if [[ ${#filters[@]} -gt 0 ]]; then
+		log_and_display "(keyword filters: ${filters[*]})"
+	fi
+	log_and_display ""
 
-  is_item_filtered() {
-    local item_path="$1"
-    local item_rel="${item_path#/}"
-    local item_home_rel="${item_path#"$user_home"/}"
+	is_item_filtered() {
+		local item_path="$1"
+		local item_rel="${item_path#/}"
+		local item_home_rel="${item_path#"$user_home"/}"
 
-    if echo "$system_dirs $system_files $user_dirs $user_files" | grep -Fq "$item_rel" || echo "$user_dirs $user_files" | grep -Fq "$item_home_rel" || echo "$mount_output" | grep -Fq " on $item_path type "; then
-      return 0
-    fi
+		if echo "$system_dirs $system_files $user_dirs $user_files" | grep -Fq "$item_rel" || echo "$user_dirs $user_files" | grep -Fq "$item_home_rel" || echo "$mount_output" | grep -Fq " on $item_path type "; then
+			return 0
+		fi
 
-    local link_target
-    if [[ -L "$item_path" ]]; then
-      link_target="$(readlink "$item_path" 2>/dev/null || echo "")"
-      if [[ "$link_target" =~ ^/nix/store/ ]] || [[ "$link_target" =~ ^/etc/static/ ]]; then
-        return 0
-      fi
-    fi
+		local link_target
+		if [[ -L "$item_path" ]]; then
+			link_target="$(readlink "$item_path" 2>/dev/null || echo "")"
+			if [[ "$link_target" =~ ^/nix/store/ ]] || [[ "$link_target" =~ ^/etc/static/ ]]; then
+				return 0
+			fi
+		fi
 
-    case "$item_path" in
-      /etc/aliases|/etc/group|/etc/passwd|/etc/printcap|/etc/shadow|/etc/subgid|/etc/subuid|/etc/sudoers)
-        return 0
-        ;;
-      /proc|/proc/*|/sys|/sys/*|/dev|/dev/*|/run|/run/*|/tmp|/tmp/*|/var/tmp|/var/tmp/*)
-        return 0
-        ;;
-    esac
+		case "$item_path" in
+		/etc/aliases | /etc/group | /etc/passwd | /etc/printcap | /etc/shadow | /etc/subgid | /etc/subuid | /etc/sudoers)
+			return 0
+			;;
+		/proc | /proc/* | /sys | /sys/* | /dev | /dev/* | /run | /run/* | /tmp | /tmp/* | /var/tmp | /var/tmp/*)
+			return 0
+			;;
+		esac
 
-    return 1
-  }
+		return 1
+	}
 
-  has_persisted_content_in_directory() {
-    local dir="$1"
-    local dir_rel="${dir#/}"
+	has_persisted_content_in_directory() {
+		local dir="$1"
+		local dir_rel="${dir#/}"
 
-    local persisted_list="$system_dirs $user_dirs"
-    if [[ -n "$persisted_list" ]]; then
-      for persisted in $persisted_list; do
-        if [[ -n "$persisted" && "$persisted" =~ ^"$dir_rel"/ ]]; then
-          return 0
-        fi
-      done
-    fi
+		local persisted_list="$system_dirs $user_dirs"
+		if [[ -n "$persisted_list" ]]; then
+			for persisted in $persisted_list; do
+				if [[ -n "$persisted" && "$persisted" =~ ^"$dir_rel"/ ]]; then
+					return 0
+				fi
+			done
+		fi
 
-    local persisted_files_list="$system_files $user_files"
-    if [[ -n "$persisted_files_list" ]]; then
-      for persisted in $persisted_files_list; do
-        if [[ -n "$persisted" && "$persisted" =~ ^"$dir_rel"/ ]]; then
-          return 0
-        fi
-      done
-    fi
+		local persisted_files_list="$system_files $user_files"
+		if [[ -n "$persisted_files_list" ]]; then
+			for persisted in $persisted_files_list; do
+				if [[ -n "$persisted" && "$persisted" =~ ^"$dir_rel"/ ]]; then
+					return 0
+				fi
+			done
+		fi
 
-    while IFS= read -r content; do
-      if [[ -n "$content" && "$content" != "$dir" ]]; then
-        if is_item_filtered "$content"; then
-          return 0
-        fi
-      fi
-    done < <($sudo find "$dir" -maxdepth 1 2>/dev/null || true)
+		while IFS= read -r content; do
+			if [[ -n "$content" && "$content" != "$dir" ]]; then
+				if is_item_filtered "$content"; then
+					return 0
+				fi
+			fi
+		done < <($sudo find "$dir" -maxdepth 1 2>/dev/null || true)
 
-    return 1
-  }
-  local hostname
-  local username
-  local full_profile
-  local home_path
+		return 1
+	}
+	local hostname
+	local username
+	local full_profile
+	local home_path
 
-  hostname="$(hostname)"
-  username="$(get_main_username)"
-  local persist_user_full="${persist_system}/home/$username"
+	hostname="$(hostname)"
+	username="$(get_main_username)"
+	local persist_user_full="${persist_system}/home/$username"
 
-  local user_home="/home/$username"
-  if [[ -d "$CONFIG_DIR" ]]; then
-    full_profile="$(construct_profile_name "$hostname")"
-    home_path="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-      ".#nixosConfigurations.$full_profile.config.users.users.$username.home" 2>/dev/null || echo "null")"
-    if [[ -n "$home_path" && "$home_path" != "null" && "$home_path" != "\"null\"" ]]; then
-      user_home="${home_path//\"/}"
-    fi
-  fi
+	local user_home="/home/$username"
+	if [[ -d "$CONFIG_DIR" ]]; then
+		full_profile="$(construct_profile_name "$hostname")"
+		home_path="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+			".#nixosConfigurations.$full_profile.config.users.users.$username.home" 2>/dev/null || echo "null")"
+		if [[ -n "$home_path" && "$home_path" != "null" && "$home_path" != "\"null\"" ]]; then
+			user_home="${home_path//\"/}"
+		fi
+	fi
 
-  local system_dirs=""
-  local system_files=""
-  local user_dirs=""
-  local user_files=""
-  local mount_output
-  mount_output="$(mount)"
+	local system_dirs=""
+	local system_files=""
+	local user_dirs=""
+	local user_files=""
+	local mount_output
+	mount_output="$(mount)"
 
-  if [[ -z "$mount_output" ]] || ! echo "$mount_output" | grep -q "on / type"; then
-    echo -e "${RED}Error: Failed to get mount information${RESET}" >&2
-    echo -e "Mount command output appears invalid or empty" >&2
-    exit 1
-  fi
+	if [[ -z "$mount_output" ]] || ! echo "$mount_output" | grep -q "on / type"; then
+		echo -e "${RED}Error: Failed to get mount information${RESET}" >&2
+		echo -e "Mount command output appears invalid or empty" >&2
+		exit 1
+	fi
 
-  if [[ -d "$CONFIG_DIR" ]]; then
-    local full_profile
-    full_profile="$(construct_profile_name "$hostname")"
+	if [[ -d "$CONFIG_DIR" ]]; then
+		local full_profile
+		full_profile="$(construct_profile_name "$hostname")"
 
-    system_dirs="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-      ".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".directories" 2>/dev/null \
-      | jq -r '.[]?' 2>/dev/null || echo "")"
+		system_dirs="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+			".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".directories" 2>/dev/null |
+			jq -r '.[]?' 2>/dev/null || echo "")"
 
-    system_files="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-      ".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".files" 2>/dev/null \
-      | jq -r '.[]?' 2>/dev/null || echo "")"
+		system_files="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+			".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".files" 2>/dev/null |
+			jq -r '.[]?' 2>/dev/null || echo "")"
 
-    user_dirs="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-      ".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".directories" 2>/dev/null \
-      | jq -r '.[]?' 2>/dev/null || echo "")"
+		user_dirs="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+			".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".directories" 2>/dev/null |
+			jq -r '.[]?' 2>/dev/null || echo "")"
 
-    user_files="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-      ".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".files" 2>/dev/null \
-      | jq -r '.[]?' 2>/dev/null || echo "")"
-  fi
+		user_files="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+			".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".files" 2>/dev/null |
+			jq -r '.[]?' 2>/dev/null || echo "")"
+	fi
 
-  local ephemeral_items=()
-  local search_path="/"
-  if [[ "$show_home_only" == "true" ]]; then
-    search_path="$user_home"
-  fi
+	local ephemeral_items=()
+	local search_path="/"
+	if [[ "$show_home_only" == "true" ]]; then
+		search_path="$user_home"
+	fi
 
-  while IFS= read -r item; do
-    local item_path="${item#/}"
-    local full_path="/$item_path"
+	while IFS= read -r item; do
+		local item_path="${item#/}"
+		local full_path="/$item_path"
 
-    if is_item_filtered "$full_path"; then
-      continue
-    fi
+		if is_item_filtered "$full_path"; then
+			continue
+		fi
 
-    if [[ "$show_system_only" == "true" ]]; then
-      if [[ "$full_path" =~ ^$user_home/ || "$full_path" =~ ^$persist_system/ ]]; then
-        continue
-      fi
-    fi
+		if [[ "$show_system_only" == "true" ]]; then
+			if [[ "$full_path" =~ ^$user_home/ || "$full_path" =~ ^$persist_system/ ]]; then
+				continue
+			fi
+		fi
 
-    if [[ ${#filters[@]} -gt 0 ]]; then
-      local match_found=false
-      for filter in "${filters[@]}"; do
-        if echo "$full_path" | grep -Fq "$filter"; then
-          match_found=true
-          break
-        fi
-      done
-      if [[ "$match_found" != "true" ]]; then
-        continue
-      fi
-    fi
+		if [[ ${#filters[@]} -gt 0 ]]; then
+			local match_found=false
+			for filter in "${filters[@]}"; do
+				if echo "$full_path" | grep -Fq "$filter"; then
+					match_found=true
+					break
+				fi
+			done
+			if [[ "$match_found" != "true" ]]; then
+				continue
+			fi
+		fi
 
-    ephemeral_items+=("$full_path")
-  done < <($sudo find "$search_path" -xdev -type f -o -type d 2>/dev/null | grep -v "^$search_path$" | sort)
+		ephemeral_items+=("$full_path")
+	done < <($sudo find "$search_path" -xdev -type f -o -type d 2>/dev/null | grep -v "^$search_path$" | sort)
 
-  local filtered_items=()
-  for item in "${ephemeral_items[@]}"; do
-    local should_include=true
+	local filtered_items=()
+	for item in "${ephemeral_items[@]}"; do
+		local should_include=true
 
-    for existing in "${filtered_items[@]}"; do
-      if [[ "$item" =~ ^"$existing"/ ]]; then
-        should_include=false
-        break
-      fi
-    done
+		for existing in "${filtered_items[@]}"; do
+			if [[ "$item" =~ ^"$existing"/ ]]; then
+				should_include=false
+				break
+			fi
+		done
 
-    if [[ "$should_include" == "true" ]]; then
-      filtered_items+=("$item")
-    fi
-  done
+		if [[ "$should_include" == "true" ]]; then
+			filtered_items+=("$item")
+		fi
+	done
 
-  is_common_parent_path() {
-    local path="$1"
-    local path_rel="${path#"$user_home"/}"
+	is_common_parent_path() {
+		local path="$1"
+		local path_rel="${path#"$user_home"/}"
 
-    case "$path_rel" in
-      .local|.cache|.config|.local/share|.local/state)
-        return 0
-        ;;
-      *)
-        return 1
-        ;;
-    esac
-  }
+		case "$path_rel" in
+		.local | .cache | .config | .local/share | .local/state)
+			return 0
+			;;
+		*)
+			return 1
+			;;
+		esac
+	}
 
-  process_directory_recursive() {
-    local dir="$1"
-    local result_array_name="$2"
-    local -n result_ref=$result_array_name
+	process_directory_recursive() {
+		local dir="$1"
+		local result_array_name="$2"
+		local -n result_ref=$result_array_name
 
-    if is_item_filtered "$dir"; then
-      return
-    fi
+		if is_item_filtered "$dir"; then
+			return
+		fi
 
-    local has_unfiltered_content=false
-    local unfiltered_subdirs=()
-    local unfiltered_files=()
+		local has_unfiltered_content=false
+		local unfiltered_subdirs=()
+		local unfiltered_files=()
 
-    while IFS= read -r content; do
-      if [[ -n "$content" && "$content" != "$dir" ]]; then
-        if ! is_item_filtered "$content"; then
-          has_unfiltered_content=true
-          if [[ -d "$content" ]]; then
-            unfiltered_subdirs+=("$content")
-          else
-            unfiltered_files+=("$content")
-          fi
-        fi
-      fi
-    done < <($sudo find "$dir" -maxdepth 1 2>/dev/null || true)
+		while IFS= read -r content; do
+			if [[ -n "$content" && "$content" != "$dir" ]]; then
+				if ! is_item_filtered "$content"; then
+					has_unfiltered_content=true
+					if [[ -d "$content" ]]; then
+						unfiltered_subdirs+=("$content")
+					else
+						unfiltered_files+=("$content")
+					fi
+				fi
+			fi
+		done < <($sudo find "$dir" -maxdepth 1 2>/dev/null || true)
 
-    if [[ "$has_unfiltered_content" == "true" ]]; then
-      if is_common_parent_path "$dir"; then
-        for file in "${unfiltered_files[@]}"; do
-          result_ref+=("$file")
-        done
+		if [[ "$has_unfiltered_content" == "true" ]]; then
+			if is_common_parent_path "$dir"; then
+				for file in "${unfiltered_files[@]}"; do
+					result_ref+=("$file")
+				done
 
-        for subdir in "${unfiltered_subdirs[@]}"; do
-          if is_common_parent_path "$subdir"; then
-            process_directory_recursive "$subdir" "$result_array_name"
-          else
-            result_ref+=("$subdir")
-          fi
-        done
-      elif has_persisted_content_in_directory "$dir"; then
-        for subdir in "${unfiltered_subdirs[@]}"; do
-          result_ref+=("$subdir")
-        done
-      else
-        result_ref+=("$dir")
-      fi
-    fi
-  }
+				for subdir in "${unfiltered_subdirs[@]}"; do
+					if is_common_parent_path "$subdir"; then
+						process_directory_recursive "$subdir" "$result_array_name"
+					else
+						result_ref+=("$subdir")
+					fi
+				done
+			elif has_persisted_content_in_directory "$dir"; then
+				for subdir in "${unfiltered_subdirs[@]}"; do
+					result_ref+=("$subdir")
+				done
+			else
+				result_ref+=("$dir")
+			fi
+		fi
+	}
 
-  local final_items=()
-  for item in "${filtered_items[@]}"; do
-    if [[ -d "$item" ]]; then
-      process_directory_recursive "$item" final_items
-    else
-      final_items+=("$item")
-    fi
-  done
+	local final_items=()
+	for item in "${filtered_items[@]}"; do
+		if [[ -d "$item" ]]; then
+			process_directory_recursive "$item" final_items
+		else
+			final_items+=("$item")
+		fi
+	done
 
-  ephemeral_items=("${final_items[@]}")
+	ephemeral_items=("${final_items[@]}")
 
-  if [[ ${#ephemeral_items[@]} -gt 0 ]]; then
-    log_and_display "⚠️  Ephemeral files/directories (will be lost on reboot):"
+	if [[ ${#ephemeral_items[@]} -gt 0 ]]; then
+		log_and_display "⚠️  Ephemeral files/directories (will be lost on reboot):"
 
-    local dirs=()
-    local files=()
+		local dirs=()
+		local files=()
 
-    for item in "${ephemeral_items[@]}"; do
-      local display_item="$item"
-      if [[ "$show_home_only" == "true" && "$item" =~ ^$user_home/ ]]; then
-        display_item="${item#"$user_home"/}"
-      fi
+		for item in "${ephemeral_items[@]}"; do
+			local display_item="$item"
+			if [[ "$show_home_only" == "true" && "$item" =~ ^$user_home/ ]]; then
+				display_item="${item#"$user_home"/}"
+			fi
 
-      if [[ -d "$item" ]]; then
-        dirs+=("$display_item/")
-      else
-        files+=("$display_item")
-      fi
-    done
+			if [[ -d "$item" ]]; then
+				dirs+=("$display_item/")
+			else
+				files+=("$display_item")
+			fi
+		done
 
-    local dir_printed=0
-    for dir in "${dirs[@]}"; do
-      log_and_display "  Dir  -> $dir"
-      dir_printed=1
-    done
+		local dir_printed=0
+		for dir in "${dirs[@]}"; do
+			log_and_display "  Dir  -> $dir"
+			dir_printed=1
+		done
 
-    if (( dir_printed )); then
-      log_and_display ""
-    fi
+		if ((dir_printed)); then
+			log_and_display ""
+		fi
 
-    for file in "${files[@]}"; do
-      log_and_display "  File -> $file"
-    done
+		for file in "${files[@]}"; do
+			log_and_display "  File -> $file"
+		done
 
-    log_and_display ""
-    log_and_display "Add missing files and folders to $persist_system:"
-    log_and_display ""
-    log_and_display " For home modules:"
-    # shellcheck disable=SC2016
-    log_and_display '  home.persistence."${self.persist}" = { directories = [...], files = [...] };'
-    log_and_display ""
-    log_and_display " For system modules:"
-    # shellcheck disable=SC2016
-    log_and_display '  environment.persistence."${self.persist}" = { directories = [...], files = [...] };'
-    log_and_display ""
-    log_and_display " Note: Files may not work depending on the program."
-    log_and_display "       Specifying directories for bind mounts is generally"
-    log_and_display "       the recommended way."
-    log_and_display ""
-    log_and_display " After that move the files and folders to $persist_system and then rebuild the system."
-  else
-    log_and_display "All files are properly persisted!"
-  fi
+		log_and_display ""
+		log_and_display "Add missing files and folders to $persist_system:"
+		log_and_display ""
+		log_and_display " For home modules:"
+		# shellcheck disable=SC2016
+		log_and_display '  home.persistence."${self.persist}" = { directories = [...], files = [...] };'
+		log_and_display ""
+		log_and_display " For system modules:"
+		# shellcheck disable=SC2016
+		log_and_display '  environment.persistence."${self.persist}" = { directories = [...], files = [...] };'
+		log_and_display ""
+		log_and_display " Note: Files may not work depending on the program."
+		log_and_display "       Specifying directories for bind mounts is generally"
+		log_and_display "       the recommended way."
+		log_and_display ""
+		log_and_display " After that move the files and folders to $persist_system and then rebuild the system."
+	else
+		log_and_display "All files are properly persisted!"
+	fi
 
-  log_and_display ""
-  log_and_display "=== Check completed at $(date) ==="
+	log_and_display ""
+	log_and_display "=== Check completed at $(date) ==="
 
-  echo -e "${GRAY}Log saved to: ${WHITE}$log_file${RESET}" >&2
+	echo -e "${GRAY}Log saved to: ${WHITE}$log_file${RESET}" >&2
 }
 
 subcommand_diff() {
-  local range=1
-  local show_home_only=false
-  local show_system_only=false
+	local range=1
+	local show_home_only=false
+	local show_system_only=false
 
-  while [[ $# -gt 0 ]]; do
-    case $1 in
-      --range)
-        if [[ $# -lt 2 ]]; then
-          echo -e "${RED}Error: --range requires a number argument${RESET}" >&2
-          exit 1
-        fi
-        if ! [[ "$2" =~ ^[0-9]+$ ]] || [[ "$2" -eq 0 ]]; then
-          echo -e "${RED}Error: --range must be a positive integer${RESET}" >&2
-          exit 1
-        fi
-        range="$2"
-        shift 2
-        ;;
-      --home)
-        show_home_only=true
-        shift
-        ;;
-      --system)
-        show_system_only=true
-        shift
-        ;;
-      *)
-        echo -e "${RED}Error: Unknown option: ${WHITE}$1${RESET}" >&2
-        echo -e "Usage: ${WHITE}nx impermanence diff [--range N] [--home] [--system]${RESET}" >&2
-        exit 1
-        ;;
-    esac
-  done
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		--range)
+			if [[ $# -lt 2 ]]; then
+				echo -e "${RED}Error: --range requires a number argument${RESET}" >&2
+				exit 1
+			fi
+			if ! [[ "$2" =~ ^[0-9]+$ ]] || [[ "$2" -eq 0 ]]; then
+				echo -e "${RED}Error: --range must be a positive integer${RESET}" >&2
+				exit 1
+			fi
+			range="$2"
+			shift 2
+			;;
+		--home)
+			show_home_only=true
+			shift
+			;;
+		--system)
+			show_system_only=true
+			shift
+			;;
+		*)
+			echo -e "${RED}Error: Unknown option: ${WHITE}$1${RESET}" >&2
+			echo -e "Usage: ${WHITE}nx impermanence diff [--range N] [--home] [--system]${RESET}" >&2
+			exit 1
+			;;
+		esac
+	done
 
-  if [[ "$show_home_only" == "true" && "$show_system_only" == "true" ]]; then
-    echo -e "${RED}Error: --home and --system cannot be used together${RESET}" >&2
-    exit 1
-  fi
+	if [[ "$show_home_only" == "true" && "$show_system_only" == "true" ]]; then
+		echo -e "${RED}Error: --home and --system cannot be used together${RESET}" >&2
+		exit 1
+	fi
 
-  local check_type="all"
-  if [[ "$show_home_only" == "true" ]]; then
-    check_type="home"
-  elif [[ "$show_system_only" == "true" ]]; then
-    check_type="system"
-  fi
+	local check_type="all"
+	if [[ "$show_home_only" == "true" ]]; then
+		check_type="home"
+	elif [[ "$show_system_only" == "true" ]]; then
+		check_type="system"
+	fi
 
-  local real_home
-  if [[ -n "${SUDO_USER:-}" ]]; then
-    real_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
-  else
-    real_home="$HOME"
-  fi
+	local real_home
+	if [[ -n "${SUDO_USER:-}" ]]; then
+		real_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+	else
+		real_home="$HOME"
+	fi
 
-  local log_dir="$real_home/.local/logs/nx/impermanence/$check_type"
+	local log_dir="$real_home/.local/logs/nx/impermanence/$check_type"
 
-  if [[ ! -d "$log_dir" ]]; then
-    echo -e "${RED}Error: No logs found for check type '${WHITE}$check_type${RED}'${RESET}" >&2
-    echo -e "Directory not found: ${WHITE}$log_dir${RESET}" >&2
-    exit 1
-  fi
+	if [[ ! -d "$log_dir" ]]; then
+		echo -e "${RED}Error: No logs found for check type '${WHITE}$check_type${RED}'${RESET}" >&2
+		echo -e "Directory not found: ${WHITE}$log_dir${RESET}" >&2
+		exit 1
+	fi
 
-  local log_files
-  readarray -t log_files < <(ls -1t "$log_dir"/check_*.log 2>/dev/null || true)
+	local log_files
+	readarray -t log_files < <(ls -1t "$log_dir"/check_*.log 2>/dev/null || true)
 
-  if [[ ${#log_files[@]} -eq 0 ]]; then
-    echo -e "${RED}Error: No check log files found in ${WHITE}$log_dir${RESET}" >&2
-    exit 1
-  fi
+	if [[ ${#log_files[@]} -eq 0 ]]; then
+		echo -e "${RED}Error: No check log files found in ${WHITE}$log_dir${RESET}" >&2
+		exit 1
+	fi
 
-  local required_files=$((range + 1))
-  if [[ ${#log_files[@]} -lt $required_files ]]; then
-    echo -e "${RED}Error: Not enough log files for range ${WHITE}$range${RED}${RESET}" >&2
-    echo -e "Available log files: ${WHITE}${#log_files[@]}${RESET}, need at least $required_files" >&2
-    exit 1
-  fi
+	local required_files=$((range + 1))
+	if [[ ${#log_files[@]} -lt $required_files ]]; then
+		echo -e "${RED}Error: Not enough log files for range ${WHITE}$range${RED}${RESET}" >&2
+		echo -e "Available log files: ${WHITE}${#log_files[@]}${RESET}, need at least $required_files" >&2
+		exit 1
+	fi
 
-  local newer_file="${log_files[0]}"
-  local older_file="${log_files[$range]}"
+	local newer_file="${log_files[0]}"
+	local older_file="${log_files[$range]}"
 
-  echo -e "${GRAY}Comparing impermanence check logs (${WHITE}$check_type${GRAY})${RESET}"
-  echo -e "${GRAY}Newer: ${WHITE}$(basename "$newer_file")${RESET}"
-  echo -e "${GRAY}Older: ${WHITE}$(basename "$older_file")${RESET}"
-  echo ""
+	echo -e "${GRAY}Comparing impermanence check logs (${WHITE}$check_type${GRAY})${RESET}"
+	echo -e "${GRAY}Newer: ${WHITE}$(basename "$newer_file")${RESET}"
+	echo -e "${GRAY}Older: ${WHITE}$(basename "$older_file")${RESET}"
+	echo ""
 
-  diff "$older_file" "$newer_file"
+	diff "$older_file" "$newer_file"
 }
 
 subcommand_logs() {
-  local log_file="/var/log/nx/impermanence/rollback.log"
+	local log_file="/var/log/nx/impermanence/rollback.log"
 
-  if [[ ! -f "$log_file" ]]; then
-    echo -e "${RED}No rollback logs found at ${WHITE}$log_file${RESET}" >&2
-    exit 1
-  fi
+	if [[ ! -f "$log_file" ]]; then
+		echo -e "${RED}No rollback logs found at ${WHITE}$log_file${RESET}" >&2
+		exit 1
+	fi
 
-  local pager="${PAGER:-less}"
-  "$pager" "$log_file"
+	local pager="${PAGER:-less}"
+	"$pager" "$log_file"
 }
 
 main() {
-  check_nixos
-  check_impermanence
+	check_nixos
+	check_impermanence
 
-  case "${1:-}" in
-    check)
-      shift
-      subcommand_check "$@"
-      ;;
-    diff)
-      shift
-      subcommand_diff "$@"
-      ;;
-    logs)
-      subcommand_logs
-      ;;
-    "")
-      echo -e "${RED}Error: Subcommand required${RESET}" >&2
-      echo -e "Run '${WHITE}nx impermanence --help${RESET}' for usage information." >&2
-      exit 1
-      ;;
-    *)
-      echo -e "${RED}Error: Unknown subcommand: ${WHITE}$1${RESET}" >&2
-      echo -e "Run '${WHITE}nx impermanence --help${RESET}' for usage information." >&2
-      exit 1
-      ;;
-  esac
+	case "${1:-}" in
+	check)
+		shift
+		subcommand_check "$@"
+		;;
+	diff)
+		shift
+		subcommand_diff "$@"
+		;;
+	logs)
+		subcommand_logs
+		;;
+	"")
+		echo -e "${RED}Error: Subcommand required${RESET}" >&2
+		echo -e "Run '${WHITE}nx impermanence --help${RESET}' for usage information." >&2
+		exit 1
+		;;
+	*)
+		echo -e "${RED}Error: Unknown subcommand: ${WHITE}$1${RESET}" >&2
+		echo -e "Run '${WHITE}nx impermanence --help${RESET}' for usage information." >&2
+		exit 1
+		;;
+	esac
 }
 main "$@"

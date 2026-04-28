@@ -11,8 +11,8 @@ check_deployment_conflicts "test"
 PROFILE="$(retrieve_active_profile)"
 
 if nh os test -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
-  notify_success "Test"
+	notify_success "Test"
 else
-  notify_error "Test"
-  exit 1
+	notify_error "Test"
+	exit 1
 fi

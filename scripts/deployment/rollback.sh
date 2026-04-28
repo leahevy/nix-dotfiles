@@ -11,8 +11,8 @@ check_git_worktrees_clean
 check_deployment_conflicts "rollback"
 
 if nh os rollback "${EXTRA_ARGS[@]:-}"; then
-  notify_success "Rollback"
+	notify_success "Rollback"
 else
-  notify_error "Rollback"
-  exit 1
+	notify_error "Rollback"
+	exit 1
 fi

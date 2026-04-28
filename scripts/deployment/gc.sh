@@ -6,17 +6,17 @@ simple_deployment_script_setup "gc"
 check_deployment_conflicts "gc"
 
 if [[ -e /etc/NIXOS ]]; then
-  if nh clean all; then
-    notify_success "GC"
-  else
-    notify_error "GC"
-    exit 1
-  fi
+	if nh clean all; then
+		notify_success "GC"
+	else
+		notify_error "GC"
+		exit 1
+	fi
 else
-  if nh clean user; then
-    notify_success "GC"
-  else
-    notify_error "GC"
-    exit 1
-  fi
+	if nh clean user; then
+		notify_success "GC"
+	else
+		notify_error "GC"
+		exit 1
+	fi
 fi
