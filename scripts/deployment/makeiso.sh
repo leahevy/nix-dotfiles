@@ -148,6 +148,7 @@ if [[ -n "$NXCORE_DIR" ]]; then
             echo -e "${RED}Passwords do not match, please try again${RESET}"
         done
 
+        echo
         echo -e "Exporting and encrypting git-crypt key for ISO..."
         PLAIN_KEY_FILE="$(mktemp)"
         if git-crypt export-key "$PLAIN_KEY_FILE"; then
@@ -155,14 +156,17 @@ if [[ -n "$NXCORE_DIR" ]]; then
                 shred -u "$PLAIN_KEY_FILE" 2>/dev/null || rm -f "$PLAIN_KEY_FILE"
                 PLAIN_KEY_FILE=""
                 unset GIT_CRYPT_PASS1 GIT_CRYPT_PASS2
+                echo
                 echo -e "${GREEN}Git-crypt key exported and encrypted successfully${RESET}"
             else
                 unset GIT_CRYPT_PASS1 GIT_CRYPT_PASS2
+                echo
                 echo -e "${RED}Error: Failed to encrypt git-crypt key${RESET}" >&2
                 exit 1
             fi
         else
             unset GIT_CRYPT_PASS1 GIT_CRYPT_PASS2
+            echo
             echo -e "${RED}Error: Failed to export git-crypt key${RESET}" >&2
             echo -e "Make sure the repository is unlocked and you have ${WHITE}git-crypt${RESET} installed" >&2
             exit 1
@@ -189,11 +193,13 @@ fi
 echo -e "Copying ISO image out of store to ${WHITE}$OUTPUT_DIR/$ISO_NAME${RESET}"
 mkdir -p "$OUTPUT_DIR"
 cp "$ISO_FILE" "$OUTPUT_DIR/$ISO_NAME"
+echo
 echo -e "${GREEN}ISO created: ${WHITE}$OUTPUT_DIR/$ISO_NAME${RESET}"
 
 echo -e "Generating SHA256 checksum..."
 cd "$OUTPUT_DIR"
 sha256sum "$ISO_NAME" > "$ISO_NAME.sha256"
+echo
 echo -e "${GREEN}Checksum created: ${WHITE}$OUTPUT_DIR/$ISO_NAME.sha256${RESET}"
 
 echo ""
