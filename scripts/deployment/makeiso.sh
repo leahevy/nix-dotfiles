@@ -129,18 +129,19 @@ if [[ -n "$NXCORE_DIR" ]]; then
     EXTRA_ARGS+=("--override-input" "core" "path:$NXCORE_DIR")
 
     if [[ -d "$REPO_ROOT/.git/git-crypt" ]]; then
+        echo
         echo -e "${GREEN}Detected git-crypt encryption in config repository${RESET}"
         echo
 
         while true; do
-            echo -e "Enter a password to protect the git-crypt key in the ISO:"
+            echo -e "${CYAN}Enter a password to protect the git-crypt key in the ISO:${RESET}"
             read -rs GIT_CRYPT_PASS1
             echo
             if [[ -z "$GIT_CRYPT_PASS1" ]]; then
                 echo -e "${RED}Password must not be empty${RESET}"
                 continue
             fi
-            echo -e "Confirm password:"
+            echo -e "${CYAN}Confirm password:${RESET}"
             read -rs GIT_CRYPT_PASS2
             echo
             if [[ "$GIT_CRYPT_PASS1" == "$GIT_CRYPT_PASS2" ]]; then
@@ -149,7 +150,7 @@ if [[ -n "$NXCORE_DIR" ]]; then
             echo -e "${RED}Passwords do not match, please try again${RESET}"
         done
 
-        echo -e "Exporting and encrypting git-crypt key for ISO..."
+        echo -e "${WHITE}Exporting and encrypting git-crypt key for ISO...{RESET}"
         PLAIN_KEY_FILE="$(mktemp)"
         if git-crypt export-key "$PLAIN_KEY_FILE"; then
             if openssl enc -aes-256-cbc -pbkdf2 -in "$PLAIN_KEY_FILE" -out "$REPO_ROOT/.git-crypt-key" -pass stdin <<< "$GIT_CRYPT_PASS1"; then
