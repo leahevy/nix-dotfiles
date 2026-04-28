@@ -803,7 +803,10 @@ args@{
                                   fi
 
                                   activity=false
-                                  if [[ "$effective_state" == "scanning" || "$effective_state" == "sync-preparing" || "$effective_state" == "syncing" ]]; then
+                                  if [[ "$effective_state" == "sync-preparing" || "$effective_state" == "syncing" ]]; then
+                                      activity=true
+                                  fi
+                                  if [[ "$effective_state" == "scanning" ]] && [[ "$prev_state" == "scanning" ]]; then
                                       activity=true
                                   fi
                                   if [[ "$prev_sequence" != "0" && "$sequence" != "$prev_sequence" ]]; then
