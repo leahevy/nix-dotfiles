@@ -75,6 +75,16 @@ args@{
           string = "Missing value on line [0-9]+ of /var/cache/cups/job\\.cache\\.";
         }
         {
+          service = "cups.service";
+          tag = "cupsd";
+          string = "Unable to queue job for destination ";
+        }
+        {
+          service = "cups.service";
+          tag = "cupsd";
+          string = "Files have gone away\\.";
+        }
+        {
           string = "^cups\\.socket$";
           service = "ensure-printers.service";
           tag = "systemctl";
