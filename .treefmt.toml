@@ -16,3 +16,8 @@ command = "isort"
 includes = [ "*.py" ]
 options = [ "--profile", "black" ]
 priority = 0
+
+[formatter.shell]
+command = "shfmt"
+includes = [ "*.sh" ]
+options = [ "-w", "-ln", "bash" ]

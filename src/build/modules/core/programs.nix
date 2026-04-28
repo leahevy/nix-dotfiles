@@ -39,6 +39,7 @@ args@{
           git
           htop
           vim
+          shfmt
           nixfmt-rfc-style
           nixfmt-tree
           nix-search
