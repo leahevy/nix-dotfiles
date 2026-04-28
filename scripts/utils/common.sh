@@ -1193,6 +1193,15 @@ run_bump() {
 	local push="$2"
 	local exit_cleanup="${3:-}"
 
+	if [[ "$push" == "true" ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
+		if [[ "$(git -C "$CONFIG_DIR" status --porcelain)" != "" ]]; then
+			echo -e "${RED}Error: bump-push requires a clean config worktree!${RESET}" >&2
+			echo
+			echo -e "${YELLOW}Commit or stash changes in ${WHITE}$CONFIG_DIR${YELLOW} and retry!${RESET}" >&2
+			return 1
+		fi
+	fi
+
 	if [[ "$commit" == "true" ]] && ! git diff --quiet HEAD -- flake.lock .label; then
 		echo -e "${YELLOW}Warning: flake.lock or .label already have local changes.${RESET}"
 		echo -e -n "${CYAN}Commit bump anyway? [${GREEN}y${CYAN}/${RED}N${CYAN}]${RESET} "
