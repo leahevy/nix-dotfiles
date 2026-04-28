@@ -25,6 +25,7 @@ args@{
     folderBasedMonitoringDeviceSyncInterval = 10;
     folderBasedMonitoringFolderInterval = 30;
     folderBasedMonitoringInitialDelay = 45;
+    debounceNotificationsSeconds = 30;
     devices = [ ];
   };
 
@@ -322,6 +323,8 @@ args@{
           DEVICE_SYNC_INTERVAL="${builtins.toString self.settings.folderBasedMonitoringDeviceSyncInterval}"
           FOLDER_INTERVAL="${builtins.toString self.settings.folderBasedMonitoringFolderInterval}"
           INITIAL_DELAY="${builtins.toString self.settings.folderBasedMonitoringInitialDelay}"
+          DEBOUNCE_SECONDS="${builtins.toString self.settings.debounceNotificationsSeconds}"
+          STATE_MAX_AGE_SECONDS=$(( DEBOUNCE_SECONDS * 10 ))
 
           declare -A DEVICE_NAMES
           ${lib.concatStringsSep "\n" (
@@ -335,6 +338,70 @@ args@{
           FIRST_CHECK_FILE="$STATE_DIR/first-check-done"
 
           mkdir -p "$STATE_DIR"
+
+          get_now_ts() {
+              date +%s
+          }
+
+          device_debounce_file() {
+              local device_id="$1"
+              echo "$STATE_DIR/debounce-device-$device_id"
+          }
+
+          folder_debounce_file() {
+              local folder_id="$1"
+              echo "$STATE_DIR/debounce-folder-$folder_id"
+          }
+
+          read_field() {
+              local file="$1"
+              local key="$2"
+              if [[ -f "$file" ]]; then
+                  ${pkgs.gnugrep}/bin/grep -E "^$key=" "$file" 2>/dev/null | head -n 1 | cut -d'=' -f2-
+              fi
+          }
+
+          write_sync_state() {
+              local file="$1"
+              local last_activity_ts="$2"
+              local started_sent="$3"
+              {
+                  echo "started_sent=$started_sent"
+                  echo "last_activity_ts=$last_activity_ts"
+              } > "$file"
+          }
+
+          clear_sync_state() {
+              local file="$1"
+              write_sync_state "$file" "0" "0"
+          }
+
+          prune_debounce_files() {
+              local prefix="$1"
+              local allowed_ids_file="$2"
+              local now_ts="$3"
+
+              local f=""
+              for f in "$STATE_DIR"/"$prefix"*; do
+                  [[ -e "$f" ]] || continue
+
+                  local base
+                  base="$(basename "$f")"
+                  local id="''${base#"$prefix"}"
+
+                  local mtime_ts=""
+                  mtime_ts="$(${pkgs.coreutils}/bin/stat -c %Y "$f" 2>/dev/null || echo "")"
+
+                  if [[ -n "$mtime_ts" ]] && (( now_ts - mtime_ts > STATE_MAX_AGE_SECONDS )); then
+                      rm -f "$f" 2>/dev/null || true
+                      continue
+                  fi
+
+                  if ! ${pkgs.gnugrep}/bin/grep -Fxq "$id" "$allowed_ids_file" 2>/dev/null; then
+                      rm -f "$f" 2>/dev/null || true
+                  fi
+              done
+          }
 
           if [[ ! -f "$API_KEY_FILE" ]] || [[ ! -r "$API_KEY_FILE" ]] || [[ ! -s "$API_KEY_FILE" ]]; then
               exit 0
@@ -378,7 +445,7 @@ args@{
               while read -r device_id; do
                   [[ -z "$device_id" ]] && continue
 
-                  if [[ -f "$DEVICE_STATE_FILE" ]] && ! grep -q "^$device_id=true$" "$DEVICE_STATE_FILE"; then
+                  if [[ -f "$DEVICE_STATE_FILE" ]] && ! ${pkgs.gnugrep}/bin/grep -q "^$device_id=true$" "$DEVICE_STATE_FILE"; then
                       continue
                   fi
 
@@ -424,6 +491,12 @@ args@{
               if curl -s -H @"$HEADER_FILE" "http://127.0.0.1:$SYNCTHING_GUI_PORT/rest/system/connections" > "$CONNECTIONS_FILE"; then
                   declare -A current_device_states
                   > "$DEVICE_STATE_FILE"
+
+                  ALLOWED_DEVICE_IDS_FILE="$TEMP_DIR/allowed-device-ids"
+                  if command -v jq >/dev/null 2>&1; then
+                      jq -r '.connections | keys[]' "$CONNECTIONS_FILE" 2>/dev/null | ${pkgs.coreutils}/bin/sort -u > "$ALLOWED_DEVICE_IDS_FILE" || true
+                      prune_debounce_files "debounce-device-" "$ALLOWED_DEVICE_IDS_FILE" "$(get_now_ts)"
+                  fi
 
                   if command -v jq >/dev/null 2>&1; then
                       while IFS='=' read -r device_id connected; do
@@ -536,48 +609,60 @@ args@{
                                       }}
                                   fi
                               else
-                                  prev_sync_status="''${prev_device_sync_states[$device_id]:-unknown}"
+                                  now_ts=$(get_now_ts)
+                                  debounce_file=$(device_debounce_file "$device_id")
+                                  last_activity_ts=$(read_field "$debounce_file" "last_activity_ts" || true)
+                                  started_sent=$(read_field "$debounce_file" "started_sent" || true)
 
-                                  if [[ "$prev_sync_status" != "$sync_status" ]]; then
-                                      device_display_name=$(get_device_display_name "$device_id")
-                                      case "$sync_status" in
-                                          "syncing")
-                                              if [[ "$prev_sync_status" == "idle" || "$prev_sync_status" == "unknown" ]]; then
-                                                  ${self.notifyUser {
-                                                    inherit pkgs;
-                                                    title = "Syncthing: Device Sync";
-                                                    body = "Started syncing: <b>$device_display_name</b>";
-                                                    icon = "syncthing";
-                                                    urgency = "normal";
-                                                    validation = { inherit config; };
-                                                  }}
-                                              fi
-                                              ;;
-                                          "idle")
-                                              if [[ "$prev_sync_status" == "syncing" ]]; then
-                                                  ${self.notifyUser {
-                                                    inherit pkgs;
-                                                    title = "Syncthing: Device Sync";
-                                                    body = "Completed syncing: <b>$device_display_name</b> (Up to Date)";
-                                                    icon = "syncthing";
-                                                    urgency = "normal";
-                                                    validation = { inherit config; };
-                                                  }}
-                                              fi
-                                              ;;
-                                      esac
-                                  else
-                                      prev_hash="''${prev_device_state_hashes[$device_id]:-0}"
-                                      if [[ "$prev_hash" != "0" && "$state_hash" != "$prev_hash" && "$sync_status" == "idle" ]]; then
-                                          device_display_name=$(get_device_display_name "$device_id")
+                                  if [[ -z "$last_activity_ts" ]]; then
+                                      last_activity_ts="0"
+                                  fi
+                                  if [[ -z "$started_sent" ]]; then
+                                      started_sent="0"
+                                  fi
+
+                                  prev_sync_status="''${prev_device_sync_states[$device_id]:-unknown}"
+                                  prev_hash="''${prev_device_state_hashes[$device_id]:-0}"
+
+                                  activity=false
+                                  if [[ "$sync_status" == "syncing" ]]; then
+                                      activity=true
+                                  fi
+                                  if [[ "$prev_sync_status" == "syncing" ]]; then
+                                      activity=true
+                                  fi
+                                  if [[ "$prev_hash" != "0" && "$state_hash" != "$prev_hash" ]]; then
+                                      activity=true
+                                  fi
+
+                                  device_display_name=$(get_device_display_name "$device_id")
+
+                                  if [[ "$activity" == "true" ]]; then
+                                      if [[ "$started_sent" == "0" ]]; then
                                           ${self.notifyUser {
                                             inherit pkgs;
                                             title = "Syncthing: Device Sync";
-                                            body = "Updated: <b>$device_display_name</b> (Up to Date)";
+                                            body = "Started syncing: <b>$device_display_name</b>";
                                             icon = "syncthing";
                                             urgency = "normal";
                                             validation = { inherit config; };
                                           }}
+                                          started_sent="1"
+                                      fi
+
+                                      last_activity_ts="$now_ts"
+                                      write_sync_state "$debounce_file" "$last_activity_ts" "$started_sent"
+                                  else
+                                      if [[ "$started_sent" == "1" ]] && [[ "$last_activity_ts" != "0" ]] && (( now_ts - last_activity_ts >= DEBOUNCE_SECONDS )); then
+                                          ${self.notifyUser {
+                                            inherit pkgs;
+                                            title = "Syncthing: Device Sync";
+                                            body = "Completed syncing: <b>$device_display_name</b> (Up to Date)";
+                                            icon = "syncthing";
+                                            urgency = "normal";
+                                            validation = { inherit config; };
+                                          }}
+                                          clear_sync_state "$debounce_file"
                                       fi
                                   fi
                               fi
@@ -610,6 +695,12 @@ args@{
               if curl -s -H @"$HEADER_FILE" "http://127.0.0.1:$SYNCTHING_GUI_PORT/rest/config/folders" > "$FOLDERS_FILE"; then
                   declare -A current_folder_states
                   > "$FOLDER_STATE_FILE"
+
+                  ALLOWED_FOLDER_IDS_FILE="$TEMP_DIR/allowed-folder-ids"
+                  if command -v jq >/dev/null 2>&1; then
+                      jq -r '.[] | .id' "$FOLDERS_FILE" 2>/dev/null | ${pkgs.coreutils}/bin/sort -u > "$ALLOWED_FOLDER_IDS_FILE" || true
+                      prune_debounce_files "debounce-folder-" "$ALLOWED_FOLDER_IDS_FILE" "$(get_now_ts)"
+                  fi
 
                   if command -v jq >/dev/null 2>&1; then
                       while IFS='|' read -r folder_id folder_label folder_path; do
@@ -671,35 +762,23 @@ args@{
                                       esac
                                   fi
                               else
+                                  now_ts=$(get_now_ts)
+                                  debounce_file=$(folder_debounce_file "$folder_id")
+                                  last_activity_ts=$(read_field "$debounce_file" "last_activity_ts" || true)
+                                  started_sent=$(read_field "$debounce_file" "started_sent" || true)
+
+                                  if [[ -z "$last_activity_ts" ]]; then
+                                      last_activity_ts="0"
+                                  fi
+                                  if [[ -z "$started_sent" ]]; then
+                                      started_sent="0"
+                                  fi
+
                                   prev_state="''${prev_folder_states[$folder_id]:-unknown}"
+                                  prev_sequence="''${prev_folder_sequences[$folder_id]:-0}"
 
                                   if [[ "$prev_state" != "$effective_state" ]]; then
                                       case "$effective_state" in
-                                          "scanning"|"sync-preparing"|"syncing")
-                                              if [[ "$prev_state" == "idle" || "$prev_state" == "unknown" ]]; then
-                                                  ${self.notifyUser {
-                                                    inherit pkgs;
-                                                    title = "Syncthing: Folder Sync";
-                                                    body = "Started: $folder_display";
-                                                    icon = "syncthing";
-                                                    urgency = "normal";
-                                                    validation = { inherit config; };
-                                                  }}
-                                              fi
-                                              ;;
-                                          "idle")
-                                              if [[ "$prev_state" == "scanning" || "$prev_state" == "sync-preparing" || "$prev_state" == "syncing" ]]; then
-                                                  sync_status=$(check_folder_device_sync_status "$folder_id")
-                                                  ${self.notifyUser {
-                                                    inherit pkgs;
-                                                    title = "Syncthing: Folder Sync";
-                                                    body = "Completed: $folder_display$sync_status";
-                                                    icon = "syncthing";
-                                                    urgency = "normal";
-                                                    validation = { inherit config; };
-                                                  }}
-                                              fi
-                                              ;;
                                           "error")
                                               ${self.notifyUser {
                                                 inherit pkgs;
@@ -721,18 +800,43 @@ args@{
                                               }}
                                               ;;
                                       esac
-                                  else
-                                      prev_sequence="''${prev_folder_sequences[$folder_id]:-0}"
-                                      if [[ "$prev_sequence" != "0" && "$sequence" != "$prev_sequence" && "$effective_state" == "idle" ]]; then
-                                          sync_status=$(check_folder_device_sync_status "$folder_id")
+                                  fi
+
+                                  activity=false
+                                  if [[ "$effective_state" == "scanning" || "$effective_state" == "sync-preparing" || "$effective_state" == "syncing" ]]; then
+                                      activity=true
+                                  fi
+                                  if [[ "$prev_sequence" != "0" && "$sequence" != "$prev_sequence" ]]; then
+                                      activity=true
+                                  fi
+
+                                  if [[ "$activity" == "true" ]]; then
+                                      if [[ "$started_sent" == "0" ]]; then
                                           ${self.notifyUser {
                                             inherit pkgs;
                                             title = "Syncthing: Folder Sync";
-                                            body = "Updated: $folder_display$sync_status";
+                                            body = "Started: $folder_display";
                                             icon = "syncthing";
                                             urgency = "normal";
                                             validation = { inherit config; };
                                           }}
+                                          started_sent="1"
+                                      fi
+
+                                      last_activity_ts="$now_ts"
+                                      write_sync_state "$debounce_file" "$last_activity_ts" "$started_sent"
+                                  else
+                                      if [[ "$started_sent" == "1" ]] && [[ "$last_activity_ts" != "0" ]] && (( now_ts - last_activity_ts >= DEBOUNCE_SECONDS )); then
+                                          sync_status=$(check_folder_device_sync_status "$folder_id")
+                                          ${self.notifyUser {
+                                            inherit pkgs;
+                                            title = "Syncthing: Folder Sync";
+                                            body = "Completed: $folder_display$sync_status";
+                                            icon = "syncthing";
+                                            urgency = "normal";
+                                            validation = { inherit config; };
+                                          }}
+                                          clear_sync_state "$debounce_file"
                                       fi
                                   fi
                               fi
