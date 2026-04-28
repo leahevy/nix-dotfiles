@@ -1364,7 +1364,6 @@ diff_store_paths() {
     local prefixes_require_reboot=(
       "nvidia-"
       "unit-plymouth-"
-      "unit-dbus-"
       "initrd-"
       "kmod-"
       "nixos-"
