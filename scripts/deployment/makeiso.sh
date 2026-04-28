@@ -107,6 +107,7 @@ PLAIN_KEY_FILE=""
 cleanup() {
   rm -rf "$TEMP_DIR"
   if [[ -f "$REPO_ROOT/.git-crypt-key" ]]; then
+    echo
     echo -e "${YELLOW}Cleaning up git-crypt key...${RESET}"
     rm -f "$REPO_ROOT/.git-crypt-key"
   fi
@@ -148,7 +149,6 @@ if [[ -n "$NXCORE_DIR" ]]; then
             echo -e "${RED}Passwords do not match, please try again${RESET}"
         done
 
-        echo
         echo -e "Exporting and encrypting git-crypt key for ISO..."
         PLAIN_KEY_FILE="$(mktemp)"
         if git-crypt export-key "$PLAIN_KEY_FILE"; then
@@ -158,6 +158,7 @@ if [[ -n "$NXCORE_DIR" ]]; then
                 unset GIT_CRYPT_PASS1 GIT_CRYPT_PASS2
                 echo
                 echo -e "${GREEN}Git-crypt key exported and encrypted successfully${RESET}"
+                echo
             else
                 unset GIT_CRYPT_PASS1 GIT_CRYPT_PASS2
                 echo
@@ -218,4 +219,3 @@ echo -e "  ${WHITE}sudo dd if=\"$OUTPUT_DIR/$ISO_NAME\" of=/dev/sdX bs=4M status
 echo ""
 echo -e "${YELLOW}Validate USB device data with:${RESET}"
 echo -e "  ${WHITE}sudo head -c \$(stat -c \"%s\" \"$OUTPUT_DIR/$ISO_NAME\") /dev/sdX | sha256sum${RESET}"
-echo ""
