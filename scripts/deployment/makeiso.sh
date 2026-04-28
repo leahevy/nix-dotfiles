@@ -48,12 +48,12 @@ else
 fi
 
 OUTPUT_DIR="$(pwd)/result"
-TIMEOUT=3600
+TIMEOUT=7200
 
 while [[ $# -gt 0 ]]; do
   case "${1:-}" in
     --timeout)
-      TIMEOUT="${2:-3600}"
+      TIMEOUT="${2:-7200}"
       shift 2
       ;;
     --output-dir)
@@ -75,7 +75,7 @@ while [[ $# -gt 0 ]]; do
       echo "The ISO is built for the current host architecture ($SYSTEM)."
       echo ""
       echo "Options:"
-      echo "  --timeout SECONDS              Build timeout in seconds (default: 3600)"
+      echo "  --timeout SECONDS              Build timeout in seconds (default: 7200)"
       echo "  --output-dir DIR               Output directory (default: ./result)"
       echo "  --offline                      Build without network access"
       echo "  --skip-verification            Skip commit signature verification"

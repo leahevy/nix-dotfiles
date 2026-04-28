@@ -492,6 +492,21 @@
         arguments = [ (arg "branch" "Branch to switch to" "gitBranch") ];
       };
 
+      makeiso = {
+        description = "Build a NixOS live ISO image";
+        group = "configuration";
+        modes = [
+          "local"
+          "develop"
+        ];
+        options = {
+          timeout = optionWithDefault "Build timeout in seconds" "seconds" "int" "7200";
+          output-dir = optionWith "Output directory for the ISO" "dir" "filepath";
+          offline = option "Build without network access";
+          skip-verification = option "Skip commit signature verification";
+        };
+      };
+
       bootstrap = {
         description = "Run bootstrap scripts for initial system setup";
         group = "bootstrap";
