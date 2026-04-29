@@ -27,6 +27,7 @@ args@{
         "nx-config"
         "homebrew"
         "profile"
+        "man"
       ];
       desktop = [
         "desktop"

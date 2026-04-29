@@ -26,6 +26,7 @@ args@{
         "preferences"
         "homebrew"
         "profile"
+        "man"
       ];
       desktop = [
         "desktop"

@@ -41,6 +41,11 @@ with lib;
     };
 
     settings = {
+      generateManCaches = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Whether to enable man-cache";
+      };
       shell = mkOption {
         type = (
           types.enum [
