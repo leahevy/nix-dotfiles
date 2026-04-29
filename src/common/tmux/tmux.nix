@@ -25,7 +25,6 @@ args@{
     statusFg = null;
     borderColor = null;
     activeBorderColor = null;
-    defaultShell = "fish";
     useTransparency = true;
     tmuxinatorConfigs = { };
     tmuxinatorPackage = helpers.requireMinimumPackageVersion args "tmuxinator" "3.3.7";
