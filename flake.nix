@@ -21,6 +21,11 @@
       flake = false;
     };
 
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nix-systems = {
       url = "github:nix-systems/default";
     };
@@ -148,9 +153,9 @@
       inputs.systems.follows = "nix-systems-darwin";
       inputs.flake-utils.follows = "flake-utils";
       inputs.flake-compat.follows = "flake-compat";
-      inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs-darwin";
+      inputs.treefmt-nix.follows = "treefmt-nix";
       inputs.cl-nix-lite.inputs.nixpkgs.follows = "nixpkgs-darwin";
-      inputs.cl-nix-lite.inputs.treefmt-nix.follows = "mac-app-util/treefmt-nix";
+      inputs.cl-nix-lite.inputs.treefmt-nix.follows = "treefmt-nix";
       inputs.cl-nix-lite.inputs.flake-parts.follows = "flake-parts";
       inputs.cl-nix-lite.inputs.systems.follows = "nix-systems";
     };
