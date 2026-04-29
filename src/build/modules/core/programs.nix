@@ -40,6 +40,7 @@ args@{
           htop
           vim
           shfmt
+          shellcheck
           nixfmt-rfc-style
           nixfmt-tree
           nix-search
