@@ -16,6 +16,7 @@ args@{
 
   settings = {
     enableTransience = true;
+    scanTimeout = 5000;
   };
 
   module = {
@@ -66,7 +67,7 @@ args@{
               "[└───](fg:${config.nx.preferences.theme.colors.separators.ultraDark.html})$directory$character"
             ];
             right_format = "";
-            scan_timeout = 50;
+            scan_timeout = self.settings.scanTimeout;
 
             time = {
               format = "[]($style)[ $time ]($style)";
