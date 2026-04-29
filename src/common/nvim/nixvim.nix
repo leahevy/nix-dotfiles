@@ -250,6 +250,7 @@ args@{
                 (lib.mkIf (self.isModuleEnabled "nvim-modules.copilot") [ "copilot.vim" ])
                 (lib.mkIf (self.isModuleEnabled "nvim-modules.luasnip") [ "friendly-snippets" ])
                 (lib.mkIf (self.isModuleEnabled "nvim-modules.rest") [ "rest.nvim" ])
+                (lib.mkIf (self.isModuleEnabled "nvim-modules.lsp") [ "conform.nvim" ])
                 (lib.mkIf (self.isModuleEnabled "nvim-modules.neotest") [
                   "neotest-python"
                   "neotest-rust"

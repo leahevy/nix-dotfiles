@@ -39,6 +39,65 @@ args@{
   module = {
     home = config: {
       programs.nixvim = {
+        plugins.conform-nvim = {
+          enable = true;
+
+          settings = {
+            formatters_by_ft = {
+              python = [
+                "isort"
+                "black"
+              ];
+              bash = [ "shfmt-bash" ];
+              sh = [ "shfmt" ];
+              nix = [ "nixfmt" ];
+            };
+
+            formatters = {
+              isort = {
+                command = lib.getExe pkgs.isort;
+                args = [
+                  "--profile"
+                  "black"
+                  "-"
+                ];
+              };
+
+              black = {
+                command = lib.getExe pkgs.black;
+                args = [
+                  "--quiet"
+                  "-"
+                ];
+              };
+
+              shfmt = {
+                command = lib.getExe pkgs.shfmt;
+                args = [
+                  "-filename"
+                  "$FILENAME"
+                  "-ln"
+                  "auto"
+                ];
+              };
+
+              shfmt-bash = {
+                command = lib.getExe pkgs.shfmt;
+                args = [
+                  "-filename"
+                  "$FILENAME"
+                  "-ln"
+                  "bash"
+                ];
+              };
+
+              nixfmt = {
+                command = lib.getExe pkgs.nixfmt-rfc-style;
+              };
+            };
+          };
+        };
+
         plugins.lspconfig = {
           enable = true;
         };
@@ -136,11 +195,6 @@ args@{
             nixd = lib.mkIf self.settings.enableNix {
               enable = true;
               package = pkgs.nixd;
-              config = {
-                formatting = {
-                  command = [ "treefmt" ];
-                };
-              };
             };
 
             rust_analyzer = lib.mkIf self.settings.enableRust {
@@ -335,7 +389,7 @@ args@{
               action.__raw = ''
                 function()
                   local filename = vim.fn.expand("%:t")
-                  vim.lsp.buf.format()
+                  require("conform").format()
                   vim.notify("File " .. filename .. " was formatted", vim.log.levels.INFO, {
                     icon = "📝",
                     title = "Formatting"
