@@ -16,6 +16,7 @@ let
       browser = [ "firefox" ];
       dev = [
         "conda"
+        "just"
         "poetry"
         "uv"
         "devenv"
