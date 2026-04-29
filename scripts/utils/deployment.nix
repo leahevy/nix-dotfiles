@@ -185,6 +185,7 @@
         group = "switch";
         scope = "integrated";
         system = "linux";
+        vmHost = "enabled";
         modes = [
           "develop"
           "local"

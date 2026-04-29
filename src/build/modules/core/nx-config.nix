@@ -24,6 +24,10 @@ args@{
         ];
         description = "Deployment mode for this machine";
       };
+      isVMHost = lib.mkOption {
+        type = lib.types.bool;
+        description = "Whether this host is configured to run VMs";
+      };
       minEnabledModules = lib.mkOption {
         type = lib.types.int;
         default = 10000;
@@ -57,13 +61,8 @@ args@{
   module = {
     enabled = config: {
       nx.global = self.variables.nx.config // {
-        deploymentMode =
-          if self ? host then
-            self.host.deploymentMode or "develop"
-          else if self ? user then
-            self.user.deploymentMode or "develop"
-          else
-            "develop";
+        deploymentMode = helpers.resolveFromHostOrUser config [ "deploymentMode" ] "develop";
+        isVMHost = helpers.resolveFromHostOrUser config [ "isVMHost" ] false;
       };
     };
 

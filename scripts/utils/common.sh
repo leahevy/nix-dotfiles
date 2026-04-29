@@ -118,6 +118,9 @@ get_nx_default() {
 	"deploymentMode")
 		echo "develop"
 		;;
+	"isVMHost")
+		echo "false"
+		;;
 	*)
 		echo ""
 		;;
@@ -1145,8 +1148,9 @@ load_nx_config() {
 	COMMIT_VERIFICATION_NXCORE=$(get_config_value "security.commitVerification.nxcore" "$config_json")
 	COMMIT_VERIFICATION_NXCONFIG=$(get_config_value "security.commitVerification.nxconfig" "$config_json")
 	NX_DEPLOYMENT_MODE=$(get_config_value "deploymentMode" "$config_json")
+	IS_VM_HOST=$(get_config_value "isVMHost" "$config_json")
 
-	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE
+	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE IS_VM_HOST
 }
 
 check_brew_activity() {

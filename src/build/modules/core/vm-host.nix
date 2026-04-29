@@ -23,6 +23,11 @@ args@{
         boot.kernelModules =
           lib.optional (self.host.hardware.cpu == "intel") "kvm-intel"
           ++ lib.optional (self.host.hardware.cpu == "amd") "kvm-amd";
+
+        environment.systemPackages = with pkgs; [
+          qemu
+          OVMF
+        ];
       };
     home =
       { config, ... }:

@@ -4,11 +4,17 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 INVOCATION_DIR="$(pwd)"
 deployment_script_setup "vm"
+load_nx_config
 
 umask 077
 
 if [[ "$(uname)" != "Linux" ]]; then
 	print_error "nx vm is only supported on Linux!"
+	exit 1
+fi
+
+if [[ "$IS_VM_HOST" == "false" ]]; then
+	print_error "Host is not configured to run VMs!"
 	exit 1
 fi
 

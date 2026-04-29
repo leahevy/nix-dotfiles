@@ -72,6 +72,7 @@ let
     system = if pkgs.stdenv.isDarwin then "darwin" else "linux";
     mode = host.deploymentMode or "develop";
     hasImpermanence = host.impermanence or false;
+    isVMHost = host.isVMHost or false;
   };
 
   nxCliEnabled = (host.deploymentMode or "develop") != "managed";

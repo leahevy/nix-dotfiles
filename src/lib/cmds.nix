@@ -6,6 +6,7 @@
   architectures,
   mode ? "develop",
   hasImpermanence ? false,
+  isVMHost ? false,
 }:
 
 let
@@ -194,6 +195,12 @@ let
       "disabled"
     ];
 
+    validVMHost = [
+      "always"
+      "enabled"
+      "disabled"
+    ];
+
     allowedCommandFields = [
       "description"
       "options"
@@ -205,6 +212,7 @@ let
       "group"
       "modes"
       "impermanence"
+      "vmHost"
     ];
 
     allowedOptionFields = [
@@ -334,6 +342,7 @@ let
       && assertFieldEnum "scope" validScopes cmd path
       && assertFieldEnum "system" validSystems cmd path
       && assertFieldEnum "impermanence" validImpermanence cmd path
+      && assertFieldEnum "vmHost" validVMHost cmd path
       && assertValidModes path cmd
       && all (x: x) (
         mapAttrsToList (n: o: assertValidOption "${path}.options.${n}" o) (cmd.options or { })
@@ -352,6 +361,7 @@ let
       && assertFieldEnum "scope" validScopes cmd path
       && assertFieldEnum "system" validSystems cmd path
       && assertFieldEnum "impermanence" validImpermanence cmd path
+      && assertFieldEnum "vmHost" validVMHost cmd path
       && assertValidModes path cmd
       && all (x: x) (
         mapAttrsToList (n: o: assertValidOption "${path}.options.${n}" o) (cmd.options or { })
@@ -499,11 +509,13 @@ let
           p = cmd.system or "both";
           m = cmd.modes or [ ];
           i = cmd.impermanence or "always";
+          v = cmd.vmHost or "always";
         in
         (s == "both" || s == scope)
         && (p == "both" || p == system)
         && (m == [ ] || elem mode m)
         && (i == "always" || (i == "enabled" && hasImpermanence) || (i == "disabled" && !hasImpermanence))
+        && (v == "always" || (v == "enabled" && isVMHost) || (v == "disabled" && !isVMHost))
       ) cmds;
 
     optArgEnumValues =
