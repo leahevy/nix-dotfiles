@@ -147,6 +147,10 @@ while [[ $# -gt 0 ]]; do
 		LIST_ALL=true
 		shift
 		;;
+	--timeout)
+		build_args+=("$1" "$2")
+		shift 2
+		;;
 	--diff | --show-derivation | --nixos | --standalone | --dry-run | --raw)
 		print_error "Option $1 is not supported for 'nx vm'"
 		exit 1
