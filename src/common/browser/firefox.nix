@@ -14,10 +14,8 @@ args@{
   group = "browser";
   input = "common";
 
-  requiredPlatforms = [ "linux" ];
-
   module = {
-    home = config: {
+    linux.home = config: {
       programs.firefox = {
         enable = true;
       };
@@ -38,6 +36,10 @@ args@{
           ".cache/mozilla/firefox"
         ];
       };
+    };
+
+    darwin.enabled = config: {
+      nx.homebrew.casks = [ "firefox" ];
     };
   };
 }

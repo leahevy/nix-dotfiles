@@ -13,6 +13,7 @@ let
     common = {
       graphics = [ "imagemagick" ];
       utils = [ "archive-tools" ];
+      browser = [ "firefox" ];
       dev = [
         "conda"
         "poetry"
@@ -89,7 +90,6 @@ let
       proton = [ "mail" ];
       photos = [ "ente" ];
       chat = [ "fluffychat" ];
-      browser = [ "firefox" ];
       dev = [ "vscodium" ];
       git = [
         "git-credential-manager"
@@ -131,7 +131,6 @@ let
     darwin = {
       core = [ "coreutils" ];
       browser = [
-        "firefox"
         "qutebrowser"
       ];
       chat = [
