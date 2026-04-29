@@ -1367,7 +1367,9 @@ diff_store_paths() {
 		"nixos-system-"
 		"etc-nx-theme-active-"
 	)
-	local paths_require_attention=()
+	local paths_require_attention=(
+		"etc-nx-impermanence-rollback-script"
+	)
 	local prefixes_require_attention=()
 	local suffixes_require_attention=()
 	local paths_require_reboot=(
@@ -1395,7 +1397,9 @@ diff_store_paths() {
 	local paths_changed_look_suspicious=()
 	local prefixes_changed_look_suspicious=()
 	local suffixes_changed_look_suspicious=()
-	local paths_removed_look_suspicious=()
+	local paths_removed_look_suspicious=(
+		"etc-nx-impermanence-rollback-script"
+	)
 	local prefixes_removed_look_suspicious=()
 	local suffixes_removed_look_suspicious=()
 

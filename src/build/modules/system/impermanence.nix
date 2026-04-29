@@ -315,6 +315,13 @@ in
         ];
 
         programs.fuse.userAllowOther = true;
+
+        environment.etc."nx/impermanence-rollback-script" = {
+          text = rollbackScript;
+          mode = "0444";
+          user = "root";
+          group = "root";
+        };
       };
 
     home =
