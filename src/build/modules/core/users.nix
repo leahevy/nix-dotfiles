@@ -80,24 +80,24 @@ in
             };
           };
           shell =
-            if (ifSet user.system.shell "bash") == "bash" then
+            if (ifSet user.system.loginShell "bash") == "bash" then
               pkgs.bash
-            else if (ifSet user.system.shell "bash") == "zsh" then
+            else if (ifSet user.system.loginShell "bash") == "zsh" then
               pkgs.zsh
-            else if (ifSet user.system.shell "bash") == "fish" then
+            else if (ifSet user.system.loginShell "bash") == "fish" then
               pkgs.fish
             else
-              throw "Shell is unknown: ${user.system.shell} for user: ${user.username}";
+              throw "Shell is unknown: ${user.system.loginShell} for user: ${user.username}";
           linger = ifSet user.system.systemdSessionAtBoot false;
           packages = (
-            if (ifSet user.system.shell "bash") == "bash" then
+            if (ifSet user.system.loginShell "bash") == "bash" then
               [ pkgs.bash ]
-            else if (ifSet user.system.shell "bash") == "zsh" then
+            else if (ifSet user.system.loginShell "bash") == "zsh" then
               [ pkgs.zsh ]
-            else if (ifSet user.system.shell "bash") == "fish" then
+            else if (ifSet user.system.loginShell "bash") == "fish" then
               [ pkgs.fish ]
             else
-              throw "Shell is unknown: ${user.system.shell} for user: ${user.username}"
+              throw "Shell is unknown: ${user.system.loginShell} for user: ${user.username}"
           );
         }) mergedUsers)
         // {

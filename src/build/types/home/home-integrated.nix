@@ -41,12 +41,17 @@ with lib;
         description = "Whether the user is a system user";
       };
 
-      shell = mkOption {
-        type = types.str;
+      loginShell = mkOption {
+        type = (
+          types.enum [
+            "fish"
+            "bash"
+            "zsh"
+          ]
+        );
         default = "zsh";
-        description = "The user's shell";
+        description = "Default login shell for the user";
       };
-
     };
 
     settings = {
