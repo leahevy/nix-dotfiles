@@ -19,7 +19,7 @@ args@{
       next = "J";
       prev = "K";
       quit = "q";
-      revision_message = "<C-m>";
+      revision_message = "<C-y>";
       commit = "<C-g>";
     };
 

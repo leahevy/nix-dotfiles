@@ -30,8 +30,8 @@ args@{
                       ("TAB" . 'copilot-accept-completion)
                       ("C-TAB" . 'copilot-accept-completion-by-word)
                       ("C-<tab>" . 'copilot-accept-completion-by-word)
-                      ("C-n" . 'copilot-next-completion)
-                      ("C-p" . 'copilot-previous-completion))
+                      ("C-b" . 'copilot-next-completion)
+                      ("C-o" . 'copilot-previous-completion))
 
           :config
           (add-to-list 'copilot-indentation-alist '(prog-mode 2))

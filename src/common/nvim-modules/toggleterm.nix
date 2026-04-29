@@ -57,7 +57,7 @@ args@{
           {
             mode = "t";
             key = "<Esc>";
-            action = "<C-\\><C-n>";
+            action = "<C-\\><C-b>";
             options = {
               silent = true;
               desc = "Exit terminal mode";

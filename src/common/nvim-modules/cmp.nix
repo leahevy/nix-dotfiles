@@ -148,9 +148,9 @@ args@{
                         (lib.mkIf
                           (!(self.isModuleEnabled "nvim-modules.copilot") && !(self.isModuleEnabled "nvim-modules.minuet"))
                           {
-                            "<C-n>" =
+                            "<C-b>" =
                               "cmp.mapping(function(fallback) if _G.should_disable_for_filetype(vim.bo.filetype) then if cmp.visible() then cmp.select_next_item() end elseif cmp.visible() then cmp.select_next_item() else cmp.complete() end end, { 'i', 's' })";
-                            "<C-p>" =
+                            "<C-o>" =
                               "cmp.mapping(function(fallback) if _G.should_disable_for_filetype(vim.bo.filetype) then if cmp.visible() then cmp.select_prev_item() end elseif cmp.visible() then cmp.select_prev_item() else cmp.complete() end end, { 'i', 's' })";
                           }
                         )
@@ -353,7 +353,7 @@ args@{
             _G.nx_modules["39-cmp-copilot"] = function()
               local cmp = require("cmp")
 
-              vim.keymap.set("i", "<C-n>", function()
+              vim.keymap.set("i", "<C-b>", function()
                 if _G.should_disable_for_filetype(vim.bo.filetype) then
                   if cmp.visible() then
                     cmp.select_next_item()
@@ -373,7 +373,7 @@ args@{
                 end
               end, { desc = "Next completion (dismiss copilot first)" })
 
-              vim.keymap.set("i", "<C-p>", function()
+              vim.keymap.set("i", "<C-o>", function()
                 if _G.should_disable_for_filetype(vim.bo.filetype) then
                   if cmp.visible() then
                     cmp.select_prev_item()
@@ -399,7 +399,7 @@ args@{
             _G.nx_modules["39-cmp-minuet"] = function()
               local cmp = require("cmp")
 
-              vim.keymap.set("i", "<C-n>", function()
+              vim.keymap.set("i", "<C-b>", function()
                 if _G.should_disable_for_filetype(vim.bo.filetype) then
                   if cmp.visible() then
                     cmp.select_next_item()
@@ -419,7 +419,7 @@ args@{
                 end
               end, { desc = "Next completion (dismiss minuet first)" })
 
-              vim.keymap.set("i", "<C-p>", function()
+              vim.keymap.set("i", "<C-o>", function()
                 if _G.should_disable_for_filetype(vim.bo.filetype) then
                   if cmp.visible() then
                     cmp.select_prev_item()
@@ -474,12 +474,12 @@ args@{
             _G.nx_modules["40-cmp-cmdline"] = function()
               local cmp = require("cmp")
 
-              vim.keymap.set('c', '<C-n>', '<Nop>', { silent = true })
-              vim.keymap.set('c', '<C-p>', '<Nop>', { silent = true })
+              vim.keymap.set('c', '<C-b>', '<Nop>', { silent = true })
+              vim.keymap.set('c', '<C-o>', '<Nop>', { silent = true })
 
               cmp.setup.cmdline({ "/", "?" }, {
                 mapping = cmp.mapping.preset.cmdline({
-                  ['<C-n>'] = {
+                  ['<C-b>'] = {
                     c = function(fallback)
                       if cmp.visible() then
                         cmp.select_next_item()
@@ -488,7 +488,7 @@ args@{
                       end
                     end,
                   },
-                  ['<C-p>'] = {
+                  ['<C-o>'] = {
                     c = function(fallback)
                       if cmp.visible() then
                         cmp.select_prev_item()
@@ -510,7 +510,7 @@ args@{
 
               cmp.setup.cmdline(":", {
                 mapping = cmp.mapping.preset.cmdline({
-                  ['<C-n>'] = {
+                  ['<C-b>'] = {
                     c = function(fallback)
                       if cmp.visible() then
                         cmp.select_next_item()
@@ -519,7 +519,7 @@ args@{
                       end
                     end,
                   },
-                  ['<C-p>'] = {
+                  ['<C-o>'] = {
                     c = function(fallback)
                       if cmp.visible() then
                         cmp.select_prev_item()
