@@ -776,17 +776,38 @@ rec {
     diskoDevices:
     let
       lvmVgs = diskoDevices.lvm_vg or { };
-    in
-    lib.flatten (
-      lib.mapAttrsToList (
-        vgName: vg:
+      disks = diskoDevices.disk or { };
+
+      fromLvm = lib.flatten (
         lib.mapAttrsToList (
-          lvName: lv:
-          if (lv.content.type or "") == "swap" && (lv.content.resumeDevice or false) == true then
-            [ "/dev/${vgName}/${lvName}" ]
-          else
-            [ ]
-        ) (vg.lvs or { })
-      ) lvmVgs
-    );
+          vgName: vg:
+          lib.mapAttrsToList (
+            lvName: lv:
+            if (lv.content.type or "") == "swap" && (lv.content.resumeDevice or false) == true then
+              [ "/dev/${vgName}/${lvName}" ]
+            else
+              [ ]
+          ) (vg.lvs or { })
+        ) lvmVgs
+      );
+
+      fromDiskPartitions = lib.flatten (
+        lib.mapAttrsToList (
+          _diskName: disk:
+          let
+            partitions = disk.content.partitions or { };
+          in
+          lib.mapAttrsToList (
+            _partName: part:
+            let
+              isSwap = (part.content.type or "") == "swap";
+              wantsResume = (part.content.resumeDevice or false) == true;
+              partDevice = part.device or null;
+            in
+            if isSwap && wantsResume && partDevice != null then [ partDevice ] else [ ]
+          ) partitions
+        ) disks
+      );
+    in
+    builtins.filter (d: d != null) (fromLvm ++ fromDiskPartitions);
 }
