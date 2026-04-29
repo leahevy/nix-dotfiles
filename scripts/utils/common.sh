@@ -1512,17 +1512,6 @@ diff_store_paths() {
 			matched_entries_require_reboot=()
 		fi
 
-		local print_warnings=0
-		if ((${#matched_entries_require_attention[@]} > 0 || ${#matched_entries_require_reboot[@]} > 0 || ${#matched_entries_look_suspicious[@]} > 0)); then
-			print_warnings=1
-		fi
-
-		if ((print_warnings)); then
-			echo
-			echo
-			echo -e "${CYAN}=== Attention! ===${RESET}"
-		fi
-
 		if ((${#matched_entries_require_attention[@]} > 0)); then
 			echo
 			echo -e "${YELLOW}== Requires review ==${RESET}"
@@ -1545,10 +1534,6 @@ diff_store_paths() {
 			for e in "${matched_entries_look_suspicious[@]+"${matched_entries_look_suspicious[@]}"}"; do
 				echo -e "  $e"
 			done
-		fi
-
-		if ((print_warnings)); then
-			echo
 		fi
 	}
 
@@ -1607,10 +1592,10 @@ diff_store_paths() {
 		hash="$(grep -m1 "	${name}$" "$new_file" | cut -f1)"
 		full_path="/nix/store/${hash}-${name}"
 		severity="$(_diff_store_paths_severity_for_name "$name" "added")"
-		entry="${GREEN}[A]${RESET} ${WHITE}${name}${RESET}  ${GRAY}${full_path}${RESET}"
+		entry="${GREEN}[A ]${RESET} ${WHITE}${name}${RESET}  ${GRAY}${full_path}${RESET}"
 		_diff_store_paths_record_match "$severity" "$full_path" "$entry"
 		[[ -n "$severity" ]] && continue
-		echo -e "${GREEN}[A]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
+		echo -e "${GREEN}[A ]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
 	done < <(comm -13 "$old_names" "$new_names") >>"$out_file"
 
 	while IFS= read -r name; do
@@ -1634,10 +1619,10 @@ diff_store_paths() {
 		hash="$(grep -m1 "	${name}$" "$old_file" | cut -f1)"
 		full_path="/nix/store/${hash}-${name}"
 		severity="$(_diff_store_paths_severity_for_name "$name" "removed")"
-		entry="${RED}[R]${RESET} ${WHITE}${name}${RESET}  ${GRAY}${full_path}${RESET}"
+		entry="${RED}[R ]${RESET} ${WHITE}${name}${RESET}  ${GRAY}${full_path}${RESET}"
 		_diff_store_paths_record_match "$severity" "$full_path" "$entry"
 		[[ -n "$severity" ]] && continue
-		echo -e "${RED}[R]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
+		echo -e "${RED}[R ]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
 	done < <(comm -23 "$old_names" "$new_names") >>"$out_file"
 
 	local changed_file
@@ -1734,11 +1719,27 @@ diff_store_paths() {
 			continue
 		fi
 
-		local severity
-		severity="$(_diff_store_paths_severity_for_name "$name" "changed")"
-		_diff_store_paths_record_match "$severity" "" "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
-		[[ -z "$severity" ]] && echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
-		if ((${#only_old[@]} == 1 && ${#only_new[@]} == 1)); then
+		local severity op header
+		if ((${#only_old[@]} > 0 && ${#only_new[@]} == 0)); then
+			op="removed"
+			header="${RED}[R${CYAN}-${RED}]${RESET} ${WHITE}${name}${RESET}"
+		elif ((${#only_old[@]} == 0 && ${#only_new[@]} > 0)); then
+			op="added"
+			header="${GREEN}[A${CYAN}+${GREEN}]${RESET} ${WHITE}${name}${RESET}"
+		else
+			op="changed"
+			if ((${#only_old[@]} == ${#only_new[@]})); then
+				header="${YELLOW}[C ]${RESET} ${WHITE}${name}${RESET}"
+			else
+				header="${YELLOW}[C${CYAN}~${YELLOW}]${RESET} ${WHITE}${name}${RESET}"
+			fi
+		fi
+
+		severity="$(_diff_store_paths_severity_for_name "$name" "$op")"
+		_diff_store_paths_record_match "$severity" "" "$header"
+		[[ -z "$severity" ]] && echo -e "$header"
+
+		if [[ "$op" == "changed" ]] && ((${#only_old[@]} == 1 && ${#only_new[@]} == 1)); then
 			_diff_store_paths_record_match "$severity" "/nix/store/${only_old[0]}-${name}" "    ${GRAY}/nix/store/${only_old[0]}-${name}${RESET} ${GRAY}/nix/store/${only_new[0]}-${name}${RESET}"
 			_diff_store_paths_record_match "$severity" "/nix/store/${only_new[0]}-${name}"
 			[[ -z "$severity" ]] && echo -e "    ${GRAY}/nix/store/${only_old[0]}-${name}${RESET} ${GRAY}/nix/store/${only_new[0]}-${name}${RESET}"
