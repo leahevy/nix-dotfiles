@@ -27,6 +27,8 @@ args@{
             '')
             ''
               PROMPT='%F{green}%*%f %F{blue}%~%f $ '
+            ''
+            (lib.mkIf (self.user.settings.shell == "fish") ''
 
               if [[ -z ''${__SHELL_BOOTSTRAPPED:-} ]]; then
                 [[ -o login ]] && LOGIN_OPTION="--login" || LOGIN_OPTION=""
@@ -45,7 +47,7 @@ args@{
                   fi
                 fi
               fi
-            ''
+            '')
           ];
         };
       };

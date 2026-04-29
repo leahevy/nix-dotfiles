@@ -41,6 +41,17 @@ with lib;
     };
 
     settings = {
+      shell = mkOption {
+        type = (
+          types.enum [
+            "fish"
+            "bash"
+            "zsh"
+          ]
+        );
+        default = "fish";
+        description = "Default shell for the user";
+      };
       desktopPreference = mkOption {
         type = (
           types.enum [

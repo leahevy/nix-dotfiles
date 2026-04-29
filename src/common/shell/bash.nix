@@ -21,7 +21,7 @@ args@{
         bash = {
           enable = true;
 
-          initExtra = ''
+          initExtra = lib.mkIf (self.user.settings.shell == "fish") ''
             if [[ -n ''${__SHELL_BOOTSTRAPPED:-} ]]; then
               return
             fi
