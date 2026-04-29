@@ -1609,6 +1609,7 @@ diff_store_paths() {
 		severity="$(_diff_store_paths_severity_for_name "$name" "added")"
 		entry="${GREEN}[A]${RESET} ${WHITE}${name}${RESET}  ${GRAY}${full_path}${RESET}"
 		_diff_store_paths_record_match "$severity" "$full_path" "$entry"
+		[[ -n "$severity" ]] && continue
 		echo -e "${GREEN}[A]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
 	done < <(comm -13 "$old_names" "$new_names") >>"$out_file"
 
@@ -1635,6 +1636,7 @@ diff_store_paths() {
 		severity="$(_diff_store_paths_severity_for_name "$name" "removed")"
 		entry="${RED}[R]${RESET} ${WHITE}${name}${RESET}  ${GRAY}${full_path}${RESET}"
 		_diff_store_paths_record_match "$severity" "$full_path" "$entry"
+		[[ -n "$severity" ]] && continue
 		echo -e "${RED}[R]${RESET} ${WHITE}${name}${RESET}  ${GRAY}/nix/store/${hash}-${name}${RESET}"
 	done < <(comm -23 "$old_names" "$new_names") >>"$out_file"
 
@@ -1735,19 +1737,19 @@ diff_store_paths() {
 		local severity
 		severity="$(_diff_store_paths_severity_for_name "$name" "changed")"
 		_diff_store_paths_record_match "$severity" "" "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
-		echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
+		[[ -z "$severity" ]] && echo -e "${YELLOW}[C]${RESET} ${WHITE}${name}${RESET}"
 		if ((${#only_old[@]} == 1 && ${#only_new[@]} == 1)); then
 			_diff_store_paths_record_match "$severity" "/nix/store/${only_old[0]}-${name}" "    ${GRAY}/nix/store/${only_old[0]}-${name}${RESET} ${GRAY}/nix/store/${only_new[0]}-${name}${RESET}"
 			_diff_store_paths_record_match "$severity" "/nix/store/${only_new[0]}-${name}"
-			echo -e "    ${GRAY}/nix/store/${only_old[0]}-${name}${RESET} ${GRAY}/nix/store/${only_new[0]}-${name}${RESET}"
+			[[ -z "$severity" ]] && echo -e "    ${GRAY}/nix/store/${only_old[0]}-${name}${RESET} ${GRAY}/nix/store/${only_new[0]}-${name}${RESET}"
 		else
 			for oh in "${only_old[@]+"${only_old[@]}"}"; do
 				_diff_store_paths_record_match "$severity" "/nix/store/${oh}-${name}" "    ${RED}old${RESET} ${GRAY}/nix/store/${oh}-${name}${RESET}"
-				echo -e "    ${RED}old${RESET} ${GRAY}/nix/store/${oh}-${name}${RESET}"
+				[[ -z "$severity" ]] && echo -e "    ${RED}old${RESET} ${GRAY}/nix/store/${oh}-${name}${RESET}"
 			done
 			for nh in "${only_new[@]+"${only_new[@]}"}"; do
 				_diff_store_paths_record_match "$severity" "/nix/store/${nh}-${name}" "    ${GREEN}new${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
-				echo -e "    ${GREEN}new${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
+				[[ -z "$severity" ]] && echo -e "    ${GREEN}new${RESET} ${GRAY}/nix/store/${nh}-${name}${RESET}"
 			done
 		fi
 	done <"$changed_file" >>"$out_file"
