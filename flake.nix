@@ -143,6 +143,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # -----------------------------------------------------------------------------
     # Third-party inputs (require manual review on update)
     # -----------------------------------------------------------------------------

@@ -48,6 +48,7 @@ let
           inputs.sops-nix.homeManagerModules.sops
           inputs.stylix.homeModules.stylix
           inputs.nixvim.homeModules.nixvim
+          inputs.nix-index-database.homeModules.default
         ]
         ++ (lib.optionals (helpers.isLinuxArch arch && isNiriDesktop) [
           inputs.niri-flake.homeModules.niri

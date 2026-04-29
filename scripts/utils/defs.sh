@@ -42,6 +42,7 @@ export AUTO_UPDATE_INPUTS=(
 	"flake-parts"
 	"flake-utils"
 	"flake-compat"
+	"nix-index-database"
 	"treefmt-nix"
 	"nirimation"
 	"solarized-everything-css"

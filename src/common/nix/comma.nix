@@ -16,11 +16,7 @@ args@{
 
   module = {
     home = config: {
-      home = {
-        packages = with pkgs; [
-          comma
-        ];
-      };
+      programs.nix-index-database.comma.enable = true;
     };
   };
 }
