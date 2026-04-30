@@ -159,6 +159,17 @@
     smartmontools
     pciutils
     usbutils
+    binutils
+    dieHook
+    expand-response-params
+    gcc
+    glibc
+    gmp
+    isl
+    libmpc
+    linuxHeaders
+    makeBinaryWrapper
+    mpfr
   ];
 
   systemd.services.nx-setup = {
