@@ -17,23 +17,7 @@ args@{
 
   submodules = {
     build = {
-      core = [
-        "programs"
-        "utils"
-        "tokens"
-        "sops"
-        "path"
-        "preferences"
-        "homebrew"
-        "profile"
-        "man"
-      ];
-      desktop = [
-        "desktop"
-        "terminal"
-      ];
-      system = [ "dummy-files" ] ++ (if self.host.impermanence or false then [ "impermanence" ] else [ ]);
-      theme = [ "theme-home" ];
+      system = (if self.host.impermanence or false then [ "impermanence" ] else [ ]);
     };
   };
 }

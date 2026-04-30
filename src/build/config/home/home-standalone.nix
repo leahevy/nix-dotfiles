@@ -17,6 +17,7 @@ let
     lib.recursiveUpdate
       {
         groups.build.home-standalone = true;
+        groups.build.shared = true;
       }
       (
         if user.addBaseGroup then

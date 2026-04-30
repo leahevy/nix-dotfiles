@@ -10,8 +10,8 @@ args@{
 }:
 {
   name = "nixos-anywhere";
-  group = "dev";
-  input = "common";
+  group = "inputs";
+  input = "build";
 
   disableOnVM = true;
 

@@ -15,26 +15,5 @@ args@{
   group = "build";
   input = "groups";
 
-  submodules = {
-    build = {
-      core = [
-        "programs"
-        "utils"
-        "tokens"
-        "sops"
-        "path"
-        "preferences"
-        "nx-config"
-        "homebrew"
-        "profile"
-        "man"
-      ];
-      desktop = [
-        "desktop"
-        "terminal"
-      ];
-      system = [ "dummy-files" ];
-      theme = [ "theme-home" ];
-    };
-  };
+  submodules = { };
 }

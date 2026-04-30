@@ -41,6 +41,11 @@ with lib;
     };
 
     settings = {
+      hasRemoteCommand = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Whether nx has the remote command and nixos-anywhere should be installed";
+      };
       generateManCaches = mkOption {
         type = types.bool;
         default = true;

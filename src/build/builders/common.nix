@@ -405,6 +405,7 @@ in
             {
               groups.build.nixos = true;
               groups.build.home-integrated = true;
+              groups.build.shared = true;
             }
             (
               if resolvedHost.addBaseGroup then
