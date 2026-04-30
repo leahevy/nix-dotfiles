@@ -372,16 +372,11 @@ in
         usesLvm = (diskoDevices.lvm_vg or { }) != { };
         withLuksOrLvm = usesLuks || usesLvm;
 
-        candidateDevices = lib.unique (
-          lib.flatten (
-            lib.mapAttrsToList (
-              _diskName: disk:
-              lib.mapAttrsToList (_partName: part: if part ? device then [ part.device ] else [ ]) (
-                disk.content.partitions or { }
-              )
-            ) (diskoDevices.disk or { })
-          )
-        );
+        persistFsDevice = (config.fileSystems.${self.persist} or { }).device or null;
+
+        candidateDevices = builtins.filter (d: d != null && d != "") [
+          persistFsDevice
+        ];
 
         rollbackScript = mkImpermanenceRollbackScript { inherit withLuksOrLvm candidateDevices; };
 
@@ -426,6 +421,10 @@ in
               (config.fileSystems.${self.persist} or { }) ? options
               && lib.elem "subvol=@persist" (config.fileSystems.${self.persist}.options or [ ]);
             message = "Impermanence requires fileSystems.${self.persist}.options to include subvol=@persist!";
+          }
+          {
+            assertion = withLuksOrLvm || (candidateDevices != [ ]);
+            message = "Impermanence rollback requires fileSystems.${self.persist}.device to be set for non-LUKS/LVM setups!";
           }
         ];
 
