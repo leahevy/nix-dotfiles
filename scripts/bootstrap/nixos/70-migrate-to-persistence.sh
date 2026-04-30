@@ -117,6 +117,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	IGNORE_SYSTEM_FILES=(
 		"/etc/.clean"
 		"/etc/kernel/entry-token"
+		"/etc/resolv.conf"
 		"/root/.nix-channels"
 		"/etc/group"
 		"/etc/passwd"
@@ -124,6 +125,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		"/etc/subuid"
 		"/etc/subgid"
 		"/etc/sudoers"
+		"/etc/nx/config.json"
+		"/etc/nx/impermanence-rollback-script"
 	)
 
 	IGNORE_USER_FILES=()
