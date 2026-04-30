@@ -329,6 +329,10 @@ rec {
             "sysinit.target"
             "systemd-sysusers.service"
             "systemd-tmpfiles-setup.service"
+            "suspend.target"
+            "hibernate.target"
+            "hybrid-sleep.target"
+            "sleep.target"
           ];
 
           excludeForVMUnits = [
@@ -336,10 +340,6 @@ rec {
             "autovt@tty1.service"
             "rc-local.service"
             "systemd-machined.service"
-            "suspend.target"
-            "hibernate.target"
-            "hybrid-sleep.target"
-            "sleep.target"
           ];
 
           activeExcludes =
