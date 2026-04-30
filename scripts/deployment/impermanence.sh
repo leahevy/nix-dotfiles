@@ -80,7 +80,7 @@ subcommand_check() {
 	done
 
 	local persist_system
-	persist_system=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist)
+	persist_system=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist 2>/dev/null)
 
 	if [[ "$show_home_only" == "true" && "$show_system_only" == "true" ]]; then
 		echo -e "${RED}Error: --home and --system cannot be used together${RESET}" >&2
@@ -192,7 +192,7 @@ subcommand_check() {
 
 	hostname="$(hostname)"
 	username="$(get_main_username)"
-	local persist_user_full="${persist_system}/home/$username"
+	local persist_user_key="${persist_system}"
 
 	local user_home="/home/$username"
 	if [[ -d "$CONFIG_DIR" ]]; then
@@ -221,21 +221,41 @@ subcommand_check() {
 		local full_profile
 		full_profile="$(construct_profile_name "$hostname")"
 
-		system_dirs="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-			".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".directories" 2>/dev/null |
-			jq -r '.[]?' 2>/dev/null || echo "")"
+		local system_dirs_json
+		if ! system_dirs_json="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+			".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".directories" \
+			--apply 'dirs: builtins.map (d: if builtins.typeOf d == "string" then d else d.directory) dirs' 2>/dev/null)"; then
+			echo -e "${RED}Error: Failed to evaluate system persistence directories!${RESET}" >&2
+			exit 1
+		fi
+		system_dirs="$(echo "$system_dirs_json" | jq -r '.[]?')"
 
-		system_files="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-			".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".files" 2>/dev/null |
-			jq -r '.[]?' 2>/dev/null || echo "")"
+		local system_files_json
+		if ! system_files_json="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+			".#nixosConfigurations.$full_profile.config.environment.persistence.\"$persist_system\".files" \
+			--apply 'files: builtins.map (f: if builtins.typeOf f == "string" then f else f.file) files' 2>/dev/null)"; then
+			echo -e "${RED}Error: Failed to evaluate system persistence files!${RESET}" >&2
+			exit 1
+		fi
+		system_files="$(echo "$system_files_json" | jq -r '.[]?')"
 
-		user_dirs="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-			".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".directories" 2>/dev/null |
-			jq -r '.[]?' 2>/dev/null || echo "")"
+		local user_dirs_json
+		if ! user_dirs_json="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+			".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_key\".directories" \
+			--apply 'dirs: builtins.map (d: if builtins.typeOf d == "string" then d else d.directory) dirs' 2>/dev/null)"; then
+			echo -e "${RED}Error: Failed to evaluate user persistence directories!${RESET}" >&2
+			exit 1
+		fi
+		user_dirs="$(echo "$user_dirs_json" | jq -r '.[]?')"
 
-		user_files="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-			".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_full\".files" 2>/dev/null |
-			jq -r '.[]?' 2>/dev/null || echo "")"
+		local user_files_json
+		if ! user_files_json="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+			".#nixosConfigurations.$full_profile.config.home-manager.users.$username.home.persistence.\"$persist_user_key\".files" \
+			--apply 'files: builtins.map (f: if builtins.typeOf f == "string" then f else f.file) files' 2>/dev/null)"; then
+			echo -e "${RED}Error: Failed to evaluate user persistence files!${RESET}" >&2
+			exit 1
+		fi
+		user_files="$(echo "$user_files_json" | jq -r '.[]?')"
 	fi
 
 	local ephemeral_items=()

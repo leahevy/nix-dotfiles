@@ -69,7 +69,10 @@ fi
 
 echo -e "${GREEN}Impermanence enabled, proceeding with persistence migration...${RESET}"
 
-PERSIST_SYSTEM=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist)
+if ! PERSIST_SYSTEM="$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist 2>/dev/null)"; then
+	echo -e "${RED}Error: Failed to evaluate persist path!${RESET}" >&2
+	exit 1
+fi
 
 if [[ ! -e "/mnt/etc/NIXOS" && ! -e "/mnt${PERSIST_SYSTEM}/etc/NIXOS" ]]; then
 	echo -e "${RED}Error: NixOS installation not found at ${WHITE}/mnt${RESET}" >&2
@@ -107,10 +110,7 @@ echo -e "${YELLOW}Migrating nixos-install generated files to persistence storage
 echo -e "${YELLOW}Main user: ${WHITE}$USERNAME${YELLOW} (UID: ${WHITE}$USER_UID${YELLOW}, GID: ${WHITE}$USER_GID${YELLOW})${RESET}"
 read -p "Continue? [y|N]: " -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-	PERSIST_USER_FULL="${PERSIST_SYSTEM}/home/$USERNAME"
-
-	echo -e "${WHITE}Creating persistence directory structure...${RESET}"
-	$DRY_RUN mkdir -p /mnt${PERSIST_SYSTEM}/home
+	PERSIST_USER_KEY="${PERSIST_SYSTEM}"
 
 	echo -e "Extracting persistence requirements from NixOS configuration..."
 
@@ -127,6 +127,47 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	)
 
 	IGNORE_USER_FILES=()
+
+	echo -e "${WHITE}Querying system persistence requirements...${RESET}"
+	SYSTEM_PERSIST_DIRS_JSON=""
+	if ! SYSTEM_PERSIST_DIRS_JSON="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+		".#nixosConfigurations.$FULL_PROFILE.config.environment.persistence.\"$PERSIST_SYSTEM\".directories" \
+		--apply 'dirs: builtins.map (d: if builtins.typeOf d == "string" then d else d.directory) dirs' 2>/dev/null)"; then
+		echo -e "${RED}Error: Failed to evaluate system persistence directories for ${WHITE}$HOSTNAME${RED}!${RESET}" >&2
+		exit 1
+	fi
+	SYSTEM_PERSIST_DIRS="$(echo "$SYSTEM_PERSIST_DIRS_JSON" | jq -r '.[]?')"
+
+	SYSTEM_PERSIST_FILES_JSON=""
+	if ! SYSTEM_PERSIST_FILES_JSON="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+		".#nixosConfigurations.$FULL_PROFILE.config.environment.persistence.\"$PERSIST_SYSTEM\".files" \
+		--apply 'files: builtins.map (f: if builtins.typeOf f == "string" then f else f.file) files' 2>/dev/null)"; then
+		echo -e "${RED}Error: Failed to evaluate system persistence files for ${WHITE}$HOSTNAME${RED}!${RESET}" >&2
+		exit 1
+	fi
+	SYSTEM_PERSIST_FILES="$(echo "$SYSTEM_PERSIST_FILES_JSON" | jq -r '.[]?')"
+
+	echo -e "Querying user persistence requirements for ${WHITE}$USERNAME${RESET}..."
+	USER_PERSIST_DIRS_JSON=""
+	if ! USER_PERSIST_DIRS_JSON="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+		".#nixosConfigurations.$FULL_PROFILE.config.home-manager.users.$USERNAME.home.persistence.\"$PERSIST_USER_KEY\".directories" \
+		--apply 'dirs: builtins.map (d: if builtins.typeOf d == "string" then d else d.directory) dirs' 2>/dev/null)"; then
+		echo -e "${RED}Error: Failed to evaluate user persistence directories for ${WHITE}$USERNAME${RED}!${RESET}" >&2
+		exit 1
+	fi
+	USER_PERSIST_DIRS="$(echo "$USER_PERSIST_DIRS_JSON" | jq -r '.[]?')"
+
+	USER_PERSIST_FILES_JSON=""
+	if ! USER_PERSIST_FILES_JSON="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
+		".#nixosConfigurations.$FULL_PROFILE.config.home-manager.users.$USERNAME.home.persistence.\"$PERSIST_USER_KEY\".files" \
+		--apply 'files: builtins.map (f: if builtins.typeOf f == "string" then f else f.file) files' 2>/dev/null)"; then
+		echo -e "${RED}Error: Failed to evaluate user persistence files for ${WHITE}$USERNAME${RED}!${RESET}" >&2
+		exit 1
+	fi
+	USER_PERSIST_FILES="$(echo "$USER_PERSIST_FILES_JSON" | jq -r '.[]?')"
+
+	echo -e "${WHITE}Creating persistence directory structure...${RESET}"
+	$DRY_RUN mkdir -p /mnt${PERSIST_SYSTEM}/home
 
 	migrate_system_directory() {
 		local dir="$1"
@@ -186,24 +227,6 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 			$DRY_RUN rm "$full_path"
 		fi
 	}
-
-	echo -e "${WHITE}Querying system persistence requirements...${RESET}"
-	SYSTEM_PERSIST_DIRS="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-		".#nixosConfigurations.$FULL_PROFILE.config.environment.persistence.\"$PERSIST_SYSTEM\".directories" 2>/dev/null |
-		jq -r '.[] | if type == "string" then . else .directory end' 2>/dev/null || echo "")"
-
-	SYSTEM_PERSIST_FILES="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-		".#nixosConfigurations.$FULL_PROFILE.config.environment.persistence.\"$PERSIST_SYSTEM\".files" 2>/dev/null |
-		jq -r '.[] | if type == "string" then . else .file end' 2>/dev/null || echo "")"
-
-	echo -e "Querying user persistence requirements for ${WHITE}$USERNAME${RESET}..."
-	USER_PERSIST_DIRS="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-		".#nixosConfigurations.$FULL_PROFILE.config.home-manager.users.$USERNAME.home.persistence.\"$PERSIST_USER_FULL\".directories" 2>/dev/null |
-		jq -r '.[] | if type == "string" then . else .directory end' 2>/dev/null || echo "")"
-
-	USER_PERSIST_FILES="$(nix eval --json --override-input core "path:$NXCORE_DIR" \
-		".#nixosConfigurations.$FULL_PROFILE.config.home-manager.users.$USERNAME.home.persistence.\"$PERSIST_USER_FULL\".files" 2>/dev/null |
-		jq -r '.[] | if type == "string" then . else .file end' 2>/dev/null || echo "")"
 
 	echo
 	echo -e "${WHITE}Migrating system directories...${RESET}"
