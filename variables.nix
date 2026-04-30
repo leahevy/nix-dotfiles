@@ -19,7 +19,7 @@
   configRepoIsoUrl = "";
   configRepoInstallUrl = "";
 
-  isoRootSSHPublicKey = null;
+  isoManagementSSHKey = null;
 
   allowedUnfreePackages = [ ];
 
