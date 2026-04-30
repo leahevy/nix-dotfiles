@@ -17,9 +17,18 @@ args@{
     let
       isLinux = self ? isLinux && self.isLinux;
       terminal = self.user.settings.terminal;
+      hasHost = self ? host && self.host != null;
+      hasUser = self ? user && self.user != null;
+      hasDesktop =
+        if hasHost then
+          self.host.settings.system.desktop != null
+        else if hasUser && self.user ? settings && self.user.settings ? desktop then
+          self.user.settings.desktop != null
+        else
+          false;
     in
     (
-      if isLinux && terminal == "ghostty" then
+      if isLinux && hasDesktop && terminal == "ghostty" then
         {
           linux = {
             terminal = {
@@ -29,7 +38,7 @@ args@{
             };
           };
         }
-      else if !isLinux && terminal == "ghostty" then
+      else if !isLinux && hasDesktop && terminal == "ghostty" then
         {
           darwin = {
             terminal = {
@@ -37,7 +46,7 @@ args@{
             };
           };
         }
-      else if terminal == "kitty" then
+      else if hasDesktop && terminal == "kitty" then
         {
           common = {
             terminal = {
@@ -49,7 +58,9 @@ args@{
         }
       else if terminal == null then
         { }
-      else
+      else if hasDesktop then
         throw "Unknown terminal setting: ${terminal}"
+      else
+        { }
     );
 }
