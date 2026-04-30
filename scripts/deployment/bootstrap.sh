@@ -51,7 +51,12 @@ case "$SUBCOMMAND" in
 	exit 0
 	;;
 nixos)
-	if [[ -e /etc/NIXOS ]]; then
+	if [[ ! -e /etc/NIXOS ]]; then
+		echo -e "${RED}Error: NixOS bootstrap scripts must be run on a NixOS system!${RESET}" >&2
+		exit 1
+	fi
+
+	if ! grep -q "^nixos:" /etc/passwd 2>/dev/null; then
 		echo -e "${RED}Error: NixOS is already installed on this system.${RESET}" >&2
 		echo -e "${RED}Bootstrap scripts are for fresh installations only.${RESET}" >&2
 		exit 1
