@@ -118,9 +118,6 @@ get_nx_default() {
 	"deploymentMode")
 		echo "develop"
 		;;
-	"isVMHost")
-		echo "false"
-		;;
 	*)
 		echo ""
 		;;
@@ -138,6 +135,12 @@ get_config_value() {
 	else
 		echo "$default_value"
 	fi
+}
+
+has_nx_command() {
+	local cmd="$1"
+	[[ "${NX_CONFIG_LOADED:-0}" != "1" ]] && load_nx_config
+	echo "${ENABLED_COMMANDS_JSON:-[]}" | jq -e --arg cmd "$cmd" 'index($cmd) != null' >/dev/null 2>&1
 }
 
 check_config_directory() {
@@ -1159,9 +1162,9 @@ load_nx_config() {
 	COMMIT_VERIFICATION_NXCORE=$(get_config_value "security.commitVerification.nxcore" "$config_json")
 	COMMIT_VERIFICATION_NXCONFIG=$(get_config_value "security.commitVerification.nxconfig" "$config_json")
 	NX_DEPLOYMENT_MODE=$(get_config_value "deploymentMode" "$config_json")
-	IS_VM_HOST=$(get_config_value "isVMHost" "$config_json")
+	ENABLED_COMMANDS_JSON=$(echo "${config_json:-{\}}" | jq -c '.enabledCommands // []' 2>/dev/null || echo "[]")
 
-	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE IS_VM_HOST
+	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE ENABLED_COMMANDS_JSON
 }
 
 check_brew_activity() {

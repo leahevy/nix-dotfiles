@@ -180,73 +180,12 @@
         options = commonDeploymentOptions;
       };
 
-      vm = {
-        description = "Build and run a NixOS VM";
-        group = "switch";
-        scope = "integrated";
-        system = "linux";
-        vmHost = "enabled";
-        modes = [
-          "develop"
-          "local"
-        ];
-        options = {
-          timeout = optionWithDefault "Set timeout in seconds" "seconds" "int" "7200";
-          profile = optionWith "Use specific profile" "profile" "string";
-          arch = optionWithEnum "Target architecture for cross-arch builds" "architecture" architectures;
-          show-trace = option "Show detailed Nix error traces";
-          allow-ifd = option "Allow import-from-derivation";
-          skip-verification = option "Skip commit signature verification";
-          keep = option "Save VM image with timestamp instead of using ephemeral storage";
-          no-run = option "Build VM image without starting it";
-          reuse-latest = option "Run the most recently saved image without rebuilding";
-          select = optionWith "Run a specific saved image by version name" "version" "string";
-          list = option "List all saved VM images for the current profile";
-          list-all = option "List all saved VM images for all profiles";
-          cleanup = option "Remove all cached VM images for the current profile";
-          cleanup-all = option "Remove all cached VM images for all profiles";
-          age-system-file = optionWith "Use system age key from file path (no sudo)" "system_path" "filepath";
-          age-user-file = optionWith "Use user age key from file path (no sudo)" "user_path" "filepath";
-          age-file = optionWith "Use same age key file for both system+user (no sudo)" "path" "filepath";
-          no-user-age = option "Skip passing a user age key to the VM";
-          dangerously-use-host-sops = option "Allow copying host SOPS age key into VM share via sudo";
-        };
-      };
-
       rollback = {
         description = "Rollback to previous configuration";
         group = "switch";
         scope = "integrated";
         options = {
           allow-dirty-git = option "Allow proceeding with uncommitted changes";
-        };
-      };
-
-      impermanence = {
-        description = "Manage ephemeral root filesystems";
-        group = "switch";
-        scope = "integrated";
-        impermanence = "enabled";
-        subcommands = {
-          check = {
-            description = "List files/directories in ephemeral root";
-            options = {
-              home = option "Show only paths under /home";
-              system = option "Show only system paths";
-              filter = optionRepeatable "Filter results by keyword" "keyword" "string";
-            };
-          };
-          diff = {
-            description = "Compare historical impermanence check logs";
-            options = {
-              range = optionWith "Compare with Nth previous log" "range" "int";
-              home = option "Compare only home check logs";
-              system = option "Compare only system check logs";
-            };
-          };
-          logs = {
-            description = "Show impermanence rollback logs";
-          };
         };
       };
 

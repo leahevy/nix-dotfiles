@@ -64,21 +64,23 @@ let
   profileInitModules = hostProfileModule.initModules ++ userProfileModule.initModules;
   profileContextModules = hostProfileModule.contextModules ++ userProfileModule.contextModules;
 
-  nxDef = import (inputs.lib + "/cmds.nix") {
-    inherit lib;
-    architectures = import inputs.nix-systems;
-    rootPath = defs.rootPath;
-    scope = "integrated";
-    system = if pkgs.stdenv.isDarwin then "darwin" else "linux";
-    mode = host.deploymentMode or "develop";
-    hasImpermanence = host.impermanence or false;
-    isVMHost = host.isVMHost or false;
-  };
+  mkNxDef =
+    extraCommands:
+    import (inputs.lib + "/cmds.nix") {
+      inherit lib extraCommands;
+      architectures = import inputs.nix-systems;
+      rootPath = defs.rootPath;
+      scope = "integrated";
+      system = if pkgs.stdenv.isDarwin then "darwin" else "linux";
+      mode = host.deploymentMode or "develop";
+    };
 
   nxCliEnabled = (host.deploymentMode or "develop") != "managed";
 in
 { config, options, ... }:
-
+let
+  nxDef = mkNxDef config.nx.commandline;
+in
 {
   imports =
     optionsModules

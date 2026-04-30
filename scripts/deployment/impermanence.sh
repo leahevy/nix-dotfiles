@@ -4,6 +4,11 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "impermanence"
 
+if ! has_nx_command "impermanence"; then
+	print_error "nx impermanence is not enabled on this machine!"
+	exit 1
+fi
+
 check_nixos() {
 	if [[ ! -f /etc/NIXOS ]]; then
 		echo -e "${RED}Error: This command only works on NixOS systems${RESET}" >&2

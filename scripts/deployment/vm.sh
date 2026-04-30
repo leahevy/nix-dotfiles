@@ -13,7 +13,7 @@ if [[ "$(uname)" != "Linux" ]]; then
 	exit 1
 fi
 
-if [[ "$IS_VM_HOST" == "false" ]]; then
+if ! has_nx_command "vm"; then
 	print_error "Host is not configured to run VMs!"
 	exit 1
 fi

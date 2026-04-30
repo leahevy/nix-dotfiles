@@ -331,6 +331,39 @@ in
   input = "build";
 
   module = {
+    enabled = config: {
+      nx.commandline.impermanence =
+        cmds:
+        let
+          inherit (cmds) option optionWith optionRepeatable;
+        in
+        {
+          description = "Manage ephemeral root filesystems";
+          group = "switch";
+          scope = "integrated";
+          subcommands = {
+            check = {
+              description = "List files/directories in ephemeral root";
+              options = {
+                home = option "Show only paths under /home";
+                system = option "Show only system paths";
+                filter = optionRepeatable "Filter results by keyword" "keyword" "string";
+              };
+            };
+            diff = {
+              description = "Compare historical impermanence check logs";
+              options = {
+                range = optionWith "Compare with Nth previous log" "range" "int";
+                home = option "Compare only home check logs";
+                system = option "Compare only system check logs";
+              };
+            };
+            logs = {
+              description = "Show impermanence rollback logs";
+            };
+          };
+        };
+    };
     system =
       config:
       let

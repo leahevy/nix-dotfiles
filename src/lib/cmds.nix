@@ -5,8 +5,7 @@
   system,
   architectures,
   mode ? "develop",
-  hasImpermanence ? false,
-  isVMHost ? false,
+  extraCommands ? { },
 }:
 
 let
@@ -109,6 +108,21 @@ let
 
   inherit (sharedOptions) helpOption commonDeploymentOptions gitOptions;
 
+  cmdsLib = {
+    inherit
+      option
+      optionWith
+      optionWithDefault
+      optionWithEnum
+      optionRepeatable
+      arg
+      argVariadic
+      commonDeploymentOptions
+      gitOptions
+      architectures
+      ;
+  };
+
   deploymentSpec = import (rootPath + "/scripts/utils/deployment.nix") {
     inherit
       architectures
@@ -130,6 +144,14 @@ let
     groups
     nx
     ;
+
+  resolvedExtraCommands = builtins.mapAttrs (
+    _: v: if builtins.isFunction v then v cmdsLib else v
+  ) extraCommands;
+
+  nxWithExtra = nx // {
+    subcommands = nx.subcommands // resolvedExtraCommands;
+  };
 
   defs = import ./defs.nix { inherit lib; };
   gitRepoPath = "~/${defs.nxConfigPath}/${defs.coreDirName}";
@@ -189,18 +211,6 @@ let
       "develop"
     ];
 
-    validImpermanence = [
-      "always"
-      "enabled"
-      "disabled"
-    ];
-
-    validVMHost = [
-      "always"
-      "enabled"
-      "disabled"
-    ];
-
     allowedCommandFields = [
       "description"
       "options"
@@ -211,8 +221,6 @@ let
       "system"
       "group"
       "modes"
-      "impermanence"
-      "vmHost"
     ];
 
     allowedOptionFields = [
@@ -341,8 +349,6 @@ let
       && assertRequiredFields [ "description" ] cmd path
       && assertFieldEnum "scope" validScopes cmd path
       && assertFieldEnum "system" validSystems cmd path
-      && assertFieldEnum "impermanence" validImpermanence cmd path
-      && assertFieldEnum "vmHost" validVMHost cmd path
       && assertValidModes path cmd
       && all (x: x) (
         mapAttrsToList (n: o: assertValidOption "${path}.options.${n}" o) (cmd.options or { })
@@ -360,8 +366,6 @@ let
       && assertRequiredFields [ "description" ] cmd path
       && assertFieldEnum "scope" validScopes cmd path
       && assertFieldEnum "system" validSystems cmd path
-      && assertFieldEnum "impermanence" validImpermanence cmd path
-      && assertFieldEnum "vmHost" validVMHost cmd path
       && assertValidModes path cmd
       && all (x: x) (
         mapAttrsToList (n: o: assertValidOption "${path}.options.${n}" o) (cmd.options or { })
@@ -508,14 +512,8 @@ let
           s = cmd.scope or "both";
           p = cmd.system or "both";
           m = cmd.modes or [ ];
-          i = cmd.impermanence or "always";
-          v = cmd.vmHost or "always";
         in
-        (s == "both" || s == scope)
-        && (p == "both" || p == system)
-        && (m == [ ] || elem mode m)
-        && (i == "always" || (i == "enabled" && hasImpermanence) || (i == "disabled" && !hasImpermanence))
-        && (v == "always" || (v == "enabled" && isVMHost) || (v == "disabled" && !isVMHost))
+        (s == "both" || s == scope) && (p == "both" || p == system) && (m == [ ] || elem mode m)
       ) cmds;
 
     optArgEnumValues =
@@ -589,11 +587,11 @@ let
 
   nxValidated =
     assert assertValidGroupStructure groups;
-    assert assertNoReservedOptions "nx" nx;
-    assert assertValidCommand "nx" nx;
-    assert assertValidGroups "nx" nx (map (g: g.id) groups);
-    assert assertUniqueShortFlags "nx" nx;
-    injectHelpOptions (filterTree nx);
+    assert assertNoReservedOptions "nx" nxWithExtra;
+    assert assertValidCommand "nx" nxWithExtra;
+    assert assertValidGroups "nx" nxWithExtra (map (g: g.id) groups);
+    assert assertUniqueShortFlags "nx" nxWithExtra;
+    injectHelpOptions (filterTree nxWithExtra);
 
   outputs = {
     bash =
