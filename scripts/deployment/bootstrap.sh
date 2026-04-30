@@ -159,9 +159,9 @@ if [[ $# -gt 0 ]]; then
 	echo -e "  args: ${WHITE}$*${RESET}"
 fi
 echo
-read -p "Continue? [Y|n]: " -n 1 -r
+read -p "Continue? [Y|n]: " -r
 echo
-if [[ $REPLY =~ ^[Nn]$ ]]; then
+if [[ -n "$REPLY" && ! "$REPLY" =~ ^([Yy]([Ee][Ss])?)$ ]]; then
 	echo -e "${YELLOW}Aborted.${RESET}"
 	exit 0
 fi
