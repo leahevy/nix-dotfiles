@@ -35,6 +35,10 @@
     openssh.authorizedKeys.keys = [ variables.isoManagementSSHKey ];
   };
 
+  users.users.nixos = lib.mkIf (variables.isoManagementSSHKey != null) {
+    openssh.authorizedKeys.keys = [ variables.isoManagementSSHKey ];
+  };
+
   security.sudo.wheelNeedsPassword = false;
 
   environment.interactiveShellInit = ''
