@@ -4,10 +4,12 @@ set -euo pipefail
 NX_SPEC=""
 
 if [[ "$UID" == 0 ]]; then
-  RED='\033[1;31m'
-  RESET='\033[0m'
-  echo -e "${RED}Error: Do not run directly as root due to config dir resolution${RESET}" >&2
-  exit 1
+  if ! grep -q "^nixos:" /etc/passwd 2>/dev/null; then
+    RED='\033[1;31m'
+    RESET='\033[0m'
+    echo -e "${RED}Error: Do not run directly as root due to config dir resolution${RESET}" >&2
+    exit 1
+  fi
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

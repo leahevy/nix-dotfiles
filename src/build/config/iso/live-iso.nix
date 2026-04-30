@@ -48,7 +48,6 @@
 
     alias ll='ls -la'
     alias la='ls -la'
-    alias nx='/nxcore/nx'
 
     if [ "$USER" = "nixos" ] && [ -z "$NX_STARTUP_CHECKED" ]; then
       export NX_STARTUP_CHECKED=1
@@ -127,6 +126,11 @@
   systemd.services.networkd-dispatcher.enable = false;
 
   environment.systemPackages = with pkgs; [
+    (pkgs.writeShellScriptBin "nx" ''
+      export ACTUAL_PWD="$PWD"
+      cd /nxcore
+      exec /nxcore/nx "$@"
+    '')
     git
     htop
     vim
