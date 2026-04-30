@@ -351,6 +351,11 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo -e "${GREEN}Persistent structure created:${RESET}"
 	echo -e "  ${WHITE}${PERSIST_SYSTEM}/${RESET}         - System files/directories"
 	echo -e "  ${WHITE}${PERSIST_SYSTEM}/home/${RESET}    - User files/directories"
+
+	if ((IS_DRY_RUN)); then
+		echo
+		echo -e "${YELLOW}WARNING: This was a dry run - no changes were made!${RESET}"
+	fi
 else
 	exit 0
 fi
