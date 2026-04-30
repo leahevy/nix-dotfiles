@@ -69,13 +69,13 @@ nixos)
 
 	if [[ -z "$SCRIPT_NAME" ]]; then
 		echo -e "${CYAN}Available nixos bootstrap scripts:${RESET}"
-		echo -e "   ${WHITE}decrypt${RESET}                   00-decrypt.sh"
-		echo -e "   ${WHITE}fetch-latest-config${RESET}       10-fetch-latest-config.sh"
-		echo -e "   ${WHITE}disk-format${RESET} <hostname>    20-disk-format.sh"
-		echo -e "   ${WHITE}mount${RESET} <hostname>          30-mount.sh"
-		echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]  40-create-profile-stub.sh"
-		echo -e "   ${WHITE}nixos-create-sops-key${RESET} <hostname>  50-nixos-create-sops-key.sh"
-		echo -e "   ${WHITE}nixos-install${RESET} <hostname>  60-nixos-install.sh"
+		echo -e "   ${WHITE}decrypt${RESET}                                        00-decrypt.sh"
+		echo -e "   ${WHITE}fetch-latest-config${RESET}                            10-fetch-latest-config.sh"
+		echo -e "   ${WHITE}disk-format${RESET} <hostname>                         20-disk-format.sh"
+		echo -e "   ${WHITE}mount${RESET} <hostname>                               30-mount.sh"
+		echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]     40-create-profile-stub.sh"
+		echo -e "   ${WHITE}nixos-create-sops-key${RESET} <hostname>               50-nixos-create-sops-key.sh"
+		echo -e "   ${WHITE}nixos-install${RESET} <hostname>                       60-nixos-install.sh"
 		echo -e "   ${WHITE}migrate-to-persistence${RESET} <hostname> [--dry-run]  70-migrate-to-persistence.sh"
 		exit 0
 	fi
