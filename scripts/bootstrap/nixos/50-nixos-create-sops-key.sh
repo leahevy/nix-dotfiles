@@ -49,7 +49,7 @@ if [[ -z "$USERNAME" || "$USERNAME" == "null" || "$USERNAME" == "\"null\"" ]]; t
 fi
 USERNAME="${USERNAME//\"/}"
 
-echo -e "${MAGENTA}You are about to create SOPS keys and prepare for NixOS installation for host ${WHITE}$HOSTNAME${GREEN} with admin user '${WHITE}$USERNAME${GREEN}'${RESET}"
+echo -e "${YELLOW}You are about to create SOPS keys and prepare for NixOS installation for host ${WHITE}$HOSTNAME${GREEN} with admin user '${WHITE}$USERNAME${GREEN}'${RESET}"
 read -p "Continue? [y|N]: " -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo -e "\n"
@@ -133,8 +133,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo
 	echo -e "${GREEN}SOPS keys preparation completed successfully.${RESET}"
 	echo
-	echo -e "${MAGENTA}Next steps:${RESET}"
-	echo -e "${MAGENTA}1. Re-encrypt the config directory with the new SOPS key.${RESET}"
-	echo -e "${MAGENTA}2. Pull the updated config directory on this host.${RESET}"
-	echo -e "${MAGENTA}3. You can then run ${WHITE}60-nixos-install.sh${MAGENTA} to proceed with the installation.${RESET}"
+	echo -e "${YELLOW}Next steps:${RESET}"
+	echo -e "${YELLOW}1. Re-encrypt the config directory with the new SOPS key.${RESET}"
+	echo -e "${YELLOW}2. Pull the updated config directory on this host.${RESET}"
+	echo -e "${YELLOW}3. You can then run ${WHITE}60-nixos-install.sh${YELLOW} to proceed with the installation.${RESET}"
 fi

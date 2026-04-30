@@ -62,8 +62,8 @@ if ./result/activate; then
 	echo >&2
 	echo -e "${GREEN}Configuration activated successfully!${RESET}" >&2
 	echo >&2
-	echo -e "${MAGENTA}Next steps:${RESET}" >&2
-	echo -e "${MAGENTA}  - Restart the whole system to ensure that everything is applied correctly!${RESET}" >&2
+	echo -e "${YELLOW}Next steps:${RESET}" >&2
+	echo -e "${YELLOW}  - Restart the whole system to ensure that everything is applied correctly!${RESET}" >&2
 else
 	CLEANUP_RESULT=0
 	echo >&2
@@ -74,10 +74,10 @@ else
 	echo -e "${YELLOW}   - ${WHITE}$HOME/.profile${RESET}" >&2
 	echo -e "${YELLOW}   - ${WHITE}$HOME/.config/user-dirs.dirs${RESET}" >&2
 	echo >&2
-	echo -e "${MAGENTA}If this is the case:${RESET}" >&2
-	echo -e "${MAGENTA}  1. Remove the files and then run manually ${WHITE}$(pwd)/result/activate${RESET}" >&2
-	echo -e "${MAGENTA}  2. Then manually remove the folder/symlink: ${WHITE}rm -rf $(pwd)/result${RESET}" >&2
-	echo -e "${MAGENTA}  3. Restart the whole system to ensure that everything will be applied correctly!${RESET}" >&2
+	echo -e "${YELLOW}If this is the case:${RESET}" >&2
+	echo -e "${YELLOW}  1. Remove the files and then run manually ${WHITE}$(pwd)/result/activate${RESET}" >&2
+	echo -e "${YELLOW}  2. Then manually remove the folder/symlink: ${WHITE}rm -rf $(pwd)/result${RESET}" >&2
+	echo -e "${YELLOW}  3. Restart the whole system to ensure that everything will be applied correctly!${RESET}" >&2
 fi
 
 echo >&2

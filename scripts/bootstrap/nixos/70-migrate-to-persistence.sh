@@ -103,8 +103,8 @@ fi
 USER_GID="${USER_GID//\"/}"
 
 echo
-echo -e "${MAGENTA}Migrating nixos-install generated files to persistence storage...${RESET}"
-echo -e "${MAGENTA}Main user: ${WHITE}$USERNAME${MAGENTA} (UID: ${WHITE}$USER_UID${MAGENTA}, GID: ${WHITE}$USER_GID${MAGENTA})${RESET}"
+echo -e "${YELLOW}Migrating nixos-install generated files to persistence storage...${RESET}"
+echo -e "${YELLOW}Main user: ${WHITE}$USERNAME${YELLOW} (UID: ${WHITE}$USER_UID${YELLOW}, GID: ${WHITE}$USER_GID${YELLOW})${RESET}"
 read -p "Continue? [y|N]: " -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
 	PERSIST_USER_FULL="${PERSIST_SYSTEM}/home/$USERNAME"

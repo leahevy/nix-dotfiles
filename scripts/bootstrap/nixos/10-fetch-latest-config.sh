@@ -62,7 +62,7 @@ fi
 echo
 echo -e "${GREEN}Fetching latest config repository...${RESET}"
 while true; do
-	echo -e "${MAGENTA}You will be prompted for credentials if needed${RESET}"
+	echo -e "${YELLOW}You will be prompted for credentials if needed${RESET}"
 
 	if git fetch origin main; then
 		echo -e "${GREEN}Fetch successful!${RESET}"
@@ -74,7 +74,7 @@ while true; do
 		echo -e "${YELLOW}- Network issues${RESET}"
 		echo -e "${YELLOW}- Repository access issues${RESET}"
 		echo
-		echo -e "${MAGENTA}Try again? (y/n)${RESET}"
+		echo -e "${YELLOW}Try again? (y/n)${RESET}"
 		read -r retry
 		if [[ "$retry" != "y" && "$retry" != "Y" ]]; then
 			echo -e "${YELLOW}Aborted by user${RESET}"

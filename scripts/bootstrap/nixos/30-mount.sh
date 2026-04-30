@@ -45,7 +45,7 @@ if mountpoint -q /mnt; then
 
 	if [[ -e "/mnt/etc/NIXOS" ]]; then
 		echo -e "${YELLOW}The mounted filesystem appears to contain a NixOS installation.${RESET}" >&2
-		echo -e "${MAGENTA}Do you want to proceed with the existing mount?${RESET}"
+		echo -e "${YELLOW}Do you want to proceed with the existing mount?${RESET}"
 		read -p "Continue? [Y|n]: " -n 1 -r
 		echo
 		if [[ ! $REPLY =~ ^[Nn]$ ]]; then
@@ -54,7 +54,7 @@ if mountpoint -q /mnt; then
 		fi
 	fi
 
-	echo -e "${MAGENTA}Do you want to unmount first?${RESET}"
+	echo -e "${YELLOW}Do you want to unmount first?${RESET}"
 	read -p "Continue? [y|N]: " -n 1 -r
 	if [[ $REPLY =~ ^[Yy]$ ]]; then
 		echo -e "\n"
@@ -72,7 +72,7 @@ fi
 echo -e "Mounting existing filesystem from ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/disk.nix${RESET}"
 echo -e "${GREEN}This will mount the existing partitions WITHOUT formatting or destroying data.${RESET}"
 echo
-echo -e "${MAGENTA}Do you want to proceed with mounting?${RESET}"
+echo -e "${YELLOW}Do you want to proceed with mounting?${RESET}"
 read -p "Continue? [y|N]: " -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo -e "\n"

@@ -40,7 +40,7 @@ done
 if [[ -z "$HOSTNAME" ]]; then
 	DETECTED_HOSTNAME="$(hostname)"
 	echo -e "${YELLOW}No hostname provided.${RESET}"
-	echo -e "${MAGENTA}Use detected hostname '${WHITE}$DETECTED_HOSTNAME${MAGENTA}'?${RESET}"
+	echo -e "${YELLOW}Use detected hostname '${WHITE}$DETECTED_HOSTNAME${YELLOW}'?${RESET}"
 	read -p "Continue? [y|N]: " -n 1 -r
 	echo
 	if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -60,7 +60,7 @@ PROFILE_DIR="$CONFIG_DIR/profiles/nixos/$HOSTNAME"
 OVERWRITE_PROFILE=true
 if [[ -d "$PROFILE_DIR" ]]; then
 	echo -e "${YELLOW}Warning: Profile directory $PROFILE_DIR already exists!${RESET}" >&2
-	echo -e "${MAGENTA}Do you want to overwrite it?${RESET}"
+	echo -e "${YELLOW}Do you want to overwrite it?${RESET}"
 	read -p "Continue? [y|N]: " -n 1 -r
 	echo
 	if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -365,7 +365,7 @@ else
 fi
 
 echo
-echo -e "${MAGENTA}Next steps:${RESET}"
-echo -e "${MAGENTA}   1. Edit ${WHITE}$PROFILE_DIR/$HOSTNAME.nix${MAGENTA} to set ${WHITE}mainUser${MAGENTA}, ${WHITE}additionalUsers${MAGENTA}, and ${WHITE}ethernetDeviceName${RESET}"
-echo -e "${MAGENTA}   2. Configure modules and settings as needed${RESET}"
-echo -e "${MAGENTA}   3. Run bootstrap scripts: ${WHITE}50-nixos-create-sops-key.sh${MAGENTA} then ${WHITE}60-nixos-install.sh${RESET} and if needed ${WHITE}70-migrate-to-persistence.sh${RESET}"
+echo -e "${YELLOW}Next steps:${RESET}"
+echo -e "${YELLOW}   1. Edit ${WHITE}$PROFILE_DIR/$HOSTNAME.nix${YELLOW} to set ${WHITE}mainUser${YELLOW}, ${WHITE}additionalUsers${YELLOW}, and ${WHITE}ethernetDeviceName${RESET}"
+echo -e "${YELLOW}   2. Configure modules and settings as needed${RESET}"
+echo -e "${YELLOW}   3. Run bootstrap scripts: ${WHITE}50-nixos-create-sops-key.sh${YELLOW} then ${WHITE}60-nixos-install.sh${RESET} and if needed ${WHITE}70-migrate-to-persistence.sh${RESET}"

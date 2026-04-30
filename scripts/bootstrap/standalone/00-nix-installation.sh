@@ -68,7 +68,7 @@ chmod 700 "."
 
 echo >&2
 echo -e "${GREEN}Nix installation completed!${RESET}" >&2
-echo -e "${MAGENTA}Next steps:${RESET}" >&2
-echo -e "${MAGENTA}  1. Ensure your config is available${RESET}" >&2
-echo -e "${MAGENTA}  2. Run ${WHITE}10-create-sops-key.sh${MAGENTA} to create encryption keys and follow instructions${RESET}" >&2
-echo -e "${MAGENTA}  3. Run ${WHITE}20-initial-sync.sh${MAGENTA} to apply configuration${RESET}" >&2
+echo -e "${YELLOW}Next steps:${RESET}" >&2
+echo -e "${YELLOW}  1. Ensure your config is available${RESET}" >&2
+echo -e "${YELLOW}  2. Run ${WHITE}10-create-sops-key.sh${YELLOW} to create encryption keys and follow instructions${RESET}" >&2
+echo -e "${YELLOW}  3. Run ${WHITE}20-initial-sync.sh${YELLOW} to apply configuration${RESET}" >&2

@@ -56,7 +56,7 @@ echo -e "${RED}         configured in ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNA
 echo
 echo -e "${RED}ALL EXISTING DATA WILL BE LOST! THIS OPERATION CANNOT BE UNDONE!${RESET}"
 echo
-echo -e "${MAGENTA}Are you ABSOLUTELY SURE you want to DESTROY ALL DATA and proceed?${RESET}"
+echo -e "${YELLOW}Are you ABSOLUTELY SURE you want to DESTROY ALL DATA and proceed?${RESET}"
 read -p "Continue? [y|N]: " -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo -e "\n"

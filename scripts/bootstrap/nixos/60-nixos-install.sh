@@ -68,7 +68,7 @@ if [[ ! "$HOME" =~ ^/[a-zA-Z0-9_/.-]+$ ]]; then
 	exit 1
 fi
 
-echo -e "${MAGENTA}You are about to install NixOS from profile ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix${RESET} for admin user '${WHITE}$USERNAME${RESET}'"
+echo -e "${YELLOW}You are about to install NixOS from profile ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix${RESET} for admin user '${WHITE}$USERNAME${RESET}'"
 read -p "Continue? [y|N]: " -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo -e "\n"
@@ -152,7 +152,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		if [[ -d "$CORE_DIR" ]]; then
 			echo -e "${YELLOW}Warning: Core directory $CORE_DIR already exists${RESET}" >&2
 			echo
-			echo -e "${MAGENTA}Do you want to overwrite it?${RESET}"
+			echo -e "${YELLOW}Do you want to overwrite it?${RESET}"
 			read -p "Continue? [y|N]: " -n 1 -r
 			echo
 			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -178,12 +178,12 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	fi
 
 	echo
-	echo -e "${MAGENTA}Next steps:${RESET}"
+	echo -e "${YELLOW}Next steps:${RESET}"
 	if [[ "$IMPERMANENCE_ENABLED" == "true" ]]; then
-		echo -e "${MAGENTA}  1) Run the script ${WHITE}70-migrate-to-persistence.sh${MAGENTA} (REQUIRED - impermanence is enabled)${RESET}"
-		echo -e "${MAGENTA}  2) Reboot to enter the new host...${RESET}"
+		echo -e "${YELLOW}  1) Run the script ${WHITE}70-migrate-to-persistence.sh${YELLOW} (REQUIRED - impermanence is enabled)${RESET}"
+		echo -e "${YELLOW}  2) Reboot to enter the new host...${RESET}"
 	else
-		echo -e "${MAGENTA}  - Reboot to enter the new host...${RESET}"
-		echo -e "${MAGENTA}    (No migration needed - impermanence is disabled)${RESET}"
+		echo -e "${YELLOW}  - Reboot to enter the new host...${RESET}"
+		echo -e "${YELLOW}    (No migration needed - impermanence is disabled)${RESET}"
 	fi
 fi

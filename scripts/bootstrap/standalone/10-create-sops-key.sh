@@ -44,7 +44,7 @@ echo -e "🔑 Age public key:" >&2
 nix-shell -p age --run "age-keygen -y $TARGET_FILE"
 
 echo >&2
-echo -e "${MAGENTA}Next steps:${RESET}" >&2
-echo -e "${MAGENTA}  1. Add the generated sops public key to the config directory ${WHITE}.sops.yaml${MAGENTA} file ${YELLOW}(on another host if there are already existing secrets!)${RESET}" >&2
-echo -e "${MAGENTA}  2. Run ${WHITE}updatekeys.sh${MAGENTA} script in config directory to re-encrypt with the new age key${RESET}" >&2
-echo -e "${MAGENTA}  3. Run ${WHITE}20-initial-sync.sh${MAGENTA} to apply configuration${RESET}" >&2
+echo -e "${YELLOW}Next steps:${RESET}" >&2
+echo -e "${YELLOW}  1. Add the generated sops public key to the config directory ${WHITE}.sops.yaml${YELLOW} file ${YELLOW}(on another host if there are already existing secrets!)${RESET}" >&2
+echo -e "${YELLOW}  2. Run ${WHITE}updatekeys.sh${YELLOW} script in config directory to re-encrypt with the new age key${RESET}" >&2
+echo -e "${YELLOW}  3. Run ${WHITE}20-initial-sync.sh${YELLOW} to apply configuration${RESET}" >&2
