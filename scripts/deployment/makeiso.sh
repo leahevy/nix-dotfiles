@@ -150,7 +150,7 @@ if [[ -n "$NXCORE_DIR" ]]; then
 			echo -e "${RED}Passwords do not match, please try again${RESET}"
 		done
 
-		echo -e "${WHITE}Exporting and encrypting git-crypt key for ISO...{RESET}"
+		echo -e "${WHITE}Exporting and encrypting git-crypt key for ISO...${RESET}"
 		PLAIN_KEY_FILE="$(mktemp)"
 		if git-crypt export-key "$PLAIN_KEY_FILE"; then
 			if openssl enc -aes-256-cbc -pbkdf2 -in "$PLAIN_KEY_FILE" -out "$REPO_ROOT/.git-crypt-key" -pass stdin <<<"$GIT_CRYPT_PASS1"; then
