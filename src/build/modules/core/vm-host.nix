@@ -32,6 +32,116 @@ args@{
     home =
       { config, ... }:
       {
+        home.shellAliases.get-ovmf-code = "echo ${pkgs.OVMF.fd}/FV/OVMF.fd";
+
+        programs.fish.functions = {
+          vm-image-create = ''
+            argparse 'n/name=' 's/size=' -- $argv
+            or return
+
+            if not set -q _flag_name
+              echo "Usage: vm-image-create --name NAME [--size SIZE]"
+              return 1
+            end
+
+            set -q _flag_size; or set _flag_size 40G
+            set image_path "$HOME/.cache/nx/vms/qemu-images/$_flag_name.qcow2"
+            mkdir -p "$HOME/.cache/nx/vms/qemu-images"
+            if test -e "$image_path"
+              echo "Image already exists: $image_path"
+              return 1
+            end
+            ${pkgs.qemu}/bin/qemu-img create -f qcow2 "$image_path" "$_flag_size"
+          '';
+
+          vm-run-bios = ''
+            argparse 'n/name=' 'i/iso=' 'm/mem=' 'c/cpus=' 'p/ssh-port=' 'g/graphical' -- $argv
+            or return
+
+            if not set -q _flag_name
+              echo "Usage: vm-run-bios --name NAME [--iso PATH] [--mem MiB] [--cpus N] [--ssh-port PORT] [--graphical]"
+              return 1
+            end
+
+            set -q _flag_mem; or set _flag_mem 4096
+            set -q _flag_cpus; or set _flag_cpus 4
+            set -q _flag_ssh_port; or set _flag_ssh_port 2222
+            set image_path "$HOME/.cache/nx/vms/qemu-images/$_flag_name.qcow2"
+
+            if not test -f "$image_path"
+              echo "Missing image: $image_path"
+              echo "Create it first: vm-image-create --name $_flag_name"
+              return 1
+            end
+
+            set cmd ${pkgs.qemu}/bin/qemu-system-x86_64 \
+              ${lib.optionalString self.host.settings.system.virtualisation.enableKVM "-enable-kvm"} \
+              -m "$_flag_mem" \
+              -smp "$_flag_cpus" \
+              -drive "file=$image_path,if=virtio" \
+              -netdev "user,id=net0,hostfwd=tcp::$_flag_ssh_port-:22" \
+              -device virtio-net-pci,netdev=net0
+
+            if set -q _flag_iso
+              set cmd $cmd -cdrom "$_flag_iso" -boot d
+            end
+
+            if not set -q _flag_graphical
+              set cmd $cmd -nographic
+            end
+
+            $cmd
+          '';
+
+          vm-run-uefi = ''
+            argparse 'n/name=' 'i/iso=' 'm/mem=' 'c/cpus=' 'p/ssh-port=' 'o/ovmf=' 'g/graphical' -- $argv
+            or return
+
+            if not set -q _flag_name
+              echo "Usage: vm-run-uefi --name NAME [--iso PATH] [--mem MiB] [--cpus N] [--ssh-port PORT] [--ovmf PATH] [--graphical]"
+              return 1
+            end
+
+            set -q _flag_mem; or set _flag_mem 4096
+            set -q _flag_cpus; or set _flag_cpus 4
+            set -q _flag_ssh_port; or set _flag_ssh_port 2222
+            set -q _flag_ovmf; or set _flag_ovmf "${pkgs.OVMF.fd}/FV/OVMF_CODE.fd"
+            set image_path "$HOME/.cache/nx/vms/qemu-images/$_flag_name.qcow2"
+            set vars_path "$HOME/.cache/nx/vms/qemu-images/$_flag_name.OVMF_VARS.fd"
+
+            if not test -f "$image_path"
+              echo "Missing image: $image_path"
+              echo "Create it first: vm-image-create --name $_flag_name"
+              return 1
+            end
+
+            if not test -f "$vars_path"
+              cp "${pkgs.OVMF.fd}/FV/OVMF_VARS.fd" "$vars_path"
+              chmod 600 "$vars_path"
+            end
+
+            set cmd ${pkgs.qemu}/bin/qemu-system-x86_64 \
+              ${lib.optionalString self.host.settings.system.virtualisation.enableKVM "-enable-kvm"} \
+              -m "$_flag_mem" \
+              -smp "$_flag_cpus" \
+              -drive "file=$image_path,if=virtio" \
+              -drive "if=pflash,format=raw,readonly=on,file=$_flag_ovmf" \
+              -drive "if=pflash,format=raw,file=$vars_path" \
+              -netdev "user,id=net0,hostfwd=tcp::$_flag_ssh_port-:22" \
+              -device virtio-net-pci,netdev=net0
+
+            if set -q _flag_iso
+              set cmd $cmd -cdrom "$_flag_iso" -boot d
+            end
+
+            if not set -q _flag_graphical
+              set cmd $cmd -nographic
+            end
+
+            $cmd
+          '';
+        };
+
         home.persistence."${self.persist}".directories = [
           ".cache/nx/vms"
         ];
