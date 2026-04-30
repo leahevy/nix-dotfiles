@@ -147,9 +147,13 @@ while [[ $# -gt 0 ]]; do
 		LIST_ALL=true
 		shift
 		;;
-	--timeout)
+	--timeout | --profile | --arch)
 		build_args+=("$1" "$2")
 		shift 2
+		;;
+	--allow-ifd | --show-trace | --skip-verification)
+		build_args+=("$1")
+		shift
 		;;
 	--diff | --show-derivation | --nixos | --standalone | --dry-run | --raw)
 		print_error "Option $1 is not supported for 'nx vm'"
@@ -392,12 +396,13 @@ if [[ "${LIST_ALL}" == "true" ]]; then
 	found_any=false
 	for profile_dir in "${profile_dirs[@]}"; do
 		[[ -d "${profile_dir}" ]] || continue
+		profile="$(basename "${profile_dir}")"
+		[[ "${profile}" == "qemu-images" ]] && continue
 		shopt -s nullglob
 		version_dirs=("${profile_dir}"/*)
 		shopt -u nullglob
 		[[ ${#version_dirs[@]} -eq 0 ]] && continue
 		found_any=true
-		profile="$(basename "${profile_dir}")"
 		echo -e "${WHITE}VM images for ${profile}:${RESET}"
 		for version_dir in "${version_dirs[@]}"; do
 			[[ -d "${version_dir}" ]] || continue
@@ -428,6 +433,11 @@ PROFILE="$(retrieve_active_profile)"
 base_profile="${PROFILE%--*}"
 if [[ -n "${BUILD_OVERRIDE_PROFILE:-}" ]]; then
 	base_profile="${BUILD_OVERRIDE_PROFILE}"
+fi
+
+if [[ "${base_profile}" == "qemu-images" ]]; then
+	print_error "'qemu-images' is a reserved name and cannot be used as a VM profile name!"
+	exit 1
 fi
 
 if [[ -n "${BUILD_OVERRIDE_ARCH:-}" ]]; then
