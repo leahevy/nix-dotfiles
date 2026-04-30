@@ -99,11 +99,11 @@ args@{
           '';
 
           vm-run-bios = ''
-            argparse 'n/name=' 'i/iso=' 'm/mem=' 'c/cpus=' 'p/ssh-port=' 'g/graphical' -- $argv
+            argparse 'n/name=' 'i/iso=' 'm/mem=' 'c/cpus=' 'p/ssh-port=' 'no-graphical' -- $argv
             or return
 
             if not set -q _flag_name
-              echo "Usage: vm-run-bios --name NAME [--iso PATH] [--mem MiB] [--cpus N] [--ssh-port PORT] [--graphical]"
+              echo "Usage: vm-run-bios --name NAME [--iso PATH] [--mem MiB] [--cpus N] [--ssh-port PORT] [--no-graphical]"
               return 1
             end
 
@@ -130,7 +130,7 @@ args@{
               set cmd $cmd -cdrom "$_flag_iso" -boot d
             end
 
-            if not set -q _flag_graphical
+            if set -q _flag_no_graphical
               set cmd $cmd -nographic
             end
 
@@ -138,11 +138,11 @@ args@{
           '';
 
           vm-run-uefi = ''
-            argparse 'n/name=' 'i/iso=' 'm/mem=' 'c/cpus=' 'p/ssh-port=' 'o/ovmf=' 'g/graphical' -- $argv
+            argparse 'n/name=' 'i/iso=' 'm/mem=' 'c/cpus=' 'p/ssh-port=' 'o/ovmf=' 'no-graphical' -- $argv
             or return
 
             if not set -q _flag_name
-              echo "Usage: vm-run-uefi --name NAME [--iso PATH] [--mem MiB] [--cpus N] [--ssh-port PORT] [--ovmf PATH] [--graphical]"
+              echo "Usage: vm-run-uefi --name NAME [--iso PATH] [--mem MiB] [--cpus N] [--ssh-port PORT] [--ovmf PATH] [--no-graphical]"
               return 1
             end
 
@@ -178,7 +178,7 @@ args@{
               set cmd $cmd -cdrom "$_flag_iso" -boot d
             end
 
-            if not set -q _flag_graphical
+            if set -q _flag_no_graphical
               set cmd $cmd -nographic
             end
 
