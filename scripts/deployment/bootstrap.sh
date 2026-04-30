@@ -11,19 +11,19 @@ show_list() {
 	echo -e "${CYAN}Available bootstrap scripts:${RESET}"
 	echo
 	echo -e "${WHITE}nixos:${RESET}"
-	echo -e "   ${WHITE}decrypt${RESET}                   00-decrypt.sh"
-	echo -e "   ${WHITE}fetch-latest-config${RESET}       10-fetch-latest-config.sh"
-	echo -e "   ${WHITE}disk-format${RESET} <hostname>    20-disk-format.sh"
-	echo -e "   ${WHITE}mount${RESET} <hostname>          30-mount.sh"
-	echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]  40-create-profile-stub.sh"
-	echo -e "   ${WHITE}nixos-create-sops-key${RESET} <hostname>  50-nixos-create-sops-key.sh"
-	echo -e "   ${WHITE}nixos-install${RESET} <hostname>  60-nixos-install.sh"
-	echo -e "   ${WHITE}migrate-to-persistence${RESET} <hostname> [--dry-run]  70-migrate-to-persistence.sh"
+	echo -e "   ${WHITE}decrypt${RESET}                                         00-decrypt.sh"
+	echo -e "   ${WHITE}fetch-latest-config${RESET}                             10-fetch-latest-config.sh"
+	echo -e "   ${WHITE}disk-format${RESET} <hostname>                          20-disk-format.sh"
+	echo -e "   ${WHITE}mount${RESET} <hostname>                                30-mount.sh"
+	echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]      40-create-profile-stub.sh"
+	echo -e "   ${WHITE}nixos-create-sops-key${RESET} <hostname>                50-nixos-create-sops-key.sh"
+	echo -e "   ${WHITE}nixos-install${RESET} <hostname>                        60-nixos-install.sh"
+	echo -e "   ${WHITE}migrate-to-persistence${RESET} <hostname> [--dry-run]   70-migrate-to-persistence.sh"
 	echo
 	echo -e "${WHITE}standalone:${RESET}"
-	echo -e "   ${WHITE}nix-installation${RESET}          00-nix-installation.sh"
-	echo -e "   ${WHITE}create-sops-key${RESET}           10-create-sops-key.sh"
-	echo -e "   ${WHITE}initial-sync${RESET}              20-initial-sync.sh"
+	echo -e "   ${WHITE}nix-installation${RESET}                                00-nix-installation.sh"
+	echo -e "   ${WHITE}create-sops-key${RESET}                                 10-create-sops-key.sh"
+	echo -e "   ${WHITE}initial-sync${RESET}                                    20-initial-sync.sh"
 }
 
 if [[ -n "${NX_INSTALL_PATH:-}" ]]; then
