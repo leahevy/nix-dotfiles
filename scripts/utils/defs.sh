@@ -37,6 +37,7 @@ export AUTO_UPDATE_INPUTS=(
 	"disko"
 	"impermanence"
 	"lanzaboote"
+	"nixos-anywhere"
 	"niri-flake"
 	"nixos-hardware"
 	"flake-parts"

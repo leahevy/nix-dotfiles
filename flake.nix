@@ -73,6 +73,18 @@
       inputs.pre-commit.inputs.flake-compat.follows = "flake-compat";
     };
 
+    nixos-anywhere = {
+      url = "github:leahevy/nixos-anywhere/1.13.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixos-stable.follows = "nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
+      inputs.disko.follows = "disko";
+      inputs.treefmt-nix.follows = "treefmt-nix";
+      inputs.nixos-images.inputs.nixos-stable.follows = "nixpkgs";
+      inputs.nixos-images.inputs.nixos-unstable.follows = "nixpkgs-unstable";
+      inputs.nix-vm-test.inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     niri-flake = {
       url = "github:leahevy/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs-unstable";

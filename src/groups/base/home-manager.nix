@@ -28,6 +28,7 @@ let
         "nodejs"
         "typescript-lsp"
         "jujutsu"
+        "nixos-anywhere"
       ];
       services = [
         "ollama"
