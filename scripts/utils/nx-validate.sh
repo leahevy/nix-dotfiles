@@ -200,6 +200,9 @@ show_command_help() {
 	load_nx_spec
 
 	if [[ ! -f "$NX_SPEC" ]]; then
+		if [[ "${IS_LIVE_ISO:-0}" == "1" ]]; then
+			return
+		fi
 		echo -e "${RED}Help not available in local development version${RESET}" >&2
 		exit 1
 	fi

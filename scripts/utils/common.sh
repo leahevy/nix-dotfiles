@@ -150,7 +150,8 @@ check_config_directory() {
 		return
 	fi
 
-	if [[ -f /etc/NIXOS && "$CONTEXT" != "deployment" ]]; then
+	if [[ -d "/nxcore" || -d "/nxconfig" ]]; then
+		IS_LIVE_ISO=1
 		NXCORE_DIR="/nxcore"
 		CONFIG_DIR="/nxconfig"
 
@@ -174,6 +175,7 @@ check_config_directory() {
 			exit 1
 		fi
 	else
+		IS_LIVE_ISO=0
 		NXCORE_DIR="$HOME/.config/nx/nxcore"
 		CONFIG_DIR="$HOME/.config/nx/nxconfig"
 
@@ -198,7 +200,7 @@ check_config_directory() {
 		fi
 	fi
 
-	export NXCORE_DIR CONFIG_DIR
+	export IS_LIVE_ISO NXCORE_DIR CONFIG_DIR
 }
 
 check_config_directory_optional() {

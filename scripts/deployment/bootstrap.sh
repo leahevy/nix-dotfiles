@@ -46,6 +46,10 @@ SCRIPT_NAME="${1:-}"
 shift || true
 
 case "$SUBCOMMAND" in
+--help | -h)
+	show_list
+	exit 0
+	;;
 nixos)
 	if [[ -e /etc/NIXOS ]]; then
 		echo -e "${RED}Error: NixOS is already installed on this system.${RESET}" >&2
