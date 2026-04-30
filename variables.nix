@@ -19,6 +19,8 @@
   configRepoIsoUrl = "";
   configRepoInstallUrl = "";
 
+  isoRootSSHPublicKey = null;
+
   allowedUnfreePackages = [ ];
 
   persist = "/persist";

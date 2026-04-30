@@ -26,8 +26,13 @@
 
   services.openssh = {
     enable = true;
-    settings.PermitRootLogin = "no";
-    settings.PermitEmptyPasswords = "no";
+    settings.PermitRootLogin =
+      if variables.isoRootSSHPublicKey != null then "prohibit-password" else "no";
+    settings.PasswordAuthentication = false;
+  };
+
+  users.users.root = lib.mkIf (variables.isoRootSSHPublicKey != null) {
+    openssh.authorizedKeys.keys = [ variables.isoRootSSHPublicKey ];
   };
 
   security.sudo.wheelNeedsPassword = false;
