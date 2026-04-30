@@ -150,8 +150,16 @@ check_config_directory() {
 		return
 	fi
 
-	if [[ -d "/nxcore" || -d "/nxconfig" ]]; then
+	local has_root_repos=0
+	[[ -d "/nxcore" || -d "/nxconfig" ]] && has_root_repos=1
+
+	if [[ "$has_root_repos" == "1" || ! -d "/nix/store" ]]; then
 		IS_LIVE_ISO=1
+	else
+		IS_LIVE_ISO=0
+	fi
+
+	if [[ "$has_root_repos" == "1" ]]; then
 		NXCORE_DIR="/nxcore"
 		CONFIG_DIR="/nxconfig"
 
@@ -175,7 +183,6 @@ check_config_directory() {
 			exit 1
 		fi
 	else
-		IS_LIVE_ISO=0
 		NXCORE_DIR="$HOME/.config/nx/nxcore"
 		CONFIG_DIR="$HOME/.config/nx/nxconfig"
 
@@ -1142,7 +1149,9 @@ load_nx_config() {
 		config_file="$HOME/.config/nx/config.json"
 		config_json=$(cat "$config_file")
 	else
-		echo -e "${YELLOW}No nx config found, using defaults${RESET}" >&2
+		if [[ "${IS_LIVE_ISO:-0}" != "1" ]]; then
+			echo -e "${YELLOW}No nx config found, using defaults${RESET}" >&2
+		fi
 		config_json=""
 	fi
 

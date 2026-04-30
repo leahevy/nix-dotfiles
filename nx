@@ -36,7 +36,22 @@ else
     NAME="nx"
 fi
 
+show_live_iso_help() {
+    echo -e "${WHITE}Usage: nx <command> [args...]${RESET}"
+    echo
+    echo -e "${CYAN}Bootstrap commands:${RESET}"
+    echo -e "  ${WHITE}./nx bootstrap${RESET}             List all bootstrap scripts"
+    echo -e "  ${WHITE}./nx bootstrap nixos${RESET}       List NixOS bootstrap scripts"
+    echo -e "  ${WHITE}./nx bootstrap standalone${RESET}  List standalone bootstrap scripts"
+    echo
+    echo -e "${CYAN}Note: Most nx commands require a fully configured system.${RESET}"
+}
+
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || "${1:-}" == "help" ]]; then
+    if [[ "${IS_LIVE_ISO:-0}" == "1" ]]; then
+        show_live_iso_help
+        exit 0
+    fi
     source "$SCRIPTS_PATH/../utils/nx-validate.sh"
     show_command_help ""
     exit 0
@@ -52,6 +67,10 @@ if [[ "${1:-}" == "--version" ]]; then
 fi
 
 if [[ $# -eq 0 ]]; then
+  if [[ "${IS_LIVE_ISO:-0}" == "1" ]]; then
+    show_live_iso_help
+    exit 0
+  fi
   if [[ "${ACTUAL_PWD:-$PWD}" == "$(realpath "$NXCORE_DIR")" ]]; then
     SCRIPT_NAME="status"
   else
@@ -60,6 +79,13 @@ if [[ $# -eq 0 ]]; then
 else
   SCRIPT_NAME="$1"
   shift
+
+  if [[ "${IS_LIVE_ISO:-0}" == "1" && "$SCRIPT_NAME" != "bootstrap" ]]; then
+    echo -e "${RED}Only bootstrap commands are supported in this environment!${RESET}" >&2
+    echo >&2
+    show_live_iso_help
+    exit 1
+  fi
 
   source "$SCRIPTS_PATH/../utils/nx-validate.sh"
 
