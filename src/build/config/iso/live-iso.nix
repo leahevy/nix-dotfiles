@@ -322,6 +322,7 @@
       User = "nixos";
       WorkingDirectory = "/nxconfig";
       RemainAfterExit = true;
+      Environment = "GIT_TERMINAL_PROMPT=0";
     };
     script = ''
       if [ -n "${variables.configRepoIsoUrl}" ] && [ "${variables.configRepoIsoUrl}" != "" ]; then
