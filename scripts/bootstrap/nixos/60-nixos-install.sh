@@ -85,10 +85,20 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		exit 1
 	fi
 
+	if ! age-keygen -y /mnt/etc/sops/age/keys.txt >/dev/null 2>&1; then
+		echo -e "${RED}Error: Root SOPS key at ${WHITE}/mnt/etc/sops/age/keys.txt${RED} is not a valid age key!${RESET}" >&2
+		exit 1
+	fi
+
 	USER_SOPS_KEY="/mnt/$HOME/.config/sops/age/keys.txt"
 	if [[ ! -f "$USER_SOPS_KEY" ]]; then
 		echo -e "${RED}Error: User SOPS key not found at ${WHITE}$USER_SOPS_KEY${RESET}" >&2
 		echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-nixos-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
+		exit 1
+	fi
+
+	if ! age-keygen -y "$USER_SOPS_KEY" >/dev/null 2>&1; then
+		echo -e "${RED}Error: User SOPS key at ${WHITE}$USER_SOPS_KEY${RED} is not a valid age key!${RESET}" >&2
 		exit 1
 	fi
 

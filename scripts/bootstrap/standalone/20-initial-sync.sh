@@ -32,6 +32,11 @@ if [[ ! -f "$TARGET_FILE" ]]; then
 	exit 1
 fi
 
+if ! age-keygen -y "$TARGET_FILE" >/dev/null 2>&1; then
+	echo -e "${RED}Error: SOPS key at ${WHITE}$TARGET_FILE${RED} is not a valid age key!${RESET}" >&2
+	exit 1
+fi
+
 if [[ -x "$HOME/.nix-profile/bin/home-manager" ]]; then
 	echo -e "${GREEN}Home Manager already configured and available in ${WHITE}~/.nix-profile/bin/${RESET}" >&2
 	echo -e "${GREEN}Skipping initial sync - use '${WHITE}nx sync${GREEN}' for future updates${RESET}" >&2
