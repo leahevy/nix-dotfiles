@@ -28,6 +28,12 @@ with lib;
       description = "Hardware module to be imported from this list: https://raw.githubusercontent.com/NixOS/nixos-hardware/refs/heads/master/flake.nix";
     };
 
+    isVM = mkOption {
+      type = types.bool;
+      default = false;
+      description = "Whether this host is a virtual machine";
+    };
+
     kernel = mkOption {
       type = types.submodule {
         options = {
@@ -63,6 +69,100 @@ with lib;
             type = types.nullOr types.str;
             default = null;
             description = "Explicit kernel resume device path (boot.kernelParams resume=...). When null, auto-detected from disko swap LVs";
+          };
+          addPhysicalModules = mkOption {
+            type = types.bool;
+            default = true;
+            description = "Automatically apply defaults.physicalModules kernel module sets";
+          };
+          addVMModules = mkOption {
+            type = types.bool;
+            default = false;
+            description = "Automatically apply defaults.vmModules kernel module sets";
+          };
+          addOpticalDriveModules = mkOption {
+            type = types.bool;
+            default = true;
+            description = "Automatically apply defaults.opticalDriveModules kernel module sets";
+          };
+          addFilesystemModules = mkOption {
+            type = types.bool;
+            default = true;
+            description = "Automatically apply defaults.filesystemModules kernel module sets";
+          };
+          defaults = mkOption {
+            type = types.submodule {
+              options =
+                let
+                  moduleSet =
+                    defaults:
+                    types.submodule {
+                      options = {
+                        classicBootModules = mkOption {
+                          type = types.listOf types.str;
+                          default = defaults.classicBootModules or [ ];
+                        };
+                        classicInitrdModules = mkOption {
+                          type = types.listOf types.str;
+                          default = defaults.classicInitrdModules or [ ];
+                        };
+                        systemdBootModules = mkOption {
+                          type = types.listOf types.str;
+                          default = defaults.systemdBootModules or [ ];
+                        };
+                        systemdInitrdModules = mkOption {
+                          type = types.listOf types.str;
+                          default = defaults.systemdInitrdModules or [ ];
+                        };
+                        nixModules = mkOption {
+                          type = types.listOf types.str;
+                          default = defaults.nixModules or [ ];
+                        };
+                      };
+                    };
+                  both = modules: {
+                    classicBootModules = modules;
+                    systemdBootModules = modules;
+                  };
+                  bothInitrd = modules: {
+                    classicInitrdModules = modules;
+                    systemdInitrdModules = modules;
+                  };
+                in
+                {
+                  physicalModules = mkOption {
+                    type = moduleSet (both [
+                      "xhci_pci"
+                      "ahci"
+                      "usb_storage"
+                      "usbhid"
+                      "sd_mod"
+                    ]);
+                    default = { };
+                    description = "Common physical hardware kernel modules, applied when addPhysicalModules is true";
+                  };
+                  vmModules = mkOption {
+                    type = moduleSet (bothInitrd [
+                      "virtio_pci"
+                      "virtio_blk"
+                    ]);
+                    default = { };
+                    description = "VM kernel modules for virtio compatibility, applied when addVMModules is true";
+                  };
+                  opticalDriveModules = mkOption {
+                    type = moduleSet (both [ "sr_mod" ]);
+                    default = { };
+                    description = "Optical drive kernel modules, applied when addOpticalDriveModules is true";
+                  };
+                  filesystemModules = mkOption {
+                    type = moduleSet { classicBootModules = [ "btrfs" ]; };
+                    default = { };
+                    description = "Filesystem kernel modules, applied when addFilesystemModules is true";
+                  };
+                };
+            };
+            default = { };
+            description = "Default kernel module sets selectively applied via add* options";
           };
         };
       };

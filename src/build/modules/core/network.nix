@@ -22,7 +22,8 @@ args@{
       in
       {
         networking.hostName = host.hostname;
-        networking.wireless.enable = ifSet host.settings.networking.wifi.enabled false;
+        networking.wireless.enable =
+          if (host.isVM or false) then false else ifSet host.settings.networking.wifi.enabled false;
         networking.useDHCP = lib.mkForce (!host.settings.networking.useNetworkManager);
         networking.nftables.enable = true;
         networking.search = lib.mkIf (self.host.homeserverDomain != null) [
@@ -39,7 +40,7 @@ args@{
                 };
               };
               ensureProfiles.profiles = (
-                if host.ethernetDeviceName != null then
+                if host.ethernetDeviceName != null && !(host.isVM or false) then
                   {
                     "Ethernet" = {
                       connection = {

@@ -28,16 +28,9 @@ let
         inherit profileName arch buildArch;
         isVirtual = true;
         overrides = {
+          isVM = true;
           impermanence = false;
           deploymentMode = "managed";
-          hardware = {
-            cpu = null;
-            gpu = null;
-            board = null;
-          };
-          nixHardwareModule = null;
-          wifiDeviceName = null;
-          ethernetDeviceName = null;
           kernel = {
             bootModules = [ ];
             initrdModules = [ ];
@@ -47,14 +40,12 @@ let
           settings = {
             networking = {
               useNetworkManager = false;
-              wifi.enabled = false;
             };
             system = {
               firmware = {
                 redistributable = false;
                 unfree = false;
               };
-              touchpad.enabled = false;
             };
           };
         };

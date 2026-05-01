@@ -169,7 +169,7 @@ let
 
   getHardwareModule =
     host:
-    if host.nixHardwareModule != null then
+    if host.nixHardwareModule != null && !(host.isVM or false) then
       [ (inputs.nixos-hardware + "/${host.nixHardwareModule}") ]
     else
       [ ];

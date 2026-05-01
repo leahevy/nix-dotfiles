@@ -384,9 +384,6 @@ in
           !withLuksOrLvm
         ) "copy_bin_and_libs ${pkgs.util-linux}/bin/blkid";
 
-        availableDmkernelModules =
-          (lib.optionals (usesLuks || usesLvm) [ "dm_mod" ]) ++ (lib.optionals usesLuks [ "dm_crypt" ]);
-
         luksDeviceNames = builtins.attrNames (config.boot.initrd.luks.devices or { });
 
         systemdAfterCryptsetup = lib.optionals usesLuks (
@@ -463,9 +460,6 @@ in
 
         boot.initrd.postDeviceCommands = lib.mkIf (!config.boot.initrd.systemd.enable) (
           lib.mkAfter rollbackScript
-        );
-        boot.initrd.availableKernelModules = lib.mkIf (!config.boot.initrd.systemd.enable) (
-          [ "btrfs" ] ++ availableDmkernelModules
         );
         boot.initrd.extraUtilsCommands = lib.mkIf (!config.boot.initrd.systemd.enable) ''
           copy_bin_and_libs ${pkgs.gnugrep}/bin/grep

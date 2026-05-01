@@ -34,7 +34,7 @@ args@{
             libva-vdpau-driver
             libvdpau-va-gl
           ]
-          ++ lib.optionals (self.host.hardware.cpu == "intel") [
+          ++ lib.optionals (self.host.hardware.cpu == "intel" && !(self.host.isVM or false)) [
             intel-media-driver
             intel-vaapi-driver
           ];
