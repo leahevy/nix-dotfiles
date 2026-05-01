@@ -811,26 +811,40 @@ in
           "computer-fail"
         ];
       };
-      standalone = config: {
-        home.packages = [
-          config.nx.lib.iconResolveScript
-        ]
-        ++ lib.optionals helpers.isHostArchitecture [
-          (mkIconValidation config {
-            icons = config.nx.lib.icons;
-            primaryIcons = config.nx.lib.primaryIcons;
-          })
-        ];
-      };
-      system = config: {
-        environment.systemPackages = [ config.nx.lib.iconResolveScript ];
-        system.extraDependencies = lib.optionals helpers.isHostArchitecture [
-          (mkIconValidation config {
-            icons = config.nx.lib.icons;
-            primaryIcons = config.nx.lib.primaryIcons;
-          })
-        ];
-      };
+      standalone =
+        config:
+        let
+          hasDesktop =
+            (self ? user)
+            && (self.user ? settings)
+            && (self.user.settings ? desktop)
+            && self.user.settings.desktop != null;
+        in
+        lib.mkIf hasDesktop {
+          home.packages = [
+            config.nx.lib.iconResolveScript
+          ]
+          ++ lib.optionals helpers.isHostArchitecture [
+            (mkIconValidation config {
+              icons = config.nx.lib.icons;
+              primaryIcons = config.nx.lib.primaryIcons;
+            })
+          ];
+        };
+      system =
+        config:
+        let
+          hasDesktop = (self ? host) && (self.host.settings.system.desktop or null) != null;
+        in
+        lib.mkIf hasDesktop {
+          environment.systemPackages = [ config.nx.lib.iconResolveScript ];
+          system.extraDependencies = lib.optionals helpers.isHostArchitecture [
+            (mkIconValidation config {
+              icons = config.nx.lib.icons;
+              primaryIcons = config.nx.lib.primaryIcons;
+            })
+          ];
+        };
     };
 
   module.darwin.enabled = config: {
