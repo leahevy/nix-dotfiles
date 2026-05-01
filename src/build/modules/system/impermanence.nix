@@ -499,7 +499,7 @@ in
             if [ ! -e ${lib.escapeShellArg p} ]; then
               ${pkgs.coreutils}/bin/echo "Touch file ${p}"
               ${pkgs.coreutils}/bin/touch ${lib.escapeShellArg p} || true
-              ${pkgs.coreutils}/bin/chmod 600 ${lib.escapeShellArg p} || true
+              ${pkgs.coreutils}/bin/chmod 644 ${lib.escapeShellArg p} || true
               ${pkgs.coreutils}/bin/chown ${userUid}:${userGid} ${lib.escapeShellArg p} || true
               HOME_COUNT=$((HOME_COUNT + 1))
             fi'') homePersistPaths}
