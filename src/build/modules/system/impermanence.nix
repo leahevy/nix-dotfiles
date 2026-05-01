@@ -400,6 +400,111 @@ in
             "systemd-hibernate-resume@.service"
             "systemd-hibernate-resume.service"
           ];
+
+        username = self.host.mainUser.username;
+        userUid = toString config.users.users.${username}.uid;
+        userGid = toString config.users.groups.${config.users.users.${username}.group}.gid;
+
+        normalizeFile = f: if builtins.isString f then f else f.file;
+        escapeUnitPath = path: lib.replaceStrings [ "/" ] [ "-" ] (lib.removePrefix "/" path);
+
+        sysPersistFiles = map normalizeFile (config.environment.persistence.${self.persist}.files or [ ]);
+        homePersistFiles = lib.optionals (!self.user.isStandalone) (
+          map normalizeFile (
+            (config.home-manager.users.${username}.home.persistence.${self.persist} or { }).files or [ ]
+          )
+        );
+
+        sysPersistPaths = map (f: "${self.persist}${f}") sysPersistFiles;
+        homePersistPaths = map (f: "${self.persist}${self.user.home}/${f}") homePersistFiles;
+        allPersistPaths = sysPersistPaths ++ homePersistPaths;
+
+        persistUnits = map (p: "persist-${escapeUnitPath p}.service") allPersistPaths;
+
+        userHomePersist = "${self.persist}${self.user.home}";
+
+        dirsOfPath =
+          base: filePath:
+          let
+            dirPath = builtins.dirOf filePath;
+            relPath = lib.removePrefix "${base}/" dirPath;
+            components = lib.filter (c: c != "") (lib.splitString "/" relPath);
+            buildPaths =
+              prefix: remaining:
+              if remaining == [ ] then
+                [ ]
+              else
+                let
+                  next = "${prefix}/${builtins.head remaining}";
+                in
+                [ next ] ++ buildPaths next (builtins.tail remaining);
+          in
+          if dirPath == base then [ ] else buildPaths base components;
+
+        mkSysDirBlock =
+          dir:
+          let
+            perm = if dir == "${self.persist}/root" then "750" else "755";
+          in
+          ''
+            if [ ! -d ${lib.escapeShellArg dir} ]; then
+              ${pkgs.coreutils}/bin/echo "Create directory ${dir}"
+              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/mkdir ${dir}"
+              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chmod ${perm} ${dir}"
+              SYS_DIR_COUNT=$((SYS_DIR_COUNT + 1))
+            fi'';
+
+        mkHomeDirBlock =
+          dir:
+          let
+            perm = if dir == userHomePersist then "700" else "755";
+          in
+          ''
+            if [ ! -d ${lib.escapeShellArg dir} ]; then
+              ${pkgs.coreutils}/bin/echo "Create directory ${dir}"
+              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/mkdir ${dir}"
+              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chmod ${perm} ${dir}"
+              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chown ${userUid}:${userGid} ${dir}"
+              HOME_DIR_COUNT=$((HOME_DIR_COUNT + 1))
+            fi'';
+
+        mkDirBlocksForPath =
+          p:
+          let
+            dirs = dirsOfPath self.persist p;
+            sysDirs = lib.filter (d: !lib.hasPrefix userHomePersist d) dirs;
+            homeDirs = lib.filter (d: lib.hasPrefix userHomePersist d) dirs;
+          in
+          lib.concatStringsSep "\n" (map mkSysDirBlock sysDirs ++ map mkHomeDirBlock homeDirs);
+
+        touchFilesScript = pkgs.writeShellScript "impermanence-touch-files" ''
+          if [ ! -d ${lib.escapeShellArg self.persist} ]; then
+            ${pkgs.coreutils}/bin/echo "Persist directory ${self.persist} not found, skipping"
+            exit 0
+          fi
+          SYS_COUNT=0
+          HOME_COUNT=0
+          SYS_DIR_COUNT=0
+          HOME_DIR_COUNT=0
+          ${lib.concatMapStringsSep "\n" (p: ''
+            ${mkDirBlocksForPath p}
+            if [ ! -e ${lib.escapeShellArg p} ]; then
+              ${pkgs.coreutils}/bin/echo "Touch file ${p}"
+              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/touch ${p}"
+              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chmod 644 ${p}"
+              SYS_COUNT=$((SYS_COUNT + 1))
+            fi'') sysPersistPaths}
+          ${lib.concatMapStringsSep "\n" (p: ''
+            ${mkDirBlocksForPath p}
+            if [ ! -e ${lib.escapeShellArg p} ]; then
+              ${pkgs.coreutils}/bin/echo "Touch file ${p}"
+              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/touch ${p}"
+              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chmod 600 ${p}"
+              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chown ${userUid}:${userGid} ${p}"
+              HOME_COUNT=$((HOME_COUNT + 1))
+            fi'') homePersistPaths}
+          ${pkgs.coreutils}/bin/echo "Touched $SYS_COUNT system and $HOME_COUNT user files, created $SYS_DIR_COUNT system and $HOME_DIR_COUNT user dirs"
+        '';
       in
       lib.mkIf (self.host.impermanence or false) {
         assertions = [
@@ -509,6 +614,19 @@ in
           mode = "0444";
           user = "root";
           group = "root";
+        };
+
+        systemd.services.impermanence-touch-files = lib.mkIf (allPersistPaths != [ ]) {
+          description = "Touch impermanence files before bind mounts";
+          wantedBy = [ "local-fs.target" ];
+          unitConfig = {
+            DefaultDependencies = false;
+            Before = [ "local-fs.target" ] ++ persistUnits;
+          };
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = touchFilesScript;
+          };
         };
       };
 
