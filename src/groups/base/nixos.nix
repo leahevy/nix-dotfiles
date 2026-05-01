@@ -22,7 +22,7 @@ args@{
         common.style = lib.optionals (self.host.settings.system.desktop != null) [ "stylix" ];
         linux = {
           memory = [ "zram" ];
-          storage = [ "smartd" ];
+          storage = lib.optionals (!(self.host.isVM or false)) [ "smartd" ];
           system = [
             "gc"
             "timesyncd"
