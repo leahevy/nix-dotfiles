@@ -40,7 +40,7 @@ args@{
                 };
               };
               ensureProfiles.profiles = (
-                if host.ethernetDeviceName != null && !(host.isVM or false) then
+                if host.ethernetDeviceName != null then
                   {
                     "Ethernet" = {
                       connection = {

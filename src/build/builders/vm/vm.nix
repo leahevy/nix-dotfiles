@@ -31,6 +31,7 @@ let
           isVM = true;
           impermanence = false;
           deploymentMode = "managed";
+          ethernetDeviceName = null;
           kernel = {
             bootModules = [ ];
             initrdModules = [ ];
