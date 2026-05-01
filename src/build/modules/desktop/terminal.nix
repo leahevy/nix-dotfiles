@@ -17,8 +17,8 @@ args@{
     let
       isLinux = self ? isLinux && self.isLinux;
       terminal = self.user.settings.terminal;
-      hasHost = self ? host && self.host != null;
-      hasUser = self ? user && self.user != null;
+      hasHost = self ? host && self.host != null && self.host ? settings;
+      hasUser = self ? user && self.user != null && self.user ? settings;
       hasDesktop =
         if hasHost then
           self.host.settings.system.desktop != null
