@@ -184,6 +184,33 @@ args@{
 
             $cmd
           '';
+
+          vm-list = ''
+            set dir "$HOME/.cache/nx/vms/qemu-images"
+            if not test -d "$dir"
+              echo "No VM images directory found: $dir"
+              return 0
+            end
+            set found 0
+            for f in "$dir"/*.qcow2
+              if not test -f "$f"
+                break
+              end
+              set found 1
+              set name (${pkgs.coreutils}/bin/basename "$f" .qcow2)
+              set info (${pkgs.qemu}/bin/qemu-img info "$f")
+              set disk (echo $info | string match -rg 'disk size: (\S+ \S+)' | string trim)
+              set virtual (echo $info | string match -rg 'virtual size: (\S+ \S+)' | string trim)
+              set extra ""
+              if test -f "$dir/$name.OVMF_VARS.fd"
+                set extra ", uefi=true"
+              end
+              echo "$name  (disk: $disk/$virtual$extra)"
+            end
+            if test $found -eq 0
+              echo "No VM images found in $dir"
+            end
+          '';
         };
 
         home.persistence."${self.persist}".directories = [
