@@ -449,8 +449,8 @@ in
           ''
             if [ ! -d ${lib.escapeShellArg dir} ]; then
               ${pkgs.coreutils}/bin/echo "Create directory ${dir}"
-              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/mkdir ${dir}"
-              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chmod ${perm} ${dir}"
+              ${pkgs.coreutils}/bin/mkdir ${lib.escapeShellArg dir} || true
+              ${pkgs.coreutils}/bin/chmod ${perm} ${lib.escapeShellArg dir} || true
               SYS_DIR_COUNT=$((SYS_DIR_COUNT + 1))
             fi'';
 
@@ -462,9 +462,9 @@ in
           ''
             if [ ! -d ${lib.escapeShellArg dir} ]; then
               ${pkgs.coreutils}/bin/echo "Create directory ${dir}"
-              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/mkdir ${dir}"
-              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chmod ${perm} ${dir}"
-              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chown ${userUid}:${userGid} ${dir}"
+              ${pkgs.coreutils}/bin/mkdir ${lib.escapeShellArg dir} || true
+              ${pkgs.coreutils}/bin/chmod ${perm} ${lib.escapeShellArg dir} || true
+              ${pkgs.coreutils}/bin/chown ${userUid}:${userGid} ${lib.escapeShellArg dir} || true
               HOME_DIR_COUNT=$((HOME_DIR_COUNT + 1))
             fi'';
 
@@ -490,17 +490,17 @@ in
             ${mkDirBlocksForPath p}
             if [ ! -e ${lib.escapeShellArg p} ]; then
               ${pkgs.coreutils}/bin/echo "Touch file ${p}"
-              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/touch ${p}"
-              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chmod 644 ${p}"
+              ${pkgs.coreutils}/bin/touch ${lib.escapeShellArg p} || true
+              ${pkgs.coreutils}/bin/chmod 644 ${lib.escapeShellArg p} || true
               SYS_COUNT=$((SYS_COUNT + 1))
             fi'') sysPersistPaths}
           ${lib.concatMapStringsSep "\n" (p: ''
             ${mkDirBlocksForPath p}
             if [ ! -e ${lib.escapeShellArg p} ]; then
               ${pkgs.coreutils}/bin/echo "Touch file ${p}"
-              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/touch ${p}"
-              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chmod 600 ${p}"
-              ${pkgs.coreutils}/bin/echo "${pkgs.coreutils}/bin/chown ${userUid}:${userGid} ${p}"
+              ${pkgs.coreutils}/bin/touch ${lib.escapeShellArg p} || true
+              ${pkgs.coreutils}/bin/chmod 600 ${lib.escapeShellArg p} || true
+              ${pkgs.coreutils}/bin/chown ${userUid}:${userGid} ${lib.escapeShellArg p} || true
               HOME_COUNT=$((HOME_COUNT + 1))
             fi'') homePersistPaths}
           ${pkgs.coreutils}/bin/echo "Touched $SYS_COUNT system and $HOME_COUNT user files, created $SYS_DIR_COUNT system and $HOME_DIR_COUNT user dirs"
