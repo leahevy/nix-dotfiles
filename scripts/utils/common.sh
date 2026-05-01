@@ -1413,6 +1413,7 @@ diff_store_paths() {
 	local suffixes_changed_look_suspicious=()
 	local paths_removed_look_suspicious=(
 		"etc-nx-impermanence-rollback-script"
+		"unit-impermanence-rollback.service"
 	)
 	local prefixes_removed_look_suspicious=()
 	local suffixes_removed_look_suspicious=()
