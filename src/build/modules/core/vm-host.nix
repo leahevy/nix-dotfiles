@@ -197,7 +197,7 @@ args@{
                 -device virtio-net-pci,netdev=net0
 
               if set -q _flag_iso
-                set cmd $cmd -cdrom "$_flag_iso" -boot d
+                set cmd $cmd -drive "if=none,id=cdiso,file=$_flag_iso,format=raw,media=cdrom" -device "ide-cd,drive=cdiso,bootindex=1"
               end
 
               if set -q _flag_no_graphical
