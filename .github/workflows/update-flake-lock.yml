@@ -18,6 +18,7 @@ jobs:
           echo "REBOOT_NORMAL_CHECK_INPUTS=$(IFS=,; echo "${REBOOT_NORMAL_CHECK_INPUTS[*]}")" >> $GITHUB_ENV
           echo "REBOOT_NIX_CHECK_INPUTS=$(IFS=,; echo "${REBOOT_NIX_CHECK_INPUTS[*]}")" >> $GITHUB_ENV
           echo "EXCLUDE_FROM_REBOOT_CHECK=$(printf '%s\n' "${AUTO_UPDATE_INPUTS[@]}" | grep -vxF -f <(printf '%s\n' "${REBOOT_NORMAL_CHECK_INPUTS[@]}" "${REBOOT_NIX_CHECK_INPUTS[@]}") | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_ENV
+          echo "NIXPKGS_INPUTS=$(IFS=,; echo "${NIXPKGS_INPUTS[*]}")" >> $GITHUB_ENV
           echo "TRUNCATE_INPUTS=$(IFS=,; echo "${TRUNCATE_INPUTS[*]}")" >> $GITHUB_ENV
           echo "UPDATE_AUTO_MERGE_ENABLED=$UPDATE_AUTO_MERGE_ENABLED" >> $GITHUB_ENV
           echo "UPDATE_MERGE_DAYS=$(IFS=,; echo "${UPDATE_MERGE_DAYS[*]}")" >> $GITHUB_ENV
@@ -315,7 +316,16 @@ jobs:
                     staging_count=$(printf '%s\n' "$all_commits_full" | grep -cE '^- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release)-[0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]' || true)
 
                     if [ -n "$regular_commits_full" ]; then
-                      regular_commits=$(printf '%s\n' "$regular_commits_full" | sed -E 's/^- //; s/ \\(\\[[^]]+\\]\\([^)]*\\)\\)$//' | cut -d: -f1 | sed -E 's/[[:space:]]+$//' | sort -fu | sed -E 's/^/- /')
+                      should_reduce_commit_subjects="false"
+                      if echo ",$NIXPKGS_INPUTS," | grep -q ",$input,"; then
+                        should_reduce_commit_subjects="true"
+                      fi
+
+                      if [ "$should_reduce_commit_subjects" = "true" ]; then
+                        regular_commits=$(printf '%s\n' "$regular_commits_full" | sed -E 's/^- //; s/ \\(\\[[^]]+\\]\\([^)]*\\)\\)$//' | cut -d: -f1 | sed -E 's/[[:space:]]+$//' | sort -fu | sed -E 's/^/- /')
+                      else
+                        regular_commits="$regular_commits_full"
+                      fi
                       commit_count=$(echo "$regular_commits" | wc -l)
                       commits_to_show="$regular_commits"
 
