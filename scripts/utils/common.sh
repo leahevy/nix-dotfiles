@@ -118,6 +118,9 @@ get_nx_default() {
 	"deploymentMode")
 		echo "develop"
 		;;
+	"vmsDir")
+		echo "~/.cache/nx/vms"
+		;;
 	*)
 		echo ""
 		;;
@@ -135,6 +138,19 @@ get_config_value() {
 	else
 		echo "$default_value"
 	fi
+}
+
+expand_home_path() {
+	local p="${1:-}"
+	if [[ "$p" == "~" ]]; then
+		echo "${HOME}"
+		return 0
+	fi
+	if [[ "$p" == "~/"* ]]; then
+		echo "${HOME}/${p#~/}"
+		return 0
+	fi
+	echo "$p"
 }
 
 has_nx_command() {
@@ -1217,8 +1233,9 @@ load_nx_config() {
 	COMMIT_VERIFICATION_NXCONFIG=$(get_config_value "security.commitVerification.nxconfig" "$config_json")
 	NX_DEPLOYMENT_MODE=$(get_config_value "deploymentMode" "$config_json")
 	ENABLED_COMMANDS_JSON=$(echo "${config_json:-{\}}" | jq -c '.enabledCommands // []' 2>/dev/null || echo "[]")
+	NX_VMS_DIR="$(expand_home_path "$(get_config_value "vmsDir" "$config_json")")"
 
-	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE ENABLED_COMMANDS_JSON
+	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE ENABLED_COMMANDS_JSON NX_VMS_DIR
 }
 
 check_brew_activity() {

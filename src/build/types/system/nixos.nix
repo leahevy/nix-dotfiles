@@ -430,6 +430,12 @@ with lib;
           default = { };
           description = "Virtualisation settings";
         };
+
+        vmsDataPath = mkOption {
+          type = types.nullOr types.str;
+          default = null;
+          description = "Optional custom VM data directory for nx vm";
+        };
       };
 
       sshd = mkOption {

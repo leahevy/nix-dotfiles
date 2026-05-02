@@ -30,6 +30,32 @@ rec {
     else
       default;
 
+  # Resolve a nested attribute path from config.host only, else return default.
+  # Usage: resolveFromHost config [ "system" "vmsDataPath" ] null
+  resolveFromHost =
+    config: attrPath: default:
+    if
+      config.nx.profile ? host
+      && config.nx.profile.host != null
+      && lib.hasAttrByPath attrPath config.nx.profile.host
+    then
+      lib.getAttrFromPath attrPath config.nx.profile.host
+    else
+      default;
+
+  # Resolve a nested attribute path from config.user only, else return default.
+  # Usage: resolveFromUser config [ "deploymentMode" ] "develop"
+  resolveFromUser =
+    config: attrPath: default:
+    if
+      config.nx.profile ? user
+      && config.nx.profile.user != null
+      && lib.hasAttrByPath attrPath config.nx.profile.user
+    then
+      lib.getAttrFromPath attrPath config.nx.profile.user
+    else
+      default;
+
   # Deep-merge values with list concatenation and type checks.
   # Usage: deepMergeComplex { base = $BASE; override = $OVERRIDE; forbidNewRoot = $BOOL; forbidNewAny = $BOOL;  forbidNewDeep = $BOOL;}
   deepMergeComplex =

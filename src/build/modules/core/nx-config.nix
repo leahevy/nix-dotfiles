@@ -15,6 +15,11 @@ args@{
 
   rawOptions = {
     nx.global = {
+      vmsDir = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Optional custom VM cache directory for nx vm";
+      };
       kernel = {
         bootModules = lib.mkOption {
           type = lib.types.listOf lib.types.str;
@@ -81,6 +86,7 @@ args@{
       nx.global = self.variables.nx.config // {
         deploymentMode = helpers.resolveFromHostOrUser config [ "deploymentMode" ] "develop";
         enabledCommands = builtins.attrNames config.nx.commandline;
+        vmsDir = helpers.resolveFromHost config [ "settings" "system" "vmsDataPath" ] null;
         kernel = {
           bootModules = config.boot.initrd.availableKernelModules or [ ];
           initrdModules = config.boot.initrd.kernelModules or [ ];

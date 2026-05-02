@@ -337,7 +337,7 @@ fi
 LOCK_ACQUIRED=true
 echo "$$:vm:$(date +%s)" >"${NX_VM_LOCK}/info"
 
-VM_CACHE="${HOME}/.cache/nx/vms"
+VM_CACHE="${NX_VMS_DIR}"
 
 shopt -s nullglob
 stale_removed=()
@@ -390,7 +390,7 @@ if [[ "${LIST_ALL}" == "true" ]]; then
 	profile_dirs=("${VM_CACHE}"/*)
 	shopt -u nullglob
 	if [[ ${#profile_dirs[@]} -eq 0 ]]; then
-		print_info "No VM images found"
+		print_info "No VM images found ($VM_CACHE)"
 		exit 0
 	fi
 	found_any=false
@@ -421,7 +421,7 @@ if [[ "${LIST_ALL}" == "true" ]]; then
 		done
 	done
 	if [[ "${found_any}" == "false" ]]; then
-		print_info "No VM images found"
+		print_info "No VM images found ($VM_CACHE)"
 	fi
 	exit 0
 fi
@@ -465,7 +465,7 @@ if [[ "${LIST_VERSIONS}" == "true" ]]; then
 	version_dirs=("${PROFILE_CACHE}"/*)
 	shopt -u nullglob
 	if [[ ${#version_dirs[@]} -eq 0 ]]; then
-		print_info "No VM images found for ${PROFILE}"
+		print_info "No VM images found for ${PROFILE} ($VM_CACHE)"
 		exit 0
 	fi
 	running_version=""
