@@ -583,6 +583,12 @@ check_git_worktrees_clean() {
 }
 
 verify_commits() {
+	if [[ ! -d "$HOME/.gnupg" && ! -L "$HOME/.gnupg" ]]; then
+		echo -e "${YELLOW}No GnuPG configuration found -> Skipping commit verification!${RESET}" >&2
+		echo
+		return 0
+	fi
+
 	if [[ "${SKIP_VERIFICATION:-false}" == "true" ]]; then
 		echo -e "${MAGENTA}Skipping commit verification due to --skip-verification flag${RESET}" >&2
 		echo
