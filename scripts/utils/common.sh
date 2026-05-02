@@ -583,8 +583,24 @@ check_git_worktrees_clean() {
 }
 
 verify_commits() {
+	local gnupg_configured=true
+
 	if [[ ! -d "$HOME/.gnupg" && ! -L "$HOME/.gnupg" ]]; then
-		echo -e "${YELLOW}No GnuPG configuration found -> Skipping commit verification!${RESET}" >&2
+		gnupg_configured=false
+	elif [[ ! -e "$HOME/.gnupg/trustdb.gpg" ]]; then
+		gnupg_configured=false
+	elif ! command -v gpg >/dev/null 2>&1; then
+		gnupg_configured=false
+	else
+		local keys
+		keys="$(gpg --list-keys 2>/dev/null || true)"
+		if [[ -z "${keys//[[:space:]]/}" ]]; then
+			gnupg_configured=false
+		fi
+	fi
+
+	if [[ "$gnupg_configured" != "true" ]]; then
+		echo -e "${YELLOW}GnuPG not configured -> Skipping commit verification!${RESET}" >&2
 		echo
 		return 0
 	fi
