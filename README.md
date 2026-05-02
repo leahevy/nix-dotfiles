@@ -60,8 +60,7 @@ My personal NixOS, macOS, and Home-Manager configuration using a dual-repository
 
 ## ISO Build Requirements
 
-For building live ISOs, `configRepoIsoUrl` must be set in `~/.config/nx/nxconfig/variables.nix`.
-Optionally, set `configRepoInstallUrl` and `coreRepoInstallUrl` variables to set different URLs for the
+For building live ISOs, `configRepoURL` must be set in `~/.config/nx/nxconfig/variables.nix`.
 installed system during the live ISO installation process.
 
 ## NX Utility

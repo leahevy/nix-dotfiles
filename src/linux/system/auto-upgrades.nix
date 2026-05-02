@@ -198,10 +198,8 @@ args@{
 
         profileName = "${self.host.hostname}--${self.host.architecture}";
 
-        coreRepoHost = builtins.head (builtins.match "https://([^/]+)/.*" self.variables.coreRepoIsoUrl);
-        configRepoHost = builtins.head (
-          builtins.match "https://([^/]+)/.*" self.variables.configRepoIsoUrl
-        );
+        coreRepoHost = builtins.head (builtins.match "https://([^/]+)/.*" self.variables.coreRepoURL);
+        configRepoHost = builtins.head (builtins.match "https://([^/]+)/.*" self.variables.configRepoURL);
 
         gitEnv = "GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null";
 
@@ -648,10 +646,10 @@ args@{
 
                   ${lib.optionalString isDevelopMode ''
                     if [[ -d "${nxcoreDir}/.git" ]]; then
-                      setup_nx_auto_upgrade_remote "${nxcoreDir}" "nxcore" "${self.variables.coreRepoIsoUrl}"
+                      setup_nx_auto_upgrade_remote "${nxcoreDir}" "nxcore" "${self.variables.coreRepoURL}"
                     fi
                   ''}
-                  setup_nx_auto_upgrade_remote "${nxconfigDir}" "nxconfig" "${self.variables.configRepoIsoUrl}"
+                  setup_nx_auto_upgrade_remote "${nxconfigDir}" "nxconfig" "${self.variables.configRepoURL}"
         '';
 
         checkForChangesScript = ''

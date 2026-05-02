@@ -294,11 +294,11 @@
 
       echo "Configuring remote origin for live environment..."
       if ${pkgs.git}/bin/git remote get-url origin >/dev/null 2>&1; then
-        ${pkgs.git}/bin/git remote set-url origin "${variables.coreRepoIsoUrl}"
-        echo "Updated existing remote origin to: ${variables.coreRepoIsoUrl}"
+        ${pkgs.git}/bin/git remote set-url origin "${variables.coreRepoURL}"
+        echo "Updated existing remote origin to: ${variables.coreRepoURL}"
       else
-        ${pkgs.git}/bin/git remote add origin "${variables.coreRepoIsoUrl}"
-        echo "Added remote origin: ${variables.coreRepoIsoUrl}"
+        ${pkgs.git}/bin/git remote add origin "${variables.coreRepoURL}"
+        echo "Added remote origin: ${variables.coreRepoURL}"
       fi
 
       echo "Attempting to fetch from remote repository..."
@@ -344,7 +344,7 @@
       Environment = "GIT_TERMINAL_PROMPT=0";
     };
     script = ''
-      if [ -n "${variables.configRepoIsoUrl}" ] && [ "${variables.configRepoIsoUrl}" != "" ]; then
+      if [ -n "${variables.configRepoURL}" ] && [ "${variables.configRepoURL}" != "" ]; then
         if [ ! -d .git ]; then
           echo "Initializing git repository for nxconfig..."
           ${pkgs.git}/bin/git init
@@ -354,11 +354,11 @@
 
         echo "Configuring remote origin for live environment..."
         if ${pkgs.git}/bin/git remote get-url origin >/dev/null 2>&1; then
-          ${pkgs.git}/bin/git remote set-url origin "${variables.configRepoIsoUrl}"
-          echo "Updated existing remote origin to: ${variables.configRepoIsoUrl}"
+          ${pkgs.git}/bin/git remote set-url origin "${variables.configRepoURL}"
+          echo "Updated existing remote origin to: ${variables.configRepoURL}"
         else
-          ${pkgs.git}/bin/git remote add origin "${variables.configRepoIsoUrl}"
-          echo "Added remote origin: ${variables.configRepoIsoUrl}"
+          ${pkgs.git}/bin/git remote add origin "${variables.configRepoURL}"
+          echo "Added remote origin: ${variables.configRepoURL}"
         fi
 
         echo "Attempting to fetch from remote repository..."
@@ -371,7 +371,7 @@
           exit 0
         fi
       else
-        echo "No configRepoIsoUrl configured, skipping config git initialization"
+        echo "No configRepoURL configured, skipping config git initialization"
       fi
     '';
   };

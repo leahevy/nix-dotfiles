@@ -20,7 +20,7 @@ cd /nxconfig
 if [ ! -d .git ]; then
 	echo -e "${RED}Error: ${WHITE}/nxconfig${RED} is not a git repository${RESET}" >&2
 	echo -e "${RED}Make sure the ${WHITE}nx-config-git-init${RED} service has run successfully${RESET}"
-	echo -e "This usually means ${WHITE}configRepoIsoUrl${RESET} is not configured in ${WHITE}variables.nix${RESET}" >&2
+	echo -e "This usually means ${WHITE}configRepoURL${RESET} is not configured in ${WHITE}variables.nix${RESET}" >&2
 	exit 1
 fi
 

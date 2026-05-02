@@ -929,43 +929,75 @@ configure_target_git_remotes() {
 	local TARGET_CORE="/mnt$TARGET_HOME/.config/nx/nxcore"
 	local TARGET_CONFIG="/mnt$TARGET_HOME/.config/nx/nxconfig"
 
-	local CORE_INSTALL_URL
-	local CONFIG_INSTALL_URL
+	local CORE_URL
+	local CONFIG_URL
+	local git_cmd=(git)
 
-	CORE_INSTALL_URL="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#variables.coreRepoInstallUrl" 2>/dev/null || echo "null")"
-	if [[ "$CORE_INSTALL_URL" == "null" || "$CORE_INSTALL_URL" == "\"null\"" ]]; then
-		CORE_INSTALL_URL="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#variables.coreRepoIsoUrl" 2>/dev/null)"
-	fi
-	CORE_INSTALL_URL="${CORE_INSTALL_URL//\"/}"
+	normalize_git_origin_url() {
+		local url="$1"
+		if [[ "$url" =~ ^git@([^:]+):(.+)$ ]]; then
+			echo "https://${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+			return 0
+		fi
+		echo "$url"
+	}
 
-	CONFIG_INSTALL_URL="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#variables.configRepoInstallUrl" 2>/dev/null || echo "null")"
-	if [[ "$CONFIG_INSTALL_URL" == "null" || "$CONFIG_INSTALL_URL" == "\"null\"" ]]; then
-		CONFIG_INSTALL_URL="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#variables.configRepoIsoUrl" 2>/dev/null)"
-	fi
-	CONFIG_INSTALL_URL="${CONFIG_INSTALL_URL//\"/}"
+	sanitize_repo_git() {
+		local repo_dir="$1"
+
+		if [[ ! -d "$repo_dir/.git" ]]; then
+			return 0
+		fi
+
+		local remotes=()
+		while IFS= read -r remote; do
+			[[ -n "$remote" ]] && remotes+=("$remote")
+		done < <("${git_cmd[@]}" -c safe.directory="$repo_dir" -C "$repo_dir" remote 2>/dev/null || true)
+
+		local remote
+		for remote in "${remotes[@]}"; do
+			if [[ "$remote" != "origin" ]]; then
+				"${git_cmd[@]}" -c safe.directory="$repo_dir" -C "$repo_dir" remote remove "$remote" >/dev/null 2>&1 || true
+			fi
+		done
+
+		"${git_cmd[@]}" -c safe.directory="$repo_dir" -C "$repo_dir" checkout -- . >/dev/null 2>&1 || true
+	}
+
+	CORE_URL="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#variables.coreRepoURL" 2>/dev/null || echo "null")"
+	CORE_URL="${CORE_URL//\"/}"
+	CORE_URL="$(normalize_git_origin_url "$CORE_URL")"
+
+	CONFIG_URL="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#variables.configRepoURL" 2>/dev/null || echo "null")"
+	CONFIG_URL="${CONFIG_URL//\"/}"
+	CONFIG_URL="$(normalize_git_origin_url "$CONFIG_URL")"
 
 	echo -e "${WHITE}Configuring git remotes for target system...${RESET}"
 
-	if [[ -d "$TARGET_CORE/.git" && -n "$CORE_INSTALL_URL" ]]; then
-		echo -e "Setting core repository remote to: ${WHITE}$CORE_INSTALL_URL${RESET}"
-		cd "$TARGET_CORE" || return 1
-		if git remote get-url origin >/dev/null 2>&1; then
-			git remote set-url origin "$CORE_INSTALL_URL"
-		else
-			git remote add origin "$CORE_INSTALL_URL"
+	if [[ -d "$TARGET_CORE/.git" ]]; then
+		sanitize_repo_git "$TARGET_CORE"
+		if [[ -n "$CORE_URL" && "$CORE_URL" != "null" ]]; then
+			echo -e "Setting core repository remote to: ${WHITE}$CORE_URL${RESET}"
+			if "${git_cmd[@]}" -c safe.directory="$TARGET_CORE" -C "$TARGET_CORE" remote get-url origin >/dev/null 2>&1; then
+				"${git_cmd[@]}" -c safe.directory="$TARGET_CORE" -C "$TARGET_CORE" remote set-url origin "$CORE_URL"
+			else
+				"${git_cmd[@]}" -c safe.directory="$TARGET_CORE" -C "$TARGET_CORE" remote add origin "$CORE_URL"
+			fi
 		fi
-		chown -R "$USER_ID:$GROUP_ID" "$TARGET_CORE/.git"
+		chown -R "$USER_ID:$GROUP_ID" "$TARGET_CORE/.git" || true
 	fi
 
-	if [[ -d "$TARGET_CONFIG/.git" && -n "$CONFIG_INSTALL_URL" ]]; then
-		echo -e "Setting config repository remote to: ${WHITE}$CONFIG_INSTALL_URL${RESET}"
-		cd "$TARGET_CONFIG" || return 1
-		if git remote get-url origin >/dev/null 2>&1; then
-			git remote set-url origin "$CONFIG_INSTALL_URL"
-		else
-			git remote add origin "$CONFIG_INSTALL_URL"
+	if [[ -d "$TARGET_CONFIG/.git" ]]; then
+		sanitize_repo_git "$TARGET_CONFIG"
+		if [[ -n "$CONFIG_URL" && "$CONFIG_URL" != "null" ]]; then
+			echo -e "Setting config repository remote to: ${WHITE}$CONFIG_URL${RESET}"
+			if "${git_cmd[@]}" -c safe.directory="$TARGET_CONFIG" -C "$TARGET_CONFIG" remote get-url origin >/dev/null 2>&1; then
+				"${git_cmd[@]}" -c safe.directory="$TARGET_CONFIG" -C "$TARGET_CONFIG" remote set-url origin "$CONFIG_URL"
+			else
+				"${git_cmd[@]}" -c safe.directory="$TARGET_CONFIG" -C "$TARGET_CONFIG" remote add origin "$CONFIG_URL"
+			fi
 		fi
-		chown -R "$USER_ID:$GROUP_ID" "$TARGET_CONFIG/.git"
+		chown -R "$USER_ID:$GROUP_ID" "$TARGET_CONFIG/.git" || true
 	fi
 
 	echo -e "${GREEN}Git remotes configured for target system.${RESET}"

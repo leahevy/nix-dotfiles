@@ -16,10 +16,8 @@
 
   home-manager-backup-extension = "nix-rebuild.backup";
 
-  coreRepoIsoUrl = "https://github.com/leahevy/nix-dotfiles";
-  coreRepoInstallUrl = "git@github.com:leahevy/nix-dotfiles.git";
-  configRepoIsoUrl = "";
-  configRepoInstallUrl = "";
+  coreRepoURL = "https://github.com/leahevy/nix-dotfiles.git";
+  configRepoURL = "";
 
   isoManagementSSHKey = null;
 
