@@ -24,6 +24,8 @@ export INFO_ICON="dialog-information"
 export SUCCESS_ICON="nix-snowflake"
 export ERROR_ICON="dialog-error"
 
+export HOME_MANAGER_BACKUP_EXT="nix-rebuild.backup"
+
 export AUTO_UPDATE_INPUTS=(
 	"nixpkgs"
 	"nixpkgs-darwin"

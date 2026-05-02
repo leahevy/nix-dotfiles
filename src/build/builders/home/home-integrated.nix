@@ -51,7 +51,7 @@
         );
         home-manager.useGlobalPkgs = false;
         home-manager.useUserPackages = true;
-        home-manager.backupFileExtension = "nix-rebuild.backup";
+        home-manager.backupFileExtension = variables.home-manager-backup-extension;
         home-manager.extraSpecialArgs = specialArgs;
       }
     ]

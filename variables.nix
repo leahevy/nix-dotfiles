@@ -14,6 +14,8 @@
 
   nix-implementation = "nix"; # "nix" | "lix"
 
+  home-manager-backup-extension = "nix-rebuild.backup";
+
   coreRepoIsoUrl = "https://github.com/leahevy/nix-dotfiles";
   coreRepoInstallUrl = "git@github.com:leahevy/nix-dotfiles.git";
   configRepoIsoUrl = "";
