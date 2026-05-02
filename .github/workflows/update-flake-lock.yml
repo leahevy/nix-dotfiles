@@ -151,6 +151,9 @@ jobs:
             "^nix$"
             "^nixVersions"
             "^nixos:"
+            "^lix:"
+            "^lix[[:space:]]"
+            "^lix$"
           )
 
           DESKTOP_REBOOT_PACKAGES=(
