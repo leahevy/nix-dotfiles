@@ -409,7 +409,7 @@ in
         escapeUnitPath = path: lib.replaceStrings [ "-" "/" ] [ "\\x2d" "-" ] (lib.removePrefix "/" path);
 
         sysPersistFiles = map normalizeFile (config.environment.persistence.${self.persist}.files or [ ]);
-        homePersistFiles = lib.optionals (!self.user.isStandalone) (
+        homePersistFiles = (
           map normalizeFile (
             (config.home-manager.users.${username}.home.persistence.${self.persist} or { }).files or [ ]
           )
