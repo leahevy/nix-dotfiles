@@ -56,15 +56,15 @@ echo
 echo -e "${WHITE}Checking if impermanence is enabled for this host...${RESET}"
 IMPERMANENCE_ENABLED="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.nx.profile.host.impermanence" 2>/dev/null || echo "false")"
 
-HOME="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
-if [[ -z "$HOME" || "$HOME" == "null" ]]; then
+USER_HOME="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
+if [[ -z "$USER_HOME" || "$USER_HOME" == "null" ]]; then
 	echo -e "${RED}Error: Failed to extract valid home directory for ${WHITE}$USERNAME${RESET}" >&2
 	exit 1
 fi
-HOME="${HOME//\"/}"
+USER_HOME="${USER_HOME//\"/}"
 
-if [[ ! "$HOME" =~ ^/[a-zA-Z0-9_/.-]+$ ]]; then
-	echo -e "${RED}Error: Invalid home directory path: ${WHITE}$HOME${RESET}" >&2
+if [[ ! "$USER_HOME" =~ ^/[a-zA-Z0-9_/.-]+$ ]]; then
+	echo -e "${RED}Error: Invalid home directory path: ${WHITE}$USER_HOME${RESET}" >&2
 	exit 1
 fi
 
@@ -90,7 +90,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		exit 1
 	fi
 
-	USER_SOPS_KEY="/mnt/$HOME/.config/sops/age/keys.txt"
+	USER_SOPS_KEY="/mnt/$USER_HOME/.config/sops/age/keys.txt"
 	if [[ ! -f "$USER_SOPS_KEY" ]]; then
 		echo -e "${RED}Error: User SOPS key not found at ${WHITE}$USER_SOPS_KEY${RESET}" >&2
 		echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
@@ -125,10 +125,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		echo -e "${YELLOW}Skipping nixos-install - system appears ready${RESET}" >&2
 		echo -e "${YELLOW}If you need to reinstall, remove ${WHITE}/mnt/etc/NIXOS${YELLOW} first${RESET}" >&2
 	else
-		if [[ -d "/mnt/$HOME" ]]; then
+		if [[ -d "/mnt/$USER_HOME" ]]; then
 			echo -e "Fixing general user dir permissions"
-			chmod 700 "/mnt/$HOME"
-			chown "$USER_UID:$USER_GID" -R "/mnt/$HOME"
+			chmod 700 "/mnt/$USER_HOME"
+			chown "$USER_UID:$USER_GID" -R "/mnt/$USER_HOME"
 		fi
 
 		echo
@@ -143,15 +143,20 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 			exit 1
 		fi
 
+		if [[ -z "${PERSIST_PATH:-}" || "$PERSIST_PATH" == "/" ]]; then
+			echo -e "${RED}Error: Refusing to clear invalid persistence path: ${WHITE}${PERSIST_PATH:-<empty>}${RESET}" >&2
+			exit 1
+		fi
+
 		echo -e "Clearing ${WHITE}/mnt${PERSIST_PATH}${RESET} directory for preparation of persistence"
-		rm -rf /mnt${PERSIST_PATH}/* || true
+		rm -rf "/mnt${PERSIST_PATH:?}/"* || true
 
 		echo -e "${GREEN}NixOS installation completed successfully.${RESET}"
 	fi
 
-	BASE_DIR="/mnt/$HOME/.config/nx"
-	CORE_DIR="/mnt/$HOME/.config/nx/nxcore"
-	CONFIG_TARGET_DIR="/mnt/$HOME/.config/nx/nxconfig"
+	BASE_DIR="/mnt/$USER_HOME/.config/nx"
+	CORE_DIR="/mnt/$USER_HOME/.config/nx/nxcore"
+	CONFIG_TARGET_DIR="/mnt/$USER_HOME/.config/nx/nxconfig"
 
 	if [[ -d "$CORE_DIR" && -f "$CORE_DIR/flake.nix" && -d "$CONFIG_TARGET_DIR" && -d "$CONFIG_TARGET_DIR/profiles" ]]; then
 		echo -e "${GREEN}Both core and config directories appear to be already set up:${RESET}"
@@ -172,19 +177,19 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		fi
 
 		echo -e "${WHITE}Copying core repository to target system...${RESET}"
-		mkdir -p "/mnt/$HOME/.config/nx"
+		mkdir -p "/mnt/$USER_HOME/.config/nx"
 		cp -R --verbose -T "$NXCORE_DIR" "$CORE_DIR"
 		chown -R "$USER_UID:$USER_GID" "$CORE_DIR"
 
 		echo -e "${WHITE}Copying config repository to target system...${RESET}"
-		copy_config_to_target "$HOME" "$USER_UID" "$USER_GID"
+		copy_config_to_target "$USER_HOME" "$USER_UID" "$USER_GID"
 
 		chown "$USER_UID:$USER_GID" "$BASE_DIR"
 		chmod 700 "$CORE_DIR"
 		chmod 700 "$CONFIG_TARGET_DIR"
 
 		echo -e "${WHITE}Configuring git remotes for target system...${RESET}"
-		configure_target_git_remotes "$HOME" "$USER_UID" "$USER_GID"
+		configure_target_git_remotes "$USER_HOME" "$USER_UID" "$USER_GID"
 	fi
 
 	echo
