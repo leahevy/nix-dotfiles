@@ -47,7 +47,7 @@ args@{
         cmp = true;
         project = true;
         vimwiki = false;
-        obsidian = true;
+        obsidian = false;
         tmuxline = false;
         vim-tmux-navigator = true;
         copilot = false;
