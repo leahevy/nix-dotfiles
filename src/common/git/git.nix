@@ -23,6 +23,7 @@ args@{
   };
 
   settings = {
+    disableSSHRewrites = false;
     serversToEnforceSSH = [
       "github.com"
       "gitlab.com"
@@ -69,13 +70,15 @@ args@{
               autocorrect = "prompt";
             };
 
-            url = lib.listToAttrs (
-              map (server: {
-                name = "git@${server}:";
-                value = {
-                  insteadOf = "https://${server}/";
-                };
-              }) self.settings.serversToEnforceSSH
+            url = lib.mkIf (!self.settings.disableSSHRewrites) (
+              lib.listToAttrs (
+                map (server: {
+                  name = "git@${server}:";
+                  value = {
+                    insteadOf = "https://${server}/";
+                  };
+                }) self.settings.serversToEnforceSSH
+              )
             );
 
             rerere = {
