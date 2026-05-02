@@ -406,7 +406,7 @@ in
         userGid = toString config.users.groups.${config.users.users.${username}.group}.gid;
 
         normalizeFile = f: if builtins.isString f then f else f.file;
-        escapeUnitPath = path: lib.replaceStrings [ "/" ] [ "-" ] (lib.removePrefix "/" path);
+        escapeUnitPath = path: lib.replaceStrings [ "-" "/" ] [ "\\x2d" "-" ] (lib.removePrefix "/" path);
 
         sysPersistFiles = map normalizeFile (config.environment.persistence.${self.persist}.files or [ ]);
         homePersistFiles = lib.optionals (!self.user.isStandalone) (
@@ -619,6 +619,8 @@ in
         systemd.services.impermanence-touch-files = lib.mkIf (allPersistPaths != [ ]) {
           description = "Touch impermanence files before bind mounts";
           wantedBy = [ "local-fs.target" ];
+          wants = [ "${escapeUnitPath self.persist}.mount" ];
+          after = [ "${escapeUnitPath self.persist}.mount" ];
           unitConfig = {
             DefaultDependencies = false;
             Before = [ "local-fs.target" ] ++ persistUnits;
