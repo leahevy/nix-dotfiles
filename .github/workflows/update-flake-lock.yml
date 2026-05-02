@@ -15,7 +15,9 @@ jobs:
         run: |
           source scripts/utils/defs.sh
           echo "UPDATE_INPUTS=$(IFS=,; echo "${AUTO_UPDATE_INPUTS[*]}")" >> $GITHUB_ENV
-          echo "EXCLUDE_FROM_REBOOT_CHECK=$(printf '%s\n' "${AUTO_UPDATE_INPUTS[@]}" | grep -vxF -f <(printf '%s\n' "${REBOOT_CHECK_INPUTS[@]}") | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_ENV
+          echo "REBOOT_NORMAL_CHECK_INPUTS=$(IFS=,; echo "${REBOOT_NORMAL_CHECK_INPUTS[*]}")" >> $GITHUB_ENV
+          echo "REBOOT_NIX_CHECK_INPUTS=$(IFS=,; echo "${REBOOT_NIX_CHECK_INPUTS[*]}")" >> $GITHUB_ENV
+          echo "EXCLUDE_FROM_REBOOT_CHECK=$(printf '%s\n' "${AUTO_UPDATE_INPUTS[@]}" | grep -vxF -f <(printf '%s\n' "${REBOOT_NORMAL_CHECK_INPUTS[@]}" "${REBOOT_NIX_CHECK_INPUTS[@]}") | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_ENV
           echo "TRUNCATE_INPUTS=$(IFS=,; echo "${TRUNCATE_INPUTS[*]}")" >> $GITHUB_ENV
           echo "UPDATE_AUTO_MERGE_ENABLED=$UPDATE_AUTO_MERGE_ENABLED" >> $GITHUB_ENV
           echo "UPDATE_MERGE_DAYS=$(IFS=,; echo "${UPDATE_MERGE_DAYS[*]}")" >> $GITHUB_ENV
@@ -135,7 +137,7 @@ jobs:
             fi
           }
 
-          REBOOT_PACKAGES=(
+          REBOOT_NORMAL_PACKAGES=(
             "^linux[-_][0-9]"
             "^linuxKernel\.kernels\.linux:[[:space:]]"
             "^linuxKernel\.kernels\.linux[-_][0-9]"
@@ -146,6 +148,9 @@ jobs:
             "^glibc"
             "^microcode"
             "^linux-firmware"
+          )
+
+          REBOOT_NIX_PACKAGES=(
             "^nix:"
             "^nix[[:space:]]"
             "^nix$"
@@ -154,6 +159,9 @@ jobs:
             "^lix:"
             "^lix[[:space:]]"
             "^lix$"
+            "^nh:"
+            "^nh[[:space:]]"
+            "^nh$"
           )
 
           DESKTOP_REBOOT_PACKAGES=(
@@ -162,16 +170,27 @@ jobs:
             "^uwsm"
           )
 
-          REBOOT_PATTERNS=""
-          for pattern in "${REBOOT_PACKAGES[@]}"; do
+          REBOOT_NORMAL_PATTERNS=""
+          for pattern in "${REBOOT_NORMAL_PACKAGES[@]}"; do
             if [[ "$pattern" =~ ^\^ ]]; then
-              REBOOT_PATTERNS="${REBOOT_PATTERNS}${pattern}"
+              REBOOT_NORMAL_PATTERNS="${REBOOT_NORMAL_PATTERNS}${pattern}"
             else
-              REBOOT_PATTERNS="${REBOOT_PATTERNS}\\b${pattern}\\b"
+              REBOOT_NORMAL_PATTERNS="${REBOOT_NORMAL_PATTERNS}\\b${pattern}\\b"
             fi
-            REBOOT_PATTERNS="${REBOOT_PATTERNS}|"
+            REBOOT_NORMAL_PATTERNS="${REBOOT_NORMAL_PATTERNS}|"
           done
-          REBOOT_PATTERNS="${REBOOT_PATTERNS%|}"
+          REBOOT_NORMAL_PATTERNS="${REBOOT_NORMAL_PATTERNS%|}"
+
+          REBOOT_NIX_PATTERNS=""
+          for pattern in "${REBOOT_NIX_PACKAGES[@]}"; do
+            if [[ "$pattern" =~ ^\^ ]]; then
+              REBOOT_NIX_PATTERNS="${REBOOT_NIX_PATTERNS}${pattern}"
+            else
+              REBOOT_NIX_PATTERNS="${REBOOT_NIX_PATTERNS}\\b${pattern}\\b"
+            fi
+            REBOOT_NIX_PATTERNS="${REBOOT_NIX_PATTERNS}|"
+          done
+          REBOOT_NIX_PATTERNS="${REBOOT_NIX_PATTERNS%|}"
 
           DESKTOP_REBOOT_PATTERNS=""
           for pattern in "${DESKTOP_REBOOT_PACKAGES[@]}"; do
@@ -232,16 +251,42 @@ jobs:
                   fi
 
                   if ! echo ",$EXCLUDE_FROM_REBOOT_CHECK," | grep -q ",$input,"; then
-                    if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_PATTERNS" > /dev/null 2>&1; then
-                      requires_reboot="true"
-                      found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
-                      if [ -n "$found_packages" ]; then
-                        reboot_packages="$reboot_packages$found_packages, "
-                      fi
+                    should_check_reboot_normal="false"
+                    should_check_reboot_nix="false"
+                    if echo ",$REBOOT_NORMAL_CHECK_INPUTS," | grep -q ",$input,"; then
+                      should_check_reboot_normal="true"
+                    fi
+                    if echo ",$REBOOT_NIX_CHECK_INPUTS," | grep -q ",$input,"; then
+                      should_check_reboot_nix="true"
+                    fi
 
-                      input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
-                      if [ -n "$input_reboot_commits" ]; then
-                        reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
+                    if [ "$should_check_reboot_normal" = "true" ]; then
+                      if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_NORMAL_PATTERNS" > /dev/null 2>&1; then
+                        requires_reboot="true"
+                        found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$REBOOT_NORMAL_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                        if [ -n "$found_packages" ]; then
+                          reboot_packages="$reboot_packages$found_packages, "
+                        fi
+
+                        input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_NORMAL_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                        if [ -n "$input_reboot_commits" ]; then
+                          reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
+                        fi
+                      fi
+                    fi
+
+                    if [ "$should_check_reboot_nix" = "true" ]; then
+                      if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_NIX_PATTERNS" > /dev/null 2>&1; then
+                        requires_reboot="true"
+                        found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$REBOOT_NIX_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                        if [ -n "$found_packages" ]; then
+                          reboot_packages="$reboot_packages$found_packages, "
+                        fi
+
+                        input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_NIX_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                        if [ -n "$input_reboot_commits" ]; then
+                          reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
+                        fi
                       fi
                     fi
 

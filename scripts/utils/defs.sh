@@ -52,8 +52,11 @@ export AUTO_UPDATE_INPUTS=(
 	"nix-season-wallpaper"
 )
 
-export REBOOT_CHECK_INPUTS=(
+export REBOOT_NORMAL_CHECK_INPUTS=(
 	"nixpkgs"
+)
+
+export REBOOT_NIX_CHECK_INPUTS=(
 	"nixpkgs-nix"
 )
 
