@@ -259,14 +259,15 @@ jobs:
                   if [ "$truncate_this_input" = "true" ]; then
                     commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($total_commits commits, details omitted)"
                   else
-                    all_commits=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                    all_commits_full=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
 
-                    regular_commits=$(echo "$all_commits" | grep -vE '^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]|- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release)-[0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]' || true)
+                    regular_commits_full=$(echo "$all_commits_full" | grep -vE '^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]|- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release)-[0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]' || true)
 
-                    backport_count=$(printf '%s\n' "$all_commits" | grep -cE '^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]' || true)
-                    staging_count=$(printf '%s\n' "$all_commits" | grep -cE '^- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release)-[0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]' || true)
+                    backport_count=$(printf '%s\n' "$all_commits_full" | grep -cE '^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]' || true)
+                    staging_count=$(printf '%s\n' "$all_commits_full" | grep -cE '^- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release)-[0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]' || true)
 
-                    if [ -n "$regular_commits" ]; then
+                    if [ -n "$regular_commits_full" ]; then
+                      regular_commits=$(printf '%s\n' "$regular_commits_full" | sed -E 's/^- //; s/ \\(\\[[^]]+\\]\\([^)]*\\)\\)$//' | cut -d: -f1 | sed -E 's/[[:space:]]+$//' | sort -fu | sed -E 's/^/- /')
                       commit_count=$(echo "$regular_commits" | wc -l)
                       commits_to_show="$regular_commits"
 
