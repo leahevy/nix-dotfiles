@@ -43,7 +43,7 @@ args@{
           }
           {
             mode = "n";
-            key = "<C-b>";
+            key = "<C-t>";
             action.__raw = "function() require('neoscroll').ctrl_u({duration = 250}) end";
             options = {
               desc = "Half page up (neoscroll)";
@@ -61,7 +61,7 @@ args@{
           }
           {
             mode = "v";
-            key = "<C-b>";
+            key = "<C-t>";
             action.__raw = "function() require('neoscroll').ctrl_u({duration = 250}) end";
             options = {
               desc = "Half page up (neoscroll)";
