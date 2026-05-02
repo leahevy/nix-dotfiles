@@ -39,6 +39,12 @@ if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix" ]]; then
 	exit 1
 fi
 
+if ! mountpoint -q /mnt; then
+	echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted!${RESET}" >&2
+	echo -e "${RED}Run ${WHITE}30-mount.sh${RED} first to mount the target filesystem.${RESET}" >&2
+	exit 1
+fi
+
 FULL_PROFILE="$(construct_profile_name "$HOSTNAME")"
 USERNAME="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.nx.profile.host.mainUser.username" 2>/dev/null || echo "null")"
 if [[ -z "$USERNAME" || "$USERNAME" == "null" || "$USERNAME" == "\"null\"" ]]; then

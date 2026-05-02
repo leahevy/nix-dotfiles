@@ -48,6 +48,12 @@ if [[ "$HOSTNAME" = "" ]]; then
 	exit 1
 fi
 
+if ! mountpoint -q /mnt; then
+	echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted!${RESET}" >&2
+	echo -e "${RED}Run ${WHITE}30-mount.sh${RED} first to mount the target filesystem.${RESET}" >&2
+	exit 1
+fi
+
 check_config_directory "migrate-to-persistence" "bootstrap"
 cd "$CONFIG_DIR"
 
