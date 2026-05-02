@@ -162,7 +162,11 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		echo -e "${GREEN}Both core and config directories appear to be already set up:${RESET}"
 		echo -e "  - ${WHITE}$CORE_DIR${RESET} (has ${WHITE}flake.nix${RESET})"
 		echo -e "  - ${WHITE}$CONFIG_TARGET_DIR${RESET} (has ${WHITE}profiles${RESET})"
-		echo -e "${GREEN}Skipping configuration copying as setup appears complete.${RESET}"
+		echo
+		echo -e "${GREEN}Skipping repository copy.${RESET}"
+		echo
+		echo -e "${WHITE}Ensuring git remotes are configured for target system...${RESET}"
+		configure_target_git_remotes "$USER_HOME" "$USER_UID" "$USER_GID"
 	else
 		if [[ -d "$CORE_DIR" ]]; then
 			echo -e "${YELLOW}Warning: Core directory $CORE_DIR already exists${RESET}" >&2
