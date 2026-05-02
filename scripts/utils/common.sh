@@ -1357,6 +1357,10 @@ diff_store_paths() {
 		"hm_gdugdu.yaml"
 		"etc-man_db.conf"
 		"etc"
+		"unit-home-manager-remove-backups.service"
+		"remove-backups-script"
+		"unit-impermanence-touch-files.service"
+		"impermanence-touch-files"
 	)
 	local suffixes_to_ignore=(
 		"-source"
