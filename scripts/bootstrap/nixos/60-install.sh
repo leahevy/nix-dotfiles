@@ -58,6 +58,11 @@ echo -e "Using full profile name: ${WHITE}$FULL_PROFILE${RESET}"
 
 PERSIST_PATH=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist)
 
+SYSTEM_PERSISTED=0
+if [[ -n "${PERSIST_PATH:-}" && "$PERSIST_PATH" != "/" && -e "/mnt${PERSIST_PATH}/etc/IMPERMANENCE" ]]; then
+	SYSTEM_PERSISTED=1
+fi
+
 echo
 echo -e "${WHITE}Checking if impermanence is enabled for this host...${RESET}"
 IMPERMANENCE_ENABLED="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.nx.profile.host.impermanence" 2>/dev/null || echo "false")"
@@ -74,31 +79,42 @@ if [[ ! "$USER_HOME" =~ ^/[a-zA-Z0-9_/.-]+$ ]]; then
 	exit 1
 fi
 
+MNT_USER_HOME="/mnt$USER_HOME"
+MNT_PERSIST_USER_HOME="/mnt${PERSIST_PATH}$USER_HOME"
+
 echo -e "${YELLOW}You are about to install NixOS from profile ${WHITE}$CONFIG_DIR/profiles/nixos/$HOSTNAME/$HOSTNAME.nix${RESET} for admin user '${WHITE}$USERNAME${RESET}'"
 read -p "Continue? [y|N]: " -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo -e "\n"
 
 	if ! mountpoint -q /mnt; then
-		echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted${RESET}" >&2
-		echo -e "${RED}Please mount your target filesystem to ${WHITE}/mnt${RED} before running install${RESET}" >&2
+		echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted!${RESET}" >&2
+		echo -e "${RED}Run ${WHITE}30-mount.sh${RED} first to mount the target filesystem.${RESET}" >&2
 		exit 1
 	fi
 
-	if [[ ! -f "/mnt/etc/sops/age/keys.txt" ]]; then
-		echo -e "${RED}Error: Root SOPS key not found at ${WHITE}/mnt/etc/sops/age/keys.txt${RESET}" >&2
+	ROOT_SOPS_KEY="/mnt/etc/sops/age/keys.txt"
+	if [[ ! -f "$ROOT_SOPS_KEY" && "$SYSTEM_PERSISTED" == "1" ]]; then
+		ROOT_SOPS_KEY="/mnt${PERSIST_PATH}/etc/sops/age/keys.txt"
+	fi
+
+	if [[ ! -f "$ROOT_SOPS_KEY" ]]; then
+		echo -e "${RED}Error: Root SOPS key not found at ${WHITE}/mnt/etc/sops/age/keys.txt${RED} or ${WHITE}/mnt${PERSIST_PATH}/etc/sops/age/keys.txt${RESET}" >&2
 		echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
 		exit 1
 	fi
 
-	if ! age-keygen -y /mnt/etc/sops/age/keys.txt >/dev/null 2>&1; then
-		echo -e "${RED}Error: Root SOPS key at ${WHITE}/mnt/etc/sops/age/keys.txt${RED} is not a valid age key!${RESET}" >&2
+	if ! age-keygen -y "$ROOT_SOPS_KEY" >/dev/null 2>&1; then
+		echo -e "${RED}Error: Root SOPS key at ${WHITE}$ROOT_SOPS_KEY${RED} is not a valid age key!${RESET}" >&2
 		exit 1
 	fi
 
-	USER_SOPS_KEY="/mnt/$USER_HOME/.config/sops/age/keys.txt"
+	USER_SOPS_KEY="$MNT_USER_HOME/.config/sops/age/keys.txt"
+	if [[ ! -f "$USER_SOPS_KEY" && "$SYSTEM_PERSISTED" == "1" ]]; then
+		USER_SOPS_KEY="$MNT_PERSIST_USER_HOME/.config/sops/age/keys.txt"
+	fi
 	if [[ ! -f "$USER_SOPS_KEY" ]]; then
-		echo -e "${RED}Error: User SOPS key not found at ${WHITE}$USER_SOPS_KEY${RESET}" >&2
+		echo -e "${RED}Error: User SOPS key not found at ${WHITE}$MNT_USER_HOME/.config/sops/age/keys.txt${RED} or ${WHITE}$MNT_PERSIST_USER_HOME/.config/sops/age/keys.txt${RESET}" >&2
 		echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
 		exit 1
 	fi
@@ -126,10 +142,16 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	fi
 	USER_GID="${USER_GID//\"/}"
 
-	if [[ -e "/mnt/etc/NIXOS" ]]; then
-		echo -e "${YELLOW}NixOS already appears to be installed on ${WHITE}/mnt${YELLOW} (found ${WHITE}/mnt/etc/NIXOS${YELLOW})" >&2
+	if [[ -e "/mnt/etc/NIXOS" || -e "/mnt${PERSIST_PATH}/etc/NIXOS" ]]; then
+		if [[ -e "/mnt/etc/NIXOS" ]]; then
+			NIXOS_MARKER="/mnt/etc/NIXOS"
+		else
+			NIXOS_MARKER="/mnt${PERSIST_PATH}/etc/NIXOS"
+		fi
+
+		echo -e "${YELLOW}NixOS already appears to be installed on ${WHITE}/mnt${YELLOW} (found ${WHITE}$NIXOS_MARKER${YELLOW})" >&2
 		echo -e "${YELLOW}Skipping nixos-install - system appears ready${RESET}" >&2
-		echo -e "${YELLOW}If you need to reinstall, remove ${WHITE}/mnt/etc/NIXOS${YELLOW} first${RESET}" >&2
+		echo -e "${YELLOW}If you need to reinstall, remove ${WHITE}$NIXOS_MARKER${YELLOW} first${RESET}" >&2
 	else
 		if [[ -d "/mnt/$USER_HOME" ]]; then
 			echo -e "Fixing general user dir permissions"
@@ -140,7 +162,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		echo
 		echo -e "Copying sops file temporarily to ${WHITE}$PERSIST_PATH${RESET}"
 		mkdir -p /mnt${PERSIST_PATH}/etc/sops/age
-		cp -a /mnt/etc/sops/age/keys.txt /mnt${PERSIST_PATH}/etc/sops/age
+		cp -a "$ROOT_SOPS_KEY" /mnt${PERSIST_PATH}/etc/sops/age/keys.txt
 
 		echo
 		echo -e "Running: ${WHITE}nixos-install --flake .#$FULL_PROFILE --no-root-password --override-input core path:$NXCORE_DIR${RESET}"
@@ -160,9 +182,21 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		echo -e "${GREEN}NixOS installation completed successfully.${RESET}"
 	fi
 
-	BASE_DIR="/mnt/$USER_HOME/.config/nx"
-	CORE_DIR="/mnt/$USER_HOME/.config/nx/nxcore"
-	CONFIG_TARGET_DIR="/mnt/$USER_HOME/.config/nx/nxconfig"
+	BASE_DIR="$MNT_USER_HOME/.config/nx"
+	CORE_DIR="$BASE_DIR/nxcore"
+	CONFIG_TARGET_DIR="$BASE_DIR/nxconfig"
+
+	PERSIST_BASE_DIR="$MNT_PERSIST_USER_HOME/.config/nx"
+	PERSIST_CORE_DIR="$PERSIST_BASE_DIR/nxcore"
+	PERSIST_CONFIG_TARGET_DIR="$PERSIST_BASE_DIR/nxconfig"
+
+	if [[ "$SYSTEM_PERSISTED" == "1" ]]; then
+		if [[ -d "$PERSIST_CORE_DIR" && -f "$PERSIST_CORE_DIR/flake.nix" && -d "$PERSIST_CONFIG_TARGET_DIR" && -d "$PERSIST_CONFIG_TARGET_DIR/profiles" ]]; then
+			BASE_DIR="$PERSIST_BASE_DIR"
+			CORE_DIR="$PERSIST_CORE_DIR"
+			CONFIG_TARGET_DIR="$PERSIST_CONFIG_TARGET_DIR"
+		fi
+	fi
 
 	if [[ -d "$CORE_DIR" && -f "$CORE_DIR/flake.nix" && -d "$CONFIG_TARGET_DIR" && -d "$CONFIG_TARGET_DIR/profiles" ]]; then
 		echo -e "${GREEN}Both core and config directories appear to be already set up:${RESET}"
