@@ -200,12 +200,12 @@ with lib;
     };
 
     mainUser = mkOption {
-      type = types.either types.str types.attrs;
+      type = types.either types.nonEmptyStr types.attrs;
       description = "The main user (profile name or processed config)";
     };
 
     additionalUsers = mkOption {
-      type = types.listOf (types.either types.str types.attrs);
+      type = types.listOf (types.either typesbnonEmptyStr types.attrs);
       default = [ ];
       description = "Additional users (profile names or processed configs)";
     };
