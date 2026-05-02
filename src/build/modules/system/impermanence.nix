@@ -331,7 +331,7 @@ in
   input = "build";
 
   module = {
-    enabled = config: {
+    linux.enabled = config: {
       nx.commandline.impermanence =
         cmds:
         let
@@ -364,7 +364,8 @@ in
           };
         };
     };
-    system =
+
+    linux.system =
       config:
       let
         diskoDevices = config.disko.devices or { };
@@ -633,7 +634,7 @@ in
         };
       };
 
-    home =
+    linux.home =
       config:
       lib.mkIf (!self.user.isStandalone && self.isLinux && (self.host.impermanence or false)) {
         home.persistence."${self.persist}" = {
