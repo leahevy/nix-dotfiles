@@ -76,7 +76,7 @@ fi
 
 if [[ ! -e "/mnt/etc/NIXOS" && ! -e "/mnt${PERSIST_SYSTEM}/etc/NIXOS" ]]; then
 	echo -e "${RED}Error: NixOS installation not found at ${WHITE}/mnt${RESET}" >&2
-	echo -e "${RED}Please run nixos-install first${RESET}" >&2
+	echo -e "${RED}Please run install first${RESET}" >&2
 	exit 1
 fi
 

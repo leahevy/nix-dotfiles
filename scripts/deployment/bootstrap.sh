@@ -16,8 +16,8 @@ show_list() {
 	echo -e "   ${WHITE}disk-format${RESET} <hostname>                          20-disk-format.sh"
 	echo -e "   ${WHITE}mount${RESET} <hostname>                                30-mount.sh"
 	echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]      40-create-profile-stub.sh"
-	echo -e "   ${WHITE}nixos-create-sops-key${RESET} <hostname>                50-nixos-create-sops-key.sh"
-	echo -e "   ${WHITE}nixos-install${RESET} <hostname>                        60-nixos-install.sh"
+	echo -e "   ${WHITE}create-sops-key${RESET} <hostname>                      50-create-sops-key.sh"
+	echo -e "   ${WHITE}install${RESET} <hostname>                              60-install.sh"
 	echo -e "   ${WHITE}migrate-to-persistence${RESET} <hostname> [--dry-run]   70-migrate-to-persistence.sh"
 	echo
 	echo -e "${WHITE}standalone:${RESET}"
@@ -74,8 +74,8 @@ nixos)
 		echo -e "   ${WHITE}disk-format${RESET} <hostname>                         20-disk-format.sh"
 		echo -e "   ${WHITE}mount${RESET} <hostname>                               30-mount.sh"
 		echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]     40-create-profile-stub.sh"
-		echo -e "   ${WHITE}nixos-create-sops-key${RESET} <hostname>               50-nixos-create-sops-key.sh"
-		echo -e "   ${WHITE}nixos-install${RESET} <hostname>                       60-nixos-install.sh"
+		echo -e "   ${WHITE}create-sops-key${RESET} <hostname>                     50-create-sops-key.sh"
+		echo -e "   ${WHITE}install${RESET} <hostname>                             60-install.sh"
 		echo -e "   ${WHITE}migrate-to-persistence${RESET} <hostname> [--dry-run]  70-migrate-to-persistence.sh"
 		exit 0
 	fi
@@ -86,8 +86,8 @@ nixos)
 	disk-format) SCRIPT_FILE="20-disk-format.sh" ;;
 	mount) SCRIPT_FILE="30-mount.sh" ;;
 	create-profile-stub) SCRIPT_FILE="40-create-profile-stub.sh" ;;
-	nixos-create-sops-key) SCRIPT_FILE="50-nixos-create-sops-key.sh" ;;
-	nixos-install) SCRIPT_FILE="60-nixos-install.sh" ;;
+	create-sops-key) SCRIPT_FILE="50-create-sops-key.sh" ;;
+	install) SCRIPT_FILE="60-install.sh" ;;
 	migrate-to-persistence) SCRIPT_FILE="70-migrate-to-persistence.sh" ;;
 	*)
 		echo -e "${RED}Error: Unknown nixos bootstrap script: ${WHITE}$SCRIPT_NAME${RESET}" >&2

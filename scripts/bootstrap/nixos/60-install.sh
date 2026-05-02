@@ -26,7 +26,7 @@ if [[ "$HOSTNAME" = "" ]]; then
 	exit 1
 fi
 
-check_config_directory "nixos-install" "bootstrap"
+check_config_directory "install" "bootstrap"
 cd "$CONFIG_DIR"
 
 if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME" ]]; then
@@ -75,13 +75,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 	if ! mountpoint -q /mnt; then
 		echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted${RESET}" >&2
-		echo -e "${RED}Please mount your target filesystem to ${WHITE}/mnt${RED} before running nixos-install${RESET}" >&2
+		echo -e "${RED}Please mount your target filesystem to ${WHITE}/mnt${RED} before running install${RESET}" >&2
 		exit 1
 	fi
 
 	if [[ ! -f "/mnt/etc/sops/age/keys.txt" ]]; then
 		echo -e "${RED}Error: Root SOPS key not found at ${WHITE}/mnt/etc/sops/age/keys.txt${RESET}" >&2
-		echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-nixos-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
+		echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
 		exit 1
 	fi
 
@@ -93,7 +93,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	USER_SOPS_KEY="/mnt/$HOME/.config/sops/age/keys.txt"
 	if [[ ! -f "$USER_SOPS_KEY" ]]; then
 		echo -e "${RED}Error: User SOPS key not found at ${WHITE}$USER_SOPS_KEY${RESET}" >&2
-		echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-nixos-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
+		echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
 		exit 1
 	fi
 

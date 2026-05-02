@@ -368,4 +368,4 @@ echo
 echo -e "${YELLOW}Next steps:${RESET}"
 echo -e "${YELLOW}   1. Edit ${WHITE}$PROFILE_DIR/$HOSTNAME.nix${YELLOW} to set ${WHITE}mainUser${YELLOW}, ${WHITE}additionalUsers${YELLOW}, and ${WHITE}ethernetDeviceName${RESET}"
 echo -e "${YELLOW}   2. Configure modules and settings as needed${RESET}"
-echo -e "${YELLOW}   3. Run bootstrap scripts: ${WHITE}50-nixos-create-sops-key.sh${YELLOW} then ${WHITE}60-nixos-install.sh${RESET} and if needed ${WHITE}70-migrate-to-persistence.sh${RESET}"
+echo -e "${YELLOW}   3. Run bootstrap scripts: ${WHITE}50-create-sops-key.sh${YELLOW} then ${WHITE}60-install.sh${RESET} and if needed ${WHITE}70-migrate-to-persistence.sh${RESET}"

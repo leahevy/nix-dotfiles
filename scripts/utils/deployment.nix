@@ -479,11 +479,11 @@
                   no-root = option "Generate config for current system instead of /mnt";
                 };
               };
-              nixos-create-sops-key = {
+              create-sops-key = {
                 description = "Create SOPS age keys for host and user";
                 arguments = [ (arg "hostname" "Target hostname" "string") ];
               };
-              nixos-install = {
+              install = {
                 description = "Install NixOS to /mnt";
                 arguments = [ (arg "hostname" "Target hostname" "string") ];
               };

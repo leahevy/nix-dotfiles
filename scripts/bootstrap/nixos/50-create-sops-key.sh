@@ -26,7 +26,7 @@ if [[ "$HOSTNAME" = "" ]]; then
 	exit 1
 fi
 
-check_config_directory "nixos-create-sops-key" "bootstrap"
+check_config_directory "create-sops-key" "bootstrap"
 cd "$CONFIG_DIR"
 
 if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME" ]]; then
@@ -136,5 +136,5 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo -e "${YELLOW}Next steps:${RESET}"
 	echo -e "${YELLOW}1. Re-encrypt the config directory with the new SOPS key.${RESET}"
 	echo -e "${YELLOW}2. Pull the updated config directory on this host.${RESET}"
-	echo -e "${YELLOW}3. You can then run ${WHITE}60-nixos-install.sh${YELLOW} to proceed with the installation.${RESET}"
+	echo -e "${YELLOW}3. You can then run ${WHITE}60-install.sh${YELLOW} to proceed with the installation.${RESET}"
 fi
