@@ -198,8 +198,15 @@ args@{
 
         profileName = "${self.host.hostname}--${self.host.architecture}";
 
-        coreRepoHost = builtins.head (builtins.match "https://([^/]+)/.*" self.variables.coreRepoURL);
-        configRepoHost = builtins.head (builtins.match "https://([^/]+)/.*" self.variables.configRepoURL);
+        coreRepoURL = self.variables.coreRepoURL or "";
+        configRepoURL = self.variables.configRepoURL or "";
+
+        coreRepoHost =
+          assert coreRepoURL != "" && configRepoURL != "";
+          builtins.head (builtins.match "https://([^/]+)/.*" coreRepoURL);
+        configRepoHost =
+          assert coreRepoURL != "" && configRepoURL != "";
+          builtins.head (builtins.match "https://([^/]+)/.*" configRepoURL);
 
         gitEnv = "GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null";
 
@@ -1013,6 +1020,10 @@ args@{
           {
             assertion = self.host.deploymentMode != "managed";
             message = "Auto-upgrades cannot be enabled in managed deployment mode!";
+          }
+          {
+            assertion = coreRepoURL != "" && configRepoURL != "";
+            message = "auto-upgrades requires variables.coreRepoURL and variables.configRepoURL to be set!";
           }
         ];
 
