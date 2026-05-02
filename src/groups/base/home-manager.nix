@@ -30,9 +30,9 @@ let
         "jujutsu"
       ];
       services = [
-        "ollama"
         "ssh-agent"
-      ];
+      ]
+      ++ lib.optionals (!(self ? host && self.host ? isVM && self.host.isVM)) [ "ollama" ];
       fonts = [
         "japanese"
         "general"
@@ -67,7 +67,7 @@ let
       tmux = [ "tmux" ];
       nvim = [ "nixvim" ];
       nvim-modules = {
-        minuet = true;
+        minuet = if self ? host && self.host ? isVM && self.host.isVM then false else true;
       };
     };
     groups.shell = [ "shell" ];
