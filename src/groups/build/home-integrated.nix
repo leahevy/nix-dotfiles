@@ -17,7 +17,9 @@ args@{
 
   submodules = {
     build = {
-      system = (if self.host.impermanence or false then [ "impermanence" ] else [ ]);
+      system = (if self.host.impermanence or false then [ "impermanence" ] else [ ]) ++ [
+        "home-manager"
+      ];
     };
   };
 }
