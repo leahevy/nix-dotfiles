@@ -148,7 +148,7 @@ let
             ];
             home-manager.useGlobalPkgs = false;
             home-manager.useUserPackages = true;
-            home-manager.backupFileExtension = variables.home-manager-backup.extension;
+            home-manager.backupFileExtension = variables.home-manager-backup-extension;
             home-manager.extraSpecialArgs = specialArgs;
           }
           {
