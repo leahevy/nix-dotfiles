@@ -14,6 +14,7 @@ let
       graphics = [ "imagemagick" ];
       utils = [ "archive-tools" ];
       browser = [ "firefox" ];
+      notes = [ "appflowy" ];
       dev = [
         "conda"
         "just"
