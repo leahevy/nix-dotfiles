@@ -329,6 +329,7 @@ jobs:
                         other_list=""
                         highlight_csv="${PACKAGES_TO_HIGHLIGHT:-}"
                         highlight_norm=$(printf '%s\n' "$highlight_csv" | tr ',' '\n' | sed '/^$/d' | tr '[:upper:]' '[:lower:]' | sort -fu)
+                        other_updates_line=""
 
                         while IFS= read -r pkg; do
                           [ -z "$pkg" ] && continue
@@ -354,30 +355,42 @@ jobs:
                           regular_commits="$highlight_list"
                         fi
                         if [ -n "$other_list" ]; then
-                          if [ -n "$regular_commits" ]; then
-                            regular_commits="$regular_commits"$'\n'
-                          fi
-                          regular_commits="$regular_commits<b>Other Updates</b>: $other_list"
+                          other_updates_line="<b>Other Updates</b>: $other_list"
                         fi
                       else
                         regular_commits="$regular_commits_full"
                       fi
                       commit_count=$(echo "$regular_commits" | wc -l)
-                      commits_to_show="$regular_commits"
-
                       if [ "$commit_count" -gt 500 ]; then
                         commits_to_show=$(echo "$regular_commits" | head -500)
                         commits_to_show="$commits_to_show"$'\n'"- ... and $(($commit_count - 500)) more commits"
+                      else
+                        commits_to_show="$regular_commits"
+                      fi
+
+                      if [ "$should_reduce_commit_subjects" = "true" ]; then
+                        if [ "$backport_count" -gt 0 ]; then
+                          if [ -n "$commits_to_show" ]; then
+                            commits_to_show="$commits_to_show"$'\n'
+                          fi
+                          commits_to_show="$commits_to_show- ($backport_count backport commits filtered out)"
+                        fi
+                        if [ "$staging_count" -gt 0 ]; then
+                          if [ -n "$commits_to_show" ]; then
+                            commits_to_show="$commits_to_show"$'\n'
+                          fi
+                          commits_to_show="$commits_to_show- ($staging_count staging/release merge commits filtered out)"
+                        fi
+                        if [ -n "$other_updates_line" ]; then
+                          if [ -n "$commits_to_show" ]; then
+                            commits_to_show="$commits_to_show"$'\n\n'
+                          fi
+                          commits_to_show="$commits_to_show$other_updates_line"
+                        fi
                       fi
 
                       commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"$commits_to_show"
 
-                      if [ "$backport_count" -gt 0 ]; then
-                        commit_lists="$commit_lists"$'\n'"- ($backport_count backport commits filtered out)"
-                      fi
-                      if [ "$staging_count" -gt 0 ]; then
-                        commit_lists="$commit_lists"$'\n'"- ($staging_count staging/release merge commits filtered out)"
-                      fi
                     else
                       filtered_total=$((backport_count + staging_count))
                       if [ "$filtered_total" -gt 0 ]; then
