@@ -25,6 +25,82 @@ let
     "nx_unfree"
     "nx_conditionForce"
   ];
+
+  l1FnNames = [
+    "init"
+    "enabled"
+    "disabled"
+    "home"
+    "system"
+    "standalone"
+    "integrated"
+  ];
+  l1FnNamesNoInit = builtins.filter (n: n != "init") l1FnNames;
+
+  moduleLayers = [
+    {
+      name = "platform";
+      keys = [
+        "linux"
+        "darwin"
+      ];
+      activeKeys =
+        ctx: lib.optional (ctx.isLinux or false) "linux" ++ lib.optional (ctx.isDarwin or false) "darwin";
+      allowsInit = true;
+    }
+    {
+      name = "arch";
+      keys = [
+        "x86_64"
+        "aarch64"
+      ];
+      activeKeys =
+        ctx:
+        lib.optional (ctx.isX86_64 or false) "x86_64" ++ lib.optional (ctx.isAARCH64 or false) "aarch64";
+      allowsInit = true;
+    }
+    {
+      name = "buildType";
+      keys = [
+        "virtual"
+        "physical"
+        "testingVM"
+        "productionVM"
+      ];
+      activeKeys =
+        ctx:
+        lib.optional (ctx.isVirtual or false) "virtual"
+        ++ lib.optional (!(ctx.isVirtual or false)) "physical"
+        ++ lib.optional (ctx.isTestingVM or false) "testingVM"
+        ++ lib.optional (ctx.isProductionVM or false) "productionVM";
+      allowsInit = false;
+    }
+    {
+      name = "deploymentMode";
+      keys = [
+        "develop"
+        "local"
+        "server"
+        "managed"
+      ];
+      activeKeys = ctx: [ (ctx.deploymentMode or "develop") ];
+      allowsInit = false;
+    }
+  ];
+
+  topLayerIdx = (builtins.length moduleLayers) - 1;
+
+  keysOfLayer = idx: (lib.elemAt moduleLayers idx).keys;
+  keysOfLayersUpTo =
+    upToIdx: if upToIdx < 0 then [ ] else lib.flatten (map (i: keysOfLayer i) (lib.range 0 upToIdx));
+
+  layerByName =
+    name:
+    let
+      match = lib.findFirst (l: l.name == name) null moduleLayers;
+    in
+    if match == null then throw "moduleLayers: no layer named '${name}'!" else match;
+  keysOfLayerByName = name: (layerByName name).keys;
 in
 rec {
   inherit moduleFuncs;
@@ -302,14 +378,8 @@ rec {
               "'${attr}' contains invalid values: ${builtins.concatStringsSep ", " invalid}. Allowed values: ${builtins.concatStringsSep ", " valid}."
             else
               null;
-          validPlatforms = [
-            "linux"
-            "darwin"
-          ];
-          validArchitectures = [
-            "x86_64"
-            "aarch64"
-          ];
+          validPlatforms = keysOfLayerByName "platform";
+          validArchitectures = keysOfLayerByName "arch";
           specialListErrors = builtins.filter (x: x != null) (
             map (sc: if sc ? allowedValues then check sc.attr sc.allowedValues else null) specialConditions
           );
@@ -627,34 +697,7 @@ rec {
   validateInnerModule =
     prefix: modulePath: module:
     let
-      l1FnNames = [
-        "init"
-        "enabled"
-        "disabled"
-        "home"
-        "system"
-        "standalone"
-        "integrated"
-      ];
-      l1BaseAllowed = l1FnNames ++ [ "overlays" ];
-      l1CondAllowed = [
-        "enabled"
-        "disabled"
-        "home"
-        "system"
-        "standalone"
-        "integrated"
-      ];
-      condStructuralKeys =
-        l1CondAllowed
-        ++ [
-          "linux"
-          "darwin"
-          "x86_64"
-          "aarch64"
-        ]
-        ++ buildTypeNames
-        ++ deploymentModeNames;
+      condStructuralKeys = l1FnNamesNoInit ++ keysOfLayersUpTo topLayerIdx;
 
       validateFn =
         path: name: value:
@@ -681,368 +724,69 @@ rec {
           name: if attrset ? ${name} then validateFn pathPrefix name attrset.${name} else [ ]
         ) names;
 
-      validatePlatformBase =
-        pathPrefix: platName: platModule:
-        checkInvalid "${prefix}.${pathPrefix}${platName}" l1BaseAllowed platModule
-        ++ checkFns "${pathPrefix}${platName}." l1FnNames platModule;
-
-      validateArchBase =
-        pathPrefix: archName: archModule:
+      mkValidateLevel =
+        {
+          mode,
+          upToIdx,
+          level,
+          allowsInit ? false,
+          extraAllowedKeys ? [ ],
+          topErr ? false,
+        }:
+        attrset:
         let
-          fullPath = "${pathPrefix}${archName}";
+          fnNames =
+            if mode == "cond" then
+              l1FnNamesNoInit
+            else if allowsInit then
+              l1FnNames
+            else
+              l1FnNamesNoInit;
+          allowedKeys =
+            fnNames ++ lib.optional (mode == "base") "overlays" ++ keysOfLayersUpTo upToIdx ++ extraAllowedKeys;
+          containerName = if topErr then "on" else "${prefix}.${level}";
+          fnPathPrefix = if level == "" then "" else "${level}.";
+          invalidErrors = checkInvalid containerName allowedKeys attrset;
+          fnErrors = checkFns fnPathPrefix fnNames attrset;
+          nestedErrors =
+            if upToIdx < 0 then
+              [ ]
+            else
+              lib.concatMap (
+                idx:
+                let
+                  layer = lib.elemAt moduleLayers idx;
+                in
+                lib.concatMap (
+                  key:
+                  let
+                    nextLevel = if level == "" then key else "${level}.${key}";
+                  in
+                  if attrset ? ${key} && builtins.isAttrs attrset.${key} then
+                    mkValidateLevel {
+                      inherit mode;
+                      upToIdx = idx - 1;
+                      level = nextLevel;
+                      allowsInit = layer.allowsInit;
+                    } attrset.${key}
+                  else if attrset ? ${key} then
+                    [
+                      "${prefix}.${nextLevel} must be an attribute set, got ${builtins.typeOf attrset.${key}}"
+                    ]
+                  else
+                    [ ]
+                ) layer.keys
+              ) (lib.range 0 upToIdx);
         in
-        checkInvalid "${prefix}.${fullPath}" (
-          l1BaseAllowed
-          ++ [
-            "linux"
-            "darwin"
-          ]
-        ) archModule
-        ++ checkFns "${fullPath}." l1FnNames archModule
-        ++
-          lib.concatMap
-            (
-              platName:
-              if archModule ? ${platName} && builtins.isAttrs archModule.${platName} then
-                validatePlatformBase "${fullPath}." platName archModule.${platName}
-              else if archModule ? ${platName} then
-                [
-                  "${prefix}.${fullPath}.${platName} must be an attribute set, got ${
-                    builtins.typeOf archModule.${platName}
-                  }"
-                ]
-              else
-                [ ]
-            )
-            [
-              "linux"
-              "darwin"
-            ];
-
-      validatePlatformCond =
-        pathPrefix: platName: platModule:
-        checkInvalid "${prefix}.${pathPrefix}${platName}" l1CondAllowed platModule
-        ++ checkFns "${pathPrefix}${platName}." l1CondAllowed platModule;
-
-      validateArchCond =
-        pathPrefix: archName: archModule:
-        let
-          fullPath = "${pathPrefix}${archName}";
-        in
-        checkInvalid "${prefix}.${fullPath}" (
-          l1CondAllowed
-          ++ [
-            "linux"
-            "darwin"
-          ]
-        ) archModule
-        ++ checkFns "${fullPath}." l1CondAllowed archModule
-        ++
-          lib.concatMap
-            (
-              platName:
-              if archModule ? ${platName} && builtins.isAttrs archModule.${platName} then
-                validatePlatformCond "${fullPath}." platName archModule.${platName}
-              else if archModule ? ${platName} then
-                [ "${prefix}.${fullPath}.${platName} must be an attribute set" ]
-              else
-                [ ]
-            )
-            [
-              "linux"
-              "darwin"
-            ];
-
-      validateVirtualPhysicalBase =
-        pathPrefix: buildTypeName: buildTypeModule:
-        let
-          vplAllowed = l1CondAllowed ++ [
-            "overlays"
-            "linux"
-            "darwin"
-            "x86_64"
-            "aarch64"
-          ];
-          fullPath = "${pathPrefix}${buildTypeName}";
-        in
-        checkInvalid "${prefix}.${fullPath}" vplAllowed buildTypeModule
-        ++ checkFns "${fullPath}." l1CondAllowed buildTypeModule
-        ++
-          lib.concatMap
-            (
-              platName:
-              if buildTypeModule ? ${platName} && builtins.isAttrs buildTypeModule.${platName} then
-                validatePlatformBase "${fullPath}." platName buildTypeModule.${platName}
-              else if buildTypeModule ? ${platName} then
-                [
-                  "${prefix}.${fullPath}.${platName} must be an attribute set, got ${
-                    builtins.typeOf buildTypeModule.${platName}
-                  }"
-                ]
-              else
-                [ ]
-            )
-            [
-              "linux"
-              "darwin"
-            ]
-        ++
-          lib.concatMap
-            (
-              archName:
-              if buildTypeModule ? ${archName} && builtins.isAttrs buildTypeModule.${archName} then
-                validateArchBase "${fullPath}." archName buildTypeModule.${archName}
-              else if buildTypeModule ? ${archName} then
-                [
-                  "${prefix}.${fullPath}.${archName} must be an attribute set, got ${
-                    builtins.typeOf buildTypeModule.${archName}
-                  }"
-                ]
-              else
-                [ ]
-            )
-            [
-              "x86_64"
-              "aarch64"
-            ];
-
-      deploymentModeNames = [
-        "develop"
-        "local"
-        "server"
-        "managed"
-      ];
-
-      buildTypeNames = [
-        "virtual"
-        "physical"
-        "testingVM"
-        "productionVM"
-      ];
-
-      validateDeploymentModeBase =
-        pathPrefix: modeName: modeModule:
-        let
-          dmlAllowed =
-            l1CondAllowed
-            ++ [
-              "overlays"
-              "linux"
-              "darwin"
-              "x86_64"
-              "aarch64"
-            ]
-            ++ buildTypeNames;
-          fullPath = "${pathPrefix}${modeName}";
-        in
-        checkInvalid "${prefix}.${fullPath}" dmlAllowed modeModule
-        ++ checkFns "${fullPath}." l1CondAllowed modeModule
-        ++
-          lib.concatMap
-            (
-              platName:
-              if modeModule ? ${platName} && builtins.isAttrs modeModule.${platName} then
-                validatePlatformBase "${fullPath}." platName modeModule.${platName}
-              else if modeModule ? ${platName} then
-                [
-                  "${prefix}.${fullPath}.${platName} must be an attribute set, got ${
-                    builtins.typeOf modeModule.${platName}
-                  }"
-                ]
-              else
-                [ ]
-            )
-            [
-              "linux"
-              "darwin"
-            ]
-        ++
-          lib.concatMap
-            (
-              archName:
-              if modeModule ? ${archName} && builtins.isAttrs modeModule.${archName} then
-                validateArchBase "${fullPath}." archName modeModule.${archName}
-              else if modeModule ? ${archName} then
-                [
-                  "${prefix}.${fullPath}.${archName} must be an attribute set, got ${
-                    builtins.typeOf modeModule.${archName}
-                  }"
-                ]
-              else
-                [ ]
-            )
-            [
-              "x86_64"
-              "aarch64"
-            ]
-        ++ lib.concatMap (
-          buildTypeName:
-          if modeModule ? ${buildTypeName} && builtins.isAttrs modeModule.${buildTypeName} then
-            validateVirtualPhysicalBase "${fullPath}." buildTypeName modeModule.${buildTypeName}
-          else if modeModule ? ${buildTypeName} then
-            [
-              "${prefix}.${fullPath}.${buildTypeName} must be an attribute set, got ${
-                builtins.typeOf modeModule.${buildTypeName}
-              }"
-            ]
-          else
-            [ ]
-        ) buildTypeNames;
-
-      validateVirtualPhysicalCond =
-        pathPrefix: buildTypeName: buildTypeModule:
-        let
-          fullPath = "${pathPrefix}${buildTypeName}";
-        in
-        checkInvalid "${prefix}.${fullPath}" (
-          l1CondAllowed
-          ++ [
-            "linux"
-            "darwin"
-            "x86_64"
-            "aarch64"
-          ]
-        ) buildTypeModule
-        ++ checkFns "${fullPath}." l1CondAllowed buildTypeModule
-        ++
-          lib.concatMap
-            (
-              platName:
-              if buildTypeModule ? ${platName} && builtins.isAttrs buildTypeModule.${platName} then
-                validatePlatformCond "${fullPath}." platName buildTypeModule.${platName}
-              else if buildTypeModule ? ${platName} then
-                [ "${prefix}.${fullPath}.${platName} must be an attribute set" ]
-              else
-                [ ]
-            )
-            [
-              "linux"
-              "darwin"
-            ]
-        ++
-          lib.concatMap
-            (
-              archName:
-              if buildTypeModule ? ${archName} && builtins.isAttrs buildTypeModule.${archName} then
-                validateArchCond "${fullPath}." archName buildTypeModule.${archName}
-              else if buildTypeModule ? ${archName} then
-                [ "${prefix}.${fullPath}.${archName} must be an attribute set" ]
-              else
-                [ ]
-            )
-            [
-              "x86_64"
-              "aarch64"
-            ];
-
-      validateDeploymentModeCond =
-        pathPrefix: modeName: modeModule:
-        let
-          dmlCondAllowed =
-            l1CondAllowed
-            ++ [
-              "linux"
-              "darwin"
-              "x86_64"
-              "aarch64"
-            ]
-            ++ buildTypeNames;
-          fullPath = "${pathPrefix}${modeName}";
-        in
-        checkInvalid "${prefix}.${fullPath}" dmlCondAllowed modeModule
-        ++ checkFns "${fullPath}." l1CondAllowed modeModule
-        ++
-          lib.concatMap
-            (
-              platName:
-              if modeModule ? ${platName} && builtins.isAttrs modeModule.${platName} then
-                validatePlatformCond "${fullPath}." platName modeModule.${platName}
-              else if modeModule ? ${platName} then
-                [ "${prefix}.${fullPath}.${platName} must be an attribute set" ]
-              else
-                [ ]
-            )
-            [
-              "linux"
-              "darwin"
-            ]
-        ++
-          lib.concatMap
-            (
-              archName:
-              if modeModule ? ${archName} && builtins.isAttrs modeModule.${archName} then
-                validateArchCond "${fullPath}." archName modeModule.${archName}
-              else if modeModule ? ${archName} then
-                [ "${prefix}.${fullPath}.${archName} must be an attribute set" ]
-              else
-                [ ]
-            )
-            [
-              "x86_64"
-              "aarch64"
-            ]
-        ++ lib.concatMap (
-          buildTypeName:
-          if modeModule ? ${buildTypeName} && builtins.isAttrs modeModule.${buildTypeName} then
-            validateVirtualPhysicalCond "${fullPath}." buildTypeName modeModule.${buildTypeName}
-          else if modeModule ? ${buildTypeName} then
-            [ "${prefix}.${fullPath}.${buildTypeName} must be an attribute set" ]
-          else
-            [ ]
-        ) buildTypeNames;
+        invalidErrors ++ fnErrors ++ nestedErrors;
 
       validateCondBody =
         path: attrset:
-        checkInvalid "${prefix}.${path}" condStructuralKeys attrset
-        ++ checkFns "${path}." l1CondAllowed attrset
-        ++
-          lib.concatMap
-            (
-              platName:
-              if attrset ? ${platName} && builtins.isAttrs attrset.${platName} then
-                validatePlatformCond "${path}." platName attrset.${platName}
-              else if attrset ? ${platName} then
-                [ "${prefix}.${path}.${platName} must be an attribute set" ]
-              else
-                [ ]
-            )
-            [
-              "linux"
-              "darwin"
-            ]
-        ++
-          lib.concatMap
-            (
-              archName:
-              if attrset ? ${archName} && builtins.isAttrs attrset.${archName} then
-                validateArchCond "${path}." archName attrset.${archName}
-              else if attrset ? ${archName} then
-                [ "${prefix}.${path}.${archName} must be an attribute set" ]
-              else
-                [ ]
-            )
-            [
-              "x86_64"
-              "aarch64"
-            ]
-        ++ lib.concatMap (
-          buildTypeName:
-          if attrset ? ${buildTypeName} && builtins.isAttrs attrset.${buildTypeName} then
-            validateVirtualPhysicalCond "${path}." buildTypeName attrset.${buildTypeName}
-          else if attrset ? ${buildTypeName} then
-            [ "${prefix}.${path}.${buildTypeName} must be an attribute set" ]
-          else
-            [ ]
-        ) buildTypeNames
-        ++ lib.concatMap (
-          modeName:
-          if attrset ? ${modeName} && builtins.isAttrs attrset.${modeName} then
-            validateDeploymentModeCond "${path}." modeName attrset.${modeName}
-          else if attrset ? ${modeName} then
-            [ "${prefix}.${path}.${modeName} must be an attribute set" ]
-          else
-            [ ]
-        ) deploymentModeNames;
+        mkValidateLevel {
+          mode = "cond";
+          upToIdx = topLayerIdx;
+          level = path;
+        } attrset;
 
       validateConditionalModule =
         condName: modPath: modModule:
@@ -1239,54 +983,18 @@ rec {
             ) condModule
           );
 
-      topAllowed =
-        l1BaseAllowed
-        ++ [
-          "linux"
-          "darwin"
-          "x86_64"
-          "aarch64"
+      topErrors = mkValidateLevel {
+        mode = "base";
+        upToIdx = topLayerIdx;
+        level = "";
+        allowsInit = true;
+        extraAllowedKeys = [
           "ifEnabled"
           "ifDisabled"
           "when"
-        ]
-        ++ buildTypeNames
-        ++ deploymentModeNames;
-
-      topErrors = checkInvalid "on" topAllowed module;
-      topFnErrors = checkFns "" l1FnNames module;
-
-      platErrors =
-        lib.concatMap
-          (
-            platName:
-            if module ? ${platName} && builtins.isAttrs module.${platName} then
-              validatePlatformBase "" platName module.${platName}
-            else if module ? ${platName} then
-              [ "${prefix}.${platName} must be an attribute set, got ${builtins.typeOf module.${platName}}" ]
-            else
-              [ ]
-          )
-          [
-            "linux"
-            "darwin"
-          ];
-
-      archErrors =
-        lib.concatMap
-          (
-            archName:
-            if module ? ${archName} && builtins.isAttrs module.${archName} then
-              validateArchBase "" archName module.${archName}
-            else if module ? ${archName} then
-              [ "${prefix}.${archName} must be an attribute set, got ${builtins.typeOf module.${archName}}" ]
-            else
-              [ ]
-          )
-          [
-            "x86_64"
-            "aarch64"
-          ];
+        ];
+        topErr = true;
+      } module;
 
       conditionalErrors =
         (if module ? ifEnabled then validateConditional "ifEnabled" module.ifEnabled else [ ])
@@ -1311,41 +1019,7 @@ rec {
         else
           [ ];
 
-      buildTypeErrors = lib.concatMap (
-        buildTypeName:
-        if module ? ${buildTypeName} && builtins.isAttrs module.${buildTypeName} then
-          validateVirtualPhysicalBase "" buildTypeName module.${buildTypeName}
-        else if module ? ${buildTypeName} then
-          [
-            "${prefix}.${buildTypeName} must be an attribute set, got ${
-              builtins.typeOf module.${buildTypeName}
-            }"
-          ]
-        else
-          [ ]
-      ) buildTypeNames;
-
-      deploymentModeErrors = lib.concatMap (
-        modeName:
-        if module ? ${modeName} && builtins.isAttrs module.${modeName} then
-          validateDeploymentModeBase "" modeName module.${modeName}
-        else if module ? ${modeName} then
-          [
-            "${prefix}.${modeName} must be an attribute set, got ${builtins.typeOf module.${modeName}}"
-          ]
-        else
-          [ ]
-      ) deploymentModeNames;
-
-      allErrors =
-        topErrors
-        ++ topFnErrors
-        ++ platErrors
-        ++ archErrors
-        ++ conditionalErrors
-        ++ whenErrors
-        ++ buildTypeErrors
-        ++ deploymentModeErrors;
+      allErrors = topErrors ++ conditionalErrors ++ whenErrors;
     in
     if allErrors != [ ] then
       throw "Module ${modulePath} has invalid 'on' configuration:\n  ${builtins.concatStringsSep "\n  " allErrors}"
@@ -1379,39 +1053,6 @@ rec {
 
       tag = fn: type: wrap: { inherit fn type wrap; };
 
-      platformOf =
-        attrset:
-        if isLinux then
-          attrset.linux or { }
-        else if isDarwin then
-          attrset.darwin or { }
-        else
-          { };
-
-      archOf =
-        attrset:
-        if isX86_64 then
-          attrset.x86_64 or { }
-        else if isAARCH64 then
-          attrset.aarch64 or { }
-        else
-          { };
-
-      collectBuildTypeLayers =
-        excludeInit: wrap: attrset:
-        collectLayers123 excludeInit wrap attrset
-        ++ (if isVirtual then collectLayers123 excludeInit wrap (attrset.virtual or { }) else [ ])
-        ++ (if !isVirtual then collectLayers123 excludeInit wrap (attrset.physical or { }) else [ ])
-        ++ (if isTestingVM then collectLayers123 excludeInit wrap (attrset.testingVM or { }) else [ ])
-        ++ (
-          if isProductionVM then collectLayers123 excludeInit wrap (attrset.productionVM or { }) else [ ]
-        );
-
-      collectAllBuildTypeLayers =
-        excludeInit: wrap: attrset:
-        collectBuildTypeLayers excludeInit wrap attrset
-        ++ collectBuildTypeLayers excludeInit wrap (attrset.${deploymentMode} or { });
-
       collectL1 =
         excludeInit: wrap: attrset:
         lib.optional (!excludeInit && includeInit && attrset ? init) (tag attrset.init "init" wrap)
@@ -1426,17 +1067,40 @@ rec {
         )
         ++ lib.optional (!isHome && attrset ? system) (tag attrset.system "system" wrap);
 
-      collectLayers123 =
+      activeKeysCtx = {
+        inherit
+          isLinux
+          isDarwin
+          isX86_64
+          isAARCH64
+          isVirtual
+          isTestingVM
+          isProductionVM
+          deploymentMode
+          ;
+      };
+
+      collectAllLayers =
         excludeInit: wrap: attrset:
         let
-          platModule = platformOf attrset;
-          archModule = archOf attrset;
-          archPlatModule = platformOf archModule;
+          go =
+            upToIdx: subset:
+            collectL1 excludeInit wrap subset
+            ++ (
+              if upToIdx < 0 then
+                [ ]
+              else
+                lib.concatMap (
+                  idx:
+                  let
+                    layer = lib.elemAt moduleLayers idx;
+                    activeKeys = layer.activeKeys activeKeysCtx;
+                  in
+                  lib.concatMap (key: go (idx - 1) (subset.${key} or { })) activeKeys
+                ) (lib.range 0 upToIdx)
+            );
         in
-        collectL1 excludeInit wrap attrset
-        ++ collectL1 excludeInit wrap platModule
-        ++ collectL1 excludeInit wrap archModule
-        ++ collectL1 excludeInit wrap archPlatModule;
+        go topLayerIdx attrset;
 
       makeWrap =
         isEnabled: modulePath:
@@ -1471,8 +1135,7 @@ rec {
                 lib.flatten (
                   lib.mapAttrsToList (
                     moduleName: subModule:
-                    collectAllBuildTypeLayers true (makeWrap isEnabled "${inputName}.${groupName}.${moduleName}")
-                      subModule
+                    collectAllLayers true (makeWrap isEnabled "${inputName}.${groupName}.${moduleName}") subModule
                   ) modules
                 )
               ) groups
@@ -1691,9 +1354,7 @@ rec {
         let
           collect =
             label: item:
-            collectAllBuildTypeLayers true (makePredWrap label (buildItemCondition label item)) (
-              item.do or { }
-            );
+            collectAllLayers true (makePredWrap label (buildItemCondition label item)) (item.do or { });
           val = module.when or null;
         in
         if val == null then
@@ -1705,7 +1366,7 @@ rec {
         else
           [ ];
     in
-    collectAllBuildTypeLayers false null module
+    collectAllLayers false null module
     ++ collectConditional true (module.ifEnabled or { })
     ++ collectConditional false (module.ifDisabled or { })
     ++ whenFns;
@@ -1818,7 +1479,7 @@ rec {
         architecture = resolveArchitecture args;
       };
 
-      module = validateInnerModule "prefix" modulePath (moduleResult.module or { });
+      module = validateInnerModule "module" modulePath (moduleResult.module or { });
       architecture = resolveArchitecture args;
 
       applicableFns = selectApplicableModuleFns {
