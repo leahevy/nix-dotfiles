@@ -52,6 +52,22 @@ export AUTO_UPDATE_INPUTS=(
 	"nix-season-wallpaper"
 )
 
+export PACKAGES_TO_HIGHLIGHT=(
+	niri
+	firefox
+	signal-desktop
+	tor-browser
+	neovim
+	qutebrowser
+	ente-desktop
+	logseq
+	todoist
+	steam
+	ghostty
+	waybar
+	nwg-wrapper
+)
+
 export NIXPKGS_INPUTS=(
 	"nixpkgs"
 	"nixpkgs-darwin"

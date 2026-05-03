@@ -18,6 +18,7 @@ jobs:
           echo "REBOOT_NORMAL_CHECK_INPUTS=$(IFS=,; echo "${REBOOT_NORMAL_CHECK_INPUTS[*]}")" >> $GITHUB_ENV
           echo "REBOOT_NIX_CHECK_INPUTS=$(IFS=,; echo "${REBOOT_NIX_CHECK_INPUTS[*]}")" >> $GITHUB_ENV
           echo "EXCLUDE_FROM_REBOOT_CHECK=$(printf '%s\n' "${AUTO_UPDATE_INPUTS[@]}" | grep -vxF -f <(printf '%s\n' "${REBOOT_NORMAL_CHECK_INPUTS[@]}" "${REBOOT_NIX_CHECK_INPUTS[@]}") | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_ENV
+          echo "PACKAGES_TO_HIGHLIGHT=$(IFS=,; echo "${PACKAGES_TO_HIGHLIGHT[*]}")" >> $GITHUB_ENV
           echo "NIXPKGS_INPUTS=$(IFS=,; echo "${NIXPKGS_INPUTS[*]}")" >> $GITHUB_ENV
           echo "TRUNCATE_INPUTS=$(IFS=,; echo "${TRUNCATE_INPUTS[*]}")" >> $GITHUB_ENV
           echo "UPDATE_AUTO_MERGE_ENABLED=$UPDATE_AUTO_MERGE_ENABLED" >> $GITHUB_ENV
@@ -322,7 +323,42 @@ jobs:
                       fi
 
                       if [ "$should_reduce_commit_subjects" = "true" ]; then
-                        regular_commits=$(printf '%s\n' "$regular_commits_full" | sed -E 's/^- //; s/ \\(\\[[^]]+\\]\\([^)]*\\)\\)$//' | cut -d: -f1 | sed -E 's/[[:space:]]+$//' | sort -fu | sed -E 's/^/- /')
+                        package_names=$(printf '%s\n' "$regular_commits_full" | sed -E 's/^- //; s/ \\(\\[[^]]+\\]\\([^)]*\\)\\)$//' | cut -d: -f1 | sed -E 's/[[:space:]]+$//' | sort -fu)
+
+                        highlight_list=""
+                        other_list=""
+                        highlight_csv="${PACKAGES_TO_HIGHLIGHT:-}"
+                        highlight_norm=$(printf '%s\n' "$highlight_csv" | tr ',' '\n' | sed '/^$/d' | tr '[:upper:]' '[:lower:]' | sort -fu)
+
+                        while IFS= read -r pkg; do
+                          [ -z "$pkg" ] && continue
+
+                          pkg_norm=$(printf '%s' "$pkg" | tr '[:upper:]' '[:lower:]')
+                          if [ -n "$highlight_norm" ] && printf '%s\n' "$highlight_norm" | grep -qxF "$pkg_norm"; then
+                            if [ -z "$highlight_list" ]; then
+                              highlight_list="- $pkg"
+                            else
+                              highlight_list="$highlight_list"$'\n'"- $pkg"
+                            fi
+                          else
+                            if [ -z "$other_list" ]; then
+                              other_list="$pkg"
+                            else
+                              other_list="$other_list, $pkg"
+                            fi
+                          fi
+                        done <<< "$package_names"
+
+                        regular_commits=""
+                        if [ -n "$highlight_list" ]; then
+                          regular_commits="$highlight_list"
+                        fi
+                        if [ -n "$other_list" ]; then
+                          if [ -n "$regular_commits" ]; then
+                            regular_commits="$regular_commits"$'\n'
+                          fi
+                          regular_commits="$regular_commits<b>Other Updates</b>: $other_list"
+                        fi
                       else
                         regular_commits="$regular_commits_full"
                       fi
