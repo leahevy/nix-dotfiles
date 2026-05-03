@@ -63,7 +63,17 @@ args@{
     nx.profile.isVirtual = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Whether the profile is a virtual (VM) build";
+      description = "Whether the profile is any kind of VM build (testing or production)";
+    };
+    nx.profile.isTestingVM = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Whether the profile is a testing VM build (vm.nix / --TESTING-VM)";
+    };
+    nx.profile.isProductionVM = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Whether the profile is a production VM (host.isVM = true on a real hypervisor)";
     };
     nx.profile.isPhysical = lib.mkOption {
       type = lib.types.bool;
@@ -84,6 +94,8 @@ args@{
       nx.profile.isAARCH64 = self.isAARCH64;
       nx.profile.isNixOS = (self.user.isIntegrated or false) && self.isLinux;
       nx.profile.isVirtual = self.isVirtual;
+      nx.profile.isTestingVM = self.isTestingVM;
+      nx.profile.isProductionVM = self.isProductionVM;
       nx.profile.isPhysical = self.isPhysical;
     };
   };

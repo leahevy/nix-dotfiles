@@ -14,7 +14,7 @@ args@{
   group = "system";
   input = "linux";
 
-  disableOnVM = true;
+  disableOnTestingVM = true;
 
   settings = {
     useNH = true;

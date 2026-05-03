@@ -32,7 +32,7 @@ let
       services = [
         "ssh-agent"
       ]
-      ++ lib.optionals (!(self ? host && self.host ? isVM && self.host.isVM)) [ "ollama" ];
+      ++ lib.optionals (!self.isVirtual) [ "ollama" ];
       fonts = [
         "japanese"
         "general"
@@ -67,7 +67,7 @@ let
       tmux = [ "tmux" ];
       nvim = [ "nixvim" ];
       nvim-modules = {
-        minuet = if self ? host && self.host ? isVM && self.host.isVM then false else true;
+        minuet = !self.isVirtual;
       };
     };
     groups.shell = [ "shell" ];

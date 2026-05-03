@@ -14,7 +14,7 @@ args@{
   group = "storage";
   input = "linux";
 
-  disableOnVM = true;
+  disableOnTestingVM = true;
 
   settings = {
     repository = {

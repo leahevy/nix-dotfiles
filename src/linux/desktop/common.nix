@@ -370,10 +370,7 @@ args@{
 
     linux.system = config: {
       services.libinput.enable =
-        if (self.host.isVM or false) then
-          false
-        else
-          helpers.ifSet self.host.settings.system.touchpad.enabled false;
+        if self.isVirtual then false else helpers.ifSet self.host.settings.system.touchpad.enabled false;
 
       console.keyMap = self.host.settings.system.keymap.console;
 

@@ -14,7 +14,7 @@ args@{
   group = "memory";
   input = "linux";
 
-  disableOnVM = true;
+  disableOnTestingVM = true;
 
   settings = {
     algorithm = "zstd";

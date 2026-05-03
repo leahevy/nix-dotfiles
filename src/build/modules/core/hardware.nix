@@ -18,7 +18,7 @@ args@{
     lib.recursiveUpdate
       (
         if
-          (self ? host && self.host.hardware.gpu != null && self.isLinux && !(self.host.isVM or false))
+          helpers.resolveFromHost self [ "hardware" "gpu" ] null != null && self.isLinux && self.isPhysical
         then
           { linux.graphics = [ "opengl" ]; }
         else
@@ -26,7 +26,9 @@ args@{
       )
       (
         if
-          (self ? host && self.host.hardware.gpu == "nvidia" && self.isLinux && !(self.host.isVM or false))
+          helpers.resolveFromHost self [ "hardware" "gpu" ] null == "nvidia"
+          && self.isLinux
+          && self.isPhysical
         then
           { linux.graphics = [ "nvidia-setup" ]; }
         else
@@ -37,10 +39,9 @@ args@{
     {
       assertion =
         !(
-          self ? host
-          && !(self.host.isVM or false)
-          && self.host.hardware.board != null
-          && self.host.hardware.cpu != null
+          self.isPhysical
+          && helpers.resolveFromHost self [ "hardware" "board" ] null != null
+          && helpers.resolveFromHost self [ "hardware" "cpu" ] null != null
         );
       message = "hardware.cpu must not be set when hardware.board is non-null!";
     }
@@ -50,10 +51,10 @@ args@{
     system =
       config:
       lib.mkMerge [
-        (lib.mkIf (self.host.hardware.cpu == "intel" && !(self.host.isVM or false)) {
+        (lib.mkIf (self.host.hardware.cpu == "intel" && self.isPhysical) {
           hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
         })
-        (lib.mkIf (self.host.hardware.cpu == "amd" && !(self.host.isVM or false)) {
+        (lib.mkIf (self.host.hardware.cpu == "amd" && self.isPhysical) {
           hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
         })
       ];

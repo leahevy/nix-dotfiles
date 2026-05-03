@@ -541,7 +541,7 @@ else
 		rm -f -- "${VM_RESULT}"
 	fi
 
-	VM_HOST="${PROFILE}--VIRTUAL"
+	VM_HOST="${PROFILE}--TESTING-VM"
 	nh_args=(
 		--hostname "${VM_HOST}"
 		--out-link "${VM_RESULT}"

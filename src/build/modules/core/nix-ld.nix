@@ -13,7 +13,7 @@ args@{
   group = "core";
   input = "build";
 
-  disableOnVM = true;
+  disableOnTestingVM = true;
 
   module = {
     system = config: {

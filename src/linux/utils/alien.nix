@@ -14,7 +14,7 @@ args@{
   group = "utils";
   input = "linux";
 
-  disableOnVM = true;
+  disableOnTestingVM = true;
 
   module = {
     linux.home = config: {

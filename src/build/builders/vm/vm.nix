@@ -26,7 +26,8 @@ let
     let
       processResult = processHostProfile {
         inherit profileName arch buildArch;
-        isVirtual = true;
+        isTestingVM = true;
+        isProductionVM = false;
         overrides = {
           isVM = true;
           impermanence = false;
@@ -79,9 +80,9 @@ let
     {
       name =
         if buildArch == arch then
-          "${profileName}--${arch}--VIRTUAL"
+          "${profileName}--${arch}--TESTING-VM"
         else
-          "${profileName}--${arch}--${buildArch}--VIRTUAL";
+          "${profileName}--${arch}--${buildArch}--TESTING-VM";
       value = inputs.nixpkgs.lib.nixosSystem {
         inherit system pkgs;
         specialArgs = specialArgs;

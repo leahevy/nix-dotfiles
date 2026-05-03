@@ -72,6 +72,10 @@ rec {
 
     isVirtual = self: self.isVirtual or false;
 
+    isTestingVM = self: self.isTestingVM or false;
+
+    isProductionVM = self: self.isProductionVM or false;
+
     isPhysical = self: !(commonFuncs.isVirtual self);
 
     # Get absolute path to file in any input's module directory
@@ -308,6 +312,8 @@ rec {
           user = self.user or null;
           users = self.users or { };
           processedModules = self.processedModules or { };
+          isTestingVM = self.isTestingVM or false;
+          isProductionVM = self.isProductionVM or false;
           isVirtual = self.isVirtual or false;
         };
 
@@ -360,6 +366,8 @@ rec {
           user = self.user or null;
           users = self.users or { };
           processedModules = self.processedModules or { };
+          isTestingVM = self.isTestingVM or false;
+          isProductionVM = self.isProductionVM or false;
           isVirtual = self.isVirtual or false;
         };
 
@@ -500,6 +508,8 @@ rec {
             configInputs
             ;
 
+          isTestingVM = moduleContext.isTestingVM or false;
+          isProductionVM = moduleContext.isProductionVM or false;
           isVirtual = moduleContext.isVirtual or false;
 
           options =

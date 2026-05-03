@@ -64,6 +64,8 @@ rec {
           (self: helpers.resolveFromHostOrUser self [ "deploymentMode" ] "develop");
     in
     (mkPair "VM" (self: self.isVirtual or false))
+    ++ (mkPair "ProductionVM" (self: self.isProductionVM or false))
+    ++ (mkPair "TestingVM" (self: self.isTestingVM or false))
     ++ (mkPair "Physical" (self: !(self.isVirtual or false)))
     ++ (mkPair "Linux" (self: self.isLinux or false))
     ++ (mkPair "Darwin" (self: self.isDarwin or false))
@@ -479,6 +481,8 @@ rec {
           user = args.user or (if args ? host && args.host ? mainUser then args.host.mainUser else null);
           users = args.users or { };
           processedModules = args.processedModules or { };
+          isTestingVM = args.isTestingVM or false;
+          isProductionVM = args.isProductionVM or false;
           isVirtual = args.isVirtual or false;
         };
 
@@ -615,6 +619,8 @@ rec {
     "isIntegrated"
     "isVirtual"
     "isPhysical"
+    "isProductionVM"
+    "isTestingVM"
   ];
 
   validateInnerModule =
@@ -1625,6 +1631,8 @@ rec {
         settings = moduleSpec.settings or { };
         unfree = basicModuleResult.unfree or [ ];
         processedModules = allProcessedModules;
+        isTestingVM = args.isTestingVM or false;
+        isProductionVM = args.isProductionVM or false;
         isVirtual = args.isVirtual or false;
       };
 
@@ -1707,6 +1715,8 @@ rec {
         user = args.user or null;
         users = args.users or { };
         processedModules = processedModules;
+        isTestingVM = args.isTestingVM or false;
+        isProductionVM = args.isProductionVM or false;
         isVirtual = args.isVirtual or false;
       };
 
@@ -1827,6 +1837,8 @@ rec {
         moduleInputName = assertion.moduleSpec.inputName;
         settings = assertion.moduleSpec.settings;
         processedModules = moduleContext.processedModules or { };
+        isTestingVM = args.isTestingVM or false;
+        isProductionVM = args.isProductionVM or false;
         isVirtual = args.isVirtual or false;
       };
 
@@ -1897,6 +1909,8 @@ rec {
             user = args.user or args.self.user or null;
             users = args.users or args.self.users or { };
             processedModules = args.processedModules or { };
+            isTestingVM = args.isTestingVM or false;
+            isProductionVM = args.isProductionVM or false;
             isVirtual = args.isVirtual or false;
           };
 
@@ -2291,6 +2305,8 @@ rec {
         isLinux = args.pkgs.stdenv.isLinux;
         isX86_64 = args.pkgs.stdenv.hostPlatform.isx86_64;
         isAARCH64 = args.pkgs.stdenv.hostPlatform.isAarch64;
+        isTestingVM = args.isTestingVM or false;
+        isProductionVM = args.isProductionVM or false;
         isVirtual = args.isVirtual or false;
       }
       // lib.optionalAttrs (args ? host && args.host != null) { host = args.host; }
@@ -2551,6 +2567,8 @@ rec {
                   users = args.users or { };
                   user = args.user or null;
                   processedModules = args.processedModules or { };
+                  isTestingVM = args.isTestingVM or false;
+                  isProductionVM = args.isProductionVM or false;
                   isVirtual = args.isVirtual or false;
                 };
 
@@ -2635,6 +2653,8 @@ rec {
                   users = args.users or { };
                   user = args.user or null;
                   processedModules = processedModules;
+                  isTestingVM = args.isTestingVM or false;
+                  isProductionVM = args.isProductionVM or false;
                   isVirtual = args.isVirtual or false;
                 };
 

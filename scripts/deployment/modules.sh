@@ -126,7 +126,7 @@ subcommand_list() {
 		fi
 	fi
 
-	[[ "$vm_mode" == "true" ]] && profile="${profile}--VIRTUAL"
+	[[ "$vm_mode" == "true" ]] && profile="${profile}--TESTING-VM"
 
 	local config_path
 	config_path="$(get_config_path "$profile" "$context")"
@@ -366,7 +366,7 @@ subcommand_info() {
 		fi
 	fi
 
-	[[ "$vm_mode" == "true" ]] && profile="${profile}--VIRTUAL"
+	[[ "$vm_mode" == "true" ]] && profile="${profile}--TESTING-VM"
 
 	local config_path
 	config_path="$(get_config_path "$profile" "$context")"
@@ -614,7 +614,7 @@ subcommand_config() {
 		fi
 	fi
 
-	[[ "$vm_mode" == "true" ]] && profile="${profile}--VIRTUAL"
+	[[ "$vm_mode" == "true" ]] && profile="${profile}--TESTING-VM"
 
 	local config_path
 	config_path="$(get_config_path "$profile" "$context")"

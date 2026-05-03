@@ -24,21 +24,19 @@ args@{
   };
 
   module = {
-    linux.home =
-      config:
-      lib.mkIf (!(helpers.resolveFromHost config [ "isVM" ] false)) {
-        home.packages = with pkgs; [
-          keyd
-        ];
+    linux.home = config: {
+      home.packages = with pkgs; [
+        keyd
+      ];
 
-        home.file.".XCompose".source = "${pkgs.keyd}/share/keyd/keyd.compose";
+      home.file.".XCompose".source = "${pkgs.keyd}/share/keyd/keyd.compose";
 
-        home.sessionVariables = {
-          GTK_IM_MODULE = "xim";
-          QT_IM_MODULE = "xim";
-          XMODIFIERS = "@im=none";
-        };
+      home.sessionVariables = {
+        GTK_IM_MODULE = "xim";
+        QT_IM_MODULE = "xim";
+        XMODIFIERS = "@im=none";
       };
+    };
 
     system =
       config:
@@ -47,7 +45,7 @@ args@{
         ignoreIds = map (id: "-${id}") allIdsToIgnore;
         keyboardIds = [ "*" ] ++ ignoreIds;
       in
-      lib.mkIf (!(helpers.resolveFromHost config [ "isVM" ] false)) {
+      {
         services.keyd = {
           enable = true;
 

@@ -48,6 +48,10 @@ args@{
   # Build context control (disable/enable per context)
   # disableOnVM = true;
   # enableOnVM = true;
+  # disableOnProductionVM = true;
+  # enableOnProductionVM = true;
+  # disableOnTestingVM = true;
+  # enableOnTestingVM = true;
   # disableOnPhysical = true;
   # enableOnPhysical = true;
   # disableOnLinux = true;

@@ -73,7 +73,7 @@ in
     inherit host;
     config = config;
     architecture = host.architecture;
-    isVM = config.nx.profile.isVirtual || (host.isVM or false);
+    isVM = config.nx.profile.isVirtual;
     context = "system";
   })
   ++ lib.optionals (host.impermanence or false) (

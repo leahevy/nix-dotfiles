@@ -54,7 +54,7 @@ in
   group = "core";
   input = "build";
 
-  disableOnVM = true;
+  disableOnLinux = true;
 
   rawOptions = {
     nx.homebrew = {

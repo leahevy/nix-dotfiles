@@ -109,7 +109,7 @@ if [[ -n "$override_arch" ]]; then
 fi
 
 NIXOS_PROFILE="${PROFILE}"
-[[ "$vm_mode" == "true" ]] && NIXOS_PROFILE="${PROFILE}--VIRTUAL"
+[[ "$vm_mode" == "true" ]] && NIXOS_PROFILE="${PROFILE}--TESTING-VM"
 
 if [[ "$context" == "nixos" ]]; then
 	if [[ "$HOME_MODE" == "true" ]]; then

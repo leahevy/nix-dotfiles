@@ -168,8 +168,8 @@ let
     };
 
   getHardwareModule =
-    host:
-    if host.nixHardwareModule != null && !(host.isVM or false) then
+    { host, isPhysical }:
+    if host.nixHardwareModule != null && isPhysical then
       [ (inputs.nixos-hardware + "/${host.nixHardwareModule}") ]
     else
       [ ];
@@ -258,7 +258,8 @@ in
       arch,
       buildArch ? arch,
       overrides ? { },
-      isVirtual ? false,
+      isTestingVM ? false,
+      isProductionVM ? false,
     }:
     let
       localHelpers = helpers // {
@@ -425,6 +426,8 @@ in
               { }
           );
 
+      isVirtual = isTestingVM || isProductionVM;
+
       unifiedArgs = {
         inherit
           lib
@@ -434,6 +437,8 @@ in
           variables
           defs
           funcs
+          isTestingVM
+          isProductionVM
           isVirtual
           ;
         helpers = localHelpers;
@@ -513,7 +518,10 @@ in
           inherit isVirtual;
         };
         diskoModule = getDiskoModule { inherit profileName; };
-        hardwareModule = getHardwareModule hostConfig.host;
+        hardwareModule = getHardwareModule {
+          host = hostConfig.host;
+          isPhysical = !isVirtual;
+        };
       };
     in
     {
