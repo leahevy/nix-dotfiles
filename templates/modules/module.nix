@@ -59,6 +59,13 @@ args@{
   # disableOnAARCH64 = true;
   # enableOnAARCH64 = true;
 
+  # Deployment mode control (disable/enable per deployment mode)
+  # disableOnDeploymentModes = [ "managed" "server" "local" "develop" ];
+  # enableOnDeploymentModes = [ "managed" "server" "local" "develop" ];
+
+  # Dynamic condition (true = force-enable, false = force-disable, null = no opinion)
+  # condition = if self ? host && self.host.hostname == "example" then true else null;
+
   assertions = [
     {
       assertion = true;

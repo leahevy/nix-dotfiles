@@ -41,7 +41,27 @@ rec {
           fn = self: if check self then true else null;
         }
       ];
-      extraConditions = [ ];
+      mkListPair = disableAttr: enableAttr: allowedValues: datatype: getValue: [
+        {
+          attr = disableAttr;
+          inherit allowedValues datatype;
+          fn = val: self: if builtins.elem (getValue self) val then false else null;
+        }
+        {
+          attr = enableAttr;
+          inherit allowedValues datatype;
+          fn = val: self: if builtins.elem (getValue self) val then true else null;
+        }
+      ];
+      deploymentModes = [
+        "managed"
+        "server"
+        "local"
+        "develop"
+      ];
+      extraConditions =
+        mkListPair "disableOnDeploymentModes" "enableOnDeploymentModes" deploymentModes "string"
+          (self: helpers.resolveFromHostOrUser self [ "deploymentMode" ] "develop");
     in
     (mkPair "VM" (self: self.isVirtual or false))
     ++ (mkPair "Physical" (self: !(self.isVirtual or false)))
@@ -58,8 +78,36 @@ rec {
         sc:
         let
           raw = moduleResult.${sc.attr} or null;
+          isList = sc ? allowedValues;
         in
-        if raw == null || raw == false then
+        if raw == null then
+          null
+        else if isList then
+          if !builtins.isList raw then
+            throw "Module ${moduleResult.name or "unknown"}: '${sc.attr}' must be a list, got ${builtins.typeOf raw}!"
+          else if raw == [ ] then
+            null
+          else
+            let
+              typeErrors =
+                if sc ? datatype then builtins.filter (v: builtins.typeOf v != sc.datatype) raw else [ ];
+              invalid = builtins.filter (v: !(builtins.elem v sc.allowedValues)) raw;
+              result =
+                if typeErrors != [ ] then
+                  throw "Module ${moduleResult.name or "unknown"}: '${sc.attr}' elements must be of type ${sc.datatype}, got: [${builtins.concatStringsSep ", " (map builtins.toJSON typeErrors)}]!"
+                else if invalid != [ ] then
+                  throw "Module ${moduleResult.name or "unknown"}: '${sc.attr}' contains invalid values: [${builtins.concatStringsSep ", " (map builtins.toJSON invalid)}]. Allowed: [${builtins.concatStringsSep ", " sc.allowedValues}]!"
+                else
+                  sc.fn raw self;
+            in
+            if result == null then
+              null
+            else
+              {
+                label = sc.attr;
+                inherit result;
+              }
+        else if raw == false then
           null
         else if raw != true then
           throw "Module ${moduleResult.name or "unknown"}: '${sc.attr}' must be true or false, got ${builtins.typeOf raw} (value: ${builtins.toJSON raw})!"
@@ -260,13 +308,17 @@ rec {
             "x86_64"
             "aarch64"
           ];
+          specialListErrors = builtins.filter (x: x != null) (
+            map (sc: if sc ? allowedValues then check sc.attr sc.allowedValues else null) specialConditions
+          );
         in
         builtins.filter (x: x != null) [
           (check "platforms" validPlatforms)
           (check "requiredPlatforms" validPlatforms)
           (check "architectures" validArchitectures)
           (check "requiredArchitectures" validArchitectures)
-        ];
+        ]
+        ++ specialListErrors;
     in
     if !correctFormat then
       throw formatErrorMessage
@@ -2240,7 +2292,9 @@ rec {
         isX86_64 = args.pkgs.stdenv.hostPlatform.isx86_64;
         isAARCH64 = args.pkgs.stdenv.hostPlatform.isAarch64;
         isVirtual = args.isVirtual or false;
-      };
+      }
+      // lib.optionalAttrs (args ? host && args.host != null) { host = args.host; }
+      // lib.optionalAttrs (args ? user && args.user != null) { user = args.user; };
 
       minimalArgs = {
         inherit lib;

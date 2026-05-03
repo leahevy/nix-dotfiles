@@ -18,9 +18,11 @@ rec {
   resolveFromHostOrUser =
     configOrSelf: attrPath: default:
     if configOrSelf._nx_self or false then
-      if lib.hasAttrByPath attrPath (configOrSelf.host or { }) then
+      if (configOrSelf.host or null) != null && lib.hasAttrByPath attrPath (configOrSelf.host or { }) then
         lib.getAttrFromPath attrPath (configOrSelf.host or { })
-      else if configOrSelf.user != null && lib.hasAttrByPath attrPath (configOrSelf.user or { }) then
+      else if
+        (configOrSelf.user or null) != null && lib.hasAttrByPath attrPath (configOrSelf.user or { })
+      then
         lib.getAttrFromPath attrPath (configOrSelf.user or { })
       else
         default
@@ -78,6 +80,27 @@ rec {
       lib.getAttrFromPath attrPath configOrSelf.nx.profile.user
     else
       default;
+
+  # Check if the current deployment mode is in the given list of modes. Throws on invalid mode names.
+  # Accepts either a NixOS config or a self object (detected via _nx_self = true).
+  # Usage: isDeploymentMode config [ "local" "develop" ]
+  # Usage: isDeploymentMode self [ "managed" ]
+  isDeploymentMode =
+    configOrSelf: modes:
+    let
+      validModes = [
+        "managed"
+        "server"
+        "local"
+        "develop"
+      ];
+      invalid = builtins.filter (m: !(builtins.elem m validModes)) modes;
+      current = resolveFromHostOrUser configOrSelf [ "deploymentMode" ] "develop";
+    in
+    if invalid != [ ] then
+      throw "isDeploymentMode: invalid mode(s): [${builtins.concatStringsSep ", " invalid}]. Allowed: [${builtins.concatStringsSep ", " validModes}]!"
+    else
+      builtins.elem current modes;
 
   # Deep-merge values with list concatenation and type checks.
   # Usage: deepMergeComplex { base = $BASE; override = $OVERRIDE; forbidNewRoot = $BOOL; forbidNewAny = $BOOL;  forbidNewDeep = $BOOL;}
