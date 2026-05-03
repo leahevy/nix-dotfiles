@@ -23,16 +23,86 @@ let
 
   systemManagedAttrs = [
     "nx_unfree"
-    "nx_disableOnVM"
-    "nx_disableOnPhysical"
-    "nx_disableOnLinux"
-    "nx_disableOnDarwin"
-    "nx_disableOnX86_64"
-    "nx_disableOnAARCH64"
+    "nx_conditionForce"
   ];
 in
 rec {
   inherit moduleFuncs;
+
+  specialConditions =
+    let
+      mkPair = name: check: [
+        {
+          attr = "disableOn${name}";
+          fn = self: if check self then false else null;
+        }
+        {
+          attr = "enableOn${name}";
+          fn = self: if check self then true else null;
+        }
+      ];
+      extraConditions = [ ];
+    in
+    (mkPair "VM" (self: self.isVirtual or false))
+    ++ (mkPair "Physical" (self: !(self.isVirtual or false)))
+    ++ (mkPair "Linux" (self: self.isLinux or false))
+    ++ (mkPair "Darwin" (self: self.isDarwin or false))
+    ++ (mkPair "X86_64" (self: self.isX86_64 or false))
+    ++ (mkPair "AARCH64" (self: self.isAARCH64 or false))
+    ++ extraConditions;
+
+  evaluateModuleCondition =
+    moduleResult: self:
+    let
+      evalSpecial =
+        sc:
+        let
+          raw = moduleResult.${sc.attr} or null;
+        in
+        if raw == null || raw == false then
+          null
+        else if raw != true then
+          throw "Module ${moduleResult.name or "unknown"}: '${sc.attr}' must be true or false, got ${builtins.typeOf raw} (value: ${builtins.toJSON raw})!"
+        else
+          let
+            result = sc.fn self;
+          in
+          if result == null then
+            null
+          else
+            {
+              label = sc.attr;
+              inherit result;
+            };
+
+      specialEntries = builtins.filter (e: e != null) (map evalSpecial specialConditions);
+
+      condVal = moduleResult.condition or null;
+      condEntry =
+        if condVal == null then
+          [ ]
+        else if !builtins.isBool condVal then
+          throw "Module ${moduleResult.name or "unknown"}: 'condition' must be true, false, or null, got ${builtins.typeOf condVal} (value: ${builtins.toJSON condVal})!"
+        else
+          [
+            {
+              label = "condition";
+              result = condVal;
+            }
+          ];
+
+      allEntries = specialEntries ++ condEntry;
+      trueLabels = map (e: e.label) (builtins.filter (e: e.result == true) allEntries);
+      falseLabels = map (e: e.label) (builtins.filter (e: e.result == false) allEntries);
+    in
+    if allEntries == [ ] then
+      null
+    else if trueLabels != [ ] && falseLabels != [ ] then
+      throw "Module ${moduleResult.name or "unknown"}: conflicting conditions - enabling: [${builtins.concatStringsSep ", " trueLabels}], disabling: [${builtins.concatStringsSep ", " falseLabels}]!"
+    else if falseLabels != [ ] then
+      false
+    else
+      true;
 
   extractPathComponents =
     filePath: inputName:
@@ -95,19 +165,9 @@ rec {
         "requiredPlatforms"
         "architectures"
         "requiredArchitectures"
-        "disableOnVM"
-        "enableOnVM"
-        "disableOnPhysical"
-        "enableOnPhysical"
-        "disableOnLinux"
-        "enableOnLinux"
-        "disableOnDarwin"
-        "enableOnDarwin"
-        "disableOnX86_64"
-        "enableOnX86_64"
-        "disableOnAARCH64"
-        "enableOnAARCH64"
-      ];
+        "condition"
+      ]
+      ++ map (sc: sc.attr) specialConditions;
 
       actualAttrs = builtins.attrNames moduleResult;
 
@@ -367,6 +427,7 @@ rec {
           user = args.user or (if args ? host && args.host ? mainUser then args.host.mainUser else null);
           users = args.users or { };
           processedModules = args.processedModules or { };
+          isVirtual = args.isVirtual or false;
         };
 
         enhancedModuleContext = injectModuleFuncs moduleContext;
@@ -384,12 +445,6 @@ rec {
         moduleDefaults = moduleResult.settings or { };
         moduleOptions = moduleResult.options or { };
         moduleUnfree = moduleResult.unfree or [ ];
-        moduleDisableOnVM = moduleResult.disableOnVM or false;
-        moduleDisableOnPhysical = moduleResult.disableOnPhysical or false;
-        moduleDisableOnLinux = moduleResult.disableOnLinux or false;
-        moduleDisableOnDarwin = moduleResult.disableOnDarwin or false;
-        moduleDisableOnX86_64 = moduleResult.disableOnX86_64 or false;
-        moduleDisableOnAARCH64 = moduleResult.disableOnAARCH64 or false;
 
         hasSettings = moduleDefaults != { };
         hasStandardOptions = moduleOptions != { };
@@ -410,16 +465,13 @@ rec {
           else
             validatedUserSettings;
 
-        settingsWithFlags =
+        conditionResult = evaluateModuleCondition moduleResult enhancedModuleContext;
+
+        settingsWithCondition =
           settingsWithUnfree
-          // lib.optionalAttrs moduleDisableOnVM { nx_disableOnVM = true; }
-          // lib.optionalAttrs moduleDisableOnPhysical { nx_disableOnPhysical = true; }
-          // lib.optionalAttrs moduleDisableOnLinux { nx_disableOnLinux = true; }
-          // lib.optionalAttrs moduleDisableOnDarwin { nx_disableOnDarwin = true; }
-          // lib.optionalAttrs moduleDisableOnX86_64 { nx_disableOnX86_64 = true; }
-          // lib.optionalAttrs moduleDisableOnAARCH64 { nx_disableOnAARCH64 = true; };
+          // lib.optionalAttrs (conditionResult != null) { nx_conditionForce = conditionResult; };
       in
-      lib.recursiveUpdate moduleDefaults settingsWithFlags;
+      lib.recursiveUpdate moduleDefaults settingsWithCondition;
 
   processModules =
     modules:
@@ -483,7 +535,14 @@ rec {
             "/${cleanPath}";
       };
     in
-    moduleContext // appliedCommonFuncs // contextFuncs // hierarchicalFuncs // persistShortcut;
+    moduleContext
+    // appliedCommonFuncs
+    // contextFuncs
+    // hierarchicalFuncs
+    // persistShortcut
+    // {
+      _nx_self = true;
+    };
 
   resolveArchitecture =
     args:
@@ -1929,25 +1988,10 @@ rec {
           normalizedSubmodules = normalizeModules filteredSubmodules;
           collectedSubmodulesWithDefaults = applyDefaultsToModules normalizedSubmodules;
 
-          isVirtual = args.isVirtual or false;
-          isLinux = args.pkgs.stdenv.isLinux;
-          isDarwin = args.pkgs.stdenv.isDarwin;
-          isX86_64 = args.pkgs.stdenv.hostPlatform.isx86_64;
-          isAARCH64 = args.pkgs.stdenv.hostPlatform.isAarch64;
-
           contextFilteredSubmodules = lib.mapAttrs (
             _: inputGroups:
             lib.mapAttrs (
-              _: groupModules:
-              lib.filterAttrs (
-                _: s:
-                !(isVirtual && (s.nx_disableOnVM or false))
-                && !(!isVirtual && (s.nx_disableOnPhysical or false))
-                && !(isLinux && (s.nx_disableOnLinux or false))
-                && !(isDarwin && (s.nx_disableOnDarwin or false))
-                && !(isX86_64 && (s.nx_disableOnX86_64 or false))
-                && !(isAARCH64 && (s.nx_disableOnAARCH64 or false))
-              ) groupModules
+              _: groupModules: lib.filterAttrs (_: s: (s.nx_conditionForce or null) != false) groupModules
             ) inputGroups
           ) collectedSubmodulesWithDefaults;
 
@@ -2189,6 +2233,15 @@ rec {
     args:
     let
 
+      minimalSelf = {
+        _nx_self = true;
+        isDarwin = args.pkgs.stdenv.isDarwin;
+        isLinux = args.pkgs.stdenv.isLinux;
+        isX86_64 = args.pkgs.stdenv.hostPlatform.isx86_64;
+        isAARCH64 = args.pkgs.stdenv.hostPlatform.isAarch64;
+        isVirtual = args.isVirtual or false;
+      };
+
       minimalArgs = {
         inherit lib;
         pkgs = args.pkgs;
@@ -2196,12 +2249,7 @@ rec {
         funcs = { };
         helpers = args.helpers;
         defs = args.defs;
-        self = {
-          isDarwin = args.pkgs.stdenv.isDarwin;
-          isLinux = args.pkgs.stdenv.isLinux;
-          isX86_64 = args.pkgs.stdenv.hostPlatform.isx86_64;
-          isAARCH64 = args.pkgs.stdenv.hostPlatform.isAarch64;
-        };
+        self = minimalSelf;
       };
 
       scanInput =
@@ -2228,12 +2276,7 @@ rec {
                 rawOptions = moduleResult.value.rawOptions or { };
                 settings = moduleResult.value.settings or { };
                 description = moduleResult.value.description or "";
-                enableOnVM = moduleResult.value.enableOnVM or false;
-                enableOnPhysical = moduleResult.value.enableOnPhysical or false;
-                enableOnLinux = moduleResult.value.enableOnLinux or false;
-                enableOnDarwin = moduleResult.value.enableOnDarwin or false;
-                enableOnX86_64 = moduleResult.value.enableOnX86_64 or false;
-                enableOnAARCH64 = moduleResult.value.enableOnAARCH64 or false;
+                conditionResult = evaluateModuleCondition moduleResult.value minimalSelf;
               }
             else
               {
@@ -2247,12 +2290,7 @@ rec {
                 rawOptions = { };
                 settings = { };
                 description = "";
-                enableOnVM = false;
-                enableOnPhysical = false;
-                enableOnLinux = false;
-                enableOnDarwin = false;
-                enableOnX86_64 = false;
-                enableOnAARCH64 = false;
+                conditionResult = null;
               }
           ) moduleSpecs
         else
@@ -2269,20 +2307,7 @@ rec {
     args:
     let
       allData = collectAllModuleData args;
-      isVirtual = args.isVirtual or false;
-      isLinux = args.pkgs.stdenv.isLinux;
-      isDarwin = args.pkgs.stdenv.isDarwin;
-      isX86_64 = args.pkgs.stdenv.hostPlatform.isx86_64;
-      isAARCH64 = args.pkgs.stdenv.hostPlatform.isAarch64;
-      contextEnabled = builtins.filter (
-        m:
-        (isVirtual && m.enableOnVM)
-        || (!isVirtual && m.enableOnPhysical)
-        || (isLinux && m.enableOnLinux)
-        || (isDarwin && m.enableOnDarwin)
-        || (isX86_64 && m.enableOnX86_64)
-        || (isAARCH64 && m.enableOnAARCH64)
-      ) allData;
+      contextEnabled = builtins.filter (m: m.conditionResult == true) allData;
     in
     lib.foldl (
       acc: m:

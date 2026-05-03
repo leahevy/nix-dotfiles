@@ -12,47 +12,70 @@ rec {
   ifSet = value: default: if value != null then value else default;
 
   # Resolve a nested attribute path from config.host first, then config.user, then a default.
+  # Accepts either a NixOS config or a self object (detected via _nx_self = true).
   # Usage: resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true
+  # Usage: resolveFromHostOrUser self [ "displays" "mainIsWidescreen" ] true
   resolveFromHostOrUser =
-    config: attrPath: default:
-    if
-      config.nx.profile ? host
-      && config.nx.profile.host != null
-      && lib.hasAttrByPath attrPath config.nx.profile.host
-    then
-      lib.getAttrFromPath attrPath config.nx.profile.host
+    configOrSelf: attrPath: default:
+    if configOrSelf._nx_self or false then
+      if lib.hasAttrByPath attrPath (configOrSelf.host or { }) then
+        lib.getAttrFromPath attrPath (configOrSelf.host or { })
+      else if configOrSelf.user != null && lib.hasAttrByPath attrPath (configOrSelf.user or { }) then
+        lib.getAttrFromPath attrPath (configOrSelf.user or { })
+      else
+        default
     else if
-      config.nx.profile ? user
-      && config.nx.profile.user != null
-      && lib.hasAttrByPath attrPath config.nx.profile.user
+      configOrSelf.nx.profile ? host
+      && configOrSelf.nx.profile.host != null
+      && lib.hasAttrByPath attrPath configOrSelf.nx.profile.host
     then
-      lib.getAttrFromPath attrPath config.nx.profile.user
+      lib.getAttrFromPath attrPath configOrSelf.nx.profile.host
+    else if
+      configOrSelf.nx.profile ? user
+      && configOrSelf.nx.profile.user != null
+      && lib.hasAttrByPath attrPath configOrSelf.nx.profile.user
+    then
+      lib.getAttrFromPath attrPath configOrSelf.nx.profile.user
     else
       default;
 
   # Resolve a nested attribute path from config.host only, else return default.
+  # Accepts either a NixOS config or a self object (detected via _nx_self = true).
   # Usage: resolveFromHost config [ "system" "vmsDataPath" ] null
+  # Usage: resolveFromHost self [ "system" "vmsDataPath" ] null
   resolveFromHost =
-    config: attrPath: default:
-    if
-      config.nx.profile ? host
-      && config.nx.profile.host != null
-      && lib.hasAttrByPath attrPath config.nx.profile.host
+    configOrSelf: attrPath: default:
+    if configOrSelf._nx_self or false then
+      if lib.hasAttrByPath attrPath (configOrSelf.host or { }) then
+        lib.getAttrFromPath attrPath (configOrSelf.host or { })
+      else
+        default
+    else if
+      configOrSelf.nx.profile ? host
+      && configOrSelf.nx.profile.host != null
+      && lib.hasAttrByPath attrPath configOrSelf.nx.profile.host
     then
-      lib.getAttrFromPath attrPath config.nx.profile.host
+      lib.getAttrFromPath attrPath configOrSelf.nx.profile.host
     else
       default;
 
   # Resolve a nested attribute path from config.user only, else return default.
+  # Accepts either a NixOS config or a self object (detected via _nx_self = true).
   # Usage: resolveFromUser config [ "deploymentMode" ] "develop"
+  # Usage: resolveFromUser self [ "deploymentMode" ] "develop"
   resolveFromUser =
-    config: attrPath: default:
-    if
-      config.nx.profile ? user
-      && config.nx.profile.user != null
-      && lib.hasAttrByPath attrPath config.nx.profile.user
+    configOrSelf: attrPath: default:
+    if configOrSelf._nx_self or false then
+      if configOrSelf.user != null && lib.hasAttrByPath attrPath (configOrSelf.user or { }) then
+        lib.getAttrFromPath attrPath (configOrSelf.user or { })
+      else
+        default
+    else if
+      configOrSelf.nx.profile ? user
+      && configOrSelf.nx.profile.user != null
+      && lib.hasAttrByPath attrPath configOrSelf.nx.profile.user
     then
-      lib.getAttrFromPath attrPath config.nx.profile.user
+      lib.getAttrFromPath attrPath configOrSelf.nx.profile.user
     else
       default;
 
