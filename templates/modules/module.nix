@@ -134,14 +134,16 @@ args@{
     #   darwin = { ... };
     # };
 
-    # virtual = {                        # VM builds only (no init, when, ifEnabled, ifDisabled)
+    # virtual = {                        # any VM build (testing or production); no init, when, ifEnabled, ifDisabled
     #   overlays = [ (final: prev: { ... }) ];
     #   home = config: { };
     #   system = config: { };
     #   linux = { home = config: { }; ... };
     #   x86_64 = { home = config: { }; linux = { ... }; ... };
     # };
-    # physical = { ... };                # Physical (bare-metal) builds only; same structure as virtual
+    # testingVM = { ... };              # testing VM only (--TESTING-VM builds); same structure as virtual; stacks on top of virtual
+    # productionVM = { ... };           # production VM only (host.isVM=true); same structure as virtual; stacks on top of virtual
+    # physical = { ... };               # physical (bare-metal) only; same structure as virtual
     # aarch64 = { ... };
 
     # ifEnabled.INPUT.GROUP.MODULE = {

@@ -80,6 +80,11 @@ args@{
       default = true;
       description = "Whether the profile is a physical (bare-metal) build";
     };
+    nx.profile.deploymentMode = lib.mkOption {
+      type = lib.types.str;
+      default = "develop";
+      description = "Deployment mode of the profile (managed, server, local, develop)";
+    };
   };
 
   module = {
@@ -97,6 +102,7 @@ args@{
       nx.profile.isTestingVM = self.isTestingVM;
       nx.profile.isProductionVM = self.isProductionVM;
       nx.profile.isPhysical = self.isPhysical;
+      nx.profile.deploymentMode = helpers.resolveFromHostOrUser self [ "deploymentMode" ] "develop";
     };
   };
 }

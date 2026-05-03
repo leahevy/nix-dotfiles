@@ -621,6 +621,7 @@ rec {
     "isPhysical"
     "isProductionVM"
     "isTestingVM"
+    "deploymentMode"
   ];
 
   validateInnerModule =
@@ -651,6 +652,8 @@ rec {
         "aarch64"
         "virtual"
         "physical"
+        "testingVM"
+        "productionVM"
       ];
 
       validateFn =
@@ -897,6 +900,8 @@ rec {
             [
               "virtual"
               "physical"
+              "testingVM"
+              "productionVM"
             ];
 
       validateConditionalModule =
@@ -1104,6 +1109,8 @@ rec {
         "when"
         "virtual"
         "physical"
+        "testingVM"
+        "productionVM"
       ];
 
       topErrors = checkInvalid "on" topAllowed module;
@@ -1182,6 +1189,8 @@ rec {
           [
             "virtual"
             "physical"
+            "testingVM"
+            "productionVM"
           ];
 
       allErrors =
@@ -1205,6 +1214,8 @@ rec {
       buildContext,
       architecture,
       isVirtual ? false,
+      isTestingVM ? false,
+      isProductionVM ? false,
       includeInit ? false,
       includeDisabled ? false,
       sourceModule ? "unknown",
@@ -1240,12 +1251,15 @@ rec {
         else
           { };
 
-      buildTypeOf = attrset: if isVirtual then attrset.virtual or { } else attrset.physical or { };
-
       collectAllBuildTypeLayers =
         excludeInit: wrap: attrset:
         collectLayers123 excludeInit wrap attrset
-        ++ collectLayers123 excludeInit wrap (buildTypeOf attrset);
+        ++ (if isVirtual then collectLayers123 excludeInit wrap (attrset.virtual or { }) else [ ])
+        ++ (if !isVirtual then collectLayers123 excludeInit wrap (attrset.physical or { }) else [ ])
+        ++ (if isTestingVM then collectLayers123 excludeInit wrap (attrset.testingVM or { }) else [ ])
+        ++ (
+          if isProductionVM then collectLayers123 excludeInit wrap (attrset.productionVM or { }) else [ ]
+        );
 
       collectL1 =
         excludeInit: wrap: attrset:
@@ -1659,6 +1673,8 @@ rec {
       applicableFns = selectApplicableModuleFns {
         inherit module buildContext architecture;
         isVirtual = args.isVirtual or false;
+        isTestingVM = args.isTestingVM or false;
+        isProductionVM = args.isProductionVM or false;
         prefix = "module";
         sourceModule = toString modulePath;
         moduleNxPath = [
@@ -1729,6 +1745,8 @@ rec {
       allFns = selectApplicableModuleFns {
         inherit module buildContext architecture;
         isVirtual = args.isVirtual or false;
+        isTestingVM = args.isTestingVM or false;
+        isProductionVM = args.isProductionVM or false;
         prefix = "profile";
         includeInit = true;
         sourceModule = "profile:${profileType}/${profileName}";
@@ -2598,6 +2616,8 @@ rec {
                   builtins.filter (f: f.type == "init") (selectApplicableModuleFns {
                     inherit module architecture;
                     isVirtual = args.isVirtual or false;
+                    isTestingVM = args.isTestingVM or false;
+                    isProductionVM = args.isProductionVM or false;
                     prefix = "module";
                     buildContext = "system";
                     includeInit = true;
@@ -2680,6 +2700,8 @@ rec {
                   builtins.filter (f: f.type == "disabled") (selectApplicableModuleFns {
                     inherit module architecture;
                     isVirtual = args.isVirtual or false;
+                    isTestingVM = args.isTestingVM or false;
+                    isProductionVM = args.isProductionVM or false;
                     prefix = "module";
                     buildContext = "system";
                     includeDisabled = true;
