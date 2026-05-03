@@ -21,13 +21,20 @@ fi
 
 HOSTNAME="${1:-}"
 
-if [[ "$HOSTNAME" = "" ]]; then
-	echo -e "${RED}Run with ${WHITE}<HOSTNAME>${RED} argument (from ${WHITE}/nxconfig/profiles/nixos${RED})!${RESET}" >&2
-	exit 1
-fi
-
 check_config_directory "install" "bootstrap"
 cd "$CONFIG_DIR"
+
+: "${NXCORE_DIR:?}"
+
+if [[ -z "$HOSTNAME" && -e ".nx-profile.conf" ]]; then
+	HOSTNAME="$(cat .nx-profile.conf)"
+	echo -e "Found base profile in ${WHITE}$PWD/.nx-profile.conf${RESET} file: ${WHITE}$HOSTNAME${RESET}" >&2
+fi
+
+if [[ -z "$HOSTNAME" ]]; then
+	echo -e "${RED}Run with ${WHITE}<HOSTNAME>${RED} argument or run ${WHITE}nx bootstrap nixos select-profile <HOSTNAME>${RED} first!${RESET}" >&2
+	exit 1
+fi
 
 if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME" ]]; then
 	echo -e "${RED}Host ${WHITE}$HOSTNAME${RED} does not exist in ${WHITE}$CONFIG_DIR/profiles/nixos${RED}!${RESET}" >&2
@@ -41,7 +48,7 @@ fi
 
 if ! mountpoint -q /mnt; then
 	echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted!${RESET}" >&2
-	echo -e "${RED}Run ${WHITE}30-mount.sh${RED} first to mount the target filesystem.${RESET}" >&2
+	echo -e "${RED}Run ${WHITE}nx bootstrap nixos mount${RED} first to mount the target filesystem.${RESET}" >&2
 	exit 1
 fi
 
@@ -89,7 +96,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 	if ! mountpoint -q /mnt; then
 		echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted!${RESET}" >&2
-		echo -e "${RED}Run ${WHITE}30-mount.sh${RED} first to mount the target filesystem.${RESET}" >&2
+		echo -e "${RED}Run ${WHITE}nx bootstrap nixos mount${RED} first to mount the target filesystem.${RESET}" >&2
 		exit 1
 	fi
 
@@ -100,7 +107,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 	if [[ ! -f "$ROOT_SOPS_KEY" ]]; then
 		echo -e "${RED}Error: Root SOPS key not found at ${WHITE}/mnt/etc/sops/age/keys.txt${RED} or ${WHITE}/mnt${PERSIST_PATH}/etc/sops/age/keys.txt${RESET}" >&2
-		echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
+		echo -e "${RED}Please run ${WHITE}nx bootstrap nixos create-sops-key${RED} first to create SOPS keys${RESET}" >&2
 		exit 1
 	fi
 
@@ -115,7 +122,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	fi
 	if [[ ! -f "$USER_SOPS_KEY" ]]; then
 		echo -e "${RED}Error: User SOPS key not found at ${WHITE}$MNT_USER_HOME/.config/sops/age/keys.txt${RED} or ${WHITE}$MNT_PERSIST_USER_HOME/.config/sops/age/keys.txt${RESET}" >&2
-		echo -e "${RED}Please run ${WHITE}scripts/bootstrap/nixos/50-create-sops-key.sh${RED} first to create SOPS keys${RESET}" >&2
+		echo -e "${RED}Please run ${WHITE}nx bootstrap nixos create-sops-key${RED} first to create SOPS keys${RESET}" >&2
 		exit 1
 	fi
 
@@ -161,8 +168,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 		echo
 		echo -e "Copying sops file temporarily to ${WHITE}$PERSIST_PATH${RESET}"
-		mkdir -p /mnt${PERSIST_PATH}/etc/sops/age
-		cp -a "$ROOT_SOPS_KEY" /mnt${PERSIST_PATH}/etc/sops/age/keys.txt
+		mkdir -p /mnt"${PERSIST_PATH}"/etc/sops/age
+		cp -a "$ROOT_SOPS_KEY" /mnt"${PERSIST_PATH}"/etc/sops/age/keys.txt
 
 		echo
 		echo -e "Running: ${WHITE}nixos-install --flake .#$FULL_PROFILE --no-root-password --override-input core path:$NXCORE_DIR${RESET}"
@@ -239,7 +246,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo
 	echo -e "${YELLOW}Next steps:${RESET}"
 	if [[ "$IMPERMANENCE_ENABLED" == "true" ]]; then
-		echo -e "${YELLOW}  1) Run the script ${WHITE}70-migrate-to-persistence.sh${YELLOW} (REQUIRED - impermanence is enabled)${RESET}"
+		echo -e "${YELLOW}  1) Run ${WHITE}nx bootstrap nixos migrate-to-persistence${YELLOW} (REQUIRED - impermanence is enabled)${RESET}"
 		echo -e "${YELLOW}  2) Reboot to enter the new host...${RESET}"
 	else
 		echo -e "${YELLOW}  - Reboot to enter the new host...${RESET}"

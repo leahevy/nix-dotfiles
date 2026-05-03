@@ -28,7 +28,7 @@ fi
 TARGET_FILE="$HOME/.config/sops/age/keys.txt"
 if [[ ! -f "$TARGET_FILE" ]]; then
 	echo -e "${RED}Error: Sops key not found at ${WHITE}$TARGET_FILE${RESET}" >&2
-	echo -e "${RED}Please run ${WHITE}scripts/bootstrap/standalone/10-create-sops-key.sh${RED} first to create sops key and follow instructions${RESET}" >&2
+	echo -e "${RED}Please run ${WHITE}nx bootstrap standalone create-sops-key${RED} first to create sops key and follow instructions${RESET}" >&2
 	exit 1
 fi
 
@@ -43,7 +43,13 @@ if [[ -x "$HOME/.nix-profile/bin/home-manager" ]]; then
 	exit 0
 fi
 
-FULL_PROFILE="$(construct_profile_name "$USER")"
+BASE_PROFILE="$USER"
+if [[ -e ".nx-profile.conf" ]]; then
+	BASE_PROFILE="$(cat .nx-profile.conf)"
+	echo -e "Found base profile in ${WHITE}$PWD/.nx-profile.conf${RESET} file: ${WHITE}$BASE_PROFILE${RESET}" >&2
+fi
+
+FULL_PROFILE="$(construct_profile_name "$BASE_PROFILE")"
 echo -e "${GREEN}Building Home Manager configuration for ${WHITE}$FULL_PROFILE${GREEN} with config override${RESET}" >&2
 
 CLEANUP_RESULT=1

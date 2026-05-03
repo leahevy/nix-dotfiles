@@ -42,20 +42,25 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-if [[ "$HOSTNAME" = "" ]]; then
-	echo -e "${RED}Usage: ${WHITE}$0${RED} [--dry-run|-n] <HOSTNAME>${RESET}" >&2
-	echo -e "${RED}Run with ${WHITE}<HOSTNAME>${RED} argument (from ${WHITE}/nxconfig/profiles/nixos${RED})!${RESET}" >&2
-	exit 1
-fi
-
 if ! mountpoint -q /mnt; then
 	echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted!${RESET}" >&2
-	echo -e "${RED}Run ${WHITE}30-mount.sh${RED} first to mount the target filesystem.${RESET}" >&2
+	echo -e "${RED}Run ${WHITE}nx bootstrap nixos mount${RED} first to mount the target filesystem.${RESET}" >&2
 	exit 1
 fi
 
 check_config_directory "migrate-to-persistence" "bootstrap"
 cd "$CONFIG_DIR"
+
+if [[ -z "$HOSTNAME" && -e ".nx-profile.conf" ]]; then
+	HOSTNAME="$(cat .nx-profile.conf)"
+	echo -e "Found base profile in ${WHITE}$PWD/.nx-profile.conf${RESET} file: ${WHITE}$HOSTNAME${RESET}" >&2
+fi
+
+if [[ -z "$HOSTNAME" ]]; then
+	echo -e "${RED}Usage: ${WHITE}$0${RED} [--dry-run|-n] [HOSTNAME]${RESET}" >&2
+	echo -e "${RED}Run with ${WHITE}<HOSTNAME>${RED} argument or run ${WHITE}nx bootstrap nixos select-profile <HOSTNAME>${RED} first!${RESET}" >&2
+	exit 1
+fi
 
 if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME" ]]; then
 	echo -e "${RED}Host ${WHITE}$HOSTNAME${RED} does not exist in ${WHITE}$CONFIG_DIR/profiles/nixos${RED}!${RESET}" >&2
@@ -176,7 +181,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	USER_PERSIST_FILES="$(echo "$USER_PERSIST_FILES_JSON" | jq -r '.[]?')"
 
 	echo -e "${WHITE}Creating persistence directory structure...${RESET}"
-	$DRY_RUN mkdir -p /mnt${PERSIST_SYSTEM}/home
+	$DRY_RUN mkdir -p /mnt"${PERSIST_SYSTEM}"/home
 
 	migrate_system_directory() {
 		local dir="$1"
@@ -270,7 +275,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 			if ((IS_DRY_RUN)); then
 				echo "systemd-machine-id-setup --root=/mnt${PERSIST_SYSTEM} || dbus-uuidgen > /mnt${PERSIST_SYSTEM}/etc/machine-id"
 			else
-				if ! systemd-machine-id-setup --root=/mnt${PERSIST_SYSTEM}; then
+				if ! systemd-machine-id-setup --root=/mnt"${PERSIST_SYSTEM}"; then
 					echo -e "${RED}Error: systemd-machine-id-setup failed, cannot generate ${WHITE}/etc/machine-id${RESET}" >&2
 					exit 1
 				fi
@@ -304,8 +309,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 	echo
 	echo -e "${WHITE}Setting ownership for persistent data...${RESET}"
-	[[ -d "/mnt${PERSIST_SYSTEM}/etc" ]] && $DRY_RUN chown -R 0:0 /mnt${PERSIST_SYSTEM}/etc
-	[[ -d "/mnt${PERSIST_SYSTEM}/var" ]] && $DRY_RUN chown -R 0:0 /mnt${PERSIST_SYSTEM}/var
+	[[ -d "/mnt${PERSIST_SYSTEM}/etc" ]] && $DRY_RUN chown -R 0:0 /mnt"${PERSIST_SYSTEM}"/etc
+	[[ -d "/mnt${PERSIST_SYSTEM}/var" ]] && $DRY_RUN chown -R 0:0 /mnt"${PERSIST_SYSTEM}"/var
 	[[ -d "/mnt${PERSIST_SYSTEM}/home/$USERNAME" ]] && $DRY_RUN chown -R "$USER_UID:$USER_GID" "/mnt${PERSIST_SYSTEM}/home/$USERNAME"
 	[[ -d "/mnt${PERSIST_SYSTEM}/home/$USERNAME" ]] && $DRY_RUN chmod 700 "/mnt${PERSIST_SYSTEM}/home/$USERNAME"
 
@@ -314,11 +319,11 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	if ((IS_DRY_RUN)); then
 		echo "echo IMPERMANENCE_ENABLED=true > /mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE"
 		echo -e "echo MIGRATION_DATE=$(date -Iseconds) >> /mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE"
-		echo "echo MIGRATION_SCRIPT=70-migrate-to-persistence.sh >> /mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE"
+		echo "echo MIGRATION_SCRIPT='nx bootstrap nixos migrate-to-persistence' >> /mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE"
 	else
-		echo "IMPERMANENCE_ENABLED=true" >/mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE
-		echo -e "MIGRATION_DATE=$(date -Iseconds)" >>/mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE
-		echo "MIGRATION_SCRIPT=70-migrate-to-persistence.sh" >>/mnt${PERSIST_SYSTEM}/etc/IMPERMANENCE
+		echo "IMPERMANENCE_ENABLED=true" >/mnt"${PERSIST_SYSTEM}"/etc/IMPERMANENCE
+		echo -e "MIGRATION_DATE=$(date -Iseconds)" >>/mnt"${PERSIST_SYSTEM}"/etc/IMPERMANENCE
+		echo "MIGRATION_SCRIPT=nx bootstrap nixos migrate-to-persistence" >>/mnt"${PERSIST_SYSTEM}"/etc/IMPERMANENCE
 	fi
 
 	echo

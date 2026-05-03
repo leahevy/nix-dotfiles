@@ -19,15 +19,19 @@ if [[ "$UID" != 0 ]]; then
 	exit 1
 fi
 
-HOSTNAME="${1:-}"
-
-if [[ "$HOSTNAME" = "" ]]; then
-	echo -e "${RED}Run with ${WHITE}<HOSTNAME>${RED} argument (from ${WHITE}/nxconfig/profiles/nixos${RED})!${RESET}" >&2
-	exit 1
-fi
-
 check_config_directory "create-sops-key" "bootstrap"
 cd "$CONFIG_DIR"
+
+HOSTNAME="${1:-}"
+if [[ -z "$HOSTNAME" && -e ".nx-profile.conf" ]]; then
+	HOSTNAME="$(cat .nx-profile.conf)"
+	echo -e "Found base profile in ${WHITE}$PWD/.nx-profile.conf${RESET} file: ${WHITE}$HOSTNAME${RESET}" >&2
+fi
+
+if [[ -z "$HOSTNAME" ]]; then
+	echo -e "${RED}Run with ${WHITE}<HOSTNAME>${RED} argument or run ${WHITE}nx bootstrap nixos select-profile <HOSTNAME>${RED} first!${RESET}" >&2
+	exit 1
+fi
 
 if [[ ! -e "$CONFIG_DIR/profiles/nixos/$HOSTNAME" ]]; then
 	echo -e "${RED}Host ${WHITE}$HOSTNAME${RED} does not exist in ${WHITE}$CONFIG_DIR/profiles/nixos${RED}!${RESET}" >&2
@@ -55,25 +59,25 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo -e "\n"
 
 	if ! mountpoint -q /mnt; then
-		echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted${RESET}" >&2
-		echo -e "${RED}Please mount your target filesystem to ${WHITE}/mnt${RED} before creating SOPS keys${RESET}" >&2
+		echo -e "${RED}Error: ${WHITE}/mnt${RED} is not mounted!${RESET}" >&2
+		echo -e "${RED}Run ${WHITE}nx bootstrap nixos mount${RED} first to mount the target filesystem.${RESET}" >&2
 		exit 1
 	fi
 
 	FULL_PROFILE_NAME="$(construct_profile_name "$HOSTNAME")"
-	HOME="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.home")"
-	if [[ -z "$HOME" || "$HOME" == "null" ]]; then
+	USER_HOME="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.home")"
+	if [[ -z "$USER_HOME" || "$USER_HOME" == "null" ]]; then
 		echo -e "${RED}Error: Failed to extract valid home directory for ${WHITE}$USERNAME${RESET}" >&2
 		exit 1
 	fi
-	HOME="${HOME//\"/}"
+	USER_HOME="${USER_HOME//\"/}"
 
-	if [[ ! "$HOME" =~ ^/[a-zA-Z0-9_/.-]+$ ]]; then
-		echo -e "${RED}Error: Invalid home directory path: ${WHITE}$HOME${RESET}" >&2
+	if [[ ! "$USER_HOME" =~ ^/[a-zA-Z0-9_/.-]+$ ]]; then
+		echo -e "${RED}Error: Invalid home directory path: ${WHITE}$USER_HOME${RESET}" >&2
 		exit 1
 	fi
 
-	USER_SOPS_DIR="/mnt/$HOME/.config/sops/age"
+	USER_SOPS_DIR="/mnt/$USER_HOME/.config/sops/age"
 
 	if [[ -f "/mnt/etc/sops/age/keys.txt" && -f "$USER_SOPS_DIR/keys.txt" ]]; then
 		echo -e "${GREEN}SOPS keys already exist, skipping creation.${RESET}"
@@ -93,7 +97,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 			echo -e "${GREEN}Installing user SOPS key for home-manager...${RESET}"
 
 			mkdir -p "$USER_SOPS_DIR"
-			mkdir -p "/mnt/$HOME/.config"
+			mkdir -p "/mnt/$USER_HOME/.config"
 
 			cp "/mnt/etc/sops/age/keys.txt" "$USER_SOPS_DIR/keys.txt"
 
@@ -107,7 +111,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 			if [[ -z "$USER_UID" || "$USER_UID" == "null" || -z "$GROUP_NAME" || "$GROUP_NAME" == "null" ]]; then
 				echo -e "${RED}Error: Failed to extract valid user information for ${WHITE}$USERNAME${RESET}" >&2
-				echo -e "${YELLOW}You might have to fix the permissions of /mnt/$HOME yourself before installing!${RESET}" >&2
+				echo -e "${YELLOW}You might have to fix the permissions of /mnt/$USER_HOME yourself before installing!${RESET}" >&2
 			else
 				USER_UID="${USER_UID//\"/}"
 				GROUP_NAME="${GROUP_NAME//\"/}"
@@ -115,10 +119,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 				USER_GID="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.groups.$GROUP_NAME.gid")"
 				if [[ -z "$USER_GID" || "$USER_GID" == "null" ]]; then
 					echo -e "${RED}Error: Failed to extract valid group GID for group ${WHITE}$GROUP_NAME${RESET}" >&2
-					echo -e "${YELLOW}You might have to fix the permissions of /mnt/$HOME yourself before installing!${RESET}" >&2
+					echo -e "${YELLOW}You might have to fix the permissions of /mnt/$USER_HOME yourself before installing!${RESET}" >&2
 				else
 					USER_GID="${USER_GID//\"/}"
-					chown "$USER_UID:$USER_GID" -R "/mnt/$HOME"
+					chown "$USER_UID:$USER_GID" -R "/mnt/$USER_HOME"
 				fi
 			fi
 		else
@@ -136,5 +140,5 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo -e "${YELLOW}Next steps:${RESET}"
 	echo -e "${YELLOW}1. Re-encrypt the config directory with the new SOPS key.${RESET}"
 	echo -e "${YELLOW}2. Pull the updated config directory on this host.${RESET}"
-	echo -e "${YELLOW}3. You can then run ${WHITE}60-install.sh${YELLOW} to proceed with the installation.${RESET}"
+	echo -e "${YELLOW}3. You can then run ${WHITE}nx bootstrap nixos install${YELLOW} to proceed with the installation.${RESET}"
 fi

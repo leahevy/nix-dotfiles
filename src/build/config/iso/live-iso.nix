@@ -200,6 +200,8 @@
         chmod -R u+w /nxcore /nxconfig
         chown -R nixos:users /nxcore /nxconfig
 
+        rm -f /nxconfig/.nx-profile.conf
+
         echo "NX directories setup complete"
       else
         echo "Error: nx-repositories package not found at: $REPO_PKG"

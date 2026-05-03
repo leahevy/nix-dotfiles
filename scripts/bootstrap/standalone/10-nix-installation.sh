@@ -70,5 +70,6 @@ echo >&2
 echo -e "${GREEN}Nix installation completed!${RESET}" >&2
 echo -e "${YELLOW}Next steps:${RESET}" >&2
 echo -e "${YELLOW}  1. Ensure your config is available${RESET}" >&2
-echo -e "${YELLOW}  2. Run ${WHITE}10-create-sops-key.sh${YELLOW} to create encryption keys and follow instructions${RESET}" >&2
-echo -e "${YELLOW}  3. Run ${WHITE}20-initial-sync.sh${YELLOW} to apply configuration${RESET}" >&2
+echo -e "${YELLOW}  2. Run ${WHITE}nx bootstrap standalone select-profile${YELLOW} to select your profile (optional)${RESET}" >&2
+echo -e "${YELLOW}  3. Run ${WHITE}nx bootstrap standalone create-sops-key${YELLOW} to create encryption keys and follow instructions${RESET}" >&2
+echo -e "${YELLOW}  4. Run ${WHITE}nx bootstrap standalone initial-sync${YELLOW} to apply configuration${RESET}" >&2

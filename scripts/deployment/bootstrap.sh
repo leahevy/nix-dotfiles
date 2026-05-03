@@ -13,17 +13,24 @@ show_list() {
 	echo -e "${WHITE}nixos:${RESET}"
 	echo -e "   ${WHITE}decrypt${RESET}                                         00-decrypt.sh"
 	echo -e "   ${WHITE}fetch-latest-config${RESET}                             10-fetch-latest-config.sh"
-	echo -e "   ${WHITE}disk-format${RESET} <hostname>                          20-disk-format.sh"
-	echo -e "   ${WHITE}mount${RESET} <hostname>                                30-mount.sh"
-	echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]      40-create-profile-stub.sh"
-	echo -e "   ${WHITE}create-sops-key${RESET} <hostname>                      50-create-sops-key.sh"
-	echo -e "   ${WHITE}install${RESET} <hostname>                              60-install.sh"
-	echo -e "   ${WHITE}migrate-to-persistence${RESET} <hostname> [--dry-run]   70-migrate-to-persistence.sh"
+	echo -e "   ${WHITE}select-profile${RESET} <hostname>                        20-select-profile.sh"
+	echo -e "   ${WHITE}disk-format${RESET} [hostname]                           30-disk-format.sh"
+	echo -e "   ${WHITE}mount${RESET} [hostname]                                 40-mount.sh"
+	echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]       50-create-profile-stub.sh"
+	echo -e "   ${WHITE}create-sops-key${RESET} [hostname]                       60-create-sops-key.sh"
+	echo -e "   ${WHITE}install${RESET} [hostname]                               70-install.sh"
+	echo -e "   ${WHITE}migrate-to-persistence${RESET} [hostname] [--dry-run]    80-migrate-to-persistence.sh"
+
+	if [[ -e /etc/NIXOS ]] && grep -q "^nixos:" /etc/passwd 2>/dev/null; then
+		return 0
+	fi
+
 	echo
 	echo -e "${WHITE}standalone:${RESET}"
-	echo -e "   ${WHITE}nix-installation${RESET}                                00-nix-installation.sh"
-	echo -e "   ${WHITE}create-sops-key${RESET}                                 10-create-sops-key.sh"
-	echo -e "   ${WHITE}initial-sync${RESET}                                    20-initial-sync.sh"
+	echo -e "   ${WHITE}select-profile${RESET} <profile>                         00-select-profile.sh"
+	echo -e "   ${WHITE}nix-installation${RESET}                                 10-nix-installation.sh"
+	echo -e "   ${WHITE}create-sops-key${RESET}                                  20-create-sops-key.sh"
+	echo -e "   ${WHITE}initial-sync${RESET}                                     30-initial-sync.sh"
 }
 
 if [[ -n "${NX_INSTALL_PATH:-}" ]]; then
@@ -71,24 +78,26 @@ nixos)
 		echo -e "${CYAN}Available nixos bootstrap scripts:${RESET}"
 		echo -e "   ${WHITE}decrypt${RESET}                                        00-decrypt.sh"
 		echo -e "   ${WHITE}fetch-latest-config${RESET}                            10-fetch-latest-config.sh"
-		echo -e "   ${WHITE}disk-format${RESET} <hostname>                         20-disk-format.sh"
-		echo -e "   ${WHITE}mount${RESET} <hostname>                               30-mount.sh"
-		echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]     40-create-profile-stub.sh"
-		echo -e "   ${WHITE}create-sops-key${RESET} <hostname>                     50-create-sops-key.sh"
-		echo -e "   ${WHITE}install${RESET} <hostname>                             60-install.sh"
-		echo -e "   ${WHITE}migrate-to-persistence${RESET} <hostname> [--dry-run]  70-migrate-to-persistence.sh"
+		echo -e "   ${WHITE}select-profile${RESET} <hostname>                       20-select-profile.sh"
+		echo -e "   ${WHITE}disk-format${RESET} [hostname]                          30-disk-format.sh"
+		echo -e "   ${WHITE}mount${RESET} [hostname]                                40-mount.sh"
+		echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]      50-create-profile-stub.sh"
+		echo -e "   ${WHITE}create-sops-key${RESET} [hostname]                      60-create-sops-key.sh"
+		echo -e "   ${WHITE}install${RESET} [hostname]                              70-install.sh"
+		echo -e "   ${WHITE}migrate-to-persistence${RESET} [hostname] [--dry-run]   80-migrate-to-persistence.sh"
 		exit 0
 	fi
 
 	case "$SCRIPT_NAME" in
 	decrypt) SCRIPT_FILE="00-decrypt.sh" ;;
 	fetch-latest-config) SCRIPT_FILE="10-fetch-latest-config.sh" ;;
-	disk-format) SCRIPT_FILE="20-disk-format.sh" ;;
-	mount) SCRIPT_FILE="30-mount.sh" ;;
-	create-profile-stub) SCRIPT_FILE="40-create-profile-stub.sh" ;;
-	create-sops-key) SCRIPT_FILE="50-create-sops-key.sh" ;;
-	install) SCRIPT_FILE="60-install.sh" ;;
-	migrate-to-persistence) SCRIPT_FILE="70-migrate-to-persistence.sh" ;;
+	select-profile) SCRIPT_FILE="20-select-profile.sh" ;;
+	disk-format) SCRIPT_FILE="30-disk-format.sh" ;;
+	mount) SCRIPT_FILE="40-mount.sh" ;;
+	create-profile-stub) SCRIPT_FILE="50-create-profile-stub.sh" ;;
+	create-sops-key) SCRIPT_FILE="60-create-sops-key.sh" ;;
+	install) SCRIPT_FILE="70-install.sh" ;;
+	migrate-to-persistence) SCRIPT_FILE="80-migrate-to-persistence.sh" ;;
 	*)
 		echo -e "${RED}Error: Unknown nixos bootstrap script: ${WHITE}$SCRIPT_NAME${RESET}" >&2
 		exit 1
@@ -104,33 +113,37 @@ standalone)
 
 	if [[ -z "$SCRIPT_NAME" ]]; then
 		echo -e "${CYAN}Available standalone bootstrap scripts:${RESET}"
-		echo -e "   ${WHITE}nix-installation${RESET}          00-nix-installation.sh"
-		echo -e "   ${WHITE}create-sops-key${RESET}           10-create-sops-key.sh"
-		echo -e "   ${WHITE}initial-sync${RESET}              20-initial-sync.sh"
+		echo -e "   ${WHITE}select-profile${RESET}            00-select-profile.sh"
+		echo -e "   ${WHITE}nix-installation${RESET}          10-nix-installation.sh"
+		echo -e "   ${WHITE}create-sops-key${RESET}           20-create-sops-key.sh"
+		echo -e "   ${WHITE}initial-sync${RESET}              30-initial-sync.sh"
 		exit 0
 	fi
 
 	case "$SCRIPT_NAME" in
+	select-profile)
+		SCRIPT_FILE="00-select-profile.sh"
+		;;
 	nix-installation)
 		if [[ -d /nix/store ]]; then
 			echo -e "${RED}Error: /nix/store already exists - Nix appears to be installed already.${RESET}" >&2
 			exit 1
 		fi
-		SCRIPT_FILE="00-nix-installation.sh"
+		SCRIPT_FILE="10-nix-installation.sh"
 		;;
 	create-sops-key)
 		if [[ ! -d /nix/store ]]; then
 			echo -e "${RED}Error: /nix/store not found - run ${WHITE}nix-installation${RED} first.${RESET}" >&2
 			exit 1
 		fi
-		SCRIPT_FILE="10-create-sops-key.sh"
+		SCRIPT_FILE="20-create-sops-key.sh"
 		;;
 	initial-sync)
 		if [[ ! -d /nix/store ]]; then
 			echo -e "${RED}Error: /nix/store not found - run ${WHITE}nix-installation${RED} first.${RESET}" >&2
 			exit 1
 		fi
-		SCRIPT_FILE="20-initial-sync.sh"
+		SCRIPT_FILE="30-initial-sync.sh"
 		;;
 	*)
 		echo -e "${RED}Error: Unknown standalone bootstrap script: ${WHITE}$SCRIPT_NAME${RESET}" >&2

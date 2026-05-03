@@ -20,10 +20,16 @@ if [[ "$UID" != 0 ]]; then
 fi
 
 check_config_directory "mount" "bootstrap"
+cd "$CONFIG_DIR"
 
 HOSTNAME="${1:-}"
-if [[ "$HOSTNAME" = "" ]]; then
-	echo -e "${RED}Run with ${WHITE}<HOSTNAME>${RED} argument (from ${WHITE}/nxconfig/profiles/nixos${RED})!${RESET}" >&2
+if [[ -z "$HOSTNAME" && -e ".nx-profile.conf" ]]; then
+	HOSTNAME="$(cat .nx-profile.conf)"
+	echo -e "Found base profile in ${WHITE}$PWD/.nx-profile.conf${RESET} file: ${WHITE}$HOSTNAME${RESET}" >&2
+fi
+
+if [[ -z "$HOSTNAME" ]]; then
+	echo -e "${RED}Run with ${WHITE}<HOSTNAME>${RED} argument or run ${WHITE}nx bootstrap nixos select-profile <HOSTNAME>${RED} first!${RESET}" >&2
 	exit 1
 fi
 

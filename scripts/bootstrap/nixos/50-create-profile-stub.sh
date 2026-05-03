@@ -14,6 +14,7 @@ if [[ ! -e /etc/NIXOS ]]; then
 fi
 
 check_config_directory "create-profile-stub" "bootstrap"
+cd "$CONFIG_DIR"
 
 HOSTNAME=""
 NO_ROOT=false
@@ -36,6 +37,11 @@ while [[ $# -gt 0 ]]; do
 		;;
 	esac
 done
+
+if [[ -z "$HOSTNAME" && -e ".nx-profile.conf" ]]; then
+	HOSTNAME="$(cat .nx-profile.conf)"
+	echo -e "Found base profile in ${WHITE}$PWD/.nx-profile.conf${RESET} file: ${WHITE}$HOSTNAME${RESET}" >&2
+fi
 
 if [[ -z "$HOSTNAME" ]]; then
 	DETECTED_HOSTNAME="$(hostname)"
@@ -351,7 +357,9 @@ EOF
 	if [[ -n "$UNFREE_PACKAGES" ]]; then
 		echo
 		echo -e "${YELLOW}Required unfree packages detected${RESET}:"
-		echo "$UNFREE_PACKAGES" | sed 's/^/     - /'
+		while IFS= read -r pkg; do
+			[[ -n "$pkg" ]] && echo "     - $pkg"
+		done <<<"$UNFREE_PACKAGES"
 		echo
 		echo -e "${YELLOW}Add these to ${WHITE}variables.nix${YELLOW}: allowedUnfreePackages:${RESET}"
 		echo -e "${WHITE}  allowedUnfreePackages = [${RESET}"
@@ -368,4 +376,4 @@ echo
 echo -e "${YELLOW}Next steps:${RESET}"
 echo -e "${YELLOW}   1. Edit ${WHITE}$PROFILE_DIR/$HOSTNAME.nix${YELLOW} to set ${WHITE}mainUser${YELLOW}, ${WHITE}additionalUsers${YELLOW}, and ${WHITE}ethernetDeviceName${RESET}"
 echo -e "${YELLOW}   2. Configure modules and settings as needed${RESET}"
-echo -e "${YELLOW}   3. Run bootstrap scripts: ${WHITE}50-create-sops-key.sh${YELLOW} then ${WHITE}60-install.sh${RESET} and if needed ${WHITE}70-migrate-to-persistence.sh${RESET}"
+echo -e "${YELLOW}   3. Run bootstrap scripts: ${WHITE}nx bootstrap nixos create-sops-key${YELLOW} then ${WHITE}nx bootstrap nixos install${RESET} and if needed ${WHITE}nx bootstrap nixos migrate-to-persistence${RESET}"

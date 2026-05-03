@@ -464,32 +464,36 @@
               fetch-latest-config = {
                 description = "Fetch latest config from remote";
               };
+              select-profile = {
+                description = "Select target hostname for subsequent bootstrap commands";
+                arguments = [ (arg "hostname" "Target hostname" "string") ];
+              };
               disk-format = {
                 description = "Format target disk";
-                arguments = [ (arg "hostname" "Target hostname" "string") ];
+                arguments = [ (argVariadic "hostname" "Target hostname" "string") ];
               };
               mount = {
                 description = "Mount target filesystem";
-                arguments = [ (arg "hostname" "Target hostname" "string") ];
+                arguments = [ (argVariadic "hostname" "Target hostname" "string") ];
               };
               create-profile-stub = {
                 description = "Generate NixOS profile stub from hardware configuration";
-                arguments = [ (arg "hostname" "Target hostname" "string") ];
+                arguments = [ (argVariadic "hostname" "Target hostname" "string") ];
                 options = {
                   no-root = option "Generate config for current system instead of /mnt";
                 };
               };
               create-sops-key = {
                 description = "Create SOPS age keys for host and user";
-                arguments = [ (arg "hostname" "Target hostname" "string") ];
+                arguments = [ (argVariadic "hostname" "Target hostname" "string") ];
               };
               install = {
                 description = "Install NixOS to /mnt";
-                arguments = [ (arg "hostname" "Target hostname" "string") ];
+                arguments = [ (argVariadic "hostname" "Target hostname" "string") ];
               };
               migrate-to-persistence = {
                 description = "Migrate files to persistence storage";
-                arguments = [ (arg "hostname" "Target hostname" "string") ];
+                arguments = [ (argVariadic "hostname" "Target hostname" "string") ];
                 options = {
                   dry-run = option "Preview changes without applying them";
                 };
@@ -499,6 +503,10 @@
           standalone = {
             description = "Run standalone Home Manager bootstrap scripts";
             subcommands = {
+              select-profile = {
+                description = "Select target profile for subsequent bootstrap commands";
+                arguments = [ (arg "profile" "Profile name" "string") ];
+              };
               nix-installation = {
                 description = "Install Nix package manager";
               };
