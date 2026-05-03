@@ -12,7 +12,7 @@ rec {
   ifSet = value: default: if value != null then value else default;
 
   # Resolve a nested attribute path from config.host first, then config.user, then a default.
-  # Accepts either a NixOS config or a self object (detected via _nx_self = true).
+  # Accepts either a config or a self object (detected via _nx_self = true).
   # Usage: resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] true
   # Usage: resolveFromHostOrUser self [ "displays" "mainIsWidescreen" ] true
   resolveFromHostOrUser =
@@ -42,7 +42,7 @@ rec {
       default;
 
   # Resolve a nested attribute path from config.host only, else return default.
-  # Accepts either a NixOS config or a self object (detected via _nx_self = true).
+  # Accepts either a config or a self object (detected via _nx_self = true).
   # Usage: resolveFromHost config [ "system" "vmsDataPath" ] null
   # Usage: resolveFromHost self [ "system" "vmsDataPath" ] null
   resolveFromHost =
@@ -62,7 +62,7 @@ rec {
       default;
 
   # Resolve a nested attribute path from config.user only, else return default.
-  # Accepts either a NixOS config or a self object (detected via _nx_self = true).
+  # Accepts either a config or a self object (detected via _nx_self = true).
   # Usage: resolveFromUser config [ "deploymentMode" ] "develop"
   # Usage: resolveFromUser self [ "deploymentMode" ] "develop"
   resolveFromUser =
@@ -82,7 +82,7 @@ rec {
       default;
 
   # Check if the current deployment mode is in the given list of modes. Throws on invalid mode names.
-  # Accepts either a NixOS config or a self object (detected via _nx_self = true).
+  # Accepts either a config or a self object (detected via _nx_self = true).
   # Usage: isDeploymentMode config [ "local" "develop" ]
   # Usage: isDeploymentMode self [ "managed" ]
   isDeploymentMode =
