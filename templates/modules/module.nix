@@ -144,6 +144,14 @@ args@{
     # testingVM = { ... };              # testing VM only (--TESTING-VM builds); same structure as virtual; stacks on top of virtual
     # productionVM = { ... };           # production VM only (host.isVM=true); same structure as virtual; stacks on top of virtual
     # physical = { ... };               # physical (bare-metal) only; same structure as virtual
+    # develop = {                       # deployment mode blocks (develop/local/server/managed); supports virtual/physical/testingVM/productionVM inside
+    #   home = config: { };
+    #   linux.home = config: { };
+    #   physical.darwin.home = config: { };
+    # };
+    # local = { ... };
+    # server = { ... };
+    # managed = { ... };
     # aarch64 = { ... };
 
     # ifEnabled.INPUT.GROUP.MODULE = {

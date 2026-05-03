@@ -645,16 +645,16 @@ rec {
         "standalone"
         "integrated"
       ];
-      condStructuralKeys = l1CondAllowed ++ [
-        "linux"
-        "darwin"
-        "x86_64"
-        "aarch64"
-        "virtual"
-        "physical"
-        "testingVM"
-        "productionVM"
-      ];
+      condStructuralKeys =
+        l1CondAllowed
+        ++ [
+          "linux"
+          "darwin"
+          "x86_64"
+          "aarch64"
+        ]
+        ++ buildTypeNames
+        ++ deploymentModeNames;
 
       validateFn =
         path: name: value:
@@ -806,6 +806,89 @@ rec {
               "aarch64"
             ];
 
+      deploymentModeNames = [
+        "develop"
+        "local"
+        "server"
+        "managed"
+      ];
+
+      buildTypeNames = [
+        "virtual"
+        "physical"
+        "testingVM"
+        "productionVM"
+      ];
+
+      validateDeploymentModeBase =
+        pathPrefix: modeName: modeModule:
+        let
+          dmlAllowed =
+            l1CondAllowed
+            ++ [
+              "overlays"
+              "linux"
+              "darwin"
+              "x86_64"
+              "aarch64"
+            ]
+            ++ buildTypeNames;
+          fullPath = "${pathPrefix}${modeName}";
+        in
+        checkInvalid "${prefix}.${fullPath}" dmlAllowed modeModule
+        ++ checkFns "${fullPath}." l1CondAllowed modeModule
+        ++
+          lib.concatMap
+            (
+              platName:
+              if modeModule ? ${platName} && builtins.isAttrs modeModule.${platName} then
+                validatePlatformBase "${fullPath}." platName modeModule.${platName}
+              else if modeModule ? ${platName} then
+                [
+                  "${prefix}.${fullPath}.${platName} must be an attribute set, got ${
+                    builtins.typeOf modeModule.${platName}
+                  }"
+                ]
+              else
+                [ ]
+            )
+            [
+              "linux"
+              "darwin"
+            ]
+        ++
+          lib.concatMap
+            (
+              archName:
+              if modeModule ? ${archName} && builtins.isAttrs modeModule.${archName} then
+                validateArchBase "${fullPath}." archName modeModule.${archName}
+              else if modeModule ? ${archName} then
+                [
+                  "${prefix}.${fullPath}.${archName} must be an attribute set, got ${
+                    builtins.typeOf modeModule.${archName}
+                  }"
+                ]
+              else
+                [ ]
+            )
+            [
+              "x86_64"
+              "aarch64"
+            ]
+        ++ lib.concatMap (
+          buildTypeName:
+          if modeModule ? ${buildTypeName} && builtins.isAttrs modeModule.${buildTypeName} then
+            validateVirtualPhysicalBase "${fullPath}." buildTypeName modeModule.${buildTypeName}
+          else if modeModule ? ${buildTypeName} then
+            [
+              "${prefix}.${fullPath}.${buildTypeName} must be an attribute set, got ${
+                builtins.typeOf modeModule.${buildTypeName}
+              }"
+            ]
+          else
+            [ ]
+        ) buildTypeNames;
+
       validateVirtualPhysicalCond =
         pathPrefix: buildTypeName: buildTypeModule:
         let
@@ -852,6 +935,62 @@ rec {
               "aarch64"
             ];
 
+      validateDeploymentModeCond =
+        pathPrefix: modeName: modeModule:
+        let
+          dmlCondAllowed =
+            l1CondAllowed
+            ++ [
+              "linux"
+              "darwin"
+              "x86_64"
+              "aarch64"
+            ]
+            ++ buildTypeNames;
+          fullPath = "${pathPrefix}${modeName}";
+        in
+        checkInvalid "${prefix}.${fullPath}" dmlCondAllowed modeModule
+        ++ checkFns "${fullPath}." l1CondAllowed modeModule
+        ++
+          lib.concatMap
+            (
+              platName:
+              if modeModule ? ${platName} && builtins.isAttrs modeModule.${platName} then
+                validatePlatformCond "${fullPath}." platName modeModule.${platName}
+              else if modeModule ? ${platName} then
+                [ "${prefix}.${fullPath}.${platName} must be an attribute set" ]
+              else
+                [ ]
+            )
+            [
+              "linux"
+              "darwin"
+            ]
+        ++
+          lib.concatMap
+            (
+              archName:
+              if modeModule ? ${archName} && builtins.isAttrs modeModule.${archName} then
+                validateArchCond "${fullPath}." archName modeModule.${archName}
+              else if modeModule ? ${archName} then
+                [ "${prefix}.${fullPath}.${archName} must be an attribute set" ]
+              else
+                [ ]
+            )
+            [
+              "x86_64"
+              "aarch64"
+            ]
+        ++ lib.concatMap (
+          buildTypeName:
+          if modeModule ? ${buildTypeName} && builtins.isAttrs modeModule.${buildTypeName} then
+            validateVirtualPhysicalCond "${fullPath}." buildTypeName modeModule.${buildTypeName}
+          else if modeModule ? ${buildTypeName} then
+            [ "${prefix}.${fullPath}.${buildTypeName} must be an attribute set" ]
+          else
+            [ ]
+        ) buildTypeNames;
+
       validateCondBody =
         path: attrset:
         checkInvalid "${prefix}.${path}" condStructuralKeys attrset
@@ -886,23 +1025,24 @@ rec {
               "x86_64"
               "aarch64"
             ]
-        ++
-          lib.concatMap
-            (
-              buildTypeName:
-              if attrset ? ${buildTypeName} && builtins.isAttrs attrset.${buildTypeName} then
-                validateVirtualPhysicalCond "${path}." buildTypeName attrset.${buildTypeName}
-              else if attrset ? ${buildTypeName} then
-                [ "${prefix}.${path}.${buildTypeName} must be an attribute set" ]
-              else
-                [ ]
-            )
-            [
-              "virtual"
-              "physical"
-              "testingVM"
-              "productionVM"
-            ];
+        ++ lib.concatMap (
+          buildTypeName:
+          if attrset ? ${buildTypeName} && builtins.isAttrs attrset.${buildTypeName} then
+            validateVirtualPhysicalCond "${path}." buildTypeName attrset.${buildTypeName}
+          else if attrset ? ${buildTypeName} then
+            [ "${prefix}.${path}.${buildTypeName} must be an attribute set" ]
+          else
+            [ ]
+        ) buildTypeNames
+        ++ lib.concatMap (
+          modeName:
+          if attrset ? ${modeName} && builtins.isAttrs attrset.${modeName} then
+            validateDeploymentModeCond "${path}." modeName attrset.${modeName}
+          else if attrset ? ${modeName} then
+            [ "${prefix}.${path}.${modeName} must be an attribute set" ]
+          else
+            [ ]
+        ) deploymentModeNames;
 
       validateConditionalModule =
         condName: modPath: modModule:
@@ -1099,19 +1239,19 @@ rec {
             ) condModule
           );
 
-      topAllowed = l1BaseAllowed ++ [
-        "linux"
-        "darwin"
-        "x86_64"
-        "aarch64"
-        "ifEnabled"
-        "ifDisabled"
-        "when"
-        "virtual"
-        "physical"
-        "testingVM"
-        "productionVM"
-      ];
+      topAllowed =
+        l1BaseAllowed
+        ++ [
+          "linux"
+          "darwin"
+          "x86_64"
+          "aarch64"
+          "ifEnabled"
+          "ifDisabled"
+          "when"
+        ]
+        ++ buildTypeNames
+        ++ deploymentModeNames;
 
       topErrors = checkInvalid "on" topAllowed module;
       topFnErrors = checkFns "" l1FnNames module;
@@ -1171,27 +1311,31 @@ rec {
         else
           [ ];
 
-      buildTypeErrors =
-        lib.concatMap
-          (
-            buildTypeName:
-            if module ? ${buildTypeName} && builtins.isAttrs module.${buildTypeName} then
-              validateVirtualPhysicalBase "" buildTypeName module.${buildTypeName}
-            else if module ? ${buildTypeName} then
-              [
-                "${prefix}.${buildTypeName} must be an attribute set, got ${
-                  builtins.typeOf module.${buildTypeName}
-                }"
-              ]
-            else
-              [ ]
-          )
+      buildTypeErrors = lib.concatMap (
+        buildTypeName:
+        if module ? ${buildTypeName} && builtins.isAttrs module.${buildTypeName} then
+          validateVirtualPhysicalBase "" buildTypeName module.${buildTypeName}
+        else if module ? ${buildTypeName} then
           [
-            "virtual"
-            "physical"
-            "testingVM"
-            "productionVM"
-          ];
+            "${prefix}.${buildTypeName} must be an attribute set, got ${
+              builtins.typeOf module.${buildTypeName}
+            }"
+          ]
+        else
+          [ ]
+      ) buildTypeNames;
+
+      deploymentModeErrors = lib.concatMap (
+        modeName:
+        if module ? ${modeName} && builtins.isAttrs module.${modeName} then
+          validateDeploymentModeBase "" modeName module.${modeName}
+        else if module ? ${modeName} then
+          [
+            "${prefix}.${modeName} must be an attribute set, got ${builtins.typeOf module.${modeName}}"
+          ]
+        else
+          [ ]
+      ) deploymentModeNames;
 
       allErrors =
         topErrors
@@ -1200,7 +1344,8 @@ rec {
         ++ archErrors
         ++ conditionalErrors
         ++ whenErrors
-        ++ buildTypeErrors;
+        ++ buildTypeErrors
+        ++ deploymentModeErrors;
     in
     if allErrors != [ ] then
       throw "Module ${modulePath} has invalid 'on' configuration:\n  ${builtins.concatStringsSep "\n  " allErrors}"
@@ -1216,6 +1361,7 @@ rec {
       isVirtual ? false,
       isTestingVM ? false,
       isProductionVM ? false,
+      deploymentMode ? "develop",
       includeInit ? false,
       includeDisabled ? false,
       sourceModule ? "unknown",
@@ -1251,7 +1397,7 @@ rec {
         else
           { };
 
-      collectAllBuildTypeLayers =
+      collectBuildTypeLayers =
         excludeInit: wrap: attrset:
         collectLayers123 excludeInit wrap attrset
         ++ (if isVirtual then collectLayers123 excludeInit wrap (attrset.virtual or { }) else [ ])
@@ -1260,6 +1406,11 @@ rec {
         ++ (
           if isProductionVM then collectLayers123 excludeInit wrap (attrset.productionVM or { }) else [ ]
         );
+
+      collectAllBuildTypeLayers =
+        excludeInit: wrap: attrset:
+        collectBuildTypeLayers excludeInit wrap attrset
+        ++ collectBuildTypeLayers excludeInit wrap (attrset.${deploymentMode} or { });
 
       collectL1 =
         excludeInit: wrap: attrset:
@@ -1675,6 +1826,9 @@ rec {
         isVirtual = args.isVirtual or false;
         isTestingVM = args.isTestingVM or false;
         isProductionVM = args.isProductionVM or false;
+        deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
+          "deploymentMode"
+        ] "develop";
         prefix = "module";
         sourceModule = toString modulePath;
         moduleNxPath = [
@@ -1747,6 +1901,9 @@ rec {
         isVirtual = args.isVirtual or false;
         isTestingVM = args.isTestingVM or false;
         isProductionVM = args.isProductionVM or false;
+        deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
+          "deploymentMode"
+        ] "develop";
         prefix = "profile";
         includeInit = true;
         sourceModule = "profile:${profileType}/${profileName}";
@@ -2618,6 +2775,9 @@ rec {
                     isVirtual = args.isVirtual or false;
                     isTestingVM = args.isTestingVM or false;
                     isProductionVM = args.isProductionVM or false;
+                    deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
+                      "deploymentMode"
+                    ] "develop";
                     prefix = "module";
                     buildContext = "system";
                     includeInit = true;
@@ -2702,6 +2862,9 @@ rec {
                     isVirtual = args.isVirtual or false;
                     isTestingVM = args.isTestingVM or false;
                     isProductionVM = args.isProductionVM or false;
+                    deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
+                      "deploymentMode"
+                    ] "develop";
                     prefix = "module";
                     buildContext = "system";
                     includeDisabled = true;
