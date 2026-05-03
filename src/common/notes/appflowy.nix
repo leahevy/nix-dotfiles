@@ -25,9 +25,22 @@ args@{
       };
     };
 
+    ifEnabled.linux.desktop.niri.linux.enabled = config: {
+      nx.linux.desktop.niri.autostartPrograms = [
+        "appflowy"
+      ];
+    };
+
     ifEnabled.linux.desktop.niri.home = config: {
       programs.niri = {
         settings = {
+          binds = with config.lib.niri.actions; {
+            "Mod+Ctrl+Alt+Comma" = {
+              action = spawn-sh "niri-scratchpad --app-id AppFlowy --all-windows --spawn appflowy";
+              hotkey-overlay.title = "Apps:AppFlowy";
+            };
+          };
+
           window-rules = [
             {
               matches = [
@@ -35,6 +48,9 @@ args@{
                   app-id = "AppFlowy";
                 }
               ];
+              open-on-workspace = "scratch";
+              open-floating = true;
+              open-focused = false;
               block-out-from = "screencast";
             }
           ];
