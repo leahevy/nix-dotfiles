@@ -127,6 +127,7 @@ let
             home-manager.sharedModules = [
               inputs.sops-nix.homeManagerModules.sops
               inputs.nixvim.homeModules.nixvim
+              inputs.nix-index-database.homeModules.default
               (lib.mkIf (variables."nix-implementation" == "lix") {
                 nix.package = lib.mkForce pkgs.lix;
               })
