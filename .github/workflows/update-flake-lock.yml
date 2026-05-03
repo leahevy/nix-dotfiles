@@ -369,17 +369,19 @@ jobs:
                       fi
 
                       if [ "$should_reduce_commit_subjects" = "true" ]; then
-                        if [ "$backport_count" -gt 0 ]; then
+                        filtered_total=$((backport_count + staging_count))
+                        if [ "$filtered_total" -gt 0 ]; then
                           if [ -n "$commits_to_show" ]; then
-                            commits_to_show="$commits_to_show"$'\n'
+                            commits_to_show="$commits_to_show"$'\n\n'
                           fi
-                          commits_to_show="$commits_to_show- ($backport_count backport commits filtered out)"
-                        fi
-                        if [ "$staging_count" -gt 0 ]; then
-                          if [ -n "$commits_to_show" ]; then
-                            commits_to_show="$commits_to_show"$'\n'
+                          commits_to_show="$commits_to_show<b>Filtered</b>:"$'\n'
+                          if [ "$backport_count" -gt 0 ]; then
+                            commits_to_show="$commits_to_show- $backport_count backport commits filtered out"$'\n'
                           fi
-                          commits_to_show="$commits_to_show- ($staging_count staging/release merge commits filtered out)"
+                          if [ "$staging_count" -gt 0 ]; then
+                            commits_to_show="$commits_to_show- $staging_count staging/release merge commits filtered out"$'\n'
+                          fi
+                          commits_to_show=$(printf '%s' "$commits_to_show" | sed -E 's/\n$//')
                         fi
                         if [ -n "$other_updates_line" ]; then
                           if [ -n "$commits_to_show" ]; then
