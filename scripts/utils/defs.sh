@@ -55,6 +55,7 @@ export AUTO_UPDATE_INPUTS=(
 export PACKAGES_TO_HIGHLIGHT=(
 	niri
 	firefox
+	firefox-unwrapped
 	signal-desktop
 	tor-browser
 	neovim
