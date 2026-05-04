@@ -56,17 +56,50 @@ export PACKAGES_TO_HIGHLIGHT=(
 	niri
 	firefox
 	firefox-unwrapped
+	thunderbird-latest-unwrapped
+	spotify
+	docker
+	ungoogled-chromium
+	google-chrome
 	signal-desktop
 	tor-browser
 	neovim
 	qutebrowser
 	ente-desktop
 	logseq
+	appflowy
+	beeper
+	bitwarden
+	discord
+	easytag
+	fluffychat
+	heroic
+	paperless-ngx
+	home-assistant
+	pihole
+	lutris
+	onlyoffice
+	protonmail-desktop
+	syncthing
+	tmux
 	todoist
+	vlc
+	xwayland
 	steam
 	ghostty
 	waybar
 	nwg-wrapper
+	keyd
+	sops
+	plymouth
+	keepassxc
+	vscodium
+	nvidia-settings
+	ollama
+	vimPlugins.obsidian-nvim
+	vimPlugins.nvim-treesitter
+	borgbackup
+	smartmontools
 )
 
 export NIXPKGS_INPUTS=(
