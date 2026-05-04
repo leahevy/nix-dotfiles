@@ -18,7 +18,14 @@ args@{
     linux.system =
       config:
       let
-        extension = self.variables.home-manager-backup-extension;
+        extension =
+          let
+            ext = self.variables.home-manager-backup-extension or null;
+          in
+          if lib.isString ext && ext != "" then
+            ext
+          else
+            throw "variables.home-manager-backup-extension must be a non-empty string!";
         username = self.host.mainUser.username;
 
         homeFilePaths = lib.attrNames (config.home-manager.users.${username}.home.file or { });
@@ -38,19 +45,20 @@ args@{
         '';
       in
       lib.mkIf (backupFiles != [ ]) {
+        systemd.services."home-manager-${username}".wants = [ "home-manager-remove-backups.service" ];
+
         systemd.services.home-manager-remove-backups = {
           unitConfig = {
             Description = "Remove .${extension} files for all home.file generated files";
+            PartOf = [ "home-manager-${username}.service" ];
             Before = [
               "systemd-user-sessions.service"
               "home-manager-${username}.service"
             ];
             RequiresMountsFor = "${self.user.home}";
           };
-          wantedBy = [ "multi-user.target" ];
           serviceConfig = {
             Type = "oneshot";
-            RemainAfterExit = true;
             User = username;
             ExecStart = "${removeBackupsScript}";
           };
