@@ -4,12 +4,12 @@ set -euo pipefail
 NX_SPEC=""
 
 if [[ "$UID" == 0 ]]; then
-  if ! grep -q "^nixos:" /etc/passwd 2>/dev/null; then
-    RED='\033[1;31m'
-    RESET='\033[0m'
-    echo -e "${RED}Error: Do not run directly as root due to config dir resolution${RESET}" >&2
-    exit 1
-  fi
+	if ! grep -q "^nixos:" /etc/passwd 2>/dev/null; then
+		RED='\033[1;31m'
+		RESET='\033[0m'
+		echo -e "${RED}Error: Do not run directly as root due to config dir resolution${RESET}" >&2
+		exit 1
+	fi
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,135 +20,135 @@ check_config_directory "help" "deployment"
 load_nx_config
 
 if [[ -n "${NX_INSTALL_PATH:-}" && "$SCRIPT_DIR" != "$NX_INSTALL_PATH" ]]; then
-    if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "managed" || "${NX_DEPLOYMENT_MODE:-develop}" == "server" ]]; then
-        echo -e "${RED}Error: Running nx directly from source is not allowed in managed or server mode!${RESET}" >&2
-        echo -e "${CYAN}Current deployment mode: ${WHITE}${NX_DEPLOYMENT_MODE:-develop}${RESET}" >&2
-        exit 1
-    fi
-    unset NX_INSTALL_PATH
+	if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "managed" || "${NX_DEPLOYMENT_MODE:-develop}" == "server" ]]; then
+		echo -e "${RED}Error: Running nx directly from source is not allowed in managed or server mode!${RESET}" >&2
+		echo -e "${CYAN}Current deployment mode: ${WHITE}${NX_DEPLOYMENT_MODE:-develop}${RESET}" >&2
+		exit 1
+	fi
+	unset NX_INSTALL_PATH
 fi
 
 if [[ -n "${NX_INSTALL_PATH:-}" && -f "$NX_INSTALL_PATH/nx-spec.json" ]]; then
-    NX_SPEC="$NX_INSTALL_PATH/nx-spec.json"
+	NX_SPEC="$NX_INSTALL_PATH/nx-spec.json"
 fi
 
 if [[ -n "$NX_SPEC" ]]; then
-    NAME="$(jq -r '.name' "$NX_SPEC" 2>/dev/null || echo 'nx')"
+	NAME="$(jq -r '.name' "$NX_SPEC" 2>/dev/null || echo 'nx')"
 else
-    NAME="nx"
+	NAME="nx"
 fi
 
 show_live_iso_help() {
-    echo -e "${WHITE}Usage: nx <command> [args...]${RESET}"
-    echo
-    echo -e "${CYAN}Bootstrap commands:${RESET}"
-    echo -e "  ${WHITE}./nx bootstrap${RESET}             List all bootstrap scripts"
-    echo -e "  ${WHITE}./nx bootstrap nixos${RESET}       List NixOS bootstrap scripts"
-    echo -e "  ${WHITE}./nx bootstrap standalone${RESET}  List standalone bootstrap scripts"
-    echo
-    echo -e "${CYAN}Note: Most nx commands require a fully configured system.${RESET}"
+	echo -e "${WHITE}Usage: nx <command> [args...]${RESET}"
+	echo
+	echo -e "${CYAN}Bootstrap commands:${RESET}"
+	echo -e "  ${WHITE}./nx bootstrap${RESET}             List all bootstrap scripts"
+	echo -e "  ${WHITE}./nx bootstrap nixos${RESET}       List NixOS bootstrap scripts"
+	echo -e "  ${WHITE}./nx bootstrap standalone${RESET}  List standalone bootstrap scripts"
+	echo
+	echo -e "${CYAN}Note: Most nx commands require a fully configured system.${RESET}"
 }
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || "${1:-}" == "help" ]]; then
-    if [[ "${IS_LIVE_ISO:-0}" == "1" ]]; then
-        show_live_iso_help
-        exit 0
-    fi
-    source "$SCRIPTS_PATH/../utils/nx-validate.sh"
-    show_command_help ""
-    exit 0
+	if [[ "${IS_LIVE_ISO:-0}" == "1" ]]; then
+		show_live_iso_help
+		exit 0
+	fi
+	source "$SCRIPTS_PATH/../utils/nx-validate.sh"
+	show_command_help ""
+	exit 0
 fi
 
 if [[ "${1:-}" == "--version" ]]; then
-    if [[ -n "$NX_SPEC" ]]; then
-        echo "$NAME version $(jq -r '.version' "$NX_SPEC")" >&2
-    else
-        echo "$NAME local development version" >&2
-    fi
-    exit 0
+	if [[ -n "$NX_SPEC" ]]; then
+		echo "$NAME version $(jq -r '.version' "$NX_SPEC")" >&2
+	else
+		echo "$NAME local development version" >&2
+	fi
+	exit 0
 fi
 
 if [[ $# -eq 0 ]]; then
-  if [[ "${IS_LIVE_ISO:-0}" == "1" ]]; then
-    show_live_iso_help
-    exit 0
-  fi
-  if [[ "${ACTUAL_PWD:-$PWD}" == "$(realpath "$NXCORE_DIR")" ]]; then
-    SCRIPT_NAME="status"
-  else
-    SCRIPT_NAME="core"
-  fi
+	if [[ "${IS_LIVE_ISO:-0}" == "1" ]]; then
+		show_live_iso_help
+		exit 0
+	fi
+	if [[ "${ACTUAL_PWD:-$PWD}" == "$(realpath "$NXCORE_DIR")" ]]; then
+		SCRIPT_NAME="status"
+	else
+		SCRIPT_NAME="core"
+	fi
 else
-  SCRIPT_NAME="$1"
-  shift
+	SCRIPT_NAME="$1"
+	shift
 
-  if [[ "${IS_LIVE_ISO:-0}" == "1" && "$SCRIPT_NAME" != "bootstrap" ]]; then
-    echo -e "${RED}Only bootstrap commands are supported in this environment!${RESET}" >&2
-    echo >&2
-    show_live_iso_help
-    exit 1
-  fi
+	if [[ "${IS_LIVE_ISO:-0}" == "1" && "$SCRIPT_NAME" != "bootstrap" ]]; then
+		echo -e "${RED}Only bootstrap commands are supported in this environment!${RESET}" >&2
+		echo >&2
+		show_live_iso_help
+		exit 1
+	fi
 
-  source "$SCRIPTS_PATH/../utils/nx-validate.sh"
+	source "$SCRIPTS_PATH/../utils/nx-validate.sh"
 
-  help_requested=false
-  for arg in "$@"; do
-    if [[ "$arg" == "--help" || "$arg" == "-h" ]]; then
-      help_requested=true
-      break
-    fi
-  done
+	help_requested=false
+	for arg in "$@"; do
+		if [[ "$arg" == "--help" || "$arg" == "-h" ]]; then
+			help_requested=true
+			break
+		fi
+	done
 
-  if [[ "$help_requested" == "true" ]]; then
-    cmd_path="$SCRIPT_NAME"
-    for arg in "$@"; do
-      if [[ "$arg" == "--help" || "$arg" == "-h" || "$arg" == --* || "$arg" == -* ]]; then
-        break
-      fi
-      cmd_path="$cmd_path $arg"
-    done
-    show_command_help "$cmd_path"
-  fi
+	if [[ "$help_requested" == "true" ]]; then
+		cmd_path="$SCRIPT_NAME"
+		for arg in "$@"; do
+			if [[ "$arg" == "--help" || "$arg" == "-h" || "$arg" == --* || "$arg" == -* ]]; then
+				break
+			fi
+			cmd_path="$cmd_path $arg"
+		done
+		show_command_help "$cmd_path"
+	fi
 
-  if ! validate_command "$SCRIPT_NAME" "$@"; then
-    exit 1
-  fi
+	if ! validate_command "$SCRIPT_NAME" "$@"; then
+		exit 1
+	fi
 
-  if [[ -n "$NX_SPEC" ]]; then
-    readarray -d '' INJECTED_ARGS < <(inject_defaults_for_command "$SCRIPT_NAME" "$@")
-    if [[ ${#INJECTED_ARGS[@]} -gt 0 ]] && [[ -z "${INJECTED_ARGS[-1]}" ]]; then
-      unset 'INJECTED_ARGS[-1]'
-    fi
-    set -- "${INJECTED_ARGS[@]}"
-  fi
+	if [[ -n "$NX_SPEC" ]]; then
+		readarray -d '' INJECTED_ARGS < <(inject_defaults_for_command "$SCRIPT_NAME" "$@")
+		if [[ ${#INJECTED_ARGS[@]} -gt 0 ]] && [[ -z "${INJECTED_ARGS[-1]}" ]]; then
+			unset 'INJECTED_ARGS[-1]'
+		fi
+		set -- "${INJECTED_ARGS[@]}"
+	fi
 fi
 
 SCRIPT_FILE="$SCRIPTS_PATH/$SCRIPT_NAME"
 
 if [[ -e "${SCRIPT_FILE}.sh" ]]; then
-    bash "${SCRIPT_FILE}.sh" "$@"
+	bash "${SCRIPT_FILE}.sh" "$@"
 elif [[ -e "${SCRIPT_FILE}.py" ]]; then
-    python "${SCRIPT_FILE}.py" "$@"
+	python "${SCRIPT_FILE}.py" "$@"
 else
-    if [[ "${SCRIPT_NAME:-}" == -* ]]; then
-        echo -e "${RED}Error: unknown option '${WHITE}${SCRIPT_NAME:-}${RED}'${RESET}" >&2
-        echo >&2
-        if [[ -n "$NX_SPEC" ]]; then
-            OPTS=$(jq -r '.options | keys | map("--" + .) | join(", ")' "$NX_SPEC")
-            echo -e "${CYAN}Available options: ${WHITE}${OPTS}${RESET}" >&2
-        else
-            echo -e "${CYAN}Try ${WHITE}$NAME --help${RESET}" >&2
-        fi
-    else
-        echo -e "${RED}Error: unknown command '${WHITE}${SCRIPT_NAME:-}${RED}'${RESET}" >&2
-        echo >&2
-        if [[ -n "$NX_SPEC" ]]; then
-            CMDS=$(jq -r '.subcommands | keys | join(", ")' "$NX_SPEC")
-            echo -e "${CYAN}Available commands: ${WHITE}${CMDS}${RESET}" >&2
-            echo -e "${CYAN}Use ${WHITE}$NAME --help${CYAN} for details${RESET}" >&2
-        else
-            echo -e "${CYAN}Try ${WHITE}$NAME --help${RESET}" >&2
-        fi
-    fi
-    exit 1
+	if [[ "${SCRIPT_NAME:-}" == -* ]]; then
+		echo -e "${RED}Error: unknown option '${WHITE}${SCRIPT_NAME:-}${RED}'${RESET}" >&2
+		echo >&2
+		if [[ -n "$NX_SPEC" ]]; then
+			OPTS=$(jq -r '.options | keys | map("--" + .) | join(", ")' "$NX_SPEC")
+			echo -e "${CYAN}Available options: ${WHITE}${OPTS}${RESET}" >&2
+		else
+			echo -e "${CYAN}Try ${WHITE}$NAME --help${RESET}" >&2
+		fi
+	else
+		echo -e "${RED}Error: unknown command '${WHITE}${SCRIPT_NAME:-}${RED}'${RESET}" >&2
+		echo >&2
+		if [[ -n "$NX_SPEC" ]]; then
+			CMDS=$(jq -r '.subcommands | keys | join(", ")' "$NX_SPEC")
+			echo -e "${CYAN}Available commands: ${WHITE}${CMDS}${RESET}" >&2
+			echo -e "${CYAN}Use ${WHITE}$NAME --help${CYAN} for details${RESET}" >&2
+		else
+			echo -e "${CYAN}Try ${WHITE}$NAME --help${RESET}" >&2
+		fi
+	fi
+	exit 1
 fi
