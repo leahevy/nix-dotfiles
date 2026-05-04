@@ -14,7 +14,10 @@ let
       graphics = [ "imagemagick" ];
       utils = [ "archive-tools" ];
       browser = [ "firefox" ];
-      notes = [ "appflowy" ];
+      notes = [
+        "appflowy"
+        "obsidian"
+      ];
       dev = [
         "conda"
         "just"

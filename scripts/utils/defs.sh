@@ -100,6 +100,7 @@ export PACKAGES_TO_HIGHLIGHT=(
 	vimPlugins.nvim-treesitter
 	borgbackup
 	smartmontools
+	obsidian
 )
 
 export NIXPKGS_INPUTS=(
