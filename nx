@@ -44,7 +44,11 @@ show_live_iso_help() {
 	echo -e "${CYAN}Bootstrap commands:${RESET}"
 	echo -e "  ${WHITE}./nx bootstrap${RESET}             List all bootstrap scripts"
 	echo -e "  ${WHITE}./nx bootstrap nixos${RESET}       List NixOS bootstrap scripts"
-	echo -e "  ${WHITE}./nx bootstrap standalone${RESET}  List standalone bootstrap scripts"
+
+	if ! ([[ -e /etc/NIXOS ]] && grep -q "^nixos:" /etc/passwd 2>/dev/null); then
+		echo -e "  ${WHITE}./nx bootstrap standalone${RESET}  List standalone bootstrap scripts"
+	fi
+
 	echo
 	echo -e "${CYAN}Note: Most nx commands require a fully configured system.${RESET}"
 }
