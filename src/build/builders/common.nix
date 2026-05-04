@@ -426,7 +426,10 @@ in
               { }
           );
 
-      isVirtual = isTestingVM || isProductionVM;
+      effectiveIsTestingVM = isTestingVM;
+      effectiveIsProductionVM =
+        if effectiveIsTestingVM then false else isProductionVM || (resolvedHost.isVM or false);
+      effectiveIsVirtual = effectiveIsTestingVM || effectiveIsProductionVM;
 
       unifiedArgs = {
         inherit
@@ -437,9 +440,9 @@ in
           variables
           defs
           funcs
-          isTestingVM
-          isProductionVM
-          isVirtual
+          effectiveIsTestingVM
+          effectiveIsProductionVM
+          effectiveIsVirtual
           ;
         helpers = localHelpers;
         host = resolvedHost;
@@ -447,13 +450,18 @@ in
         users = userAttrSet;
         configInputs = config.configInputs or { };
       };
+      unifiedArgsWithVmState = unifiedArgs // {
+        isTestingVM = effectiveIsTestingVM;
+        isProductionVM = effectiveIsProductionVM;
+        isVirtual = effectiveIsVirtual;
+      };
 
-      extraContextModules = funcs.collectContextEnabledModules unifiedArgs;
+      extraContextModules = funcs.collectContextEnabledModules unifiedArgsWithVmState;
 
       buildModulesForCollection = lib.recursiveUpdate buildModules extraContextModules;
 
       processedModulesRaw =
-        funcs.collectAllModulesWithSettings unifiedArgs mergedModules
+        funcs.collectAllModulesWithSettings unifiedArgsWithVmState mergedModules
           buildModulesForCollection;
 
       processedModules = lib.mapAttrs (
@@ -515,12 +523,14 @@ in
           users = hostConfig.users;
           processedModules = processedModules;
           configInputs = config.configInputs or { };
-          inherit isVirtual;
+          isVirtual = effectiveIsVirtual;
+          isTestingVM = effectiveIsTestingVM;
+          isProductionVM = effectiveIsProductionVM;
         };
         diskoModule = getDiskoModule { inherit profileName; };
         hardwareModule = getHardwareModule {
           host = hostConfig.host;
-          isPhysical = !isVirtual;
+          isPhysical = !effectiveIsVirtual;
         };
       };
     in
@@ -646,6 +656,9 @@ in
           host = { };
           configInputs = config.configInputs or { };
           isMainUser = true;
+          isVirtual = false;
+          isTestingVM = false;
+          isProductionVM = false;
         };
         extraUserModule = [ ];
       };
