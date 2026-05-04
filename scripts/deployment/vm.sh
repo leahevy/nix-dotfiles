@@ -252,9 +252,9 @@ fi
 
 if [[ "${WILL_RUN_VM}" == "true" ]]; then
 	if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "develop" ]]; then
-		PERSIST_PATH=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist)
+		PERSIST_PATH=$(nix eval --raw --override-input core "path:$NXCORE_DIR" .#variables.persist 2>/dev/null)
 	else
-		PERSIST_PATH=$(nix eval --raw .#variables.persist)
+		PERSIST_PATH=$(nix eval --raw .#variables.persist 2>/dev/null)
 	fi
 
 	if [[ -n "${AGE_FILE}" ]]; then
@@ -546,6 +546,7 @@ else
 		--hostname "${VM_HOST}"
 		--out-link "${VM_RESULT}"
 		--print-build-logs
+		--diff never
 	)
 
 	print_info "Building image at ${YELLOW}$VM_RESULT"
