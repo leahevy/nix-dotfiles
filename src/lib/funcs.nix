@@ -139,7 +139,7 @@ rec {
         mkListPair "disableOnDeploymentModes" "enableOnDeploymentModes" deploymentModes "string"
           (self: helpers.resolveFromHostOrUser self [ "deploymentMode" ] "develop");
     in
-    (mkPair "VM" (self: self.isVirtual or false))
+    (mkPair "Virtual" (self: self.isVirtual or false))
     ++ (mkPair "ProductionVM" (self: self.isProductionVM or false))
     ++ (mkPair "TestingVM" (self: self.isTestingVM or false))
     ++ (mkPair "Physical" (self: !(self.isVirtual or false)))

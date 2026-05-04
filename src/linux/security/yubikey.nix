@@ -14,7 +14,7 @@ args@{
   group = "security";
   input = "linux";
 
-  disableOnVM = true;
+  disableOnVirtual = true;
 
   settings = {
     modelId = null;

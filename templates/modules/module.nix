@@ -46,8 +46,8 @@ args@{
   # requiredArchitectures = [ "x86_64" "aarch64" ];
 
   # Build context control (disable/enable per context)
-  # disableOnVM = true;
-  # enableOnVM = true;
+  # disableOnVirtual = true;
+  # enableOnVirtual = true;
   # disableOnProductionVM = true;
   # enableOnProductionVM = true;
   # disableOnTestingVM = true;

@@ -14,7 +14,7 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
-  disableOnVM = true;
+  disableOnVirtual = true;
 
   module = {
     linux.system = config: {

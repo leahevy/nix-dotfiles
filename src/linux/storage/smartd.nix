@@ -14,7 +14,7 @@ args@{
   group = "storage";
   input = "linux";
 
-  disableOnVM = true;
+  disableOnVirtual = true;
 
   settings = {
     autodetect = true;

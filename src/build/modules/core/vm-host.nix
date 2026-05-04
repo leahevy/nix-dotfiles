@@ -14,7 +14,7 @@ args@{
   group = "core";
   input = "build";
 
-  disableOnVM = true;
+  disableOnVirtual = true;
 
   module =
     let

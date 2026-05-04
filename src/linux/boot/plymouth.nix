@@ -14,7 +14,7 @@ args@{
   group = "boot";
   input = "linux";
 
-  disableOnVM = true;
+  disableOnVirtual = true;
 
   module = {
     linux.system =
