@@ -15,11 +15,17 @@ args@{
   input = "common";
 
   settings = {
-    wikiPath = "~/.local/share/nvim/wiki/";
+    wikiPath = null;
     homePage = "index.md";
     enableUI = false;
     diaryTemplate = null;
     addLinebreakBeforeTemplate = true;
+  };
+
+  submodules = {
+    common = {
+      notes = [ "obsidian" ];
+    };
   };
 
   assertions = [
@@ -27,6 +33,11 @@ args@{
       assertion = !(self.isModuleEnabled "nvim-modules.vimwiki");
       message = "obsidian and vimwiki modules are mutually exclusive!";
     }
+    {
+      assertion = self.settings.wikiPath != null;
+      message = "wikiPath must be set to an existing obsidian vault!";
+    }
+
   ];
 
   module = {
