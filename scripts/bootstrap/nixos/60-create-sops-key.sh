@@ -22,7 +22,27 @@ fi
 check_config_directory "create-sops-key" "bootstrap"
 cd "$CONFIG_DIR"
 
-HOSTNAME="${1:-}"
+GENERATE_STUB=false
+HOSTNAME=""
+
+while [[ $# -gt 0 ]]; do
+	case "${1:-}" in
+	--generate-stub)
+		GENERATE_STUB=true
+		shift
+		;;
+	-*)
+		echo -e "${RED}Error: Unknown option ${WHITE}${1:-}${RESET}" >&2
+		echo -e "${RED}Usage: ${WHITE}$0${RED} [--generate-stub] [HOSTNAME]${RESET}" >&2
+		exit 1
+		;;
+	*)
+		HOSTNAME="${1:-}"
+		shift
+		;;
+	esac
+done
+
 if [[ -z "$HOSTNAME" && -e ".nx-profile.conf" ]]; then
 	HOSTNAME="$(cat .nx-profile.conf)"
 	echo -e "Found base profile in ${WHITE}$PWD/.nx-profile.conf${RESET} file: ${WHITE}$HOSTNAME${RESET}" >&2
@@ -77,33 +97,48 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		exit 1
 	fi
 
-	USER_SOPS_DIR="/mnt/$USER_HOME/.config/sops/age"
+	USER_SOPS_DIR="/mnt${USER_HOME}/.config/sops/age"
+	ROOT_SOPS_KEY="/mnt/etc/sops/age/keys.txt"
+	USER_SOPS_KEY="$USER_SOPS_DIR/keys.txt"
+	STUB_KEY="AGE-SECRET-KEY-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
-	if [[ -f "/mnt/etc/sops/age/keys.txt" && -f "$USER_SOPS_DIR/keys.txt" ]]; then
+	if [[ -f "$ROOT_SOPS_KEY" && -f "$USER_SOPS_KEY" ]]; then
 		echo -e "${GREEN}SOPS keys already exist, skipping creation.${RESET}"
 	else
-		if [[ ! -f "/mnt/etc/sops/age/keys.txt" ]]; then
-			echo -e "${GREEN}Creating root SOPS key...${RESET}"
+		if [[ ! -f "$ROOT_SOPS_KEY" ]]; then
+			if [[ "$GENERATE_STUB" == "true" ]]; then
+				echo -e "${GREEN}Creating root SOPS key stub...${RESET}"
+			else
+				echo -e "${GREEN}Creating root SOPS key...${RESET}"
+			fi
 			mkdir -p "/mnt/etc/sops/age"
-			age-keygen -o /mnt/etc/sops/age/keys.txt
-			chmod 400 "/mnt/etc/sops/age/keys.txt"
-			chown 0:0 "/mnt/etc/sops/age/keys.txt"
-			echo -e "${GREEN}Root SOPS key created at ${WHITE}/mnt/etc/sops/age/keys.txt${RESET}"
+			if [[ "$GENERATE_STUB" == "true" ]]; then
+				printf '%s\n' "$STUB_KEY" >"$ROOT_SOPS_KEY"
+			else
+				age-keygen -o "$ROOT_SOPS_KEY"
+			fi
+			chmod 400 "$ROOT_SOPS_KEY"
+			chown 0:0 "$ROOT_SOPS_KEY"
+			echo -e "${GREEN}Root SOPS key created at ${WHITE}$ROOT_SOPS_KEY${RESET}"
 		else
-			echo -e "${GREEN}Root SOPS key already exists at ${WHITE}/mnt/etc/sops/age/keys.txt${RESET}"
+			echo -e "${GREEN}Root SOPS key already exists at ${WHITE}$ROOT_SOPS_KEY${RESET}"
 		fi
 
-		if [[ ! -f "$USER_SOPS_DIR/keys.txt" ]]; then
-			echo -e "${GREEN}Installing user SOPS key for home-manager...${RESET}"
+		if [[ ! -f "$USER_SOPS_KEY" ]]; then
+			if [[ "$GENERATE_STUB" == "true" ]]; then
+				echo -e "${GREEN}Creating user SOPS key stub for home-manager...${RESET}"
+			else
+				echo -e "${GREEN}Installing user SOPS key for home-manager...${RESET}"
+			fi
 
 			mkdir -p "$USER_SOPS_DIR"
-			mkdir -p "/mnt/$USER_HOME/.config"
+			mkdir -p "/mnt${USER_HOME}/.config"
 
-			cp "/mnt/etc/sops/age/keys.txt" "$USER_SOPS_DIR/keys.txt"
+			cp "$ROOT_SOPS_KEY" "$USER_SOPS_KEY"
 
-			chmod 400 "$USER_SOPS_DIR/keys.txt"
+			chmod 400 "$USER_SOPS_KEY"
 
-			echo -e "${GREEN}User SOPS key installed successfully at ${WHITE}$USER_SOPS_DIR/keys.txt${RESET}"
+			echo -e "${GREEN}User SOPS key installed successfully at ${WHITE}$USER_SOPS_KEY${RESET}"
 
 			echo -e "${GREEN}Fixing permissions of home folder now...${RESET}"
 			USER_UID="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.users.$USERNAME.uid")"
@@ -111,7 +146,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 			if [[ -z "$USER_UID" || "$USER_UID" == "null" || -z "$GROUP_NAME" || "$GROUP_NAME" == "null" ]]; then
 				echo -e "${RED}Error: Failed to extract valid user information for ${WHITE}$USERNAME${RESET}" >&2
-				echo -e "${YELLOW}You might have to fix the permissions of /mnt/$USER_HOME yourself before installing!${RESET}" >&2
+				echo -e "${YELLOW}You might have to fix the permissions of /mnt${USER_HOME} yourself before installing!${RESET}" >&2
 			else
 				USER_UID="${USER_UID//\"/}"
 				GROUP_NAME="${GROUP_NAME//\"/}"
@@ -119,26 +154,38 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 				USER_GID="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE_NAME.config.users.groups.$GROUP_NAME.gid")"
 				if [[ -z "$USER_GID" || "$USER_GID" == "null" ]]; then
 					echo -e "${RED}Error: Failed to extract valid group GID for group ${WHITE}$GROUP_NAME${RESET}" >&2
-					echo -e "${YELLOW}You might have to fix the permissions of /mnt/$USER_HOME yourself before installing!${RESET}" >&2
+					echo -e "${YELLOW}You might have to fix the permissions of /mnt${USER_HOME} yourself before installing!${RESET}" >&2
 				else
 					USER_GID="${USER_GID//\"/}"
-					chown "$USER_UID:$USER_GID" -R "/mnt/$USER_HOME"
+					chown "$USER_UID:$USER_GID" "$USER_SOPS_KEY" || true
+					chown "$USER_UID:$USER_GID" -R "/mnt${USER_HOME}"
 				fi
 			fi
 		else
-			echo -e "${GREEN}User SOPS key already exists at ${WHITE}$USER_SOPS_DIR/keys.txt${RESET}"
+			echo -e "${GREEN}User SOPS key already exists at ${WHITE}$USER_SOPS_KEY${RESET}"
 		fi
 	fi
 
 	echo
-	echo -e "${WHITE}🔑 Age public key:${RESET}"
-	age-keygen -y /mnt/etc/sops/age/keys.txt
+	if [[ "$GENERATE_STUB" == "true" ]]; then
+		echo -e "${GREEN}SOPS key stubs created successfully.${RESET}"
+		echo
+		echo -e "${YELLOW}Next steps:${RESET}"
+		echo -e "${YELLOW}1. Edit both key files and replace the stub value with the real age secret keys.${RESET}"
+		echo -e "${YELLOW}   ${WHITE}vim -p $ROOT_SOPS_KEY $USER_SOPS_KEY${RESET}"
+		echo -e "${YELLOW}2. Re-encrypt the config directory with the new SOPS key(s).${RESET}"
+		echo -e "${YELLOW}3. Pull the updated config directory on this host.${RESET}"
+		echo -e "${YELLOW}4. You can then run ${WHITE}nx bootstrap nixos install${YELLOW} to proceed with the installation.${RESET}"
+	else
+		echo -e "${WHITE}🔑 Age public key:${RESET}"
+		age-keygen -y "$ROOT_SOPS_KEY"
 
-	echo
-	echo -e "${GREEN}SOPS keys preparation completed successfully.${RESET}"
-	echo
-	echo -e "${YELLOW}Next steps:${RESET}"
-	echo -e "${YELLOW}1. Re-encrypt the config directory with the new SOPS key.${RESET}"
-	echo -e "${YELLOW}2. Pull the updated config directory on this host.${RESET}"
-	echo -e "${YELLOW}3. You can then run ${WHITE}nx bootstrap nixos install${YELLOW} to proceed with the installation.${RESET}"
+		echo
+		echo -e "${GREEN}SOPS keys preparation completed successfully.${RESET}"
+		echo
+		echo -e "${YELLOW}Next steps:${RESET}"
+		echo -e "${YELLOW}1. Re-encrypt the config directory with the new SOPS key.${RESET}"
+		echo -e "${YELLOW}2. Pull the updated config directory on this host.${RESET}"
+		echo -e "${YELLOW}3. You can then run ${WHITE}nx bootstrap nixos install${YELLOW} to proceed with the installation.${RESET}"
+	fi
 fi

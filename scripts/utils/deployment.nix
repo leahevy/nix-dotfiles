@@ -486,6 +486,9 @@
               create-sops-key = {
                 description = "Create SOPS age keys for host and user";
                 arguments = [ (argVariadic "hostname" "Target hostname" "string") ];
+                options = {
+                  generate-stub = option "Create stub key files instead of generating real keys";
+                };
               };
               install = {
                 description = "Install NixOS to /mnt";

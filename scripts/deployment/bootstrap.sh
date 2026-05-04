@@ -17,7 +17,7 @@ show_list() {
 	echo -e "   ${WHITE}disk-format${RESET} [hostname]                           30-disk-format.sh"
 	echo -e "   ${WHITE}mount${RESET} [hostname]                                 40-mount.sh"
 	echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]       50-create-profile-stub.sh"
-	echo -e "   ${WHITE}create-sops-key${RESET} [hostname]                       60-create-sops-key.sh"
+	echo -e "   ${WHITE}create-sops-key${RESET} [hostname] [--generate-stub]     60-create-sops-key.sh"
 	echo -e "   ${WHITE}install${RESET} [hostname]                               70-install.sh"
 	echo -e "   ${WHITE}migrate-to-persistence${RESET} [hostname] [--dry-run]    80-migrate-to-persistence.sh"
 
@@ -82,7 +82,7 @@ nixos)
 		echo -e "   ${WHITE}disk-format${RESET} [hostname]                          30-disk-format.sh"
 		echo -e "   ${WHITE}mount${RESET} [hostname]                                40-mount.sh"
 		echo -e "   ${WHITE}create-profile-stub${RESET} [hostname] [--no-root]      50-create-profile-stub.sh"
-		echo -e "   ${WHITE}create-sops-key${RESET} [hostname]                      60-create-sops-key.sh"
+		echo -e "   ${WHITE}create-sops-key${RESET} [hostname] [--generate-stub]    60-create-sops-key.sh"
 		echo -e "   ${WHITE}install${RESET} [hostname]                              70-install.sh"
 		echo -e "   ${WHITE}migrate-to-persistence${RESET} [hostname] [--dry-run]   80-migrate-to-persistence.sh"
 		exit 0
