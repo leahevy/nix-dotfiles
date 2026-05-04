@@ -13,7 +13,7 @@ args@{
   group = "inputs";
   input = "build";
 
-  disableOnVM = true;
+  disableOnVirtual = true;
 
   module = {
     home = config: {
