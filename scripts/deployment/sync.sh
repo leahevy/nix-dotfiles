@@ -12,14 +12,14 @@ check_deployment_conflicts "sync"
 PROFILE="$(retrieve_active_profile)"
 
 if [[ -e /etc/NIXOS ]]; then
-	if nh os switch -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
+	if nh os switch --show-activation-logs -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
 		notify_success "Sync"
 	else
 		notify_error "Sync"
 		exit 1
 	fi
 else
-	if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null nh home switch . -c "$PROFILE" -b "$HOME_MANAGER_BACKUP_EXT" -- "${EXTRA_ARGS[@]:-}"; then
+	if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null nh home switch --show-activation-logs . -c "$PROFILE" -b "$HOME_MANAGER_BACKUP_EXT" -- "${EXTRA_ARGS[@]:-}"; then
 		notify_success "Sync"
 	else
 		notify_error "Sync"
