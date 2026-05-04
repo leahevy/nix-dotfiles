@@ -10,7 +10,7 @@ check_deployment_conflicts "dry"
 
 PROFILE="$(retrieve_active_profile)"
 
-if nh os switch --dry -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
+if nh os switch --show-activation-logs --dry -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
 	notify_success "Dry"
 else
 	notify_error "Dry"

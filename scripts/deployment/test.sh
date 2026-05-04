@@ -10,7 +10,7 @@ check_deployment_conflicts "test"
 
 PROFILE="$(retrieve_active_profile)"
 
-if nh os test -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
+if nh os test --show-activation-logs -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
 	notify_success "Test"
 else
 	notify_error "Test"

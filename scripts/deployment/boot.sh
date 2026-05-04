@@ -13,7 +13,7 @@ check_deployment_conflicts "boot"
 
 PROFILE="$(retrieve_active_profile)"
 
-if nh os boot -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
+if nh os boot --show-activation-logs -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
 	notify_success "Boot"
 else
 	notify_error "Boot"
