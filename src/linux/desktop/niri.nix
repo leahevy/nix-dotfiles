@@ -175,7 +175,7 @@ args@{
     };
     honorXDGActivation = lib.mkOption {
       type = lib.types.bool;
-      default = true;
+      default = false;
     };
     deactivateUnfocusedWindows = lib.mkOption {
       type = lib.types.bool;
