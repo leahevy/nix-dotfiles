@@ -14,7 +14,7 @@ args@{
   group = "dev";
   input = "common";
 
-  requiredPlatforms = [ "linux" ];
+  requirePlatforms = [ "linux" ];
 
   module = {
     home = config: {

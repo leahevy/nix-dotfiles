@@ -14,7 +14,7 @@ args@{
   group = "photos";
   input = "common";
 
-  requiredPlatforms = [ "linux" ];
+  requirePlatforms = [ "linux" ];
 
   module = {
     linux.enabled = config: {

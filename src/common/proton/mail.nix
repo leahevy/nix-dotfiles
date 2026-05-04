@@ -19,8 +19,8 @@ args@{
     isolateConfig = true;
   };
 
-  requiredPlatforms = [ "linux" ];
-  requiredArchitectures = [ "x86_64" ];
+  requirePlatforms = [ "linux" ];
+  requireArchitectures = [ "x86_64" ];
 
   module = {
     ifEnabled.linux.desktop-modules.desktop-files.enabled = config: {

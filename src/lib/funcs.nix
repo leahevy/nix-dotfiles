@@ -149,8 +149,61 @@ rec {
     ++ (mkPair "AARCH64" (self: self.isAARCH64 or false))
     ++ extraConditions;
 
+  requireConditions =
+    let
+      validPlatforms = keysOfLayerByName "platform";
+      validArchitectures = keysOfLayerByName "arch";
+      validDeploymentModes = keysOfLayerByName "deploymentMode";
+      mkRequire = name: check: label: [
+        {
+          attr = "require${name}";
+          fn = self: check self;
+          errLabel = label;
+        }
+      ];
+      mkRequireList = attr: allowedValues: datatype: getValue: label: [
+        {
+          inherit
+            attr
+            allowedValues
+            datatype
+            getValue
+            label
+            ;
+        }
+      ];
+    in
+    (mkRequire "Virtual" (self: self.isVirtual or false) "any VM context")
+    ++ (mkRequire "ProductionVM" (self: self.isProductionVM or false) "a production VM context")
+    ++ (mkRequire "TestingVM" (self: self.isTestingVM or false) "a testing VM context")
+    ++ (mkRequire "Physical" (self: !(self.isVirtual or false)) "a physical (bare-metal) context")
+    ++ (mkRequireList "requirePlatforms" validPlatforms "string" (
+      self:
+      if self.isLinux or false then
+        "linux"
+      else if self.isDarwin or false then
+        "darwin"
+      else
+        "unknown"
+    ) "platform")
+    ++ (mkRequireList "requireArchitectures" validArchitectures "string" (
+      self:
+      if self.isX86_64 or false then
+        "x86_64"
+      else if self.isAARCH64 or false then
+        "aarch64"
+      else
+        "unknown"
+    ) "architecture")
+    ++ (mkRequireList "requireDeploymentModes" validDeploymentModes "string" (
+      self: helpers.resolveFromHostOrUser self [ "deploymentMode" ] "develop"
+    ) "deployment mode");
+
   evaluateModuleCondition =
     moduleResult: self:
+    {
+      enabled ? false,
+    }:
     let
       evalSpecial =
         sc:
@@ -203,6 +256,47 @@ rec {
 
       specialEntries = builtins.filter (e: e != null) (map evalSpecial specialConditions);
 
+      evalRequire =
+        rc:
+        let
+          raw = moduleResult.${rc.attr} or null;
+          isList = rc ? allowedValues;
+        in
+        if raw == null then
+          null
+        else if isList then
+          if !builtins.isList raw then
+            throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' must be a list, got ${builtins.typeOf raw}!"
+          else if raw == [ ] then
+            null
+          else
+            let
+              typeErrors =
+                if rc ? datatype then builtins.filter (v: builtins.typeOf v != rc.datatype) raw else [ ];
+              invalid = builtins.filter (v: !(builtins.elem v rc.allowedValues)) raw;
+              current = rc.getValue self;
+            in
+            if typeErrors != [ ] then
+              throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' elements must be of type ${rc.datatype}, got: [${builtins.concatStringsSep ", " (map builtins.toJSON typeErrors)}]!"
+            else if invalid != [ ] then
+              throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' contains invalid values: [${builtins.concatStringsSep ", " (map builtins.toJSON invalid)}]. Allowed: [${builtins.concatStringsSep ", " rc.allowedValues}]!"
+            else if enabled && !(builtins.elem current raw) then
+              throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' requires [${builtins.concatStringsSep ", " raw}] but current ${rc.label} is '${current}'!"
+            else
+              null
+        else if raw == false then
+          null
+        else if raw != true then
+          throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' must be true or false, got ${builtins.typeOf raw} (value: ${builtins.toJSON raw})!"
+        else if rc.fn self then
+          null
+        else if enabled then
+          throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' requires ${rc.errLabel} but this condition is not met!"
+        else
+          null;
+
+      requireCheck = builtins.length (builtins.filter (e: e != null) (map evalRequire requireConditions));
+
       condVal = moduleResult.condition or null;
       condEntry =
         if condVal == null then
@@ -217,7 +311,7 @@ rec {
             }
           ];
 
-      allEntries = specialEntries ++ condEntry;
+      allEntries = builtins.seq requireCheck (specialEntries ++ condEntry);
       trueLabels = map (e: e.label) (builtins.filter (e: e.result == true) allEntries);
       falseLabels = map (e: e.label) (builtins.filter (e: e.result == false) allEntries);
     in
@@ -288,12 +382,11 @@ rec {
         "options"
         "rawOptions"
         "platforms"
-        "requiredPlatforms"
         "architectures"
-        "requiredArchitectures"
         "condition"
       ]
-      ++ map (sc: sc.attr) specialConditions;
+      ++ map (sc: sc.attr) specialConditions
+      ++ map (rc: rc.attr) requireConditions;
 
       actualAttrs = builtins.attrNames moduleResult;
 
@@ -386,9 +479,7 @@ rec {
         in
         builtins.filter (x: x != null) [
           (check "platforms" validPlatforms)
-          (check "requiredPlatforms" validPlatforms)
           (check "architectures" validArchitectures)
-          (check "requiredArchitectures" validArchitectures)
         ]
         ++ specialListErrors;
     in
@@ -448,9 +539,7 @@ rec {
         archAllowed = list: builtins.elem currentArch list;
 
         platformsValue = moduleResult.platforms or null;
-        requiredPlatformsValue = moduleResult.requiredPlatforms or null;
         architecturesValue = moduleResult.architectures or null;
-        requiredArchitecturesValue = moduleResult.requiredArchitectures or null;
 
         getCleanPath =
           _:
@@ -494,10 +583,6 @@ rec {
         throw "${getCleanPath null}: This module is currently broken!"
       else if inputImpliedPlatform != null && currentPlatform != inputImpliedPlatform then
         throw "${getCleanPath null}: This module is in the '${moduleContext.inputName}' input and only supports [${inputImpliedPlatform}] platforms. Current platform: ${currentPlatform}."
-      else if requiredPlatformsValue != null && !(platformAllowed requiredPlatformsValue) then
-        throw "${getCleanPath null}: This module only supports [${builtins.concatStringsSep ", " requiredPlatformsValue}] platforms. Current platform: ${currentPlatform}."
-      else if requiredArchitecturesValue != null && !(archAllowed requiredArchitecturesValue) then
-        throw "${getCleanPath null}: This module only supports [${builtins.concatStringsSep ", " requiredArchitecturesValue}] architectures. Current architecture: ${currentArch}."
       else if moduleWarning != null then
         builtins.trace "${getCleanPath null}: ${moduleWarning}" moduleResult
       else if platformsValue != null && !(platformAllowed platformsValue) then
@@ -591,7 +676,7 @@ rec {
           else
             validatedUserSettings;
 
-        conditionResult = evaluateModuleCondition moduleResult enhancedModuleContext;
+        conditionResult = evaluateModuleCondition moduleResult enhancedModuleContext { enabled = true; };
 
         settingsWithCondition =
           settingsWithUnfree
@@ -2182,7 +2267,7 @@ rec {
                 rawOptions = moduleResult.value.rawOptions or { };
                 settings = moduleResult.value.settings or { };
                 description = moduleResult.value.description or "";
-                conditionResult = evaluateModuleCondition moduleResult.value minimalSelf;
+                conditionResult = evaluateModuleCondition moduleResult.value minimalSelf { enabled = false; };
               }
             else
               {

@@ -41,9 +41,14 @@ args@{
   # platforms = [ "linux" "darwin" ];
   # architectures = [ "x86_64" "aarch64" ];
 
-  # Error if built on wrong platform/arch
-  # requiredPlatforms = [ "linux" "darwin" ];
-  # requiredArchitectures = [ "x86_64" "aarch64" ];
+  # Fail build if those requirements are not fulfilled and the module is enabled
+  # requirePlatforms = [ "linux" "darwin" ];
+  # requireArchitectures = [ "x86_64" "aarch64" ];
+  # requireDeploymentModes = [ "managed" "server" "local" "develop" ];
+  # requireVirtual = true
+  # requireProductionVM = true
+  # requireTestingVM = true
+  # requirePhysical = true
 
   # Build context control (disable/enable per context)
   # disableOnVirtual = true;

@@ -16,7 +16,7 @@ args@{
 
   unfree = [ "widevine-cdm" ];
 
-  requiredArchitectures = [ "x86_64" ];
+  requireArchitectures = [ "x86_64" ];
 
   options = {
     package = lib.mkOption {

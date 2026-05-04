@@ -14,7 +14,7 @@ args@{
   group = "chat";
   input = "common";
 
-  requiredPlatforms = [ "linux" ];
+  requirePlatforms = [ "linux" ];
 
   module = {
     ifEnabled.linux.desktop.niri.home = config: {
