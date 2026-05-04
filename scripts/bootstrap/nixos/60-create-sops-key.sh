@@ -172,7 +172,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		echo
 		echo -e "${YELLOW}Next steps:${RESET}"
 		echo -e "${YELLOW}1. Edit both key files and replace the stub value with the real age secret keys.${RESET}"
-		echo -e "${YELLOW}   ${WHITE}vim -p $ROOT_SOPS_KEY $USER_SOPS_KEY${RESET}"
+		echo -e "${YELLOW}   ${WHITE}sudo vim -p $ROOT_SOPS_KEY $USER_SOPS_KEY${RESET}"
 		echo -e "${YELLOW}2. Re-encrypt the config directory with the new SOPS key(s).${RESET}"
 		echo -e "${YELLOW}3. Pull the updated config directory on this host.${RESET}"
 		echo -e "${YELLOW}4. You can then run ${WHITE}nx bootstrap nixos install${YELLOW} to proceed with the installation.${RESET}"
