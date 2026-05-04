@@ -1406,6 +1406,7 @@ diff_store_paths() {
 		"home-manager-files"
 		"home-manager-applications"
 		"home-manager-fonts"
+		"home-manager-agents"
 		"system-units"
 		"user-environment"
 		"X-Restart-Triggers-systemd-modules-load"
