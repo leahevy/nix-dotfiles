@@ -178,6 +178,12 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 			exit 1
 		fi
 
+		echo
+		echo -e "${GREEN}Installation succeeded.${RESET}"
+		echo
+		echo -e "${WHITE}Press enter to continue...${RESET}"
+		read -r
+
 		if [[ -z "${PERSIST_PATH:-}" || "$PERSIST_PATH" == "/" ]]; then
 			echo -e "${RED}Error: Refusing to clear invalid persistence path: ${WHITE}${PERSIST_PATH:-<empty>}${RESET}" >&2
 			exit 1
