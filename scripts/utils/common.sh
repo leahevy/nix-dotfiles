@@ -897,7 +897,8 @@ retrieve_active_profile() {
 	local target_profile
 	if [[ -e .nx-profile.conf ]]; then
 		base_profile="$(cat .nx-profile.conf)"
-		echo -e "Found base profile in ${WHITE}$PWD/.nx-profile.conf${RESET} file: ${WHITE}$base_profile${RESET}" >&2
+		echo -e "${GREEN}Found base profile: ${WHITE}$base_profile${RESET}" >&2
+		echo >&2
 	else
 		if [[ -e /etc/nixos ]]; then
 			base_profile="$HOSTNAME"
