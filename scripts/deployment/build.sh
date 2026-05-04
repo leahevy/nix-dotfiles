@@ -10,10 +10,23 @@ parse_build_deployment_args "$@"
 verify_commits
 check_deployment_conflicts "build"
 
-LOG_FORMAT=""
+log_format_args=()
 if [[ "${RAW_LOG:-false}" == "true" ]]; then
-	LOG_FORMAT="--log-format internal-json"
+	log_format_args=(--log-format internal-json)
 fi
+
+BUILD_TMP_DIR=""
+BUILD_TMP_OUT_LINK=""
+
+cleanup_build_tmp_dir() {
+	if [[ -n "${BUILD_TMP_DIR:-}" && -d "${BUILD_TMP_DIR}" ]]; then
+		rm -rf -- "${BUILD_TMP_DIR}"
+	fi
+}
+
+BUILD_TMP_DIR="$(mktemp_dir)"
+BUILD_TMP_OUT_LINK="${BUILD_TMP_DIR}/result"
+append_trap "cleanup_build_tmp_dir" EXIT
 
 base_profile=""
 if [[ -n "${BUILD_OVERRIDE_PROFILE:-}" ]]; then
@@ -41,21 +54,31 @@ fi
 
 if [[ "${SHOW_DERIVATION:-false}" == "true" ]]; then
 	if [[ "$context" == "nixos" ]]; then
-		timeout "${TIMEOUT}s" nix derivation show ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" | jq
+		timeout "${TIMEOUT}s" nix derivation show ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]}" | jq
 	else
-		GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nix derivation show ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" | jq
+		GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nix derivation show ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]}" | jq
 	fi
 	exit 0
 fi
 
+nh_common_args=(
+	--out-link "${BUILD_TMP_OUT_LINK}"
+	--diff never
+	--print-build-logs
+)
+
+if [[ -n "${DRY_RUN:-}" ]]; then
+	nh_common_args+=(--dry)
+fi
+
 if [[ "$context" == "nixos" ]]; then
-	# shellcheck disable=SC2086
-	if NEW_SYSTEM=$(timeout "${TIMEOUT}s" nix build --no-link $DRY_RUN $LOG_FORMAT ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths); then
+	if timeout "${TIMEOUT}s" nh os build -H "$PROFILE" "${nh_common_args[@]}" "${log_format_args[@]}" . -- "${EXTRA_ARGS[@]}"; then
 		notify_success "Build"
 	else
 		notify_error "Build"
 		exit 1
 	fi
+	NEW_SYSTEM="$(readlink -f "${BUILD_TMP_OUT_LINK}")"
 
 	if [[ "${BUILD_HAS_OVERRIDE:-false}" == "true" ]]; then
 		echo
@@ -70,13 +93,13 @@ if [[ "$context" == "nixos" ]]; then
 		diff_packages /run/current-system "$NEW_SYSTEM" || echo -e "${YELLOW}Package diff failed${RESET}"
 	fi
 else
-	# shellcheck disable=SC2086
-	if NEW_HOME=$(GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nix build --no-link $DRY_RUN $LOG_FORMAT ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" --print-build-logs --print-out-paths); then
+	if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nh home build -c "$PROFILE" "${nh_common_args[@]}" "${log_format_args[@]}" . -- "${EXTRA_ARGS[@]}"; then
 		notify_success "Build"
 	else
 		notify_error "Build"
 		exit 1
 	fi
+	NEW_HOME="$(readlink -f "${BUILD_TMP_OUT_LINK}")"
 
 	if [[ "${BUILD_HAS_OVERRIDE:-false}" == "true" ]]; then
 		echo

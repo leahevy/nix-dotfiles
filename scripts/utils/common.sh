@@ -14,6 +14,40 @@ print_error() {
 	echo -e "${RED}" "$@" "${RESET}"
 }
 
+append_trap() {
+	local new_cmd="${1:-}"
+	shift || true
+
+	if [[ -z "${new_cmd}" || $# -lt 1 ]]; then
+		echo "append_trap: usage: append_trap 'CMD' SIG..." >&2
+		return 2
+	fi
+
+	local sig line existing
+	for sig in "$@"; do
+		line="$(trap -p "$sig" 2>/dev/null || true)"
+		if [[ -z "${line:-}" ]]; then
+			trap "${new_cmd}" "$sig"
+			continue
+		fi
+
+		existing="${line#trap -- \'}"
+		existing="${existing%\' $sig}"
+
+		if [[ -n "${existing:-}" ]]; then
+			trap "${existing}; ${new_cmd}" "$sig"
+		else
+			trap "${new_cmd}" "$sig"
+		fi
+	done
+}
+
+mktemp_dir() {
+	local tmp_dir
+	tmp_dir="$(mktemp -d 2>/dev/null || mktemp -d -t nx.XXXXXXXXXX)"
+	echo "$tmp_dir"
+}
+
 strip_html() {
 	# shellcheck disable=SC2001
 	echo "$1" | sed 's/<[^>]*>//g'

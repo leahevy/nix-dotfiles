@@ -41,6 +41,7 @@ args@{
           vim
           shfmt
           shellcheck
+          nix-output-monitor
           nixfmt-rfc-style
           nixfmt-tree
           nix-search
