@@ -54,9 +54,9 @@ fi
 
 if [[ "${SHOW_DERIVATION:-false}" == "true" ]]; then
 	if [[ "$context" == "nixos" ]]; then
-		timeout "${TIMEOUT}s" nix derivation show ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]}" | jq
+		timeout "${TIMEOUT}s" nix derivation show ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" | jq
 	else
-		GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nix derivation show ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]}" | jq
+		GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nix derivation show ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" | jq
 	fi
 	exit 0
 fi
@@ -72,7 +72,7 @@ if [[ -n "${DRY_RUN:-}" ]]; then
 fi
 
 if [[ "$context" == "nixos" ]]; then
-	if timeout "${TIMEOUT}s" nh os build -H "$PROFILE" "${nh_common_args[@]}" "${log_format_args[@]}" . -- "${EXTRA_ARGS[@]}"; then
+	if timeout "${TIMEOUT}s" nh os build -H "$PROFILE" "${nh_common_args[@]:-}" "${log_format_args[@]:-}" -- "${EXTRA_ARGS[@]:-}"; then
 		notify_success "Build"
 	else
 		notify_error "Build"
@@ -82,9 +82,10 @@ if [[ "$context" == "nixos" ]]; then
 
 	if [[ "${BUILD_HAS_OVERRIDE:-false}" == "true" ]]; then
 		echo
-		echo -e "${CYAN}Built derivation:${RESET} $NEW_SYSTEM"
+		echo -e "${GREEN}Built derivation:${RESET} $NEW_SYSTEM"
 	elif [[ "${BUILD_DIFF:-false}" == "true" ]]; then
-		echo -e "${CYAN}Comparing new build with current active system...${RESET}"
+		echo
+		echo -e "${WHITE}Comparing new build with current active system...${RESET}"
 		echo
 		echo -e "${GREEN}=== Store Path Diff ===${RESET}"
 		diff_store_paths /run/current-system "$NEW_SYSTEM" || echo -e "${YELLOW}Store path diff failed${RESET}"
@@ -93,7 +94,7 @@ if [[ "$context" == "nixos" ]]; then
 		diff_packages /run/current-system "$NEW_SYSTEM" || echo -e "${YELLOW}Package diff failed${RESET}"
 	fi
 else
-	if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nh home build -c "$PROFILE" "${nh_common_args[@]}" "${log_format_args[@]}" . -- "${EXTRA_ARGS[@]}"; then
+	if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nh home build -c "$PROFILE" "${nh_common_args[@]:-}" "${log_format_args[@]:-}" -- "${EXTRA_ARGS[@]:-}"; then
 		notify_success "Build"
 	else
 		notify_error "Build"
@@ -103,9 +104,10 @@ else
 
 	if [[ "${BUILD_HAS_OVERRIDE:-false}" == "true" ]]; then
 		echo
-		echo -e "${CYAN}Built derivation:${RESET} $NEW_HOME"
+		echo -e "${GREEN}Built derivation:${RESET} $NEW_HOME"
 	elif [[ "${BUILD_DIFF:-false}" == "true" ]]; then
-		echo -e "${CYAN}Comparing new build with current active home configuration...${RESET}"
+		echo
+		echo -e "${WHITE}Comparing new build with current active home configuration...${RESET}"
 		CURRENT_HOME=$(readlink -f ~/.local/state/nix/profiles/home-manager)
 		echo
 		echo -e "${GREEN}=== Store Path Diff ===${RESET}"
