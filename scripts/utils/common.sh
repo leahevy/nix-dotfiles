@@ -1168,7 +1168,7 @@ check_nix_daemon_activity() {
 	local build_processes
 	build_processes=$(ps ax -o stat,command | tail -n +2 | grep "nix-daemon" | grep -v -- "--daemon" | grep -v grep | awk '$1 ~ /^(R|Rs|Rl|Ssl|S\+)$/' | wc -l) || build_processes=0
 
-	if [[ "$build_processes" -gt 0 ]]; then
+	if [[ "$build_processes" -gt 0 && ! -e /etc/NIXOS ]]; then
 		echo -en "${GREEN}Nix-daemon is active, continue anyway? ${RESET}[Y/n]: " >&2
 		read -r response
 		case "$response" in
