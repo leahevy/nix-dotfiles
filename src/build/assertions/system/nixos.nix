@@ -107,11 +107,11 @@ in
         ) items;
 
       systemDirs = lib.concatMap (
-        key: extractDirList ((config.environment.persistence.${key}.directories or [ ]))
+        key: extractDirList (config.environment.persistence.${key}.directories or [ ])
       ) persistKeys;
 
       systemFiles = lib.concatMap (
-        key: extractFileList ((config.environment.persistence.${key}.files or [ ]))
+        key: extractFileList (config.environment.persistence.${key}.files or [ ])
       ) persistKeys;
 
       invalidSystemDirEntries = builtins.filter (p: p == "" || !(lib.hasPrefix "/" p)) systemDirs;

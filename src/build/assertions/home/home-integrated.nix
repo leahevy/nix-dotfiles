@@ -107,11 +107,11 @@ in
         ) items;
 
       homeDirs = lib.concatMap (
-        key: extractDirList ((config.home.persistence.${key}.directories or [ ]))
+        key: extractDirList (config.home.persistence.${key}.directories or [ ])
       ) persistKeys;
 
       homeFiles = lib.concatMap (
-        key: extractFileList ((config.home.persistence.${key}.files or [ ]))
+        key: extractFileList (config.home.persistence.${key}.files or [ ])
       ) persistKeys;
 
       invalidHomeDirEntries = builtins.filter (p: p == "" || lib.hasPrefix "/" p) homeDirs;
