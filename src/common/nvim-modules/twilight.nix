@@ -143,6 +143,7 @@ args@{
       "syntax"
     ];
     exclude = [
+      "sh"
       "undotree"
       "diff"
       "markdown"
