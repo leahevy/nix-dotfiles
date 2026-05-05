@@ -35,16 +35,19 @@ append_trap() {
 	for sig in "$@"; do
 		line="$(trap -p "$sig" 2>/dev/null || true)"
 		if [[ -z "${line:-}" ]]; then
+			# shellcheck disable=SC2064
 			trap "${new_cmd}" "$sig"
 			continue
 		fi
 
 		existing="${line#trap -- \'}"
-		existing="${existing%\' $sig}"
+		existing="${existing%\' "$sig"}"
 
 		if [[ -n "${existing:-}" ]]; then
+			# shellcheck disable=SC2064
 			trap "${existing}; ${new_cmd}" "$sig"
 		else
+			# shellcheck disable=SC2064
 			trap "${new_cmd}" "$sig"
 		fi
 	done
@@ -161,7 +164,7 @@ get_nx_default() {
 		echo "develop"
 		;;
 	"vmsDir")
-		echo "~/.cache/nx/vms"
+		echo "$HOME/.cache/nx/vms"
 		;;
 	*)
 		echo ""
@@ -188,6 +191,7 @@ expand_home_path() {
 		echo "${HOME}"
 		return 0
 	fi
+	# shellcheck disable=SC2088
 	if [[ "$p" == "~/"* ]]; then
 		echo "${HOME}/${p#~/}"
 		return 0
@@ -616,6 +620,7 @@ check_git_worktrees_clean() {
 	fi
 
 	if [[ "$config_dirty" == true ]] || [[ "$core_dirty" == true ]]; then
+		echo >&2
 		echo -e "${YELLOW}Found dirty git worktree(s):${RESET}" >&2
 		echo >&2
 
@@ -1197,7 +1202,7 @@ check_nix_daemon_activity() {
 check_nix_tool_activity() {
 	local nix_tool_processes
 	if [[ "$(uname)" == "Darwin" ]]; then
-		nix_tool_processes=$(ps ax -o command | tail -n +2 | grep -E "nix (build|eval|flake|gc)" | grep -v grep | wc -l) || nix_tool_processes=0
+		nix_tool_processes=$(ps ax -o command | tail -n +2 | grep -cE "nix (build|eval|flake|gc)") || nix_tool_processes=0
 	else
 		nix_tool_processes=$(ps ax -o stat,command | tail -n +2 | grep -E "nix (build|eval|flake|gc)" | grep -v grep | awk '$1 ~ /^(R|Rs|Rl|S\+)$/' | wc -l) || nix_tool_processes=0
 	fi
