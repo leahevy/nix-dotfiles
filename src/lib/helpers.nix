@@ -7,6 +7,10 @@ rec {
   # Returns if building for native or compatible architecture
   isHostArchitecture = throw "isHostArchitecture must be overridden by localHelpers (processHostProfile/processStandaloneUserProfile)";
 
+  # Import NixOS helpers from nixpkgs (e.g. escapeSystemdPath).
+  importNixOSLibrary =
+    { config, pkgs }: import (pkgs.path + "/nixos/lib/utils.nix") { inherit lib config pkgs; };
+
   # Null-safe value selection
   # Usage: ifSet $VALUE $DEFAULT
   ifSet = value: default: if value != null then value else default;

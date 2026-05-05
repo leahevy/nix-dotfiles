@@ -407,7 +407,7 @@ in
         userGid = toString config.users.groups.${config.users.users.${username}.group}.gid;
 
         normalizeFile = f: if builtins.isString f then f else f.file;
-        escapeUnitPath = path: lib.replaceStrings [ "-" "/" ] [ "\\x2d" "-" ] (lib.removePrefix "/" path);
+        escapeUnitPath = (helpers.importNixOSLibrary { inherit config pkgs; }).escapeSystemdPath;
 
         sysPersistFiles = map normalizeFile (config.environment.persistence.${self.persist}.files or [ ]);
         homePersistFiles = (
