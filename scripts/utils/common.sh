@@ -3,15 +3,23 @@
 source "$(dirname "${BASH_SOURCE[0]}")/defs.sh"
 
 print_info() {
-	echo -e "${WHITE}" "$@" "${RESET}"
+	printf "%b%s%b\n" "${WHITE}" "$*" "${RESET}"
 }
 
 print_success() {
-	echo -e "${GREEN}" "$@" "${RESET}"
+	printf "%b%s%b\n" "${GREEN}" "$*" "${RESET}"
 }
 
 print_error() {
-	echo -e "${RED}" "$@" "${RESET}"
+	printf "%b%s%b\n" "${RED}" "$*" "${RESET}"
+}
+
+print_warning() {
+	printf "%b%s%b\n" "${YELLOW}" "$*" "${RESET}"
+}
+
+print_debug() {
+	printf "%b%s%b\n" "${GRAY}" "$*" "${RESET}"
 }
 
 append_trap() {
