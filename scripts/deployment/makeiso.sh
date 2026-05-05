@@ -31,12 +31,11 @@ fi
 
 NXCORE_DIR="$HOME/.config/nx/nxcore"
 export NXCORE_DIR
-check_git_worktrees_clean
-verify_commits
 
 EXTRA_ARGS=()
 SKIP_VERIFICATION=false
 OVERRIDE=false
+ALLOW_DIRTY_GIT=false
 
 HOST_ARCH="$(uname -m)"
 if [[ "$HOST_ARCH" == "arm64" ]] || [[ "$HOST_ARCH" == "aarch64" ]]; then
@@ -69,6 +68,10 @@ while [[ $# -gt 0 ]]; do
 		SKIP_VERIFICATION=true
 		shift
 		;;
+	--allow-dirty-git)
+		ALLOW_DIRTY_GIT=true
+		shift
+		;;
 	--override)
 		OVERRIDE=true
 		shift
@@ -84,6 +87,7 @@ while [[ $# -gt 0 ]]; do
 		echo "  --output-dir DIR               Output directory (default: ./result)"
 		echo "  --offline                      Build without network access"
 		echo "  --skip-verification            Skip commit signature verification"
+		echo "  --allow-dirty-git              Allow proceeding with uncommitted changes"
 		echo "  --override                     Replace older ISO(s) in output dir"
 		echo "  --help                         Show this help message"
 		echo ""
@@ -105,6 +109,11 @@ while [[ $# -gt 0 ]]; do
 		;;
 	esac
 done
+
+if [[ "$ALLOW_DIRTY_GIT" != true ]]; then
+	check_git_worktrees_clean
+fi
+verify_commits
 
 export SKIP_VERIFICATION
 
