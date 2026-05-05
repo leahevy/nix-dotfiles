@@ -608,7 +608,7 @@ check_git_worktrees_clean() {
 	fi
 
 	if [[ "$config_dirty" == true ]] || [[ "$core_dirty" == true ]]; then
-		echo -e "${YELLOW}!!! Git worktree(s) are dirty!${RESET}" >&2
+		echo -e "${YELLOW}Found dirty git worktree(s):${RESET}" >&2
 		echo >&2
 
 		if [[ "$config_dirty" == true ]]; then
@@ -624,7 +624,7 @@ check_git_worktrees_clean() {
 		fi
 
 		if [[ "${ALLOW_DIRTY_GIT:-false}" == "true" ]]; then
-			echo -e "${YELLOW}WARNING: Proceeding with dirty git worktree(s) due to --allow-dirty-git flag${RESET}" >&2
+			echo -e "${YELLOW}Proceeding with dirty git worktree(s) due to --allow-dirty-git flag${RESET}" >&2
 			echo >&2
 		else
 			exit 1
