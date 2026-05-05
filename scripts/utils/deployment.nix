@@ -444,6 +444,7 @@
           output-dir = optionWith "Output directory for the ISO" "dir" "filepath";
           offline = option "Build without network access";
           skip-verification = option "Skip commit signature verification";
+          override = option "Remove older ISO(s) from output dir after successful build";
         };
       };
 

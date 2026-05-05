@@ -36,6 +36,7 @@ verify_commits
 
 EXTRA_ARGS=()
 SKIP_VERIFICATION=false
+OVERRIDE=false
 
 HOST_ARCH="$(uname -m)"
 if [[ "$HOST_ARCH" == "arm64" ]] || [[ "$HOST_ARCH" == "aarch64" ]]; then
@@ -68,6 +69,10 @@ while [[ $# -gt 0 ]]; do
 		SKIP_VERIFICATION=true
 		shift
 		;;
+	--override)
+		OVERRIDE=true
+		shift
+		;;
 	--help)
 		echo "Usage: $0 [OPTIONS]"
 		echo ""
@@ -79,6 +84,7 @@ while [[ $# -gt 0 ]]; do
 		echo "  --output-dir DIR               Output directory (default: ./result)"
 		echo "  --offline                      Build without network access"
 		echo "  --skip-verification            Skip commit signature verification"
+		echo "  --override                     Replace older ISO(s) in output dir"
 		echo "  --help                         Show this help message"
 		echo ""
 		echo "Examples:"
@@ -122,7 +128,8 @@ echo -e "Output directory: ${WHITE}$OUTPUT_DIR${RESET}"
 
 echo ""
 
-ISO_NAME="nxcore-${SYSTEM}-$(date +"%d-%m-%y_%H-%M").iso"
+ISO_PREFIX="nxcore-${SYSTEM}-"
+ISO_NAME="${ISO_PREFIX}$(date +"%d-%m-%y_%H-%M").iso"
 
 if [[ -n "$NXCORE_DIR" ]]; then
 	echo -e "Using core directory: ${WHITE}$NXCORE_DIR${RESET}"
@@ -203,6 +210,26 @@ cd "$OUTPUT_DIR"
 sha256sum "$ISO_NAME" >"$ISO_NAME.sha256"
 echo
 echo -e "${GREEN}Checksum created: ${WHITE}$OUTPUT_DIR/$ISO_NAME.sha256${RESET}"
+
+if [[ "$OVERRIDE" == true ]]; then
+	shopt -s nullglob
+	old_isos=("$OUTPUT_DIR/${ISO_PREFIX}"*.iso)
+	shopt -u nullglob
+
+	removed_count=0
+	for old_iso in "${old_isos[@]:-}"; do
+		if [[ "$(basename "$old_iso")" == "$ISO_NAME" ]]; then
+			continue
+		fi
+		rm -f "$old_iso" "${old_iso}.sha256" || true
+		removed_count=$((removed_count + 1))
+	done
+
+	if [[ "$removed_count" -gt 0 ]]; then
+		echo
+		echo -e "${GREEN}Removed ${WHITE}${removed_count}${GREEN} older ISO(s) from ${WHITE}${OUTPUT_DIR}${RESET}"
+	fi
+fi
 
 echo ""
 echo -e "${GREEN}=== ISO Build Complete ===${RESET}"
