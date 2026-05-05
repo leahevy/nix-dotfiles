@@ -81,11 +81,61 @@ in
       allowedSystemPersistPath = variables.persist;
       persistKeys = builtins.attrNames (config.environment.persistence or { });
       invalidKeys = builtins.filter (key: key != allowedSystemPersistPath) persistKeys;
+
+      extractDirList =
+        items:
+        builtins.map (
+          item:
+          if builtins.typeOf item == "string" then
+            item
+          else if builtins.isAttrs item && item ? directory then
+            item.directory
+          else
+            ""
+        ) items;
+
+      extractFileList =
+        items:
+        builtins.map (
+          item:
+          if builtins.typeOf item == "string" then
+            item
+          else if builtins.isAttrs item && item ? file then
+            item.file
+          else
+            ""
+        ) items;
+
+      systemDirs = lib.concatMap (
+        key: extractDirList ((config.environment.persistence.${key}.directories or [ ]))
+      ) persistKeys;
+
+      systemFiles = lib.concatMap (
+        key: extractFileList ((config.environment.persistence.${key}.files or [ ]))
+      ) persistKeys;
+
+      invalidSystemDirEntries = builtins.filter (p: p == "" || !(lib.hasPrefix "/" p)) systemDirs;
+      invalidSystemFileEntries = builtins.filter (p: p == "" || !(lib.hasPrefix "/" p)) systemFiles;
     in
     [
       {
+        assertion =
+          lib.hasPrefix "/" allowedSystemPersistPath
+          && !(lib.hasSuffix "/" allowedSystemPersistPath)
+          && (builtins.match ".*[ ].*" allowedSystemPersistPath) == null;
+        message = "variables.persist must start with '/', must not end with '/', and must not contain spaces!";
+      }
+      {
         assertion = invalidKeys == [ ];
         message = "environment.persistence contains invalid mount points: ${builtins.concatStringsSep ", " invalidKeys}. Only '${allowedSystemPersistPath}' is allowed (use self.persist).";
+      }
+      {
+        assertion = invalidSystemDirEntries == [ ];
+        message = "environment.persistence directories must be absolute paths starting with '/'!";
+      }
+      {
+        assertion = invalidSystemFileEntries == [ ];
+        message = "environment.persistence files must be absolute paths starting with '/'!";
       }
     ]
   )

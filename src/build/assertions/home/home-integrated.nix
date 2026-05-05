@@ -81,11 +81,61 @@ in
       allowedHomePersistPath = "${variables.persist}";
       persistKeys = builtins.attrNames (config.home.persistence or { });
       invalidKeys = builtins.filter (key: key != allowedHomePersistPath) persistKeys;
+
+      extractDirList =
+        items:
+        builtins.map (
+          item:
+          if builtins.typeOf item == "string" then
+            item
+          else if builtins.isAttrs item && item ? directory then
+            item.directory
+          else
+            ""
+        ) items;
+
+      extractFileList =
+        items:
+        builtins.map (
+          item:
+          if builtins.typeOf item == "string" then
+            item
+          else if builtins.isAttrs item && item ? file then
+            item.file
+          else
+            ""
+        ) items;
+
+      homeDirs = lib.concatMap (
+        key: extractDirList ((config.home.persistence.${key}.directories or [ ]))
+      ) persistKeys;
+
+      homeFiles = lib.concatMap (
+        key: extractFileList ((config.home.persistence.${key}.files or [ ]))
+      ) persistKeys;
+
+      invalidHomeDirEntries = builtins.filter (p: p == "" || lib.hasPrefix "/" p) homeDirs;
+      invalidHomeFileEntries = builtins.filter (p: p == "" || lib.hasPrefix "/" p) homeFiles;
     in
     [
       {
+        assertion =
+          lib.hasPrefix "/" "${variables.persist}"
+          && !(lib.hasSuffix "/" "${variables.persist}")
+          && (builtins.match ".*[ ].*" "${variables.persist}") == null;
+        message = "variables.persist must start with '/', must not end with '/', and must not contain spaces!";
+      }
+      {
         assertion = invalidKeys == [ ];
         message = "home.persistence contains invalid mount points: ${builtins.concatStringsSep ", " invalidKeys}. Only '${allowedHomePersistPath}' is allowed (use self.persist).";
+      }
+      {
+        assertion = invalidHomeDirEntries == [ ];
+        message = "home.persistence directories must be relative paths and must not start with '/'!";
+      }
+      {
+        assertion = invalidHomeFileEntries == [ ];
+        message = "home.persistence files must be relative paths and must not start with '/'!";
       }
     ]
   );
