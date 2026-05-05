@@ -244,6 +244,10 @@ if [[ -z "${AGE_SYSTEM_FILE}" && -n "${AGE_USER_FILE}" ]]; then
 	print_error "--age-user-file requires --age-system-file"
 	exit 1
 fi
+if [[ "${DANGEROUSLY_USE_HOST_SOPS}" == "true" && (-n "${AGE_FILE}" || -n "${AGE_SYSTEM_FILE}") ]]; then
+	print_error "--dangerously-use-host-sops cannot be combined with --age-file or --age-system-file!"
+	exit 1
+fi
 
 WILL_RUN_VM=false
 if [[ "${NO_RUN}" != "true" && "${LIST_VERSIONS}" != "true" && "${LIST_ALL}" != "true" && "${CLEANUP}" != "true" && "${CLEANUP_ALL}" != "true" ]]; then
