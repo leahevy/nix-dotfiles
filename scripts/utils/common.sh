@@ -612,14 +612,14 @@ check_git_worktrees_clean() {
 		echo >&2
 
 		if [[ "$config_dirty" == true ]]; then
-			echo -e "${RED}Config repository (.config/nx/nxconfig):${RESET}" >&2
-			git status --porcelain >&2
+			echo -e "  ${RED}Config repository (.config/nx/nxconfig):${RESET}" >&2
+			git status --porcelain | sed 's/^/    /g' >&2
 			echo >&2
 		fi
 
 		if [[ "$core_dirty" == true ]]; then
-			echo -e "${RED}Core repository (.config/nx/nxcore):${RESET}" >&2
-			(cd "$NXCORE_DIR" && git status --porcelain) >&2
+			echo -e "  ${RED}Core repository (.config/nx/nxcore):${RESET}" >&2
+			(cd "$NXCORE_DIR" && git status --porcelain | sed 's/^/    /g') >&2
 			echo >&2
 		fi
 
