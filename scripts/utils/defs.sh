@@ -1,14 +1,35 @@
 #!/usr/bin/env bash
 
-export RED='\033[1;31m'
-export ORANGE='\033[38;5;208m'
-export YELLOW='\033[1;33m'
-export GREEN='\033[1;32m'
-export WHITE='\033[1;37m'
-export MAGENTA='\033[1;35m'
-export BLUE='\033[1;34m'
-export CYAN='\033[1;36m'
-export GRAY='\033[1;90m'
+export RED_LIGHT='\033[38;5;196m'
+export ORANGE_LIGHT='\033[38;5;208m'
+export YELLOW_LIGHT='\033[38;5;220m'
+export GREEN_LIGHT='\033[38;5;82m'
+export BLUE_LIGHT='\033[38;5;39m'
+export MAGENTA_LIGHT='\033[38;5;201m'
+export CYAN_LIGHT='\033[38;5;51m'
+export GRAY_LIGHT='\033[38;5;250m'
+export WHITE_LIGHT='\033[38;5;15m'
+
+export RED_BOLD='\033[1;38;5;196m'
+export ORANGE_BOLD='\033[1;38;5;208m'
+export YELLOW_BOLD='\033[1;38;5;220m'
+export GREEN_BOLD='\033[1;38;5;82m'
+export BLUE_BOLD='\033[1;38;5;39m'
+export MAGENTA_BOLD='\033[1;38;5;201m'
+export CYAN_BOLD='\033[1;38;5;51m'
+export GRAY_BOLD='\033[1;38;5;250m'
+export WHITE_BOLD='\033[1;38;5;15m'
+
+export RED="$RED_BOLD"
+export ORANGE="$ORANGE_BOLD"
+export YELLOW="$YELLOW_BOLD"
+export GREEN="$GREEN_BOLD"
+export BLUE="$BLUE_BOLD"
+export MAGENTA="$MAGENTA_BOLD"
+export CYAN="$CYAN_BOLD"
+export GRAY="$GRAY_LIGHT"
+export WHITE="$WHITE_LIGHT"
+
 export RESET='\033[0m'
 
 export RAINBOW_COLOURS=(
