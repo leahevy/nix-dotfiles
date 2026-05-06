@@ -77,7 +77,9 @@ if [[ $# -eq 0 ]]; then
 		show_live_iso_help
 		exit 0
 	fi
-	if [[ "${ACTUAL_PWD:-$PWD}" == "$(realpath "$NXCORE_DIR")" ]]; then
+	if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "server" ]]; then
+		SCRIPT_NAME="config"
+	elif [[ -n "${NXCORE_DIR:-}" ]] && [[ "${ACTUAL_PWD:-$PWD}" == "$(realpath "$NXCORE_DIR")" ]]; then
 		SCRIPT_NAME="status"
 	else
 		SCRIPT_NAME="core"
