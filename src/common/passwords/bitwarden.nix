@@ -118,7 +118,32 @@ args@{
 
           Service = {
             Type = "oneshot";
-            ExecStart = "${pkgs.bitwarden-cli}/bin/bw sync";
+            ExecStart = pkgs.writeShellScript "bitwarden-sync" ''
+              set -euo pipefail
+
+              attempts=5
+              attempt=1
+              sleep_seconds=1
+              last_rc=0
+
+              while true; do
+                rc=0
+                ${pkgs.bitwarden-cli}/bin/bw sync || rc=$?
+                last_rc=$rc
+
+                if [[ $rc -ne 1 ]]; then
+                  exit $rc
+                fi
+
+                if [[ $attempt -ge $attempts ]]; then
+                  exit $last_rc
+                fi
+
+                sleep "$sleep_seconds"
+                attempt=$((attempt + 1))
+                sleep_seconds=$((sleep_seconds * 2))
+              done
+            '';
             ExecCondition = pkgs.writeShellScript "check-bw-status" ''
               set -euo pipefail
               [[ -f "${config.home.homeDirectory}/.config/Bitwarden-CLI/data.json" && -r "${config.home.homeDirectory}/.config/Bitwarden-CLI/data.json" ]] || exit 1
@@ -128,8 +153,12 @@ args@{
 
               serverUrl=$(echo "$response" | ${pkgs.jq}/bin/jq -r '.serverUrl // ""')
               if [[ -n "$serverUrl" && "$serverUrl" != "null" ]]; then
-                serverHost=$(echo "$serverUrl" | ${pkgs.gnused}/bin/sed 's|https\?://||' | ${pkgs.gnused}/bin/sed 's|/.*||')
-                ${pkgs.iputils}/bin/ping -c 1 -W 5 "$serverHost" >/dev/null 2>&1
+                url="''${serverUrl%/}/api/config"
+                code="$(${pkgs.curl}/bin/curl -sS --connect-timeout 5 --max-time 10 -o /dev/null -w '%{http_code}' "$url" || echo 000)"
+                case "$code" in
+                  2??) exit 0 ;;
+                  *) exit 1 ;;
+                esac
               fi
             '';
           };
