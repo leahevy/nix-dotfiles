@@ -647,6 +647,23 @@ check_git_worktrees_clean() {
 	fi
 }
 
+git_worktrees_clean() {
+	local config_dirty=false
+	local core_dirty=false
+
+	if [[ "$(git status --porcelain 2>/dev/null || true)" != "" ]]; then
+		config_dirty=true
+	fi
+
+	if [[ -n "${NXCORE_DIR:-}" ]] && [[ -d "$NXCORE_DIR" ]]; then
+		if [[ "$(cd "$NXCORE_DIR" && git status --porcelain 2>/dev/null || true)" != "" ]]; then
+			core_dirty=true
+		fi
+	fi
+
+	[[ "$config_dirty" != "true" && "$core_dirty" != "true" ]]
+}
+
 verify_commits() {
 	local gnupg_configured=true
 
