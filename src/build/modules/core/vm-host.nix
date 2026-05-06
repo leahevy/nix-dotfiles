@@ -207,6 +207,46 @@ args@{
               $cmd
             '';
 
+            vm-remove = ''
+              argparse 'n/name=' -- $argv
+              or return
+
+              if not set -q _flag_name
+                echo "Usage: vm-remove --name NAME"
+                return 1
+              end
+
+              set image_path "${vmDataDir}/qemu-images/$_flag_name.qcow2"
+              set vars_path "${vmDataDir}/qemu-images/$_flag_name.OVMF_VARS.fd"
+
+              if not test -f "$image_path"
+                echo "VM image not found: $image_path"
+                return 1
+              end
+
+              if not ${pkgs.qemu}/bin/qemu-img info "$image_path" > /dev/null 2>&1
+                echo "VM '$_flag_name' appears to be running (image is locked). Stop it before removing."
+                return 1
+              end
+
+              echo "This will permanently remove:"
+              echo "  $image_path"
+              if test -f "$vars_path"
+                echo "  $vars_path"
+              end
+              read -l -P "Are you sure? [y/N] " confirm
+              if not string match -qi "y" "$confirm"
+                echo "Aborted."
+                return 1
+              end
+
+              ${pkgs.coreutils}/bin/rm -f "$image_path"
+              if test -f "$vars_path"
+                ${pkgs.coreutils}/bin/rm -f "$vars_path"
+              end
+              echo "Removed VM '$_flag_name'."
+            '';
+
             vm-list = ''
               set dir "${vmDataDir}/qemu-images"
               if not test -d "$dir"
