@@ -506,5 +506,39 @@ with lib;
       default = { };
       description = "VM resource configuration for nx vm builds";
     };
+
+    remote = mkOption {
+      type = types.submodule {
+        options = {
+          address = mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "Remote hostname/IP for deployment";
+          };
+          buildUser = mkOption {
+            type = types.str;
+            default = "root";
+            description = "SSH user for deployment connections";
+          };
+          allowLuksRootEncryption = mkOption {
+            type = types.bool;
+            default = false;
+            description = "Permit LUKS on root/boot partitions";
+          };
+          buildIdentityFile = mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "SSH identity file for deployment";
+          };
+          buildPublicSSHKey = mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "SSH public key for the build user on the deployed system";
+          };
+        };
+      };
+      default = { };
+      description = "Remote deployment configuration";
+    };
   };
 }

@@ -144,5 +144,64 @@ in
       assertion = (config.disko.devices or { }) == { } -> config.nx.profile.isVirtual;
       message = "Disko devices not found on a physical machine! (File disk.nix in nixos profile folder)";
     }
+    {
+      assertion = host.remote.buildUser != "";
+      message = "host.remote.buildUser must not be empty!";
+    }
+    {
+      assertion = (builtins.match ".*[@ ].*" host.remote.buildUser) == null;
+      message = "host.remote.buildUser must not contain '@' or spaces!";
+    }
+    {
+      assertion =
+        host.remote.address == null
+        || (builtins.match ".*[;&|`<>$(){}!\"'\\\\ ].*" host.remote.address) == null;
+      message = "host.remote.address must not contain unsafe characters!";
+    }
+    {
+      assertion =
+        host.remote.buildIdentityFile != null
+        -> (builtins.match ".*[;&|`<>$(){}!\"'\\\\ ].*" host.remote.buildIdentityFile) == null;
+      message = "host.remote.buildIdentityFile must not contain spaces or unsafe characters!";
+    }
+    {
+      assertion =
+        let
+          remote = host.remote;
+        in
+        (
+          remote.buildIdentityFile != null
+          || remote.buildPublicSSHKey != null
+          || remote.address != null
+          || (remote.buildUser != null && remote.buildUser != "root")
+        )
+        -> (
+          remote.buildIdentityFile != null
+          && remote.buildPublicSSHKey != null
+          && remote.address != null
+          && remote.buildUser != null
+        );
+      message = "All host.remote settings must be provided if any of them is provided!";
+    }
+    {
+      assertion =
+        (host.remote.address != null && !host.remote.allowLuksRootEncryption)
+        -> (config.boot.initrd.luks.devices or { }) == { };
+      message = "Host is not configured to use LUKS root encryption (via remote settings), but it has been enabled in the initrd!";
+    }
+    {
+      assertion =
+        let
+          buildUser = host.remote.buildUser;
+          users = config.users.users;
+        in
+        (buildUser != null && buildUser != "root")
+        -> (
+          (builtins.hasAttr buildUser users)
+          && (users.${buildUser}.isNormalUser || users.${buildUser}.isSystemUser)
+          && (users.${buildUser}.group != null && users.${buildUser}.group != "")
+        );
+      message = "Host has configured ${host.remote.buildUser} as buildUser, but this user does not exist in the configuration!";
+    }
   ];
 }
