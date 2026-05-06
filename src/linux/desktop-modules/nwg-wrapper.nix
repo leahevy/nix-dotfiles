@@ -239,6 +239,32 @@ args@{
           in
           lib.concatStringsSep "\n" rows;
 
+        dateTimePosition = if personPosition == "right" then "right" else "left";
+        dateTimeMarginArgs =
+          if dateTimePosition == "left" then
+            [
+              "-ml"
+              (if personPosition == "left" then builtins.toString effectiveCenterOffset else "20")
+            ]
+          else
+            [
+              "-mr"
+              (if personPosition == "right" then builtins.toString effectiveCenterOffset else "20")
+            ];
+
+        keybindingsPosition = if personPosition == "right" then "left" else "right";
+        keybindingsMarginArgs =
+          if keybindingsPosition == "left" then
+            [
+              "-ml"
+              "20"
+            ]
+          else
+            [
+              "-mr"
+              "20"
+            ];
+
         dateTimeArgs = [
           "-s"
           "%h/.local/bin/date-time.sh"
@@ -247,16 +273,13 @@ args@{
           "-r"
           "20000"
           "-p"
-          "left"
+          dateTimePosition
           "-mt"
           "20"
           "-mb"
           "20"
         ]
-        ++ [
-          "-ml"
-          (if personPosition == "left" then builtins.toString effectiveCenterOffset else "20")
-        ]
+        ++ dateTimeMarginArgs
         ++ displayArgs;
 
         keybindingsArgs = [
@@ -265,16 +288,13 @@ args@{
           "-c"
           "%h/.config/nwg-wrapper/keybindings.css"
           "-p"
-          "right"
+          keybindingsPosition
           "-mt"
           "20"
           "-mb"
           "20"
         ]
-        ++ [
-          "-mr"
-          (if personPosition == "right" then builtins.toString effectiveCenterOffset else "20")
-        ]
+        ++ keybindingsMarginArgs
         ++ displayArgs;
       in
       {
