@@ -311,20 +311,24 @@ deployment_script_setup() {
 	check_config_directory "$script_name" "deployment"
 	load_nx_config
 
-	if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "server" ]]; then
-		echo -e "${YELLOW}WARNING: This machine is in server mode!${RESET}" >&2
-		echo -en "${WHITE}Run manual deployment? ${RESET}[y/N]: " >&2
-		read -r response
-		case "$response" in
-		[yY] | [yY][eE][sS]) ;;
-		*)
-			echo -e "${RED}Aborted${RESET}" >&2
-			exit 1
-			;;
-		esac
-	fi
-
 	export SCRIPT_DIR
+}
+
+confirm_server_manual_deploy() {
+	local label="${1:-deployment}"
+	if [[ "${NX_DEPLOYMENT_MODE:-develop}" != "server" ]]; then
+		return 0
+	fi
+	echo -e "${YELLOW}WARNING: This machine is in server mode!${RESET}" >&2
+	echo -en "${WHITE}Run manual ${label}? ${RESET}[y/N]: " >&2
+	read -r response
+	case "$response" in
+	[yY] | [yY][eE][sS]) return 0 ;;
+	*)
+		echo -e "${RED}Aborted${RESET}" >&2
+		exit 1
+		;;
+	esac
 }
 
 parse_common_deployment_args() {

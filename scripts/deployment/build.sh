@@ -7,6 +7,7 @@ deployment_script_setup "build-test"
 PROFILE="$(retrieve_active_profile)"
 
 parse_build_deployment_args "$@"
+confirm_server_manual_deploy "build"
 verify_commits
 check_deployment_conflicts "build"
 

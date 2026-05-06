@@ -6,6 +6,7 @@ deployment_script_setup "boot"
 
 parse_common_deployment_args "$@"
 ensure_nixos_only "boot"
+confirm_server_manual_deploy "boot"
 
 check_git_worktrees_clean
 verify_commits

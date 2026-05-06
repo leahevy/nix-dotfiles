@@ -5,6 +5,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "sync"
 
 parse_common_deployment_args "$@"
+confirm_server_manual_deploy "sync"
 check_git_worktrees_clean
 
 PROFILE="$(retrieve_active_profile)"
