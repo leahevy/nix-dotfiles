@@ -1207,7 +1207,7 @@ check_nix_tool_activity() {
 		nix_tool_processes=$(ps ax -o stat,command | tail -n +2 | grep -E "nix (build|eval|flake|gc)" | grep -v grep | awk '$1 ~ /^(R|Rs|Rl|S\+)$/' | wc -l) || nix_tool_processes=0
 	fi
 
-	if [[ "$nix_tool_processes" -gt 0 ]]; then
+	if [[ "$nix_tool_processes" -gt 0 && "$(uname -s)" != "Darwin" ]]; then
 		echo
 		echo -e "${RED}Warning: Nix tools appears to be active ($nix_tool_processes active processes)${RESET}" >&2
 		echo -e "${YELLOW}Running concurrent actions may cause issues.${RESET}" >&2
