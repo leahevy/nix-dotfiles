@@ -19,6 +19,7 @@ args@{
     niriKeybindings = false;
     withBorder = true;
     withBackground = true;
+    centerOffset = null;
   };
 
   module = {
@@ -64,8 +65,12 @@ args@{
             dailyWallpaperInfo.metadata.positionPerson
           else
             "center";
-        statusAnchor = if personPosition == "left" then "center" else "left";
-        keybindingsAnchor = if personPosition == "right" then "center" else "right";
+        isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] false;
+        effectiveCenterOffset =
+          if self.settings.centerOffset != null then
+            self.settings.centerOffset
+          else
+            (if isWidescreen then 3440 * 4 / 10 else 1920 * 4 / 10);
         terminal = config.nx.preferences.desktop.programs.terminal;
         highlightMainColor = config.nx.preferences.theme.colors.main.foregrounds.primary.html;
         highlightSecondColor = config.nx.preferences.theme.colors.main.foregrounds.emphasized.html;
@@ -242,17 +247,15 @@ args@{
           "-r"
           "20000"
           "-p"
-          statusAnchor
+          "left"
           "-mt"
           "20"
           "-mb"
           "20"
         ]
-        ++ lib.optionals (statusAnchor == "left") [
-          "-mr"
-          "66"
+        ++ [
           "-ml"
-          "20"
+          (if personPosition == "left" then builtins.toString effectiveCenterOffset else "20")
         ]
         ++ displayArgs;
 
@@ -262,15 +265,15 @@ args@{
           "-c"
           "%h/.config/nwg-wrapper/keybindings.css"
           "-p"
-          keybindingsAnchor
+          "right"
           "-mt"
           "20"
           "-mb"
           "20"
         ]
-        ++ lib.optionals (keybindingsAnchor == "right") [
+        ++ [
           "-mr"
-          "20"
+          (if personPosition == "right" then builtins.toString effectiveCenterOffset else "20")
         ]
         ++ displayArgs;
       in
