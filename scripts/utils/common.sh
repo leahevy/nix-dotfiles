@@ -224,6 +224,8 @@ check_config_directory() {
 		IS_LIVE_ISO=0
 	fi
 
+	[[ "${NX_CONFIG_LOADED:-0}" == "1" ]] || load_nx_config
+
 	if [[ "$has_root_repos" == "1" ]]; then
 		NXCORE_DIR="/nxcore"
 		CONFIG_DIR="/nxconfig"
