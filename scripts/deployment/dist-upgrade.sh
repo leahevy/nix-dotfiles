@@ -31,6 +31,15 @@ check_git_worktrees_clean
 echo -e "Updating version references in ${WHITE}nxcore/flake.nix${RESET}..."
 sed -i "s/[0-9][0-9]\.[0-9][0-9]/$NIXOS_VERSION/g" "$NXCORE_DIR/flake.nix"
 
+echo -e "Updating state-version in ${WHITE}nxcore/variables.nix${RESET}..."
+sed -i "s/state-version = \"[0-9][0-9]\.[0-9][0-9]\"/state-version = \"$NIXOS_VERSION\"/g" "$NXCORE_DIR/variables.nix"
+
+echo -e "Updating stateVersion in ${WHITE}nxcore/templates${RESET}..."
+find "$NXCORE_DIR/templates" -name "*.nix" -type f -exec sed -i "s/stateVersion = \"[0-9][0-9]\.[0-9][0-9]\"/stateVersion = \"$NIXOS_VERSION\"/g" {} \;
+
+echo -e "Updating stateVersion fallback in ${WHITE}nxcore/scripts/bootstrap/nixos/50-create-profile-stub.sh${RESET}..."
+sed -i '/STATE_VERSION_VALUE=/s/[0-9][0-9]\.[0-9][0-9]/'"$NIXOS_VERSION"'/' "$NXCORE_DIR/scripts/bootstrap/nixos/50-create-profile-stub.sh"
+
 CURRENT_PYTHON=$(grep 'pythonName' "$NXCORE_DIR/variables.nix" | grep -oE 'python[0-9]+' | head -n1 || true)
 echo
 echo -e "${YELLOW}Action required: verify pythonName in nxcore/variables.nix for NixOS $NIXOS_VERSION.${RESET}"
@@ -40,6 +49,11 @@ echo
 if [[ -d "$CONFIG_DIR/.git" ]]; then
 	echo -e "Updating version references in ${WHITE}nxconfig/flake.nix${RESET}..."
 	(cd "$CONFIG_DIR" && sed -i "s/[0-9][0-9]\.[0-9][0-9]/$NIXOS_VERSION/g" flake.nix)
+
+	if [[ -f "$CONFIG_DIR/variables.nix" ]]; then
+		echo -e "Updating state-version in ${WHITE}nxconfig/variables.nix${RESET}..."
+		(cd "$CONFIG_DIR" && sed -i "s/state-version = \"[0-9][0-9]\.[0-9][0-9]\"/state-version = \"$NIXOS_VERSION\"/g" variables.nix)
+	fi
 fi
 
 echo

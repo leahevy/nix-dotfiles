@@ -169,6 +169,13 @@ EOF
 
 	rm -f /tmp/nixconfig-hardware-config.nix
 
+	DETECTED_VERSION=$(nixos-version 2>/dev/null | grep -oE '^[0-9]+\.[0-9]+' || true)
+	if [[ -n "$DETECTED_VERSION" ]]; then
+		STATE_VERSION_VALUE="\"$DETECTED_VERSION\""
+	else
+		STATE_VERSION_VALUE="\"25.11\""
+	fi
+
 	echo -e "Creating profile directory: ${WHITE}$PROFILE_DIR${RESET}"
 	mkdir -p "$PROFILE_DIR"
 
@@ -199,7 +206,7 @@ EOF
       modules = { };
     };
 
-    stateVersion = null;
+    stateVersion = $STATE_VERSION_VALUE;
 
     allowedUnfreePackages = [ ];
 

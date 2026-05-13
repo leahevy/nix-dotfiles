@@ -45,7 +45,7 @@
       modules = { };
     };
 
-    stateVersion = null;
+    stateVersion = "25.11";
 
     allowedUnfreePackages = [ ];
 

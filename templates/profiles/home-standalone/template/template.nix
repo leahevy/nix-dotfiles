@@ -17,7 +17,7 @@
 
     gpg = null;
 
-    stateVersion = null;
+    stateVersion = "25.11";
 
     additionalPackages = [ ];
 

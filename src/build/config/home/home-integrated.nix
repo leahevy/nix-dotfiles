@@ -185,7 +185,7 @@ in
 
     homeDirectory = user.home;
 
-    stateVersion = variables.state-version;
+    stateVersion = if host.stateVersion != null then host.stateVersion else variables.state-version;
   };
 
   programs = {
