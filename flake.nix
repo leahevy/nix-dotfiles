@@ -268,13 +268,22 @@
         };
 
         standalone-user-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (
-          builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/home-standalone"))
+          if builtins.pathExists (nxinputs.config + "/profiles/home-standalone") then
+            builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/home-standalone"))
+          else
+            [ ]
         );
         integrated-user-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (
-          builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/home-integrated"))
+          if builtins.pathExists (nxinputs.config + "/profiles/home-integrated") then
+            builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/home-integrated"))
+          else
+            [ ]
         );
         host-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (
-          builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/nixos"))
+          if builtins.pathExists (nxinputs.config + "/profiles/nixos") then
+            builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/nixos"))
+          else
+            [ ]
         );
 
         nixosArchitectures = import nxinputs.nix-systems-linux;
