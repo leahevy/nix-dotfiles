@@ -28,34 +28,34 @@ args@{
   };
 
   module = {
-    linux.system =
-      config:
-      let
-        buildUser = self.host.remote.buildUser;
-        buildPublicSSHKey = self.host.remote.buildPublicSSHKey;
-        hasBuildKey = buildPublicSSHKey != null;
-      in
-      {
-        services = {
-          openssh = {
-            enable = true;
-            ports = [ self.settings.port ];
-            settings = {
-              PasswordAuthentication = false;
-              AllowUsers = lib.unique ([ self.host.mainUser.username ] ++ lib.optional hasBuildKey buildUser);
-              X11Forwarding = false;
-              PermitRootLogin = if hasBuildKey && buildUser == "root" then "prohibit-password" else "no";
-            };
+    linux.system = config: {
+      assertions = [
+        {
+          assertion =
+            config.nx.profile.host.remote.initrdSSHHostPrivateKey == null
+            || config.nx.profile.host.remote.initrdSSHServicePort != self.settings.port;
+          message = "host.remote.initrdSSHServicePort must not equal the main sshd port (${toString self.settings.port})!";
+        }
+      ];
+
+      services = {
+        openssh = {
+          enable = true;
+          ports = [ self.settings.port ];
+          settings = {
+            PasswordAuthentication = false;
+            KbdInteractiveAuthentication = false;
+            PermitEmptyPasswords = false;
+            AllowUsers = [ self.host.mainUser.username ];
+            X11Forwarding = false;
+            PermitRootLogin = "no";
           };
         };
-
-        users.users = lib.mkIf hasBuildKey {
-          ${buildUser}.openssh.authorizedKeys.keys = [ buildPublicSSHKey ];
-        };
-
-        # Already configured in system module as ssh keys should always be persisted!
-        environment.persistence.${self.persist} = { };
       };
+
+      # Already configured in system module as ssh keys should always be persisted!
+      environment.persistence.${self.persist} = { };
+    };
 
     virtual.linux.system = config: {
       virtualisation.vmVariant = {
