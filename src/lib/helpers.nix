@@ -85,6 +85,46 @@ rec {
     else
       default;
 
+  # Validate SSH public key format
+  # Usage: validateSSHPublicKey $key
+  validateSSHPublicKey =
+    key:
+    let
+      k = if key == null then "" else toString key;
+    in
+    k != ""
+    && (
+      builtins.match "(ssh-ed25519|sk-ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ecdsa-sha2-nistp(256|384|521))(@[a-zA-Z0-9._-]+)? [A-Za-z0-9+/=]+( .*)?" k
+      != null
+    );
+
+  # Return the public key string for a given string, a nix store path, or a path object
+  # Usage: sshPublicKeyToString $key
+  sshPublicKeyToString =
+    raw:
+    lib.trim (
+      if builtins.isPath raw || lib.hasPrefix "/nix/store/" raw then builtins.readFile raw else raw
+    );
+
+  # Validate an SSH private key string
+  # Usage: validateSSHPrivateKey $key
+  validateSSHPrivateKey =
+    key:
+    let
+      k = if key == null then "" else toString key;
+      begin = "-----BEGIN OPENSSH PRIVATE KEY-----";
+      end = "-----END OPENSSH PRIVATE KEY-----";
+      stripTrailingNewlines =
+        s:
+        let
+          s1 = lib.removeSuffix "\n" s;
+          s2 = lib.removeSuffix "\r" s1;
+        in
+        if s2 == s then s else stripTrailingNewlines s2;
+      normalized = stripTrailingNewlines k;
+    in
+    k != "" && lib.strings.hasPrefix begin k && lib.strings.hasSuffix end normalized;
+
   # Check if the current deployment mode is in the given list of modes. Throws on invalid mode names.
   # Accepts either a config or a self object (detected via _nx_self = true).
   # Usage: isDeploymentMode config [ "local" "develop" ]
