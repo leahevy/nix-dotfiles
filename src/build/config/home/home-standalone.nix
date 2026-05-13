@@ -27,7 +27,10 @@ let
         else
           { }
       );
-  allModules = funcs.collectAllModulesWithSettings args initialModules buildModules;
+  extraContextModules = funcs.collectContextEnabledModules args;
+  allModules = funcs.collectAllModulesWithSettings args initialModules (
+    lib.recursiveUpdate buildModules extraContextModules
+  );
 
   moduleSpecs = funcs.processModules allModules;
   moduleResults = funcs.importModules args moduleSpecs allModules "home-standalone";
