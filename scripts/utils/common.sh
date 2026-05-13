@@ -1466,6 +1466,7 @@ diff_store_paths() {
 		"manifest-for-users.json"
 		"manifest.json"
 		"sops-nix.service"
+		"org.nix-community.home.sops-nix.plist"
 		"sops-nix-user"
 		"source"
 		"hm_fontconfigconf.d10hmfonts.conf"
