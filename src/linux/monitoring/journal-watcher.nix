@@ -197,6 +197,10 @@ args@{
           tag = "systemd";
           string = "nix-daemon\\.service: This usually indicates unclean termination of a previous run, or service implementation deficiencies\\.";
         }
+        {
+          tag = "systemd-coredump";
+          string = "of user 3[0-9]{4} terminated abnormally";
+        }
       ];
       baseHighlightPatterns = [
         {
