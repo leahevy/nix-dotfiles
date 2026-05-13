@@ -121,11 +121,11 @@ args@{
             '';
 
             vm-run-bios = ''
-              argparse 'n/name=' 'i/iso=' 'm/mem=' 'c/cpus=' 'p/ssh-port=' 'no-graphical' -- $argv
+              argparse 'n/name=' 'i/iso=' 'm/mem=' 'c/cpus=' 'p/ssh-port=' 'initrd-ssh' 'initrd-ssh-port=' 'no-graphical' -- $argv
               or return
 
               if not set -q _flag_name
-                echo "Usage: vm-run-bios --name NAME [--iso PATH] [--mem MiB] [--cpus N] [--ssh-port PORT] [--no-graphical]"
+                echo "Usage: vm-run-bios --name NAME [--iso PATH] [--mem MiB] [--cpus N] [--ssh-port PORT] [--initrd-ssh] [--initrd-ssh-port PORT] [--no-graphical]"
                 return 1
               end
 
@@ -140,12 +140,18 @@ args@{
                 return 1
               end
 
+              set initrd_forward ""
+              if set -q _flag_initrd_ssh
+                set -q _flag_initrd_ssh_port; or set _flag_initrd_ssh_port 2233
+                set initrd_forward ",hostfwd=tcp::$_flag_initrd_ssh_port-:$_flag_initrd_ssh_port"
+              end
+
               set cmd ${pkgs.qemu}/bin/qemu-system-x86_64 \
                 ${lib.optionalString self.host.settings.system.virtualisation.enableKVM "-enable-kvm"} \
                 -m "$_flag_mem" \
                 -smp "$_flag_cpus" \
                 -drive "file=$image_path,if=virtio" \
-                -netdev "user,id=net0,hostfwd=tcp::$_flag_ssh_port-:22" \
+                -netdev "user,id=net0,hostfwd=tcp::$_flag_ssh_port-:22$initrd_forward" \
                 -device virtio-net-pci,netdev=net0
 
               if set -q _flag_iso
@@ -160,11 +166,11 @@ args@{
             '';
 
             vm-run-uefi = ''
-              argparse 'n/name=' 'i/iso=' 'm/mem=' 'c/cpus=' 'p/ssh-port=' 'o/ovmf=' 'no-graphical' -- $argv
+              argparse 'n/name=' 'i/iso=' 'm/mem=' 'c/cpus=' 'p/ssh-port=' 'initrd-ssh' 'initrd-ssh-port=' 'o/ovmf=' 'no-graphical' -- $argv
               or return
 
               if not set -q _flag_name
-                echo "Usage: vm-run-uefi --name NAME [--iso PATH] [--mem MiB] [--cpus N] [--ssh-port PORT] [--ovmf PATH] [--no-graphical]"
+                echo "Usage: vm-run-uefi --name NAME [--iso PATH] [--mem MiB] [--cpus N] [--ssh-port PORT] [--initrd-ssh] [--initrd-ssh-port PORT] [--ovmf PATH] [--no-graphical]"
                 return 1
               end
 
@@ -186,6 +192,12 @@ args@{
                 chmod 600 "$vars_path"
               end
 
+              set initrd_forward ""
+              if set -q _flag_initrd_ssh
+                set -q _flag_initrd_ssh_port; or set _flag_initrd_ssh_port 2233
+                set initrd_forward ",hostfwd=tcp::$_flag_initrd_ssh_port-:$_flag_initrd_ssh_port"
+              end
+
               set cmd ${pkgs.qemu}/bin/qemu-system-x86_64 \
                 ${lib.optionalString self.host.settings.system.virtualisation.enableKVM "-enable-kvm"} \
                 -m "$_flag_mem" \
@@ -193,7 +205,7 @@ args@{
                 -drive "file=$image_path,if=virtio" \
                 -drive "if=pflash,format=raw,readonly=on,file=$_flag_ovmf" \
                 -drive "if=pflash,format=raw,file=$vars_path" \
-                -netdev "user,id=net0,hostfwd=tcp::$_flag_ssh_port-:22" \
+                -netdev "user,id=net0,hostfwd=tcp::$_flag_ssh_port-:22$initrd_forward" \
                 -device virtio-net-pci,netdev=net0
 
               if set -q _flag_iso
