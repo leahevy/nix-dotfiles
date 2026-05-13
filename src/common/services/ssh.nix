@@ -37,7 +37,7 @@ args@{
       default = "known_hosts_managed";
       description = "Filename under ~/.ssh/ written by this module with auto-generated known_hosts entries (e.g. initrd SSH host keys)";
     };
-    configOverrideName = lib.mkOption {
+    configOverridesName = lib.mkOption {
       type = lib.types.str;
       default = "config_overrides";
       description = "Filename under ~/.ssh/ to use for config overrides";
