@@ -5,6 +5,7 @@
   variables,
   helpers,
   defs,
+  self,
   ...
 }:
 {

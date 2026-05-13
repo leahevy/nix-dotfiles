@@ -8,6 +8,9 @@ let
     inherit lib defs additionalInputs;
   };
 in
+let
+  nixdPath = base: sub: if lib.hasSuffix "/" base then "${base}${sub}" else "${base}.nix.d/${sub}";
+in
 rec {
   commonFuncs = {
     # Check if current module architecture is Linux
@@ -109,11 +112,7 @@ rec {
       self: args: subpath:
       let
         filePath =
-          helpers.resolveInputFromInput self.moduleInputName
-          + "/"
-          + self.moduleBasePath
-          + ".nix.d/"
-          + subpath;
+          helpers.resolveInputFromInput self.moduleInputName + "/" + nixdPath self.moduleBasePath subpath;
         importArgs = args // {
           self = self;
         };
@@ -140,11 +139,7 @@ rec {
       self: args: subpath:
       let
         filePath =
-          helpers.resolveInputFromInput self.moduleInputName
-          + "/"
-          + self.moduleBasePath
-          + ".nix.d/"
-          + subpath;
+          helpers.resolveInputFromInput self.moduleInputName + "/" + nixdPath self.moduleBasePath subpath;
         importArgs = args // {
           self = self;
         };
@@ -461,9 +456,7 @@ rec {
           filePath =
             helpers.resolveInputFromInput moduleContext.moduleInputName
             + "/"
-            + moduleContext.moduleBasePath
-            + ".nix.d/"
-            + subpath;
+            + nixdPath moduleContext.moduleBasePath subpath;
           importArgs = args // {
             self = finalContext;
           };
@@ -544,7 +537,7 @@ rec {
       subPath:
       let
         relativePath =
-          if moduleBasePath != null then "${moduleBasePath}.nix.d/${subPath}" else "files/${subPath}";
+          if moduleBasePath != null then nixdPath moduleBasePath subPath else "files/${subPath}";
         fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
       in
       if builtins.pathExists fullPath then
@@ -563,7 +556,7 @@ rec {
       let
         relativePath =
           if moduleBasePath != null then
-            "${moduleBasePath}.nix.d/secrets/${subPath}"
+            nixdPath moduleBasePath "secrets/${subPath}"
           else
             "secrets/${subPath}";
         fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
@@ -641,7 +634,7 @@ rec {
       else
         let
           relativePath =
-            if moduleBasePath != null then "${moduleBasePath}.nix.d/${subPath}" else "files/${subPath}";
+            if moduleBasePath != null then nixdPath moduleBasePath subPath else "files/${subPath}";
           fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
         in
         if builtins.pathExists fullPath then
@@ -663,7 +656,7 @@ rec {
         let
           relativePath =
             if moduleBasePath != null then
-              "${moduleBasePath}.nix.d/secrets/${subPath}"
+              nixdPath moduleBasePath "secrets/${subPath}"
             else
               "secrets/${subPath}";
           fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;

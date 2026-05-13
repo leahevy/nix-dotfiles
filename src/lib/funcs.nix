@@ -628,6 +628,9 @@ rec {
           inputs = args.inputs;
           variables = args.variables;
           configInputs = args.configInputs or { };
+          nixOSHosts = args.nixOSHosts or { };
+          homeIntegratedUsers = args.homeIntegratedUsers or { };
+          homeStandaloneUsers = args.homeStandaloneUsers or { };
           moduleBasePath = moduleDir;
           moduleInput = helpers.resolveInputFromInput inputName;
           moduleInputName = inputName;
@@ -1536,6 +1539,9 @@ rec {
         users = args.users or { };
         variables = args.variables;
         configInputs = args.configInputs or { };
+        nixOSHosts = args.nixOSHosts or { };
+        homeIntegratedUsers = args.homeIntegratedUsers or { };
+        homeStandaloneUsers = args.homeStandaloneUsers or { };
         moduleBasePath = moduleDir;
         moduleInput = moduleSpec.input;
         moduleInputName = moduleSpec.inputName;
@@ -1624,7 +1630,10 @@ rec {
         inputs = args.inputs;
         variables = args.variables;
         configInputs = args.configInputs or { };
-        moduleBasePath = "profiles/${profileType}/${profileName}";
+        nixOSHosts = args.nixOSHosts or { };
+        homeIntegratedUsers = args.homeIntegratedUsers or { };
+        homeStandaloneUsers = args.homeStandaloneUsers or { };
+        moduleBasePath = "profiles/${profileType}/${profileName}/";
         moduleInput = args.configInputs.config or args.inputs.config;
         moduleInputName = "config";
         host = args.host or { };

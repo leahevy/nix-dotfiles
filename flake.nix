@@ -270,6 +270,9 @@
         standalone-user-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (
           builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/home-standalone"))
         );
+        integrated-user-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (
+          builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/home-integrated"))
+        );
         host-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (
           builtins.attrNames (builtins.readDir (nxinputs.config + "/profiles/nixos"))
         );
@@ -289,6 +292,9 @@
             helpers
             defs
             funcs
+            host-files
+            standalone-user-files
+            integrated-user-files
             nixosArchitectures
             darwinArchitectures
             allArchitectures
