@@ -93,15 +93,28 @@ in
     nixpkgs.hostPlatform = host.architecture;
 
     nix = {
-      settings = {
-        experimental-features = variables.experimental-features;
-        trusted-users = lib.mkForce [ ];
-        allowed-users = lib.mkForce [ host.mainUser.username ];
-        http-connections = variables.httpConnections;
-        keep-outputs = true;
-        keep-derivations = true;
-        allow-import-from-derivation = false;
-      };
+      settings =
+        let
+          deploymentUsers =
+            if
+              (host.deploymentMode == "managed" || host.deploymentMode == "server")
+              && host.remote.address != null
+              && host.remote.deploySSHPublicKey != null
+            then
+              [ "nx-deployment" ]
+            else
+              [ ];
+          users = [ host.mainUser.username ] ++ deploymentUsers;
+        in
+        {
+          experimental-features = variables.experimental-features;
+          trusted-users = lib.mkForce [ ];
+          allowed-users = lib.mkForce users;
+          http-connections = variables.httpConnections;
+          keep-outputs = true;
+          keep-derivations = true;
+          allow-import-from-derivation = false;
+        };
     };
   };
 }
