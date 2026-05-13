@@ -69,7 +69,6 @@
 
                 "@root-empty" = {
                   mountpoint = null;
-                  mountOptions = [ ];
                 };
 
                 "@nix" = {
