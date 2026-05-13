@@ -16,6 +16,7 @@
     - [ ] 4b. supported nixvim plugins, e.g. `programs.nixvim.plugins.*`
 - [ ] 5. Search for `fetchFromGitHub` in the repository to check if any derivations did arrive in `nixpkgs`
 - [ ] 6. Consider removing packages specified as unstable in both `variables.nix` files
+    - [ ] 6a. Verify `pythonName` in `nxcore/variables.nix` reflects the default Python version for this NixOS release and update if needed
 - [ ] 7. Fix evaluation warnings until configuration builds without warnings (use `NIX_ABORT_ON_WARN=true` with build command to find warning sources)
 - [ ] 8. Build with `nx build --diff` to see the changes
 - [ ] 9. Commit everything with `nx commit`

@@ -14,6 +14,10 @@ args@{
   input = "build";
 
   module = {
+    ifDisabled.common.python.python.home = config: {
+      home.packages = [ pkgs.${self.variables.pythonName} ];
+    };
+
     standalone = config: {
       home.file = {
         ".local/bin/nix".source = config.nix.package.out + "/bin/nix";

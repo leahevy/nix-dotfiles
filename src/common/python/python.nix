@@ -37,13 +37,18 @@ args@{
 
   module = {
     home =
-      config:
+      {
+        config,
+        basePackages,
+        additionalPackages,
+        ...
+      }:
       let
-        allPackages = (self.options config).additionalPackages ++ (self.options config).basePackages;
+        allPackages = additionalPackages ++ basePackages;
       in
       {
-        home.packages = with pkgs; [
-          (python313.withPackages (p: map (pkg: p.${pkg}) allPackages))
+        home.packages = [
+          (pkgs.${self.variables.pythonName}.withPackages (p: map (pkg: p.${pkg}) allPackages))
         ];
       };
   };

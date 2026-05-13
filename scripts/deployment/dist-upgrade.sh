@@ -31,6 +31,12 @@ check_git_worktrees_clean
 echo -e "Updating version references in ${WHITE}nxcore/flake.nix${RESET}..."
 sed -i "s/[0-9][0-9]\.[0-9][0-9]/$NIXOS_VERSION/g" "$NXCORE_DIR/flake.nix"
 
+CURRENT_PYTHON=$(grep 'pythonName' "$NXCORE_DIR/variables.nix" | grep -oE 'python[0-9]+' | head -n1 || true)
+echo
+echo -e "${YELLOW}Action required: verify pythonName in nxcore/variables.nix for NixOS $NIXOS_VERSION.${RESET}"
+[[ -n "$CURRENT_PYTHON" ]] && echo -e "${YELLOW}Current value is ${WHITE}$CURRENT_PYTHON${YELLOW}. Update it if the default Python version changed for this NixOS release.${RESET}"
+echo
+
 if [[ -d "$CONFIG_DIR/.git" ]]; then
 	echo -e "Updating version references in ${WHITE}nxconfig/flake.nix${RESET}..."
 	(cd "$CONFIG_DIR" && sed -i "s/[0-9][0-9]\.[0-9][0-9]/$NIXOS_VERSION/g" flake.nix)
