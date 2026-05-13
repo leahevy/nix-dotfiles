@@ -506,7 +506,7 @@ rec {
         in
         {
           assertion = invalidRefsWithoutExcludes == [ ];
-          message = "SystemD ${context} units referenced but not found: ${builtins.concatStringsSep ", " invalidRefsWithoutExcludes}";
+          message = "Systemd ${context} units referenced but not found: ${builtins.concatStringsSep ", " invalidRefsWithoutExcludes}";
         };
 
       systemdRefs = extractSystemdReferences config;
