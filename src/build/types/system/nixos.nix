@@ -37,6 +37,11 @@ with lib;
     kernel = mkOption {
       type = types.submodule {
         options = {
+          systemdInitrd = mkOption {
+            type = types.bool;
+            default = true;
+            description = "Whether to use SystemD for the initial RAM disk";
+          };
           variant = mkOption {
             type = types.enum [
               "lts"

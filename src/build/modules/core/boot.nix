@@ -30,6 +30,7 @@ in
           in
           map (dev: "resume=${dev}") resumeDevices;
       };
+
     system =
       config:
       let
@@ -77,6 +78,8 @@ in
                 )
                 ++ lib.optionals kernel.addFilesystemModules (pickInitrd kernel.defaults.filesystemModules)
                 ++ lib.optionals usesLvm [ "dm-snapshot" ];
+
+              systemd.enable = kernel.systemdInitrd;
             };
 
           kernelPackages =
