@@ -74,9 +74,13 @@ in
             ++ (if user.isMainUser then mainUserGroups else [ ]);
           openssh = {
             authorizedKeys = {
-              keys =
+              keys = lib.unique (
                 (ifSet (user.settings.sshd or { }).authorizedKeys [ ])
-                ++ (ifSet (host.settings.sshd or { }).authorizedKeys [ ]);
+                ++ (ifSet (host.settings.sshd or { }).authorizedKeys [ ])
+                ++ lib.optional (
+                  user.defaultSSHKey != null && builtins.hasAttr user.defaultSSHKey config.nx.common.services.ssh.keys
+                ) (helpers.sshPublicKeyToString config.nx.common.services.ssh.keys.${user.defaultSSHKey}.public)
+              );
             };
           };
           shell =

@@ -34,6 +34,12 @@ with lib;
       description = "Additional GPG keys for the user";
     };
 
+    defaultSSHKey = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      description = "Name of a key in nx.common.services.ssh.keys to use as the default SSH identity";
+    };
+
     home = mkOption {
       type = types.nullOr types.str;
       default = null;

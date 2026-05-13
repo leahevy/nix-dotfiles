@@ -10,50 +10,12 @@ args@{
   ...
 }:
 { config, osConfig, ... }:
-let
-  moduleInputs = helpers.allModuleInputsToScan;
-
-  countEnabledModules = lib.pipe moduleInputs [
-    (map (
-      inputName:
-      lib.mapAttrsToList (
-        groupName: groupModules:
-        if !builtins.isAttrs groupModules then
-          [ ]
-        else
-          lib.mapAttrsToList (
-            moduleName: moduleConfig:
-            if (config.nx.${inputName}.${groupName}.${moduleName}.enable or false) then 1 else 0
-          ) groupModules
-      ) (config.nx.${inputName} or { })
-    ))
-    lib.flatten
-    (builtins.foldl' builtins.add 0)
-  ];
-in
 {
   assertions = [
-    {
-      assertion = countEnabledModules >= config.nx.global.minEnabledModules;
-      message = "Only ${toString countEnabledModules} modules enabled, but at least ${toString config.nx.global.minEnabledModules} required for configuration integrity";
-    }
     {
       assertion = (user.isMainUser or false) -> (user.home-manager or false);
       message = "user.home-manager must be true for the main user!";
     }
-    (funcs.validateUnfreePackages {
-      packages = config.home.packages or [ ];
-      declaredUnfree = (user.allowedUnfreePackages or [ ]) ++ (variables.allowedUnfreePackages or [ ]);
-      context = "home";
-      profileName = user.profileName or "unknown";
-      processedModules = processedModules;
-    })
-  ]
-  ++ helpers.assertNotNull "user" user [
-    "username"
-    "fullname"
-    "email"
-    "home"
   ]
   ++ (
     let

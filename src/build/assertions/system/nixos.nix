@@ -141,16 +141,16 @@ in
   )
   ++ [
     {
+      assertion =
+        let
+          remoteEnabled = host.mainUser.settings.hasRemoteCommand or false;
+        in
+        (!remoteEnabled) || (variables.isoManagementSSHKey or null) != null;
+      message = "Remote command is enabled but variables.isoManagementSSHKey is not set!";
+    }
+    {
       assertion = (config.disko.devices or { }) == { } -> config.nx.profile.isVirtual;
       message = "Disko devices not found on a physical machine! (File disk.nix in nixos profile folder)";
-    }
-    {
-      assertion = host.remote.buildUser != "";
-      message = "host.remote.buildUser must not be empty!";
-    }
-    {
-      assertion = (builtins.match ".*[@ ].*" host.remote.buildUser) == null;
-      message = "host.remote.buildUser must not contain '@' or spaces!";
     }
     {
       assertion =
@@ -160,48 +160,68 @@ in
     }
     {
       assertion =
-        host.remote.buildIdentityFile != null
-        -> (builtins.match ".*[;&|`<>$(){}!\"'\\\\ ].*" host.remote.buildIdentityFile) == null;
-      message = "host.remote.buildIdentityFile must not contain spaces or unsafe characters!";
+        host.remote.deploySSHPublicKey == null
+        || helpers.validateSSHPublicKey host.remote.deploySSHPublicKey;
+      message = "host.remote.deploySSHPublicKey must be a valid SSH public key!";
+    }
+    {
+      assertion = host.remote.initrdSSHHostPrivateKey == null || host.remote.address != null;
+      message = "host.remote.initrdSSHHostPrivateKey is set but host.remote.address is not configured!";
     }
     {
       assertion =
-        let
-          remote = host.remote;
-        in
-        (
-          remote.buildIdentityFile != null
-          || remote.buildPublicSSHKey != null
-          || remote.address != null
-          || (remote.buildUser != null && remote.buildUser != "root")
-        )
-        -> (
-          remote.buildIdentityFile != null
-          && remote.buildPublicSSHKey != null
-          && remote.address != null
-          && remote.buildUser != null
-        );
-      message = "All host.remote settings must be provided if any of them is provided!";
+        host.remote.initrdSSHHostPrivateKey == null
+        || helpers.validateSSHPrivateKey host.remote.initrdSSHHostPrivateKey;
+      message = "host.remote.initrdSSHHostPrivateKey does not look like a valid SSH private key!";
     }
     {
       assertion =
-        (host.remote.address != null && !host.remote.allowLuksRootEncryption)
-        -> (config.boot.initrd.luks.devices or { }) == { };
-      message = "Host is not configured to use LUKS root encryption (via remote settings), but it has been enabled in the initrd!";
+        host.remote.initrdSSHHostPrivateKey == null || host.remote.initrdSSHHostPublicKey != null;
+      message = "host.remote.initrdSSHHostPublicKey must be set when initrdSSHHostPrivateKey is configured!";
     }
     {
       assertion =
-        let
-          buildUser = host.remote.buildUser;
-          users = config.users.users;
-        in
-        (buildUser != null && buildUser != "root")
-        -> (
-          (builtins.hasAttr buildUser users)
-          && (users.${buildUser}.isNormalUser || users.${buildUser}.isSystemUser)
-          && (users.${buildUser}.group != null && users.${buildUser}.group != "")
-        );
-      message = "Host has configured ${host.remote.buildUser} as buildUser, but this user does not exist in the configuration!";
+        host.remote.initrdSSHHostPublicKey == null || host.remote.initrdSSHHostPrivateKey != null;
+      message = "host.remote.initrdSSHHostPrivateKey must be set when initrdSSHHostPublicKey is configured!";
     }
-  ];
+    {
+      assertion =
+        host.remote.initrdSSHHostPublicKey == null
+        || helpers.validateSSHPublicKey host.remote.initrdSSHHostPublicKey;
+      message = "host.remote.initrdSSHHostPublicKey is not a valid SSH public key!";
+    }
+    {
+      assertion =
+        host.remote.initrdSSHHostPrivateKey == null || (config.boot.initrd.luks.devices or { }) != { };
+      message = "host.remote.initrdSSHHostPrivateKey is set but no LUKS devices are configured!";
+    }
+    {
+      assertion = host.remote.initrdSSHExposedPort != host.remote.port;
+      message = "host.remote.initrdSSHExposedPort must not equal host.remote.port!";
+    }
+    {
+      assertion =
+        host.remote.initrdSSHHostPrivateKey == null
+        || !(builtins.elem host.remote.initrdSSHExposedPort (config.services.openssh.ports or [ ]));
+      message = "host.remote.initrdSSHExposedPort must not equal any openssh port!";
+    }
+  ]
+  ++ (
+    let
+      needsInitrdSSH =
+        (config.boot.initrd.luks.devices or { }) != { }
+        && host.remote.address != null
+        && (host.deploymentMode == "managed" || host.deploymentMode == "server");
+    in
+    [
+      {
+        assertion = needsInitrdSSH -> host.remote.initrdSSHHostPrivateKey != null;
+        message = "host.remote.initrdSSHHostPrivateKey must be set when LUKS devices are present on a remotely managed host!";
+      }
+      {
+        assertion = needsInitrdSSH -> (config.boot.initrd.systemd.enable or false);
+        message = "boot.initrd.systemd.enable must be true when LUKS is present on a remotely managed host (required for initrd SSH unlock)!";
+      }
+    ]
+  );
 }

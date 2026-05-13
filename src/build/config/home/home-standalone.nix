@@ -101,6 +101,7 @@ in
     ++ profileContextModules
     ++ [
       (import ../../assertions/home/home-standalone.nix (args // { processedModules = allModules; }))
+      (import ../../assertions/home/shared.nix (args // { processedModules = allModules; }))
     ];
 
   specialisation = specialisationConfigs;
