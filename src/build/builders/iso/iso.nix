@@ -25,7 +25,7 @@ let
       value = inputs.nixpkgs.lib.nixosSystem {
         inherit system pkgs;
         specialArgs = {
-          inherit inputs variables;
+          inherit inputs variables helpers;
           nx-repositories = (
             pkgs.stdenv.mkDerivation {
               name = "nx-repositories";

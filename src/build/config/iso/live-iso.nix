@@ -4,6 +4,7 @@
   lib,
   modulesPath,
   variables,
+  helpers,
   nx-repositories,
   ...
 }:
@@ -32,11 +33,15 @@
   };
 
   users.users.root = lib.mkIf (variables.isoManagementSSHKey != null) {
-    openssh.authorizedKeys.keys = [ variables.isoManagementSSHKey ];
+    openssh.authorizedKeys.keys = [
+      (helpers.sshPublicKeyToString variables.isoManagementSSHKey.public)
+    ];
   };
 
   users.users.nixos = lib.mkIf (variables.isoManagementSSHKey != null) {
-    openssh.authorizedKeys.keys = [ variables.isoManagementSSHKey ];
+    openssh.authorizedKeys.keys = [
+      (helpers.sshPublicKeyToString variables.isoManagementSSHKey.public)
+    ];
   };
 
   security.sudo.wheelNeedsPassword = false;
