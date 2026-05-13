@@ -15,5 +15,9 @@ args@{
   group = "build";
   input = "groups";
 
-  submodules = { };
+  submodules = {
+    build = {
+      core = [ "darwin" ];
+    };
+  };
 }
