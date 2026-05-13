@@ -150,6 +150,7 @@ with lib;
                     type = moduleSet (bothInitrd [
                       "virtio_pci"
                       "virtio_blk"
+                      "virtio_net"
                     ]);
                     default = { };
                     description = "VM kernel modules for virtio compatibility, applied when addVMModules is true";
