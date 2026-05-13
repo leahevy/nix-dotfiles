@@ -150,10 +150,7 @@ args@{
         "FelixKratz/formulae"
       ];
       nx.homebrew.brews = [
-        {
-          name = "yabai";
-          args = [ "HEAD" ];
-        }
+        "yabai"
         "skhd"
         {
           name = "borders";
