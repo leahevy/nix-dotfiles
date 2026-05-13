@@ -41,7 +41,7 @@ append_trap() {
 		fi
 
 		existing="${line#trap -- \'}"
-		existing="${existing%\' "$sig"}"
+		existing="${existing%\' *}"
 
 		if [[ -n "${existing:-}" ]]; then
 			# shellcheck disable=SC2064
