@@ -25,7 +25,7 @@ args@{
     folderBasedMonitoringDeviceSyncInterval = 10;
     folderBasedMonitoringFolderInterval = 30;
     folderBasedMonitoringInitialDelay = 45;
-    debounceNotificationsSeconds = 30;
+    debounceNotificationsSeconds = 60;
     devices = [ ];
   };
 
