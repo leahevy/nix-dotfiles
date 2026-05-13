@@ -118,11 +118,86 @@ args@{
             "nx-install" = installKey;
           }
           // deployKeys;
+
+        nx.commandline.remote =
+          cmds:
+          let
+            inherit (cmds)
+              arg
+              option
+              optionWith
+              commonDeploymentOptions
+              ;
+
+            mkRemoteDeploySubcommand =
+              {
+                description,
+                extraOptions ? { },
+              }:
+              {
+                inherit description;
+                arguments = [ (arg "profile" "NixOS profile name" "string") ];
+                options =
+                  commonDeploymentOptions
+                  // {
+                    build-on-host = option "Build locally on the invoking machine instead of the target";
+                    allow-own-profile = option "Allow deploying to the current machine's own profile";
+                    allow-localhost = option "Allow localhost/127.0.0.1 as remote address";
+                    connect-only = option "Test SSH connectivity without deploying";
+                    dry-run = option "Show the final command without connecting or modifying anything";
+                    ask = option "Prompt for confirmation before each network or system action";
+                  }
+                  // extraOptions;
+              };
+          in
+          {
+            description = "Remote NixOS deployment";
+            group = "switch";
+            modes = [
+              "develop"
+              "local"
+            ];
+            subcommands = {
+              keygen = {
+                description = "Generate SOPS age keys for a profile";
+                arguments = [ (arg "profile" "NixOS profile name" "string") ];
+                options = {
+                  shared-key = option "Generate a single age key used for both system and user";
+                };
+              };
+              install = {
+                description = "Initial NixOS installation via nixos-anywhere (formats disk!)";
+                arguments = [ (arg "profile" "NixOS profile name" "string") ];
+                options = commonDeploymentOptions // {
+                  age-system-file = optionWith "Use system age key from file path (no sudo)" "system_path" "filepath";
+                  age-user-file = optionWith "Use user age key from file path (no sudo)" "user_path" "filepath";
+                  age-file = optionWith "Use same age key file for both system+user (no sudo)" "path" "filepath";
+                  no-user-age = option "Skip passing a user age key";
+                  dangerously-use-host-sops = option "Allow copying host SOPS age key into target via sudo";
+                  force = option "Force install even if target already has NixOS";
+                  build-on-remote = option "Build on the target rather than locally";
+                  allow-own-profile = option "Allow deploying to the current machine's own profile";
+                  allow-localhost = option "Allow localhost/127.0.0.1 as remote address";
+                  connect-only = option "Test SSH connectivity without deploying";
+                  dry-run = option "Show the final command without connecting or modifying anything";
+                  ask = option "Prompt for confirmation before each network or system action";
+                };
+              };
+              sync = mkRemoteDeploySubcommand { description = "Deploy configuration to remote NixOS host"; };
+              boot = mkRemoteDeploySubcommand { description = "Deploy to remote bootloader without switching"; };
+              test = mkRemoteDeploySubcommand {
+                description = "Activate configuration remotely without changing boot default";
+              };
+            };
+          };
       };
 
     home = config: {
       home.packages = [
         self.inputs.nixos-anywhere.packages.${pkgs.system}.default
+      ];
+      home.persistence."${self.persist}".directories = [
+        ".local/share/nx/deploy-keys"
       ];
     };
   };
