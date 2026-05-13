@@ -205,7 +205,7 @@ with lib;
     };
 
     additionalUsers = mkOption {
-      type = types.listOf (types.either typesbnonEmptyStr types.attrs);
+      type = types.listOf (types.either types.nonEmptyStr types.attrs);
       default = [ ];
       description = "Additional users (profile names or processed configs)";
     };
