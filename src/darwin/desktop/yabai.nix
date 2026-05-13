@@ -537,6 +537,8 @@ args@{
 
               "alt - a" = "yabai -m window --toggle split";
 
+              "shift - escape" = "osascript -e 'tell application \"System Events\" to keystroke \"~\"'";
+
               "alt - return" =
                 let
                   terminal = config.nx.preferences.desktop.programs.terminal;
