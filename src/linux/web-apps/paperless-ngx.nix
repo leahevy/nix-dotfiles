@@ -17,7 +17,9 @@ args@{
   settings = {
     name = "Paperless-ngx";
     webapp = "paperless-ngx";
-    iconPath = "${pkgs.paperless-ngx}/lib/paperless-ngx/static/paperless/img/logo-dark.png";
+    iconPath = "${helpers.packageFile args pkgs.paperless-ngx
+      "lib/paperless-ngx/static/paperless/img/logo-dark.png"
+    }";
     categories = [
       "Office"
       "Viewer"

@@ -132,9 +132,15 @@ args@{
 
         security.pam.services.sddm-autologin = lib.mkForce {
           text = ''
-            auth optional ${pkgs.systemd}/lib/security/pam_systemd_loadkey.so keyname=cryptsetup
-            ${lib.optionalString isGnome "auth optional ${pkgs.gnome-keyring}/lib/security/pam_gnome_keyring.so"}
-            ${lib.optionalString isKDE "auth optional ${pkgs.kdePackages.kwallet-pam}/lib/security/pam_kwallet5.so"}
+            auth optional ${
+              helpers.packageFile args pkgs.systemd "lib/security/pam_systemd_loadkey.so"
+            } keyname=cryptsetup
+            ${lib.optionalString isGnome "auth optional ${
+              helpers.packageFile args pkgs.gnome-keyring "lib/security/pam_gnome_keyring.so"
+            }"}
+            ${lib.optionalString isKDE "auth optional ${
+              helpers.packageFile args pkgs.kdePackages.kwallet-pam "lib/security/pam_kwallet5.so"
+            }"}
 
             auth requisite pam_nologin.so
             auth required pam_succeed_if.so uid >= 1000 quiet
@@ -144,8 +150,12 @@ args@{
             password include login
             session include login
 
-            ${lib.optionalString isGnome "session optional ${pkgs.gnome-keyring}/lib/security/pam_gnome_keyring.so auto_start"}
-            ${lib.optionalString isKDE "session optional ${pkgs.kdePackages.kwallet-pam}/lib/security/pam_kwallet5.so auto_start"}
+            ${lib.optionalString isGnome "session optional ${
+              helpers.packageFile args pkgs.gnome-keyring "lib/security/pam_gnome_keyring.so"
+            } auto_start"}
+            ${lib.optionalString isKDE "session optional ${
+              helpers.packageFile args pkgs.kdePackages.kwallet-pam "lib/security/pam_kwallet5.so"
+            } auto_start"}
           '';
         };
 

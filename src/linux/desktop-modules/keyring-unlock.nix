@@ -122,7 +122,10 @@ args@{
                       pkgs.coreutils
                     ]
                   }:$PATH"
-                  export PYTHONPATH="${pkgs.python3Packages.dbus-python}/lib/python${pkgs.python3.pythonVersion}/site-packages:$PYTHONPATH"
+                  export PYTHONPATH="${
+                    helpers.packageFile args pkgs.python3Packages.dbus-python
+                      "lib/python${pkgs.python3.pythonVersion}/site-packages"
+                  }:$PYTHONPATH"
                   set -euo pipefail
 
                   timeout=30

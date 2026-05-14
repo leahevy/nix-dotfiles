@@ -50,7 +50,9 @@ args@{
             ''
               mkdir -p $out/share/icons
 
-              originalIcon="${pkgs.nixos-icons}/share/icons/hicolor/scalable/apps/nix-snowflake.svg"
+              originalIcon="${
+                helpers.packageFile args pkgs.nixos-icons "share/icons/hicolor/scalable/apps/nix-snowflake.svg"
+              }"
 
               if sed "s/#699ad7/${config.nx.preferences.theme.colors.main.foregrounds.primary.html}/g; \
                       s/#7eb1dd/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \

@@ -41,7 +41,9 @@ args@{
             -background transparent \
             -bordercolor transparent \
             -border 42% \
-            ${pkgs.nixos-icons}/share/icons/hicolor/256x256/apps/nix-snowflake.png \
+            ${
+              helpers.packageFile args pkgs.nixos-icons "share/icons/hicolor/256x256/apps/nix-snowflake.png"
+            } \
             $themeDir/logo.png
 
           cp ${themeScript} $themeDir/nxboot.script
@@ -80,8 +82,10 @@ args@{
 
           plymouth = {
             enable = true;
-            font = "${pkgs.hack-font}/share/fonts/truetype/Hack-Regular.ttf";
-            logo = "${pkgs.nixos-icons}/share/icons/hicolor/128x128/apps/nix-snowflake.png";
+            font = "${helpers.packageFile args pkgs.hack-font "share/fonts/truetype/Hack-Regular.ttf"}";
+            logo = "${helpers.packageFile args pkgs.nixos-icons
+              "share/icons/hicolor/128x128/apps/nix-snowflake.png"
+            }";
             theme = "nxboot";
             themePackages = [ theme ];
           };

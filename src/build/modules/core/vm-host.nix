@@ -98,7 +98,7 @@ args@{
               finalResolvedDataPath;
         in
         {
-          home.shellAliases.get-ovmf-code = "echo ${pkgs.OVMF.fd}/FV/OVMF.fd";
+          home.shellAliases.get-ovmf-code = "echo ${helpers.packageFile args pkgs.OVMF.fd "FV/OVMF.fd"}";
 
           programs.fish.functions = {
             vm-image-create = ''
@@ -177,7 +177,7 @@ args@{
               set -q _flag_mem; or set _flag_mem 4096
               set -q _flag_cpus; or set _flag_cpus 4
               set -q _flag_ssh_port; or set _flag_ssh_port 2222
-              set -q _flag_ovmf; or set _flag_ovmf "${pkgs.OVMF.fd}/FV/OVMF_CODE.fd"
+              set -q _flag_ovmf; or set _flag_ovmf "${helpers.packageFile args pkgs.OVMF.fd "FV/OVMF_CODE.fd"}"
               set image_path "${vmDataDir}/qemu-images/$_flag_name.qcow2"
               set vars_path "${vmDataDir}/qemu-images/$_flag_name.OVMF_VARS.fd"
 
@@ -188,7 +188,7 @@ args@{
               end
 
               if not test -f "$vars_path"
-                cp "${pkgs.OVMF.fd}/FV/OVMF_VARS.fd" "$vars_path"
+                cp "${helpers.packageFile args pkgs.OVMF.fd "FV/OVMF_VARS.fd"}" "$vars_path"
                 chmod 600 "$vars_path"
               end
 

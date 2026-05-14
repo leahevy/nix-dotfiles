@@ -63,9 +63,13 @@ args@{
               let
                 baseWrapperArgs = ''
                   wrapProgram $out/bin/qutebrowser \
-                    --prefix LD_LIBRARY_PATH : "${pkgs.curl.out}/lib" \
-                    --prefix XDG_DATA_DIRS : "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:${pkgs.gsettings-desktop-schemas}/share" \
-                    --prefix QT_PLUGIN_PATH : "${pkgs.kdePackages.qtpositioning}/lib/qt-6/plugins"'';
+                    --prefix LD_LIBRARY_PATH : "${helpers.packageFile args pkgs.curl.out "lib"}" \
+                    --prefix XDG_DATA_DIRS : "${
+                      helpers.packageFile args pkgs.gtk3 "share/gsettings-schemas/${pkgs.gtk3.name}"
+                    }:${helpers.packageFile args pkgs.gsettings-desktop-schemas "share"}" \
+                    --prefix QT_PLUGIN_PATH : "${
+                      helpers.packageFile args pkgs.kdePackages.qtpositioning "lib/qt-6/plugins"
+                    }"'';
 
                 nvidiaWrapperArgs =
                   lib.optionalString (nvidiaQuirks && (self.linux.isModuleEnabled "graphics.nvidia-setup"))

@@ -11,6 +11,10 @@ rec {
   importNixOSLibrary =
     { config, pkgs }: import (pkgs.path + "/nixos/lib/utils.nix") { inherit lib config pkgs; };
 
+  # Strips the string value to empty while preserving its Nix string context. Returns "" for null.
+  # Usage: convertToEmptyString $STRING
+  convertToEmptyString = s: if s == null then "" else builtins.substring 0 0 s;
+
   # Null-safe value selection
   # Usage: ifSet $VALUE $DEFAULT
   ifSet = value: default: if value != null then value else default;
@@ -863,6 +867,39 @@ rec {
       "critical"
     else
       throw "loggerLevelToNotifyLevel: unknown level '${level}'";
+
+  # Build-time checked reference to a file inside a package.
+  # Usage: packageFile $PKGS_OR_ARGS $PKG $PATH
+  packageFile =
+    pkgsOrArgs: pkg: path:
+    if !lib.isDerivation pkg then
+      throw "helpers.packageFile: pkg must be a derivation!"
+    else if !builtins.isString path || path == "" then
+      throw "helpers.packageFile: path must be a non-empty string!"
+    else
+      let
+        resolvedPkgs = if pkgsOrArgs ? runCommand then pkgsOrArgs else pkgsOrArgs.pkgs;
+        cleanPath = lib.removePrefix "/" path;
+        checker = resolvedPkgs.runCommand "package-file-${pkg.name}" { } ''
+          src="${pkg}/${cleanPath}"
+          if [ ! -e "$src" ]; then
+            echo "helpers.packageFile: path '${cleanPath}' does not exist in package '${pkg.name}'!" >&2
+            parent=$(dirname "$src")
+            while [ ! -d "$parent" ] && [ "$parent" != "/" ]; do
+              parent=$(dirname "$parent")
+            done
+            if [ -d "$parent" ]; then
+              echo "  nearest existing parent '$parent' contains:" >&2
+              ls "$parent" 2>/dev/null | while read -r f; do
+                echo "  - $f" >&2
+              done
+            fi
+            exit 1
+          fi
+          touch "$out"
+        '';
+      in
+      "${pkg}/${cleanPath}" + convertToEmptyString "${checker}";
 
   isModulesOnlyInput = inputName: builtins.elem inputName defs.modulesOnlyInputs;
 

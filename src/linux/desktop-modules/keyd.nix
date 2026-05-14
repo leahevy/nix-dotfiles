@@ -29,7 +29,7 @@ args@{
         keyd
       ];
 
-      home.file.".XCompose".source = "${pkgs.keyd}/share/keyd/keyd.compose";
+      home.file.".XCompose".source = "${helpers.packageFile args pkgs.keyd "share/keyd/keyd.compose"}";
 
       home.sessionVariables = {
         GTK_IM_MODULE = "xim";
