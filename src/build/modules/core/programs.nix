@@ -15,7 +15,7 @@ args@{
 
   module = {
     ifDisabled.common.python.python.home = config: {
-      home.packages = [ pkgs.${self.variables.pythonName} ];
+      home.packages = [ pkgs.python3 ];
     };
 
     standalone = config: {

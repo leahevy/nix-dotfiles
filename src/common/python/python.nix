@@ -48,7 +48,7 @@ args@{
       in
       {
         home.packages = [
-          (pkgs.${self.variables.pythonName}.withPackages (p: map (pkg: p.${pkg}) allPackages))
+          (pkgs.python3.withPackages (p: map (pkg: p.${pkg}) allPackages))
         ];
       };
   };

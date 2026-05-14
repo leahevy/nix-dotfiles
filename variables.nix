@@ -44,7 +44,5 @@
     };
   };
 
-  pythonName = "python313";
-
   defaultTheme = "season";
 }
