@@ -14,33 +14,14 @@ args@{
   group = "browser";
   input = "common";
 
+  submodules = {
+    common.browser = [ "browser" ];
+  };
+
   settings = {
     backend = "webengine";
-    privacySearch = true;
-    startpageAsPrivacySearch = true;
-    addAmazon = false;
-    amazonDomain = "amazon.com";
-    googleDomain = "google.com";
-    home = null;
-    useThemedUserCSS = true;
     useDmenuForOpenOnLinux = true;
-    bookmarks = { };
     customSettings = { };
-    baseBookmarks = {
-      nixpkgs = "https://github.com/NixOS/nixpkgs";
-      qutebrowser = "https://www.qutebrowser.org/doc/help/settings.html";
-      nix-datatypes = "https://nlewo.github.io/nixos-manual-sphinx/development/option-types.xml.html";
-      nixos-wiki = "https://nixos.wiki/wiki/Main_Page";
-      mynixos = "https://mynixos.com/";
-      nx = "https://github.com/leahevy/nix-dotfiles";
-      nxac = "https://github.com/leahevy/nix-dotfiles/actions/workflows/update-flake-lock.yml";
-      nxpr = "https://github.com/leahevy/nix-dotfiles/pulls";
-    };
-    baseSearchEngines = {
-      pkgs = "https://search.nixos.org/packages?query={}";
-      opts = "https://search.nixos.org/options?query={}";
-      nix = "https://mynixos.com/search?q={}";
-    };
     darkMode = true;
     autoplay = false;
     blockAds = false;
@@ -481,7 +462,7 @@ args@{
           in
           flattenBookmarksRecursive "";
 
-        flattenedBookmarks = flattenBookmarks self.settings.bookmarks;
+        flattenedBookmarks = flattenBookmarks config.nx.common.browser.browser.final.bookmarks;
 
         extractFolderPaths =
           let
@@ -512,25 +493,9 @@ args@{
 
         folderPaths = extractFolderPaths;
 
-        defaultSearch =
-          if self.settings.privacySearch then
-            if self.settings.startpageAsPrivacySearch then
-              "https://www.startpage.com/sp/search?q="
-            else
-              "https://duckduckgo.com/?q="
-          else
-            "https://${self.settings.googleDomain}/search?q=";
+        defaultSearch = config.nx.common.browser.browser.defaultSearchUrl;
 
-        homeUrl =
-          if self.settings.home != null then
-            self.settings.home
-          else if self.settings.privacySearch then
-            if self.settings.startpageAsPrivacySearch then
-              "https://www.startpage.com"
-            else
-              "https://duckduckgo.com"
-          else
-            "https://${self.settings.googleDomain}";
+        homeUrl = config.nx.common.browser.browser.homeUrl;
 
         userAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/{webkit_version} (KHTML, like Gecko) {upstream_browser_key}/{upstream_browser_version_short} Safari/{webkit_version}";
         spoofedUserAgent = "Mozilla/5.0 ({os_info}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
@@ -584,86 +549,6 @@ args@{
 
         mergedKeyBindings = lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate (lib.recursiveUpdate self.settings.keyBindings (lib.optionalAttrs self.settings.enableExtendedKeyBindings self.settings.extendedKeyBindings)) self.settings.additionalKeyBindings) keepassxcKeyBindings) dmenuKeyBindings) bitwardenKeyBindings;
 
-        themedCSS = pkgs.writeText "themed-css.css" (
-          builtins.replaceStrings
-            [
-              "#000"
-              "#262626"
-              "#2a2a2a"
-              "#2e2e2e"
-              "#323232"
-              "#363636"
-              "#2c4125"
-
-              "#5e6263"
-              "#797fd4"
-              "#909396"
-              "#a6aaab"
-              "#b8bbbd"
-              "#c7c9ca"
-              "#d2d8d9"
-
-              "#fff"
-              "#fba"
-              "#aba"
-
-              "#2f7bde"
-              "#639ce6"
-
-              "#15968d"
-              "#436237"
-              "#598249"
-
-              "#b68800"
-
-              "#e05f27"
-
-              "#5e1c19"
-              "#bd3832"
-              "#ce4139"
-              "#a8366b"
-            ]
-            [
-              config.nx.preferences.theme.colors.main.backgrounds.primary.html
-              config.nx.preferences.theme.colors.main.backgrounds.primary.html
-              config.nx.preferences.theme.colors.main.backgrounds.primary.html
-              config.nx.preferences.theme.colors.main.backgrounds.primary.html
-              config.nx.preferences.theme.colors.main.backgrounds.secondary.html
-              config.nx.preferences.theme.colors.main.backgrounds.tertiary.html
-              config.nx.preferences.theme.colors.main.backgrounds.themed.html
-
-              config.nx.preferences.theme.colors.main.foregrounds.subtle.html
-              config.nx.preferences.theme.colors.main.foregrounds.secondary.html
-              config.nx.preferences.theme.colors.main.foregrounds.subtle.html
-              config.nx.preferences.theme.colors.main.foregrounds.secondary.html
-              config.nx.preferences.theme.colors.main.foregrounds.strong.html
-              config.nx.preferences.theme.colors.main.foregrounds.strong.html
-              config.nx.preferences.theme.colors.main.foregrounds.strong.html
-
-              config.nx.preferences.theme.colors.main.foregrounds.primary.html
-              config.nx.preferences.theme.colors.main.foregrounds.emphasized.html
-              config.nx.preferences.theme.colors.main.foregrounds.strong.html
-
-              config.nx.preferences.theme.colors.semantic.modifiedDarker.html
-              config.nx.preferences.theme.colors.semantic.removedDarker.html
-
-              config.nx.preferences.theme.colors.semantic.success.html
-              config.nx.preferences.theme.colors.semantic.successDarker.html
-              config.nx.preferences.theme.colors.semantic.success.html
-
-              config.nx.preferences.theme.colors.semantic.warning.html
-
-              config.nx.preferences.theme.colors.semantic.error.html
-
-              config.nx.preferences.theme.colors.semantic.errorDarker.html
-              config.nx.preferences.theme.colors.semantic.info.html
-              config.nx.preferences.theme.colors.semantic.info.html
-              config.nx.preferences.theme.colors.semantic.selected.html
-            ]
-            (
-              builtins.readFile "${self.inputs.solarized-everything-css}/css/darculized/darculized-all-sites.css"
-            )
-        );
       in
       {
         home.packages = lib.optionals (dmenuKeyBindings != { }) [ pkgs.sqlite ];
@@ -811,9 +696,9 @@ args@{
                 };
                 webgl = true;
                 dns_prefetch = false;
-                user_stylesheets = lib.mkIf self.settings.useThemedUserCSS [
-                  "${themedCSS}"
-                ];
+                user_stylesheets = lib.optional (
+                  config.nx.common.browser.browser.final.userContentCSS != null
+                ) "${config.nx.common.browser.browser.final.userContentCSS}";
               };
               downloads = {
                 position = "bottom";
@@ -911,24 +796,11 @@ args@{
               convertSearchEngines =
                 searchEngines:
                 lib.mapAttrs' (name: url: lib.nameValuePair "/${name}" url) searchEngines // searchEngines;
+              enginesByShortName = lib.mapAttrs' (
+                name: e: lib.nameValuePair e.shortName e.queryUrl
+              ) config.nx.common.browser.browser.final.searchEngines;
             in
-            convertSearchEngines (
-              {
-                search = defaultSearch + "{}";
-                google = "https://${self.settings.googleDomain}/search?q={}";
-              }
-              // lib.optionalAttrs self.settings.addAmazon {
-                amazon = "https://${self.settings.amazonDomain}/s?k={}";
-              }
-              // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
-                start = "https://www.startpage.com/sp/search?q={}";
-              }
-              // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
-                duck = "https://duckduckgo.com/?q={}";
-              }
-              // self.settings.baseSearchEngines
-              // self.settings.additionalSearchEngines
-            )
+            convertSearchEngines ({ search = defaultSearch + "{}"; } // enginesByShortName)
             // {
               DEFAULT = defaultSearch + "{}";
             };
@@ -937,23 +809,21 @@ args@{
             let
               convertQuickmarks =
                 quickmarks: lib.mapAttrs' (name: url: lib.nameValuePair "@${name}" url) quickmarks;
+              siteShortcuts = lib.filterAttrs (n: v: v != null) (
+                lib.mapAttrs' (
+                  name: e: lib.nameValuePair e.shortName e.homeUrl
+                ) config.nx.common.browser.browser.final.searchEngines
+              );
             in
             convertQuickmarks (
               {
                 home = homeUrl;
-                google = "https://${self.settings.googleDomain}";
               }
-              // lib.optionalAttrs self.settings.addAmazon {
-                amazon = "https://${self.settings.amazonDomain}";
+              // siteShortcuts
+              // {
+                qutebrowser = "https://www.qutebrowser.org/doc/help/settings.html";
               }
-              // lib.optionalAttrs self.settings.startpageAsPrivacySearch {
-                start = "https://www.startpage.com";
-              }
-              // lib.optionalAttrs (!self.settings.startpageAsPrivacySearch) {
-                duck = "https://duckduckgo.com";
-              }
-              // self.settings.baseBookmarks
-              // (flattenBookmarks self.settings.bookmarks)
+              // flattenedBookmarks
             )
             // {
               home = homeUrl;
