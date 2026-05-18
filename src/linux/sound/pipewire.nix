@@ -131,6 +131,30 @@ args@{
           string = "Failed to get percentage from UPower";
           user = true;
         }
+        {
+          tag = "pipewire";
+          string = "pw\\.context: ";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "pipewire";
+          string = "pw\\.link: .*no more input formats";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "wireplumber";
+          string = "wp-proc-utils: failed to get .* for PID [0-9]+:.*No such file or directory";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "wireplumber";
+          string = "GLib: GError set over the top of a previous GError";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 
