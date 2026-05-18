@@ -112,13 +112,28 @@ let
     else
       "${homeDir}/${defaultName}";
 
-  mkSharedPlatformPrefs = config: downloadDir: {
-    "browser.toolbars.bookmarks.visibility" = "never";
-    "browser.bookmarks.file" = "${mkBookmarksHtml config}";
-    "browser.download.dir" = downloadDir;
-    "browser.download.folderList" = 2;
-    "browser.download.useDownloadDir" = true;
-  };
+  mkSharedPlatformPrefs =
+    config: downloadDir: hasExternalPasswordManager:
+    {
+      "browser.toolbars.bookmarks.visibility" = "never";
+      "browser.bookmarks.file" = "${mkBookmarksHtml config}";
+      "browser.download.dir" = downloadDir;
+      "browser.download.folderList" = 2;
+      "browser.download.useDownloadDir" = true;
+      "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+    }
+    // lib.optionalAttrs hasExternalPasswordManager {
+      "signon.rememberSignons" = false;
+      "signon.autofillForms" = false;
+      "signon.generation.enabled" = false;
+      "signon.generation.available" = false;
+      "signon.formlessCapture.enabled" = false;
+      "signon.formRemovalCapture.enabled" = false;
+      "signon.capture.inputChanges.enabled" = false;
+      "signon.privateBrowsingCapture.enabled" = false;
+      "signon.storeWhenAutocompleteOff" = false;
+      "browser.contextual-password-manager.enabled" = false;
+    };
 
   extensionType = lib.types.submodule {
     options = {
@@ -260,6 +275,8 @@ let
       thirdPartyExtensions = lib.filterAttrs (
         _: ext: (ext.managedSettings or null) != null
       ) allExtensions;
+      hasExternalPasswordManager =
+        config.nx.common.passwords.bitwarden.enable || config.nx.common.passwords.keepassxc.enable;
     in
     {
       AppAutoUpdate = false;
@@ -322,6 +339,10 @@ let
         "browser.translations.enable" = lockFalse;
         "browser.translations.automaticallyPopup" = lockFalse;
       }
+      // lib.optionalAttrs hasExternalPasswordManager {
+        PasswordManagerEnabled = false;
+        OfferToSaveLogins = false;
+      }
       // lib.optionalAttrs darkMode {
         "ui.systemUsesDarkTheme" = lockValue 1;
         "layout.css.prefers-color-scheme.content-override" = lockValue 0;
@@ -329,7 +350,9 @@ let
       // lib.optionalAttrs (!sidebar) {
         "sidebar.revamp" = lockFalse;
       }
-      // lib.mapAttrs (_: v: lockValue v) (mkSharedPlatformPrefs config downloadDir)
+      // lib.mapAttrs (_: v: lockValue v) (
+        mkSharedPlatformPrefs config downloadDir hasExternalPasswordManager
+      )
       // lockedPreferences;
     }
     // lib.optionalAttrs (!syncEnable) {
@@ -551,6 +574,8 @@ in
               toolbarExtensionsForceShownCSS
             ]
           );
+        hasExternalPasswordManager =
+          config.nx.common.passwords.bitwarden.enable || config.nx.common.passwords.keepassxc.enable;
       in
       {
         assertions =
@@ -583,7 +608,8 @@ in
           settings = {
             "browser.places.importBookmarksHTML" = true;
           }
-          // mkSharedPlatformPrefs config downloadDir;
+          // mkSharedPlatformPrefs config downloadDir hasExternalPasswordManager;
+
           userContent = lib.mkIf (
             config.nx.common.browser.browser.final.userContentCSS != null
           ) config.nx.common.browser.browser.final.userContentCSS.data;
