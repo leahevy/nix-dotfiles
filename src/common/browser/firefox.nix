@@ -627,6 +627,30 @@ in
       };
     };
 
+    linux.enabled =
+      config:
+      lib.mkIf (!(self.user.isStandalone or false)) {
+        nx.linux.desktop-modules.desktop-files.entries.firefox = {
+          exec = "${pkgs.systemd}/bin/systemd-run --user --collect --quiet /run/current-system/sw/bin/firefox --name firefox %U";
+          name = "Firefox";
+          icon = "firefox";
+          validateIcon = false;
+          categories = [
+            "Network"
+            "WebBrowser"
+          ];
+          mimeType = [
+            "text/html"
+            "text/xml"
+            "application/xhtml+xml"
+            "application/xml"
+            "x-scheme-handler/http"
+            "x-scheme-handler/https"
+            "x-scheme-handler/ftp"
+          ];
+        };
+      };
+
     linux.integrated = config: {
       programs.firefox.package = lib.mkForce null;
       home.file.".local/bin/firefox-wrapper" = {
