@@ -203,9 +203,6 @@ args@{
 
   submodules = {
     linux = {
-      browser = {
-        qutebrowser = true;
-      };
       storage = {
         auto-mount = true;
       };
