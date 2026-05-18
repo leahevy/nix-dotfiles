@@ -698,7 +698,7 @@ in
       };
     };
 
-    linux.standalone =
+    standalone =
       {
         config,
         syncEnable,
@@ -715,7 +715,6 @@ in
       in
       {
         programs.firefox = {
-          package = lib.mkDefault pkgs.firefox;
           policies = mkPolicies {
             inherit
               config
@@ -728,6 +727,24 @@ in
               downloadDir
               ;
           };
+        };
+      };
+
+    linux.standalone =
+      {
+        config,
+        syncEnable,
+        darkMode,
+        sidebar,
+        lockedPreferences,
+        extraPolicies,
+        extensions,
+        defaultDownloadsName,
+        ...
+      }:
+      {
+        programs.firefox = {
+          package = lib.mkDefault pkgs.firefox;
         };
         home.file.".local/bin/firefox-wrapper" = {
           text = ''
