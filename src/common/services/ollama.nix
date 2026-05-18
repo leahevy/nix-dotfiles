@@ -38,6 +38,32 @@ args@{
       ollamaPort = self.settings.port;
     in
     {
+      darwin.overlays = [
+        (final: prev: {
+          ollama = prev.ollama.overrideAttrs (old: {
+            postPatch =
+              let
+                lib = final.lib;
+
+                fixRmTestGoLine =
+                  line:
+                  let
+                    stripped = lib.trim line;
+                  in
+                  if
+                    lib.hasPrefix "rm " stripped
+                    && !(lib.hasPrefix "rm -f " stripped)
+                    && lib.hasSuffix "_test.go" stripped
+                  then
+                    builtins.replaceStrings [ "rm " ] [ "rm -f " ] line
+                  else
+                    line;
+              in
+              lib.concatStringsSep "\n" (map fixRmTestGoLine (lib.splitString "\n" (old.postPatch or "")));
+          });
+        })
+      ];
+
       home =
         config:
         let
