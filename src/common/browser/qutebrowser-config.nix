@@ -915,10 +915,6 @@ args@{
           ];
         };
 
-        home.sessionVariables = {
-          BROWSER = "qutebrowser";
-        };
-
         home.file.".local/share/qutebrowser/userscripts/launcher-open" =
           lib.mkIf (dmenuKeyBindings != { })
             {

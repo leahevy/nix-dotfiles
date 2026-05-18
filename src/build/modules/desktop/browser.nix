@@ -40,6 +40,17 @@ args@{
       throw "Unknown browser setting: ${browser}";
 
   module = {
+    home =
+      config:
+      let
+        browser = self.user.settings.browser or null;
+      in
+      {
+        home.sessionVariables = lib.mkIf (browser != null) {
+          BROWSER = browser;
+        };
+      };
+
     enabled =
       config:
       let
