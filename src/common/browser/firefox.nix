@@ -301,7 +301,7 @@ let
       Preferences = {
         "browser.aboutConfig.showWarning" = lockFalse;
         "browser.tabs.closeWindowWithLastTab" = lockFalse;
-        "browser.warnOnQuit" = lockTrue;
+        "browser.warnOnQuit" = lockFalse;
         "browser.tabs.warnOnClose" = lockFalse;
         "browser.tabs.warnOnCloseOtherTabs" = lockTrue;
         "media.autoplay.default" = lockValue 5;
