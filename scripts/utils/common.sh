@@ -339,6 +339,7 @@ parse_common_deployment_args() {
 	fi
 	ALLOW_DIRTY_GIT=false
 	SKIP_VERIFICATION=false
+	USE_HOME_MANAGER=false
 
 	local _branch_config _branch_core
 	_branch_config="$(git branch --show-current)"
@@ -377,6 +378,10 @@ parse_common_deployment_args() {
 			EXTRA_ARGS+=("--option" "allow-import-from-derivation" "true")
 			shift
 			;;
+		--use-home-manager)
+			USE_HOME_MANAGER=true
+			shift
+			;;
 		-*)
 			echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
 			exit 1
@@ -388,7 +393,7 @@ parse_common_deployment_args() {
 		esac
 	done
 
-	export EXTRA_ARGS ALLOW_DIRTY_GIT SKIP_VERIFICATION
+	export EXTRA_ARGS ALLOW_DIRTY_GIT SKIP_VERIFICATION USE_HOME_MANAGER
 }
 
 parse_build_deployment_args() {

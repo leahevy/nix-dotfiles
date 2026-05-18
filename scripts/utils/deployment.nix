@@ -102,7 +102,9 @@
       sync = {
         description = "Sync/deploy the system state";
         group = "switch";
-        options = commonDeploymentOptions;
+        options = commonDeploymentOptions // {
+          use-home-manager = option "Use raw home-manager for standalone sync";
+        };
       };
 
       gc = {

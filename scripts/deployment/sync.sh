@@ -14,6 +14,10 @@ verify_commits
 check_deployment_conflicts "sync"
 
 if [[ -e /etc/NIXOS ]]; then
+	if [[ "$USE_HOME_MANAGER" == "true" ]]; then
+		echo -e "${RED}Error: --use-home-manager is only supported for standalone Home Manager sync!${RESET}" >&2
+		exit 1
+	fi
 	if nh os switch --show-activation-logs -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
 		notify_success "Sync"
 	else
@@ -21,7 +25,14 @@ if [[ -e /etc/NIXOS ]]; then
 		exit 1
 	fi
 else
-	if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null nh home switch --show-activation-logs . -c "$PROFILE" -b "$HOME_MANAGER_BACKUP_EXT" -- "${EXTRA_ARGS[@]:-}"; then
+	if [[ "$USE_HOME_MANAGER" == "true" ]]; then
+		if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null home-manager switch --flake ".#$PROFILE" -b "$HOME_MANAGER_BACKUP_EXT" "${EXTRA_ARGS[@]:-}"; then
+			notify_success "Sync"
+		else
+			notify_error "Sync"
+			exit 1
+		fi
+	elif GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null nh home switch --show-activation-logs . -c "$PROFILE" -b "$HOME_MANAGER_BACKUP_EXT" -- "${EXTRA_ARGS[@]:-}"; then
 		notify_success "Sync"
 	else
 		notify_error "Sync"
