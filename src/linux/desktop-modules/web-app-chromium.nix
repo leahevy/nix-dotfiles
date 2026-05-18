@@ -15,7 +15,7 @@ args@{
   input = "linux";
 
   settings = {
-    package = pkgs.chromium;
+    package = pkgs.ungoogled-chromium;
     program = "chromium";
     args = "--app=";
     persistenceDirs = [
