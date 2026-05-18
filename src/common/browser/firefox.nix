@@ -483,6 +483,14 @@ in
               #toolbar-context-menu { background-color: #000000 !important; }
             '';
 
+            disableVPNButtonCSS = ''
+              #ipprotection-button { display: none !important; }
+            '';
+
+            disableSidebarButtonCSS = ''
+              #sidebar-button { display: none !important; }
+            '';
+
             disableStarIconCSS = ''
               #star-button-box { display: none !important; }
             '';
@@ -555,6 +563,8 @@ in
               hideSingleTabToolbarCSS
               hideBookmarkToolbarIconsCSS
               forceBlackToolbarBackgroundsCSS
+              disableVPNButtonCSS
+              disableSidebarButtonCSS
               disableStarIconCSS
               disableReaderModeButtonCSS
               hideToolbarTabStopCSS
