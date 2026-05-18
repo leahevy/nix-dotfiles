@@ -2,6 +2,7 @@
 **/profiles/nixos/**/*.nix
 !/templates/profiles/nixos/**/*.nix
 /file.txt
+/PATCH.txt
 
 __pycache__/
 *.pyc
