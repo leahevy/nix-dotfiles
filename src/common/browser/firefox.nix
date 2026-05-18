@@ -874,16 +874,47 @@ in
         ];
       };
 
-    darwin.home = config: {
-      programs.firefox.package = lib.mkForce null;
-      home.file.".local/bin/firefox-wrapper" = {
-        text = ''
-          #!/bin/sh
-          exec open -a Firefox "$@"
-        '';
-        executable = true;
+    darwin.home =
+      {
+        config,
+        syncEnable,
+        darkMode,
+        profileName,
+        sidebar,
+        lockedPreferences,
+        extraPolicies,
+        extensions,
+        defaultDownloadsName,
+        ...
+      }:
+      let
+        userCSS = config.nx.common.browser.browser.final.userContentCSS;
+      in
+      {
+        programs.firefox.package = lib.mkForce null;
+        home.file.".local/bin/firefox-wrapper" = {
+          text = ''
+            #!/bin/sh
+            exec open -a Firefox "$@"
+          '';
+          executable = true;
+        };
+
+        home.activation."firefox-userContent-copy" = lib.mkIf (userCSS != null) (
+          (self.hmLib config).dag.entryAfter [ "linkGeneration" ] ''
+            ${pkgs.writeShellScript "firefox-copy-userContent" ''
+              base_dir="$HOME/Library/Application Support/Firefox/Profiles/${profileName}"
+              if [[ -d "$base_dir" ]]; then
+                css_dir="$base_dir/chrome"
+                mkdir -p "$css_dir"
+                rm -f "$css_dir/userContent.css"
+                rm -f "$css_dir/userContent.css.${self.variables.home-manager-backup-extension}"
+                cp "${userCSS.derivation}" "$css_dir/userContent.css"
+               fi
+            ''} || true
+          ''
+        );
       };
-    };
 
     darwin.enabled = config: {
       nx.homebrew.casks = [ "firefox" ];
