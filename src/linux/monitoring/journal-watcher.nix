@@ -176,7 +176,7 @@ args@{
       };
       highlightRateLimit = lib.mkOption {
         type = lib.types.int;
-        default = 40;
+        default = 100;
       };
       sameMessageRateLimitMinutes = lib.mkOption {
         type = lib.types.int;
