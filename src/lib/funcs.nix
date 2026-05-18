@@ -1866,9 +1866,20 @@ rec {
               inputName: inputGroups:
               lib.mapAttrs (
                 groupName: groupModules:
-                lib.mapAttrs (moduleName: moduleValue: if moduleValue == true then { } else moduleValue) (
-                  lib.filterAttrs (moduleName: moduleValue: moduleValue != false) groupModules
-                )
+                lib.mapAttrs
+                  (
+                    moduleName: moduleValue:
+                    if moduleValue == true then { } else builtins.removeAttrs moduleValue [ "enable" ]
+                  )
+                  (
+                    lib.filterAttrs (
+                      moduleName: moduleValue:
+                      if builtins.isAttrs moduleValue && moduleValue ? enable && !builtins.isBool moduleValue.enable then
+                        throw "${inputName}.${groupName}.${moduleName}: 'enable' in import attrset must be a bool!"
+                      else
+                        moduleValue != false && !(builtins.isAttrs moduleValue && (moduleValue.enable or true) == false)
+                    ) groupModules
+                  )
               ) inputGroups
             ) submodules;
         in
@@ -1942,7 +1953,16 @@ rec {
           inputName: inputGroups:
           lib.mapAttrs (
             groupName: groupModules:
-            lib.filterAttrs (moduleName: moduleSettings: moduleSettings != false) groupModules
+            lib.filterAttrs (
+              moduleName: moduleSettings:
+              if
+                builtins.isAttrs moduleSettings && moduleSettings ? enable && !builtins.isBool moduleSettings.enable
+              then
+                throw "${inputName}.${groupName}.${moduleName}: 'enable' in import attrset must be a bool!"
+              else
+                moduleSettings != false
+                && !(builtins.isAttrs moduleSettings && (moduleSettings.enable or true) == false)
+            ) groupModules
           ) inputGroups
         ) modules;
 
@@ -1953,7 +1973,8 @@ rec {
           lib.mapAttrs (
             groupName: groupModules:
             lib.mapAttrs (
-              moduleName: moduleSettings: if moduleSettings == true then { } else moduleSettings
+              moduleName: moduleSettings:
+              if moduleSettings == true then { } else builtins.removeAttrs moduleSettings [ "enable" ]
             ) groupModules
           ) inputGroups
         ) modules;
