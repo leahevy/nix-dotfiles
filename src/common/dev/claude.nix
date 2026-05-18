@@ -8,6 +8,34 @@ args@{
   self,
   ...
 }:
+let
+  isValidBullet =
+    x:
+    if lib.isString x then
+      true
+    else if lib.isList x && x != [ ] then
+      builtins.all isValidBullet x
+    else
+      false;
+  bulletItemType = lib.types.mkOptionType {
+    name = "bulletItem";
+    description = "string or non-empty nested list of strings";
+    check = isValidBullet;
+    merge = lib.options.mergeOneOption;
+  };
+  renderBulletItem =
+    depth: item:
+    let
+      indent = lib.concatStringsSep "" (lib.genList (_: "    ") depth);
+    in
+    if lib.isString item then
+      "${indent}- ${item}"
+    else
+      lib.concatStringsSep "\n" (
+        [ (renderBulletItem depth (builtins.head item)) ]
+        ++ map (renderBulletItem (depth + 1)) (builtins.tail item)
+      );
+in
 {
   name = "claude";
 
@@ -16,14 +44,183 @@ args@{
 
   unfree = [ "claude-code" ];
 
-  settings = {
-    additionalMCPServers = { };
+  options = {
+    instructions = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf bulletItemType);
+      default = { };
+      description = "Claude-specific instructions.";
+    };
+
+    skills = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.either lib.types.str (
+          lib.types.submodule {
+            options = {
+              description = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Skill description.";
+              };
+              text = lib.mkOption {
+                type = lib.types.str;
+                description = "Skill instructions.";
+              };
+            };
+          }
+        )
+      );
+      default = { };
+      description = "Claude-specific skills.";
+    };
+
+    agents = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            description = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Agent description.";
+            };
+            text = lib.mkOption {
+              type = lib.types.str;
+              description = "Agent instructions.";
+            };
+            tools = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [
+                "Read"
+                "Edit"
+                "Write"
+              ];
+              description = "Allowed tools.";
+            };
+          };
+        }
+      );
+      default = { };
+      description = "Claude-specific custom agents.";
+    };
+  };
+
+  submodules = {
+    common = {
+      dev = [ "agents" ];
+    };
   };
 
   module = {
-    home =
+    enabled =
       config:
       let
+        baseInstructions = {
+          "90 - Claude" = [
+            "Use the conversation as initial context, then read only the files and local context required to complete the request."
+            "Batch all changes into as few operations as possible."
+            "Don't analyse too much on first feasibility questions to avoid wasting tokens."
+            "Keep sub-agents to a minimum."
+          ];
+        };
+        baseSkills = { };
+        baseAgents = { };
+      in
+      {
+        nx.common.dev.claude.instructions = lib.mkOrder 200 baseInstructions;
+
+        nx.common.dev.claude.skills = lib.mkOrder 200 baseSkills;
+        nx.common.dev.claude.agents = lib.mkOrder 200 baseAgents;
+      };
+
+    home =
+      {
+        config,
+        instructions,
+        skills,
+        agents,
+        ...
+      }:
+      let
+        sharedAgents = config.nx.common.dev.agents;
+        renderInstructions =
+          instructionsSet:
+          let
+            headers = lib.sort (a: b: a < b) (builtins.attrNames instructionsSet);
+            renderSection =
+              header:
+              let
+                bullets = instructionsSet.${header} or [ ];
+                body = lib.concatStringsSep "\n" (map (renderBulletItem 0) bullets);
+                displayHeader =
+                  let
+                    m = builtins.match "^[0-9]+[ ]*-[ ]*(.*)$" header;
+                  in
+                  if m != null && m != [ ] && (builtins.elemAt m 0) != "" then builtins.elemAt m 0 else header;
+              in
+              if bullets == [ ] then "" else "## ${displayHeader}\n\n${body}";
+            sections = builtins.filter (s: s != "") (map renderSection headers);
+          in
+          lib.concatStringsSep "\n\n" sections;
+
+        mergedInstructions = helpers.deepMergeComplex {
+          base = sharedAgents.instructions;
+          override = instructions;
+        };
+        mergedContext = renderInstructions mergedInstructions;
+
+        mergedSkills = sharedAgents.skills // skills;
+
+        mergedAgents = sharedAgents.agents // agents;
+
+        claudeSkillFiles = lib.mapAttrs' (name: value: {
+          name = ".claude/skills/${name}/SKILL.md";
+          value = {
+            text =
+              let
+                payload =
+                  if lib.isString value then
+                    {
+                      description = "Custom skill ${name}.";
+                      text = value;
+                    }
+                  else
+                    {
+                      description = value.description or "Custom skill ${name}.";
+                      text = value.text;
+                    };
+              in
+              ''
+                ---
+                name: ${builtins.toJSON name}
+                description: ${builtins.toJSON payload.description}
+                ---
+
+                ${payload.text}
+              '';
+          };
+        }) mergedSkills;
+
+        claudeAgentFiles = lib.mapAttrs' (name: value: {
+          name = ".claude/agents/${name}.md";
+          value = {
+            text =
+              let
+                desc = value.description or "Custom agent ${name}.";
+                toolsLine = lib.concatStringsSep ", " value.tools;
+              in
+              ''
+                ---
+                name: ${builtins.toJSON name}
+                description: ${builtins.toJSON desc}
+                tools: ${toolsLine}
+                ---
+
+                # ${name}
+
+                ${value.text}
+              '';
+          };
+        }) mergedAgents;
+
         gitUrl = (config.programs.git.settings.url or { });
         githubEnforceSSH =
           gitUrl ? "git@github.com:"
@@ -58,33 +255,19 @@ args@{
             pkgs.claude-code;
       in
       {
+        programs.claude-code = {
+          enable = true;
+          package = claude-package;
+          mcpServers = config.nx.common.dev.agents.mcpServers;
+        };
+
         home = {
-          packages = [
-            claude-package
-          ];
-
           file =
-            let
-              allMCPServers =
-                self.settings.additionalMCPServers
-                // lib.optionalAttrs (self.isModuleEnabled "nvim.mcp-server") {
-                  "mcp-neovim-server" = {
-                    command = "mcp-neovim-server-wrapper";
-                    args = [ ];
-                    env = {
-                      ALLOW_SHELL_COMMANDS = "false";
-                    };
-                  };
-                };
+            claudeSkillFiles
+            // claudeAgentFiles
+            // {
+              ".claude/CLAUDE.md".text = mergedContext;
 
-              mcpFiles = lib.mapAttrs' (name: config: {
-                name = ".config/claude-mcp/${name}.json";
-                value = {
-                  text = builtins.toJSON config;
-                };
-              }) allMCPServers;
-            in
-            {
               ".config/doom/config/80-claude.el".text =
                 if (self.isModuleEnabled "emacs.doom") then
                   ''
@@ -105,44 +288,7 @@ args@{
                   ''
                 else
                   "";
-
-              ".local/bin/claude-configure-mcp-servers" = {
-                executable = true;
-                text = ''
-                  #!/usr/bin/env bash
-
-                  MCP_DIR="$HOME/.config/claude-mcp"
-
-                  if [[ ! -d "$MCP_DIR" ]]; then
-                    echo "No MCP configuration directory found at $MCP_DIR"
-                    exit 0
-                  fi
-
-                  echo "Managing MCP servers from $MCP_DIR..."
-
-                  for json_file in "$MCP_DIR"/*.json; do
-                    [[ -f "$json_file" ]] || continue
-
-                    server_name=$(basename "$json_file" .json)
-
-                    if claude mcp get "$server_name" >/dev/null 2>&1; then
-                      echo "→ Removing existing MCP server '$server_name'..."
-                      claude mcp remove "$server_name"
-                    fi
-
-                    echo "→ Adding MCP server '$server_name'..."
-                    if claude mcp add-json --scope user "$server_name" "$(cat "$json_file")"; then
-                      echo "✓ Successfully configured '$server_name'"
-                    else
-                      echo "✗ Failed to configure '$server_name'"
-                    fi
-                  done
-
-                  echo "MCP server configuration complete. Run 'claude mcp list' to verify."
-                '';
-              };
-            }
-            // mcpFiles;
+            };
 
           persistence."${self.persist}" = {
             directories = [

@@ -21,10 +21,20 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.common.dev.agents.mcpServers."mcp-neovim-server" = {
+        command = "mcp-neovim-server-wrapper";
+        args = [ ];
+        env = {
+          ALLOW_SHELL_COMMANDS = "false";
+        };
+      };
+    };
+
     home =
       config:
       let
-        mcp-neovim-server = pkgs.buildNpmPackage rec {
+        mcp-neovim-server = pkgs.buildNpmPackage {
           pname = "mcp-neovim-server";
           version = "0.5.5";
 
