@@ -32,6 +32,7 @@ args@{
       ];
       desktop = [
         "desktop"
+        "browser"
         "terminal"
       ];
       system = [ "dummy-files" ];

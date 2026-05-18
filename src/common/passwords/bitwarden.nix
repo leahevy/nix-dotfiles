@@ -38,6 +38,10 @@ args@{
       })
     ];
 
+    darwin.enabled = config: {
+      nx.homebrew.casks = [ "bitwarden" ];
+    };
+
     linux.enabled = config: {
       nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
         "bitwarden"
@@ -620,6 +624,17 @@ args@{
               main()
         '';
         executable = true;
+      };
+    };
+
+    ifEnabled.common.browser.firefox = {
+      enabled = config: {
+        nx.common.browser.firefox.extensions.bitwarden = {
+          addonId = "{446900e4-71c2-419f-a6a7-df9c091e268b}";
+          slug = "bitwarden-password-manager";
+          showInToolbar = true;
+          allowedInPrivateWindows = false;
+        };
       };
     };
 

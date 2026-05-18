@@ -15,19 +15,14 @@ args@{
   input = "common";
 
   module = {
-    ifEnabled.darwin.passwords.keepassxc.darwin.home = config: {
+    darwin.enabled = config: {
+      nx.homebrew.casks = [ "keepassxc" ];
+    };
+
+    darwin.home = config: {
       programs.keepassxc = {
         package = null;
       };
-    };
-
-    ifDisabled.darwin.passwords.keepassxc.darwin.home = config: {
-      assertions = [
-        {
-          assertion = false;
-          message = "The common.passwords.keepassxc module needs the darwin.passwords.keepassxc module to be enabled on Darwin!";
-        }
-      ];
     };
 
     home = config: {
@@ -87,6 +82,26 @@ args@{
           ".cache/keepassxc"
         ];
       };
+    };
+
+    ifEnabled.common.browser.firefox = {
+      enabled =
+        config:
+        lib.mkIf (!config.nx.common.passwords.bitwarden.enable) {
+          nx.common.browser.firefox.extensions.keepassxc-browser = {
+            addonId = "keepassxc-browser@keepassxc.org";
+            slug = "keepassxc-browser";
+            showInToolbar = true;
+            allowedInPrivateWindows = false;
+          };
+
+          nx.common.browser.firefox.firejailExtraRules = [
+            "noblacklist \${RUNUSER}/app"
+            "whitelist \${RUNUSER}/app/org.keepassxc.KeePassXC"
+            "whitelist \${RUNUSER}/kpxc_server"
+            "whitelist \${RUNUSER}/org.keepassxc.KeePassXC.BrowserServer"
+          ];
+        };
     };
 
     ifEnabled.linux.desktop.niri.home = config: {

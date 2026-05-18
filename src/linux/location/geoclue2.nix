@@ -21,6 +21,7 @@ args@{
     withDemoAgent = true;
     baseWhitelistedAgents = [
       "org.qutebrowser.qutebrowser"
+      "firefox"
     ];
     additionalWhitelistedAgents = [ ];
     baseWhitelistedSystemAgents = [ ];

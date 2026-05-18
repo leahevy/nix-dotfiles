@@ -99,10 +99,9 @@ args@{
           });
       in
       {
-        nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.isModuleEnabled "desktop.niri") [
-          "qutebrowser"
-        ];
-        nx.preferences.desktop.programs.webBrowser.package = lib.mkForce qutebrowserPackage;
+        nx.preferences.desktop.programs.webBrowser.package = lib.mkIf (
+          (self.user.settings.browser or null) == "qutebrowser"
+        ) (lib.mkForce qutebrowserPackage);
         nx.linux.browser.qutebrowser.package = qutebrowserPackage;
       };
 

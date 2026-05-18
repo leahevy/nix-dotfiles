@@ -88,6 +88,16 @@ with lib;
         default = "ghostty";
         description = "Terminal application";
       };
+      browser = mkOption {
+        type = types.nullOr (
+          types.enum [
+            "firefox"
+            "qutebrowser"
+          ]
+        );
+        default = "firefox";
+        description = "Default browser application";
+      };
     };
   };
 }

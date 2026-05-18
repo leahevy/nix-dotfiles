@@ -34,6 +34,7 @@ args@{
     addHomeToStartPages = true;
     alwaysCreateKeepassxcKeybindings = false;
     alwaysCreateBitwardenKeybindings = false;
+    enableNiriKeybinds = true;
     additionalKeyMappings = { };
     additionalKeyBindings = { };
     basePerDomainSettings = { };
@@ -418,19 +419,6 @@ args@{
   };
 
   module = {
-    enabled = config: {
-      nx.preferences.desktop.programs.webBrowser = {
-        name = "qutebrowser";
-        package = null;
-        openCommand = [ "qutebrowser" ];
-        openFileCommand = path: [
-          "qutebrowser"
-          path
-        ];
-        desktopFile = "org.qutebrowser.qutebrowser.desktop";
-      };
-    };
-
     home =
       config:
       let
@@ -698,7 +686,7 @@ args@{
                 dns_prefetch = false;
                 user_stylesheets = lib.optional (
                   config.nx.common.browser.browser.final.userContentCSS != null
-                ) "${config.nx.common.browser.browser.final.userContentCSS}";
+                ) "${config.nx.common.browser.browser.final.userContentCSS.derivation}";
               };
               downloads = {
                 position = "bottom";
@@ -1116,34 +1104,43 @@ args@{
           settings = {
             binds =
               with config.lib.niri.actions;
-              {
-                "Mod+Ctrl+Alt+N" = {
-                  action = spawn-sh "qutebrowser";
-                  hotkey-overlay.title = "Apps:Browser";
-                };
-              }
-              // lib.optionalAttrs hasAppLauncher {
-                "Mod+Alt+Space" =
-                  let
-                    searchLauncherCmd = lib.escapeShellArgs (
-                      helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
-                        prompt = "Web Search: ";
-                        placeholder = "Enter search query";
-                        width = 60;
-                        lines = 0;
-                      }
-                    );
-                  in
-                  {
-                    action = spawn-sh ''
-                      query=$(echo "" | ${searchLauncherCmd})
-                      if [ -n "$query" ]; then
-                        qutebrowser --desktop-file-name "org.qutebrowser.websearch" --target window "${defaultSearch}$query"
-                      fi
-                    '';
-                    hotkey-overlay.title = "Apps:Web Search";
+              lib.optionalAttrs
+                (self.settings.enableNiriKeybinds && (self.user.settings.browser or null) == "qutebrowser")
+                {
+                  "Mod+Ctrl+Alt+N" = {
+                    action = spawn-sh "qutebrowser";
+                    hotkey-overlay.title = "Apps:Browser";
                   };
-              };
+                }
+              //
+                lib.optionalAttrs
+                  (
+                    hasAppLauncher
+                    && self.settings.enableNiriKeybinds
+                    && (self.user.settings.browser or null) == "qutebrowser"
+                  )
+                  {
+                    "Mod+Alt+Space" =
+                      let
+                        searchLauncherCmd = lib.escapeShellArgs (
+                          helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                            prompt = "Web Search: ";
+                            placeholder = "Enter search query";
+                            width = 60;
+                            lines = 0;
+                          }
+                        );
+                      in
+                      {
+                        action = spawn-sh ''
+                          query=$(echo "" | ${searchLauncherCmd})
+                          if [ -n "$query" ]; then
+                            qutebrowser --desktop-file-name "org.qutebrowser.websearch" --target window "${defaultSearch}$query"
+                          fi
+                        '';
+                        hotkey-overlay.title = "Apps:Web Search";
+                      };
+                  };
 
             window-rules = [
               {

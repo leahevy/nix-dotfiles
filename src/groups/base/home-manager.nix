@@ -105,7 +105,6 @@ let
         "beeper"
         "signal"
       ];
-      browser = [ "qutebrowser" ];
       utils = [ "alien" ];
       gnome = [
         "keyring"
@@ -135,9 +134,6 @@ let
     common.style = [ "stylix" ];
     darwin = {
       core = [ "coreutils" ];
-      browser = [
-        "qutebrowser"
-      ];
       chat = [
         "beeper"
         "slack"
@@ -155,7 +151,6 @@ let
       graphics = [ "gimp" ];
       music = [ "spotify" ];
       organising = [ "logseq" ];
-      passwords = [ "keepassxc" ];
       terminal = [
         "alacritty"
         "ghostty"
