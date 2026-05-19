@@ -754,6 +754,9 @@ in
             "image/bmp" = prefs.imageViewer.desktopFile;
             "image/tiff" = prefs.imageViewer.desktopFile;
             "image/svg+xml" = prefs.imageViewer.desktopFile;
+            "image/avif" = prefs.imageViewer.desktopFile;
+            "image/heic" = prefs.imageViewer.desktopFile;
+            "image/heif" = prefs.imageViewer.desktopFile;
 
             "application/pdf" = prefs.pdfViewer.desktopFile;
 
@@ -763,22 +766,44 @@ in
             "video/webm" = prefs.videoPlayer.desktopFile;
             "video/x-msvideo" = prefs.videoPlayer.desktopFile;
             "video/quicktime" = prefs.videoPlayer.desktopFile;
+            "video/x-matroska" = prefs.videoPlayer.desktopFile;
+            "video/ogg" = prefs.videoPlayer.desktopFile;
+            "video/x-ms-wmv" = prefs.videoPlayer.desktopFile;
+            "video/3gpp" = prefs.videoPlayer.desktopFile;
+            "video/x-flv" = prefs.videoPlayer.desktopFile;
 
             "audio/mpeg" = prefs.musicPlayer.desktopFile;
             "audio/mp3" = prefs.musicPlayer.desktopFile;
             "audio/ogg" = prefs.musicPlayer.desktopFile;
             "audio/flac" = prefs.musicPlayer.desktopFile;
             "audio/wav" = prefs.musicPlayer.desktopFile;
+            "audio/aac" = prefs.musicPlayer.desktopFile;
+            "audio/mp4" = prefs.musicPlayer.desktopFile;
+            "audio/x-m4a" = prefs.musicPlayer.desktopFile;
+            "audio/opus" = prefs.musicPlayer.desktopFile;
+            "audio/x-flac" = prefs.musicPlayer.desktopFile;
+            "audio/x-wav" = prefs.musicPlayer.desktopFile;
+            "audio/vnd.wave" = prefs.musicPlayer.desktopFile;
 
             "application/zip" = prefs.archiver.desktopFile;
             "application/x-rar-compressed" = prefs.archiver.desktopFile;
             "application/x-tar" = prefs.archiver.desktopFile;
             "application/gzip" = prefs.archiver.desktopFile;
             "application/x-7z-compressed" = prefs.archiver.desktopFile;
+            "application/x-bzip2" = prefs.archiver.desktopFile;
+            "application/x-xz" = prefs.archiver.desktopFile;
+            "application/x-lzma" = prefs.archiver.desktopFile;
+            "application/x-zstd" = prefs.archiver.desktopFile;
+            "application/x-compressed-tar" = prefs.archiver.desktopFile;
+            "application/x-bzip-compressed-tar" = prefs.archiver.desktopFile;
+            "application/x-xz-compressed-tar" = prefs.archiver.desktopFile;
 
             "text/plain" = prefs.textEditor.desktopFile;
+            "text/csv" = prefs.textEditor.desktopFile;
+            "text/xml" = prefs.textEditor.desktopFile;
             "text/markdown" = prefs.advancedTextEditor.desktopFile;
             "application/x-shellscript" = prefs.textEditor.desktopFile;
+            "application/json" = prefs.advancedTextEditor.desktopFile;
 
             "inode/directory" = prefs.fileBrowser.desktopFile;
 
@@ -793,6 +818,18 @@ in
             "application/x-extension-shtml" = prefs.webBrowser.desktopFile;
             "application/x-extension-xhtml" = prefs.webBrowser.desktopFile;
             "application/x-extension-xht" = prefs.webBrowser.desktopFile;
+          }
+          // lib.optionalAttrs (prefs.emailClient != null) {
+            "x-scheme-handler/mailto" = prefs.emailClient.desktopFile;
+            "message/rfc822" = prefs.emailClient.desktopFile;
+          }
+          // lib.optionalAttrs (prefs.calendar != null) {
+            "text/calendar" = prefs.calendar.desktopFile;
+            "x-scheme-handler/webcal" = prefs.calendar.desktopFile;
+          }
+          // lib.optionalAttrs (prefs.contacts != null) {
+            "text/vcard" = prefs.contacts.desktopFile;
+            "text/x-vcard" = prefs.contacts.desktopFile;
           }
           // (
             if self.settings.installOfficeSuite then
