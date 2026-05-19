@@ -14,6 +14,8 @@ args@{
   group = "desktop";
   input = "linux";
 
+  disableOnDarwin = true;
+
   submodules = {
     linux = {
       desktop = {

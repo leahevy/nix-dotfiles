@@ -22,6 +22,8 @@ args@{
     };
   };
 
+  disableOnDarwin = true;
+
   submodules = {
     linux = {
       desktop-modules = {

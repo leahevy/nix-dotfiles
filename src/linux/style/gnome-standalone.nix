@@ -14,6 +14,8 @@ args@{
   group = "style";
   input = "linux";
 
+  disableOnDarwin = true;
+
   module = {
     standalone = config: {
       stylix.targets.gnome.enable = lib.mkForce true;
