@@ -29,6 +29,7 @@ args@{
         "profile"
         "man"
         "commandline"
+        "unfree"
       ];
       desktop = [
         "desktop"

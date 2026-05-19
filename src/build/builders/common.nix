@@ -92,6 +92,7 @@ let
     {
       system,
       extraOverlays ? [ ],
+      allowedUnfreePackages ? null,
       nixpkgs ? inputs.nixpkgs,
       nixpkgs-unstable ? inputs.nixpkgs-unstable,
       nixpkgs-darwin ? inputs.nixpkgs-darwin,
@@ -101,9 +102,15 @@ let
       moduleOverlays = funcs.collectModuleOverlays system;
       overlays = moduleOverlays ++ extraOverlays;
 
+      unfreePredicate =
+        if allowedUnfreePackages == null then
+          pkg: true
+        else
+          pkg: lib.elem (lib.getName pkg) allowedUnfreePackages;
+
       pkgs-unstable = import nixpkgs-unstable {
         inherit system overlays;
-        config.allowUnfreePredicate = pkg: true;
+        config.allowUnfreePredicate = unfreePredicate;
       };
 
       unstablePackages =
@@ -120,7 +127,10 @@ let
 
       nixImpl = variables."nix-implementation";
 
-      pkgs-nix = import nixpkgs-nix { inherit system; };
+      pkgs-nix = import nixpkgs-nix {
+        inherit system;
+        config.allowUnfreePredicate = unfreePredicate;
+      };
 
       nixImplOverlay =
         if nixImpl == "nix" then
@@ -181,7 +191,7 @@ let
             nixImplOverlay
             nixToolsOverlay
           ];
-          config.allowUnfreePredicate = pkg: true;
+          config.allowUnfreePredicate = unfreePredicate;
         };
 
       pkgs =
@@ -221,6 +231,21 @@ let
         user.home
     else
       user.home;
+
+  enrichUserProfile =
+    rawUser: profileName: isStandalone: isMainUser: arch:
+    rawUser
+    // {
+      inherit profileName;
+      isStandalone = isStandalone;
+      isIntegrated = !isStandalone;
+      isMainUser = isMainUser;
+      architecture = arch;
+      home = resolveHomePath {
+        user = rawUser;
+        inherit arch;
+      };
+    };
 
   buildSpecialArgs =
     {
@@ -476,9 +501,75 @@ in
         inherit system;
       };
 
+      mainUserProfileName = preEval.config.host.mainUser;
+      mainUserConfigPath =
+        config + "/profiles/home-integrated/${mainUserProfileName}/${mainUserProfileName}.nix";
+
+      mainUserPreEval =
+        if builtins.isString mainUserProfileName && builtins.pathExists mainUserConfigPath then
+          evalConfigModule {
+            optionPaths = [
+              (build + "/types/shared/all.nix")
+              (build + "/types/shared/user.nix")
+              (build + "/types/home/home-integrated.nix")
+            ];
+            configPath = mainUserConfigPath;
+            specialArgs = {
+              inherit
+                lib
+                variables
+                helpers
+                defs
+                ;
+              pkgs = { };
+              pkgs-unstable = { };
+              self = mkProfileSelf "home-integrated" mainUserProfileName { };
+            };
+          }
+        else
+          null;
+
+      mainUserAllowedUnfree =
+        if mainUserPreEval != null then mainUserPreEval.config.user.allowedUnfreePackages or [ ] else [ ];
+
+      preMergedModules = funcs.mergeModulesWithPrecedence (preEval.config.host.modules or { }) (
+        lib.foldl lib.recursiveUpdate { } [
+          (if mainUserPreEval != null then mainUserPreEval.config.user.modules or { } else { })
+          (preEval.config.host.userDefaults.modules or { })
+        ]
+      );
+
+      preBuildModules = funcs.computeNixOSBuildModules {
+        addHostBaseGroup = preEval.config.host.addBaseGroup or false;
+        addUserBaseGroup =
+          if mainUserPreEval != null then mainUserPreEval.config.user.addBaseGroup or false else false;
+        desktop = preEval.config.host.settings.system.desktop or null;
+      };
+
+      preEvalHost = preEval.config.host // {
+        architecture = arch;
+        inherit profileName;
+      };
+      preEvalMainUser =
+        if mainUserPreEval != null then
+          enrichUserProfile mainUserPreEval.config.user mainUserProfileName false true arch
+        else
+          null;
+
+      allowedUnfreePackages = lib.unique (
+        (variables.allowedUnfreePackages or [ ])
+        ++ (preEval.config.host.allowedUnfreePackages or [ ])
+        ++ mainUserAllowedUnfree
+        ++
+          funcs.collectAllModuleUnfreePackages system preMergedModules preBuildModules preEvalHost
+            preEvalMainUser
+            variables
+            inputs
+      );
+
       inherit
         (setupPackages {
-          inherit system;
+          inherit system allowedUnfreePackages;
           extraOverlays = profileOverlays;
         })
         pkgs
@@ -540,18 +631,9 @@ in
             };
           };
         in
-        userEval.config.user
-        // {
-          profileName = userProfileName;
-          isStandalone = false;
-          isIntegrated = true;
-          isMainUser = userProfileName == rawHost.mainUser;
-          architecture = arch;
-          home = resolveHomePath {
-            user = userEval.config.user;
-            inherit arch;
-          };
-        };
+        enrichUserProfile userEval.config.user userProfileName false (
+          userProfileName == rawHost.mainUser
+        ) arch;
 
       allUserProfiles = [ rawHost.mainUser ] ++ (rawHost.additionalUsers or [ ]);
       userAttrSet = builtins.listToAttrs (
@@ -589,31 +671,11 @@ in
         ]
       );
 
-      buildModules =
-        lib.recursiveUpdate
-          (lib.recursiveUpdate
-            {
-              groups.build.nixos = true;
-              groups.build.home-integrated = true;
-              groups.build.shared = true;
-            }
-            (
-              if resolvedHost.addBaseGroup then
-                {
-                  groups.base.nixos = true;
-                }
-              else
-                { }
-            )
-          )
-          (
-            if (mainUser.addBaseGroup && resolvedHost.settings.system.desktop != null) then
-              {
-                groups.base.home-manager = true;
-              }
-            else
-              { }
-          );
+      buildModules = funcs.computeNixOSBuildModules {
+        addHostBaseGroup = resolvedHost.addBaseGroup;
+        addUserBaseGroup = mainUser.addBaseGroup;
+        desktop = resolvedHost.settings.system.desktop;
+      };
 
       effectiveIsTestingVM = isTestingVM;
       effectiveIsProductionVM =
@@ -786,9 +848,22 @@ in
         inherit system;
       };
 
+      preBuildModules = funcs.computeStandaloneBuildModules {
+        addBaseGroup = preEval.config.user.addBaseGroup or false;
+      };
+
+      preEvalUser = enrichUserProfile preEval.config.user profileName true true arch;
+
+      allowedUnfreePackages = lib.unique (
+        (variables.allowedUnfreePackages or [ ])
+        ++ (preEval.config.user.allowedUnfreePackages or [ ])
+        ++ funcs.collectAllModuleUnfreePackages system (preEval.config.user.modules or { }
+        ) preBuildModules { } preEvalUser variables inputs
+      );
+
       inherit
         (setupPackages {
-          inherit system;
+          inherit system allowedUnfreePackages;
           extraOverlays = profileOverlays;
         })
         pkgs
@@ -824,17 +899,7 @@ in
         };
       };
 
-      resolvedUser = userEval.config.user // {
-        inherit profileName;
-        architecture = arch;
-        isStandalone = true;
-        isIntegrated = false;
-        isMainUser = true;
-        home = resolveHomePath {
-          user = userEval.config.user;
-          inherit arch;
-        };
-      };
+      resolvedUser = enrichUserProfile userEval.config.user profileName true true arch;
 
       finalUserConfig = resolvedUser // {
         modules = resolvedUser.modules or { };

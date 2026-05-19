@@ -48,13 +48,6 @@ in
       assertion = builtins.all builtins.isAttrs host.additionalUsers;
       message = "All host.additionalUsers must be attribute sets (processed configs) at assertion time";
     }
-    (funcs.validateUnfreePackages {
-      packages = config.environment.systemPackages or [ ];
-      declaredUnfree = (host.allowedUnfreePackages or [ ]) ++ (variables.allowedUnfreePackages or [ ]);
-      context = "system";
-      profileName = host.profileName or "unknown";
-      processedModules = processedModules;
-    })
   ]
   ++ helpers.assertNotNull "host" host [
     "hostname"

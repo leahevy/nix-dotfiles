@@ -1,11 +1,8 @@
 args@{
   lib,
-  funcs,
   helpers,
-  defs,
   user,
   variables,
-  processedModules,
   ...
 }:
 { config, ... }:
@@ -44,13 +41,6 @@ in
       assertion = countEnabledModules >= config.nx.global.minEnabledModules;
       message = "Only ${toString countEnabledModules} modules enabled, but at least ${toString config.nx.global.minEnabledModules} required for configuration integrity";
     }
-    (funcs.validateUnfreePackages {
-      packages = config.home.packages or [ ];
-      declaredUnfree = (user.allowedUnfreePackages or [ ]) ++ (variables.allowedUnfreePackages or [ ]);
-      context = "home";
-      profileName = user.profileName or "unknown";
-      processedModules = processedModules;
-    })
     {
       assertion =
         user.defaultSSHKey == null

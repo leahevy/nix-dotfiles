@@ -13,20 +13,7 @@ args@{
 }:
 let
   initialModules = user.modules or { };
-  buildModules =
-    lib.recursiveUpdate
-      {
-        groups.build.home-standalone = true;
-        groups.build.shared = true;
-      }
-      (
-        if user.addBaseGroup then
-          {
-            groups.base.home-manager = true;
-          }
-        else
-          { }
-      );
+  buildModules = funcs.computeStandaloneBuildModules { addBaseGroup = user.addBaseGroup; };
   extraContextModules = funcs.collectContextEnabledModules args;
   allModules = funcs.collectAllModulesWithSettings args initialModules (
     lib.recursiveUpdate buildModules extraContextModules
@@ -42,6 +29,7 @@ let
   settingsValueModules = funcs.generateSettingsValueModules allModuleData allModules;
   optionsValueModules = funcs.generateOptionsValueModules allModuleData allModules;
   enableValueModules = funcs.generateEnableValueModules allModuleData allModules;
+  unfreeValueModules = funcs.generateUnfreeValueModules allModuleData allModules;
   metaValueModules = funcs.generateMetaValueModules allModuleData;
 
   initModules = funcs.importAllModuleInits (args // { processedModules = allModules; });
@@ -95,6 +83,7 @@ in
     ++ settingsValueModules
     ++ optionsValueModules
     ++ enableValueModules
+    ++ unfreeValueModules
     ++ metaValueModules
     ++ initModules
     ++ disabledModules

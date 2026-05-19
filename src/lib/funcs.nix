@@ -22,7 +22,6 @@ let
     helpers.buildModuleFilePath input inputName group name;
 
   systemManagedAttrs = [
-    "nx_unfree"
     "nx_conditionForce"
   ];
 
@@ -658,7 +657,6 @@ rec {
 
         moduleDefaults = moduleResult.settings or { };
         moduleOptions = moduleResult.options or { };
-        moduleUnfree = moduleResult.unfree or [ ];
 
         hasSettings = moduleDefaults != { };
         hasStandardOptions = moduleOptions != { };
@@ -673,16 +671,10 @@ rec {
           else
             validateSettingsOverride moduleDefaults userSettings inputName groupName moduleName;
 
-        settingsWithUnfree =
-          if moduleUnfree != [ ] then
-            validatedUserSettings // { nx_unfree = moduleUnfree; }
-          else
-            validatedUserSettings;
-
         conditionResult = evaluateModuleCondition moduleResult enhancedModuleContext { enabled = true; };
 
         settingsWithCondition =
-          settingsWithUnfree
+          validatedUserSettings
           // lib.optionalAttrs (conditionResult != null) { nx_conditionForce = conditionResult; };
       in
       lib.recursiveUpdate moduleDefaults settingsWithCondition;
@@ -1546,7 +1538,6 @@ rec {
         moduleInput = moduleSpec.input;
         moduleInputName = moduleSpec.inputName;
         settings = moduleSpec.settings or { };
-        unfree = basicModuleResult.unfree or [ ];
         processedModules = allProcessedModules;
         isTestingVM = args.isTestingVM or false;
         isProductionVM = args.isProductionVM or false;
@@ -1856,7 +1847,14 @@ rec {
             self = enhancedModuleContext;
           };
 
-          moduleResult = import modulePath consolidatedArgs;
+          moduleResult =
+            if args.preEvalMode or false then
+              let
+                r = builtins.tryEval (import modulePath consolidatedArgs);
+              in
+              if r.success then r.value else { }
+            else
+              import modulePath consolidatedArgs;
         in
         let
           rawSubmodules = normalizeListsToAttrsets (moduleResult.submodules or { });
@@ -1932,6 +1930,27 @@ rec {
         b
       ];
 
+  computeNixOSBuildModules =
+    {
+      addHostBaseGroup,
+      addUserBaseGroup,
+      desktop,
+    }:
+    lib.recursiveUpdate
+      (lib.recursiveUpdate {
+        groups.build.nixos = true;
+        groups.build.home-integrated = true;
+        groups.build.shared = true;
+      } (lib.optionalAttrs addHostBaseGroup { groups.base.nixos = true; }))
+      (lib.optionalAttrs (addUserBaseGroup && desktop != null) { groups.base.home-manager = true; });
+
+  computeStandaloneBuildModules =
+    { addBaseGroup }:
+    lib.recursiveUpdate {
+      groups.build.home-standalone = true;
+      groups.build.shared = true;
+    } (lib.optionalAttrs addBaseGroup { groups.base.home-manager = true; });
+
   mergeModulesWithPrecedence =
     modules1: modules2:
     let
@@ -2003,14 +2022,22 @@ rec {
           collectedSubmodules = collectSubModules args moduleSpecs;
           filteredSubmodules = filterFalseValues collectedSubmodules;
           normalizedSubmodules = normalizeModules filteredSubmodules;
-          collectedSubmodulesWithDefaults = applyDefaultsToModules normalizedSubmodules;
+          collectedSubmodulesWithDefaults =
+            if args.preEvalMode or false then
+              normalizedSubmodules
+            else
+              applyDefaultsToModules normalizedSubmodules;
 
-          contextFilteredSubmodules = lib.mapAttrs (
-            _: inputGroups:
-            lib.mapAttrs (
-              _: groupModules: lib.filterAttrs (_: s: (s.nx_conditionForce or null) != false) groupModules
-            ) inputGroups
-          ) collectedSubmodulesWithDefaults;
+          contextFilteredSubmodules =
+            if args.preEvalMode or false then
+              collectedSubmodulesWithDefaults
+            else
+              lib.mapAttrs (
+                _: inputGroups:
+                lib.mapAttrs (
+                  _: groupModules: lib.filterAttrs (_: s: (s.nx_conditionForce or null) != false) groupModules
+                ) inputGroups
+              ) collectedSubmodulesWithDefaults;
 
           nextModules = mergeModulesWithPrecedence contextFilteredSubmodules currentModules;
 
@@ -2060,90 +2087,6 @@ rec {
           ) withDefaults;
     in
     finalModulesWithDefaults;
-
-  extractModuleUnfreePackages =
-    processedModules:
-    let
-      collectUnfreeFromModules =
-        modules:
-        lib.flatten (
-          lib.mapAttrsToList (
-            inputName: inputGroups:
-            lib.mapAttrsToList (
-              groupName: groupModules:
-              lib.mapAttrsToList (moduleName: moduleSettings: moduleSettings.nx_unfree or [ ]) groupModules
-            ) inputGroups
-          ) modules
-        );
-    in
-    lib.unique (collectUnfreeFromModules processedModules);
-
-  validateUnfreePackages =
-    {
-      packages,
-      declaredUnfree ? [ ],
-      context,
-      profileName ? "unknown",
-      processedModules ? { },
-    }:
-    let
-      moduleUnfreePackages = extractModuleUnfreePackages processedModules;
-      allDeclaredUnfreePackages = declaredUnfree ++ moduleUnfreePackages;
-
-      unfreePackages = builtins.filter (
-        pkg:
-        let
-          isUnfree = pkg.meta.unfree or false;
-
-          hasUnfreeLicense = builtins.any (
-            license:
-            let
-              licenseName = lib.toLower (license.shortName or license.spdxId or "");
-            in
-            lib.hasInfix "unfree" licenseName
-            || lib.hasInfix "proprietary" licenseName
-            || licenseName == "unknown"
-          ) (lib.toList (pkg.meta.license or [ ]));
-
-        in
-        isUnfree || hasUnfreeLicense
-      ) packages;
-
-      unfreePackageNames = map (pkg: pkg.pname or pkg.name or "unknown") unfreePackages;
-
-      undeclaredUnfreePackages = builtins.filter (
-        packageName:
-        !(builtins.any (
-          declaredName: packageName == declaredName || lib.hasPrefix declaredName packageName
-        ) allDeclaredUnfreePackages)
-      ) unfreePackageNames;
-
-      hasUndeclaredUnfreePackages = undeclaredUnfreePackages != [ ];
-
-      configInstructions =
-        if context == "system" then
-          "host.allowedUnfreePackages = [ ${
-            lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages
-          } ];"
-        else
-          "user.allowedUnfreePackages = [ ${
-            lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages
-          } ];";
-
-    in
-    {
-      assertion = !hasUndeclaredUnfreePackages;
-      message = ''
-        Unfree packages found in ${context} packages but not declared in ${profileName} profile:
-        ${lib.concatStringsSep ", " undeclaredUnfreePackages}
-
-        Please add them to your profile:
-        ${configInstructions}
-
-        Or declare them in modules that use them:
-        unfree = [ ${lib.concatMapStringsSep " " (name: "\"${name}\"") undeclaredUnfreePackages} ];
-      '';
-    };
 
   scanAllModulesForInput =
     inputName: input:
@@ -2309,6 +2252,7 @@ rec {
                 rawOptions = moduleResult.value.rawOptions or { };
                 settings = moduleResult.value.settings or { };
                 description = moduleResult.value.description or "";
+                unfree = moduleResult.value.unfree or [ ];
                 conditionResult = evaluateModuleCondition moduleResult.value minimalSelf { enabled = false; };
               }
             else
@@ -2323,6 +2267,7 @@ rec {
                 rawOptions = { };
                 settings = { };
                 description = "";
+                unfree = [ ];
                 conditionResult = null;
               }
           ) moduleSpecs
@@ -2335,6 +2280,88 @@ rec {
 
   collectAllModuleOptions =
     args: builtins.filter (m: m.options != { } || m.rawOptions != { }) (collectAllModuleData args);
+
+  collectEnabledModulesPreEval =
+    initialModules: buildModules: host: user: variables: inputs:
+    let
+      minimalArgs = {
+        inherit
+          lib
+          defs
+          helpers
+          variables
+          inputs
+          ;
+        pkgs = { };
+        pkgs-unstable = { };
+        funcs = { };
+        configInputs = { };
+        inherit host;
+        user = user;
+        users = { };
+        processedModules = { };
+        nixOSHosts = { };
+        homeIntegratedUsers = { };
+        homeStandaloneUsers = { };
+        isTestingVM = false;
+        isProductionVM = false;
+        isVirtual = false;
+        preEvalMode = true;
+      };
+    in
+    collectAllModulesWithSettings minimalArgs initialModules buildModules;
+
+  collectAllModuleUnfreePackages =
+    system: preMergedModules: preBuildModules: host: user: variables: inputs:
+    let
+      enabledModules =
+        collectEnabledModulesPreEval preMergedModules preBuildModules host user variables
+          inputs;
+
+      minimalSelf = {
+        _nx_self = true;
+        isDarwin = helpers.isDarwinArch system;
+        isLinux = helpers.isLinuxArch system;
+        isX86_64 = helpers.isX86_64Arch system;
+        isAARCH64 = helpers.isAARCH64Arch system;
+        isTestingVM = false;
+        isProductionVM = false;
+        isVirtual = false;
+      };
+
+      minimalArgs = {
+        inherit lib defs;
+        pkgs = { };
+        pkgs-unstable = { };
+        funcs = { };
+        helpers = helpers;
+        self = minimalSelf;
+      };
+
+      isModuleEnabled =
+        spec: (enabledModules.${spec.inputName} or { }).${spec.groupName} or { } ? ${spec.moduleName};
+
+      scanInput =
+        inputName:
+        if additionalInputs ? ${inputName} then
+          let
+            input = additionalInputs.${inputName};
+            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input);
+            enabledSpecs = builtins.filter isModuleEnabled moduleSpecs;
+          in
+          lib.flatten (
+            map (
+              spec:
+              let
+                moduleResult = builtins.tryEval (import spec.modulePath minimalArgs);
+              in
+              if moduleResult.success then moduleResult.value.unfree or [ ] else [ ]
+            ) enabledSpecs
+          )
+        else
+          [ ];
+    in
+    lib.unique (lib.flatten (map scanInput helpers.allModuleInputsToScan));
 
   collectContextEnabledModules =
     args:
@@ -2476,6 +2503,27 @@ rec {
         config.nx.${m.inputName}.${m.groupName}.${m.moduleName}.enable = isEnabled;
       }
     ) allModuleData;
+
+  generateUnfreeValueModules =
+    allModuleData: processedModules:
+    lib.flatten (
+      map (
+        m:
+        let
+          isEnabled =
+            processedModules ? ${m.inputName}
+            && processedModules.${m.inputName} ? ${m.groupName}
+            && processedModules.${m.inputName}.${m.groupName} ? ${m.moduleName};
+          unfreeList = m.unfree or [ ];
+        in
+        lib.optional (isEnabled && unfreeList != [ ]) (
+          { config, ... }:
+          {
+            config.nx.unfree = unfreeList;
+          }
+        )
+      ) allModuleData
+    );
 
   generateMetaValueModules =
     allModuleData:

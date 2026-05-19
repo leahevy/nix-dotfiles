@@ -30,6 +30,7 @@ let
   settingsValueModules = funcs.generateSettingsValueModules allModuleData allModules;
   optionsValueModules = funcs.generateOptionsValueModules allModuleData allModules;
   enableValueModules = funcs.generateEnableValueModules allModuleData allModules;
+  unfreeValueModules = funcs.generateUnfreeValueModules allModuleData allModules;
   metaValueModules = funcs.generateMetaValueModules allModuleData;
 
   initModules = funcs.importAllModuleInits systemArgs;
@@ -70,6 +71,7 @@ in
     ++ settingsValueModules
     ++ optionsValueModules
     ++ enableValueModules
+    ++ unfreeValueModules
     ++ metaValueModules
     ++ initModules
     ++ disabledModules
