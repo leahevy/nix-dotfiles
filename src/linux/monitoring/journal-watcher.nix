@@ -201,6 +201,11 @@ args@{
           tag = "systemd-coredump";
           string = "of user 3[0-9]{4} terminated abnormally";
         }
+        {
+          tag = "systemd";
+          string = "Failed with result 'exit-code'\\.";
+          user = true;
+        }
       ];
       baseHighlightPatterns = [
         {
