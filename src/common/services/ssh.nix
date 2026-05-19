@@ -505,7 +505,7 @@ args@{
                   // lib.optionalAttrs (initrdHostPubKey != null) {
                     knownHostKeys = [ initrdHostPubKey ];
                   }
-                  // lib.optionalAttrs (installKey != null) {
+                  // lib.optionalAttrs (installKey != null && keys ? "nx-install") {
                     key = "nx-install";
                   };
                 }
