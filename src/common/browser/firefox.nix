@@ -705,27 +705,39 @@ in
 
     linux.enabled =
       config:
-      lib.mkIf (!(self.user.isStandalone or false)) {
-        nx.linux.desktop-modules.desktop-files.entries.firefox = {
-          exec = "${pkgs.systemd}/bin/systemd-run --user --collect --quiet /run/current-system/sw/bin/firefox --name firefox %U";
-          name = "Firefox";
-          icon = "firefox";
-          validateIcon = false;
-          categories = [
-            "Network"
-            "WebBrowser"
+      lib.mkMerge [
+        (lib.mkIf (!(self.user.isStandalone or false)) {
+          nx.linux.desktop-modules.desktop-files.entries.firefox = {
+            exec = "${pkgs.systemd}/bin/systemd-run --user --collect --quiet /run/current-system/sw/bin/firefox --name firefox %U";
+            name = "Firefox";
+            icon = "firefox";
+            validateIcon = false;
+            categories = [
+              "Network"
+              "WebBrowser"
+            ];
+            mimeType = [
+              "text/html"
+              "text/xml"
+              "application/xhtml+xml"
+              "application/xml"
+              "x-scheme-handler/http"
+              "x-scheme-handler/https"
+              "x-scheme-handler/ftp"
+            ];
+          };
+        })
+        {
+          nx.linux.monitoring.journal-watcher.ignorePatterns = [
+            {
+              tag = "firefox";
+              string = "Failed to enumerate devices of org\\.freedesktop\\.UPower.*";
+              user = true;
+              unitless = true;
+            }
           ];
-          mimeType = [
-            "text/html"
-            "text/xml"
-            "application/xhtml+xml"
-            "application/xml"
-            "x-scheme-handler/http"
-            "x-scheme-handler/https"
-            "x-scheme-handler/ftp"
-          ];
-        };
-      };
+        }
+      ];
 
     linux.integrated = config: {
       programs.firefox.package = lib.mkForce null;
