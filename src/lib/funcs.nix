@@ -2045,7 +2045,19 @@ rec {
     in
     let
       finalModules = collectRound { } normalizedInitialModules 0;
-      finalModulesWithDefaults = applyDefaultsToModules finalModules;
+      finalModulesWithDefaults =
+        if args.preEvalMode or false then
+          finalModules
+        else
+          let
+            withDefaults = applyDefaultsToModules finalModules;
+          in
+          lib.mapAttrs (
+            _: inputGroups:
+            lib.mapAttrs (
+              _: groupModules: lib.filterAttrs (_: s: (s.nx_conditionForce or null) != false) groupModules
+            ) inputGroups
+          ) withDefaults;
     in
     finalModulesWithDefaults;
 
