@@ -85,6 +85,11 @@ args@{
           string = "Files have gone away\\.";
         }
         {
+          service = "cups.service";
+          tag = "cupsd";
+          string = "\\[Job [0-9]+\\] ppdFilterLoadPPD: Last filter could not get determined, page logging by the PDF filter turned off\\.";
+        }
+        {
           string = "^cups\\.socket$";
           service = "ensure-printers.service";
           tag = "systemctl";
