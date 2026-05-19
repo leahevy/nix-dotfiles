@@ -25,6 +25,12 @@ args@{
     additionalModels = [ ];
   };
 
+  submodules = lib.optionalAttrs self.isLinux {
+    linux = {
+      graphics = [ "cuda" ];
+    };
+  };
+
   assertions = [
     {
       assertion = !(self.darwin.isModuleEnabled "dev.ollama");
