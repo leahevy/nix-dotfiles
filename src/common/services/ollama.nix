@@ -36,6 +36,12 @@ args@{
       assertion = !(self.darwin.isModuleEnabled "dev.ollama");
       message = "common ollama (home-manager service) and darwin ollama (homebrew) are mutually exclusive!";
     }
+    {
+      assertion =
+        (self.isLinux && self.settings.allowGPU && self.linux.isModuleEnabled "graphics.nvidia-setup")
+        -> self.variables.cudaArchitectures != [ ];
+      message = "cudaArchitectures is required when nvidia-setup is enabled on Linux!";
+    }
   ];
 
   module =
