@@ -659,6 +659,10 @@ in
             "browser.places.importBookmarksHTML" = true;
           }
           // mkSharedPlatformPrefs config downloadDir hasExternalPasswordManager
+          // lib.optionalAttrs self.isLinux {
+            "widget.use-xdg-desktop-portal.mime-handler" = 1;
+            "widget.use-xdg-desktop-portal.open-uri" = 1;
+          }
           // lib.optionalAttrs self.isDarwin {
             "ui.key.accelKey" =
               let
@@ -880,6 +884,7 @@ in
           let
             generalRules = [
               "dbus-user.talk org.freedesktop.portal.Desktop"
+              "env GIO_USE_PORTALS=1"
               "noblacklist /dev/null"
               "whitelist /dev/null"
             ];
