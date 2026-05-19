@@ -25,7 +25,7 @@ args@{
   module = {
     ifEnabled.linux.desktop-modules.desktop-files.enabled = config: {
       nx.linux.desktop-modules.desktop-files.entries.proton-mail = {
-        exec = "~/.local/bin/proton-mail";
+        exec = "${self.user.home}/.local/bin/proton-mail %u";
         name = "Proton Mail";
         icon = "mail-archive-symbolic";
         categories = [
@@ -41,19 +41,26 @@ args@{
       ];
     };
 
-    enabled = config: {
-      nx.preferences.desktop.programs.emailClient = {
-        name = lib.mkForce "proton-mail";
-        package = lib.mkForce null;
-        localBin = lib.mkForce true;
-        openCommand = lib.mkForce [ "proton-mail" ];
-        openFileCommand = lib.mkForce (path: [
-          "proton-mail"
-          path
-        ]);
-        desktopFile = lib.mkForce "proton-mail.desktop";
+    enabled =
+      config:
+      let
+        protonConfig = {
+          name = lib.mkForce "proton-mail";
+          package = lib.mkForce null;
+          localBin = lib.mkForce true;
+          openCommand = lib.mkForce [ "proton-mail" ];
+          openFileCommand = lib.mkForce (path: [
+            "proton-mail"
+            path
+          ]);
+          desktopFile = lib.mkForce "proton-mail.desktop";
+        };
+      in
+      {
+        nx.preferences.desktop.programs.emailClient = protonConfig;
+        nx.preferences.desktop.programs.calendar = protonConfig;
+        nx.preferences.desktop.programs.contacts = protonConfig;
       };
-    };
 
     home =
       config:
