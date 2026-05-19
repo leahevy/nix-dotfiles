@@ -755,6 +755,11 @@ in
         '';
         executable = true;
       };
+      home.packages = [
+        (pkgs.writeShellScriptBin "firejail-firefox-ls" ''
+          exec /run/wrappers/bin/firejail --profile=firefox -- ${pkgs.coreutils}/bin/ls -l "$@"
+        '')
+      ];
     };
 
     standalone =
