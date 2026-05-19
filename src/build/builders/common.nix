@@ -237,7 +237,7 @@ let
     rawUser
     // {
       inherit profileName;
-      isStandalone = isStandalone;
+      inherit isStandalone;
       isIntegrated = !isStandalone;
       isMainUser = isMainUser;
       architecture = arch;
@@ -507,25 +507,28 @@ in
 
       mainUserPreEval =
         if builtins.isString mainUserProfileName && builtins.pathExists mainUserConfigPath then
-          evalConfigModule {
-            optionPaths = [
-              (build + "/types/shared/all.nix")
-              (build + "/types/shared/user.nix")
-              (build + "/types/home/home-integrated.nix")
-            ];
-            configPath = mainUserConfigPath;
-            specialArgs = {
-              inherit
-                lib
-                variables
-                helpers
-                defs
-                ;
-              pkgs = { };
-              pkgs-unstable = { };
-              self = mkProfileSelf "home-integrated" mainUserProfileName { };
-            };
-          }
+          let
+            evalResult = builtins.tryEval (evalConfigModule {
+              optionPaths = [
+                (build + "/types/shared/all.nix")
+                (build + "/types/shared/user.nix")
+                (build + "/types/home/home-integrated.nix")
+              ];
+              configPath = mainUserConfigPath;
+              specialArgs = {
+                inherit
+                  lib
+                  variables
+                  helpers
+                  defs
+                  ;
+                pkgs = { };
+                pkgs-unstable = { };
+                self = mkProfileSelf "home-integrated" mainUserProfileName { };
+              };
+            });
+          in
+          if evalResult.success then evalResult.value else null
         else
           null;
 

@@ -2354,8 +2354,12 @@ rec {
               spec:
               let
                 moduleResult = builtins.tryEval (import spec.modulePath minimalArgs);
+                condResult = builtins.tryEval (
+                  evaluateModuleCondition moduleResult.value minimalSelf { enabled = true; }
+                );
+                conditionFailed = condResult.success && condResult.value == false;
               in
-              if moduleResult.success then moduleResult.value.unfree or [ ] else [ ]
+              if moduleResult.success && !conditionFailed then moduleResult.value.unfree or [ ] else [ ]
             ) enabledSpecs
           )
         else
