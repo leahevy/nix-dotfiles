@@ -658,7 +658,14 @@ in
           settings = {
             "browser.places.importBookmarksHTML" = true;
           }
-          // mkSharedPlatformPrefs config downloadDir hasExternalPasswordManager;
+          // mkSharedPlatformPrefs config downloadDir hasExternalPasswordManager
+          // lib.optionalAttrs self.isDarwin {
+            "ui.key.accelKey" =
+              let
+                ctrlKey = 17;
+              in
+              ctrlKey;
+          };
 
           userContent = lib.mkIf (
             config.nx.common.browser.browser.final.userContentCSS != null
