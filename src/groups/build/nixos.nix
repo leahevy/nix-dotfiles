@@ -38,7 +38,10 @@ args@{
       ++ lib.optionals (self.host.isVMHost or false) [ "vm-host" ];
       desktop = [ "desktop" ];
       programs = [ "programs" ];
-      system = [ ] ++ (if self.host.impermanence or false then [ "impermanence" ] else [ ]);
+      system = [
+        "kernel-fixes"
+      ]
+      ++ (if self.host.impermanence or false then [ "impermanence" ] else [ ]);
       theme = [ "theme-system" ];
     };
   };
