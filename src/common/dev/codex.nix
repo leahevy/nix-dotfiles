@@ -191,6 +191,7 @@ in
             "Do not run inline Python scripts for code checks or repository analysis. Prefer dedicated tools or manual reasoning; only run scripting languages when explicitly requested or clearly necessary."
             "Always state what you will do before running any edit tool calls."
             "Never auto-accept edits."
+            "If `functions.apply_patch` reports `Success. Updated the following files:` for the intended file path, trust that result and do not read the file again just to confirm the patch was applied."
             "When reading a file for the first time in a session, read the whole file with `cat` via `functions.exec_command` (don't use `rg` as a reader). After the initial full read, you may use targeted commands (e.g. `sed -n`, `rg`) to inspect specific parts."
           ];
 
