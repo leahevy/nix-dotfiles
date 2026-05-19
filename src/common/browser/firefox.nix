@@ -121,6 +121,7 @@ let
       "browser.download.folderList" = 2;
       "browser.download.useDownloadDir" = true;
       "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+      "devtools.theme" = "dark";
     }
     // lib.optionalAttrs hasExternalPasswordManager {
       "signon.rememberSignons" = false;
@@ -483,6 +484,43 @@ in
               #toolbar-context-menu { background-color: #000000 !important; }
             '';
 
+            forceBlackMainCSS = ''
+              #main-window,
+              .notificationbox-stack,
+              .infobar { background-color: #000000 !important; }
+            '';
+
+            forceBlackContextMenuCSS = ''
+              .tooltip-xul-wrapper,
+              .tooltip-container,
+              #toolbox-meatball-menu-button-panel,
+              .tooltip-filler,
+              .tooltip-panel,
+              .tooltip-arrow,
+              #toolbox-meatball-menu,
+              .checkbox-container,
+              .menu-standard-padding,
+              .menuitem,
+              button.command,
+              button.command.iconic,
+              span.label,
+              span.accelerator,
+              #mainPopupSet,
+              #contextAreaContextMenu,
+              #context-back,
+              #context-forward,
+              #context-reload,
+              #context-bookmarkpage,
+              #context-sep-navigation,
+              #context-navigation { background-color: #000000 !important; }
+
+              .menupopup-arrowscrollbox {
+                background-color: #000000 !important;
+                border-color: #000000 !important;
+                border-radius: 0 !important;
+              }
+            '';
+
             disableVPNButtonCSS = ''
               #ipprotection-button { display: none !important; }
             '';
@@ -563,6 +601,8 @@ in
               hideSingleTabToolbarCSS
               hideBookmarkToolbarIconsCSS
               forceBlackToolbarBackgroundsCSS
+              forceBlackMainCSS
+              forceBlackContextMenuCSS
               disableVPNButtonCSS
               disableSidebarButtonCSS
               disableStarIconCSS
