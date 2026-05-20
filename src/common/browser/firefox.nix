@@ -213,6 +213,10 @@ let
         addonId = "jid1-q4sG8pYhq8KGHs@jetpack";
         slug = "adblock-for-youtube";
       };
+      decentraleyes = {
+        addonId = "jid1-BoFifL9Vbdl2zQ@jetpack";
+        slug = "decentraleyes";
+      };
       vimium = {
         addonId = "{d7742d87-e61d-4b78-b8a1-b469842139fa}";
         slug = "vimium-ff";
