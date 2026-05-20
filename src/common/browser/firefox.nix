@@ -296,6 +296,12 @@ let
       DisableSystemAddonUpdate = true;
       DisableTelemetry = true;
       DisableFirefoxStudies = true;
+      LocalNetworkAccess = {
+        Enabled = true;
+        BlockTrackers = true;
+        EnablePrompting = false;
+        Locked = true;
+      };
       TranslateEnabled = false;
       GenerativeAI = {
         Chatbot = false;
@@ -379,6 +385,8 @@ let
         "devtools.toolbox.host" = lockValue "window";
         "dom.security.https_only_mode" = lockTrue;
         "dom.security.https_only_mode.upgrade_local" = lockFalse;
+        "network.lna.enabled" = lockTrue;
+        "network.lna.block_trackers" = lockTrue;
       }
       // lib.optionalAttrs self.isLinux {
         "widget.use-xdg-desktop-portal.mime-handler" = 1;
