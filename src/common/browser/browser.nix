@@ -27,6 +27,18 @@ in
   input = "common";
 
   options = {
+    forceSquareCSSMode = lib.mkOption {
+      type = lib.types.enum [
+        "none"
+        "normal"
+        "strict"
+      ];
+      default = "strict";
+    };
+    forceBlackCSSOverwrite = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+    };
     privacySearch = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -189,70 +201,77 @@ in
           (
             let
               data =
-                builtins.replaceStrings
-                  [
-                    "#000"
-                    "#262626"
-                    "#2a2a2a"
-                    "#2e2e2e"
-                    "#323232"
-                    "#363636"
-                    "#2c4125"
-                    "#5e6263"
-                    "#797fd4"
-                    "#909396"
-                    "#a6aaab"
-                    "#b8bbbd"
-                    "#c7c9ca"
-                    "#d2d8d9"
-                    "#fff"
-                    "#fba"
-                    "#aba"
-                    "#2f7bde"
-                    "#639ce6"
-                    "#15968d"
-                    "#436237"
-                    "#598249"
-                    "#b68800"
-                    "#e05f27"
-                    "#5e1c19"
-                    "#bd3832"
-                    "#ce4139"
-                    "#a8366b"
-                  ]
-                  [
-                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.primary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.secondary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.tertiary.html
-                    config.nx.preferences.theme.colors.main.backgrounds.themed.html
-                    config.nx.preferences.theme.colors.main.foregrounds.subtle.html
-                    config.nx.preferences.theme.colors.main.foregrounds.secondary.html
-                    config.nx.preferences.theme.colors.main.foregrounds.subtle.html
-                    config.nx.preferences.theme.colors.main.foregrounds.secondary.html
-                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
-                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
-                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
-                    config.nx.preferences.theme.colors.main.foregrounds.primary.html
-                    config.nx.preferences.theme.colors.main.foregrounds.emphasized.html
-                    config.nx.preferences.theme.colors.main.foregrounds.strong.html
-                    config.nx.preferences.theme.colors.semantic.modifiedDarker.html
-                    config.nx.preferences.theme.colors.semantic.removedDarker.html
-                    config.nx.preferences.theme.colors.semantic.success.html
-                    config.nx.preferences.theme.colors.semantic.successDarker.html
-                    config.nx.preferences.theme.colors.semantic.success.html
-                    config.nx.preferences.theme.colors.semantic.warning.html
-                    config.nx.preferences.theme.colors.semantic.error.html
-                    config.nx.preferences.theme.colors.semantic.errorDarker.html
-                    config.nx.preferences.theme.colors.semantic.info.html
-                    config.nx.preferences.theme.colors.semantic.info.html
-                    config.nx.preferences.theme.colors.semantic.selected.html
-                  ]
-                  (
-                    builtins.readFile "${self.inputs.solarized-everything-css}/css/darculized/darculized-all-sites.css"
+                (import (self.file "css.nix") {
+                  inherit lib;
+                  css = (
+                    builtins.replaceStrings
+                      [
+                        "#000"
+                        "#262626"
+                        "#2a2a2a"
+                        "#2e2e2e"
+                        "#323232"
+                        "#363636"
+                        "#2c4125"
+                        "#5e6263"
+                        "#797fd4"
+                        "#909396"
+                        "#a6aaab"
+                        "#b8bbbd"
+                        "#c7c9ca"
+                        "#d2d8d9"
+                        "#fff"
+                        "#fba"
+                        "#aba"
+                        "#2f7bde"
+                        "#639ce6"
+                        "#15968d"
+                        "#436237"
+                        "#598249"
+                        "#b68800"
+                        "#e05f27"
+                        "#5e1c19"
+                        "#bd3832"
+                        "#ce4139"
+                        "#a8366b"
+                      ]
+                      [
+                        config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                        config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                        config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                        config.nx.preferences.theme.colors.main.backgrounds.primary.html
+                        config.nx.preferences.theme.colors.separators.ultraDark.html
+                        config.nx.preferences.theme.colors.separators.ultraDark.html
+                        config.nx.preferences.theme.colors.main.backgrounds.themed.html
+                        config.nx.preferences.theme.colors.main.foregrounds.primary.html
+                        config.nx.preferences.theme.colors.main.foregrounds.emphasized.html
+                        config.nx.preferences.theme.colors.main.foregrounds.primary.html
+                        config.nx.preferences.theme.colors.main.foregrounds.emphasized.html
+                        config.nx.preferences.theme.colors.main.foregrounds.strong.html
+                        config.nx.preferences.theme.colors.main.foregrounds.strong.html
+                        config.nx.preferences.theme.colors.main.foregrounds.strong.html
+                        config.nx.preferences.theme.colors.main.foregrounds.primary.html
+                        config.nx.preferences.theme.colors.main.foregrounds.emphasized.html
+                        config.nx.preferences.theme.colors.main.foregrounds.strong.html
+                        config.nx.preferences.theme.colors.semantic.modifiedDarker.html
+                        config.nx.preferences.theme.colors.semantic.removedDarker.html
+                        config.nx.preferences.theme.colors.semantic.success.html
+                        config.nx.preferences.theme.colors.semantic.successDarker.html
+                        config.nx.preferences.theme.colors.semantic.success.html
+                        config.nx.preferences.theme.colors.semantic.warning.html
+                        config.nx.preferences.theme.colors.semantic.error.html
+                        config.nx.preferences.theme.colors.semantic.errorDarker.html
+                        config.nx.preferences.theme.colors.semantic.info.html
+                        config.nx.preferences.theme.colors.semantic.info.html
+                        config.nx.preferences.theme.colors.semantic.selected.html
+                      ]
+                      (
+                        builtins.readFile "${self.inputs.solarized-everything-css}/css/darculized/darculized-all-sites.css"
+                      )
                   );
+                  colors = config.nx.preferences.theme.colors;
+                  options = config.nx.common.browser.browser;
+                }).result;
             in
             {
               inherit data;
