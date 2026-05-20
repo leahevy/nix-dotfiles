@@ -301,7 +301,7 @@ let
       AppAutoUpdate = false;
       BackgroundAppUpdate = false;
       DisableAppUpdate = true;
-      ExtensionUpdate = false;
+      ExtensionUpdate = true;
       ManualAppUpdateOnly = true;
       DisableSystemAddonUpdate = true;
       DisableTelemetry = true;
