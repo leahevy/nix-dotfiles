@@ -71,7 +71,7 @@ let
           let
             injectedUrlPrefix = if startsWithAlnum name then urlIconPrefix else "";
           in
-          ''<DT><A HREF="${esc value}">@${esc "${injectedUrlPrefix}${fullName}"}</A>''
+          ''<DT><A HREF="${esc value}">+${esc "${injectedUrlPrefix}${fullName}"}</A>''
         else if builtins.isAttrs value then
           let
             injectedFolderPrefix = if startsWithAlnum name then folderIconPrefix else "";
@@ -281,6 +281,15 @@ let
       ) allExtensions;
       hasExternalPasswordManager =
         config.nx.common.passwords.bitwarden.enable || config.nx.common.passwords.keepassxc.enable;
+
+      builtInSearchEnginesToRemove = [
+        "Google"
+        "Bing"
+        "DuckDuckGo"
+        "Wikipedia (en)"
+        "eBay"
+        "Perplexity"
+      ];
     in
     {
       AppAutoUpdate = false;
@@ -311,12 +320,14 @@ let
       };
       SearchEngines = {
         Add = lib.mapAttrsToList (name: e: {
-          Name = capitalizeFirst name;
+          Name = "@" + (capitalizeFirst name);
           Alias = "@${e.shortName}";
           URLTemplate = builtins.replaceStrings [ "{}" ] [ "{searchTerms}" ] e.queryUrl;
         }) browserCfg.final.searchEngines;
         Default = defaultEngineName;
+        PreventInstalls = true;
         Locked = true;
+        Remove = builtInSearchEnginesToRemove;
       };
       ExtensionSettings = mkExtensionSettings allExtensions;
       Preferences = {
@@ -1023,10 +1034,10 @@ in
           lib.mkIf (enableNiriKeybinds && isSelectedBrowser && hasAppLauncher)
             (
               let
-                namesArgs = lib.escapeShellArgs (map (n: "@${n}") (lib.attrNames flattenedBookmarks));
+                namesArgs = lib.escapeShellArgs (map (n: "+${n}") (lib.attrNames flattenedBookmarks));
                 caseStatements = lib.concatStringsSep "\n" (
                   lib.mapAttrsToList (
-                    name: url: "    ${lib.escapeShellArg "@${name}"}) firefox ${lib.escapeShellArg url} ;;"
+                    name: url: "    ${lib.escapeShellArg "+${name}"}) firefox ${lib.escapeShellArg url} ;;"
                   ) flattenedBookmarks
                 );
                 launcherCmd = lib.escapeShellArgs (
