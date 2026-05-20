@@ -112,33 +112,6 @@ let
     else
       "${homeDir}/${defaultName}";
 
-  mkSharedPlatformPrefs =
-    config: downloadDir: hasExternalPasswordManager:
-    {
-      "browser.toolbars.bookmarks.visibility" = "never";
-      "browser.bookmarks.file" = "${mkBookmarksHtml config}";
-      "browser.download.dir" = downloadDir;
-      "browser.download.folderList" = 2;
-      "browser.download.useDownloadDir" = true;
-      "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
-      "devtools.theme" = "dark";
-      "devtools.toolbox.host" = "window";
-      "dom.security.https_only_mode" = true;
-      "dom.security.https_only_mode.upgrade_local" = false;
-    }
-    // lib.optionalAttrs hasExternalPasswordManager {
-      "signon.rememberSignons" = false;
-      "signon.autofillForms" = false;
-      "signon.generation.enabled" = false;
-      "signon.generation.available" = false;
-      "signon.formlessCapture.enabled" = false;
-      "signon.formRemovalCapture.enabled" = false;
-      "signon.capture.inputChanges.enabled" = false;
-      "signon.privateBrowsingCapture.enabled" = false;
-      "signon.storeWhenAutocompleteOff" = false;
-      "browser.contextual-password-manager.enabled" = false;
-    };
-
   extensionType = lib.types.submodule {
     options = {
       addonId = lib.mkOption { type = lib.types.str; };
@@ -397,10 +370,27 @@ let
         "browser.tabs.firefox-view" = lockFalse;
         "browser.translations.enable" = lockFalse;
         "browser.translations.automaticallyPopup" = lockFalse;
+        "browser.toolbars.bookmarks.visibility" = lockValue "never";
+        "browser.bookmarks.file" = lockValue "${mkBookmarksHtml config}";
+        "browser.download.dir" = lockValue downloadDir;
+        "browser.download.folderList" = lockValue 2;
+        "browser.download.useDownloadDir" = lockTrue;
+        "devtools.theme" = lockValue "dark";
+        "devtools.toolbox.host" = lockValue "window";
+        "dom.security.https_only_mode" = lockTrue;
+        "dom.security.https_only_mode.upgrade_local" = lockFalse;
       }
-      // lib.optionalAttrs hasExternalPasswordManager {
-        PasswordManagerEnabled = false;
-        OfferToSaveLogins = false;
+      // lib.optionalAttrs self.isLinux {
+        "widget.use-xdg-desktop-portal.mime-handler" = 1;
+        "widget.use-xdg-desktop-portal.open-uri" = 1;
+        "media.webspeech.synth.enabled" = false;
+      }
+      // lib.optionalAttrs self.isDarwin {
+        "ui.key.accelKey" =
+          let
+            ctrlKey = 17;
+          in
+          ctrlKey;
       }
       // lib.optionalAttrs darkMode {
         "ui.systemUsesDarkTheme" = lockValue 1;
@@ -409,10 +399,23 @@ let
       // lib.optionalAttrs (!sidebar) {
         "sidebar.revamp" = lockFalse;
       }
-      // lib.mapAttrs (_: v: lockValue v) (
-        mkSharedPlatformPrefs config downloadDir hasExternalPasswordManager
-      )
+      // lib.optionalAttrs hasExternalPasswordManager {
+        "signon.rememberSignons" = lockFalse;
+        "signon.autofillForms" = lockFalse;
+        "signon.generation.enabled" = lockFalse;
+        "signon.generation.available" = lockFalse;
+        "signon.formlessCapture.enabled" = lockFalse;
+        "signon.formRemovalCapture.enabled" = lockFalse;
+        "signon.capture.inputChanges.enabled" = lockFalse;
+        "signon.privateBrowsingCapture.enabled" = lockFalse;
+        "signon.storeWhenAutocompleteOff" = lockFalse;
+        "browser.contextual-password-manager.enabled" = lockFalse;
+      }
       // lockedPreferences;
+    }
+    // lib.optionalAttrs hasExternalPasswordManager {
+      PasswordManagerEnabled = false;
+      OfferToSaveLogins = false;
     }
     // lib.optionalAttrs (!syncEnable) {
       DisableAccounts = true;
@@ -488,13 +491,11 @@ in
       {
         config,
         profileName,
-        defaultDownloadsName,
         extensions,
         darkMode,
         ...
       }:
       let
-        downloadDir = getDownloadDir config self.user.home defaultDownloadsName;
         allExtensions = lib.filterAttrs (_: ext: !(ext.disabled or false)) (
           (baseExtensions config darkMode) // extensions
         );
@@ -682,8 +683,6 @@ in
               toolbarExtensionsForceShownCSS
             ]
           );
-        hasExternalPasswordManager =
-          config.nx.common.passwords.bitwarden.enable || config.nx.common.passwords.keepassxc.enable;
       in
       {
         assertions =
@@ -715,19 +714,6 @@ in
           ) settingsExtensions;
           settings = {
             "browser.places.importBookmarksHTML" = true;
-          }
-          // mkSharedPlatformPrefs config downloadDir hasExternalPasswordManager
-          // lib.optionalAttrs self.isLinux {
-            "widget.use-xdg-desktop-portal.mime-handler" = 1;
-            "widget.use-xdg-desktop-portal.open-uri" = 1;
-            "media.webspeech.synth.enabled" = false;
-          }
-          // lib.optionalAttrs self.isDarwin {
-            "ui.key.accelKey" =
-              let
-                ctrlKey = 17;
-              in
-              ctrlKey;
           };
 
           userContent = lib.mkIf (
