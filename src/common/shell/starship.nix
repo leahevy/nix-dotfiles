@@ -17,6 +17,7 @@ args@{
   settings = {
     enableTransience = true;
     scanTimeout = 5000;
+    commandTimeout = 2500;
   };
 
   module = {
@@ -68,6 +69,7 @@ args@{
             ];
             right_format = "";
             scan_timeout = self.settings.scanTimeout;
+            command_timeout = self.settings.commandTimeout;
 
             time = {
               format = "[]($style)[ $time ]($style)";
