@@ -703,6 +703,7 @@ in
           // lib.optionalAttrs self.isLinux {
             "widget.use-xdg-desktop-portal.mime-handler" = 1;
             "widget.use-xdg-desktop-portal.open-uri" = 1;
+            "media.webspeech.synth.enabled" = false;
           }
           // lib.optionalAttrs self.isDarwin {
             "ui.key.accelKey" =
