@@ -341,7 +341,7 @@ let
           Alias = "@${e.shortName}";
           URLTemplate = builtins.replaceStrings [ "{}" ] [ "{searchTerms}" ] e.queryUrl;
         }) browserCfg.final.searchEngines;
-        Default = defaultEngineName;
+        Default = "@" + defaultEngineName;
         PreventInstalls = true;
         Locked = true;
         Remove = builtInSearchEnginesToRemove;
