@@ -122,6 +122,9 @@ let
       "browser.download.useDownloadDir" = true;
       "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
       "devtools.theme" = "dark";
+      "devtools.toolbox.host" = "window";
+      "dom.security.https_only_mode" = true;
+      "dom.security.https_only_mode.upgrade_local" = false;
     }
     // lib.optionalAttrs hasExternalPasswordManager {
       "signon.rememberSignons" = false;
