@@ -318,6 +318,17 @@ let
         Locked = true;
         Cryptomining = true;
         Fingerprinting = true;
+        EmailTracking = true;
+        SuspectedFingerprinting = true;
+        Category = "strict";
+        BaselineExceptions = false;
+        ConvenienceExceptions = false;
+      };
+      Permissions = {
+        VirtualReality = {
+          BlockNewRequests = true;
+          Locked = true;
+        };
       };
       Homepage = {
         URL = browserCfg.homeUrl;
@@ -335,6 +346,16 @@ let
         Locked = true;
         Remove = builtInSearchEnginesToRemove;
       };
+      DisableSecurityBypass = {
+        InvalidCertificate = true;
+        SafeBrowsing = true;
+      };
+
+      DisableFormHistory = true;
+      DisablePasswordReveal = true;
+      AutofillAddressEnabled = false;
+      AutofillCreditCardEnabled = false;
+
       ExtensionSettings = mkExtensionSettings allExtensions;
       Preferences = {
         "browser.aboutConfig.showWarning" = lockFalse;
