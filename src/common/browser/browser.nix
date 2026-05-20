@@ -37,7 +37,7 @@ in
     };
     addAmazon = lib.mkOption {
       type = lib.types.bool;
-      default = false;
+      default = true;
     };
     amazonDomain = lib.mkOption {
       type = lib.types.str;
