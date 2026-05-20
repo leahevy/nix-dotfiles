@@ -255,6 +255,7 @@ let
       extraPolicies,
       extensions,
       downloadDir,
+      nextdnsID,
     }:
     let
       browserCfg = config.nx.common.browser.browser;
@@ -363,9 +364,17 @@ let
         "dom.disable_open_during_load" = lockTrue;
         "pdfjs.disabled" = lockFalse;
         "network.dns.disablePrefetch" = lockTrue;
+        "network.dns.disablePrefetchFromHTTPS" = lockTrue;
         "network.prefetch-next" = lockFalse;
+        "network.predictor.enabled" = lockFalse;
+        "network.http.speculative-parallel-limit" = lockValue 0;
+        "network.captive-portal-service.enabled" = lockFalse;
+        "network.connectivity-service.enabled" = lockFalse;
+        "network.IDN_show_punycode" = lockTrue;
         "network.http.referer.XOriginPolicy" = lockValue 1;
-        "privacy.donottrackheader.enabled" = lockTrue;
+        "network.http.referer.XOriginTrimmingPolicy" = lockValue 2;
+        "media.peerconnection.ice.default_address_only" = lockTrue;
+        "media.peerconnection.ice.no_host" = lockTrue;
         "toolkit.legacyUserProfileCustomizations.stylesheets" = lockTrue;
         "browser.topsites.contile.enabled" = lockFalse;
         "browser.newtabpage.activity-stream.showSponsored" = lockFalse;
@@ -381,12 +390,14 @@ let
         "browser.download.dir" = lockValue downloadDir;
         "browser.download.folderList" = lockValue 2;
         "browser.download.useDownloadDir" = lockTrue;
-        "devtools.theme" = lockValue "dark";
-        "devtools.toolbox.host" = lockValue "window";
         "dom.security.https_only_mode" = lockTrue;
         "dom.security.https_only_mode.upgrade_local" = lockFalse;
         "network.lna.enabled" = lockTrue;
         "network.lna.block_trackers" = lockTrue;
+      }
+      // lib.optionalAttrs (nextdnsID != null) {
+        "network.trr.mode" = 3;
+        "network.trr.uri" = "https://dns.nextdns.io/${nextdnsID}";
       }
       // lib.optionalAttrs self.isLinux {
         "widget.use-xdg-desktop-portal.mime-handler" = 1;
@@ -403,9 +414,6 @@ let
       // lib.optionalAttrs darkMode {
         "ui.systemUsesDarkTheme" = lockValue 1;
         "layout.css.prefers-color-scheme.content-override" = lockValue 0;
-      }
-      // lib.optionalAttrs (!sidebar) {
-        "sidebar.revamp" = lockFalse;
       }
       // lib.optionalAttrs hasExternalPasswordManager {
         "signon.rememberSignons" = lockFalse;
@@ -479,6 +487,10 @@ in
       type = lib.types.str;
       default = "Downloads";
     };
+    nextdnsID = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+    };
     extensions = lib.mkOption {
       type = lib.types.attrsOf extensionType;
       default = { };
@@ -501,6 +513,7 @@ in
         profileName,
         extensions,
         darkMode,
+        sidebar,
         ...
       }:
       let
@@ -722,6 +735,13 @@ in
           ) settingsExtensions;
           settings = {
             "browser.places.importBookmarksHTML" = true;
+            "devtools.theme" = "dark";
+            "devtools.toolbox.host" = "window";
+            "privacy.donottrackheader.enabled" = true;
+            "security.pki.crlite_mode" = 2;
+          }
+          // lib.optionalAttrs (!sidebar) {
+            "sidebar.revamp" = false;
           };
 
           userContent = lib.mkIf (
@@ -861,6 +881,7 @@ in
         extraPolicies,
         extensions,
         defaultDownloadsName,
+        nextdnsID,
         ...
       }:
       let
@@ -878,6 +899,7 @@ in
               extraPolicies
               extensions
               downloadDir
+              nextdnsID
               ;
           };
         };
@@ -920,6 +942,7 @@ in
         firejailXDGAllowedUserDirs,
         firejailExtraRules,
         defaultDownloadsName,
+        nextdnsID,
         ...
       }:
       let
@@ -945,6 +968,7 @@ in
               extraPolicies
               extensions
               downloadDir
+              nextdnsID
               ;
           };
         };
