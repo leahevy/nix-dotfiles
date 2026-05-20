@@ -292,6 +292,12 @@ let
       ];
     in
     {
+      HttpsOnlyMode = "force_enabled";
+      HttpAllowlist = [
+        "http://localhost"
+        "http://127.0.0.1"
+        "http://[::1]"
+      ];
       AppAutoUpdate = false;
       BackgroundAppUpdate = false;
       DisableAppUpdate = true;
