@@ -397,20 +397,20 @@ let
         "network.lna.block_trackers" = lockTrue;
       }
       // lib.optionalAttrs (nextdnsID != null) {
-        "network.trr.mode" = 3;
-        "network.trr.uri" = "https://dns.nextdns.io/${nextdnsID}";
+        "network.trr.mode" = lockValue 3;
+        "network.trr.uri" = lockValue "https://dns.nextdns.io/${nextdnsID}";
       }
       // lib.optionalAttrs self.isLinux {
-        "widget.use-xdg-desktop-portal.mime-handler" = 1;
-        "widget.use-xdg-desktop-portal.open-uri" = 1;
-        "media.webspeech.synth.enabled" = false;
+        "widget.use-xdg-desktop-portal.mime-handler" = lockValue 1;
+        "widget.use-xdg-desktop-portal.open-uri" = lockValue 1;
+        "media.webspeech.synth.enabled" = lockFalse;
       }
       // lib.optionalAttrs self.isDarwin {
         "ui.key.accelKey" =
           let
             ctrlKey = 17;
           in
-          ctrlKey;
+          lockValue ctrlKey;
       }
       // lib.optionalAttrs darkMode {
         "ui.systemUsesDarkTheme" = lockValue 1;
