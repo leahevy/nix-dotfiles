@@ -754,9 +754,10 @@ in
             addon_id=$(${helpers.packageFile args pkgs.unzip "bin/unzip"} -p "$store_path" manifest.json | ${
               helpers.packageFile args pkgs.jq "bin/jq"
             } -r '.browser_specific_settings.gecko.id // .applications.gecko.id')
+            encoded_id=$(printf '%s' "$addon_id" | ${helpers.packageFile args pkgs.jq "bin/jq"} -Rr @uri)
             slug=$(${
               helpers.packageFile args pkgs.curl "bin/curl"
-            } -s "https://addons.mozilla.org/api/v5/addons/addon/''${addon_id}/" | ${
+            } -s "https://addons.mozilla.org/api/v5/addons/addon/''${encoded_id}/" | ${
               helpers.packageFile args pkgs.jq "bin/jq"
             } -r .slug)
             ok=1
