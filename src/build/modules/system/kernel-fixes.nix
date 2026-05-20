@@ -50,7 +50,8 @@ args@{
         let
           kv = config.boot.kernelPackages.kernel.version;
         in
-        fix.when (lib.toInt (lib.versions.major kv)) (lib.toInt (lib.versions.minor kv)) (
+        !(fix ? when)
+        || fix.when (lib.toInt (lib.versions.major kv)) (lib.toInt (lib.versions.minor kv)) (
           lib.toInt (lib.versions.patch kv)
         );
     in
