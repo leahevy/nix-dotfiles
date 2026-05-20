@@ -197,6 +197,7 @@ let
       clearurls = {
         addonId = "{74145f27-f039-47ce-a470-a662b129930a}";
         slug = "clearurls";
+        showInToolbar = true;
       };
     }
     // lib.optionalAttrs darkMode {
