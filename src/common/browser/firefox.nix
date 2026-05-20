@@ -731,12 +731,43 @@ in
               echo "Error: URL must start with https://addons.mozilla.org/firefox/downloads/" >&2
               exit 1
             fi
-            store_path=$(${
+            tmp="''${url##*/file/}"
+            file_id="''${tmp%%/*}"
+            filename=$(basename "$url")
+            filename="''${filename%.xpi}"
+            prefetch_json=$(${
               helpers.packageFile args pkgs.nix "bin/nix"
-            } store prefetch-file --json "$url" 2>/dev/null | ${
+            } store prefetch-file --json "$url" 2>/dev/null)
+            store_path=$(printf '%s' "$prefetch_json" | ${
               helpers.packageFile args pkgs.jq "bin/jq"
             } -r .storePath)
-            ${helpers.packageFile args pkgs.unzip "bin/unzip"} -p "$store_path" manifest.json
+            sha256=$(printf '%s' "$prefetch_json" | ${helpers.packageFile args pkgs.jq "bin/jq"} -r .hash)
+            addon_id=$(${helpers.packageFile args pkgs.unzip "bin/unzip"} -p "$store_path" manifest.json | ${
+              helpers.packageFile args pkgs.jq "bin/jq"
+            } -r '.browser_specific_settings.gecko.id // .applications.gecko.id')
+            slug=$(${
+              helpers.packageFile args pkgs.curl "bin/curl"
+            } -s "https://addons.mozilla.org/api/v5/addons/addon/''${addon_id}/" | ${
+              helpers.packageFile args pkgs.jq "bin/jq"
+            } -r .slug)
+            ok=1
+            [[ "$file_id" =~ ^[0-9]+$ ]] || { echo "Error: could not parse fileId from URL" >&2; ok=0; }
+            [ -n "$filename" ] || { echo "Error: could not parse filename from URL" >&2; ok=0; }
+            [[ "$sha256" == sha256-* ]] || { echo "Error: unexpected sha256 format: $sha256" >&2; ok=0; }
+            [ -n "$addon_id" ] && [ "$addon_id" != "null" ] || { echo "Error: addonId not found in manifest" >&2; ok=0; }
+            [ -n "$slug" ] && [ "$slug" != "null" ] || { echo "Error: slug not found via AMO API" >&2; ok=0; }
+            [ "$ok" -eq 1 ] || exit 1
+            if [[ "$slug" =~ ^[a-zA-Z]([a-zA-Z-]*[a-zA-Z])?$ ]]; then
+              printf '%s = {\n' "$slug"
+            else
+              printf '"%s" = {\n' "$slug"
+            fi
+            printf '  addonId = "%s";\n' "$addon_id"
+            printf '  slug = "%s";\n' "$slug"
+            printf '  fileId = %s;\n' "$file_id"
+            printf '  filename = "%s";\n' "$filename"
+            printf '  sha256 = "%s";\n' "$sha256"
+            printf '};\n'
           '';
           executable = true;
         };
