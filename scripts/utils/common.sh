@@ -1481,6 +1481,7 @@ diff_store_paths() {
 		"home-manager-generation"
 		"home-manager-path"
 		"home-manager-files"
+		"home-configuration-reference-manpage"
 		"home-manager-applications"
 		"home-manager-fonts"
 		"home-manager-agents"
