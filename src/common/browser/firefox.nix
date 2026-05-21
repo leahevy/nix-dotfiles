@@ -249,6 +249,7 @@ let
         installation_mode = "force_installed";
         install_url = mkExtensionUrl ext;
         toolbar_pin = if (ext.showInToolbar or false) then "force_pinned" else "default_off";
+        default_area = if (ext.showInToolbar or false) then "navbar" else "menupanel";
         updates_disabled = !(ext.forceLatest or false) && (ext.sha256 or null) != null;
         private_browsing = ext.allowedInPrivateWindows or true;
       }
