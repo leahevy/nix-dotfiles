@@ -538,9 +538,8 @@ in
               ext
               // {
                 settings = {
-                  type = "custom_url";
-                  url = "about:blank";
-                  focus_website = false;
+                  type = "background_color";
+                  background_color = "#000000";
                 };
               }
             else
