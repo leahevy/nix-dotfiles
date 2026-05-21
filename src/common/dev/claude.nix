@@ -119,6 +119,13 @@ in
             "Batch all changes into as few operations as possible."
             "Don't analyse too much on first feasibility questions to avoid wasting tokens."
             "Keep sub-agents to a minimum."
+            [
+              "Use the AskUserQuestion tool when:"
+              "The user needs to pick between 2-4 distinct implementation approaches"
+              "A decision has clear trade-offs that benefit from side-by-side comparison"
+              "You would otherwise ask a free-form question the user would answer with a one-word reply"
+              "You did a review and we need to make decisions for fixing individual issues one by one"
+            ]
           ];
         };
         baseSkills = { };
