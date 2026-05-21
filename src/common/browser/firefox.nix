@@ -178,7 +178,7 @@ let
         settings = {
           type = "custom_url";
           url = config.nx.common.browser.browser.homeUrl;
-          focus_website = false;
+          focus_website = true;
         };
       };
       ublock-origin = {
