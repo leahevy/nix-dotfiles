@@ -1129,7 +1129,6 @@ in
         isSelectedBrowser = (self.user.settings.browser or null) == "firefox";
         appLauncher = config.nx.preferences.desktop.programs.appLauncher;
         browserCfg = config.nx.common.browser.browser;
-        defaultSearch = browserCfg.defaultSearchUrl;
 
         flattenBookmarks =
           prefix: bookmarks:
