@@ -161,6 +161,18 @@
     };
 
     # -----------------------------------------------------------------------------
+    # Rolling-tag inputs (require manual tag bump)
+    # -----------------------------------------------------------------------------
+
+    nixos-raspberrypi = {
+      url = "github:nvmd/nixos-raspberrypi/v1.20260517.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-compat.follows = "flake-compat";
+      inputs.nixos-images.inputs.nixos-stable.follows = "nixpkgs";
+      inputs.nixos-images.inputs.nixos-unstable.follows = "nixpkgs-unstable";
+    };
+
+    # -----------------------------------------------------------------------------
     # Third-party inputs (require manual review on update)
     # -----------------------------------------------------------------------------
 
