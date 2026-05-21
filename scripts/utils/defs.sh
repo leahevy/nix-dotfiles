@@ -63,7 +63,6 @@ export AUTO_UPDATE_INPUTS=(
 	"nixos-anywhere"
 	"niri-flake"
 	"nixos-hardware"
-	"nixos-raspberrypi"
 	"flake-parts"
 	"flake-utils"
 	"flake-compat"
