@@ -112,6 +112,14 @@ let
     else
       "${homeDir}/${defaultName}";
 
+  niriLauncherEffectivelyEnabled =
+    config:
+    self.isLinux
+    && config.nx.linux.desktop.niri.enable
+    && config.nx.common.browser.firefox.enableNiriKeybinds
+    && (self.user.settings.browser or null) == "firefox"
+    && config.nx.preferences.desktop.programs.appLauncher != null;
+
   extensionType = lib.types.submodule {
     options = {
       addonId = lib.mkOption { type = lib.types.str; };
@@ -521,7 +529,22 @@ in
         allExtensions = lib.filterAttrs (_: ext: !(ext.disabled or false)) (
           (baseExtensions config darkMode) // extensions
         );
-        settingsExtensions = lib.filterAttrs (_: ext: (ext.settings or null) != null) allExtensions;
+        settingsExtensions = lib.filterAttrs (_: ext: (ext.settings or null) != null) (
+          lib.mapAttrs (
+            name: ext:
+            if name == "new-tab-override" && !niriLauncherEffectivelyEnabled config then
+              ext
+              // {
+                settings = {
+                  type = "custom_url";
+                  url = "about:blank";
+                  focus_website = false;
+                };
+              }
+            else
+              ext
+          ) allExtensions
+        );
         userChromeCSS =
           let
             hideSingleTabToolbarCSS = ''
@@ -1104,7 +1127,6 @@ in
       let
         isSelectedBrowser = (self.user.settings.browser or null) == "firefox";
         appLauncher = config.nx.preferences.desktop.programs.appLauncher;
-        hasAppLauncher = appLauncher != null;
         browserCfg = config.nx.common.browser.browser;
         defaultSearch = browserCfg.defaultSearchUrl;
 
@@ -1126,37 +1148,35 @@ in
         flattenedBookmarks = flattenBookmarks "" (browserCfg.final.bookmarks // firefoxSpecificBookmarks);
       in
       {
-        home.file.".local/bin/firefox-bookmark" =
-          lib.mkIf (enableNiriKeybinds && isSelectedBrowser && hasAppLauncher)
-            (
-              let
-                namesArgs = lib.escapeShellArgs (map (n: "+${n}") (lib.attrNames flattenedBookmarks));
-                caseStatements = lib.concatStringsSep "\n" (
-                  lib.mapAttrsToList (
-                    name: url: "    ${lib.escapeShellArg "+${name}"}) firefox ${lib.escapeShellArg url} ;;"
-                  ) flattenedBookmarks
-                );
-                launcherCmd = lib.escapeShellArgs (
-                  helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
-                    prompt = "Bookmark: ";
-                    placeholder = "Select a bookmark";
-                    width = 80;
-                    lines = 15;
-                  }
-                );
-              in
-              {
-                text = ''
-                  #!/usr/bin/env bash
-                  selection=$(printf '%s\n' ${namesArgs} | ${launcherCmd}) || exit 0
-                  [ -z "$selection" ] && exit 0
-                  case "$selection" in
-                  ${caseStatements}
-                  esac
-                '';
-                executable = true;
+        home.file.".local/bin/firefox-bookmark" = lib.mkIf (niriLauncherEffectivelyEnabled config) (
+          let
+            namesArgs = lib.escapeShellArgs (map (n: "+${n}") (lib.attrNames flattenedBookmarks));
+            caseStatements = lib.concatStringsSep "\n" (
+              lib.mapAttrsToList (
+                name: url: "    ${lib.escapeShellArg "+${name}"}) firefox ${lib.escapeShellArg url} ;;"
+              ) flattenedBookmarks
+            );
+            launcherCmd = lib.escapeShellArgs (
+              helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                prompt = "Bookmark: ";
+                placeholder = "Select a bookmark";
+                width = 80;
+                lines = 15;
               }
             );
+          in
+          {
+            text = ''
+              #!/usr/bin/env bash
+              selection=$(printf '%s\n' ${namesArgs} | ${launcherCmd}) || exit 0
+              [ -z "$selection" ] && exit 0
+              case "$selection" in
+              ${caseStatements}
+              esac
+            '';
+            executable = true;
+          }
+        );
 
         programs.niri = {
           settings = {
@@ -1168,7 +1188,7 @@ in
                   hotkey-overlay.title = "Apps:Browser";
                 };
               }
-              // lib.optionalAttrs (enableNiriKeybinds && isSelectedBrowser && hasAppLauncher) (
+              // lib.optionalAttrs (niriLauncherEffectivelyEnabled config) (
                 let
                   searchLauncherCmd = lib.escapeShellArgs (
                     helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
@@ -1178,12 +1198,52 @@ in
                       lines = 0;
                     }
                   );
+                  engines = browserCfg.final.searchEngines;
+                  defaultEngineKey =
+                    if browserCfg.privacySearch then
+                      if browserCfg.startpageAsPrivacySearch then "startpage" else "duckduckgo"
+                    else
+                      "google";
+                  nonDefaultKeys = lib.sort (a: b: a < b) (
+                    lib.filter (k: k != defaultEngineKey) (lib.attrNames engines)
+                  );
+                  orderedKeys =
+                    (lib.optional (builtins.hasAttr defaultEngineKey engines) defaultEngineKey) ++ nonDefaultKeys;
+                  displayName = key: "@${capitalizeFirst key}";
+                  engineNamesArgs = lib.escapeShellArgs (map displayName orderedKeys);
+                  engineCases = lib.concatStringsSep "\n" (
+                    map (
+                      key:
+                      let
+                        parts = lib.splitString "{}" engines.${key}.queryUrl;
+                        before = builtins.elemAt parts 0;
+                        after = if builtins.length parts > 1 then builtins.elemAt parts 1 else "";
+                      in
+                      "  ${lib.escapeShellArg (displayName key)}) url_before=${lib.escapeShellArg before} url_after=${lib.escapeShellArg after} ;;"
+                    ) orderedKeys
+                  );
+                  engineLauncherCmd = lib.escapeShellArgs (
+                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                      prompt = "Engine: ";
+                      placeholder = "Select search engine";
+                      width = 40;
+                      lines = builtins.length orderedKeys;
+                    }
+                  );
                 in
                 {
                   "Mod+Alt+Space" = {
                     action = spawn-sh ''
+                      engine=$(printf '%s\n' ${engineNamesArgs} | ${engineLauncherCmd})
+                      [ -z "$engine" ] && exit 0
+                      case "$engine" in
+                      ${engineCases}
+                        *) exit 1 ;;
+                      esac
                       query=$(echo "" | ${searchLauncherCmd})
-                      [ -n "$query" ] && firefox "${defaultSearch}$query"
+                      [ -z "$query" ] && exit 0
+                      encoded=$(printf '%s' "$query" | ${helpers.packageFile args pkgs.jq "bin/jq"} -Rr @uri)
+                      firefox "$url_before$encoded$url_after"
                     '';
                     hotkey-overlay.title = "Apps:Web Search";
                   };
