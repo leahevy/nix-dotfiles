@@ -290,6 +290,7 @@ let
         "Wikipedia (en)"
         "eBay"
         "Perplexity"
+        "Ecosia"
       ];
     in
     {
