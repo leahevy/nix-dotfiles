@@ -100,7 +100,11 @@ let
     }:
     let
       moduleOverlays = funcs.collectModuleOverlays system;
-      overlays = moduleOverlays ++ extraOverlays;
+      packageFuncsModule = import (additionalInputs.lib + "/packageFuncs.nix") {
+        inherit defs additionalInputs helpers;
+      };
+      packageFuncsOverlay = final: prev: packageFuncsModule final;
+      overlays = moduleOverlays ++ extraOverlays ++ [ packageFuncsOverlay ];
 
       unfreePredicate =
         if allowedUnfreePackages == null then

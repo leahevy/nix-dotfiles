@@ -26,6 +26,7 @@ args@{
     enableCpp = true;
     enableLaTeX = true;
     enableRuby = true;
+    enableHaskell = true;
     enableGlobalFormatting = true;
     enableInlayHints = true;
     withVirtualTextDiagnostics = true;
@@ -38,6 +39,13 @@ args@{
 
   module = {
     home = config: {
+      home.packages = lib.optionals self.settings.enableHaskell (
+        with pkgs;
+        [
+          ghc
+        ]
+      );
+
       programs.nixvim = {
         plugins.conform-nvim = {
           enable = true;
@@ -309,6 +317,11 @@ args@{
 
             solargraph = lib.mkIf self.settings.enableRuby {
               enable = true;
+            };
+
+            hls = lib.mkIf self.settings.enableHaskell {
+              enable = true;
+              package = pkgs.haskell-language-server;
             };
           };
 

@@ -774,61 +774,75 @@ in
           ) config.nx.common.browser.browser.final.userContentCSS.data;
           userChrome = userChromeCSS;
         };
-        home.file.".local/bin/firefox-get-extension-manifest" = {
-          text = ''
-            #!/usr/bin/env bash
-            set -euo pipefail
-            if [ $# -ne 1 ]; then
-              echo "Usage: firefox-get-extension-manifest <xpi-url>" >&2
-              exit 1
-            fi
-            url="$1"
-            if [[ "$url" != https://addons.mozilla.org/firefox/downloads/* ]]; then
-              echo "Error: URL must start with https://addons.mozilla.org/firefox/downloads/" >&2
-              exit 1
-            fi
-            tmp="''${url##*/file/}"
-            file_id="''${tmp%%/*}"
-            filename=$(basename "$url")
-            filename="''${filename%.xpi}"
-            prefetch_json=$(${
-              helpers.packageFile args pkgs.nix "bin/nix"
-            } store prefetch-file --json "$url" 2>/dev/null)
-            store_path=$(printf '%s' "$prefetch_json" | ${
-              helpers.packageFile args pkgs.jq "bin/jq"
-            } -r .storePath)
-            sha256=$(printf '%s' "$prefetch_json" | ${helpers.packageFile args pkgs.jq "bin/jq"} -r .hash)
-            addon_id=$(${helpers.packageFile args pkgs.unzip "bin/unzip"} -p "$store_path" manifest.json | ${
-              helpers.packageFile args pkgs.jq "bin/jq"
-            } -r '.browser_specific_settings.gecko.id // .applications.gecko.id')
-            encoded_id=$(printf '%s' "$addon_id" | ${helpers.packageFile args pkgs.jq "bin/jq"} -Rr @uri)
-            slug=$(${
-              helpers.packageFile args pkgs.curl "bin/curl"
-            } -s "https://addons.mozilla.org/api/v5/addons/addon/''${encoded_id}/" | ${
-              helpers.packageFile args pkgs.jq "bin/jq"
-            } -r .slug)
-            ok=1
-            [[ "$file_id" =~ ^[0-9]+$ ]] || { echo "Error: could not parse fileId from URL" >&2; ok=0; }
-            [ -n "$filename" ] || { echo "Error: could not parse filename from URL" >&2; ok=0; }
-            [[ "$sha256" == sha256-* ]] || { echo "Error: unexpected sha256 format: $sha256" >&2; ok=0; }
-            [ -n "$addon_id" ] && [ "$addon_id" != "null" ] || { echo "Error: addonId not found in manifest" >&2; ok=0; }
-            [ -n "$slug" ] && [ "$slug" != "null" ] || { echo "Error: slug not found via AMO API" >&2; ok=0; }
-            [ "$ok" -eq 1 ] || exit 1
-            if [[ "$slug" =~ ^[a-zA-Z]([a-zA-Z-]*[a-zA-Z])?$ ]]; then
-              printf '%s = {\n' "$slug"
-            else
-              printf '"%s" = {\n' "$slug"
-            fi
-            printf '  addonId = "%s";\n' "$addon_id"
-            printf '  slug = "%s";\n' "$slug"
-            printf '  fileId = %s;\n' "$file_id"
-            printf '  filename = "%s";\n' "$filename"
-            printf '  sha256 = "%s";\n' "$sha256"
-            printf '};\n'
-          '';
-          executable = true;
-        };
 
+        home.packages = [
+          (pkgs.writeTurtleScript {
+            name = "firefox-get-extension-manifest";
+            libraries = hpkgs: [ hpkgs.uri-encode ];
+            presets = [
+              "text"
+              "aeson"
+              "regex"
+            ];
+            imports = [ "Network.URI.Encode (encodeText)" ];
+            text = ''
+              main :: IO ()
+              main = do
+                args <- arguments
+                url <- case args of
+                  [u] -> return u
+                  _   -> die "Usage: firefox-get-extension-manifest <xpi-url>"
+                unless ("https://addons.mozilla.org/firefox/downloads/" `T.isPrefixOf` url) $
+                  die "Error: URL must start with https://addons.mozilla.org/firefox/downloads/"
+                fileId <- case T.splitOn "/file/" url of
+                  [_, rest] ->
+                    let fid = T.takeWhile (/= '/') rest
+                    in if not (T.null fid) && T.all (\c -> c >= '0' && c <= '9') fid
+                         then return fid
+                         else die "Error: could not parse fileId from URL"
+                  _ -> die "Error: could not parse fileId from URL"
+                let urlBase  = T.takeWhileEnd (/= '/') url
+                    filename = if ".xpi" `T.isSuffixOf` urlBase then T.dropEnd 4 urlBase else urlBase
+                when (T.null filename) $ die "Error: could not parse filename from URL"
+                (storePath, sha256) <- decodeOrDie parsePrefetch "Error: could not parse nix prefetch output"
+                  =<< procOutput "nix" ["store", "prefetch-file", "--json", url]
+                unless ("sha256-" `T.isPrefixOf` sha256) $
+                  die ("Error: unexpected sha256 format: " <> sha256)
+                addonId <- decodeOrDie parseAddonId "Error: addonId not found in manifest"
+                  =<< procOutput "unzip" ["-p", storePath, "manifest.json"]
+                slug <- decodeOrDie parseSlug "Error: slug not found via AMO API"
+                  =<< procOutput "curl" ["-s", "https://addons.mozilla.org/api/v5/addons/addon/" <> encodeText addonId <> "/"]
+                let slugKey =
+                      if slug =~ ("^[a-zA-Z]([a-zA-Z-]*[a-zA-Z])?$" :: Text)
+                        then slug
+                        else "\"" <> slug <> "\""
+                mapM_ TIO.putStrLn
+                  [ slugKey <> " = {"
+                  , "  addonId = \"" <> addonId <> "\";"
+                  , "  slug = \"" <> slug <> "\";"
+                  , "  fileId = " <> fileId <> ";"
+                  , "  filename = \"" <> filename <> "\";"
+                  , "  sha256 = \"" <> sha256 <> "\";"
+                  , "};"
+                  ]
+
+              parsePrefetch :: Aeson.Value -> AesonTypes.Parser (Text, Text)
+              parsePrefetch = Aeson.withObject "prefetch" \o ->
+                (,) <$> o .: "storePath" <*> o .: "hash"
+
+              parseAddonId :: Aeson.Value -> AesonTypes.Parser Text
+              parseAddonId = Aeson.withObject "manifest" \o ->
+                (o .: "browser_specific_settings" >>= Aeson.withObject "bss" \bss ->
+                  bss .: "gecko" >>= Aeson.withObject "gecko" (.: "id"))
+                <|>
+                (o .: "applications" >>= Aeson.withObject "apps" \apps ->
+                  apps .: "gecko" >>= Aeson.withObject "gecko" (.: "id"))
+
+              parseSlug :: Aeson.Value -> AesonTypes.Parser Text
+              parseSlug = Aeson.withObject "addon" (.: "slug")
+            '';
+          })
+        ];
       };
 
     linux.home = config: {
