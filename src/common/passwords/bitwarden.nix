@@ -55,7 +55,7 @@ args@{
         mode = "0400";
       };
 
-      home.file.".local/bin/bitwarden-get-secret" = lib.mkIf self.settings.withSecretManager {
+      home.file."${defs.binDir}/bitwarden-get-secret" = lib.mkIf self.settings.withSecretManager {
         text = ''
           #!/usr/bin/env bash
           set -euo pipefail
@@ -188,7 +188,7 @@ args@{
         };
       };
 
-      home.file.".local/bin/scripts/convert-keepassxc-to-bitwarden" = {
+      home.file."${defs.binDir}/scripts/convert-keepassxc-to-bitwarden" = {
         text = ''
           #!/usr/bin/env python3
 

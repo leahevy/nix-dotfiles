@@ -1010,7 +1010,7 @@ args@{
           ];
         };
 
-        home.file.".local/bin/syncthing-status" = {
+        home.file."${defs.binDir}/syncthing-status" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail

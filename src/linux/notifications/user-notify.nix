@@ -123,7 +123,7 @@ args@{
         '';
       in
       {
-        home.file.".local/bin/nx-user-notify-logs" = {
+        home.file."${defs.binDir}/nx-user-notify-logs" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail

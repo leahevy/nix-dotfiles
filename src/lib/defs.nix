@@ -34,6 +34,9 @@ rec {
 
   modulesOnlyInputs = lib.lists.remove "build" coreInputs;
 
+  binDir = ".local/bin-nx";
+  binForeignDir = ".local/bin";
+
   allowedLinuxDesktops = [
     "gnome"
     "niri"

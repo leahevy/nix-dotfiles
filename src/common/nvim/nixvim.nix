@@ -220,7 +220,7 @@ args@{
             };
       in
       {
-        home.file.".local/bin/nvim" = {
+        home.file."${defs.binDir}/nvim" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -1332,7 +1332,7 @@ args@{
           };
         };
 
-        home.file.".local/bin/vim" = {
+        home.file."${defs.binDir}/vim" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -1340,7 +1340,7 @@ args@{
           '';
         };
 
-        home.file.".local/bin/nvim-run" = {
+        home.file."${defs.binDir}/nvim-run" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -1377,7 +1377,7 @@ args@{
           '';
         };
 
-        home.file.".local/bin/nvim-desktop" = lib.mkIf self.isLinux {
+        home.file."${defs.binDir}/nvim-desktop" = lib.mkIf self.isLinux {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -1419,7 +1419,7 @@ args@{
             name = "Neovim";
             genericName = "Text Editor";
             comment = "Edit text files";
-            exec = "${config.home.homeDirectory}/.local/bin/nvim-desktop %F";
+            exec = "${self.binDir}/nvim-desktop %F";
             icon = "nvim";
             terminal = false;
             categories = [

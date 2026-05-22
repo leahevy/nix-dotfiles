@@ -114,7 +114,7 @@ args@{
                 );
               in
               {
-                home.file.".local/bin/tmux-session-manager" = {
+                home.file."${defs.binDir}/tmux-session-manager" = {
                   executable = true;
                   text = ''
                     #!/usr/bin/env bash
@@ -299,18 +299,18 @@ args@{
               (helpers.createTerminalDarwinApp pkgs {
                 name = "Tmux";
                 terminalApp = "Ghostty.app";
-                execArgs = "${config.home.homeDirectory}/.local/bin/tx";
+                execArgs = "${self.binDir}/tx";
                 icon = null;
               })
             ];
 
           home.file = tmuxinatorFiles // {
-            ".local/bin/scripts/tmux-url-select" = {
+            "${defs.binDir}/scripts/tmux-url-select" = {
               source = self.file "tmux-url-select/tmux-url-select.pl";
               executable = true;
             };
 
-            ".local/bin/tx" = {
+            "${defs.binDir}/tx" = {
               text = ''
                 #!/usr/bin/env bash
                 unset __SHELL_BOOTSTRAPPED || true
@@ -323,7 +323,7 @@ args@{
               executable = true;
             };
 
-            ".local/bin/tmux" = {
+            "${defs.binDir}/tmux" = {
               text = ''
                 #!/usr/bin/env bash
                 unset __SHELL_BOOTSTRAPPED || true
@@ -336,7 +336,7 @@ args@{
               executable = true;
             };
 
-            ".local/bin/tmuxinator" = {
+            "${defs.binDir}/tmuxinator" = {
               text = ''
                 #!/usr/bin/env bash
                 unset __SHELL_BOOTSTRAPPED || true
@@ -447,7 +447,7 @@ args@{
               bind p copy-mode
               unbind [
 
-              bind u run-shell -b "${config.home.homeDirectory}/.local/bin/scripts/tmux-url-select"
+              bind u run-shell -b "${self.binDir}/scripts/tmux-url-select"
 
               bind r source-file ~/.tmux.conf \; display "Config reloaded!"
 
@@ -534,7 +534,7 @@ args@{
               name = "Tmux";
               genericName = "Tmux terminal multiplexer";
               comment = "Opens the main tmux session";
-              exec = "${config.home.homeDirectory}/.local/bin/tx";
+              exec = "${self.binDir}/tx";
               icon = "com.mitchellh.ghostty";
               terminal = true;
               categories = [

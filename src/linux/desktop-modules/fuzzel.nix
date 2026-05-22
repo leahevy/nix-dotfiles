@@ -161,7 +161,7 @@ args@{
           noDisplay = true;
         };
 
-        home.file.".local/bin/rofi" = {
+        home.file."${defs.binDir}/rofi" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail
@@ -221,7 +221,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/dmenu" = {
+        home.file."${defs.binDir}/dmenu" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail

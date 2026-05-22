@@ -47,7 +47,7 @@ args@{
     };
 
     linux.home = config: {
-      home.file.".local/bin/sops-restart" = {
+      home.file."${defs.binDir}/sops-restart" = {
         executable = true;
         text = ''
           #!/usr/bin/env bash

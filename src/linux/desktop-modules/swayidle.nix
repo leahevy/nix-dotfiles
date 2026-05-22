@@ -122,15 +122,15 @@ args@{
           ]
           ++ [ self.settings.package ];
 
-        home.file.".local/bin/scripts/swaylock-wrapper-daemon" = {
+        home.file."${defs.binDir}/scripts/swaylock-wrapper-daemon" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash
-            exec "${self.user.home}/.local/bin/scripts/swaylock-wrapper" "$@" &
+            exec "${self.binDir}/scripts/swaylock-wrapper" "$@" &
           '';
         };
 
-        home.file.".local/bin/scripts/swaylock-wrapper" = {
+        home.file."${defs.binDir}/scripts/swaylock-wrapper" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -185,7 +185,7 @@ args@{
 
         services.swayidle =
           let
-            wrapperCommand = "${self.user.home}/.local/bin/scripts/swaylock-wrapper-daemon ${self.settings.package}/bin/${commandlineValidated}";
+            wrapperCommand = "${self.binDir}/scripts/swaylock-wrapper-daemon ${self.settings.package}/bin/${commandlineValidated}";
             wrappedLockCommand = toString (wrapTimeoutCommand wrapperCommand);
             wrappedMonitorOffCommand = toString (
               wrapTimeoutCommand (lib.concatStringsSep ";" [ self.settings.turnOffMonitorsCommand ])

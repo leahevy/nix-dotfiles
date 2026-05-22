@@ -267,7 +267,7 @@ args@{
 
         dateTimeArgs = [
           "-s"
-          "%h/.local/bin/date-time.sh"
+          "%h/${defs.binDir}/date-time.sh"
           "-c"
           "%h/.config/nwg-wrapper/date-time.css"
           "-r"
@@ -284,7 +284,7 @@ args@{
 
         keybindingsArgs = [
           "-s"
-          "%h/.local/bin/keybindings-all.sh"
+          "%h/${defs.binDir}/keybindings-all.sh"
           "-c"
           "%h/.config/nwg-wrapper/keybindings.css"
           "-p"
@@ -303,7 +303,7 @@ args@{
           fastfetch
         ];
 
-        home.file.".local/bin/date-time.sh" = {
+        home.file."${defs.binDir}/date-time.sh" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -350,7 +350,7 @@ args@{
           '';
         };
 
-        home.file.".local/bin/keybindings-all.sh" = lib.mkIf self.settings.niriKeybindings {
+        home.file."${defs.binDir}/keybindings-all.sh" = lib.mkIf self.settings.niriKeybindings {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -431,7 +431,7 @@ args@{
           '';
         };
 
-        home.file.".local/bin/nwg-wrapper-restart" = {
+        home.file."${defs.binDir}/nwg-wrapper-restart" = {
           text = ''
             #!/usr/bin/env bash
             systemctl --user restart nx-nwg-wrapper-1 || true

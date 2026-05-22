@@ -111,11 +111,11 @@ args@{
         "\\CO" = "sidebar-open";
         "M" = "sidebar-toggle-visible";
         "$" = {
-          command = "<shell-escape>~/.local/bin/scripts/neomutt-print-header.sh mbsync-fetch-mail<enter><change-folder>^<enter>";
+          command = "<shell-escape>${self.binDir}/scripts/neomutt-print-header.sh mbsync-fetch-mail<enter><change-folder>^<enter>";
           description = "Sync mail + refresh";
         };
         "%" = {
-          command = "<shell-escape>~/.local/bin/scripts/neomutt-print-header.sh --notmuch ~/.local/bin/scripts/notmuch-process-mails.sh --move-first<enter><change-folder>^<enter>";
+          command = "<shell-escape>${self.binDir}/scripts/neomutt-print-header.sh --notmuch ${self.binDir}/scripts/notmuch-process-mails.sh --move-first<enter><change-folder>^<enter>";
           description = "Process existing mail";
         };
         "<Space>" = {
@@ -862,7 +862,7 @@ args@{
           };
         };
 
-        home.file.".local/bin/neomutt-term" = {
+        home.file."${defs.binDir}/neomutt-term" = {
           text = ''
             #!/usr/bin/env bash
             exec ${terminalRunWithClass "org.nx.neomutt" "neomutt"}
@@ -870,7 +870,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/scripts/neomutt-print-header.sh" = {
+        home.file."${defs.binDir}/scripts/neomutt-print-header.sh" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail

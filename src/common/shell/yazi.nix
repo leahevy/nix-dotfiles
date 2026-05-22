@@ -68,7 +68,7 @@ args@{
           settings = lib.recursiveUpdate self.settings.baseSettings self.settings.additionalSettings;
         };
 
-        home.file.".local/bin/nx-yazi" = {
+        home.file."${defs.binDir}/nx-yazi" = {
           text = ''
             #!/usr/bin/env bash
             yazi
@@ -76,7 +76,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/nx-yazi-term" = {
+        home.file."${defs.binDir}/nx-yazi-term" = {
           text = ''
             #!/usr/bin/env bash
             exec ${terminalRunWithClass "org.nx.yazi" "nx-yazi"}

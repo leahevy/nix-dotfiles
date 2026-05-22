@@ -35,7 +35,7 @@ args@{
 
       buildWebAppFn = config: webAppSettings: {
         homeFiles = {
-          ".local/bin/${webAppSettings.webapp}-webapp" = {
+          "${defs.binDir}/${webAppSettings.webapp}-webapp" = {
             executable = true;
             text = ''
               #!/usr/bin/env bash
@@ -49,7 +49,7 @@ args@{
           "${webAppSettings.webapp}" = {
             name = webAppSettings.name;
             comment = "${webAppSettings.name} Web-App";
-            exec = "${self.user.home}/.local/bin/${webAppSettings.webapp}-webapp %U";
+            exec = "${self.binDir}/${webAppSettings.webapp}-webapp %U";
             icon = webAppSettings.iconPath;
             terminal = false;
             categories = webAppSettings.categories;

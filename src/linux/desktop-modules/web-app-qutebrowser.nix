@@ -228,7 +228,7 @@ args@{
         in
         {
           homeFiles = {
-            ".local/bin/${appName}-webapp" = {
+            "${defs.binDir}/${appName}-webapp" = {
               executable = true;
               text = ''
                 #!/usr/bin/env bash
@@ -250,7 +250,7 @@ args@{
             "${appName}" = {
               name = webAppSettings.name;
               comment = "${webAppSettings.name} Web-App (Qutebrowser)";
-              exec = "${self.user.home}/.local/bin/${appName}-webapp %U";
+              exec = "${self.binDir}/${appName}-webapp %U";
               icon = webAppSettings.iconPath;
               terminal = false;
               categories = webAppSettings.categories;

@@ -356,7 +356,7 @@ args@{
           pkgs.afew
         ];
 
-        home.file.".local/bin/scripts/notmuch-process-mails.sh" = {
+        home.file."${defs.binDir}/scripts/notmuch-process-mails.sh" = {
           text =
             let
               archiveFoldersQuery = lib.concatStringsSep " OR " (

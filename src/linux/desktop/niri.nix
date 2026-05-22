@@ -816,12 +816,12 @@ args@{
         ]
         ++ autostartDummies;
 
-        home.file.".local/bin/niri-scratchpad" = {
+        home.file."${defs.binDir}/niri-scratchpad" = {
           source = self.file "niri-scratchpad/niri-scratchpad.sh";
           executable = true;
         };
 
-        home.file.".local/bin/restart-niri" = lib.mkIf (self.options config).addRestartShortcut {
+        home.file."${defs.binDir}/restart-niri" = lib.mkIf (self.options config).addRestartShortcut {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -845,7 +845,7 @@ args@{
           '';
         };
 
-        home.file.".local/bin/power-menu" = {
+        home.file."${defs.binDir}/power-menu" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -888,7 +888,7 @@ args@{
           '';
         };
 
-        home.file.".local/bin/scratchpad-terminal" =
+        home.file."${defs.binDir}/scratchpad-terminal" =
           let
             scratchpadCmd = (self.options config).scratchpadCommand;
           in
@@ -905,7 +905,7 @@ args@{
             '';
           };
 
-        home.file.".local/bin/niri-window-switcher" = {
+        home.file."${defs.binDir}/niri-window-switcher" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -964,7 +964,7 @@ args@{
           '';
         };
 
-        home.file.".local/bin/niri-workspace-action" = {
+        home.file."${defs.binDir}/niri-workspace-action" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -1016,7 +1016,7 @@ args@{
           '';
         };
 
-        home.file.".local/bin/nop" = {
+        home.file."${defs.binDir}/nop" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash

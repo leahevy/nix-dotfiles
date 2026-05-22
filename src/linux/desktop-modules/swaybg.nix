@@ -29,9 +29,9 @@ args@{
     linux.enabled = config: {
       nx.linux.desktop.common.graphicalSessionServices = [ "nx-swaybg" ];
       nx.linux.desktop.niri.nextWallpaperCommand =
-        lib.mkIf (self.isModuleEnabled "desktop.niri") "${self.user.home}/.local/bin/swaybg-next-wallpaper";
+        lib.mkIf (self.isModuleEnabled "desktop.niri") "${self.binDir}/swaybg-next-wallpaper";
       nx.linux.desktop.niri.resetWallpaperCommand =
-        lib.mkIf (self.isModuleEnabled "desktop.niri") "${self.user.home}/.local/bin/swaybg-reset-wallpaper";
+        lib.mkIf (self.isModuleEnabled "desktop.niri") "${self.binDir}/swaybg-reset-wallpaper";
     };
 
     linux.home =
@@ -109,7 +109,7 @@ args@{
             source = stylixWallpaper.source;
           };
 
-          home.file.".local/bin/swaybg-next-wallpaper" = {
+          home.file."${defs.binDir}/swaybg-next-wallpaper" = {
             executable = true;
             text = ''
               #!/usr/bin/env bash
@@ -123,7 +123,7 @@ args@{
               if [[ ! -f "$LAST_CHANGE_FILE" ]] || [[ $((CURRENT_TIME - $(${pkgs.coreutils}/bin/cat "$LAST_CHANGE_FILE" 2>/dev/null || echo 0))) -gt $RATE_LIMIT ]]; then
                 echo "$CURRENT_TIME" > "$LAST_CHANGE_FILE"
 
-                ${config.home.homeDirectory}/.local/bin/scripts/swaybg-update-wallpaper --randomize
+                ${self.binDir}/scripts/swaybg-update-wallpaper --randomize
 
                 ${lib.optionalString (!self.settings.deactivateTimer) ''
                   systemctl --user restart nx-swaybg-rotate.timer
@@ -134,7 +134,7 @@ args@{
             '';
           };
 
-          home.file.".local/bin/swaybg-reset-wallpaper" = {
+          home.file."${defs.binDir}/swaybg-reset-wallpaper" = {
             executable = true;
             text = ''
               #!/usr/bin/env bash
@@ -148,7 +148,7 @@ args@{
               if [[ ! -f "$LAST_CHANGE_FILE" ]] || [[ $((CURRENT_TIME - $(${pkgs.coreutils}/bin/cat "$LAST_CHANGE_FILE" 2>/dev/null || echo 0))) -gt $RATE_LIMIT ]]; then
                 echo "$CURRENT_TIME" > "$LAST_CHANGE_FILE"
 
-                ${config.home.homeDirectory}/.local/bin/scripts/swaybg-update-wallpaper
+                ${self.binDir}/scripts/swaybg-update-wallpaper
 
                 ${lib.optionalString (!self.settings.deactivateTimer) ''
                   systemctl --user restart nx-swaybg-rotate.timer
@@ -159,7 +159,7 @@ args@{
             '';
           };
 
-          home.file.".local/bin/swaybg-enable-wallpaper" = {
+          home.file."${defs.binDir}/swaybg-enable-wallpaper" = {
             executable = true;
             text = ''
               #!/usr/bin/env bash
@@ -215,7 +215,7 @@ args@{
             '';
           };
 
-          home.file.".local/bin/swaybg-add-wallpaper" = {
+          home.file."${defs.binDir}/swaybg-add-wallpaper" = {
             executable = true;
             text = ''
               #!/usr/bin/env bash
@@ -275,7 +275,7 @@ args@{
               if [[ -n "$DUPLICATE_FOUND" ]]; then
                 echo "Duplicate wallpaper found: $(${pkgs.coreutils}/bin/basename "$DUPLICATE_FOUND")"
                 echo "Enabling existing wallpaper instead of copying..."
-                exec "${config.home.homeDirectory}/.local/bin/swaybg-enable-wallpaper" "$(${pkgs.coreutils}/bin/basename "$DUPLICATE_FOUND")"
+                exec "${self.binDir}/swaybg-enable-wallpaper" "$(${pkgs.coreutils}/bin/basename "$DUPLICATE_FOUND")"
               fi
 
               NAME_EXISTS=""
@@ -305,7 +305,7 @@ args@{
               if [[ $? -eq 0 ]]; then
                 echo "Successfully added wallpaper: $SOURCE_BASENAME"
                 echo "Enabling new wallpaper..."
-                exec "${config.home.homeDirectory}/.local/bin/swaybg-enable-wallpaper" "$SOURCE_BASENAME"
+                exec "${self.binDir}/swaybg-enable-wallpaper" "$SOURCE_BASENAME"
               else
                 echo "Error: Failed to copy wallpaper file" >&2
                 exit 1
@@ -313,7 +313,7 @@ args@{
             '';
           };
 
-          home.file.".local/bin/swaybg-switch-wallpaper" = {
+          home.file."${defs.binDir}/swaybg-switch-wallpaper" = {
             executable = true;
             text = ''
               #!/usr/bin/env bash
@@ -409,18 +409,18 @@ args@{
                   STYLIX_FILE=$(${pkgs.findutils}/bin/find "$WALLPAPERS_DIR" -maxdepth 1 \( -type f -o -type l \) -name "stylix.*" 2>/dev/null | head -n 1)
                   if [[ -n "$STYLIX_FILE" ]]; then
                     echo "Selected wallpaper: Stylix Wallpaper"
-                    exec "${config.home.homeDirectory}/.local/bin/swaybg-enable-wallpaper" "$(${pkgs.coreutils}/bin/basename "$STYLIX_FILE")"
+                    exec "${self.binDir}/swaybg-enable-wallpaper" "$(${pkgs.coreutils}/bin/basename "$STYLIX_FILE")"
                   fi
                 else
                   ACTUAL_FILENAME="$(get_season_filename "$SELECTED_BASENAME")"
                   echo "Selected wallpaper: $ACTUAL_FILENAME"
-                  exec "${config.home.homeDirectory}/.local/bin/swaybg-enable-wallpaper" "$ACTUAL_FILENAME"
+                  exec "${self.binDir}/swaybg-enable-wallpaper" "$ACTUAL_FILENAME"
                 fi
               fi
             '';
           };
 
-          home.file.".local/bin/scripts/swaybg-update-wallpaper" = {
+          home.file."${defs.binDir}/scripts/swaybg-update-wallpaper" = {
             executable = true;
             text = ''
               #!/usr/bin/env bash
@@ -498,11 +498,11 @@ args@{
             '';
           };
 
-          home.file.".local/bin/scripts/swaybg-start" = {
+          home.file."${defs.binDir}/scripts/swaybg-start" = {
             executable = true;
             text = ''
               #!/usr/bin/env bash
-              WALLPAPER="$(${config.home.homeDirectory}/.local/bin/scripts/swaybg-update-wallpaper "$@")"
+              WALLPAPER="$(${self.binDir}/scripts/swaybg-update-wallpaper "$@")"
 
               if [[ "$WALLPAPER" == "" ]]; then
                 echo "No wallpaper found, aborting swaybg start"
@@ -525,7 +525,7 @@ args@{
             };
 
             Service = {
-              ExecStart = "${config.home.homeDirectory}/.local/bin/scripts/swaybg-start";
+              ExecStart = "${self.binDir}/scripts/swaybg-start";
               Environment = [
                 "STYLIX_WALLPAPER=${stylixWallpaperPath}"
               ];
@@ -561,7 +561,7 @@ args@{
 
             Service = {
               Type = "oneshot";
-              ExecStart = "${config.home.homeDirectory}/.local/bin/swaybg-next-wallpaper";
+              ExecStart = "${self.binDir}/swaybg-next-wallpaper";
             };
           };
 

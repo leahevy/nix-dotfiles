@@ -148,7 +148,7 @@ args@{
         lib.mkIf (devicePath != null) {
           home.packages = [ self.settings.package ];
 
-          home.file.".local/bin/bongocat-restart" = {
+          home.file."${defs.binDir}/bongocat-restart" = {
             text = ''
               #!/usr/bin/env bash
               systemctl --user restart nx-bongocat || true

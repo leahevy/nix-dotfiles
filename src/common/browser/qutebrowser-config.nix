@@ -1050,7 +1050,7 @@ args@{
               executable = true;
             };
 
-        home.file.".local/bin/qutebrowser-install-dicts" = {
+        home.file."${defs.binDir}/qutebrowser-install-dicts" = {
           text = ''
             #!/usr/bin/env bash
             set -e
@@ -1074,7 +1074,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/qutebrowser-bookmarks-from-firefox" = {
+        home.file."${defs.binDir}/qutebrowser-bookmarks-from-firefox" = {
           source = self.file "qutebrowser-bookmarks-from-firefox";
           executable = true;
         };

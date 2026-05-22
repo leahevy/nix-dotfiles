@@ -20,7 +20,7 @@ args@{
     };
 
     linux.home = config: {
-      home.file.".local/bin/scripts/toggle-dnd" = {
+      home.file."${defs.binDir}/scripts/toggle-dnd" = {
         executable = true;
         text = ''
           #!/usr/bin/env bash
@@ -286,7 +286,7 @@ args@{
             hotkey-overlay.title = "Notifications:Clear all notifications";
           };
           "Mod+Shift+M" = {
-            action = spawn-sh "${config.home.homeDirectory}/.local/bin/scripts/toggle-dnd";
+            action = spawn-sh "${self.binDir}/scripts/toggle-dnd";
             hotkey-overlay.title = "Notifications:Toggle do not disturb";
           };
         };

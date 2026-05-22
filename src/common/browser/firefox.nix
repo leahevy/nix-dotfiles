@@ -896,7 +896,7 @@ in
 
     linux.integrated = config: {
       programs.firefox.package = lib.mkForce null;
-      home.file.".local/bin/firefox-wrapper" = {
+      home.file."${defs.binDir}/firefox-wrapper" = {
         text = ''
           #!/bin/sh
           exec /run/current-system/sw/bin/firefox "$@"
@@ -960,7 +960,7 @@ in
         programs.firefox = {
           package = lib.mkDefault pkgs.firefox;
         };
-        home.file.".local/bin/firefox-wrapper" = {
+        home.file."${defs.binDir}/firefox-wrapper" = {
           text = ''
             #!/bin/sh
             exec ${pkgs.firefox}/bin/firefox "$@"
@@ -1109,7 +1109,7 @@ in
       in
       {
         programs.firefox.package = lib.mkForce null;
-        home.file.".local/bin/firefox-wrapper" = {
+        home.file."${defs.binDir}/firefox-wrapper" = {
           text = ''
             #!/bin/sh
             exec open -a Firefox "$@"
@@ -1162,7 +1162,7 @@ in
         flattenedBookmarks = flattenBookmarks "" (browserCfg.final.bookmarks // firefoxSpecificBookmarks);
       in
       {
-        home.file.".local/bin/firefox-bookmark" = lib.mkIf (niriLauncherEffectivelyEnabled config) (
+        home.file."${defs.binDir}/firefox-bookmark" = lib.mkIf (niriLauncherEffectivelyEnabled config) (
           let
             namesArgs = lib.escapeShellArgs (map (n: "+${n}") (lib.attrNames flattenedBookmarks));
             caseStatements = lib.concatStringsSep "\n" (

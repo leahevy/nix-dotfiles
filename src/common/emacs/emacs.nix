@@ -115,7 +115,7 @@ args@{
           };
         };
 
-        home.file.".local/bin/emacs-desktop" = lib.mkIf self.isLinux {
+        home.file."${defs.binDir}/emacs-desktop" = lib.mkIf self.isLinux {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -145,7 +145,7 @@ args@{
             name = "Emacs";
             genericName = "Text Editor";
             comment = "Edit text files";
-            exec = "${config.home.homeDirectory}/.local/bin/emacs-desktop %F";
+            exec = "${self.binDir}/emacs-desktop %F";
             icon = "emacs";
             terminal = false;
             categories = [

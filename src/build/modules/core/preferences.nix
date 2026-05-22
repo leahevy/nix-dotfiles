@@ -92,7 +92,7 @@ let
       localBin = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Whether this programs absolute path resides in the user's .local/bin";
+        description = "Whether this programs absolute path resides in the user's .local/bin-nx";
       };
       commandIsAbsolute = lib.mkOption {
         type = lib.types.bool;
@@ -181,7 +181,7 @@ let
       localBin = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Whether this programs absolute path resides in the user's .local/bin";
+        description = "Whether this programs absolute path resides in the user's .local/bin-nx";
       };
       commandIsAbsolute = lib.mkOption {
         type = lib.types.bool;
@@ -247,7 +247,7 @@ let
       localBin = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Whether this programs absolute path resides in the user's .local/bin";
+        description = "Whether this programs absolute path resides in the user's .local/bin-nx";
       };
       commandIsAbsolute = lib.mkOption {
         type = lib.types.bool;

@@ -129,7 +129,7 @@ args@{
                       local home = os.getenv("HOME")
                       if home then
                         table.insert(candidates, home .. "/.nix-profile/bin/" .. base_name)
-                        table.insert(candidates, home .. "/.local/bin/" .. base_name)
+                        table.insert(candidates, home .. "/${defs.binDir}/" .. base_name)
                       end
 
                       local user = os.getenv("USER")

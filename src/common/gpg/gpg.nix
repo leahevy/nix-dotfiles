@@ -112,7 +112,7 @@ in
         export GPG_TTY=$(tty)
       '';
 
-      home.file.".local/bin/gpg-upload-keys" = {
+      home.file."${defs.binDir}/gpg-upload-keys" = {
         text =
           let
             mainKey = if self.user.gpg != null then [ self.user.gpg ] else [ ];

@@ -51,7 +51,7 @@ args@{
         isHeadless = (self.host.settings.system.desktop or null) == null;
       in
       {
-        home.file.".local/bin/auto-upgrade-status" = {
+        home.file."${defs.binDir}/auto-upgrade-status" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail
@@ -100,7 +100,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/auto-upgrade-trigger-manually" = {
+        home.file."${defs.binDir}/auto-upgrade-trigger-manually" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail
@@ -137,7 +137,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/auto-upgrade-logs" = {
+        home.file."${defs.binDir}/auto-upgrade-logs" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail

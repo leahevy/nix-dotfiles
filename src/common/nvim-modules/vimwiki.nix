@@ -164,7 +164,7 @@ args@{
           ];
         };
 
-        home.file.".local/bin/vimwiki-migrate-index" = {
+        home.file."${defs.binDir}/vimwiki-migrate-index" = {
           source = self.file "vimwiki-migrate-index.py";
           executable = true;
         };

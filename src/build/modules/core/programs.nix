@@ -20,17 +20,17 @@ args@{
 
     standalone = config: {
       home.file = {
-        ".local/bin/nix".source = config.nix.package.out + "/bin/nix";
-        ".local/bin/nix-build".source = config.nix.package.out + "/bin/nix-build";
-        ".local/bin/nix-channel".source = config.nix.package.out + "/bin/nix-channel";
-        ".local/bin/nix-collect-garbage".source = config.nix.package.out + "/bin/nix-collect-garbage";
-        ".local/bin/nix-copy-closure".source = config.nix.package.out + "/bin/nix-copy-closure";
-        ".local/bin/nix-env".source = config.nix.package.out + "/bin/nix-env";
-        ".local/bin/nix-hash".source = config.nix.package.out + "/bin/nix-hash";
-        ".local/bin/nix-instantiate".source = config.nix.package.out + "/bin/nix-instantiate";
-        ".local/bin/nix-prefetch-url".source = config.nix.package.out + "/bin/nix-prefetch-url";
-        ".local/bin/nix-shell".source = config.nix.package.out + "/bin/nix-shell";
-        ".local/bin/nix-store".source = config.nix.package.out + "/bin/nix-store";
+        "${defs.binDir}/nix".source = config.nix.package.out + "/bin/nix";
+        "${defs.binDir}/nix-build".source = config.nix.package.out + "/bin/nix-build";
+        "${defs.binDir}/nix-channel".source = config.nix.package.out + "/bin/nix-channel";
+        "${defs.binDir}/nix-collect-garbage".source = config.nix.package.out + "/bin/nix-collect-garbage";
+        "${defs.binDir}/nix-copy-closure".source = config.nix.package.out + "/bin/nix-copy-closure";
+        "${defs.binDir}/nix-env".source = config.nix.package.out + "/bin/nix-env";
+        "${defs.binDir}/nix-hash".source = config.nix.package.out + "/bin/nix-hash";
+        "${defs.binDir}/nix-instantiate".source = config.nix.package.out + "/bin/nix-instantiate";
+        "${defs.binDir}/nix-prefetch-url".source = config.nix.package.out + "/bin/nix-prefetch-url";
+        "${defs.binDir}/nix-shell".source = config.nix.package.out + "/bin/nix-shell";
+        "${defs.binDir}/nix-store".source = config.nix.package.out + "/bin/nix-store";
       };
     };
 

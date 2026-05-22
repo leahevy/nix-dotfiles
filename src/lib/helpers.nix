@@ -787,7 +787,7 @@ rec {
       let
         basePath =
           if program.localBin or false then
-            config.home.homeDirectory + "/.local/bin/"
+            config.home.homeDirectory + "/" + defs.binDir + "/"
           else if program.package == null then
             throw "program ${program.name} must have a package or commandIsAbsolute set!"
           else

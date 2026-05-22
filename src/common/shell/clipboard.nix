@@ -16,7 +16,7 @@ args@{
 
   module = {
     home = config: {
-      home.file.".local/bin/x" = {
+      home.file."${defs.binDir}/x" = {
         text = ''
           #!/usr/bin/env bash
 

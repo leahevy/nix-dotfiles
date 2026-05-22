@@ -25,7 +25,7 @@ args@{
   module = {
     ifEnabled.linux.desktop-modules.desktop-files.enabled = config: {
       nx.linux.desktop-modules.desktop-files.entries.proton-mail = {
-        exec = "${self.user.home}/.local/bin/proton-mail %u";
+        exec = "${self.binDir}/proton-mail %u";
         name = "Proton Mail";
         icon = "mail-archive-symbolic";
         categories = [
@@ -91,7 +91,7 @@ args@{
             pkgs.protonmail-desktop;
       in
       {
-        home.file.".local/bin/proton-mail" = {
+        home.file."${defs.binDir}/proton-mail" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash

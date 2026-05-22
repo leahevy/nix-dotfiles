@@ -517,10 +517,10 @@ args@{
               "alt - k" = "yabai -m window --focus north";
               "alt - l" = "yabai -m window --focus east";
 
-              "shift + alt - h" = "${self.user.home}/.local/bin/scripts/yabai-move-column.sh left";
+              "shift + alt - h" = "${self.binDir}/scripts/yabai-move-column.sh left";
               "shift + alt - j" = "yabai -m window --swap south";
               "shift + alt - k" = "yabai -m window --swap north";
-              "shift + alt - l" = "${self.user.home}/.local/bin/scripts/yabai-move-column.sh right";
+              "shift + alt - l" = "${self.binDir}/scripts/yabai-move-column.sh right";
 
               "ctrl + alt - h" = "yabai -m window --resize left:-200:0 || yabai -m window --resize right:-200:0";
               "ctrl + alt - j" = "yabai -m window --resize bottom:0:200 || yabai -m window --resize top:0:200";
@@ -628,11 +628,11 @@ args@{
           '';
         };
 
-        home.file.".local/bin/yabai-restart".source = yabai-restart;
-        home.file.".local/bin/skhd-restart".source = skhd-restart;
-        home.file.".local/bin/sketchybar-restart".source = sketchybar-restart;
-        home.file.".local/bin/borders-restart".source = borders-restart;
-        home.file.".local/bin/yabai-desktop-restart".source = yabai-desktop-restart;
+        home.file."${defs.binDir}/yabai-restart".source = yabai-restart;
+        home.file."${defs.binDir}/skhd-restart".source = skhd-restart;
+        home.file."${defs.binDir}/sketchybar-restart".source = sketchybar-restart;
+        home.file."${defs.binDir}/borders-restart".source = borders-restart;
+        home.file."${defs.binDir}/yabai-desktop-restart".source = yabai-desktop-restart;
 
         home.activation.restartYabaiDesktop = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
           _yabai_changed=false
@@ -648,7 +648,7 @@ args@{
           fi
         '';
 
-        home.file.".local/bin/scripts/yabai-get-columns.sh" = {
+        home.file."${defs.binDir}/scripts/yabai-get-columns.sh" = {
           executable = true;
           text = ''
             #!/bin/bash
@@ -694,13 +694,13 @@ args@{
           '';
         };
 
-        home.file.".local/bin/scripts/yabai-move-column.sh" = {
+        home.file."${defs.binDir}/scripts/yabai-move-column.sh" = {
           executable = true;
           text = ''
             #!/bin/bash
             set -euo pipefail
 
-            readonly SCRIPT_DIR="${self.user.home}/.local/bin/scripts"
+            readonly SCRIPT_DIR="${self.binDir}/scripts"
             readonly LOCK_DIR="/tmp/yabai-move-column.lock"
 
             if ! mkdir "''${LOCK_DIR}" 2>/dev/null; then

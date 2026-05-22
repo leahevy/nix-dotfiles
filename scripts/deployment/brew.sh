@@ -9,7 +9,7 @@ check_deployment_conflicts "brew"
 
 if ! command -v brew &>/dev/null; then
 	echo -e "${RED}Homebrew not found in PATH${RESET}" >&2
-	echo -e "${YELLOW}You can install it by running: ${WHITE}~/.local/bin/brew-install${RESET}" >&2
+	echo -e "${YELLOW}You can install it by running: ${WHITE}~/.local/bin-nx/brew-install${RESET}" >&2
 	exit 1
 fi
 

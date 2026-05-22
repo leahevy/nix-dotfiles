@@ -43,7 +43,7 @@ args@{
           fzf
         ];
 
-        home.file.".local/bin/nstv" = {
+        home.file."${defs.binDir}/nstv" = {
           text = ''
             #!/usr/bin/env bash
             nix-search-tv print | fzf --preview 'nix-search-tv preview {}' --scheme history
@@ -51,7 +51,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/nstv-term" = {
+        home.file."${defs.binDir}/nstv-term" = {
           text = ''
             #!/usr/bin/env bash
             exec ${terminalRunWithClass "org.nx.nix-search-tv" "nstv"}

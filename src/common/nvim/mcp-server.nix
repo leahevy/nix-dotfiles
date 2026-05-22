@@ -70,7 +70,7 @@ args@{
       {
         home.packages = [ mcp-neovim-server ];
 
-        home.file.".local/bin/mcp-neovim-server-wrapper" = {
+        home.file."${defs.binDir}/mcp-neovim-server-wrapper" = {
           executable = true;
           text = ''
             #!/usr/bin/env bash

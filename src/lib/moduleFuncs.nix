@@ -450,6 +450,18 @@ rec {
       host = if moduleContext ? host && moduleContext.host != null then moduleContext.host else { };
       user = if moduleContext ? user && moduleContext.user != null then moduleContext.user else { };
 
+      binDir =
+        if moduleContext ? user && moduleContext.user != null && moduleContext.user ? home then
+          moduleContext.user.home + "/" + defs.binDir
+        else
+          null;
+
+      binForeignDir =
+        if moduleContext ? user && moduleContext.user != null && moduleContext.user ? home then
+          moduleContext.user.home + "/" + defs.binForeignDir
+        else
+          null;
+
       importFileData =
         args: subpath:
         let
@@ -485,6 +497,8 @@ rec {
             dummyPackage
             host
             user
+            binDir
+            binForeignDir
             importFileData
             importFileCustom
             ;

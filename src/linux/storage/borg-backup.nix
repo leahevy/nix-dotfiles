@@ -166,7 +166,7 @@ args@{
       in
       {
 
-        home.file.".local/bin/borg-backup-status" = {
+        home.file."${defs.binDir}/borg-backup-status" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail
@@ -209,7 +209,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/borg-backup-list" = {
+        home.file."${defs.binDir}/borg-backup-list" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail
@@ -226,7 +226,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/borg-backup-restore" = {
+        home.file."${defs.binDir}/borg-backup-restore" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail
@@ -264,7 +264,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/borg-backup-search" = {
+        home.file."${defs.binDir}/borg-backup-search" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail
@@ -292,7 +292,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/borg-backup-find-archives" = {
+        home.file."${defs.binDir}/borg-backup-find-archives" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail
@@ -325,7 +325,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/borg-backup-run" = {
+        home.file."${defs.binDir}/borg-backup-run" = {
           text = ''
             #!/usr/bin/env bash
             set -euo pipefail
@@ -342,7 +342,7 @@ args@{
           executable = true;
         };
 
-        home.file.".local/bin/borg-backup-trigger-manually" = {
+        home.file."${defs.binDir}/borg-backup-trigger-manually" = {
           text = ''
                       #!/usr/bin/env bash
                       set -euo pipefail

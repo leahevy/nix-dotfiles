@@ -152,7 +152,7 @@ in
         ];
 
         home.file = {
-          ".local/bin/brew-install" = {
+          "${defs.binDir}/brew-install" = {
             text = ''
               #!/usr/bin/env bash
               set -euo pipefail
@@ -167,7 +167,7 @@ in
             executable = true;
           };
 
-          ".local/bin/brew-sync" = {
+          "${defs.binDir}/brew-sync" = {
             text = ''
               #!/usr/bin/env bash
               set -euo pipefail

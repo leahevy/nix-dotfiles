@@ -104,8 +104,8 @@ args@{
                 if (self.isModuleEnabled "mail-stack.notmuch") then
                   ''
                     echo -e "''${BLUE}🔄 Processing existing mail before sync...''${RESET}"
-                    if [ -x "${config.home.homeDirectory}/.local/bin/scripts/notmuch-process-mails.sh" ]; then
-                      if ! ${config.home.homeDirectory}/.local/bin/scripts/notmuch-process-mails.sh --move-first --no-lock-check; then
+                    if [ -x "${self.binDir}/scripts/notmuch-process-mails.sh" ]; then
+                      if ! ${self.binDir}/scripts/notmuch-process-mails.sh --move-first --no-lock-check; then
                         EXIT_CODE=$?
                         echo -e "''${RED}❌ Mail processing encountered an error (exit code: $EXIT_CODE)''${RESET}"
                       fi
@@ -180,7 +180,7 @@ args@{
                     }
 
                     echo -e "''${BLUE}🔍 Processing mail with Notmuch and afew...''${RESET}"
-                    if ! ~/.local/bin/scripts/notmuch-process-mails.sh --no-lock-check; then
+                    if ! ${self.binDir}/scripts/notmuch-process-mails.sh --no-lock-check; then
                       EXIT_CODE=$?
                       echo -e "''${RED}❌ Notmuch processing encountered an error (exit code: $EXIT_CODE)''${RESET}"
                     fi
