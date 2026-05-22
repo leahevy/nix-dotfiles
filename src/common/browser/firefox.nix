@@ -1124,7 +1124,7 @@ in
 
         home.activation."firefox-userContent-copy" = lib.mkIf (userCSS != null) (
           (self.hmLib config).dag.entryAfter [ "linkGeneration" ] ''
-            ${pkgs.writeShellScript "firefox-copy-userContent" ''
+            run ${pkgs.writeShellScript "firefox-copy-userContent" ''
               base_dir="$HOME/Library/Application Support/Firefox/Profiles/${profileName}"
               if [[ -d "$base_dir" ]]; then
                 css_dir="$base_dir/chrome"

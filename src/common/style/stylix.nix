@@ -499,8 +499,8 @@ args@{
 
               export _NX_WALLPAPER=${lib.escapeShellArg (toString image)}
 
-              ${set-wallpaper-all-spaces} ${lib.escapeShellArg (toString image)} \
-                || /usr/bin/osascript -e 'tell application "System Events" to set picture of every desktop to (POSIX file (system attribute "_NX_WALLPAPER"))' \
+              run ${set-wallpaper-all-spaces} ${lib.escapeShellArg (toString image)} \
+                || run /usr/bin/osascript -e 'tell application "System Events" to set picture of every desktop to (POSIX file (system attribute "_NX_WALLPAPER"))' \
                 || true
             '';
           }

@@ -453,17 +453,17 @@ in
             shopt -s nullglob
 
             if [[ -d "$HOME/.agents/skills" ]]; then
-              rm -f "$HOME/.agents/skills"/*/SKILL.md || true
-              rmdir "$HOME/.agents/skills"/* 2>/dev/null || true
+              run rm -f "$HOME/.agents/skills"/*/SKILL.md || true
+              run rmdir "$HOME/.agents/skills"/* 2>/dev/null || true
             fi
 
-            mkdir -p "$HOME/.agents/skills" || true
+            run mkdir -p "$HOME/.agents/skills" || true
 
             ${lib.concatStringsSep "\n" (
               lib.mapAttrsToList (name: storeFile: ''
-                mkdir -p "$HOME/.agents/skills/${name}" || true
-                rm -f "$HOME/.agents/skills/${name}/SKILL.md" || true
-                cp -f ${storeFile} "$HOME/.agents/skills/${name}/SKILL.md" || true
+                run mkdir -p "$HOME/.agents/skills/${name}" || true
+                run rm -f "$HOME/.agents/skills/${name}/SKILL.md" || true
+                run cp -f ${storeFile} "$HOME/.agents/skills/${name}/SKILL.md" || true
               '') codexSkillStoreFiles
             )}
           '';

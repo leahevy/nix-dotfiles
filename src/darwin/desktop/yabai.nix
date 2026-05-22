@@ -644,7 +644,7 @@ args@{
           done
           if [[ "$_yabai_changed" == "true" ]]; then
             echo "Restarting yabai desktop..."
-            ${yabai-desktop-restart} || true
+            run ${yabai-desktop-restart} || true
           fi
         '';
 

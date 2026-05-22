@@ -741,8 +741,8 @@ args@{
         );
 
         home.activation.create_ssh_files = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
-          ${pkgs.coreutils}/bin/touch "${self.user.home}/.ssh/${defaultKnownHostsName}" || true
-          ${pkgs.coreutils}/bin/touch "${self.user.home}/.ssh/${configOverridesName}" || true
+          run ${pkgs.coreutils}/bin/touch "${self.user.home}/.ssh/${defaultKnownHostsName}" || true
+          run ${pkgs.coreutils}/bin/touch "${self.user.home}/.ssh/${configOverridesName}" || true
         '';
       };
   };
