@@ -45,6 +45,10 @@
 
     extraSettings = { };
 
+    # options = {
+    #   homebrew.casks = [ "firefox" ];
+    # };
+
     module = {
       # Runs for ALL modules (even disabled) in BOTH contexts.
       # Only set config.nx.* options here.

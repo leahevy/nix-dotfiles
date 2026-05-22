@@ -63,11 +63,16 @@ let
 
   profileInitModules = hostProfileModule.initModules ++ userProfileModule.initModules;
   profileContextModules = hostProfileModule.contextModules ++ userProfileModule.contextModules;
+
+  profileOptionsModules =
+    funcs.mkProfileOptionsModule host.profileName (host.options or { })
+    ++ funcs.mkProfileOptionsModule host.mainUser.profileName (host.mainUser.options or { });
 in
 { config, options, ... }:
 {
   imports =
     optionsModules
+    ++ profileOptionsModules
     ++ settingsValueModules
     ++ optionsValueModules
     ++ enableValueModules

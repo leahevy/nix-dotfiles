@@ -34,6 +34,10 @@
 
     extraSettings = { };
 
+    # options = {
+    #   homebrew.casks = [ "firefox" ];
+    # };
+
     module = {
       # Overlays — applied unconditionally BEFORE pkgs is created. Cannot reference pkgs.
       # Each value is a list of (final: prev: { }) functions.

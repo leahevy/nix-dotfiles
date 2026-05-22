@@ -65,6 +65,10 @@ let
   profileInitModules = hostProfileModule.initModules ++ userProfileModule.initModules;
   profileContextModules = hostProfileModule.contextModules ++ userProfileModule.contextModules;
 
+  profileOptionsModules =
+    funcs.mkProfileOptionsModule host.profileName (host.options or { })
+    ++ funcs.mkProfileOptionsModule user.profileName (user.options or { });
+
   mkNxDef =
     extraCommands:
     import (inputs.lib + "/cmds.nix") {
@@ -85,6 +89,7 @@ in
 {
   imports =
     optionsModules
+    ++ profileOptionsModules
     ++ settingsValueModules
     ++ optionsValueModules
     ++ enableValueModules

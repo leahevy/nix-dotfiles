@@ -57,5 +57,11 @@ with lib;
       description = "Event functions (init, enabled, home, system, standalone, integrated + linux/darwin variants). Signature: args -> config -> { }";
     };
 
+    options = mkOption {
+      type = types.attrs;
+      default = { };
+      description = "Values for options declared via module rawOptions, specified without the nx prefix (e.g. homebrew.casks = [...] sets nx.homebrew.casks)";
+    };
+
   };
 }

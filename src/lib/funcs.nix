@@ -1684,6 +1684,16 @@ rec {
           [ (mergeModuleFunctions "profile" "profile:${profileType}/${profileName}" null contextFns) ];
     };
 
+  mkProfileOptionsModule =
+    id: opts:
+    let
+      forbidden = builtins.filter (k: builtins.elem k defs.moduleInputsToScan) (builtins.attrNames opts);
+    in
+    if forbidden != [ ] then
+      throw "profile '${id}': options must not contain nx.INPUT.* keys (${lib.concatStringsSep ", " forbidden})!"
+    else
+      lib.optional (opts != { }) { config.nx = opts; };
+
   collectModuleAssertions =
     args: processedModules:
     let
