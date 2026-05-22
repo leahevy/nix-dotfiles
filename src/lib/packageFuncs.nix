@@ -217,6 +217,7 @@ let
         };
 
         aeson = {
+          deps = [ "text" ];
           libraries = hpkgs: [
             hpkgs.aeson
           ];
@@ -280,6 +281,13 @@ let
           or (throw "writeHaskellShellScript: invalid preset ${preset}; expected one of: ${lib.concatStringsSep ", " validPresets}!");
 
       unique = lib.unique;
+
+      expandPresetDeps =
+        preset:
+        let
+          pc = presetConfigs.${preset} or { };
+        in
+        lib.concatMap expandPresetDeps (pc.deps or [ ]) ++ [ preset ];
 
       writeHaskellShellScript =
         {
@@ -356,7 +364,9 @@ let
             else
               mkMainDo rawSourceText;
 
-          effectivePresets = presets ++ lib.optionals inline inlinePresets;
+          effectivePresets = unique (
+            lib.concatMap expandPresetDeps (presets ++ lib.optionals inline inlinePresets)
+          );
 
           presetConfigList = map getPresetConfig effectivePresets;
 
