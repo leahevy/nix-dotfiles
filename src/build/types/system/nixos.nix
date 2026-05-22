@@ -75,6 +75,11 @@ with lib;
             default = null;
             description = "Explicit kernel resume device path (boot.kernelParams resume=...). When null, auto-detected from disko swap LVs";
           };
+          allowResume = mkOption {
+            type = types.bool;
+            default = true;
+            description = "Whether to allow hibernation resume";
+          };
           addPhysicalModules = mkOption {
             type = types.bool;
             default = true;

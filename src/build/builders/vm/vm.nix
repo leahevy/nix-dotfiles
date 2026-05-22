@@ -38,6 +38,7 @@ let
             initrdModules = [ ];
             nixModules = [ ];
             extraModulePackages = [ ];
+            allowResume = false;
           };
           settings = {
             networking = {

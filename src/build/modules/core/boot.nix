@@ -20,7 +20,7 @@ in
     physical.system =
       { config, ... }:
       {
-        boot.kernelParams =
+        boot.kernelParams = lib.optionals host.kernel.allowResume (
           let
             resumeDevices =
               if host.kernel.resumeDevice != null then
@@ -28,7 +28,8 @@ in
               else
                 helpers.getDiskoResumeDevices (config.disko.devices or { });
           in
-          map (dev: "resume=${dev}") resumeDevices;
+          map (dev: "resume=${dev}") resumeDevices
+        );
       };
 
     system =
