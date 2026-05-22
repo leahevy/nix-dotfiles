@@ -35,7 +35,7 @@ setup_impermanence_logging() {
 		real_home="$HOME"
 	fi
 
-	local base_log_dir="$real_home/.local/logs/nx/impermanence"
+	local base_log_dir="$real_home/.local/state/nx/logs/impermanence"
 	local log_dir="$base_log_dir/$check_type"
 
 	setup_log_directory "$log_dir"
@@ -497,7 +497,7 @@ subcommand_diff() {
 		real_home="$HOME"
 	fi
 
-	local log_dir="$real_home/.local/logs/nx/impermanence/$check_type"
+	local log_dir="$real_home/.local/state/nx/logs/impermanence/$check_type"
 
 	if [[ ! -d "$log_dir" ]]; then
 		echo -e "${RED}Error: No logs found for check type '${WHITE}$check_type${RED}'${RESET}" >&2

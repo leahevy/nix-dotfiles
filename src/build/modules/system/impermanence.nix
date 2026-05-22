@@ -643,7 +643,7 @@ in
             ".config/nix"
             ".config/sops"
             ".cache/nix"
-            ".local/logs/nx"
+            ".local/state/nx"
           ];
 
           files = [
