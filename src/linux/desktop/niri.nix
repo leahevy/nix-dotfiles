@@ -1420,11 +1420,6 @@ args@{
                     hotkey-overlay.title = "Windows:Move window right";
                   };
 
-                  "Mod+Ctrl+Tab" = {
-                    action = spawn-sh "niri-workspace-action --change-wallpaper move-column-to-monitor-next";
-                    hotkey-overlay.title = "Windows:Move column to next monitor";
-                  };
-
                   "Mod+Shift+Down" = {
                     action = spawn-sh "niri-workspace-action move-column-to-workspace-down";
                     hotkey-overlay.title = "Windows:Move column down";
@@ -1458,11 +1453,6 @@ args@{
                   "Mod+R" = {
                     action = reset-window-height;
                     hotkey-overlay.title = "Windows:Reset height";
-                  };
-
-                  "Mod+Shift+Tab" = {
-                    action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-next";
-                    hotkey-overlay.title = "Monitor:Cycle monitor focus";
                   };
 
                   "Mod+D" = {
@@ -1693,6 +1683,17 @@ args@{
                   "Mod+Ctrl+Alt+Return" = {
                     action = spawn-sh "niri-scratchpad --app-id org.nx.scratchpad --all-windows --spawn scratchpad-terminal";
                     hotkey-overlay.title = "Apps:Scratchpad term";
+                  };
+                }
+                // lib.optionalAttrs (secondaryDisplay != null) {
+                  "Mod+Ctrl+Tab" = {
+                    action = spawn-sh "niri-workspace-action --change-wallpaper move-column-to-monitor-next";
+                    hotkey-overlay.title = "Monitor:Move column to next monitor";
+                  };
+
+                  "Mod+Shift+Tab" = {
+                    action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-next";
+                    hotkey-overlay.title = "Monitor:Cycle monitor focus";
                   };
                 };
               in
