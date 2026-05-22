@@ -151,12 +151,26 @@ in
           {
             description ? "Review the outgoing diff for secrets and privacy leaks before pushing.",
             diffCommand,
+            branchless ? false,
           }:
           {
             description = "${description} (${diffCommand})";
             text = ''
-              1) Confirm the branch has an upstream tracking branch:
-                 `git rev-parse --abbrev-ref --symbolic-full-name @{u}`
+              - Follow any additional instructions the user provides (e.g. a specific repository path or directory).
+              - These take precedence over the steps below.
+
+              ${
+                if branchless then
+                  ''
+                    1) This is a staged-only review.
+                       Do not ask for an upstream branch or compare against a target branch.
+                  ''
+                else
+                  ''
+                    1) Confirm the branch has an upstream tracking branch:
+                       `git rev-parse --abbrev-ref --symbolic-full-name @{u}`
+                  ''
+              }
 
               2) Review the diff:
                  `${diffCommand}`
@@ -176,20 +190,34 @@ in
           {
             description ? "Review a merge request diff for bugs, style, and safety before merging.",
             diffCommand,
+            branchless ? false,
           }:
           {
             description = "${description} (${diffCommand})";
             text = ''
-              1) Determine the target branch you will merge into (e.g. `main`, `master`, `develop`).
-                 If it's unclear, ask the user which target branch to review against.
+              - Follow any additional instructions the user provides (e.g. a specific repository path or directory)
+              - These take precedence over the steps below.
 
-              2) Choose the remote for the target branch.
-                 Default to `origin` unless the user says otherwise.
+              ${
+                if branchless then
+                  ''
+                    1) This is a staged-only review.
+                       Do not ask for a target branch or remote. Review only the cached diff as-is.
+                  ''
+                else
+                  ''
+                    1) Determine the merge target:
+                       - Identify the target branch (e.g. `main`, `master`, `develop`).
+                         If it's unclear, ask the user which target branch to review against.
+                       - Choose the remote for the target branch.
+                         Default to `origin` unless the user says otherwise.
+                  ''
+              }
 
-              3) Review the diff:
+              2) Review the diff:
                  `${diffCommand}`
 
-              4) Review focus:
+              3) Review focus:
                  - introduced bugs / broken logic / missing error handling
                  - code style and consistency with repo patterns
                  - safety: accidental sensitive data or risky changes
@@ -211,6 +239,7 @@ in
 
           review-pre-push-cached = prePushReviewSkill {
             diffCommand = "git diff${lib.optionalString difftasticEnabled " --no-ext-diff"} --cached";
+            branchless = true;
           };
 
           review-pre-push-workdir = prePushReviewSkill {
@@ -223,6 +252,7 @@ in
 
           review-merge-request-cached = mergeRequestReviewSkill {
             diffCommand = "git diff${lib.optionalString difftasticEnabled " --no-ext-diff"} --cached";
+            branchless = true;
           };
 
           review-merge-request-workdir = mergeRequestReviewSkill {
