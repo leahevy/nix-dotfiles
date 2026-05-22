@@ -207,6 +207,11 @@ let
         slug = "clearurls";
         showInToolbar = true;
       };
+      user-agent-string-switcher = {
+        addonId = "{a6c4a591-f1b2-4f03-b3ff-767e5bedf4e7}";
+        slug = "user-agent-string-switcher";
+        showInToolbar = true;
+      };
     }
     // lib.optionalAttrs darkMode {
       dark-reader = {
