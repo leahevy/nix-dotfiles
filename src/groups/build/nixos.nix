@@ -41,6 +41,7 @@ args@{
       system = [
         "kernel-fixes"
       ]
+      ++ (if self.host.hardening or true then [ "hardening" ] else [ ])
       ++ (if self.host.impermanence or false then [ "impermanence" ] else [ ]);
       theme = [ "theme-system" ];
     };

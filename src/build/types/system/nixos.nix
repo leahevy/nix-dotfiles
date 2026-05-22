@@ -465,6 +465,12 @@ with lib;
 
     };
 
+    hardening = mkOption {
+      type = types.bool;
+      default = true;
+      description = "Whether to enable kernel and system hardening";
+    };
+
     impermanence = mkOption {
       type = types.bool;
       default = false;
