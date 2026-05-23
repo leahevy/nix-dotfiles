@@ -707,11 +707,7 @@ args@{
               accountKey:
               let
                 account = accounts.${accountKey};
-                buildServerConfig =
-                  (self.importFileFromOtherModuleSameInput {
-                    inherit args self;
-                    modulePath = "mail-stack.accounts";
-                  }).custom.buildServerConfig;
+                buildServerConfig = self.common."mail-stack".accounts.exports.buildServerConfig;
                 serverConfig = buildServerConfig accountKey account;
                 folders = serverConfig.folders;
               in

@@ -106,47 +106,6 @@ rec {
         else
           helpers.symlink config (inputPath + "/" + self.moduleBasePath + "/" + subpath);
 
-    # Import nix file data from same module (returns data without applying context)
-    # Usage: self.importFileData args "file.nix"
-    importFileData =
-      self: args: subpath:
-      let
-        filePath =
-          helpers.resolveInputFromInput self.moduleInputName + "/" + nixdPath self.moduleBasePath subpath;
-        importArgs = args // {
-          self = self;
-        };
-
-        fileData = import filePath importArgs;
-        validatedData = args.funcs.validateModule fileData filePath {
-          inputName = self.moduleInputName;
-        };
-      in
-      validatedData;
-
-    # Import nix custom data from same module (returns data without applying context)
-    # Usage: self.importFileCustom args "file.nix"
-    importFileCustom =
-      self: args: subpath:
-      let
-        fileData = commonFuncs.importFileData self args subpath;
-      in
-      fileData.custom or { };
-
-    # Import nix file from same module and return its module.* functions
-    # Usage: self.importFile args "file.nix"
-    importFile =
-      self: args: subpath:
-      let
-        filePath =
-          helpers.resolveInputFromInput self.moduleInputName + "/" + nixdPath self.moduleBasePath subpath;
-        importArgs = args // {
-          self = self;
-        };
-        imported = import filePath importArgs;
-      in
-      if imported ? module then imported.module else { };
-
     # Send a user notification, preferring nx-user-notify (logger) when enabled, else raw notify-send (osascript -e 'display notification...' on Darwin)
     # Usage: self.notifyUser { title = "..."; body = "..."; icon = "dialog-information"; urgency = "normal"; }
     # urgency: "low" | "normal" | "critical"
@@ -271,113 +230,6 @@ rec {
       in
       if isDynamic then "${script} \"${shellBody}\"" else "${script}";
 
-    # Import module structure from same input
-    # Usage: self.importFileFromOtherModuleSameInput { inherit args; modulePath = "desktop-modules.web-app"; subpath = "file.nix"; }
-    importFileFromOtherModuleSameInput =
-      self':
-      {
-        args,
-        self,
-        modulePath,
-        subpath ? null,
-      }:
-      let
-        inputPath = helpers.resolveInputFromInput self.moduleInputName;
-
-        modulePathParts = lib.splitString "." modulePath;
-        groupName = lib.head modulePathParts;
-        moduleName = lib.last modulePathParts;
-
-        filePath =
-          if subpath == null then
-            helpers.buildModuleFilePath inputPath self.moduleInputName groupName moduleName
-          else
-            helpers.buildModuleFilePath inputPath self.moduleInputName groupName moduleName + ".d/${subpath}";
-
-        moduleDir = helpers.buildModuleDir self.moduleInputName groupName moduleName;
-        baseModuleContext = {
-          inputs = self.inputs;
-          variables = self.variables;
-          configInputs = self.configInputs or { };
-          moduleBasePath = moduleDir;
-          moduleInput = inputPath;
-          moduleInputName = self.moduleInputName;
-          settings = { };
-          host = self.host or { };
-          user = self.user or null;
-          users = self.users or { };
-          processedModules = self.processedModules or { };
-          isTestingVM = self.isTestingVM or false;
-          isProductionVM = self.isProductionVM or false;
-          isVirtual = self.isVirtual or false;
-        };
-
-        enhancedContext = buildHierarchicalFunctions baseModuleContext moduleDir;
-        moduleSettings = self.getModuleConfig modulePath;
-        finalContext = enhancedContext // {
-          settings = moduleSettings;
-        };
-
-        importArgs = args // {
-          self = finalContext;
-        };
-      in
-      import filePath importArgs;
-
-    # Import module structure from different input
-    # Usage: self.importFileFromOtherModuleOtherInput { inherit args; inputName = "common"; modulePath = "shell.fish"; subpath = "file.nix"; }
-    importFileFromOtherModuleOtherInput =
-      self':
-      {
-        args,
-        self,
-        inputName,
-        modulePath,
-        subpath ? null,
-      }:
-      let
-        inputPath = helpers.resolveInputFromInput inputName;
-
-        modulePathParts = lib.splitString "." modulePath;
-        groupName = lib.head modulePathParts;
-        moduleName = lib.last modulePathParts;
-
-        filePath =
-          if subpath == null then
-            helpers.buildModuleFilePath inputPath inputName groupName moduleName
-          else
-            helpers.buildModuleFilePath inputPath inputName groupName moduleName + ".d/${subpath}";
-
-        moduleDir = helpers.buildModuleDir inputName groupName moduleName;
-        baseModuleContext = {
-          inputs = self.inputs;
-          variables = self.variables;
-          configInputs = self.configInputs or { };
-          moduleBasePath = moduleDir;
-          moduleInput = inputPath;
-          moduleInputName = inputName;
-          settings = { };
-          host = self.host or { };
-          user = self.user or null;
-          users = self.users or { };
-          processedModules = self.processedModules or { };
-          isTestingVM = self.isTestingVM or false;
-          isProductionVM = self.isProductionVM or false;
-          isVirtual = self.isVirtual or false;
-        };
-
-        enhancedContext = buildHierarchicalFunctions baseModuleContext moduleDir;
-        moduleSettings = self.${inputName}.getModuleConfig modulePath;
-        finalContext = enhancedContext // {
-          settings = moduleSettings;
-        };
-
-        importArgs = args // {
-          self = finalContext;
-        };
-      in
-      import filePath importArgs;
-
   };
 
   # Create context-aware function wrapper with error handling
@@ -462,30 +314,6 @@ rec {
         else
           null;
 
-      importFileData =
-        args: subpath:
-        let
-          filePath =
-            helpers.resolveInputFromInput moduleContext.moduleInputName
-            + "/"
-            + nixdPath moduleContext.moduleBasePath subpath;
-          importArgs = args // {
-            self = finalContext;
-          };
-          fileData = import filePath importArgs;
-          validatedData = args.funcs.validateModule fileData filePath {
-            inputName = moduleContext.moduleInputName;
-          };
-        in
-        validatedData;
-
-      importFileCustom =
-        args: subpath:
-        let
-          fileData = importFileData args subpath;
-        in
-        fileData.custom or { };
-
       finalContext =
         contextDefaults
         // (lib.mapAttrs (
@@ -499,8 +327,6 @@ rec {
             user
             binDir
             binForeignDir
-            importFileData
-            importFileCustom
             ;
         }
         // inputSpecificFunctions

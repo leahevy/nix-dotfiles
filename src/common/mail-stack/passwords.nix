@@ -17,22 +17,33 @@ args@{
     service = "mail-stack";
   };
 
-  custom = {
-    mkPasswordCommand =
-      accountKey: service:
-      if self.isDarwin then
-        "security find-generic-password -s ${service}-${accountKey} -w"
-      else if self.isLinux then
-        let
-          desktopPreference = self.user.settings.desktopPreference;
-        in
-        if desktopPreference == "kde" then
-          "kwalletcli -f Passwords -e ${service}-${accountKey}"
+  exports =
+    {
+      lib,
+      pkgs,
+      pkgs-unstable,
+      funcs,
+      helpers,
+      defs,
+      self,
+      ...
+    }:
+    {
+      mkPasswordCommand =
+        accountKey: service:
+        if self.isDarwin then
+          "security find-generic-password -s ${service}-${accountKey} -w"
+        else if self.isLinux then
+          let
+            desktopPreference = self.user.settings.desktopPreference;
+          in
+          if desktopPreference == "kde" then
+            "kwalletcli -f Passwords -e ${service}-${accountKey}"
+          else
+            "secret-tool lookup service ${service}-${accountKey}"
         else
-          "secret-tool lookup service ${service}-${accountKey}"
-      else
-        throw "Unsupported platform for keyring authentication";
-  };
+          throw "Unsupported platform for keyring authentication!";
+    };
 
   module = {
     home =

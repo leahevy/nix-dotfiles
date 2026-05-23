@@ -372,7 +372,7 @@ rec {
         "submodules"
         "settings"
         "assertions"
-        "custom"
+        "exports"
         "module"
         "unfree"
         "warning"
@@ -442,8 +442,8 @@ rec {
         Modules can only use these top-level attributes:
           ${builtins.concatStringsSep " " approvedAttrs}
 
-        Please move custom attributes into the 'custom' attribute set:
-          custom = {
+        To share helpers between modules, use the exports field:
+          exports = { lib, pkgs, self, ... }: {
             ${builtins.concatStringsSep "\n    " (map (attr: "${attr} = ...;") invalidAttrs)}
           };
       '';
@@ -1546,6 +1546,22 @@ rec {
 
       enhancedModuleContext = injectModuleFuncs moduleContext;
 
+      exportsMap = buildAllModuleExports args allProcessedModules;
+
+      exportsPerInput = lib.mapAttrs (
+        inputName: inputGroups:
+        lib.mapAttrs (
+          groupName: groupMods:
+          lib.mapAttrs (moduleName: moduleExports: { exports = moduleExports; }) groupMods
+        ) inputGroups
+      ) exportsMap;
+
+      enhancedModuleContextFinal =
+        enhancedModuleContext
+        // lib.mapAttrs (
+          inputName: expsForInput: (enhancedModuleContext.${inputName} or { }) // expsForInput
+        ) exportsPerInput;
+
       consolidatedArgs = {
         lib = args.lib;
         pkgs = args.pkgs;
@@ -1553,7 +1569,7 @@ rec {
         funcs = args.funcs;
         helpers = args.helpers;
         defs = args.defs;
-        self = enhancedModuleContext;
+        self = enhancedModuleContextFinal;
       };
 
       moduleResult = validateModule (import modulePath consolidatedArgs) modulePath {
@@ -2263,6 +2279,11 @@ rec {
                 settings = moduleResult.value.settings or { };
                 description = moduleResult.value.description or "";
                 unfree = moduleResult.value.unfree or [ ];
+                exports =
+                  if moduleResult.value ? exports && builtins.isFunction moduleResult.value.exports then
+                    moduleResult.value.exports
+                  else
+                    null;
                 conditionResult = evaluateModuleCondition moduleResult.value minimalSelf { enabled = false; };
               }
             else
@@ -2278,6 +2299,7 @@ rec {
                 settings = { };
                 description = "";
                 unfree = [ ];
+                exports = null;
                 conditionResult = null;
               }
           ) moduleSpecs
@@ -2389,6 +2411,79 @@ rec {
         ${m.inputName}.${m.groupName}.${m.moduleName} = true;
       }
     ) { } contextEnabled;
+
+  buildAllModuleExports =
+    args: processedModules:
+    let
+      allModuleData = collectAllModuleData args;
+
+      exportsIndex = lib.foldl (
+        acc: m:
+        if m.exports != null then
+          lib.recursiveUpdate acc {
+            ${m.inputName}.${m.groupName}.${m.moduleName} = m.exports;
+          }
+        else
+          acc
+      ) { } allModuleData;
+
+      buildForModule =
+        inputName: groupName: moduleName: moduleSettings:
+        let
+          exportsFn = lib.attrByPath [
+            inputName
+            groupName
+            moduleName
+          ] null exportsIndex;
+        in
+        if exportsFn == null then
+          { }
+        else
+          let
+            moduleDir = helpers.buildModuleDir inputName groupName moduleName;
+            targetContext = {
+              inputs = args.inputs;
+              variables = args.variables;
+              configInputs = args.configInputs or { };
+              nixOSHosts = args.nixOSHosts or { };
+              homeIntegratedUsers = args.homeIntegratedUsers or { };
+              homeStandaloneUsers = args.homeStandaloneUsers or { };
+              moduleBasePath = moduleDir;
+              moduleInput = helpers.resolveInputFromInput inputName;
+              moduleInputName = inputName;
+              settings = moduleSettings;
+              host = args.host or { };
+              user = args.user or null;
+              users = args.users or { };
+              processedModules = processedModules;
+              isTestingVM = args.isTestingVM or false;
+              isProductionVM = args.isProductionVM or false;
+              isVirtual = args.isVirtual or false;
+            };
+            targetSelf = injectModuleFuncs targetContext;
+            exportsCallArgs = {
+              inherit lib;
+              pkgs = args.pkgs;
+              pkgs-unstable = args.pkgs-unstable;
+              funcs = args.funcs;
+              helpers = args.helpers;
+              defs = args.defs;
+              self = targetSelf;
+            };
+          in
+          exportsFn exportsCallArgs;
+    in
+    lib.mapAttrs (
+      inputName: inputGroups:
+      lib.mapAttrs (
+        groupName: groupModules:
+        lib.filterAttrs (_: e: e != { }) (
+          lib.mapAttrs (
+            moduleName: moduleSettings: buildForModule inputName groupName moduleName moduleSettings
+          ) groupModules
+        )
+      ) inputGroups
+    ) processedModules;
 
   generateOptionsModules =
     allModuleData:

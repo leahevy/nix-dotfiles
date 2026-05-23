@@ -113,43 +113,54 @@ rec {
     }
   ];
 
-  custom = {
-    buildServerConfig =
-      accountKey: account:
-      let
-        providers = self.settings.providers;
-        providerKey =
-          if account ? provider then account.provider else lib.last (lib.splitString "@" account.address);
-        providerConfig = lib.recursiveUpdate providers.default (providers.${providerKey} or { });
-        domain = lib.last (lib.splitString "@" account.address);
-        imapSsl = providerConfig.imap.ssl or true;
-        defaultImapPort = if imapSsl then 993 else 143;
-        smtpSsl = providerConfig.smtp.ssl or false;
-        defaultSmtpPort = if smtpSsl then 465 else 587;
-      in
-      {
-        imap = {
-          host =
-            if providerConfig.imap ? hostPattern then
-              lib.replaceStrings [ "%DOMAIN%" ] [ domain ] providerConfig.imap.hostPattern
-            else
-              providerConfig.imap.host;
-          port = providerConfig.imap.port or defaultImapPort;
-          ssl = imapSsl;
+  exports =
+    {
+      lib,
+      pkgs,
+      pkgs-unstable,
+      funcs,
+      helpers,
+      defs,
+      self,
+      ...
+    }:
+    {
+      buildServerConfig =
+        accountKey: account:
+        let
+          providers = self.settings.providers;
+          providerKey =
+            if account ? provider then account.provider else lib.last (lib.splitString "@" account.address);
+          providerConfig = lib.recursiveUpdate providers.default (providers.${providerKey} or { });
+          domain = lib.last (lib.splitString "@" account.address);
+          imapSsl = providerConfig.imap.ssl or true;
+          defaultImapPort = if imapSsl then 993 else 143;
+          smtpSsl = providerConfig.smtp.ssl or false;
+          defaultSmtpPort = if smtpSsl then 465 else 587;
+        in
+        {
+          imap = {
+            host =
+              if providerConfig.imap ? hostPattern then
+                lib.replaceStrings [ "%DOMAIN%" ] [ domain ] providerConfig.imap.hostPattern
+              else
+                providerConfig.imap.host;
+            port = providerConfig.imap.port or defaultImapPort;
+            ssl = imapSsl;
+          };
+          smtp = {
+            host =
+              if providerConfig.smtp ? hostPattern then
+                lib.replaceStrings [ "%DOMAIN%" ] [ domain ] providerConfig.smtp.hostPattern
+              else
+                providerConfig.smtp.host;
+            port = providerConfig.smtp.port or defaultSmtpPort;
+            ssl = smtpSsl;
+          };
+          folders = providerConfig.folders;
+          archiveContainsAllMail = providerConfig.archiveContainsAllMail or false;
         };
-        smtp = {
-          host =
-            if providerConfig.smtp ? hostPattern then
-              lib.replaceStrings [ "%DOMAIN%" ] [ domain ] providerConfig.smtp.hostPattern
-            else
-              providerConfig.smtp.host;
-          port = providerConfig.smtp.port or defaultSmtpPort;
-          ssl = smtpSsl;
-        };
-        folders = providerConfig.folders;
-        archiveContainsAllMail = providerConfig.archiveContainsAllMail or false;
-      };
-  };
+    };
 
   module = {
     home =
@@ -158,11 +169,7 @@ rec {
         baseDataDir = "${config.xdg.dataHome}/${self.settings.baseDataDir}";
         mailDir = "${baseDataDir}/${self.settings.maildirPath}";
 
-        mkPasswordCommand =
-          (self.importFileFromOtherModuleSameInput {
-            inherit args self;
-            modulePath = "mail-stack.passwords";
-          }).custom.mkPasswordCommand;
+        mkPasswordCommand = self.common."mail-stack".passwords.exports.mkPasswordCommand;
 
         passwordsConfig = self.getModuleConfig "mail-stack.passwords";
 
@@ -176,7 +183,7 @@ rec {
           in
           providers.${providerKey} or providers.default;
 
-        buildServerConfig = custom.buildServerConfig;
+        buildServerConfig = self.common."mail-stack".accounts.exports.buildServerConfig;
 
       in
       {

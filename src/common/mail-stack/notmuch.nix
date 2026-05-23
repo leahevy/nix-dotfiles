@@ -50,11 +50,7 @@ args@{
         accounts = accountsConfig.accounts;
         accountKeys = lib.attrNames accounts;
 
-        buildServerConfig =
-          (self.importFileFromOtherModuleSameInput {
-            inherit args self;
-            modulePath = "mail-stack.accounts";
-          }).custom.buildServerConfig;
+        buildServerConfig = self.common."mail-stack".accounts.exports.buildServerConfig;
 
         primaryAccountKey = lib.findFirst (
           name: accounts.${name}.default or false

@@ -30,8 +30,8 @@ args@{
   # Unfree package names to allow
   unfree = [ ];
 
-  # Arbitrary data, accessed via self.importFileCustom
-  custom = { };
+  # Helpers exported to other modules, accessed as self.INPUT.GROUP.MODULE.exports.NAME
+  # exports = { lib, pkgs, pkgs-unstable, funcs, helpers, defs, self, ... }: { };
 
   # warning = "This module is work in progress.";
   # error = "This module is currently broken!";
