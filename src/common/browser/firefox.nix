@@ -167,7 +167,7 @@ let
   };
 
   baseExtensions =
-    config: darkMode:
+    config: darkMode: enableFingerprintingProtection:
     {
       new-tab-override = {
         addonId = "newtaboverride@agenedia.com";
@@ -207,6 +207,8 @@ let
         slug = "clearurls";
         showInToolbar = true;
       };
+    }
+    // lib.optionalAttrs (!enableFingerprintingProtection) {
       user-agent-string-switcher = {
         addonId = "{a6c4a591-f1b2-4f03-b3ff-767e5bedf4e7}";
         slug = "user-agent-string-switcher";
@@ -271,6 +273,7 @@ let
       extensions,
       downloadDir,
       nextdnsID,
+      enableFingerprintingProtection,
     }:
     let
       browserCfg = config.nx.common.browser.browser;
@@ -280,7 +283,7 @@ let
         else
           "Google";
       allExtensions = lib.filterAttrs (_: ext: !(ext.disabled or false)) (
-        (baseExtensions config darkMode) // extensions
+        (baseExtensions config darkMode enableFingerprintingProtection) // extensions
       );
       thirdPartyExtensions = lib.filterAttrs (
         _: ext: (ext.managedSettings or null) != null
@@ -475,6 +478,10 @@ in
       type = lib.types.str;
       default = "default-release";
     };
+    enableFingerprintingProtection = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+    };
     syncEnable = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -522,7 +529,6 @@ in
   };
 
   module = {
-
     home =
       {
         config,
@@ -530,11 +536,12 @@ in
         extensions,
         darkMode,
         sidebar,
+        enableFingerprintingProtection,
         ...
       }:
       let
         allExtensions = lib.filterAttrs (_: ext: !(ext.disabled or false)) (
-          (baseExtensions config darkMode) // extensions
+          (baseExtensions config darkMode enableFingerprintingProtection) // extensions
         );
         settingsExtensions = lib.filterAttrs (_: ext: (ext.settings or null) != null) (
           lib.mapAttrs (
@@ -705,6 +712,17 @@ in
                 "#nav-bar .webextension-browser-action[data-extensionid=\"${ext.addonId}\"] { display: revert !important; }"
               ) (lib.filterAttrs (_: ext: (ext.showInToolbar or false)) allExtensions)
             );
+
+            letterboxingForceBlackCSS = ''
+              #appcontent,
+              #tabbrowser-tabbox,
+              #tabbrowser-tabpanels,
+              .browserContainer,
+              .browserStack,
+              browser[type="content"] {
+                background-color: #000000 !important;
+              }
+            '';
           in
           lib.concatStringsSep "\n" (
             [
@@ -725,6 +743,7 @@ in
               hideTitlebarCloseButtonCSS
               activeTabBackgroundCSS
               squareTabBackgroundCSS
+              letterboxingForceBlackCSS
             ]
             ++ (lib.optionals (allExtensions == { }) [
               disableUnifiedExtensionsButtonCSS
@@ -769,6 +788,12 @@ in
             "devtools.toolbox.host" = "window";
             "privacy.donottrackheader.enabled" = true;
             "security.pki.crlite_mode" = 2;
+          }
+          // lib.optionalAttrs enableFingerprintingProtection {
+            "privacy.resistFingerprinting" = false;
+            "privacy.resistFingerprinting.letterboxing" = true;
+            "privacy.fingerprintingProtection" = true;
+            "privacy.fingerprintingProtection.overrides" = "+AllTargets,-CSSPrefersColorScheme";
           }
           // lib.optionalAttrs (!sidebar) {
             "sidebar.revamp" = false;
@@ -926,6 +951,7 @@ in
         extensions,
         defaultDownloadsName,
         nextdnsID,
+        enableFingerprintingProtection,
         ...
       }:
       let
@@ -944,6 +970,7 @@ in
               extensions
               downloadDir
               nextdnsID
+              enableFingerprintingProtection
               ;
           };
         };
@@ -987,6 +1014,7 @@ in
         firejailExtraRules,
         defaultDownloadsName,
         nextdnsID,
+        enableFingerprintingProtection,
         ...
       }:
       let
@@ -1013,6 +1041,7 @@ in
               extensions
               downloadDir
               nextdnsID
+              enableFingerprintingProtection
               ;
           };
         };
