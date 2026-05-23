@@ -1504,7 +1504,7 @@ rec {
       lib.mkMerge (map callAndValidate fns);
 
   importModule =
-    args: moduleSpec: allProcessedModules: buildContext:
+    args: moduleSpec: allProcessedModules: buildContext: exportsPerInput:
     let
       modulePath = buildModulePath {
         input = moduleSpec.input;
@@ -1545,16 +1545,6 @@ rec {
       };
 
       enhancedModuleContext = injectModuleFuncs moduleContext;
-
-      exportsMap = buildAllModuleExports args allProcessedModules;
-
-      exportsPerInput = lib.mapAttrs (
-        inputName: inputGroups:
-        lib.mapAttrs (
-          groupName: groupMods:
-          lib.mapAttrs (moduleName: moduleExports: { exports = moduleExports; }) groupMods
-        ) inputGroups
-      ) exportsMap;
 
       enhancedModuleContextFinal =
         enhancedModuleContext
@@ -1611,7 +1601,16 @@ rec {
   importModules =
     args: moduleSpecs: allProcessedModules: buildContext:
     let
-      moduleResults = map (spec: importModule args spec allProcessedModules buildContext) moduleSpecs;
+      exportsPerInput = lib.mapAttrs (
+        inputName: inputGroups:
+        lib.mapAttrs (
+          groupName: groupMods:
+          lib.mapAttrs (moduleName: moduleExports: { exports = moduleExports; }) groupMods
+        ) inputGroups
+      ) (buildAllModuleExports args allProcessedModules);
+      moduleResults = map (
+        spec: importModule args spec allProcessedModules buildContext exportsPerInput
+      ) moduleSpecs;
     in
     {
       modules = map (result: result.configuration) moduleResults;
