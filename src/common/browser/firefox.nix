@@ -462,6 +462,8 @@ let
       ) thirdPartyExtensions;
     }
     // extraPolicies;
+
+  firefoxSpecificCSS = "";
 in
 {
   name = "firefox";
@@ -799,9 +801,9 @@ in
             "sidebar.revamp" = false;
           };
 
-          userContent = lib.mkIf (
-            config.nx.common.browser.browser.final.userContentCSS != null
-          ) config.nx.common.browser.browser.final.userContentCSS.data;
+          userContent = lib.mkIf (config.nx.common.browser.browser.final.userContentCSS != null) (
+            config.nx.common.browser.browser.final.userContentCSS.data + firefoxSpecificCSS
+          );
           userChrome = userChromeCSS;
         };
 
@@ -1160,7 +1162,9 @@ in
                 mkdir -p "$css_dir"
                 rm -f "$css_dir/userContent.css"
                 rm -f "$css_dir/userContent.css.${self.variables.home-manager-backup-extension}"
-                cp "${userCSS.derivation}" "$css_dir/userContent.css"
+                cp "${
+                  pkgs.writeText "browser-user-content.css" (userCSS.data + firefoxSpecificCSS)
+                }" "$css_dir/userContent.css"
                fi
             ''} || true
           ''
