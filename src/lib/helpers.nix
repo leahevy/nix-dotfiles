@@ -901,6 +901,26 @@ rec {
       in
       "${pkg}/${cleanPath}" + convertToEmptyString "${checker}";
 
+  optionsHelpers = {
+    recursiveStringListType =
+      let
+        isValid =
+          x:
+          if lib.isString x then
+            true
+          else if lib.isList x && x != [ ] then
+            builtins.all isValid x
+          else
+            false;
+      in
+      lib.types.mkOptionType {
+        name = "recursiveStringList";
+        description = "string or non-empty nested list of strings";
+        check = isValid;
+        merge = lib.options.mergeOneOption;
+      };
+  };
+
   isModulesOnlyInput = inputName: builtins.elem inputName defs.modulesOnlyInputs;
 
   allModuleInputsToScan =

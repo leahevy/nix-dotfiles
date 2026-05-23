@@ -8,34 +8,6 @@ args@{
   self,
   ...
 }:
-let
-  isValidBullet =
-    x:
-    if lib.isString x then
-      true
-    else if lib.isList x && x != [ ] then
-      builtins.all isValidBullet x
-    else
-      false;
-  bulletItemType = lib.types.mkOptionType {
-    name = "bulletItem";
-    description = "string or non-empty nested list of strings";
-    check = isValidBullet;
-    merge = lib.options.mergeOneOption;
-  };
-  renderBulletItem =
-    depth: item:
-    let
-      indent = lib.concatStringsSep "" (lib.genList (_: "    ") depth);
-    in
-    if lib.isString item then
-      "${indent}- ${item}"
-    else
-      lib.concatStringsSep "\n" (
-        [ (renderBulletItem depth (builtins.head item)) ]
-        ++ map (renderBulletItem (depth + 1)) (builtins.tail item)
-      );
-in
 {
   name = "opencode";
 
@@ -44,7 +16,7 @@ in
 
   options = {
     instructions = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.listOf bulletItemType);
+      type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
       default = { };
       description = "OpenCode-specific instructions.";
     };
@@ -132,25 +104,7 @@ in
       }:
       let
         sharedAgents = config.nx.common.dev.agents;
-        renderInstructions =
-          instructionsSet:
-          let
-            headers = lib.sort (a: b: a < b) (builtins.attrNames instructionsSet);
-            renderSection =
-              header:
-              let
-                bullets = instructionsSet.${header} or [ ];
-                body = lib.concatStringsSep "\n" (map (renderBulletItem 0) bullets);
-                displayHeader =
-                  let
-                    m = builtins.match "^[0-9]+[ ]*-[ ]*(.*)$" header;
-                  in
-                  if m != null && m != [ ] && (builtins.elemAt m 0) != "" then builtins.elemAt m 0 else header;
-              in
-              if bullets == [ ] then "" else "## ${displayHeader}\n\n${body}";
-            sections = builtins.filter (s: s != "") (map renderSection headers);
-          in
-          lib.concatStringsSep "\n\n" sections;
+        renderInstructions = self.common.dev.agents.exports.renderInstructions;
 
         mergedInstructions = helpers.deepMergeComplex {
           base = sharedAgents.instructions;
