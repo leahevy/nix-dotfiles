@@ -1408,6 +1408,9 @@ in
                 matches = [ { app-id = "firefox"; } ];
                 open-on-workspace = "2";
                 open-focused = false;
+                default-column-width = {
+                  proportion = 0.67;
+                };
               }
             ];
           };
