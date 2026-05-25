@@ -35,7 +35,8 @@ args@{
         "profile"
         "nixos-label"
       ]
-      ++ lib.optionals (self.host.isVMHost or false) [ "vm-host" ];
+      ++ lib.optionals (self.host.isVMHost or false) [ "vm-host" ]
+      ++ lib.optionals (self.host.crossBuild or false) [ "cross-build" ];
       desktop = [ "desktop" ];
       programs = [ "programs" ];
       system = [

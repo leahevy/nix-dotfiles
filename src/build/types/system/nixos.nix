@@ -488,6 +488,12 @@ with lib;
       description = "How this machine consumes the NX configuration: 1) managed: no local repos, updates pushed from outside; 2) server: local nxconfig, no local edits, auto-upgrades; 3) local: local nxconfig, local edits allowed, auto-upgrades; 4) develop: local nxcore + nxconfig via --override-input, auto-upgrades dry-run only";
     };
 
+    crossBuild = mkOption {
+      type = types.bool;
+      default = false;
+      description = "Whether to enable cross-architecture builds via QEMU binfmt emulation";
+    };
+
     isVMHost = mkOption {
       type = types.bool;
       default = false;
