@@ -463,7 +463,19 @@ let
     }
     // extraPolicies;
 
-  firefoxSpecificCSS = "";
+  firefoxSpecificCSS =
+    monospaceFont:
+    lib.optionalString monospaceFont ''
+      :not(i):not([class="icon" i]):not([class*="fa-" i]):not([class*="material-symbols" i]),
+      *::before,
+      *::after,
+      input,
+      textarea,
+      select,
+      button {
+        font-family: monospace !important;
+      }
+    '';
 in
 {
   name = "firefox";
@@ -481,6 +493,10 @@ in
       default = "default-release";
     };
     enableFingerprintingProtection = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+    };
+    monospaceFont = lib.mkOption {
       type = lib.types.bool;
       default = true;
     };
@@ -539,6 +555,7 @@ in
         darkMode,
         sidebar,
         enableFingerprintingProtection,
+        monospaceFont,
         ...
       }:
       let
@@ -725,6 +742,26 @@ in
                 background-color: #000000 !important;
               }
             '';
+
+            monospaceFontCSS = ''
+              *,
+              *::before,
+              *::after,
+              toolbar,
+              toolbarbutton,
+              button,
+              label,
+              description,
+              textbox,
+              menulist,
+              menu,
+              menuitem,
+              tab,
+              .urlbar-input,
+              .searchbar-textbox {
+                font-family: monospace !important;
+              }
+            '';
           in
           lib.concatStringsSep "\n" (
             [
@@ -749,6 +786,9 @@ in
             ]
             ++ (lib.optionals (allExtensions == { }) [
               disableUnifiedExtensionsButtonCSS
+            ])
+            ++ (lib.optionals monospaceFont [
+              monospaceFontCSS
             ])
             ++ [
               toolbarExtensionsForceHiddenCSS
@@ -802,7 +842,7 @@ in
           };
 
           userContent = lib.mkIf (config.nx.common.browser.browser.final.userContentCSS != null) (
-            config.nx.common.browser.browser.final.userContentCSS.data + firefoxSpecificCSS
+            config.nx.common.browser.browser.final.userContentCSS.data + (firefoxSpecificCSS monospaceFont)
           );
           userChrome = userChromeCSS;
         };
@@ -1138,6 +1178,7 @@ in
         extraPolicies,
         extensions,
         defaultDownloadsName,
+        monospaceFont,
         ...
       }:
       let
@@ -1163,7 +1204,7 @@ in
                 rm -f "$css_dir/userContent.css"
                 rm -f "$css_dir/userContent.css.${self.variables.home-manager-backup-extension}"
                 cp "${
-                  pkgs.writeText "browser-user-content.css" (userCSS.data + firefoxSpecificCSS)
+                  pkgs.writeText "browser-user-content.css" (userCSS.data + (firefoxSpecificCSS monospaceFont))
                 }" "$css_dir/userContent.css"
                fi
             ''} || true
