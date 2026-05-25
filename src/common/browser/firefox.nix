@@ -500,6 +500,10 @@ in
       type = lib.types.bool;
       default = true;
     };
+    bottomToolbars = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+    };
     syncEnable = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -556,6 +560,7 @@ in
         sidebar,
         enableFingerprintingProtection,
         monospaceFont,
+        bottomToolbars,
         ...
       }:
       let
@@ -621,6 +626,7 @@ in
             '';
 
             forceBlackMainCSS = ''
+              #browser,
               #main-window,
               .notificationbox-stack,
               .infobar { background-color: #000000 !important; }
@@ -762,6 +768,53 @@ in
                 font-family: monospace !important;
               }
             '';
+
+            bottomToolbarsCss = ''
+              :root {
+                --nx-nav-height: 42px;
+              }
+
+              #browser {
+                margin-bottom: var(--nx-nav-height) !important;
+              }
+
+              #nav-bar {
+                position: fixed !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                z-index: 1000 !important;
+
+                min-height: var(--nx-nav-height) !important;
+                max-height: var(--nx-nav-height) !important;
+              }
+
+              #titlebar,
+              #TabsToolbar,
+              #PersonalToolbar,
+              #toolbar-menubar {
+                position: static !important;
+                bottom: auto !important;
+                top: auto !important;
+                left: auto !important;
+                right: auto !important;
+                z-index: auto !important;
+              }
+
+              #navigator-toolbox {
+                display: block !important;
+                flex-direction: unset !important;
+                border-bottom: var(--chrome-content-separator-color) !important;
+              }
+
+              :root[inFullscreen] #nav-bar {
+                display: none !important;
+              }
+
+              :root[inFullscreen] #browser {
+                margin-bottom: 0 !important;
+              }
+            '';
           in
           lib.concatStringsSep "\n" (
             [
@@ -789,6 +842,9 @@ in
             ])
             ++ (lib.optionals monospaceFont [
               monospaceFontCSS
+            ])
+            ++ (lib.optionals bottomToolbars [
+              bottomToolbarsCss
             ])
             ++ [
               toolbarExtensionsForceHiddenCSS
