@@ -503,40 +503,46 @@ jobs:
           delete-branch: true
           sign-commits: true
 
-      - name: Notify PR Created via Pushover
-        if: steps.changes.outputs.changed == 'true' && steps.cpr.outputs.pull-request-operation == 'created'
+      - name: Notify PR Created or Updated via Pushover
+        if: steps.changes.outputs.changed == 'true' && (steps.cpr.outputs.pull-request-operation == 'created' || steps.cpr.outputs.pull-request-operation == 'updated')
         env:
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
           PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
         run: |
           set -euo pipefail
+          if [ "${{ steps.cpr.outputs.pull-request-operation }}" == "updated" ]; then
+            PR_LABEL="PR Updated"
+          else
+            PR_LABEL="New PR"
+          fi
+
           if [ "${{ env.ANY_REBOOT_REQUIRED }}" == "true" ]; then
             PRIORITY="1"
             SOUND="gamelan"
             TTL="604800"
             CIRCLE_COLOR="🟡"
-            STATUS="New PR (Manual Review Required)"
+            STATUS="$PR_LABEL (Manual Review Required)"
             EXTRA_MESSAGE="⚠️ <b>Reboot Required</b> - Auto-merge disabled"
           elif [ "${{ env.COMMITS_TRUNCATED }}" == "true" ]; then
             PRIORITY="1"
             SOUND="gamelan"
             TTL="604800"
             CIRCLE_COLOR="🟡"
-            STATUS="New PR (Manual Review Required)"
+            STATUS="$PR_LABEL (Manual Review Required)"
             EXTRA_MESSAGE="⚠️ <b>Commits truncated (&gt;250)</b> - Cannot verify reboot requirements - Auto-merge disabled"
           elif [ "${{ steps.check-day.outputs.its_mergeday }}" == "true" ]; then
             PRIORITY="0"
             SOUND="pianobar"
             TTL="129600"
             CIRCLE_COLOR="🟢"
-            STATUS="New PR (Auto-merge Enabled)"
+            STATUS="$PR_LABEL (Auto-merge Enabled)"
             EXTRA_MESSAGE="✅ <b>Auto-merge enabled</b> - Will merge automatically"
           else
             PRIORITY="0"
             SOUND="vibrate"
             TTL="129600"
             CIRCLE_COLOR="🔵"
-            STATUS="New PR"
+            STATUS="$PR_LABEL"
             EXTRA_MESSAGE=""
           fi
 
