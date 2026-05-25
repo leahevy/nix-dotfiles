@@ -76,13 +76,15 @@ args@{
           executable = true;
         };
 
-        home.file."${defs.binDir}/nx-yazi-term" = {
-          text = ''
-            #!/usr/bin/env bash
-            exec ${terminalRunWithClass "org.nx.yazi" "nx-yazi"}
-          '';
-          executable = true;
-        };
+        home.file."${defs.binDir}/nx-yazi-term" =
+          lib.mkIf ((self.host.settings.system.desktop or self.user.settings.desktop or null) != null)
+            {
+              text = ''
+                #!/usr/bin/env bash
+                exec ${terminalRunWithClass "org.nx.yazi" "nx-yazi"}
+              '';
+              executable = true;
+            };
 
         home.persistence."${self.persist}" = {
           directories = [

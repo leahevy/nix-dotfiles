@@ -1377,13 +1377,16 @@ args@{
           '';
         };
 
-        home.file."${defs.binDir}/nvim-desktop" = lib.mkIf self.isLinux {
-          executable = true;
-          text = ''
-            #!/usr/bin/env bash
-            exec ${terminalRunPrefix} nvim-run "$@"
-          '';
-        };
+        home.file."${defs.binDir}/nvim-desktop" =
+          lib.mkIf
+            (self.isLinux && (self.host.settings.system.desktop or self.user.settings.desktop or null) != null)
+            {
+              executable = true;
+              text = ''
+                #!/usr/bin/env bash
+                exec ${terminalRunPrefix} nvim-run "$@"
+              '';
+            };
 
         home.activation.nvim-timestamp = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
           run mkdir -p ${self.user.home}/.config/nvim || true
@@ -1400,35 +1403,38 @@ args@{
           ];
         };
 
-        xdg.desktopEntries = lib.optionalAttrs self.isLinux {
-          "nvim" = {
-            name = "Neovim wrapper";
-            noDisplay = true;
-          };
+        xdg.desktopEntries =
+          lib.optionalAttrs
+            (self.isLinux && (self.host.settings.system.desktop or self.user.settings.desktop or null) != null)
+            {
+              "nvim" = {
+                name = "Neovim wrapper";
+                noDisplay = true;
+              };
 
-          "gvim" = {
-            name = "GVim";
-            noDisplay = true;
-          };
-          "vim" = {
-            name = "Vim";
-            noDisplay = true;
-          };
+              "gvim" = {
+                name = "GVim";
+                noDisplay = true;
+              };
+              "vim" = {
+                name = "Vim";
+                noDisplay = true;
+              };
 
-          "custom-nvim" = {
-            name = "Neovim";
-            genericName = "Text Editor";
-            comment = "Edit text files";
-            exec = "${self.binDir}/nvim-desktop %F";
-            icon = "nvim";
-            terminal = false;
-            categories = [
-              "Utility"
-              "TextEditor"
-            ];
-            mimeType = [ "text/plain" ];
-          };
-        };
+              "custom-nvim" = {
+                name = "Neovim";
+                genericName = "Text Editor";
+                comment = "Edit text files";
+                exec = "${self.binDir}/nvim-desktop %F";
+                icon = "nvim";
+                terminal = false;
+                categories = [
+                  "Utility"
+                  "TextEditor"
+                ];
+                mimeType = [ "text/plain" ];
+              };
+            };
       };
   };
 }
