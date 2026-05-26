@@ -83,7 +83,7 @@ in
               systemd.enable = kernel.systemdInitrd;
             };
 
-          kernelPackages =
+          kernelPackages = lib.mkIf ((host.hardware.board or null) != "pi5") (
             if host.kernel.variant == "latest" then
               if self.variables.latestLinuxOverride != null then
                 pkgs.linuxKernel.packages.${self.variables.latestLinuxOverride}
@@ -95,9 +95,10 @@ in
               else
                 pkgs.linuxPackages
             else
-              throw "Did not find a Linux kernel for chosen variant '${host.kernel.variant}'!";
+              throw "Did not find a Linux kernel for chosen variant '${host.kernel.variant}'!"
+          );
 
-          loader = {
+          loader = lib.mkIf ((host.hardware.board or null) != "pi5") {
             systemd-boot = {
               enable = true;
               consoleMode = "max";
