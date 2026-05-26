@@ -245,7 +245,11 @@ echo -e "${GREEN}Checksum created: ${WHITE}$OUTPUT_DIR/$ISO_NAME.sha256${RESET}"
 
 if [[ "$OVERRIDE" == true ]]; then
 	shopt -s nullglob
-	old_isos=("$OUTPUT_DIR/${ISO_PREFIX}"*.iso)
+	if [[ "$PI5" == true ]]; then
+		old_isos=("$OUTPUT_DIR/${ISO_PREFIX}"*.img)
+	else
+		old_isos=("$OUTPUT_DIR/${ISO_PREFIX}"*.iso)
+	fi
 	shopt -u nullglob
 
 	removed_count=0
