@@ -12,4 +12,6 @@
   imports = [
     ./live-common.nix
   ];
+
+  sdImage.compressImage = false;
 }
