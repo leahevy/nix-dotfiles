@@ -25,6 +25,14 @@ args@{
   module = {
     linux.enabled = config: {
       nx.linux.desktop.common.graphicalSessionServices = [ "waybar" ];
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          tag = "waybar";
+          string = "Getting layout failed: GDBus\.Error:org\.freedesktop\.DBus\.Error\.UnknownObject: No such object path '/MenuBar'";
+          user = true;
+          unitless = true;
+        }
+      ];
     };
 
     home =
