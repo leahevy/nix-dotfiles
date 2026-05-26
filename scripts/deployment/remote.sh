@@ -38,7 +38,7 @@ _NO_USER_AGE=false _DANGEROUSLY_USE_HOST_SOPS=false
 _FORCE=false _BUILD_ON_REMOTE=false _ALLOW_OWN_PROFILE=false _ALLOW_LOCALHOST=false _CONNECT_ONLY=false _DRY_RUN=false _ASK=false _DRY_RUN_CMD=""
 _PROFILE="" _FULL_PROFILE="" _TARGET="" _REMOTE_ADDR=""
 _PERSIST_PATH="" _DEP_MODE=""
-_USES_IMPERMANENCE=false _USERNAME=""
+_USES_IMPERMANENCE=false _USERNAME="" _BOARD="null"
 _USER_UID="" _USER_GID=""
 _SYSTEM_DIRS='[]' _SYSTEM_FILES='[]' _USER_DIRS='[]' _USER_FILES='[]'
 _SYSTEM_KEY_SRC="" _USER_KEY_SRC=""
@@ -836,6 +836,7 @@ eval_install_profile() {
 	_DEP_MODE=$(echo "$HOST_JSON" | jq -r '.deploymentMode')
 	_REMOTE_ADDR=$(echo "$HOST_JSON" | jq -r '.remote.address // empty')
 	_USES_IMPERMANENCE=$(echo "$HOST_JSON" | jq -r '.impermanence')
+	_BOARD=$(echo "$HOST_JSON" | jq -r '.hardware.board // "null"')
 	_USERNAME=$(echo "$HOST_JSON" | jq -r '.mainUser.username')
 	[[ -n "$_USERNAME" && "$_USERNAME" != "null" ]] || {
 		print_error "host.mainUser.username is not set in profile $_PROFILE!"
@@ -1247,10 +1248,11 @@ build_extra_files() {
 		--argjson gid "$_USER_GID" \
 		--argjson impermanence "$_USES_IMPERMANENCE" \
 		--arg persist_path "$_PERSIST_PATH" \
+		--arg board "$_BOARD" \
 		--argjson sysd "$_SYSTEM_DIRS" --argjson sysf "$_SYSTEM_FILES" \
 		--argjson usrd "$_USER_DIRS" --argjson usrf "$_USER_FILES" \
 		'{user:$user, uid:$uid, gid:$gid, impermanence:$impermanence,
-          persist_path:$persist_path,
+          persist_path:$persist_path, board:$board,
           system_dirs:$sysd, system_files:$sysf,
           user_dirs:$usrd, user_files:$usrf}' \
 		>"$_INSTALL_TMPDIR/migrate.json"

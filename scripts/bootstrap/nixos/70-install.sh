@@ -180,6 +180,32 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 		echo
 		echo -e "${GREEN}Installation succeeded.${RESET}"
+
+		BOARD="$(nix eval --raw --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.nx.profile.host.hardware.board" 2>/dev/null || echo "null")"
+		if [[ "$BOARD" == "pi5" ]]; then
+			echo
+			echo -e "${WHITE}Configuring Raspberry Pi 5 EEPROM boot order (NVMe first, SD fallback)...${RESET}"
+			if command -v rpi-eeprom-config >/dev/null 2>&1; then
+				EEPROM_CFG=$(rpi-eeprom-config)
+				# shellcheck disable=SC2001
+				UPDATED_CFG=$(echo "$EEPROM_CFG" | sed 's/^BOOT_ORDER=.*/BOOT_ORDER=0xf16/')
+				if ! echo "$EEPROM_CFG" | grep -q "^BOOT_ORDER="; then
+					UPDATED_CFG="${UPDATED_CFG}"$'\nBOOT_ORDER=0xf16'
+				fi
+				EEPROM_TMP=$(mktemp /tmp/rpi-eeprom-boot.XXXXXX)
+				echo "$UPDATED_CFG" >"$EEPROM_TMP"
+				rpi-eeprom-config --apply "$EEPROM_TMP" || {
+					rm -f "$EEPROM_TMP"
+					exit 1
+				}
+				rm -f "$EEPROM_TMP"
+				echo -e "${GREEN}EEPROM boot order set to NVMe first (0xf16). Change takes effect on next reboot.${RESET}"
+			else
+				echo -e "${YELLOW}Warning: rpi-eeprom-config not found, skipping EEPROM boot order configuration.${RESET}"
+				echo -e "${YELLOW}Set BOOT_ORDER=0xf16 manually via rpi-eeprom-config after boot.${RESET}"
+			fi
+		fi
+
 		echo
 		echo -e "${WHITE}Press enter to continue...${RESET}"
 		read -r
