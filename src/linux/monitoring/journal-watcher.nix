@@ -348,6 +348,41 @@ args@{
       baseTagsToHighlight = [ ];
     in
     {
+      enabled =
+        config:
+        let
+          hasDataDrive = config.nx.linux.storage."luks-data-drive".enable;
+          removableDev = if hasDataDrive then "sd[c-z]" else "sd[b-z]";
+        in
+        {
+          nx.linux.monitoring.journal-watcher.ignorePatterns = [
+            {
+              kernel = true;
+              string = "EXT4-fs \\(${removableDev}[0-9]*\\): shut down requested \\([0-9]+\\)";
+            }
+            {
+              kernel = true;
+              string = "Aborting journal on device ${removableDev}[0-9]*-[0-9]+\\.";
+            }
+            {
+              kernel = true;
+              string = "device offline error, dev ${removableDev}, sector [0-9]+";
+            }
+            {
+              kernel = true;
+              string = "Buffer I/O error on dev ${removableDev}[0-9]+, logical block [0-9]+, lost sync page write";
+            }
+            {
+              kernel = true;
+              string = "JBD2: I/O error when updating journal superblock for ${removableDev}[0-9]*-[0-9]+\\.";
+            }
+            {
+              kernel = true;
+              string = "EXT4-fs \\(${removableDev}[0-9]*\\): I/O error while writing superblock";
+            }
+          ];
+        };
+
       system =
         config:
         let
