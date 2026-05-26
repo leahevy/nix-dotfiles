@@ -243,6 +243,7 @@ args@{
       ];
       baseSystemStringsToIgnore = [
         "Error re-reading partition table \\(BLKRRPART ioctl\\) on /dev/[a-z]+: Device or resource busy"
+        "Ignoring SCSI command SYNCHRONIZE CACHE failure.*on /dev/[a-z]+"
       ];
       baseKernelStringsToIgnore = [
         "Failed to make /usr/ a mount point, ignoring"
