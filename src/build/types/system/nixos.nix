@@ -200,7 +200,7 @@ with lib;
             description = "GPU type for driver and graphics configuration";
           };
           board = mkOption {
-            type = types.nullOr (types.enum [ ]);
+            type = types.nullOr (types.enum [ "pi5" ]);
             default = null;
             description = "Board type for SBC and embedded system configuration";
           };
