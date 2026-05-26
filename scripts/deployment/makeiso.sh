@@ -254,6 +254,7 @@ if [[ "$OVERRIDE" == true ]]; then
 
 	removed_count=0
 	for old_iso in "${old_isos[@]:-}"; do
+		[[ "$old_iso" == *.sha256 ]] && continue
 		if [[ "$(basename "$old_iso")" == "$ISO_NAME" ]]; then
 			continue
 		fi
