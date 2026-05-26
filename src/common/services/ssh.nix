@@ -465,7 +465,12 @@ args@{
                   name =
                     let
                       entryName =
-                        if username == "initrd" then "initrd-user-${profileName}" else "${username}.${profileName}";
+                        if username == "initrd" then
+                          "initrd-user-${profileName}"
+                        else if username == profileName then
+                          profileName
+                        else
+                          "${username}.${profileName}";
                     in
                     entryName;
                   value = {
