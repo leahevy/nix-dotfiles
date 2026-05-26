@@ -241,7 +241,9 @@ args@{
         "KD_FONT_OP_GET failed while trying to get the font metadata: Invalid argument"
         "Fonts will not be copied to remaining consoles"
       ];
-      baseSystemStringsToIgnore = [ ];
+      baseSystemStringsToIgnore = [
+        "Error re-reading partition table \\(BLKRRPART ioctl\\) on /dev/[a-z]+: Device or resource busy"
+      ];
       baseKernelStringsToIgnore = [
         "Failed to make /usr/ a mount point, ignoring"
         "Failed to get EXE, ignoring: No such process"
@@ -274,6 +276,7 @@ args@{
         "^\\*+\\s*If you see this message and you are not debugging.*\\s*\\*+$"
         "^\\*+\\s*the kernel, report this immediately to your vendor.*\\s*\\*+$"
         "buffer_io_error: [0-9]+ callbacks suppressed"
+        "FAT-fs \\([a-z0-9]+\\): unable to read boot sector to mark fs as dirty"
         "hrtimer: interrupt took [0-9]+ ns"
         "usb .*device descriptor read/([0-9]+|all), error -[0-9]+"
         "usb.*cannot disable \\(err = -[0-9]+\\)"
