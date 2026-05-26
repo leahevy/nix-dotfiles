@@ -466,14 +466,14 @@ let
   firefoxSpecificCSS =
     monospaceFont:
     lib.optionalString monospaceFont ''
-      :where(:not(i):not([class~="icon" i]):not([class~="ic" i]):not([class*="fa-" i]):not([class*="material-symbols" i])),
+      :where(:not(i):not([class*="icon" i]):not([class~="ic" i]):not([class*="fa-" i]):not([class*="material-symbols" i])),
       input,
       textarea,
       select,
       button {
         font-family: monospace !important;
       }
-      [class~="icon" i] *,
+      [class*="icon" i] *,
       [class~="ic" i] * {
         font-family: revert !important;
       }
