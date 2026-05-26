@@ -257,7 +257,7 @@
       echo "Configuring git globally for live environment..."
       ${pkgs.git}/bin/git config --global user.name "NX Live User"
       ${pkgs.git}/bin/git config --global user.email "nx@live.local"
-      ${pkgs.git}/bin/git config --global credential.helper "store"
+      ${pkgs.git}/bin/git config --global credential.helper "cache --timeout=86400"
       echo "Global git configuration complete"
     '';
   };
