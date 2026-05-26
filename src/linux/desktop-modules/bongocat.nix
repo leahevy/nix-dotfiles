@@ -53,6 +53,11 @@ args@{
             string = "Process [0-9]+ \\(bongocat\\) of user [0-9]+ dumped core";
           }
           {
+            tag = "systemd-coredump";
+            string = "Process [0-9]+ \\(bongocat\\) of user [0-9]+ dumped core";
+            unitless = true;
+          }
+          {
             service = "nx-bongocat.service";
             string = "Main process exited, code=dumped, status=6/ABRT";
             user = true;
