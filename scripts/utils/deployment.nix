@@ -435,7 +435,7 @@
       };
 
       makeiso = {
-        description = "Build a NixOS live ISO image";
+        description = "Build a NixOS live ISO or Raspberry Pi 5 SD card installer image";
         group = "configuration";
         modes = [
           "local"
@@ -448,6 +448,7 @@
           skip-verification = option "Skip commit signature verification";
           allow-dirty-git = option "Allow proceeding with uncommitted changes";
           override = option "Remove older ISO(s) from output dir after successful build";
+          pi5 = option "Build a Raspberry Pi 5 SD card installer image instead of a PC ISO";
         };
       };
 

@@ -36,6 +36,7 @@ EXTRA_ARGS=()
 SKIP_VERIFICATION=false
 OVERRIDE=false
 ALLOW_DIRTY_GIT=false
+PI5=false
 
 HOST_ARCH="$(uname -m)"
 if [[ "$HOST_ARCH" == "arm64" ]] || [[ "$HOST_ARCH" == "aarch64" ]]; then
@@ -76,6 +77,10 @@ while [[ $# -gt 0 ]]; do
 		OVERRIDE=true
 		shift
 		;;
+	--pi5)
+		PI5=true
+		shift
+		;;
 	--help)
 		echo "Usage: $0 [OPTIONS]"
 		echo ""
@@ -89,12 +94,14 @@ while [[ $# -gt 0 ]]; do
 		echo "  --skip-verification            Skip commit signature verification"
 		echo "  --allow-dirty-git              Allow proceeding with uncommitted changes"
 		echo "  --override                     Replace older ISO(s) in output dir"
+		echo "  --pi5                          Build a Raspberry Pi 5 SD card installer image"
 		echo "  --help                         Show this help message"
 		echo ""
 		echo "Examples:"
 		echo "  $0                             # Build for host architecture"
 		echo "  $0 --offline                   # Build without network access"
 		echo "  $0 --timeout 7200               # Build with 2-hour timeout"
+		echo "  $0 --pi5                        # Build Raspberry Pi 5 SD card image"
 		exit 0
 		;;
 	-*)
@@ -132,13 +139,21 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo -e "${GREEN}Building NixOS ISO for architecture: ${WHITE}$SYSTEM${RESET}"
+if [[ "$PI5" == true ]]; then
+	SYSTEM="aarch64-linux"
+	echo -e "${GREEN}Building Raspberry Pi 5 SD card installer image${RESET}"
+	ISO_PREFIX="nxcore-rpi5-"
+	ISO_NAME="${ISO_PREFIX}$(date +"%d-%m-%y_%H-%M").img"
+	TARGET_MEDIA="SD card"
+else
+	echo -e "${GREEN}Building NixOS ISO for architecture: ${WHITE}$SYSTEM${RESET}"
+	ISO_PREFIX="nxcore-${SYSTEM}-"
+	ISO_NAME="${ISO_PREFIX}$(date +"%d-%m-%y_%H-%M").iso"
+	TARGET_MEDIA="USB device"
+fi
 echo -e "Output directory: ${WHITE}$OUTPUT_DIR${RESET}"
 
 echo ""
-
-ISO_PREFIX="nxcore-${SYSTEM}-"
-ISO_NAME="${ISO_PREFIX}$(date +"%d-%m-%y_%H-%M").iso"
 
 if [[ -n "$NXCORE_DIR" ]]; then
 	echo -e "Using core directory: ${WHITE}$NXCORE_DIR${RESET}"
@@ -194,17 +209,25 @@ if [[ -n "$NXCORE_DIR" ]]; then
 	fi
 fi
 
-echo -e "${YELLOW}Building ISO image (this may take a while)...${RESET}"
-timeout "${TIMEOUT}s" nix build "path:$(pwd)#isoConfigurations.$SYSTEM.config.system.build.isoImage" "${EXTRA_ARGS[@]:-}" -o "$TEMP_DIR/result"
+echo -e "${YELLOW}Building image (this may take a while)...${RESET}"
+if [[ "$PI5" == true ]]; then
+	timeout "${TIMEOUT}s" nix build "path:$(pwd)#isoConfigurations.pi5.config.system.build.sdImage" "${EXTRA_ARGS[@]:-}" -o "$TEMP_DIR/result"
+else
+	timeout "${TIMEOUT}s" nix build "path:$(pwd)#isoConfigurations.$SYSTEM.config.system.build.isoImage" "${EXTRA_ARGS[@]:-}" -o "$TEMP_DIR/result"
+fi
 
 if [[ ! -L "$TEMP_DIR/result" ]]; then
 	echo -e "${RED}Error: Build failed - no store symlink created${RESET}" >&2
 	exit 1
 fi
 
-ISO_FILE=$(find "$TEMP_DIR/result/" -name "*.iso" | head -1)
+if [[ "$PI5" == true ]]; then
+	ISO_FILE=$(find "$TEMP_DIR/result/" -name "*.img*" | head -1)
+else
+	ISO_FILE=$(find "$TEMP_DIR/result/" -name "*.iso" | head -1)
+fi
 if [[ -z "$ISO_FILE" ]]; then
-	echo -e "${RED}Error: No ISO file found in build result${RESET}" >&2
+	echo -e "${RED}Error: No image file found in build result${RESET}" >&2
 	exit 1
 fi
 
@@ -251,8 +274,8 @@ echo -e "${YELLOW}To verify ISO integrity:${RESET}"
 echo -e "  ${WHITE}cd $OUTPUT_DIR${RESET}"
 echo -e "  ${WHITE}sha256sum -c $ISO_NAME.sha256${RESET}"
 echo ""
-echo -e "${YELLOW}To write to USB device (replace ${WHITE}/dev/sdX${RESET} with the device):${RESET}"
+echo -e "${YELLOW}To write to $TARGET_MEDIA (replace ${WHITE}/dev/sdX${RESET} with the device):${RESET}"
 echo -e "  ${WHITE}sudo dd if=\"$OUTPUT_DIR/$ISO_NAME\" of=/dev/sdX bs=4M status=progress${RESET}"
 echo ""
-echo -e "${YELLOW}Validate USB device data with:${RESET}"
+echo -e "${YELLOW}Validate $TARGET_MEDIA data with:${RESET}"
 echo -e "  ${WHITE}sudo head -c \$(stat -c \"%s\" \"$OUTPUT_DIR/$ISO_NAME\") /dev/sdX | sha256sum${RESET}"
