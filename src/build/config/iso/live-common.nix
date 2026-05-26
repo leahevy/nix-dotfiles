@@ -313,9 +313,10 @@
         ${pkgs.git}/bin/git branch --set-upstream-to=origin/main main
         echo "Git repository configured successfully with latest main branch!"
       else
-        echo "Error: Git fetch failed for nxcore repository."
-        echo "This service requires network connectivity and valid repository access."
-        exit 1
+        echo "Warning: Git fetch failed for nxcore repository."
+        echo "The embedded nxcore snapshot is still available at /nxcore."
+        echo "Fetch manually once network is available: git -C /nxcore fetch origin main"
+        exit 0
       fi
     '';
   };
