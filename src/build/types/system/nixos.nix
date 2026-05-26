@@ -578,6 +578,11 @@ with lib;
             default = null;
             description = "SSH host public key for the initrd SSH service. Must be set when initrdSSHHostPrivateKey is configured; used to auto-populate known_hosts_managed.";
           };
+          sshHostPublicKeys = mkOption {
+            type = types.listOf types.str;
+            default = [ ];
+            description = "SSH host public keys for pinning in known_hosts_managed. Enables strict host key checking on the auto-generated SSH config entry.";
+          };
         };
       };
       default = { };

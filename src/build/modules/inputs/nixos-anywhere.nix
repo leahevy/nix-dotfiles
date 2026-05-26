@@ -77,6 +77,9 @@ args@{
               if (hostCfg.hostname or "") == currentHostname || remoteAddr == null || remoteAddr == "" then
                 null
               else
+                let
+                  sshHostPublicKeys = hostCfg.remote.sshHostPublicKeys or [ ];
+                in
                 {
                   name = "nx-deployment---${profileName}---deploy";
                   value = {
@@ -85,7 +88,10 @@ args@{
                   }
                   // lib.optionalAttrs isLoopback { disableHostKeyChecking = true; }
                   // lib.optionalAttrs hasDeployKey { key = "nx-deploy-${profileName}"; }
-                  // lib.optionalAttrs (remoteDeployPort != null) { port = remoteDeployPort; };
+                  // lib.optionalAttrs (remoteDeployPort != null) { port = remoteDeployPort; }
+                  // lib.optionalAttrs (sshHostPublicKeys != [ ] && !isLoopback) {
+                    knownHostKeys = sshHostPublicKeys;
+                  };
                 }
             ) (self.nixOSHosts or { })
           )

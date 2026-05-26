@@ -461,6 +461,9 @@ args@{
               if remoteAddress == null || remoteAddress == "" || hostname == currentHostname then
                 null
               else
+                let
+                  sshHostPublicKeys = hostCfg.remote.sshHostPublicKeys or [ ];
+                in
                 {
                   name =
                     let
@@ -477,6 +480,9 @@ args@{
                     user = username;
                     hostname = remoteAddress;
                     port = remotePort;
+                  }
+                  // lib.optionalAttrs (sshHostPublicKeys != [ ]) {
+                    knownHostKeys = sshHostPublicKeys;
                   };
                 }
             ) (self.nixOSHosts or { });
@@ -671,6 +677,9 @@ args@{
               hasPriv = (hostCfg.remote.initrdSSHHostPrivateKey or null) != null;
               hasPub = (hostCfg.remote.initrdSSHHostPublicKey or null) != null;
             in
+            let
+              sshHostPublicKeys = hostCfg.remote.sshHostPublicKeys or [ ];
+            in
             [
               {
                 assertion = !hasPriv || hasPub;
@@ -679,6 +688,10 @@ args@{
               {
                 assertion = !hasPub || hasPriv;
                 message = "Host '${profileName}': host.remote.initrdSSHHostPrivateKey must be set when initrdSSHHostPublicKey is configured!";
+              }
+              {
+                assertion = builtins.all helpers.validateSSHPublicKey sshHostPublicKeys;
+                message = "Host '${profileName}': host.remote.sshHostPublicKeys contains an invalid SSH public key!";
               }
             ]
           ) (self.nixOSHosts or { })
