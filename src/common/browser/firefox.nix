@@ -809,6 +809,10 @@ in
                 border-bottom: var(--chrome-content-separator-color) !important;
               }
 
+              .notificationbox-stack {
+                order: -1 !important;
+              }
+
               :root[inFullscreen] #nav-bar {
                 display: none !important;
               }
