@@ -184,13 +184,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		BOARD="$(nix eval --raw --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.nx.profile.host.hardware.board" 2>/dev/null || echo "null")"
 		if [[ "$BOARD" == "pi5" ]]; then
 			echo
-			echo -e "${WHITE}Configuring Raspberry Pi 5 EEPROM boot order (NVMe first, SD fallback)...${RESET}"
+			echo -e "${WHITE}Configuring Raspberry Pi 5 EEPROM boot order (SD first, NVMe fallback)...${RESET}"
 			if command -v rpi-eeprom-config >/dev/null 2>&1; then
 				EEPROM_CFG=$(rpi-eeprom-config)
 				# shellcheck disable=SC2001
-				UPDATED_CFG=$(echo "$EEPROM_CFG" | sed 's/^BOOT_ORDER=.*/BOOT_ORDER=0xf16/')
+				UPDATED_CFG=$(echo "$EEPROM_CFG" | sed 's/^BOOT_ORDER=.*/BOOT_ORDER=0xf61/')
 				if ! echo "$EEPROM_CFG" | grep -q "^BOOT_ORDER="; then
-					UPDATED_CFG="${UPDATED_CFG}"$'\nBOOT_ORDER=0xf16'
+					UPDATED_CFG="${UPDATED_CFG}"$'\nBOOT_ORDER=0xf61'
 				fi
 				EEPROM_TMP=$(mktemp /tmp/rpi-eeprom-boot.XXXXXX)
 				echo "$UPDATED_CFG" >"$EEPROM_TMP"
@@ -199,10 +199,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 					exit 1
 				}
 				rm -f "$EEPROM_TMP"
-				echo -e "${GREEN}EEPROM boot order set to NVMe first (0xf16). Change takes effect on next reboot.${RESET}"
+				echo -e "${GREEN}EEPROM boot order set to SD first, NVMe fallback (0xf61). Change takes effect on next reboot.${RESET}"
 			else
 				echo -e "${YELLOW}Warning: rpi-eeprom-config not found, skipping EEPROM boot order configuration.${RESET}"
-				echo -e "${YELLOW}Set BOOT_ORDER=0xf16 manually via rpi-eeprom-config after boot.${RESET}"
+				echo -e "${YELLOW}Set BOOT_ORDER=0xf61 manually via rpi-eeprom-config after boot.${RESET}"
 			fi
 		fi
 

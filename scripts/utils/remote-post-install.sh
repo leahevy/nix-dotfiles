@@ -90,13 +90,13 @@ IMPERMANENCE=$(jq -r '.impermanence' "$MIGRATE_JSON")
 BOARD=$(jq -r '.board // "null"' "$MIGRATE_JSON")
 
 if [[ "$BOARD" == "pi5" ]]; then
-	echo "Configuring Raspberry Pi 5 EEPROM boot order (NVMe first, SD fallback)..."
+	echo "Configuring Raspberry Pi 5 EEPROM boot order (SD first, NVMe fallback)..."
 	if command -v rpi-eeprom-config >/dev/null 2>&1; then
 		EEPROM_CFG=$(rpi-eeprom-config)
 		# shellcheck disable=SC2001
-		UPDATED_CFG=$(echo "$EEPROM_CFG" | sed 's/^BOOT_ORDER=.*/BOOT_ORDER=0xf16/')
+		UPDATED_CFG=$(echo "$EEPROM_CFG" | sed 's/^BOOT_ORDER=.*/BOOT_ORDER=0xf61/')
 		if ! echo "$EEPROM_CFG" | grep -q "^BOOT_ORDER="; then
-			UPDATED_CFG="${UPDATED_CFG}"$'\nBOOT_ORDER=0xf16'
+			UPDATED_CFG="${UPDATED_CFG}"$'\nBOOT_ORDER=0xf61'
 		fi
 		EEPROM_TMP=$(mktemp /tmp/rpi-eeprom-boot.XXXXXX)
 		echo "$UPDATED_CFG" >"$EEPROM_TMP"
@@ -105,10 +105,10 @@ if [[ "$BOARD" == "pi5" ]]; then
 			exit 1
 		}
 		rm -f "$EEPROM_TMP"
-		echo "EEPROM boot order set to NVMe first (0xf16). Change takes effect on next reboot."
+		echo "EEPROM boot order set to SD first, NVMe fallback (0xf61). Change takes effect on next reboot."
 	else
 		echo "Warning: rpi-eeprom-config not found, skipping EEPROM boot order configuration."
-		echo "Set BOOT_ORDER=0xf16 manually via rpi-eeprom-config after boot."
+		echo "Set BOOT_ORDER=0xf61 manually via rpi-eeprom-config after boot."
 	fi
 fi
 
