@@ -97,7 +97,7 @@ in
     system.stateVersion =
       if host.stateVersion != null then host.stateVersion else variables.state-version;
 
-    nixpkgs.hostPlatform = host.architecture;
+    nixpkgs.hostPlatform = lib.mkIf ((host.hardware.board or null) != "pi5") host.architecture;
 
     nix = {
       settings =
