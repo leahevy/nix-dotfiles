@@ -14,4 +14,6 @@
   ];
 
   sdImage.compressImage = false;
+
+  environment.systemPackages = [ pkgs.raspberrypi-eeprom ];
 }
