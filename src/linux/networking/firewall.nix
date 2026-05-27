@@ -15,7 +15,7 @@ args@{
   input = "linux";
 
   settings = {
-    openWebServer = true;
+    openWebServer = false;
     additionalTCPPorts = [ ];
     additionalUDPPortRanges = [ ]; # List of { from = INT; to = INT; }
   };
