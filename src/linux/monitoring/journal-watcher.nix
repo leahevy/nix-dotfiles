@@ -240,6 +240,8 @@ args@{
         "Failed to set mode: Failed \\(0x[0-9a-fA-F]+\\)"
         "KD_FONT_OP_GET failed while trying to get the font metadata: Invalid argument"
         "Fonts will not be copied to remaining consoles"
+        "mm_reap: child terminated by signal 15"
+        "Failed to resolve group 'sudo': No such process"
       ];
       baseSystemStringsToIgnore = [
         "Error re-reading partition table \\(BLKRRPART ioctl\\) on /dev/[a-z]+: Device or resource busy"
@@ -340,6 +342,14 @@ args@{
         "^\\s*[A-Za-z0-9_\\.]+\\+0x[0-9a-f]+/0x[0-9a-f]+$"
         "^\\[drm:.*\\].*$"
         "^.*drm_WARN_ON.*$"
+        "^Call trace:$"
+        "^CPU: [0-9]+ (UID: [0-9]+ )?PID: [0-9]+ Comm: .*$"
+        "^Workqueue: .*$"
+        "^pstate: [0-9a-f]+ \\(.*\\)$"
+        "^pc : .*$"
+        "^lr : .*$"
+        "^sp : [0-9a-f]+$"
+        "^x[0-9]+ *: [0-9a-f]+.*$"
       ];
       baseUserStringsToIgnore = [ ];
       baseStringsToHighlight = [ ];
