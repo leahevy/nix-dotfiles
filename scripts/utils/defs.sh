@@ -74,10 +74,13 @@ export AUTO_UPDATE_INPUTS=(
 )
 
 export PACKAGES_TO_HIGHLIGHT=(
+	electron
+	linux-firmware
 	niri
 	firefox
 	firefox-unwrapped
 	thunderbird-latest-unwrapped
+	thunderbird-latest-bin-unwrapped
 	spotify
 	docker
 	ungoogled-chromium
