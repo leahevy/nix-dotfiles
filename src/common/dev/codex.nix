@@ -366,6 +366,7 @@ args@{
             notice = {
               model_migrations = {
                 "gpt-5.2" = "gpt-5.4";
+                "gpt-5.4" = "gpt-5.5";
               };
             };
 
