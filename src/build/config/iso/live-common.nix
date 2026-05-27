@@ -145,11 +145,15 @@
     dig
     iotop
     nethogs
+    sysstat
     parted
     gptfdisk
     cryptsetup
     btrfs-progs
     lvm2
+    mdadm
+    nfs-utils
+    libtirpc
     lshw
     smartmontools
     pciutils
