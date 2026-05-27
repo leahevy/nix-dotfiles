@@ -4,6 +4,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../utils/common.sh"
 
+if [ "$UID" = 0 ]; then
+	echo -e "${RED}Error: This script must not be run as root!${RESET}" >&2
+	exit 1
+fi
+
 if [ ! -e /etc/NIXOS ]; then
 	echo -e "${RED}Error: This script must be run on a NixOS live system${RESET}" >&2
 	exit 1
