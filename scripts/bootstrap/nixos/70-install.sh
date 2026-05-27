@@ -73,6 +73,7 @@ fi
 echo
 echo -e "${WHITE}Checking if impermanence is enabled for this host...${RESET}"
 IMPERMANENCE_ENABLED="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.nx.profile.host.impermanence" 2>/dev/null || echo "false")"
+DEPLOYMENT_MODE="$(nix eval --raw --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.nx.profile.host.deploymentMode" 2>/dev/null || echo "develop")"
 
 USER_HOME="$(nix eval --json --override-input core "path:$NXCORE_DIR" ".#nixosConfigurations.$FULL_PROFILE.config.users.users.$USERNAME.home")"
 if [[ -z "$USER_HOME" || "$USER_HOME" == "null" ]]; then
@@ -230,14 +231,38 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 	PERSIST_CONFIG_TARGET_DIR="$PERSIST_BASE_DIR/nxconfig"
 
 	if [[ "$SYSTEM_PERSISTED" == "1" ]]; then
-		if [[ -d "$PERSIST_CORE_DIR" && -f "$PERSIST_CORE_DIR/flake.nix" && -d "$PERSIST_CONFIG_TARGET_DIR" && -d "$PERSIST_CONFIG_TARGET_DIR/profiles" ]]; then
+		if [[ "$DEPLOYMENT_MODE" == "server" ]]; then
+			if [[ -d "$PERSIST_CONFIG_TARGET_DIR" && -d "$PERSIST_CONFIG_TARGET_DIR/profiles" ]]; then
+				BASE_DIR="$PERSIST_BASE_DIR"
+				CORE_DIR="$PERSIST_CORE_DIR"
+				CONFIG_TARGET_DIR="$PERSIST_CONFIG_TARGET_DIR"
+			fi
+		elif [[ -d "$PERSIST_CORE_DIR" && -f "$PERSIST_CORE_DIR/flake.nix" && -d "$PERSIST_CONFIG_TARGET_DIR" && -d "$PERSIST_CONFIG_TARGET_DIR/profiles" ]]; then
 			BASE_DIR="$PERSIST_BASE_DIR"
 			CORE_DIR="$PERSIST_CORE_DIR"
 			CONFIG_TARGET_DIR="$PERSIST_CONFIG_TARGET_DIR"
 		fi
 	fi
 
-	if [[ -d "$CORE_DIR" && -f "$CORE_DIR/flake.nix" && -d "$CONFIG_TARGET_DIR" && -d "$CONFIG_TARGET_DIR/profiles" ]]; then
+	if [[ "$DEPLOYMENT_MODE" == "server" ]]; then
+		if [[ -d "$CONFIG_TARGET_DIR" && -d "$CONFIG_TARGET_DIR/profiles" ]]; then
+			echo -e "${GREEN}Config directory appears to be already set up:${RESET}"
+			echo -e "  - ${WHITE}$CONFIG_TARGET_DIR${RESET} (has ${WHITE}profiles${RESET})"
+			echo
+			echo -e "${GREEN}Skipping repository copy.${RESET}"
+			echo
+			echo -e "${WHITE}Ensuring git remotes are configured for target system...${RESET}"
+			configure_target_git_remotes "$USER_HOME" "$USER_UID" "$USER_GID"
+		else
+			echo -e "${WHITE}Copying config repository to target system...${RESET}"
+			mkdir -p "$BASE_DIR"
+			copy_config_to_target "$USER_HOME" "$USER_UID" "$USER_GID"
+			chown "$USER_UID:$USER_GID" "$BASE_DIR"
+			chmod 700 "$CONFIG_TARGET_DIR"
+			echo -e "${WHITE}Configuring git remotes for target system...${RESET}"
+			configure_target_git_remotes "$USER_HOME" "$USER_UID" "$USER_GID"
+		fi
+	elif [[ -d "$CORE_DIR" && -f "$CORE_DIR/flake.nix" && -d "$CONFIG_TARGET_DIR" && -d "$CONFIG_TARGET_DIR/profiles" ]]; then
 		echo -e "${GREEN}Both core and config directories appear to be already set up:${RESET}"
 		echo -e "  - ${WHITE}$CORE_DIR${RESET} (has ${WHITE}flake.nix${RESET})"
 		echo -e "  - ${WHITE}$CONFIG_TARGET_DIR${RESET} (has ${WHITE}profiles${RESET})"

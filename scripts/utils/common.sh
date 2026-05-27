@@ -859,7 +859,7 @@ parse_git_args() {
 		esac
 	done
 
-	if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "local" ]]; then
+	if [[ "${NX_DEPLOYMENT_MODE:-develop}" == "local" || "${NX_DEPLOYMENT_MODE:-develop}" == "server" ]]; then
 		ONLY_CONFIG=true
 	fi
 

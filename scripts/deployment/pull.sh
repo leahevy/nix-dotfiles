@@ -5,8 +5,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "pull"
 parse_git_args "$@"
 
-cd "$NXCORE_DIR"
 if [[ "$ONLY_CONFIG" != true ]]; then
+	cd "$NXCORE_DIR"
 	echo -e "${GREEN}Pulling core repository ${YELLOW}(Authentication required)${GREEN}...${RESET}"
 	if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
 		git pull "${EXTRA_ARGS[@]}"
