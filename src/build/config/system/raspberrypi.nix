@@ -10,9 +10,10 @@
 
   boot.loader.raspberry-pi.bootloader = "kernel";
 
-  boot.kernelParams = [ "nvme_core.default_ps_max_latency_us=0" ];
-
-  hardware.raspberry-pi.config."all".base-dt-params.pciex1_no_l0s.enable = true;
+  boot.kernelParams = [
+    "nvme_core.default_ps_max_latency_us=0"
+    "pcie_aspm=off"
+  ];
 
   assertions = [
     {
