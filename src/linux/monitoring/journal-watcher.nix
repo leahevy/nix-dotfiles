@@ -375,11 +375,23 @@ args@{
             }
             {
               kernel = true;
+              string = "Buffer I/O error on dev ${removableDev}[0-9]+, logical block [0-9]+, lost async page write";
+            }
+            {
+              kernel = true;
               string = "JBD2: I/O error when updating journal superblock for ${removableDev}[0-9]*-[0-9]+\\.";
             }
             {
               kernel = true;
               string = "EXT4-fs \\(${removableDev}[0-9]*\\): I/O error while writing superblock";
+            }
+            {
+              kernel = true;
+              string = "EXT4-fs \\(${removableDev}[0-9]*\\): bad geometry: block count [0-9]+ exceeds size of device \\([0-9]+ blocks\\)";
+            }
+            {
+              kernel = true;
+              string = "FAT-fs \\(${removableDev}[0-9]*\\): Volume was not properly unmounted\\.";
             }
           ];
         };
