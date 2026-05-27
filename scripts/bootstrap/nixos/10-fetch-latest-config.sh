@@ -90,3 +90,20 @@ git reset --hard origin/main
 
 echo
 echo -e "${GREEN}Config repository successfully updated!${RESET}"
+
+echo
+echo -e "${GREEN}Fetching latest core repository...${RESET}"
+if [ ! -d /nxcore ] || [ ! -d /nxcore/.git ]; then
+	echo -e "${YELLOW}Warning: ${WHITE}/nxcore${YELLOW} is not a git repository, skipping core fetch${RESET}"
+elif ! git -C /nxcore remote get-url origin >/dev/null 2>&1; then
+	echo -e "${YELLOW}Warning: No remote ${WHITE}'origin'${YELLOW} configured in ${WHITE}/nxcore${YELLOW}, skipping core fetch${RESET}"
+else
+	CORE_REMOTE_URL="$(git -C /nxcore remote get-url origin)"
+	echo -e "Core repository remote: ${WHITE}$CORE_REMOTE_URL${RESET}"
+	if git -C /nxcore fetch origin main; then
+		git -C /nxcore reset --hard origin/main
+		echo -e "${GREEN}Core repository successfully updated!${RESET}"
+	else
+		echo -e "${YELLOW}Warning: Core fetch failed, continuing with existing version${RESET}"
+	fi
+fi
