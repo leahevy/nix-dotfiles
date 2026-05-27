@@ -609,8 +609,25 @@ in
               .urlbarView,
               .urlbarView-body-inner { background-color: #000000 !important; }
               .urlbarView { border-color: #000000 !important; }
-              #urlbar-searchmode-switcher { background-color: #000000 !important; }
-              .searchmode-switcher-popup { background-color: #000000 !important; border-color: #000000 !important; box-shadow: none !important; }
+              #urlbar-searchmode-switcher,
+              #urlbar .searchmode-switcher {
+                background: #000000 !important;
+                background-color: #000000 !important;
+                border-color: #000000 !important;
+                box-shadow: none !important;
+              }
+              #urlbar .searchmode-switcher {
+                --button-background-color: #000000 !important;
+                --button-border-color: #000000 !important;
+                --button-background-color-hover: #1a1a1a !important;
+                --button-border-color-hover: #1a1a1a !important;
+                --button-background-color-active: #2a2a2a !important;
+                --button-border-color-active: #2a2a2a !important;
+                --button-background-color-selected: #000000 !important;
+                --button-border-color-selected: #000000 !important;
+              }
+              .searchmode-switcher-popup,
+              .searchmode-switcher-panel { background-color: #000000 !important; border-color: #000000 !important; box-shadow: none !important; }
               .searchmode-switcher-popup-description,
               .searchmode-switcher-installed,
               .searchmode-switcher-local,
@@ -814,7 +831,8 @@ in
                 z-index: 1001 !important;
               }
 
-              #urlbar-searchmode-switcher {
+              #urlbar-searchmode-switcher,
+              #urlbar .searchmode-switcher {
                 position: static !important;
                 top: auto !important;
                 bottom: auto !important;
