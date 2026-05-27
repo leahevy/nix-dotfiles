@@ -95,7 +95,7 @@ args@{
                 (config.users.users.${config.nx.profile.host.mainUser.username}.openssh.authorizedKeys.keys or [ ])
                 ++ lib.optional (installKey != null) (helpers.sshPublicKeyToString installKey.public)
               );
-              hostKeyFile = builtins.toFile "initrd-host-key" (if hostKey != null then hostKey else "");
+              hostKeyFile = pkgs.writeText "initrd-host-key" (if hostKey != null then hostKey else "");
               initrdShell = pkgs.writeShellScript "initrd-shell" ''
                 exec ${pkgs.systemd}/bin/systemd-tty-ask-password-agent --watch
               '';
@@ -140,7 +140,9 @@ args@{
               boot.initrd.network.ssh = {
                 enable = true;
                 port = port;
-                hostKeys = lib.optional (hostKey != null) hostKeyFile;
+                hostKeys = lib.optional (hostKey != null) (
+                  if config.boot.loader.supportsInitrdSecrets then hostKeyFile else toString hostKeyFile
+                );
                 authorizedKeys = authorizedKeys;
                 extraConfig = ''
                   AllowUsers root
