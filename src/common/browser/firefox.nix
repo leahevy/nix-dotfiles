@@ -791,6 +791,41 @@ in
                 max-height: var(--nx-nav-height) !important;
               }
 
+              #urlbar-container {
+                height: var(--nx-nav-height) !important;
+                min-height: var(--nx-nav-height) !important;
+              }
+
+              #urlbar {
+                --urlbar-container-height: var(--nx-nav-height) !important;
+                --urlbar-height: var(--nx-nav-height) !important;
+              }
+
+              #urlbar[breakout],
+              #urlbar[breakout][breakout-extend],
+              #urlbar:popover-open {
+                position: fixed !important;
+                top: auto !important;
+                bottom: 0 !important;
+                inset-block-start: auto !important;
+                inset-block-end: 0 !important;
+                display: flex !important;
+                flex-direction: column-reverse !important;
+                z-index: 1001 !important;
+              }
+
+              #urlbar-searchmode-switcher {
+                position: static !important;
+                top: auto !important;
+                bottom: auto !important;
+                left: auto !important;
+                right: auto !important;
+                inset-block-start: auto !important;
+                inset-block-end: auto !important;
+                inset-inline-start: auto !important;
+                inset-inline-end: auto !important;
+              }
+
               #titlebar,
               #TabsToolbar,
               #PersonalToolbar,
