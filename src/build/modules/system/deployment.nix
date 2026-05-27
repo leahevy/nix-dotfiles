@@ -95,7 +95,7 @@ args@{
                 (config.users.users.${config.nx.profile.host.mainUser.username}.openssh.authorizedKeys.keys or [ ])
                 ++ lib.optional (installKey != null) (helpers.sshPublicKeyToString installKey.public)
               );
-              hostKeyFile = pkgs.writeText "initrd-host-key" (if hostKey != null then hostKey else "");
+              hostKeyFile = builtins.toFile "initrd-host-key" (if hostKey != null then hostKey else "");
               initrdShell = pkgs.writeShellScript "initrd-shell" ''
                 exec ${pkgs.systemd}/bin/systemd-tty-ask-password-agent --watch
               '';
