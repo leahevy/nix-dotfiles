@@ -40,6 +40,11 @@ with lib;
       description = "Domain name of the home server (without protocol)";
     };
 
+    sopsPublicKey = mkOption {
+      type = types.str;
+      description = "Age public key that must be present in all referenced SOPS files";
+    };
+
     displays = mkOption {
       type = types.submodule {
         options = {

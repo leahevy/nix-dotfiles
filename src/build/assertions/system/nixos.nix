@@ -49,6 +49,7 @@ in
       message = "All host.additionalUsers must be attribute sets (processed configs) at assertion time";
     }
   ]
+  ++ helpers.buildSopsAssertions "host" config
   ++ helpers.assertNotNull "host" host [
     "hostname"
     "mainUser"

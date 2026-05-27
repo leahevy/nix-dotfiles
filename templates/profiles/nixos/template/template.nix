@@ -48,6 +48,8 @@
 
     stateVersion = "25.11";
 
+    sopsPublicKey = "age12345...";
+
     allowedUnfreePackages = [ ];
 
     modules = { }; # Attrset or list at GROUP level: { common.shell = [ "bash" "zsh" ]; }

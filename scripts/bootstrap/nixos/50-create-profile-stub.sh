@@ -208,6 +208,8 @@ EOF
 
     stateVersion = $STATE_VERSION_VALUE;
 
+    sopsPublicKey = "age12345...";
+
     allowedUnfreePackages = [ ];
 
     kernel = {

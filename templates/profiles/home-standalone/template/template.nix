@@ -16,6 +16,8 @@
 
     email = null;
 
+    sopsPublicKey = "age12345...";
+
     gpg = null;
 
     stateVersion = "25.11";

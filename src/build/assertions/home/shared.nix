@@ -48,6 +48,7 @@ in
       message = "user.defaultSSHKey '${toString user.defaultSSHKey}' not found in nx.common.services.ssh.keys!";
     }
   ]
+  ++ helpers.buildSopsAssertions "user" config
   ++ helpers.assertNotNull "user" user [
     "username"
     "fullname"

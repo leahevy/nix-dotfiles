@@ -102,6 +102,55 @@ rec {
       != null
     );
 
+  # Validate an age public key string
+  # Usage: verifyAgeKey $key
+  verifyAgeKey =
+    key:
+    let
+      k = if key == null then "" else toString key;
+    in
+    builtins.match "^age1[02-9ac-hj-np-z]{58}$" k != null;
+
+  buildSopsAssertions =
+    profileType: config:
+    let
+      publicKey = resolveFromHostOrUser config [ "sopsPublicKey" ] null;
+      secretNames = builtins.attrNames (config.sops.secrets or { });
+      defaultSopsFile = config.sops.defaultSopsFile or null;
+      referencedFiles = lib.unique (
+        builtins.filter (file: file != null) (
+          map (
+            secretName:
+            let
+              secret = config.sops.secrets.${secretName};
+            in
+            if secret ? sopsFile then secret.sopsFile else defaultSopsFile
+          ) secretNames
+        )
+      );
+      fileContainsRecipient =
+        file:
+        let
+          content = builtins.readFile file;
+          yamlRecipient = "recipient: ${publicKey}";
+          jsonRecipient = "\"recipient\": \"${publicKey}\"";
+        in
+        lib.hasInfix yamlRecipient content || lib.hasInfix jsonRecipient content;
+    in
+    [
+      {
+        assertion = verifyAgeKey publicKey;
+        message = "${profileType}.sopsPublicKey must be a valid age public key!";
+      }
+    ]
+    ++ map (file: {
+      assertion = builtins.pathExists file && fileContainsRecipient file;
+      message = ''
+        SOPS file '${toString file}' is missing the required age key!
+        Required key: ${publicKey}
+      '';
+    }) referencedFiles;
+
   # Return the public key string for a given string, a nix store path, or a path object
   # Usage: sshPublicKeyToString $key
   sshPublicKeyToString =
