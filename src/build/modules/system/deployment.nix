@@ -140,21 +140,34 @@ args@{
               boot.initrd.network.ssh = {
                 enable = true;
                 port = port;
-                hostKeys = lib.optional (hostKey != null) (
-                  if config.boot.loader.supportsInitrdSecrets then hostKeyFile else toString hostKeyFile
-                );
+                hostKeys = lib.optional (hostKey != null && config.boot.loader.supportsInitrdSecrets) hostKeyFile;
+                ignoreEmptyHostKeys = !config.boot.loader.supportsInitrdSecrets;
                 authorizedKeys = authorizedKeys;
-                extraConfig = ''
-                  AllowUsers root
-                  PasswordAuthentication no
-                  KbdInteractiveAuthentication no
-                  PermitRootLogin prohibit-password
-                  AllowTcpForwarding no
-                  X11Forwarding no
-                  MaxAuthTries 3
-                  MaxSessions 1
-                '';
+                extraConfig =
+                  lib.optionalString (!config.boot.loader.supportsInitrdSecrets) ''
+                    HostKey /etc/ssh/initrd_host_key
+                  ''
+                  + ''
+                    AllowUsers root
+                    PasswordAuthentication no
+                    KbdInteractiveAuthentication no
+                    PermitRootLogin prohibit-password
+                    AllowTcpForwarding no
+                    X11Forwarding no
+                    MaxAuthTries 3
+                    MaxSessions 1
+                  '';
               };
+
+              boot.initrd.systemd.contents =
+                lib.mkIf (!config.boot.loader.supportsInitrdSecrets && hostKey != null)
+                  {
+                    "/etc/ssh/initrd_host_key".text = hostKey;
+                  };
+
+              boot.initrd.systemd.services.sshd.preStart = lib.mkIf (
+                !config.boot.loader.supportsInitrdSecrets && hostKey != null
+              ) "/bin/chmod 0600 /etc/ssh/initrd_host_key";
 
               boot.initrd.systemd.storePaths = [ initrdShell ];
               boot.initrd.systemd.users.root.shell = toString initrdShell;
