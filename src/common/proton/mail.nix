@@ -111,7 +111,7 @@ args@{
             with config.lib.niri.actions;
             {
               "Mod+Ctrl+Alt+O" = {
-                action = spawn-sh "niri-scratchpad --app-id \"Proton Mail\" --all-windows --spawn proton-mail";
+                action = spawn-sh "niri-scratchpad --app-id \"proton-mail\" --all-windows --spawn proton-mail";
                 hotkey-overlay.title = "Apps:Mails";
               };
             }
@@ -119,13 +119,13 @@ args@{
 
           window-rules = [
             {
-              matches = [ { app-id = "Proton Mail"; } ];
+              matches = [ { app-id = "proton-mail"; } ];
               block-out-from = "screencast";
             }
           ]
           ++ lib.optionals (!(self.isModuleEnabled "mail-stack.neomutt")) [
             {
-              matches = [ { app-id = "Proton Mail"; } ];
+              matches = [ { app-id = "proton-mail"; } ];
               min-width = 1500;
               min-height = 800;
               open-on-workspace = "scratch";
@@ -135,7 +135,7 @@ args@{
             {
               matches = [
                 {
-                  app-id = "Proton Mail";
+                  app-id = "proton-mail";
                   title = ".*(Reminder|Calendar|Event|Task|Address Book|Preferences|Options|Settings).*";
                 }
               ];

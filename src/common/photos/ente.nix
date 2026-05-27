@@ -24,7 +24,7 @@ args@{
       nx.linux.desktop.niri.lateWindowRules = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
         {
           match = {
-            app-id = "electron";
+            app-id = "ente";
             title = "Ente Photos";
           };
           apply = {
