@@ -25,6 +25,15 @@ args@{
       config:
       let
         timeFormat = "%d %b %Y %I:%M:%S %p";
+        theme = config.nx.preferences.theme;
+        deploymentMode = helpers.resolveFromHostOrUser config [ "deploymentMode" ] "develop";
+        isHeadless = deploymentMode == "managed" || deploymentMode == "server";
+        primaryBlock = if isHeadless then theme.colors.blocks.neutral else theme.colors.blocks.primary;
+        accentColor =
+          if isHeadless then
+            theme.colors.blocks.neutral.foreground.html
+          else
+            theme.colors.main.foregrounds.primary.html;
       in
       {
         home.file."${config.xdg.configHome}/fish-init/20-starship.fish".text = ''
@@ -38,13 +47,13 @@ args@{
             function starship_transient_rprompt_func
               set -l time_output (date +"${timeFormat}")
 
-              set_color '${config.nx.preferences.theme.colors.blocks.primary.background.html}'
+              set_color '${primaryBlock.background.html}'
               printf ""
 
-              set_color --background '${config.nx.preferences.theme.colors.blocks.primary.background.html}' --bold '${config.nx.preferences.theme.colors.blocks.primary.foreground.html}'
+              set_color --background '${primaryBlock.background.html}' --bold '${primaryBlock.foreground.html}'
               printf "%s" $time_output
 
-              set_color --background '${config.nx.preferences.theme.colors.blocks.primary.background.html}' '${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}'
+              set_color --background '${primaryBlock.background.html}' '${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html}'
               printf ""
 
               set_color normal
@@ -88,7 +97,7 @@ args@{
             sudo = {
               disabled = false;
               symbol = "🔑  ";
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
               format = "[$symbol]($style)";
             };
 
@@ -115,7 +124,7 @@ args@{
               home_symbol = "󰋞 ~";
               read_only_style = "bold fg:${config.nx.preferences.theme.colors.semantic.warning.html}";
               read_only = "  ";
-              format = "[](fg:${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html} bg:${config.nx.preferences.theme.colors.blocks.primary.background.html})[$path](bold fg:${config.nx.preferences.theme.colors.blocks.primary.foreground.html} bg:${config.nx.preferences.theme.colors.blocks.primary.background.html})[](fg:${config.nx.preferences.theme.colors.blocks.primary.background.html})[$read_only]($read_only_style)";
+              format = "[](fg:${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html} bg:${primaryBlock.background.html})[$path](bold fg:${primaryBlock.foreground.html} bg:${primaryBlock.background.html})[](fg:${primaryBlock.background.html})[$read_only]($read_only_style)";
               style = "";
               truncate_to_repo = true;
               use_os_path_sep = false;
@@ -131,12 +140,12 @@ args@{
             git_branch = {
               symbol = " ";
               format = "[$symbol $branch]($style) ";
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             git_status = {
               format = "[\($all_status$ahead_behind\)]($style) ";
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
               conflicted = "(c)";
               up_to_date = " ";
               untracked = " ";
@@ -164,7 +173,7 @@ args@{
                 Debian = "🐧";
               };
               format = "[$symbol]($style) ";
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             shell = {
@@ -173,88 +182,88 @@ args@{
               zsh_indicator = "🟠";
               unknown_indicator = "🔴";
               disabled = true;
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
               format = " [$indicator]($style)  ";
             };
 
             aws = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             azure = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             buf = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             bun = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             c = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             cmake = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             cobol = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             crystal = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             daml = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             dart = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             deno = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             dotnet = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             elixir = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             elm = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             erlang = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             fennel = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             fossil_branch = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             gcloud = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             git_commit = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             git_state = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             git_metrics = {
@@ -263,79 +272,79 @@ args@{
             };
 
             gleam = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             golang = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             gradle = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             guix_shell = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             haskell = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             haxe = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             helm = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             hg_branch = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             java = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             julia = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             kotlin = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             kubernetes = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             lua = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             meson = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             nim = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             nix_shell = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             ocaml = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             opa = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             openstack = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             package = {
@@ -344,91 +353,91 @@ args@{
             };
 
             perl = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             php = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             pijul_channel = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             pulumi = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             purescript = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             quarto = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             raku = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             red = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             rlang = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             ruby = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             rust = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             scala = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             singularity = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             solidity = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             spack = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             swift = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             terraform = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             typst = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             vagrant = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             vlang = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             vcsh = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             zig = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             battery = { };
@@ -442,11 +451,11 @@ args@{
             };
 
             direnv = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             env_var = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             fill = {
@@ -460,40 +469,40 @@ args@{
             };
 
             jobs = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             line_break = {
               disabled = true;
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             memory_usage = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             shlvl = {
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             docker_context = {
               format = "[via]($style) [$symbol$context]($style) ";
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             python = {
               format = "[via]($style) [$symbol$pyenv_prefix($version )(\\($virtualenv\\) )]($style)";
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             nodejs = {
               format = "[via]($style) [$symbol($version )]($style)";
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
 
             conda = {
               format = "[via]($style) [$symbol$environment]($style) ";
-              style = "bold fg:${config.nx.preferences.theme.colors.main.foregrounds.primary.html}";
+              style = "bold fg:${accentColor}";
             };
           };
         };
