@@ -56,11 +56,11 @@ args@{
 
           main = {
             windows = [
-              { "󱆃 Home" = "cd ~ && clear && ${shell}"; }
+              { "󱆃 Home" = "cd ~ && clear && exec ${shell}"; }
             ]
             ++ lib.optionals devMode [
-              { "󱆃 Core" = "cd ~/.config/nx/nxcore/ && clear && ${shell}"; }
-              { "󱆃 Config" = "cd ~/.config/nx/nxconfig/ && clear && ${shell}"; }
+              { "󱆃 Core" = "cd ~/.config/nx/nxcore/ && clear && exec ${shell}"; }
+              { "󱆃 Config" = "cd ~/.config/nx/nxconfig/ && clear && exec ${shell}"; }
             ]
             ++ lib.optionals (vimEnabled && devMode) [
               { "󱇧 Vim (Core)" = "cd ~/.config/nx/nxcore/ && clear && vim"; }
