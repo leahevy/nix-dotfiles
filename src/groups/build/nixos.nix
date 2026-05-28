@@ -44,7 +44,7 @@ args@{
       ]
       ++ (if self.host.hardening or true then [ "hardening" ] else [ ])
       ++ (if self.host.impermanence or false then [ "impermanence" ] else [ ])
-      ++ lib.optionals ((self.host.board or null) == "pi5") [ "raspberrypi" ];
+      ++ lib.optionals ((self.host.hardware.board or null) == "pi5") [ "raspberrypi" ];
       theme = [ "theme-system" ];
     };
   };
