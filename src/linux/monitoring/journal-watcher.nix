@@ -166,6 +166,10 @@ args@{
         type = lib.types.bool;
         default = true;
       };
+      forceEnableUserServicesForPushoverOnHeadless = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+      };
       pushoverRateLimit = lib.mkOption {
         type = lib.types.int;
         default = 10;
@@ -634,7 +638,12 @@ args@{
               debug_enabled = opts.debug;
               dev_enabled = false;
               stats_enabled = true;
-              ignore_user_services_for_pushover = opts.ignoreUserServicesForPushover;
+              ignore_user_services_for_pushover =
+                opts.ignoreUserServicesForPushover
+                || (
+                  opts.forceEnableUserServicesForPushoverOnHeadless
+                  && (config.nx.global.deploymentMode == "managed" || config.nx.global.deploymentMode == "server")
+                );
               main_user_uid = config.users.users.${self.host.mainUser.username}.uid;
               main_user_username = self.host.mainUser.username;
               journalctl_bin = "${pkgs.systemd}/bin/journalctl";
