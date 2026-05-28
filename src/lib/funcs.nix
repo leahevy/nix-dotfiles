@@ -1967,7 +1967,14 @@ rec {
         groups.build.home-integrated = true;
         groups.build.shared = true;
       } (lib.optionalAttrs addHostBaseGroup { groups.base.nixos = true; }))
-      (lib.optionalAttrs (addUserBaseGroup && desktop != null) { groups.base.home-manager = true; });
+      (
+        lib.optionalAttrs addUserBaseGroup (
+          if desktop != null then
+            { groups.base.home-manager = true; }
+          else
+            { groups.base.home-manager-minimal = true; }
+        )
+      );
 
   computeStandaloneBuildModules =
     { addBaseGroup }:
