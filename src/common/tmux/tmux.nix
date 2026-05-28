@@ -448,18 +448,30 @@ args@{
               }'
               bind -T copy-mode-vi r send-keys -X rectangle-toggle
 
-              bind C-p previous-window
-              bind C-n next-window
+              ${
+                if isHeadless then
+                  ''
+                    bind n next-window
+                    bind p previous-window
+                    bind a copy-mode
+                    unbind C-n
+                    unbind C-p
+                  ''
+                else
+                  ''
+                    bind C-p previous-window
+                    bind C-n next-window
+                    bind n copy-mode
+                    bind p copy-mode
+                  ''
+              }
+              unbind [
 
               bind v split-window -h -c "#{pane_current_path}"
               bind h split-window -v -c "#{pane_current_path}"
 
               unbind %
               unbind '"'
-
-              bind n copy-mode
-              bind p copy-mode
-              unbind [
 
               bind u run-shell -b "${self.binDir}/scripts/tmux-url-select"
 
