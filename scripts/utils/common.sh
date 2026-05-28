@@ -321,9 +321,10 @@ confirm_server_manual_deploy() {
 	fi
 	echo -e "${YELLOW}WARNING: This machine is in server mode!${RESET}" >&2
 	echo -en "${WHITE}Run manual ${label}? ${RESET}[y/N]: " >&2
-	read -r response
+	read -r -n 1 response
+	echo >&2
 	case "$response" in
-	[yY] | [yY][eE][sS]) return 0 ;;
+	[yY]) return 0 ;;
 	*)
 		echo -e "${RED}Aborted${RESET}" >&2
 		exit 1
