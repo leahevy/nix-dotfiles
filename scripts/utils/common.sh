@@ -1378,7 +1378,23 @@ run_bump() {
 	fi
 
 	echo -e "${CYAN}Bumping core input...${RESET}"
-	nix flake update core 2> >(grep -v "warning: Git tree.*is dirty" >&2)
+	_bump_attempt=0
+	while [[ $_bump_attempt -lt 3 ]]; do
+		_bump_attempt=$((_bump_attempt + 1))
+		_bump_stderr=$(mktemp)
+		nix flake update core 2> >(tee "$_bump_stderr" | grep -v "warning: Git tree.*is dirty" >&2)
+		if ! grep -q "unable to download\|using cached version" "$_bump_stderr" 2>/dev/null; then
+			rm -f "$_bump_stderr"
+			break
+		fi
+		rm -f "$_bump_stderr"
+		if [[ $_bump_attempt -lt 3 ]]; then
+			echo -e "${YELLOW}GitHub API transient error (attempt $_bump_attempt/3), retrying...${RESET}"
+			sleep $((_bump_attempt * 2))
+		else
+			echo -e "${YELLOW}Warning: GitHub API had transient errors, flake.lock may use cached data${RESET}" >&2
+		fi
+	done
 	echo -e "Updated ${WHITE}core${RESET} flake lock"
 	echo
 
