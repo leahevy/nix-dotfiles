@@ -54,6 +54,11 @@ args@{
         {
           string = "device \\(p2p-dev-wlan0\\): error setting IPv4 forwarding to '1': Resource temporarily unavailable";
         }
+        {
+          service = "NetworkManager.service";
+          tag = "NetworkManager";
+          string = "device \\(p2p-dev-wlan0\\): error setting IPv4 forwarding to '1': Success";
+        }
       ];
     };
   };
