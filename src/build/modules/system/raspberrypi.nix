@@ -14,8 +14,6 @@ args@{
   group = "system";
   input = "build";
 
-  condition = true;
-
   module = {
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
