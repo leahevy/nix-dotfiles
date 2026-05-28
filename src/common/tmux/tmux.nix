@@ -202,58 +202,52 @@ args@{
           isHeadless = deploymentMode == "managed" || deploymentMode == "server";
 
           theme = config.nx.preferences.theme;
-          colors = {
-            primaryBg =
-              if self.settings.primaryBg != null then
-                self.settings.primaryBg
-              else
-                theme.colors.blocks.primary.background.html;
-            primaryFg =
-              if self.settings.primaryFg != null then
-                self.settings.primaryFg
-              else
-                theme.colors.blocks.primary.foreground.html;
-            prefixFg =
-              if self.settings.prefixFg != null then
-                self.settings.prefixFg
-              else
-                theme.colors.blocks.selection.foreground.html;
-            prefixBg =
-              if self.settings.prefixBg != null then
-                self.settings.prefixBg
-              else
-                theme.colors.blocks.selection.background.html;
-            secondaryBg =
-              if self.settings.secondaryBg != null then
-                self.settings.secondaryBg
-              else
-                theme.colors.blocks.primary.foreground.html;
-            secondaryFg =
-              if self.settings.secondaryFg != null then
-                self.settings.secondaryFg
-              else
-                theme.colors.blocks.primary.background.html;
-            statusBg =
-              if self.settings.statusBg != null then
-                self.settings.statusBg
-              else
-                theme.colors.terminal.normalBackgrounds.primary.html;
-            statusFg =
-              if self.settings.statusFg != null then
-                self.settings.statusFg
-              else
-                theme.colors.terminal.colors.cyan.html;
-            borderColor =
-              if self.settings.borderColor != null then
-                self.settings.borderColor
-              else
-                theme.colors.blocks.primary.foreground.html;
-            activeBorderColor =
-              if self.settings.activeBorderColor != null then
-                self.settings.activeBorderColor
-              else
-                theme.colors.blocks.primary.background.html;
-          };
+          colors =
+            let
+              primaryBlock = if isHeadless then theme.colors.blocks.neutral else theme.colors.blocks.primary;
+              prefixBlock = if isHeadless then theme.colors.blocks.warning else theme.colors.blocks.selection;
+              statusFgColor =
+                if isHeadless then
+                  theme.colors.main.foregrounds.subtle.html
+                else
+                  theme.colors.terminal.colors.cyan.html;
+            in
+            {
+              primaryBg =
+                if self.settings.primaryBg != null then self.settings.primaryBg else primaryBlock.background.html;
+              primaryFg =
+                if self.settings.primaryFg != null then self.settings.primaryFg else primaryBlock.foreground.html;
+              prefixFg =
+                if self.settings.prefixFg != null then self.settings.prefixFg else prefixBlock.foreground.html;
+              prefixBg =
+                if self.settings.prefixBg != null then self.settings.prefixBg else prefixBlock.background.html;
+              secondaryBg =
+                if self.settings.secondaryBg != null then
+                  self.settings.secondaryBg
+                else
+                  primaryBlock.foreground.html;
+              secondaryFg =
+                if self.settings.secondaryFg != null then
+                  self.settings.secondaryFg
+                else
+                  primaryBlock.background.html;
+              statusBg =
+                if self.settings.statusBg != null then
+                  self.settings.statusBg
+                else
+                  theme.colors.terminal.normalBackgrounds.primary.html;
+              statusFg = if self.settings.statusFg != null then self.settings.statusFg else statusFgColor;
+              borderColor =
+                if self.settings.borderColor != null then
+                  self.settings.borderColor
+                else
+                  primaryBlock.foreground.html;
+              activeBorderColor =
+                if self.settings.activeBorderColor != null then
+                  self.settings.activeBorderColor
+                else
+                  primaryBlock.background.html;
+            };
           yamlFormat = pkgs.formats.yaml { };
 
           allConfigs = buildConfigs config;
