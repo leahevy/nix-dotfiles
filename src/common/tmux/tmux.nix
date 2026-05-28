@@ -26,6 +26,7 @@ args@{
     borderColor = null;
     activeBorderColor = null;
     useTransparency = true;
+    headlessPrefix = "C-a";
     tmuxinatorConfigs = { };
     tmuxinatorPackage = helpers.requireMinimumPackageVersion args "tmuxinator" "3.3.7";
   };
@@ -197,6 +198,8 @@ args@{
         config:
         let
           isWayland = config.nx.linux.desktop-modules.wayland.enable;
+          deploymentMode = helpers.resolveFromHostOrUser config [ "deploymentMode" ] "develop";
+          isHeadless = deploymentMode == "managed" || deploymentMode == "server";
 
           theme = config.nx.preferences.theme;
           colors = {
@@ -386,10 +389,21 @@ args@{
 
             ".config/tmux/20-keybindings.conf".text = ''
               unbind C-b
-              set-option -g prefix C-n
-              set-option -g prefix2 C-p
-              bind-key C-n send-prefix
-              bind-key -T prefix2 C-p send-prefix -2
+              ${
+                if isHeadless then
+                  ''
+                    set-option -g prefix ${self.settings.headlessPrefix}
+                    set-option -g prefix2 None
+                    bind-key ${self.settings.headlessPrefix} send-prefix
+                  ''
+                else
+                  ''
+                    set-option -g prefix C-n
+                    set-option -g prefix2 C-p
+                    bind-key C-n send-prefix
+                    bind-key -T prefix2 C-p send-prefix -2
+                  ''
+              }
 
 
               bind-key 0 select-window -t :10
