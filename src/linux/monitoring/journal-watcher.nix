@@ -640,8 +640,9 @@ args@{
               stats_enabled = true;
               ignore_user_services_for_pushover =
                 opts.ignoreUserServicesForPushover
-                || (
+                && !(
                   opts.forceEnableUserServicesForPushoverOnHeadless
+                  && !config.nx.linux.notifications."user-notify".enable
                   && (config.nx.global.deploymentMode == "managed" || config.nx.global.deploymentMode == "server")
                 );
               main_user_uid = config.users.users.${self.host.mainUser.username}.uid;
