@@ -549,11 +549,51 @@ args@{
             builtins.toJSON allIgnorePatterns
           );
 
+          serverManagedHighlightPatterns =
+            lib.optionals
+              (config.nx.global.deploymentMode == "server" || config.nx.global.deploymentMode == "managed")
+              [
+                {
+                  service = "init.scope";
+                  tag = "systemd";
+                  string = "Reached target Multi-User System\\.";
+                  ignoreRateLimiting = true;
+                  mapping = {
+                    label = "System";
+                    title = "Boot Complete";
+                    icon = "dialog-information";
+                  };
+                }
+                {
+                  service = "systemd-logind.service";
+                  tag = "systemd-logind";
+                  string = "The system will power off now!";
+                  ignoreRateLimiting = true;
+                  mapping = {
+                    label = "System";
+                    title = "Powering Off";
+                    icon = "system-shutdown";
+                  };
+                }
+                {
+                  service = "systemd-logind.service";
+                  tag = "systemd-logind";
+                  string = "The system will reboot now!";
+                  ignoreRateLimiting = true;
+                  mapping = {
+                    label = "System";
+                    title = "Rebooting";
+                    icon = "system-reboot";
+                  };
+                }
+              ];
+
           allHighlightPatterns =
             map (p: (p // { pattern_type = "highlight"; }) // { mapping = resolveMapping (p.mapping or null); })
               (
                 lib.concatMap expandPattern (
                   baseHighlightPatterns
+                  ++ serverManagedHighlightPatterns
                   ++ (map (
                     s:
                     mkPattern {
@@ -742,7 +782,9 @@ args@{
         {
           assertions =
             validatePatterns "ignorePatterns" (baseIgnorePatterns ++ opts.ignorePatterns)
-            ++ validatePatterns "highlightPatterns" (baseHighlightPatterns ++ opts.highlightPatterns);
+            ++ validatePatterns "highlightPatterns" (
+              baseHighlightPatterns ++ serverManagedHighlightPatterns ++ opts.highlightPatterns
+            );
 
           systemd.services.nx-journal-watcher = {
             description = "NX System Journal Watcher";
