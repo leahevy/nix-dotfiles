@@ -33,8 +33,8 @@ args@{
         shellAliases = {
           l = "ls";
           ls = "ls --color=auto";
-          "l." = "ls -d .* --color=auto";
-          ll = "ls -la --color=auto";
+          "l." = "ls -d .*";
+          ll = "ls -la";
           rm = if self.isLinux then "rm -I --preserve-root" else "rm -I";
           mv = "mv -i";
           cp = "cp -i";

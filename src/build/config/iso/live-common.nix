@@ -10,9 +10,52 @@
 
 let
   shellAliases = {
+    l = "ls";
+    ls = "ls --color=auto";
+    "l." = "ls -d .*";
     ll = "ls -la";
-    la = "ls -la";
+    rm = "rm -I --preserve-root";
+    mv = "mv -i";
+    cp = "cp -i";
+    ln = "ln -i";
+    vim = "vim -p";
+    vi = "vim -p";
+    v = "vim -p";
+    diff = "colordiff";
+    grep = "grep --color=auto";
+    egrep = "egrep --color=auto";
+    fgrep = "fgrep --color=auto";
+    mkdir = "mkdir -pv";
+    chown = "chown --preserve-root";
+    chmod = "chmod --preserve-root";
+    chgrp = "chgrp --preserve-root";
+    ".." = "cd ..";
+    "..." = "cd ../..";
+    "...." = "cd ../../..";
+    c = "clear";
+    home = "cd /nxcore";
+    nxcore = "cd /nxcore";
+    nxconfig = "cd /nxconfig";
+    nx = "nx bootstrap nixos";
+    g = "git";
+    gh = "g show HEAD";
+    gl = "g log";
+    gg = "g log --graph --pretty=format:'%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset %Cred[%G?]%Creset' --date=relative";
+    gpl = "g pull";
+    gs = "g status";
+    gsth = "g stash";
+    gsta = "gsth apply";
+    gd = "g diff";
+    gdc = "g diff --cached";
+    df = "df -h";
+    du = "du -h --max-depth=1";
+    free = "free -h";
+    lsblk = "lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,UUID";
+    ps = "ps auxf";
+    ip-get-public = "curl -s ifconfig.me";
+    ip-get-local = "ip -4 -brief addr show scope global";
   };
+
   aliasLines = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (name: value: "alias ${name}=${lib.escapeShellArg value}") shellAliases
   );
