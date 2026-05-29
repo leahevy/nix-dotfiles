@@ -18,5 +18,7 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  environment.systemPackages = [ pkgs.borgbackup ];
+
   isoImage.squashfsCompression = "gzip -Xcompression-level 1";
 }

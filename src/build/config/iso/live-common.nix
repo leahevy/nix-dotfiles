@@ -187,7 +187,6 @@ in
     wget
     tree
     jq
-    borgbackup
     sops
     age
     gnupg
