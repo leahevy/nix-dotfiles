@@ -28,6 +28,7 @@ args@{
     useTransparency = true;
     headlessPrefix = "C-a";
     tmuxinatorConfigs = { };
+    additionalMainConfigWindows = [ ];
     tmuxinatorPackage = helpers.requireMinimumPackageVersion args "tmuxinator" "3.3.7";
   };
 
@@ -46,6 +47,7 @@ args@{
         config:
         let
           shell = self.user.settings.shell;
+          interactiveShellCommand = cmd: "exec ${shell} -ic ${lib.escapeShellArg "${cmd}; exec ${shell} -i"}";
           devMode = lib.elem (helpers.resolveFromHostOrUser config [ "deploymentMode" ] "managed") [
             "develop"
             "local"
@@ -56,22 +58,23 @@ args@{
 
           main = {
             windows = [
-              { "󱆃 Home" = "cd ~ && clear && exec ${shell}"; }
+              { "󱆃 Home" = "cd ~ && clear && ${interactiveShellCommand "true"}"; }
             ]
             ++ lib.optionals devMode [
-              { "󱆃 Core" = "cd ~/.config/nx/nxcore/ && clear && exec ${shell}"; }
-              { "󱆃 Config" = "cd ~/.config/nx/nxconfig/ && clear && exec ${shell}"; }
+              { "󱆃 Core" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "true"}"; }
+              { "󱆃 Config" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "true"}"; }
             ]
             ++ lib.optionals (vimEnabled && devMode) [
-              { "󱇧 Vim (Core)" = "cd ~/.config/nx/nxcore/ && clear && vim"; }
-              { "󱇧 Vim (Config)" = "cd ~/.config/nx/nxconfig/ && clear && vim"; }
+              { "󱇧 Vim (Core)" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vim"}"; }
+              { "󱇧 Vim (Config)" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "vim"}"; }
             ]
             ++ lib.optionals (claudeEnabled && devMode) [
-              { "󱙺 Claude" = "cd ~/.config/nx/nxconfig/ && clear && claude"; }
+              { "󱙺 Claude" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "claude"}"; }
             ]
             ++ lib.optionals (codexEnabled && devMode) [
-              { "󱙺 Codex" = "cd ~/.config/nx/nxconfig/ && clear && codex"; }
-            ];
+              { "󱙺 Codex" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "codex"}"; }
+            ]
+            ++ self.settings.additionalMainConfigWindows;
           };
         in
         {
