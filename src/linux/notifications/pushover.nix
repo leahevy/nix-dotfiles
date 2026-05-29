@@ -351,12 +351,14 @@ args@{
           ESCAPED_TITLE=$(escape_for_curl "$FORMATTED_TITLE [${self.host.hostname}]")
 
           ESCAPED_MESSAGE=$(escape_message_for_curl "$MESSAGE")
+          TEMP_MESSAGE="$TEMP_DIR/message-content"
+          printf '%s' "$ESCAPED_MESSAGE" > "$TEMP_MESSAGE"
 
           cat > "$TEMP_CONFIG" <<EOF
           form = "token=$(${pkgs.coreutils}/bin/cat "$TOKEN_FILE")"
           form = "user=$(${pkgs.coreutils}/bin/cat "$USER_FILE")"
           form = "title=$ESCAPED_TITLE"
-          form = "message=$ESCAPED_MESSAGE"
+          form = "message=<$TEMP_MESSAGE"
           form = "priority=$PRIORITY"
           form = "html=1"
           form = "timestamp=$(${pkgs.coreutils}/bin/date +%s)"
