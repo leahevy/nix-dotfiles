@@ -106,6 +106,10 @@ args@{
             server {
               listen 0.0.0.0:443 ssl default_server;
               listen [::0]:443 ssl default_server;
+              ${lib.optionalString enableQuic ''
+                listen 0.0.0.0:443 quic default_server;
+                listen [::0]:443 quic default_server;
+              ''}
               ssl_reject_handshake on;
             }
           '';
