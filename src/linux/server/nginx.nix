@@ -87,17 +87,19 @@ args@{
         allowedUDPPorts = lib.mkIf enableQuic [ 443 ];
       };
 
-      services.nginx.virtualHosts = lib.mkIf (enableTestDomain && domain != null) {
-        "${self.host.hostname}.${domain}" = lib.mkDefault {
-          onlySSL = true;
-          useACMEHost = domain;
-          quic = enableQuic;
-          http3 = enableQuic;
-          locations."/" = {
-            return = "200 'nginx ok'";
-            extraConfig = "add_header Content-Type text/plain;";
+      services.nginx.virtualHosts =
+        lib.mkIf (enableTestDomain && domain != null && config.security.acme.certs ? ${domain})
+          {
+            "${self.host.hostname}.${domain}" = lib.mkDefault {
+              onlySSL = true;
+              useACMEHost = domain;
+              quic = enableQuic;
+              http3 = enableQuic;
+              locations."/" = {
+                return = "200 'nginx ok'";
+                extraConfig = "add_header Content-Type text/plain;";
+              };
+            };
           };
-        };
-      };
     };
 }
