@@ -220,7 +220,7 @@ args@{
       baseHighlightPatterns = [
         {
           tag = "nixos";
-          user = true;
+          all = true;
           ignoreRateLimiting = true;
           mapping = {
             label = "NixOS";
