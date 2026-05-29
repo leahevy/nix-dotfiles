@@ -140,7 +140,14 @@ args@{
 
           certs = lib.mapAttrs (
             domain: certConfig:
+            let
+              isRootDomain = builtins.length (lib.splitString "." domain) == 2;
+              autoWildcard = lib.optionalAttrs isRootDomain {
+                extraDomainNames = [ "*.${domain}" ];
+              };
+            in
             self.settings.extraConfigDefaults
+            // autoWildcard
             // {
               dnsProvider = certConfig.provider;
               group = certConfig.group or "acme";
