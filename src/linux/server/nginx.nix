@@ -71,7 +71,7 @@ args@{
         allowedUDPPorts = lib.mkIf enableQuic [ 443 ];
       };
 
-      services.nginx.virtualHosts = lib.mkIf enableTestDomain {
+      services.nginx.virtualHosts = lib.mkIf (enableTestDomain && domain != null) {
         "${self.host.hostname}.${domain}" = lib.mkDefault {
           onlySSL = true;
           useACMEHost = domain;
