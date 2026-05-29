@@ -52,6 +52,16 @@ args@{
     home =
       config:
       let
+        deviceHasForceDisableEncryption =
+          d:
+          builtins.any (
+            folderId:
+            let
+              shareConfig = d.shares.${folderId};
+            in
+            !(builtins.isString shareConfig) && (shareConfig.forceDisableEncryption or false)
+          ) (builtins.attrNames (d.shares or { }));
+
         devicesAttr = builtins.listToAttrs (
           map (d: {
             name = d.name;
@@ -59,7 +69,7 @@ args@{
               addresses = [ "${d.protocol or "tcp"}://${d.ipAddress}:${builtins.toString (d.port or 22000)}" ];
               id = d.id;
             }
-            // lib.optionalAttrs (d.untrusted or false) {
+            // lib.optionalAttrs ((d.untrusted or false) && !(deviceHasForceDisableEncryption d)) {
               untrusted = true;
             };
           }) self.settings.devices
@@ -74,8 +84,10 @@ args@{
               localPath = if builtins.isString shareConfig then shareConfig else shareConfig.path;
               existing = innerAcc.${folderId} or null;
               isUntrusted = device.untrusted or false;
+              forceDisableEncryption =
+                !(builtins.isString shareConfig) && (shareConfig.forceDisableEncryption or false);
               deviceEntry =
-                if isUntrusted then
+                if isUntrusted && !forceDisableEncryption then
                   {
                     name = device.name;
                     encryptionPasswordFile = config.sops.secrets."syncthing-${device.name}-encryption-password".path;
