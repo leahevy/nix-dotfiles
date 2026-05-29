@@ -552,6 +552,7 @@ args@{
           hostname = self.host.hostname;
           mainUser = config.users.users.${self.host.mainUser.username};
           mainUserGroup = mainUser.group;
+          userNotifyEnabled = self.isModuleEnabled "notifications.user-notify";
         in
         {
           sops.secrets."pushover-user" = {
@@ -591,6 +592,64 @@ args@{
           environment.systemPackages = [
             config.nx.linux.notifications.pushover.script
             pkgs.curl
+            (pkgs.writeShellScriptBin "pushover-run" ''
+              if [[ $# -eq 0 ]]; then
+                exit 0
+              fi
+
+              if ! command -v "$1" >/dev/null 2>&1; then
+                echo "pushover-run: command not found: $1" >&2
+                exit 127
+              fi
+
+              _start=$(${pkgs.coreutils}/bin/date +%s)
+              "$@"
+              _exit=$?
+              _elapsed=$(( $(${pkgs.coreutils}/bin/date +%s) - _start ))
+
+              if [[ $_elapsed -ge 3600 ]]; then
+                _dur="$((_elapsed / 3600))h $(((_elapsed % 3600) / 60))m $((_elapsed % 60))s"
+              elif [[ $_elapsed -ge 60 ]]; then
+                _dur="$((_elapsed / 60))m $((_elapsed % 60))s"
+              else
+                _dur="''${_elapsed}s"
+              fi
+
+              if [[ $_exit -eq 0 ]]; then
+                _type=success
+              else
+                _type=failed
+              fi
+
+              _cmd_escaped=$(printf '%s' "$*" | ${pkgs.gnused}/bin/sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+              _body=$(printf '<b>Command:</b> %s\n<b>Duration:</b> %s\n<b>Exit Code:</b> %s' "''${_cmd_escaped}" "''${_dur}" "''${_exit}")
+
+              ${config.nx.linux.notifications.pushover.script}/bin/pushover-send \
+                --title "Run: $(${pkgs.coreutils}/bin/basename "$1")" \
+                --message "''${_body}" \
+                --type "''${_type}" \
+                --html \
+                >/dev/null 2>&1 || true
+              ${lib.optionalString userNotifyEnabled ''
+                _notify_title="Run: $(${pkgs.coreutils}/bin/basename "$1")"
+                _notify_body=$(printf '<u>Command:</u> %s\n<u>Duration:</u> %s\n<u>Exit Code:</u> %s' "$*" "''${_dur}" "''${_exit}")
+                _notify_priority="user.info"
+                if [[ ''${_exit} -ne 0 ]]; then
+                  _notify_priority="user.err"
+                fi
+                _notify_icon="checkmark"
+                if [[ ''${_exit} -ne 0 ]]; then
+                  _notify_icon="dialog-error"
+                fi
+                _notify_payload=$(${pkgs.jq}/bin/jq -n \
+                  --arg t "''${_notify_title}" \
+                  --arg b "''${_notify_body}" \
+                  --arg i "''${_notify_icon}" \
+                  '{"title":$t,"body":$b,"icon":$i}')
+                ${pkgs.util-linux}/bin/logger -p "''${_notify_priority}" -t nx-user-notify "JSON-DATA::''${_notify_payload}"
+              ''}
+              exit ''${_exit}
+            '')
           ];
         };
     };
