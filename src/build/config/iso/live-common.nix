@@ -8,6 +8,15 @@
   ...
 }:
 
+let
+  shellAliases = {
+    ll = "ls -la";
+    la = "ls -la";
+  };
+  aliasLines = lib.concatStringsSep "\n" (
+    lib.mapAttrsToList (name: value: "alias ${name}=${lib.escapeShellArg value}") shellAliases
+  );
+in
 {
   nix.settings = {
     experimental-features = [
@@ -43,8 +52,7 @@
       cd /nxcore
     fi
 
-    alias ll='ls -la'
-    alias la='ls -la'
+    ${aliasLines}
 
     if [ "$USER" = "nixos" ] && [ -z "$NX_STARTUP_CHECKED" ]; then
       export NX_STARTUP_CHECKED=1
