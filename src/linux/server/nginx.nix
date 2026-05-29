@@ -101,7 +101,7 @@ args@{
           recommendedTlsSettings = true;
           recommendedGzipSettings = true;
           recommendedOptimisation = true;
-          commonHttpConfig = "access_log /dev/stderr combined;";
+          commonHttpConfig = "access_log syslog:server=unix:/dev/log combined;";
         };
 
         users.users.nginx.extraGroups = [ "acme" ];
