@@ -42,6 +42,11 @@ args@{
         { string = "nx-auto-upgrade-delayed.service"; }
         { string = "nx-auto-upgrade-notify.service"; }
         { string = "NX Auto-Upgrade"; }
+        {
+          tag = "systemd-inhibit";
+          string = "nx-auto-upgrade-main failed with exit status";
+          unitless = true;
+        }
       ];
     };
 

@@ -32,6 +32,24 @@ args@{
           user = true;
           unitless = true;
         }
+        {
+          tag = "waybar";
+          string = "unhandled exception \\(type std::exception\\) in signal handler:";
+          user = true;
+          unitless = true;
+        }
+        {
+          service = "waybar.service";
+          tag = "systemd";
+          string = "Main process exited, code=dumped, status=5/TRAP";
+          user = true;
+        }
+        {
+          service = "waybar.service";
+          tag = "systemd";
+          string = "Failed with result 'core-dump'\.";
+          user = true;
+        }
       ];
     };
 
