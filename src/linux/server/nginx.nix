@@ -69,6 +69,15 @@ args@{
           assertion = uncoveredVhosts == { };
           message = "linux.server.nginx: virtual hosts not covered by their ACME cert: ${lib.concatStringsSep ", " (lib.attrNames uncoveredVhosts)}!";
         }
+        (lib.mkIf enableTestDomain {
+          assertion =
+            domain != null
+            && config.nx.linux.security.letsencrypt.enable
+            && config.nx.linux.security.letsencrypt.dnsCerts ? ${domain};
+          message = "linux.server.nginx: enableTestDomain requires letsencrypt to be configured with a cert for '${
+            if domain != null then domain else "null"
+          }'!";
+        })
       ];
 
       services.nginx = {
