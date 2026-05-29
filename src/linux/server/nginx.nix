@@ -91,6 +91,10 @@ args@{
 
       users.users.nginx.extraGroups = [ "acme" ];
 
+      environment.persistence."${self.persist}" = {
+        directories = [ "/var/log/nginx" ];
+      };
+
       networking.firewall = lib.mkIf (openFirewall && config.nx.linux.networking.firewall.enable) {
         allowedTCPPorts = [ 443 ];
         allowedUDPPorts = lib.mkIf enableQuic [ 443 ];
