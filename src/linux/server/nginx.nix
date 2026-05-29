@@ -88,7 +88,13 @@ args@{
       };
 
       services.nginx.virtualHosts =
-        lib.mkIf (enableTestDomain && domain != null && config.security.acme.certs ? ${domain})
+        lib.mkIf
+          (
+            enableTestDomain
+            && domain != null
+            && config.nx.linux.security.letsencrypt.enable
+            && config.nx.linux.security.letsencrypt.dnsCerts ? ${domain}
+          )
           {
             "${self.host.hostname}.${domain}" = lib.mkDefault {
               onlySSL = true;
