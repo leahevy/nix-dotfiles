@@ -133,7 +133,7 @@ args@{
                 quic = enableQuic;
                 http3 = enableQuic;
                 locations."/" = {
-                  return = "200 'nginx ok'";
+                  return = "200 '${self.host.hostname} ok'";
                   extraConfig = "add_header Content-Type text/plain;";
                 };
               };
