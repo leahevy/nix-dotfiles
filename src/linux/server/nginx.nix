@@ -42,6 +42,18 @@ args@{
     }:
     let
       domain = self.host.remote.baseDomain;
+      uncoveredVhosts = lib.filterAttrs (
+        name: vh:
+        let
+          acmeHost = vh.useACMEHost;
+          cert = config.security.acme.certs.${acmeHost} or null;
+          certDomains = if cert != null then cert.extraDomainNames else [ ];
+        in
+        !(
+          cert != null
+          && (name == acmeHost || lib.elem name certDomains || lib.elem "*.${acmeHost}" certDomains)
+        )
+      ) (lib.filterAttrs (_: vh: vh.useACMEHost != null) config.services.nginx.virtualHosts);
     in
     {
       assertions = [
@@ -52,6 +64,10 @@ args@{
         {
           assertion = domain != null;
           message = "linux.server.nginx requires host.remote.baseDomain to be set!";
+        }
+        {
+          assertion = uncoveredVhosts == { };
+          message = "linux.server.nginx: virtual hosts not covered by their ACME cert: ${lib.concatStringsSep ", " (lib.attrNames uncoveredVhosts)}!";
         }
       ];
 
