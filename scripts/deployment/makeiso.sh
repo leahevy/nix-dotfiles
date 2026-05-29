@@ -29,6 +29,8 @@ if [[ ! -d $PWD || $perm != drwx------* || $owner != "$USER" ]]; then
 fi
 # ===================================================== #
 
+check_deployment_conflicts "makeiso"
+
 NXCORE_DIR="$HOME/.config/nx/nxcore"
 export NXCORE_DIR
 
@@ -127,6 +129,7 @@ export SKIP_VERIFICATION
 TEMP_DIR="$(mktemp -d)"
 PLAIN_KEY_FILE=""
 cleanup() {
+	cleanup_deployment_lock
 	rm -rf "$TEMP_DIR"
 	if [[ -f "$REPO_ROOT/.git-crypt-key" ]]; then
 		echo
@@ -138,6 +141,8 @@ cleanup() {
 	fi
 }
 trap cleanup EXIT
+trap 'cleanup; exit 130' INT
+trap 'cleanup; exit 143' TERM
 
 if [[ "$PI5" == true ]]; then
 	SYSTEM="aarch64-linux"
