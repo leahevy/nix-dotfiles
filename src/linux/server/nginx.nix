@@ -32,93 +32,105 @@ args@{
     };
   };
 
-  module.linux.system =
-    {
-      config,
-      openFirewall,
-      enableQuic,
-      enableTestDomain,
-      ...
-    }:
-    let
-      domain = self.host.remote.baseDomain;
-      uncoveredVhosts = lib.filterAttrs (
-        name: vh:
-        let
-          acmeHost = vh.useACMEHost;
-          cert = config.security.acme.certs.${acmeHost} or null;
-          certDomains = if cert != null then cert.extraDomainNames else [ ];
-        in
-        !(
-          cert != null
-          && (name == acmeHost || lib.elem name certDomains || lib.elem "*.${acmeHost}" certDomains)
-        )
-      ) (lib.filterAttrs (_: vh: vh.useACMEHost != null) config.services.nginx.virtualHosts);
-    in
-    {
-      assertions = [
-        {
-          assertion = config.nx.linux.security.letsencrypt.enable;
-          message = "linux.server.nginx requires linux.security.letsencrypt to be enabled!";
-        }
-        {
-          assertion = domain != null;
-          message = "linux.server.nginx requires host.remote.baseDomain to be set!";
-        }
-        {
-          assertion = uncoveredVhosts == { };
-          message = "linux.server.nginx: virtual hosts not covered by their ACME cert: ${lib.concatStringsSep ", " (lib.attrNames uncoveredVhosts)}!";
-        }
-        (lib.mkIf enableTestDomain {
-          assertion =
-            domain != null
-            && config.nx.linux.security.letsencrypt.enable
-            && config.nx.linux.security.letsencrypt.dnsCerts ? ${domain};
-          message = "linux.server.nginx: enableTestDomain requires letsencrypt to be configured with a cert for '${
-            if domain != null then domain else "null"
-          }'!";
-        })
-      ];
-
-      services.nginx = {
-        enable = true;
-        enableQuicBPF = enableQuic;
-        recommendedProxySettings = true;
-        recommendedTlsSettings = true;
-        recommendedGzipSettings = true;
-        recommendedOptimisation = true;
+  module = {
+    ifEnabled.linux.services.fail2ban = {
+      linux.system = config: {
+        services.fail2ban.jails.nginx-http-auth = ''
+          enabled = true
+          filter = nginx-http-auth
+          backend = systemd
+          maxretry = 5
+          findtime = 600
+          bantime = 3600
+        '';
       };
+    };
 
-      users.users.nginx.extraGroups = [ "acme" ];
-
-      environment.persistence."${self.persist}" = {
-        directories = [ "/var/log/nginx" ];
-      };
-
-      networking.firewall = lib.mkIf (openFirewall && config.nx.linux.networking.firewall.enable) {
-        allowedTCPPorts = [ 443 ];
-        allowedUDPPorts = lib.mkIf enableQuic [ 443 ];
-      };
-
-      services.nginx.virtualHosts =
-        lib.mkIf
-          (
-            enableTestDomain
-            && domain != null
-            && config.nx.linux.security.letsencrypt.enable
-            && config.nx.linux.security.letsencrypt.dnsCerts ? ${domain}
+    linux.system =
+      {
+        config,
+        openFirewall,
+        enableQuic,
+        enableTestDomain,
+        ...
+      }:
+      let
+        domain = self.host.remote.baseDomain;
+        uncoveredVhosts = lib.filterAttrs (
+          name: vh:
+          let
+            acmeHost = vh.useACMEHost;
+            cert = config.security.acme.certs.${acmeHost} or null;
+            certDomains = if cert != null then cert.extraDomainNames else [ ];
+          in
+          !(
+            cert != null
+            && (name == acmeHost || lib.elem name certDomains || lib.elem "*.${acmeHost}" certDomains)
           )
+        ) (lib.filterAttrs (_: vh: vh.useACMEHost != null) config.services.nginx.virtualHosts);
+      in
+      {
+        assertions = [
           {
-            "${self.host.hostname}.${domain}" = lib.mkDefault {
-              onlySSL = true;
-              useACMEHost = domain;
-              quic = enableQuic;
-              http3 = enableQuic;
-              locations."/" = {
-                return = "200 'nginx ok'";
-                extraConfig = "add_header Content-Type text/plain;";
+            assertion = config.nx.linux.security.letsencrypt.enable;
+            message = "linux.server.nginx requires linux.security.letsencrypt to be enabled!";
+          }
+          {
+            assertion = domain != null;
+            message = "linux.server.nginx requires host.remote.baseDomain to be set!";
+          }
+          {
+            assertion = uncoveredVhosts == { };
+            message = "linux.server.nginx: virtual hosts not covered by their ACME cert: ${lib.concatStringsSep ", " (lib.attrNames uncoveredVhosts)}!";
+          }
+          (lib.mkIf enableTestDomain {
+            assertion =
+              domain != null
+              && config.nx.linux.security.letsencrypt.enable
+              && config.nx.linux.security.letsencrypt.dnsCerts ? ${domain};
+            message = "linux.server.nginx: enableTestDomain requires letsencrypt to be configured with a cert for '${
+              if domain != null then domain else "null"
+            }'!";
+          })
+        ];
+
+        services.nginx = {
+          enable = true;
+          enableQuicBPF = enableQuic;
+          recommendedProxySettings = true;
+          recommendedTlsSettings = true;
+          recommendedGzipSettings = true;
+          recommendedOptimisation = true;
+          commonHttpConfig = "access_log /dev/stderr combined;";
+        };
+
+        users.users.nginx.extraGroups = [ "acme" ];
+
+        networking.firewall = lib.mkIf (openFirewall && config.nx.linux.networking.firewall.enable) {
+          allowedTCPPorts = [ 443 ];
+          allowedUDPPorts = lib.mkIf enableQuic [ 443 ];
+        };
+
+        services.nginx.virtualHosts =
+          lib.mkIf
+            (
+              enableTestDomain
+              && domain != null
+              && config.nx.linux.security.letsencrypt.enable
+              && config.nx.linux.security.letsencrypt.dnsCerts ? ${domain}
+            )
+            {
+              "${self.host.hostname}.${domain}" = lib.mkDefault {
+                onlySSL = true;
+                useACMEHost = domain;
+                quic = enableQuic;
+                http3 = enableQuic;
+                locations."/" = {
+                  return = "200 'nginx ok'";
+                  extraConfig = "add_header Content-Type text/plain;";
+                };
               };
             };
-          };
-    };
+      };
+  };
 }
