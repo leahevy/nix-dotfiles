@@ -873,31 +873,37 @@ rec {
 
   icons = {
     # Checks that the icon name is registered in config.nx.lib.icons and returns it.
-    # When no icons are declared, returns name without validation.
+    # When no icons are declared or no desktop is configured, returns name without validation.
     # Usage: getIcon config "icon-name"
     getIcon =
       config: name:
       let
         declared = config.nx.lib.icons;
         flat = lib.concatMap (e: if builtins.isList e then e else [ e ]) declared;
+        hasDesktop =
+          (config.host.settings.system.desktop or null) != null
+          || (config.user.settings.desktop or null) != null;
       in
-      if declared == [ ] || builtins.elem name flat then
+      if declared == [ ] || !hasDesktop || builtins.elem name flat then
         name
       else
         builtins.throw "nx icons: '${name}' not found in config.nx.lib.icons";
 
     # Splits pattern on '|', returns the pattern if any icon was found in config.nx.lib.icons.
-    # When no icons are declared, returns the first name in the pattern.
+    # When no icons are declared or no desktop is configured, returns the first name in the pattern.
     # Usage: searchIcon config "icon-pattern"
     searchIcon =
       config: pattern:
       let
         declared = config.nx.lib.icons;
         flat = lib.concatMap (e: if builtins.isList e then e else [ e ]) declared;
+        hasDesktop =
+          (config.host.settings.system.desktop or null) != null
+          || (config.user.settings.desktop or null) != null;
         names = lib.splitString "|" pattern;
         result = lib.findFirst (name: builtins.elem name flat) null names;
       in
-      if declared == [ ] || result != null then
+      if declared == [ ] || !hasDesktop || result != null then
         pattern
       else
         builtins.throw "nx icons: no icon found for '${pattern}' in config.nx.lib.icons";
