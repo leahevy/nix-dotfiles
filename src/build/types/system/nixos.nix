@@ -531,60 +531,79 @@ with lib;
     };
 
     remote = mkOption {
-      type = types.submodule {
-        options = {
-          address = mkOption {
-            type = types.nullOr types.str;
-            default = null;
-            description = "Remote hostname/IP for connecting";
+      type = types.submodule (
+        { config, lib, ... }:
+        {
+          options = {
+            address = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "Remote hostname/IP for connecting";
+            };
+            port = mkOption {
+              type = types.port;
+              default = 22;
+              description = "Remote port for connecting";
+            };
+            deploymentPort = mkOption {
+              type = types.nullOr types.port;
+              default = null;
+              description = "Remote port for deployment";
+            };
+            installPort = mkOption {
+              type = types.nullOr types.port;
+              default = null;
+              description = "Remote port for installing";
+            };
+            deploySSHPublicKey = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "SSH public key for the nx-deployment user; when set the nx-deployment user is created with this key and passwordless sudo is configured, otherwise the main user connects with password-based sudo";
+            };
+            initrdSSHServicePort = mkOption {
+              type = types.port;
+              default = 2233;
+              description = "Port the SSH service in the initrd listens on, used for remote LUKS unlocking";
+            };
+            initrdSSHExposedPort = mkOption {
+              type = types.port;
+              default = 2233;
+              description = "Port used in SSH config entries to reach the initrd SSH service from remote";
+            };
+            initrdSSHHostPrivateKey = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "SSH host private key for the initrd SSH service. Use a dedicated key generated only for this purpose as it is stored in the Nix store.";
+            };
+            initrdSSHHostPublicKey = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "SSH host public key for the initrd SSH service. Must be set when initrdSSHHostPrivateKey is configured; used to auto-populate known_hosts_managed.";
+            };
+            sshHostPublicKeys = mkOption {
+              type = types.listOf types.str;
+              default = [ ];
+              description = "SSH host public keys for pinning in known_hosts_managed. Enables strict host key checking on the auto-generated SSH config entry.";
+            };
+            baseDomain = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "Base domain for service hosting. Auto-derived from remote.address when it is a domain name.";
+            };
           };
-          port = mkOption {
-            type = types.port;
-            default = 22;
-            description = "Remote port for connecting";
+          config = {
+            baseDomain = lib.mkDefault (
+              let
+                addr = config.address;
+                isIPv4 = addr != null && lib.match "[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+" addr != null;
+                isIPv6 = addr != null && lib.hasInfix ":" addr;
+                isLocal = addr == "localhost" || addr == "127.0.0.1" || addr == "::1";
+              in
+              if addr == null || isIPv4 || isIPv6 || isLocal then null else addr
+            );
           };
-          deploymentPort = mkOption {
-            type = types.nullOr types.port;
-            default = null;
-            description = "Remote port for deployment";
-          };
-          installPort = mkOption {
-            type = types.nullOr types.port;
-            default = null;
-            description = "Remote port for installing";
-          };
-          deploySSHPublicKey = mkOption {
-            type = types.nullOr types.str;
-            default = null;
-            description = "SSH public key for the nx-deployment user; when set the nx-deployment user is created with this key and passwordless sudo is configured, otherwise the main user connects with password-based sudo";
-          };
-          initrdSSHServicePort = mkOption {
-            type = types.port;
-            default = 2233;
-            description = "Port the SSH service in the initrd listens on, used for remote LUKS unlocking";
-          };
-          initrdSSHExposedPort = mkOption {
-            type = types.port;
-            default = 2233;
-            description = "Port used in SSH config entries to reach the initrd SSH service from remote";
-          };
-          initrdSSHHostPrivateKey = mkOption {
-            type = types.nullOr types.str;
-            default = null;
-            description = "SSH host private key for the initrd SSH service. Use a dedicated key generated only for this purpose as it is stored in the Nix store.";
-          };
-          initrdSSHHostPublicKey = mkOption {
-            type = types.nullOr types.str;
-            default = null;
-            description = "SSH host public key for the initrd SSH service. Must be set when initrdSSHHostPrivateKey is configured; used to auto-populate known_hosts_managed.";
-          };
-          sshHostPublicKeys = mkOption {
-            type = types.listOf types.str;
-            default = [ ];
-            description = "SSH host public keys for pinning in known_hosts_managed. Enables strict host key checking on the auto-generated SSH config entry.";
-          };
-        };
-      };
+        }
+      );
       default = { };
       description = "Remote deployment configuration";
     };
