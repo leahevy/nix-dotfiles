@@ -102,6 +102,12 @@ args@{
           recommendedGzipSettings = true;
           recommendedOptimisation = true;
           commonHttpConfig = "access_log syslog:server=unix:/dev/log combined;";
+          appendConfig = ''
+            server {
+              listen 443 ssl default_server;
+              ssl_reject_handshake on;
+            }
+          '';
         };
 
         users.users.nginx.extraGroups = [ "acme" ];
