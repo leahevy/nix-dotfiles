@@ -195,6 +195,7 @@ args@{
         nxconfigDir = "${self.host.mainUser.home}/.config/nx/nxconfig";
         isDevelopMode = self.host.deploymentMode == "develop";
         effectiveDryRun = self.settings.dryRun || isDevelopMode;
+        hasLuks = (config.boot.initrd.luks.devices or { }) != { };
 
         profileName = "${self.host.hostname}--${self.host.architecture}";
 
@@ -320,7 +321,7 @@ args@{
               else if lib.hasPrefix "SUCCESS:" message then
                 "success"
               else if lib.hasPrefix "SUCCESS-REBOOT-NOW:" message then
-                "warn"
+                (if hasLuks then "emerg" else "warn")
               else if lib.hasPrefix "SUCCESS-REBOOT-LATER:" message then
                 "success"
               else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
@@ -1002,6 +1003,14 @@ args@{
                 if check_reboot_window; then
                   ${logScript "info" "INFO: Delayed reboot marker found and inside reboot window, rebooting now"}
                   ${createPersistentRebootMarkerScript "delayed-window"}
+                  ${lib.optionalString (hasLuks && self.settings.pushoverNotifications && pushover.send != null) (
+                    pushover.send {
+                      title = "Auto-Upgrade";
+                      message = "System rebooting now. LUKS disk password required!";
+                      type = "emerg";
+                      shellVars = true;
+                    }
+                  )}
                   ${config.systemd.package}/bin/shutdown -r now --no-wall
                 fi
               ''
@@ -1009,6 +1018,14 @@ args@{
               ''
                 ${logScript "info" "INFO: Delayed reboot marker found, rebooting now"}
                 ${createPersistentRebootMarkerScript "delayed-no-window"}
+                ${lib.optionalString (hasLuks && self.settings.pushoverNotifications && pushover.send != null) (
+                  pushover.send {
+                    title = "Auto-Upgrade";
+                    message = "System rebooting now. LUKS disk password required!";
+                    type = "emerg";
+                    shellVars = true;
+                  }
+                )}
                 ${config.systemd.package}/bin/shutdown -r now --no-wall
               ''
           }
