@@ -135,6 +135,7 @@ in
       exec /nxcore/nx "$@"
     '')
     git
+    colordiff
     htop
     vim
     disko
@@ -165,6 +166,15 @@ in
     libtirpc
     lshw
     smartmontools
+    tmux
+    bat
+    ripgrep
+    ncdu
+    duf
+    mtr
+    lsof
+    nmap
+    ddrescue
     pciutils
     usbutils
     binutils
