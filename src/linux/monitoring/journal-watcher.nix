@@ -139,6 +139,11 @@ args@{
               default = null;
               description = "Override notification channels for this highlight pattern. null fields use scope-based defaults.";
             };
+            ignoreRateLimiting = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Ignore message dedup rate limiting for this highlight pattern.";
+            };
           };
         };
     in
@@ -216,6 +221,7 @@ args@{
         {
           tag = "nixos";
           user = true;
+          ignoreRateLimiting = true;
           mapping = {
             label = "NixOS";
             title = "System Switch";

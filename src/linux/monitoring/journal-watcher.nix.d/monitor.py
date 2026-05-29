@@ -24,6 +24,7 @@ class PatternMatch:
     mapping: Optional[Dict[str, Any]] = None
     channels: Optional[Dict[str, Any]] = None
     pattern_id: Optional[str] = None
+    ignore_rate_limiting: bool = False
 
 
 STATS_INTERVAL = 10 * 60
@@ -242,6 +243,7 @@ class PatternMatcher:
         }
         if pat.get("pattern_type") == "highlight":
             compiled["pattern_hash"] = compute_pattern_hash(pat)
+            compiled["ignore_rate_limiting"] = pat.get("ignoreRateLimiting", False)
         if pat.get("service"):
             compiled["service"] = re.compile(re.escape(pat["service"]))
         if pat.get("tag"):
@@ -384,6 +386,7 @@ class PatternMatcher:
                     mapping=pat.get("mapping"),
                     channels=pat.get("channels"),
                     pattern_id=pat.get("pattern_hash"),
+                    ignore_rate_limiting=pat.get("ignore_rate_limiting", False),
                 )
 
         return None
@@ -670,7 +673,12 @@ def process_message(
 
         cleanup_old_rate_limits(cfg)
 
-        if not check_message_rate_limit(cfg, unit, message):
+        skip_msg_rate_limit = (
+            highlighted
+            and highlight_info is not None
+            and highlight_info.ignore_rate_limiting
+        )
+        if not skip_msg_rate_limit and not check_message_rate_limit(cfg, unit, message):
             print(
                 f"{ts_prefix}Ignore notification <rate limited> ({tag}/{unit}): {message}",
                 flush=True,
