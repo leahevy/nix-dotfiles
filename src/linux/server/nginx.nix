@@ -104,7 +104,8 @@ args@{
           commonHttpConfig = "access_log syslog:server=unix:/dev/log combined;";
           appendHttpConfig = ''
             server {
-              listen 443 ssl default_server;
+              listen 0.0.0.0:443 ssl default_server;
+              listen [::0]:443 ssl default_server;
               ssl_reject_handshake on;
             }
           '';
