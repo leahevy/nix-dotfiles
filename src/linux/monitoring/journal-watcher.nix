@@ -564,28 +564,6 @@ args@{
                     icon = "dialog-information";
                   };
                 }
-                {
-                  service = "systemd-logind.service";
-                  tag = "systemd-logind";
-                  string = "The system will power off now!";
-                  ignoreRateLimiting = true;
-                  mapping = {
-                    label = "System";
-                    title = "Powering Off";
-                    icon = "system-shutdown";
-                  };
-                }
-                {
-                  service = "systemd-logind.service";
-                  tag = "systemd-logind";
-                  string = "The system will reboot now!";
-                  ignoreRateLimiting = true;
-                  mapping = {
-                    label = "System";
-                    title = "Rebooting";
-                    icon = "system-reboot";
-                  };
-                }
               ];
 
           allHighlightPatterns =
@@ -823,6 +801,56 @@ args@{
               ]
               ++ lib.optionals (pushover.script != null) [ pushover.script ];
           };
+
+          systemd.services.nx-shutdown-notify =
+            lib.mkIf
+              (config.nx.global.deploymentMode == "server" || config.nx.global.deploymentMode == "managed")
+              {
+                description = "NX Shutdown Notification";
+                wantedBy = [ "multi-user.target" ];
+                after = [ "network.target" ];
+                serviceConfig = {
+                  Type = "oneshot";
+                  RemainAfterExit = true;
+                  ExecStart = "${pkgs.coreutils}/bin/true";
+                  ExecStop = "${pkgs.writeShellScript "nx-shutdown-notify-stop" ''
+                    set +e
+                    mode=""
+                    if ${pkgs.systemd}/bin/systemctl list-jobs 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q "reboot.target.*start"; then
+                      mode="reboot"
+                    elif ${pkgs.systemd}/bin/systemctl list-jobs 2>/dev/null | ${pkgs.gnugrep}/bin/grep -qE "(poweroff|halt).target.*start"; then
+                      mode="poweroff"
+                    elif [ -f /run/systemd/shutdown/scheduled ]; then
+                      mode=$(${pkgs.gnugrep}/bin/grep "^MODE=" /run/systemd/shutdown/scheduled | ${pkgs.coreutils}/bin/cut -d= -f2 | ${pkgs.coreutils}/bin/tr -d "[:space:]")
+                    fi
+                    case "$mode" in
+                      reboot)
+                        ${pushover.send {
+                          title = "System";
+                          message = "System is rebooting";
+                          type = "info";
+                        }}
+                        ;;
+                      poweroff|halt|kexec)
+                        ${pushover.send {
+                          title = "System";
+                          message = "System is powering off";
+                          type = "warn";
+                        }}
+                        ;;
+                      *)
+                        ${pushover.send {
+                          title = "System";
+                          message = "System is going down";
+                          type = "warn";
+                        }}
+                        ;;
+                    esac
+                    exit 0
+                  ''}";
+                  NoNewPrivileges = true;
+                };
+              };
 
           system.extraDependencies = [ regexValidation ];
 
