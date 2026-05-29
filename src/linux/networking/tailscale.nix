@@ -40,12 +40,10 @@ args@{
             "none";
 
         extraUpFlags = [
-          "--accept-routes"
           "--advertise-tags=tag:${self.host.hostname}"
         ]
-        ++ lib.optionals self.settings.exitNode [
-          "--advertise-exit-node"
-        ]
+        ++ lib.optionals self.settings.acceptRoutes [ "--accept-routes" ]
+        ++ lib.optionals self.settings.exitNode [ "--advertise-exit-node" ]
         ++ lib.optionals (self.settings.subnetRoutes != [ ]) [
           "--advertise-routes=${lib.concatStringsSep "," self.settings.subnetRoutes}"
         ];
