@@ -582,7 +582,7 @@ args@{
             wantedBy = [ "timers.target" ];
             timerConfig = {
               OnBootSec = healthInterval;
-              OnActiveSec = healthInterval;
+              OnUnitActiveSec = healthInterval;
               Persistent = true;
               RandomizedDelaySec = healthRandomDelaySec;
             };
