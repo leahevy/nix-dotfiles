@@ -220,6 +220,7 @@ args@{
       baseHighlightPatterns = [
         {
           tag = "nixos";
+          string = "switching to system configuration";
           all = true;
           ignoreRateLimiting = true;
           mapping = {
