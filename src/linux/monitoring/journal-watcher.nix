@@ -223,6 +223,9 @@ args@{
           string = "switching to system configuration";
           all = true;
           ignoreRateLimiting = true;
+          channels = {
+            pushover = false;
+          };
           mapping = {
             label = "NixOS";
             title = "System Switch";
@@ -563,6 +566,20 @@ args@{
                     label = "System";
                     title = "Boot Complete";
                     icon = "dialog-information";
+                  };
+                }
+                {
+                  tag = "nixos";
+                  string = "switching to system configuration";
+                  all = true;
+                  ignoreRateLimiting = true;
+                  channels = {
+                    user = false;
+                  };
+                  mapping = {
+                    label = "NixOS";
+                    title = "System Switch";
+                    icon = "applications-science";
                   };
                 }
               ];
