@@ -33,6 +33,10 @@ args@{
   };
 
   module = {
+    ifEnabled.linux.server.healthchecks.enabled = config: {
+      nx.linux.server.healthchecks.requireServicesUp = [ "nginx.service" ];
+    };
+
     ifEnabled.linux.services.fail2ban = {
       linux.system = config: {
         services.fail2ban.jails.nginx-http-auth = ''
