@@ -276,7 +276,7 @@ args@{
             if [[ $free_pct -lt ${toString diskFreeThresholdPct} ]]; then
               FAILURES+=("$mnt: $free_pct% free")
             fi
-          done < <(${pkgs.coreutils}/bin/df -l --output=pcent,target 2>/dev/null | tail -n +2)
+          done < <(${pkgs.coreutils}/bin/df -l -x tmpfs -x devtmpfs --output=pcent,target 2>/dev/null | tail -n +2)
           if [[ ''${#FAILURES[@]} -gt 0 ]]; then
             echo "Low disk space:"
             printf '  %s\n' "''${FAILURES[@]}"
