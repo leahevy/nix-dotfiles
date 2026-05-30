@@ -224,7 +224,16 @@ args@{
           all = true;
           ignoreRateLimiting = true;
           channels = {
-            pushover = false;
+            pushover =
+              if
+                helpers.isDeploymentMode self [
+                  "server"
+                  "managed"
+                ]
+              then
+                null
+              else
+                false;
           };
           mapping = {
             label = "NixOS";
@@ -566,20 +575,6 @@ args@{
                     label = "System";
                     title = "Boot Complete";
                     icon = "dialog-information";
-                  };
-                }
-                {
-                  tag = "nixos";
-                  string = "switching to system configuration";
-                  all = true;
-                  ignoreRateLimiting = true;
-                  channels = {
-                    user = false;
-                  };
-                  mapping = {
-                    label = "NixOS";
-                    title = "System Switch";
-                    icon = "applications-science";
                   };
                 }
               ];
