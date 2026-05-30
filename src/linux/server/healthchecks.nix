@@ -536,6 +536,7 @@ args@{
               Type = "oneshot";
               User = "root";
               TimeoutStartSec = serviceTimeoutSec;
+              SuccessExitStatus = 1;
               ExecStart = makeServiceCheckScript { inherit endpointName verifyServices checkScript; };
             };
           }
@@ -562,6 +563,7 @@ args@{
               Type = "oneshot";
               User = "root";
               TimeoutStartSec = serviceTimeoutSec;
+              SuccessExitStatus = 1;
               ExecStart = makeTimerScript {
                 endpointName = regularEndpointName;
                 checks = allRegularChecks;
@@ -591,6 +593,7 @@ args@{
               Type = "oneshot";
               User = "root";
               TimeoutStartSec = serviceTimeoutSec;
+              SuccessExitStatus = 1;
               ExecStart = makeTimerScript {
                 endpointName = dailyEndpointName;
                 checks = allDailyChecks;
