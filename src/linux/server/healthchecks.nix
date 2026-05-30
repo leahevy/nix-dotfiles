@@ -414,10 +414,15 @@ args@{
             printf 'data-binary = @%s\n' "$REPORT_FILE" >> "$CURL_CONFIG"
             MAX_WAIT=${toString networkTimeoutSec}
             WAITED=0
+            CURL_ERR="$TMPDIR_HC/curl-err"
             while true; do
               if ${pkgs.curl}/bin/curl -fsS -m 30 --connect-timeout 10 \
-                --config "$CURL_CONFIG" 2>/dev/null; then
+                --config "$CURL_CONFIG" 2>"$CURL_ERR"; then
                 break
+              fi
+              if [[ -s "$CURL_ERR" ]]; then
+                ${pkgs.coreutils}/bin/cat "$CURL_ERR" \
+                  | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
               fi
               if [[ $WAITED -ge $MAX_WAIT ]]; then
                 echo "Failed to reach healthchecks endpoint after ${toString networkTimeoutSec}s" >&2
