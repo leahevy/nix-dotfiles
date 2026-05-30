@@ -70,6 +70,10 @@ args@{
               autocorrect = "prompt";
             };
 
+            credential = {
+              helper = lib.mkDefault "cache --timeout=10800";
+            };
+
             url = lib.mkIf (!self.settings.disableSSHRewrites) (
               lib.listToAttrs (
                 map (server: {
