@@ -675,8 +675,12 @@ args@{
               --property=Result --property=ExecMainCode 2>/dev/null || true)
             TRIGGER_RESULT=$(printf '%s\n' "$_trigger_props" | ${pkgs.gawk}/bin/awk -F= '/^Result=/{print $2}')
             TRIGGER_MAIN_CODE=$(printf '%s\n' "$_trigger_props" | ${pkgs.gawk}/bin/awk -F= '/^ExecMainCode=/{print $2}')
-            if [[ "$TRIGGER_RESULT" != "success" ]] || \
-               [[ -n "$TRIGGER_MAIN_CODE" && "$TRIGGER_MAIN_CODE" != "exited" ]]; then
+            _trigger_killed=0
+            if [[ "$TRIGGER_MAIN_CODE" == "2" || "$TRIGGER_MAIN_CODE" == "3" || \
+                  "$TRIGGER_MAIN_CODE" == "killed" || "$TRIGGER_MAIN_CODE" == "dumped" ]]; then
+              _trigger_killed=1
+            fi
+            if [[ "$TRIGGER_RESULT" != "success" ]] || [[ $_trigger_killed -eq 1 ]]; then
               printf '[FAIL] %s (result: %s, code: %s)\n' \
                 ${lib.escapeShellArg triggerUnit} "$TRIGGER_RESULT" "$TRIGGER_MAIN_CODE" >> "$DETAIL_FILE"
               FAILED=$((FAILED + 1))
