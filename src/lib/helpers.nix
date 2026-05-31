@@ -367,6 +367,11 @@ rec {
     in
     "${builtins.substring 0 8 hash}-${builtins.substring 8 4 hash}-${builtins.substring 12 4 hash}-${builtins.substring 16 4 hash}-${builtins.substring 20 12 hash}";
 
+  isValidUUID =
+    str:
+    builtins.match "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" str
+    != null;
+
   # Get absolute path to file in any input
   # Usage: getInputFilePath $INPUT $SUBPATH
   getInputFilePath = input: subPath: input + "/" + subPath;

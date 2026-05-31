@@ -130,6 +130,17 @@ args@{
       description = "TimeoutStartSec for all generated health check services in seconds.";
     };
 
+    healthchecksBaseUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "https://healthchecks.io";
+      description = "Base URL of the healthchecks.io web UI, used to build dashboard links. Override for self-hosted instances.";
+    };
+
+    projectUUID = lib.mkOption {
+      type = lib.types.str;
+      description = "Healthchecks.io project UUID (not the ping key) used to build the dashboard URL included in notifications.";
+    };
+
     servicesHealthChecks = lib.mkOption {
       type = lib.types.attrsOf (
         lib.types.submodule {
@@ -197,6 +208,8 @@ args@{
         checkSmartDisk,
         servicesHealthChecks,
         serviceTimeoutSec,
+        healthchecksBaseUrl,
+        projectUUID,
         ...
       }:
       let
@@ -205,6 +218,7 @@ args@{
         mainUserUid = toString config.users.users.${self.host.mainUser.username}.uid;
         deploymentMode = config.nx.global.deploymentMode;
         secretPath = config.sops.secrets."${hostname}-healthchecks-uuid".path;
+        projectUrl = "${healthchecksBaseUrl}/projects/${projectUUID}/checks/";
 
         effectiveRegular =
           if enableRegularHealthCheck != null then
@@ -438,6 +452,8 @@ args@{
                   title = "Healthchecks.io";
                   message = "Auto-created check: ${endpointName}";
                   type = "info";
+                  url = projectUrl;
+                  urlTitle = "View all checks";
                 };
           in
           ''
@@ -679,6 +695,26 @@ args@{
       in
       lib.mkMerge [
         {
+          assertions = [
+            {
+              assertion =
+                (pingBaseUrl == "https://hc-ping.com") == (healthchecksBaseUrl == "https://healthchecks.io");
+              message = "linux.server.healthchecks: pingBaseUrl and healthchecksBaseUrl must both be overridden for self-hosted instances (only one is still at its default)!";
+            }
+            {
+              assertion = lib.hasPrefix "https://" pingBaseUrl;
+              message = "linux.server.healthchecks: pingBaseUrl must use HTTPS!";
+            }
+            {
+              assertion = lib.hasPrefix "https://" healthchecksBaseUrl;
+              message = "linux.server.healthchecks: healthchecksBaseUrl must use HTTPS!";
+            }
+            {
+              assertion = helpers.isValidUUID projectUUID;
+              message = "linux.server.healthchecks: projectUUID must be a valid UUID!";
+            }
+          ];
+
           sops.secrets."${hostname}-healthchecks-uuid" = {
             format = "binary";
             sopsFile = self.profile.secretsPath "healthchecks-uuid";
