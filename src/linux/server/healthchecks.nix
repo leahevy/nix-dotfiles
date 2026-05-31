@@ -671,10 +671,14 @@ args@{
             done
 
             TOTAL=$((TOTAL + 1))
-            TRIGGER_RESULT=$(${pkgs.systemd}/bin/systemctl show ${lib.escapeShellArg triggerUnit} \
-              --property=Result --value 2>/dev/null || echo "unknown")
-            if [[ "$TRIGGER_RESULT" != "success" ]]; then
-              printf '[FAIL] %s (result: %s)\n' ${lib.escapeShellArg triggerUnit} "$TRIGGER_RESULT" >> "$DETAIL_FILE"
+            _trigger_props=$(${pkgs.systemd}/bin/systemctl show ${lib.escapeShellArg triggerUnit} \
+              --property=Result --property=ExecMainCode 2>/dev/null || true)
+            TRIGGER_RESULT=$(printf '%s\n' "$_trigger_props" | ${pkgs.gawk}/bin/awk -F= '/^Result=/{print $2}')
+            TRIGGER_MAIN_CODE=$(printf '%s\n' "$_trigger_props" | ${pkgs.gawk}/bin/awk -F= '/^ExecMainCode=/{print $2}')
+            if [[ "$TRIGGER_RESULT" != "success" ]] || \
+               [[ -n "$TRIGGER_MAIN_CODE" && "$TRIGGER_MAIN_CODE" != "exited" ]]; then
+              printf '[FAIL] %s (result: %s, code: %s)\n' \
+                ${lib.escapeShellArg triggerUnit} "$TRIGGER_RESULT" "$TRIGGER_MAIN_CODE" >> "$DETAIL_FILE"
               FAILED=$((FAILED + 1))
             else
               printf '[OK ] %s\n' ${lib.escapeShellArg triggerUnit} >> "$DETAIL_FILE"
