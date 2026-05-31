@@ -119,6 +119,7 @@ args@{
           settings = {
             PAPERLESS_OCR_LANGUAGE = ocrLanguage;
             PAPERLESS_ADMIN_USER = adminUser;
+            PAPERLESS_CONSUMER_RECURSIVE = true;
             PAPERLESS_USE_X_FORWARD_HOST = true;
             PAPERLESS_PROXY_SSL_HEADER = [
               "HTTP_X_FORWARDED_PROTO"
