@@ -424,9 +424,16 @@ args@{
           '';
 
         curlWithRetry =
-          { endpointName, networkTimeoutSec }:
+          {
+            endpointName,
+            networkTimeoutSec,
+            urlPath ? null,
+            includeBody ? true,
+            failOnTimeout ? true,
+          }:
           let
             sleepInterval = if networkTimeoutSec <= 60 then "10" else "60";
+            dynamicPath = urlPath == null;
             pushover = config.nx.linux.notifications.pushover;
             notifyCreatedCheck =
               if pushover.send == null then
@@ -439,24 +446,37 @@ args@{
                 };
           in
           ''
+            : ''${TMPDIR_HC:?TMPDIR_HC must be set by the calling script}
             CURL_CONFIG="$TMPDIR_HC/curl-config"
             ${pkgs.coreutils}/bin/touch "$CURL_CONFIG"
             ${pkgs.coreutils}/bin/chmod 600 "$CURL_CONFIG"
             PING_KEY=$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg secretPath})
-            if [[ $FAILED -eq 0 ]]; then
-              printf 'url = %s/%s/${endpointName}?create=1\n' \
-                "${pingBaseUrl}" "$PING_KEY" > "$CURL_CONFIG"
-            else
-              printf 'url = %s/%s/${endpointName}/fail?create=1\n' \
-                "${pingBaseUrl}" "$PING_KEY" > "$CURL_CONFIG"
-            fi
-            if [[ $FAILED -gt 0 ]]; then
-              ${pkgs.coreutils}/bin/cat "$REPORT_FILE" \
-                | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
-            fi
-            ${pkgs.coreutils}/bin/head -c 100000 "$REPORT_FILE" > "$TMPDIR_HC/report-trunc"
-            ${pkgs.coreutils}/bin/mv "$TMPDIR_HC/report-trunc" "$REPORT_FILE"
-            printf 'data-binary = @%s\n' "$REPORT_FILE" >> "$CURL_CONFIG"
+            ${
+              if dynamicPath then
+                ''
+                  if [[ ''${FAILED:-0} -eq 0 ]]; then
+                    printf 'url = %s/%s/${endpointName}?create=1\n' \
+                      "${pingBaseUrl}" "$PING_KEY" > "$CURL_CONFIG"
+                  else
+                    printf 'url = %s/%s/${endpointName}/fail?create=1\n' \
+                      "${pingBaseUrl}" "$PING_KEY" > "$CURL_CONFIG"
+                  fi
+                ''
+              else
+                ''
+                  printf 'url = %s/%s/${endpointName}${urlPath}?create=1\n' \
+                    "${pingBaseUrl}" "$PING_KEY" > "$CURL_CONFIG"
+                ''
+            }
+            ${lib.optionalString includeBody ''
+              if [[ ''${FAILED:-0} -gt 0 ]]; then
+                ${pkgs.coreutils}/bin/cat "''${REPORT_FILE:-$TMPDIR_HC/report}" \
+                  | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
+              fi
+              ${pkgs.coreutils}/bin/head -c 100000 "''${REPORT_FILE:-$TMPDIR_HC/report}" > "$TMPDIR_HC/report-trunc"
+              ${pkgs.coreutils}/bin/mv "$TMPDIR_HC/report-trunc" "''${REPORT_FILE:-$TMPDIR_HC/report}"
+              printf 'data-binary = @%s\n' "''${REPORT_FILE:-$TMPDIR_HC/report}" >> "$CURL_CONFIG"
+            ''}
             MAX_WAIT=${toString networkTimeoutSec}
             WAITED=0
             CURL_ERR="$TMPDIR_HC/curl-err"
@@ -477,7 +497,7 @@ args@{
               fi
               if [[ $WAITED -ge $MAX_WAIT ]]; then
                 echo "Failed to reach healthchecks endpoint after ${toString networkTimeoutSec}s" >&2
-                exit 1
+                ${if failOnTimeout then "exit 1" else "break"}
               fi
               ${pkgs.coreutils}/bin/sleep ${sleepInterval}
               WAITED=$((WAITED + ${sleepInterval}))
@@ -516,7 +536,25 @@ args@{
             ${curlWithRetry { inherit endpointName networkTimeoutSec; }}
           '';
 
-        makeServiceCheckScript =
+        makeStartPingScript =
+          endpointName:
+          pkgs.writeShellScript "nx-hc-start-${endpointName}" ''
+            set -euo pipefail
+            TMPDIR_HC=$(${pkgs.coreutils}/bin/mktemp -d)
+            trap "${pkgs.coreutils}/bin/rm -rf '$TMPDIR_HC'" EXIT
+            REPORT_FILE="$TMPDIR_HC/report"
+            FAILED=0
+            ${curlWithRetry {
+              inherit endpointName;
+              networkTimeoutSec = 60;
+              urlPath = "/start";
+              includeBody = false;
+              failOnTimeout = false;
+            }}
+            exit 0
+          '';
+
+        makeServiceStopScript =
           {
             endpointName,
             triggerUnit,
@@ -528,7 +566,7 @@ args@{
             compiledCheckScript =
               if checkScript != null then makeCheckScript "svc-${endpointName}" checkScript else null;
           in
-          pkgs.writeShellScript "nx-hc-svc-${endpointName}" ''
+          pkgs.writeShellScript "nx-hc-stop-${endpointName}" ''
             set -euo pipefail
             TMPDIR_HC=$(${pkgs.coreutils}/bin/mktemp -d)
             trap "${pkgs.coreutils}/bin/rm -rf '$TMPDIR_HC'" EXIT
@@ -536,6 +574,14 @@ args@{
             DETAIL_FILE="$TMPDIR_HC/detail"
             FAILED=0
             TOTAL=0
+
+            TOTAL=$((TOTAL + 1))
+            if [[ "''${EXIT_STATUS:-0}" != "0" ]]; then
+              printf '[FAIL] %s (exit %s)\n' ${lib.escapeShellArg triggerUnit} "''${EXIT_STATUS:-?}" >> "$DETAIL_FILE"
+              FAILED=$((FAILED + 1))
+            else
+              printf '[OK ] %s\n' ${lib.escapeShellArg triggerUnit} >> "$DETAIL_FILE"
+            fi
 
             ${lib.concatStringsSep "\n" (
               map (svc: ''
@@ -614,6 +660,7 @@ args@{
               inherit endpointName;
               networkTimeoutSec = 60;
             }}
+            exit 0
           '';
 
         serviceCheckUnits = lib.mapAttrs' (
@@ -622,32 +669,29 @@ args@{
             entryName = sanitizeName key;
             endpointName = "${hostname}-${entryName}";
             triggerUnit = entry.trigger.runsAfter;
+            serviceBaseName = lib.removeSuffix ".service" triggerUnit;
             verifyServices = entry.check.verifySuccess;
             checkScript = entry.check.checkScript;
             includeLogs = entry.includeLogs;
           in
-          lib.nameValuePair "nx-hc-${sanitizeName entryName}" {
-            description = "Healthcheck ping: ${key}";
-            wantedBy = [ triggerUnit ];
-            after = [
-              triggerUnit
-              "network-online.target"
-            ];
+          lib.nameValuePair serviceBaseName {
             wants = [ "network-online.target" ];
+            after = [ "network-online.target" ];
             serviceConfig = {
-              Type = "oneshot";
-              User = "root";
-              TimeoutStartSec = serviceTimeoutSec;
-              SuccessExitStatus = 1;
-              ExecStart = makeServiceCheckScript {
-                inherit
-                  endpointName
-                  triggerUnit
-                  verifyServices
-                  checkScript
-                  includeLogs
-                  ;
-              };
+              ExecStartPre = lib.mkBefore [ "-${makeStartPingScript endpointName}" ];
+              ExecStopPost = lib.mkAfter [
+                "-${
+                  makeServiceStopScript {
+                    inherit
+                      endpointName
+                      triggerUnit
+                      verifyServices
+                      checkScript
+                      includeLogs
+                      ;
+                  }
+                }"
+              ];
             };
           }
         ) servicesHealthChecks;
