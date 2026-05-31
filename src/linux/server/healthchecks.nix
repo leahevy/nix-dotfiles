@@ -215,6 +215,12 @@ args@{
       nx.linux.server.healthchecks.healthchecksFinalChecksURL =
         "${config.nx.linux.server.healthchecks.healthchecksBaseUrl}/projects/${config.nx.linux.server.healthchecks.projectUUID}/checks/";
       nx.linux.server.healthchecks.requireServicesUp = [ "nix-daemon.service" ];
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          tag = "nx-healthcheck";
+          string = "curl:";
+        }
+      ];
     };
 
     ifEnabled.linux.security.letsencrypt.enabled = config: {
