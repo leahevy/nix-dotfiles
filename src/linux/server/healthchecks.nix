@@ -737,9 +737,9 @@ args@{
             wants = [ "network-online.target" ];
             after = [ "network-online.target" ];
             serviceConfig = {
-              ExecStartPre = lib.mkBefore [ "-${makeStartPingScript endpointName}" ];
+              ExecStartPre = lib.mkBefore [ "+-${makeStartPingScript endpointName}" ];
               ExecStopPost = lib.mkAfter [
-                "-${
+                "+-${
                   makeServiceStopScript {
                     inherit
                       endpointName
