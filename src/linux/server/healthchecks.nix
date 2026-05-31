@@ -369,17 +369,17 @@ args@{
             echo "No mounted SATA/NVMe devices found" >&3
             exit 0
           fi
-          printf 'Checking: %s\n' "''${CHECKED[*]}" >&3
-          FAILURES=()
+          SMART_FAILED=0
           for disk in "''${CHECKED[@]}"; do
-            if ! ${pkgs.smartmontools}/bin/smartctl -H "$disk" 2>&1 \
+            if ${pkgs.smartmontools}/bin/smartctl -H "$disk" 2>&1 \
               | ${pkgs.gnugrep}/bin/grep -qE "PASSED|OK"; then
-              FAILURES+=("$disk")
+              printf '[OK ] %s\n' "$disk" >&3
+            else
+              printf '[FAIL] %s\n' "$disk" >&3
+              SMART_FAILED=$((SMART_FAILED + 1))
             fi
           done
-          if [[ ''${#FAILURES[@]} -gt 0 ]]; then
-            echo "SMART failures:"
-            printf '  %s\n' "''${FAILURES[@]}"
+          if [[ $SMART_FAILED -gt 0 ]]; then
             exit 1
           fi
         '';
