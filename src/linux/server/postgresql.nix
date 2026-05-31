@@ -36,6 +36,10 @@ args@{
   };
 
   module = {
+    linux.home = config: {
+      home.shellAliases.psql = "sudo -u postgres psql";
+    };
+
     linux.system =
       {
         config,
