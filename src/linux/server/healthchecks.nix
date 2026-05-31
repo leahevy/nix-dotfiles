@@ -279,22 +279,36 @@ args@{
             ${cmd}
           '';
 
-        makeServiceActiveCheck = svc: ''
-          _elapsed=0
-          while true; do
-            _state=$(${pkgs.systemd}/bin/systemctl is-active ${lib.escapeShellArg svc} 2>/dev/null || true)
-            if [[ "$_state" == "active" ]]; then
-              exit 0
+        servicesGroupedExpr = ''
+          _svc_failed=0
+          ${lib.concatMapStringsSep "\n" (svc: ''
+            _elapsed=0
+            _svc_ok=0
+            while true; do
+              _state=$(${pkgs.systemd}/bin/systemctl is-active ${lib.escapeShellArg svc} 2>/dev/null || true)
+              if [[ "$_state" == "active" ]]; then
+                _svc_ok=1
+                break
+              fi
+              if [[ "$_state" != "activating" && "$_state" != "deactivating" && "$_state" != "reloading" ]]; then
+                break
+              fi
+              if [[ $_elapsed -ge 10 ]]; then
+                break
+              fi
+              ${pkgs.coreutils}/bin/sleep 1
+              _elapsed=$((_elapsed + 1))
+            done
+            if [[ $_svc_ok -eq 1 ]]; then
+              printf '[OK ] %s\n' ${lib.escapeShellArg svc} >&3
+            else
+              printf '[FAIL] %s\n' ${lib.escapeShellArg svc} >&3
+              _svc_failed=$((_svc_failed + 1))
             fi
-            if [[ "$_state" != "activating" && "$_state" != "deactivating" && "$_state" != "reloading" ]]; then
-              exit 1
-            fi
-            if [[ $_elapsed -ge 10 ]]; then
-              exit 1
-            fi
-            ${pkgs.coreutils}/bin/sleep 1
-            _elapsed=$((_elapsed + 1))
-          done
+          '') requireServicesUp}
+          if [[ $_svc_failed -gt 0 ]]; then
+            exit 1
+          fi
         '';
 
         memoryCheckExpr = ''
@@ -418,12 +432,7 @@ args@{
           '';
           "Memory and swap free" = memoryCheckExpr;
         }
-        // lib.listToAttrs (
-          map (svc: {
-            name = "${svc} running";
-            value = makeServiceActiveCheck svc;
-          }) requireServicesUp
-        )
+        // lib.optionalAttrs (requireServicesUp != [ ]) { "Services" = servicesGroupedExpr; }
         // regularHealthChecks;
 
         allDailyChecks =
