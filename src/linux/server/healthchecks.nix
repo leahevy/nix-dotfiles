@@ -658,10 +658,13 @@ args@{
             TOTAL=0
 
             while true; do
-              _trigger_state=$(${pkgs.systemd}/bin/systemctl show ${lib.escapeShellArg triggerUnit} \
-                --property=ActiveState --value 2>/dev/null || echo "unknown")
+              _trigger_out=$(${pkgs.systemd}/bin/systemctl show ${lib.escapeShellArg triggerUnit} \
+                --property=ActiveState --property=SubState 2>/dev/null || true)
+              _trigger_state=$(printf '%s\n' "$_trigger_out" | ${pkgs.gawk}/bin/awk -F= '/^ActiveState=/{print $2}')
+              _trigger_substate=$(printf '%s\n' "$_trigger_out" | ${pkgs.gawk}/bin/awk -F= '/^SubState=/{print $2}')
               if [[ "$_trigger_state" != "active" && "$_trigger_state" != "activating" && \
-                    "$_trigger_state" != "deactivating" && "$_trigger_state" != "reloading" ]]; then
+                    "$_trigger_state" != "deactivating" && "$_trigger_state" != "reloading" ]] || \
+                 [[ "$_trigger_substate" == "exited" ]]; then
                 break
               fi
               ${pkgs.coreutils}/bin/sleep 2
