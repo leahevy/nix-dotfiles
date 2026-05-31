@@ -58,6 +58,12 @@ args@{
       description = "Service units that must be active, each generating a named check in the regular health check.";
     };
 
+    tempMaxCelsius = lib.mkOption {
+      type = lib.types.int;
+      default = 79;
+      description = "Maximum temperature in Celsius across all thermal zones before the temperature check fails.";
+    };
+
     memoryFreeThresholdPct = lib.mkOption {
       type = lib.types.int;
       default = 20;
@@ -207,6 +213,7 @@ args@{
         healthRandomDelaySec,
         regularHealthChecks,
         requireServicesUp,
+        tempMaxCelsius,
         memoryFreeThresholdPct,
         enableDailyHealthCheck,
         dailyName,
@@ -410,6 +417,40 @@ args@{
           fi
         '';
 
+        thermalCheckExpr = ''
+          _zone_count=0
+          _temp_max=0
+          _zone_names=()
+          _zone_temps=()
+          for _zone_file in /sys/class/thermal/thermal_zone*/temp; do
+            [[ -f "$_zone_file" ]] || continue
+            _temp_raw=$(${pkgs.coreutils}/bin/cat "$_zone_file" 2>/dev/null || true)
+            [[ "$_temp_raw" =~ ^[0-9]+$ ]] || continue
+            _temp_c=$((_temp_raw / 1000))
+            _zone_dir="''${_zone_file%/temp}"
+            _zone_names+=("''${_zone_dir##*/}")
+            _zone_temps+=($_temp_c)
+            _zone_count=$((_zone_count + 1))
+            if [[ $_temp_c -gt $_temp_max ]]; then
+              _temp_max=$_temp_c
+            fi
+          done
+          if [[ $_zone_count -eq 0 ]]; then
+            printf 'no thermal zones found\n' >&3
+            exit 0
+          fi
+          if [[ $_zone_count -eq 1 ]]; then
+            printf 'core: %dC\n' "$_temp_max" >&3
+          else
+            for (( _i=0; _i<_zone_count; _i++ )); do
+              printf '%s: %dC\n' "''${_zone_names[$_i]}" "''${_zone_temps[$_i]}" >&3
+            done
+          fi
+          if [[ $_temp_max -ge ${toString tempMaxCelsius} ]]; then
+            exit 1
+          fi
+        '';
+
         allRegularChecks = {
           "Server is up" = "true";
           "No failed system services" = ''
@@ -432,6 +473,7 @@ args@{
           '';
           "Memory and swap free" = memoryCheckExpr;
         }
+        // lib.optionalAttrs (!self.isVirtual) { "Temperature" = thermalCheckExpr; }
         // lib.optionalAttrs (requireServicesUp != [ ]) { "Services" = servicesGroupedExpr; }
         // regularHealthChecks;
 
