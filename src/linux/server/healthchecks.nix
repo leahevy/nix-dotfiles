@@ -427,6 +427,16 @@ args@{
           { endpointName, networkTimeoutSec }:
           let
             sleepInterval = if networkTimeoutSec <= 60 then "10" else "60";
+            pushover = config.nx.linux.notifications.pushover;
+            notifyCreatedCheck =
+              if pushover.send == null then
+                ""
+              else
+                pushover.send {
+                  title = "Healthchecks.io";
+                  message = "Auto-created check: ${endpointName}";
+                  type = "info";
+                };
           in
           ''
             CURL_CONFIG="$TMPDIR_HC/curl-config"
@@ -434,10 +444,10 @@ args@{
             ${pkgs.coreutils}/bin/chmod 600 "$CURL_CONFIG"
             PING_KEY=$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg secretPath})
             if [[ $FAILED -eq 0 ]]; then
-              printf 'url = %s/%s/${endpointName}\n' \
+              printf 'url = %s/%s/${endpointName}?create=1\n' \
                 "${pingBaseUrl}" "$PING_KEY" > "$CURL_CONFIG"
             else
-              printf 'url = %s/%s/${endpointName}/fail\n' \
+              printf 'url = %s/%s/${endpointName}/fail?create=1\n' \
                 "${pingBaseUrl}" "$PING_KEY" > "$CURL_CONFIG"
             fi
             if [[ $FAILED -gt 0 ]]; then
@@ -451,8 +461,14 @@ args@{
             WAITED=0
             CURL_ERR="$TMPDIR_HC/curl-err"
             while true; do
-              if ${pkgs.curl}/bin/curl -fsS -m 30 --connect-timeout 10 \
-                --config "$CURL_CONFIG" 2>"$CURL_ERR"; then
+              HTTP_CODE=$(${pkgs.curl}/bin/curl -sS -m 30 --connect-timeout 10 \
+                --config "$CURL_CONFIG" -w '%{http_code}' -o /dev/null 2>"$CURL_ERR" || true)
+              if [[ "$HTTP_CODE" =~ ^2[0-9]{2}$ ]]; then
+                if [[ "$HTTP_CODE" == "201" ]]; then
+                  echo "Healthchecks.io check auto-created: ${endpointName}" \
+                    | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
+                  ${notifyCreatedCheck}
+                fi
                 break
               fi
               if [[ -s "$CURL_ERR" ]]; then
