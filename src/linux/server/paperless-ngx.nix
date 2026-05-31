@@ -140,7 +140,7 @@ args@{
 
     ifEnabled.linux.server.healthchecks = {
       enabled = config: {
-        nx.linux.server.healthchecks.requireServicesUp = [ "paperless.service" ];
+        nx.linux.server.healthchecks.requireServicesUp = [ "paperless-web.service" ];
       };
     };
   };
