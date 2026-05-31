@@ -146,11 +146,6 @@ args@{
             check = lib.mkOption {
               type = lib.types.submodule {
                 options = {
-                  verifySuccess = lib.mkOption {
-                    type = lib.types.listOf lib.types.str;
-                    default = [ ];
-                    description = "Service units to check, any in a failed state counts as a failure.";
-                  };
                   checkScript = lib.mkOption {
                     type = lib.types.nullOr lib.types.str;
                     default = null;
@@ -159,7 +154,7 @@ args@{
                 };
               };
               default = { };
-              description = "Check conditions, all AND-combined, all must pass for the success ping.";
+              description = "Optional additional check scripts.";
             };
             includeLogs = lib.mkOption {
               type = lib.types.bool;
@@ -558,7 +553,6 @@ args@{
           {
             endpointName,
             triggerUnit,
-            verifyServices,
             checkScript,
             includeLogs,
           }:
@@ -582,18 +576,6 @@ args@{
             else
               printf '[OK ] %s\n' ${lib.escapeShellArg triggerUnit} >> "$DETAIL_FILE"
             fi
-
-            ${lib.concatStringsSep "\n" (
-              map (svc: ''
-                TOTAL=$((TOTAL + 1))
-                if ${pkgs.systemd}/bin/systemctl is-failed --quiet ${lib.escapeShellArg svc} 2>/dev/null; then
-                  printf '[FAIL] %s\n' ${lib.escapeShellArg svc} >> "$DETAIL_FILE"
-                  FAILED=$((FAILED + 1))
-                else
-                  printf '[OK ] %s\n' ${lib.escapeShellArg svc} >> "$DETAIL_FILE"
-                fi
-              '') verifyServices
-            )}
 
             ${lib.optionalString (compiledCheckScript != null) ''
               TOTAL=$((TOTAL + 1))
@@ -670,7 +652,6 @@ args@{
             endpointName = "${hostname}-${entryName}";
             triggerUnit = entry.trigger.runsAfter;
             serviceBaseName = lib.removeSuffix ".service" triggerUnit;
-            verifyServices = entry.check.verifySuccess;
             checkScript = entry.check.checkScript;
             includeLogs = entry.includeLogs;
           in
@@ -685,7 +666,6 @@ args@{
                     inherit
                       endpointName
                       triggerUnit
-                      verifyServices
                       checkScript
                       includeLogs
                       ;
