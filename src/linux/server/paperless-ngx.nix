@@ -100,6 +100,12 @@ args@{
           mode = "0400";
         };
 
+        systemd.tmpfiles.settings."10-paperless-export"."${basePath}/export".d = {
+          mode = "0750";
+          user = "paperless";
+          group = "paperless";
+        };
+
         services.paperless = {
           enable = true;
           domain = if domain != null then "${subdomain}.${domain}" else null;
