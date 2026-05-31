@@ -60,7 +60,7 @@ args@{
           enable = true;
           settings = settings // {
             shared_buffers = sharedBuffers;
-            max_connections = (builtins.foldl' (a: b: a + b) 0 connectionSlots) + 10;
+            max_connections = (builtins.foldl' (a: b: a + b) 0 connectionSlots) + 15;
           };
         };
 

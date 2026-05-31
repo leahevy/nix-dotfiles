@@ -53,7 +53,7 @@ args@{
 
   module = {
     enabled = config: {
-      nx.linux.server.postgresql.connectionSlots = [ 10 ];
+      nx.linux.server.postgresql.connectionSlots = [ 25 ];
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
           service = "redis-paperless.service";
