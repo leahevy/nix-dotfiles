@@ -435,6 +435,10 @@ args@{
               printf 'url = %s/%s/${endpointName}/fail\n' \
                 "${pingBaseUrl}" "$PING_KEY" > "$CURL_CONFIG"
             fi
+            if [[ $FAILED -gt 0 ]]; then
+              ${pkgs.coreutils}/bin/cat "$REPORT_FILE" \
+                | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
+            fi
             ${pkgs.coreutils}/bin/head -c 100000 "$REPORT_FILE" > "$TMPDIR_HC/report-trunc"
             ${pkgs.coreutils}/bin/mv "$TMPDIR_HC/report-trunc" "$REPORT_FILE"
             printf 'data-binary = @%s\n' "$REPORT_FILE" >> "$CURL_CONFIG"
