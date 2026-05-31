@@ -64,6 +64,12 @@ args@{
       description = "Maximum temperature in Celsius across all thermal zones before the temperature check fails.";
     };
 
+    loadMaxPerCore = lib.mkOption {
+      type = lib.types.int;
+      default = 1;
+      description = "Maximum 5-minute load average per CPU core before the load check fails.";
+    };
+
     memoryFreeThresholdPct = lib.mkOption {
       type = lib.types.int;
       default = 20;
@@ -214,6 +220,7 @@ args@{
         regularHealthChecks,
         requireServicesUp,
         tempMaxCelsius,
+        loadMaxPerCore,
         memoryFreeThresholdPct,
         enableDailyHealthCheck,
         dailyName,
@@ -451,6 +458,18 @@ args@{
           fi
         '';
 
+        loadCheckExpr = ''
+          _nproc=$(${pkgs.coreutils}/bin/nproc 2>/dev/null || echo 1)
+          ${pkgs.gawk}/bin/awk -v max=${toString loadMaxPerCore} -v nproc="$_nproc" '
+            {
+              load5 = $2
+              threshold = max * nproc
+              printf "load 5m: %.2f (%s cores, limit: %.1f)\n", load5, nproc, threshold > "/dev/fd/3"
+              exit (load5 > threshold)
+            }
+          ' /proc/loadavg
+        '';
+
         allRegularChecks = {
           "Server is up" = "true";
           "No failed system services" = ''
@@ -474,6 +493,9 @@ args@{
           "Memory and swap free" = memoryCheckExpr;
         }
         // lib.optionalAttrs (!self.isVirtual) { "Temperature" = thermalCheckExpr; }
+        // {
+          "Load" = loadCheckExpr;
+        }
         // lib.optionalAttrs (requireServicesUp != [ ]) { "Services" = servicesGroupedExpr; }
         // regularHealthChecks;
 
