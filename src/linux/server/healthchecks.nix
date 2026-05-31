@@ -190,6 +190,7 @@ args@{
     enabled = config: {
       nx.linux.server.healthchecks.healthchecksFinalChecksURL =
         "${config.nx.linux.server.healthchecks.healthchecksBaseUrl}/projects/${config.nx.linux.server.healthchecks.projectUUID}/checks/";
+      nx.linux.server.healthchecks.requireServicesUp = [ "nix-daemon.service" ];
     };
 
     ifEnabled.linux.security.letsencrypt.enabled = config: {

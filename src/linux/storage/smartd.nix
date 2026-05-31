@@ -200,5 +200,11 @@ args@{
           ];
         };
       };
+
+    ifEnabled.linux.server.healthchecks = {
+      enabled = config: {
+        nx.linux.server.healthchecks.requireServicesUp = [ "smartd.service" ];
+      };
+    };
   };
 }

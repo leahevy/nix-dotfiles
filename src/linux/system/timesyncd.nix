@@ -20,5 +20,11 @@ args@{
         enable = lib.mkForce true;
       };
     };
+
+    ifEnabled.linux.server.healthchecks = {
+      enabled = config: {
+        nx.linux.server.healthchecks.requireServicesUp = [ "systemd-timesyncd.service" ];
+      };
+    };
   };
 }
