@@ -597,6 +597,10 @@ with lib;
                     type = types.either types.str types.bool;
                     default = false;
                   };
+                  syncthing = mkOption {
+                    type = types.either types.str types.bool;
+                    default = false;
+                  };
                 };
               };
               default = { };
