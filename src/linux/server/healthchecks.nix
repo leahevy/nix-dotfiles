@@ -153,9 +153,9 @@ args@{
           options = {
             trigger = lib.mkOption {
               type = lib.types.submodule {
-                options.runsAfter = lib.mkOption {
+                options.service = lib.mkOption {
                   type = lib.types.str;
-                  description = "Service unit this check is ordered after.";
+                  description = "Service unit this check is linked to.";
                 };
               };
               description = "Trigger configuration.";
@@ -680,7 +680,7 @@ args@{
           let
             entryName = sanitizeName key;
             endpointName = "${hostname}-${entryName}";
-            triggerUnit = entry.trigger.runsAfter;
+            triggerUnit = entry.trigger.service;
             serviceBaseName = lib.removeSuffix ".service" triggerUnit;
             checkScript = entry.check.checkScript;
             includeLogs = entry.includeLogs;
