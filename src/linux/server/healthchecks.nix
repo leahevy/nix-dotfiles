@@ -37,7 +37,7 @@ args@{
     healthInterval = lib.mkOption {
       type = lib.types.str;
       default = "60s";
-      description = "Interval between regular health check runs, passed to systemd OnActiveSec/OnBootSec.";
+      description = "Interval between regular health check runs, passed to systemd OnUnitInactiveSec/OnBootSec.";
     };
 
     healthRandomDelaySec = lib.mkOption {
@@ -618,7 +618,7 @@ args@{
             wantedBy = [ "timers.target" ];
             timerConfig = {
               OnBootSec = healthInterval;
-              OnUnitActiveSec = healthInterval;
+              OnUnitInactiveSec = healthInterval;
               Persistent = true;
               RandomizedDelaySec = healthRandomDelaySec;
             };
