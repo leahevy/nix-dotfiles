@@ -398,10 +398,23 @@ args@{
 
         allRegularChecks = {
           "Server is up" = "true";
-          "No failed system services" = "${pkgs.systemd}/bin/systemctl --failed --quiet";
+          "No failed system services" = ''
+            _failed=$(${pkgs.systemd}/bin/systemctl --failed --plain --no-legend --no-pager 2>/dev/null \
+              | ${pkgs.gawk}/bin/awk 'NF>0{print $1}')
+            if [[ -n "$_failed" ]]; then
+              printf '%s\n' "$_failed" >&3
+              exit 1
+            fi
+          '';
           "No failed user services" = ''
             ${pkgs.systemd}/bin/systemctl is-active --quiet "user@${mainUserUid}.service" 2>/dev/null || exit 0
-            ${pkgs.systemd}/bin/systemctl --user --failed --quiet --machine=${mainUser}@.host
+            _failed=$(${pkgs.systemd}/bin/systemctl --user --failed --plain --no-legend --no-pager \
+              --machine=${mainUser}@.host 2>/dev/null \
+              | ${pkgs.gawk}/bin/awk 'NF>0{print $1}')
+            if [[ -n "$_failed" ]]; then
+              printf '%s\n' "$_failed" >&3
+              exit 1
+            fi
           '';
           "Memory and swap free" = memoryCheckExpr;
         }
