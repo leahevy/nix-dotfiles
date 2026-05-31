@@ -255,12 +255,18 @@ args@{
 
         memoryCheckExpr = ''
           ${pkgs.gawk}/bin/awk '
-            /MemTotal/{t=$2} /MemFree/{f=$2} /SwapFree/{s=$2}
+            /MemTotal/{t=$2} /MemFree/{f=$2} /SwapTotal/{st=$2} /SwapFree/{sf=$2}
             END{
-              combined=(f+s)*100/t; mem=f*100/t; swap=s*100/t
-              printf "%.0f%% mem free, %.0f%% swap free (%.0f%% combined)\n", \
-                mem, swap, combined > "/dev/fd/3"
-              exit (combined < ${toString memoryFreeThresholdPct})
+              mem_used=(t>0) ? (t-f)*100/t : 0
+              if (st > 0) {
+                swap_used=(st-sf)*100/st
+                combined_free=(f+sf)*100/(t+st)
+                printf "%.0f%% mem used, %.0f%% swap used\n", mem_used, swap_used > "/dev/fd/3"
+              } else {
+                combined_free=(t>0) ? f*100/t : 100
+                printf "%.0f%% mem used\n", mem_used > "/dev/fd/3"
+              }
+              exit (combined_free < ${toString memoryFreeThresholdPct})
             }
           ' /proc/meminfo
         '';
