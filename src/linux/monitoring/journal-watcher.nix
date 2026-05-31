@@ -434,6 +434,7 @@ args@{
         config:
         let
           pushover = config.nx.linux.notifications.pushover;
+          hcUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
 
           opts = self.options config;
 
@@ -632,6 +633,8 @@ args@{
                 title = "{title_text_pushover}";
                 message = "{message_text_pushover}";
                 type = "{notify_type}";
+                url = hcUrl;
+                urlTitle = if hcUrl != null then "View healthchecks" else null;
               }
             else
               [ ];
