@@ -44,12 +44,6 @@ args@{
       description = "Whether all system users can write to the import directory.";
     };
 
-    enableTika = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Enable Apache Tika for Office document text extraction.";
-    };
-
     adminUser = lib.mkOption {
       type = lib.types.str;
       default = "admin";
@@ -69,7 +63,6 @@ args@{
         ocrLanguage,
         paperlessDataBasePath,
         importPublic,
-        enableTika,
         adminUser,
         ...
       }:
@@ -109,7 +102,6 @@ args@{
           mediaDir = "${basePath}/media";
           consumptionDir = "${basePath}/import";
           consumptionDirIsPublic = importPublic;
-          configureTika = enableTika;
           passwordFile = config.sops.secrets."${self.host.hostname}-paperless-admin-pass".path;
           exporter.directory = "${basePath}/export";
           settings = {
