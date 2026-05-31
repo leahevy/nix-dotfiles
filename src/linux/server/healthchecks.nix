@@ -318,10 +318,10 @@ args@{
                 _svc_ok=1
                 break
               fi
-              if [[ "$_state" != "activating" && "$_state" != "deactivating" && "$_state" != "reloading" ]]; then
+              if [[ "$_state" != "activating" && "$_state" != "deactivating" && "$_state" != "reloading" && "$_state" != "inactive" ]]; then
                 break
               fi
-              if [[ $_elapsed -ge 10 ]]; then
+              if [[ $_elapsed -ge 30 ]]; then
                 break
               fi
               ${pkgs.coreutils}/bin/sleep 1
