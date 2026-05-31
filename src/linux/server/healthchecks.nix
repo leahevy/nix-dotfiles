@@ -67,7 +67,7 @@ args@{
     enableDailyHealthCheck = lib.mkOption {
       type = lib.types.nullOr lib.types.bool;
       default = null;
-      description = "Enable the daily health check timer; null auto-enables in server and managed deployment modes.";
+      description = "Enable the daily health check timer. It is auto-enabled in server and managed deployment modes.";
     };
 
     dailyName = lib.mkOption {
