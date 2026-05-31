@@ -14,6 +14,10 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
+  submodules = {
+    linux.desktop-modules.web-app = true;
+  };
+
   settings = {
     package = pkgs.ungoogled-chromium;
     program = "chromium";

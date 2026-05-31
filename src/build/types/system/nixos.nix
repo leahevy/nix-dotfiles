@@ -590,6 +590,18 @@ with lib;
               default = null;
               description = "Base domain for service hosting. Auto-derived from remote.address when it is a domain name.";
             };
+            exposedServices = mkOption {
+              type = types.submodule {
+                options = {
+                  paperless-ngx = mkOption {
+                    type = types.either types.str types.bool;
+                    default = false;
+                  };
+                };
+              };
+              default = { };
+              description = "Services exposed by this host for automatic service discovery.";
+            };
           };
           config = {
             baseDomain = lib.mkDefault (

@@ -24,9 +24,8 @@ args@{
 
   submodules = {
     linux = {
-      browser = {
-        qutebrowser = true;
-      };
+      desktop-modules.web-app = true;
+      browser.qutebrowser = true;
     };
   };
 
