@@ -615,7 +615,7 @@ args@{
         ];
         secretWipeRegex = lib.concatStringsSep "|" (map lib.escapeRegex secretWipePatterns);
 
-        makeServiceStopScript =
+        makeCompanionScript =
           {
             endpointName,
             triggerUnit,
@@ -626,7 +626,7 @@ args@{
             compiledCheckScript =
               if checkScript != null then makeCheckScript "svc-${endpointName}" checkScript else null;
           in
-          pkgs.writeShellScript "nx-hc-stop-${endpointName}" ''
+          pkgs.writeShellScript "nx-hc-companion-${endpointName}" ''
             set -euo pipefail
             TMPDIR_HC=$(${pkgs.coreutils}/bin/mktemp -d)
             trap "${pkgs.coreutils}/bin/rm -rf '$TMPDIR_HC'" EXIT
@@ -636,8 +636,10 @@ args@{
             TOTAL=0
 
             TOTAL=$((TOTAL + 1))
-            if [[ "''${EXIT_STATUS:-0}" != "0" ]]; then
-              printf '[FAIL] %s (exit %s)\n' ${lib.escapeShellArg triggerUnit} "''${EXIT_STATUS:-?}" >> "$DETAIL_FILE"
+            TRIGGER_RESULT=$(${pkgs.systemd}/bin/systemctl show ${lib.escapeShellArg triggerUnit} \
+              --property=Result --value 2>/dev/null || echo "unknown")
+            if [[ "$TRIGGER_RESULT" != "success" ]]; then
+              printf '[FAIL] %s (result: %s)\n' ${lib.escapeShellArg triggerUnit} "$TRIGGER_RESULT" >> "$DETAIL_FILE"
               FAILED=$((FAILED + 1))
             else
               printf '[OK ] %s\n' ${lib.escapeShellArg triggerUnit} >> "$DETAIL_FILE"
@@ -675,7 +677,10 @@ args@{
 
             ${lib.optionalString includeLogs ''
               LOG_FILE="$TMPDIR_HC/service-logs"
+              LOG_SINCE=$(${pkgs.systemd}/bin/systemctl show ${lib.escapeShellArg triggerUnit} \
+                --property=ExecMainStartTimestamp --value 2>/dev/null || true)
               ${pkgs.systemd}/bin/journalctl -u ${lib.escapeShellArg triggerUnit} \
+                ''${LOG_SINCE:+--since "$LOG_SINCE"} \
                 --no-pager --output=short -n 500 > "$LOG_FILE" 2>/dev/null || true
               if [[ -s "$LOG_FILE" ]]; then
                 FILTERED_LOG="$TMPDIR_HC/service-logs-filtered"
@@ -723,36 +728,52 @@ args@{
             exit 0
           '';
 
-        serviceCheckUnits = lib.mapAttrs' (
-          key: entry:
+        serviceCheckUnits = lib.foldlAttrs (
+          acc: key: entry:
           let
             entryName = sanitizeName key;
             endpointName = "${hostname}-${entryName}";
             triggerUnit = entry.trigger.service;
             serviceBaseName = lib.removeSuffix ".service" triggerUnit;
+            companionName = "nx-hc-${entryName}";
             checkScript = entry.check.checkScript;
             includeLogs = entry.includeLogs;
           in
-          lib.nameValuePair serviceBaseName {
-            wants = [ "network-online.target" ];
-            after = [ "network-online.target" ];
-            serviceConfig = {
-              ExecStartPre = lib.mkBefore [ "+-${makeStartPingScript endpointName}" ];
-              ExecStopPost = lib.mkAfter [
-                "+-${
-                  makeServiceStopScript {
-                    inherit
-                      endpointName
-                      triggerUnit
-                      checkScript
-                      includeLogs
-                      ;
-                  }
-                }"
+          acc
+          // {
+            ${serviceBaseName} = {
+              wants = [
+                "${companionName}.service"
+                "network-online.target"
               ];
+              after = [ "network-online.target" ];
+              serviceConfig = {
+                ExecStartPre = lib.mkBefore [ "+-${makeStartPingScript endpointName}" ];
+              };
+            };
+            ${companionName} = {
+              description = "Healthchecks ping for ${triggerUnit}";
+              after = [
+                triggerUnit
+                "network-online.target"
+              ];
+              wants = [ "network-online.target" ];
+              serviceConfig = {
+                Type = "oneshot";
+                User = "root";
+                TimeoutStartSec = serviceTimeoutSec;
+                ExecStart = makeCompanionScript {
+                  inherit
+                    endpointName
+                    triggerUnit
+                    checkScript
+                    includeLogs
+                    ;
+                };
+              };
             };
           }
-        ) servicesHealthChecks;
+        ) { } servicesHealthChecks;
 
       in
       lib.mkMerge [
