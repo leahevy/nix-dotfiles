@@ -161,6 +161,11 @@ args@{
               default = { };
               description = "Check conditions, all AND-combined, all must pass for the success ping.";
             };
+            includeLogs = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Append the trigger unit's last journal logs to the ping body.";
+            };
           };
         }
       );
@@ -498,8 +503,10 @@ args@{
         makeServiceCheckScript =
           {
             endpointName,
+            triggerUnit,
             verifyServices,
             checkScript,
+            includeLogs,
           }:
           let
             compiledCheckScript =
@@ -556,6 +563,37 @@ args@{
             echo "" >> "$REPORT_FILE"
             ${pkgs.coreutils}/bin/cat "$DETAIL_FILE" >> "$REPORT_FILE"
 
+            ${lib.optionalString includeLogs ''
+              LOG_FILE="$TMPDIR_HC/service-logs"
+              ${pkgs.systemd}/bin/journalctl -u ${lib.escapeShellArg triggerUnit} \
+                --no-pager --output=short -n 500 > "$LOG_FILE" 2>/dev/null || true
+              if [[ -s "$LOG_FILE" ]]; then
+                LOG_HDR=$'\nLogs (${triggerUnit}):\n'
+                LOG_HDR_SIZE=''${#LOG_HDR}
+                LOG_ELLIPSIS=$'\n[...]\n'
+                LOG_ELLIPSIS_SIZE=''${#LOG_ELLIPSIS}
+                LOG_FIRST_BYTES=100
+                REPORT_SIZE=$(${pkgs.coreutils}/bin/wc -c < "$REPORT_FILE")
+                LOG_SIZE=$(${pkgs.coreutils}/bin/wc -c < "$LOG_FILE")
+                REMAINING=$((100000 - REPORT_SIZE - LOG_HDR_SIZE))
+                if [[ $REMAINING -gt 0 ]]; then
+                  printf '%s' "$LOG_HDR" >> "$REPORT_FILE"
+                  if [[ $LOG_SIZE -le $REMAINING ]]; then
+                    ${pkgs.coreutils}/bin/cat "$LOG_FILE" >> "$REPORT_FILE"
+                  else
+                    TAIL_BYTES=$((REMAINING - LOG_FIRST_BYTES - LOG_ELLIPSIS_SIZE))
+                    if [[ $TAIL_BYTES -lt 300 ]]; then
+                      ${pkgs.coreutils}/bin/tail -c "$REMAINING" "$LOG_FILE" >> "$REPORT_FILE"
+                    else
+                      ${pkgs.coreutils}/bin/head -c "$LOG_FIRST_BYTES" "$LOG_FILE" >> "$REPORT_FILE"
+                      printf '%s' "$LOG_ELLIPSIS" >> "$REPORT_FILE"
+                      ${pkgs.coreutils}/bin/tail -c "$TAIL_BYTES" "$LOG_FILE" >> "$REPORT_FILE"
+                    fi
+                  fi
+                fi
+              fi
+            ''}
+
             ${curlWithRetry {
               inherit endpointName;
               networkTimeoutSec = 60;
@@ -570,6 +608,7 @@ args@{
             triggerUnit = entry.trigger.runsAfter;
             verifyServices = entry.check.verifySuccess;
             checkScript = entry.check.checkScript;
+            includeLogs = entry.includeLogs;
           in
           lib.nameValuePair "nx-hc-${sanitizeName entryName}" {
             description = "Healthcheck ping: ${key}";
@@ -584,7 +623,15 @@ args@{
               User = "root";
               TimeoutStartSec = serviceTimeoutSec;
               SuccessExitStatus = 1;
-              ExecStart = makeServiceCheckScript { inherit endpointName verifyServices checkScript; };
+              ExecStart = makeServiceCheckScript {
+                inherit
+                  endpointName
+                  triggerUnit
+                  verifyServices
+                  checkScript
+                  includeLogs
+                  ;
+              };
             };
           }
         ) servicesHealthChecks;
