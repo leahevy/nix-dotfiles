@@ -54,6 +54,12 @@ args@{
   module = {
     enabled = config: {
       nx.linux.server.postgresql.connectionSlots = [ 10 ];
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          service = "redis-paperless.service";
+          string = "Redis does not require authentication";
+        }
+      ];
     };
 
     linux.system =
