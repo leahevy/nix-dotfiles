@@ -435,6 +435,8 @@ args@{
               printf 'url = %s/%s/${endpointName}/fail\n' \
                 "${pingBaseUrl}" "$PING_KEY" > "$CURL_CONFIG"
             fi
+            ${pkgs.coreutils}/bin/head -c 100000 "$REPORT_FILE" > "$TMPDIR_HC/report-trunc"
+            ${pkgs.coreutils}/bin/mv "$TMPDIR_HC/report-trunc" "$REPORT_FILE"
             printf 'data-binary = @%s\n' "$REPORT_FILE" >> "$CURL_CONFIG"
             MAX_WAIT=${toString networkTimeoutSec}
             WAITED=0
