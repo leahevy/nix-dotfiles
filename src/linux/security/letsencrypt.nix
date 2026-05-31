@@ -27,6 +27,7 @@ args@{
       config:
       let
         pushover = config.nx.linux.notifications.pushover;
+        hcUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
         logScript =
           level: message:
           let
@@ -110,6 +111,8 @@ args@{
                 title = "Let's Encrypt";
                 message = pushoverMessage;
                 type = pushoverType;
+                url = hcUrl;
+                urlTitle = if hcUrl != null then "View healthchecks" else null;
               }
             )}
             echo "${message}" ${if level == "err" then ">&2" else ""}

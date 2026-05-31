@@ -37,6 +37,7 @@ args@{
       config:
       let
         pushover = config.nx.linux.notifications.pushover;
+        hcUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
 
         smartdNotifyScript = pkgs.writeShellScriptBin "smartd-notify" ''
           set -euo pipefail
@@ -141,6 +142,8 @@ args@{
               message = "\${PUSHOVER_MESSAGE}";
               type = "\${NOTIFY_TYPE}";
               shellVars = true;
+              url = hcUrl;
+              urlTitle = if hcUrl != null then "View healthchecks" else null;
             }}
           fi
 

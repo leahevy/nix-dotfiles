@@ -196,6 +196,7 @@ args@{
       config:
       let
         pushover = config.nx.linux.notifications.pushover;
+        hcUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
         nxcoreDir = "${self.host.mainUser.home}/.config/nx/nxcore";
         nxconfigDir = "${self.host.mainUser.home}/.config/nx/nxconfig";
         isDevelopMode = self.host.deploymentMode == "develop";
@@ -394,6 +395,8 @@ args@{
                 type = pushoverType;
                 priority = pushoverPriorityOverride;
                 shellVars = true;
+                url = hcUrl;
+                urlTitle = if hcUrl != null then "View healthchecks" else null;
               }
             )}
             echo "${message}" ${if level == "err" then ">&2" else ""}
@@ -1014,6 +1017,8 @@ args@{
                       message = "System rebooting now. LUKS disk password required!";
                       type = "emerg";
                       shellVars = true;
+                      url = hcUrl;
+                      urlTitle = if hcUrl != null then "View healthchecks" else null;
                     }
                   )}
                   ${config.systemd.package}/bin/shutdown -r now --no-wall
@@ -1029,6 +1034,8 @@ args@{
                     message = "System rebooting now. LUKS disk password required!";
                     type = "emerg";
                     shellVars = true;
+                    url = hcUrl;
+                    urlTitle = if hcUrl != null then "View healthchecks" else null;
                   }
                 )}
                 ${config.systemd.package}/bin/shutdown -r now --no-wall

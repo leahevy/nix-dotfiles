@@ -405,6 +405,7 @@ args@{
       config:
       let
         pushover = config.nx.linux.notifications.pushover;
+        hcUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
         repoUrl = "ssh://${self.settings.repository.user}@${self.settings.repository.server}:${toString self.settings.repository.port}${self.settings.repository.path}";
         snapshotBase = self.persistPath ".snapshots";
 
@@ -576,6 +577,8 @@ args@{
                 title = "Borg-Backup";
                 message = pushoverMessage;
                 type = pushoverType;
+                url = hcUrl;
+                urlTitle = if hcUrl != null then "View healthchecks" else null;
               }
             )}
             echo "${message}" ${if level == "err" then ">&2" else ""}
