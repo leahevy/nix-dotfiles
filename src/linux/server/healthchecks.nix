@@ -310,9 +310,9 @@ args@{
             mnt=$(printf '%s' "$line" | ${pkgs.gawk}/bin/awk '{print $2}')
             [[ "$pct" =~ ^[0-9]+$ ]] || continue
             free_pct=$((100 - pct))
-            printf '%s: %d%% free\n' "$mnt" "$free_pct" >&3
+            printf '%s: %d%% used\n' "$mnt" "$pct" >&3
             if [[ $free_pct -lt ${toString diskFreeThresholdPct} ]]; then
-              FAILURES+=("$mnt: $free_pct% free")
+              FAILURES+=("$mnt: $pct% used")
             fi
           done < <(${pkgs.coreutils}/bin/df -l -x tmpfs -x devtmpfs --output=pcent,target 2>/dev/null | tail -n +2)
           if [[ ''${#FAILURES[@]} -gt 0 ]]; then
