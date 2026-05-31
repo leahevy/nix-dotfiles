@@ -579,6 +579,42 @@ args@{
             exit 0
           '';
 
+        secretWipePatterns = [
+          "/bin/git"
+          "/bin/gpg"
+          "/bin/ssh"
+          "/bin/openssl"
+          "/bin/age"
+          "/bin/sops"
+          "/bin/curl"
+          "ssh://"
+          "sftp://"
+          "http://"
+          "https://"
+          "ftp://"
+          "ftps://"
+          "smtp://"
+          "smtps://"
+          "postgres://"
+          "postgresql://"
+          "mysql://"
+          "redis://"
+          "rediss://"
+          "amqp://"
+          "amqps://"
+          "secret"
+          "password"
+          "passwd"
+          "token"
+          "-----BEGIN"
+          "Authorization:"
+          "Bearer "
+          "/run/secrets"
+          config.users.users.${mainUser}.home
+          "/root"
+        ];
+        secretWipeRegex = lib.concatStringsSep "|" (map lib.escapeRegex secretWipePatterns);
+
         makeServiceStopScript =
           {
             endpointName,
@@ -642,26 +678,38 @@ args@{
               ${pkgs.systemd}/bin/journalctl -u ${lib.escapeShellArg triggerUnit} \
                 --no-pager --output=short -n 500 > "$LOG_FILE" 2>/dev/null || true
               if [[ -s "$LOG_FILE" ]]; then
-                LOG_HDR=$'\nLogs (${triggerUnit}):\n'
+                FILTERED_LOG="$TMPDIR_HC/service-logs-filtered"
+                ${pkgs.gawk}/bin/awk '
+                  BEGIN { IGNORECASE = 1; pat = "${secretWipeRegex}" }
+                  match($0, pat) {
+                    prefix = substr($0, 1, RSTART - 1)
+                    suffix = substr($0, RSTART)
+                    gsub(/[^ \t]/, "*", suffix)
+                    print prefix suffix
+                    next
+                  }
+                  { print }
+                ' "$LOG_FILE" > "$FILTERED_LOG"
+                LOG_HDR=$'\nLogs (${triggerUnit}):\n\n'
                 LOG_HDR_SIZE=''${#LOG_HDR}
                 LOG_ELLIPSIS=$'\n[...]\n'
                 LOG_ELLIPSIS_SIZE=''${#LOG_ELLIPSIS}
                 LOG_FIRST_BYTES=100
                 REPORT_SIZE=$(${pkgs.coreutils}/bin/wc -c < "$REPORT_FILE")
-                LOG_SIZE=$(${pkgs.coreutils}/bin/wc -c < "$LOG_FILE")
+                LOG_SIZE=$(${pkgs.coreutils}/bin/wc -c < "$FILTERED_LOG")
                 REMAINING=$((100000 - REPORT_SIZE - LOG_HDR_SIZE))
                 if [[ $REMAINING -gt 0 ]]; then
                   printf '%s' "$LOG_HDR" >> "$REPORT_FILE"
                   if [[ $LOG_SIZE -le $REMAINING ]]; then
-                    ${pkgs.coreutils}/bin/cat "$LOG_FILE" >> "$REPORT_FILE"
+                    ${pkgs.coreutils}/bin/cat "$FILTERED_LOG" >> "$REPORT_FILE"
                   else
                     TAIL_BYTES=$((REMAINING - LOG_FIRST_BYTES - LOG_ELLIPSIS_SIZE))
                     if [[ $TAIL_BYTES -lt 300 ]]; then
-                      ${pkgs.coreutils}/bin/tail -c "$REMAINING" "$LOG_FILE" >> "$REPORT_FILE"
+                      ${pkgs.coreutils}/bin/tail -c "$REMAINING" "$FILTERED_LOG" >> "$REPORT_FILE"
                     else
-                      ${pkgs.coreutils}/bin/head -c "$LOG_FIRST_BYTES" "$LOG_FILE" >> "$REPORT_FILE"
+                      ${pkgs.coreutils}/bin/head -c "$LOG_FIRST_BYTES" "$FILTERED_LOG" >> "$REPORT_FILE"
                       printf '%s' "$LOG_ELLIPSIS" >> "$REPORT_FILE"
-                      ${pkgs.coreutils}/bin/tail -c "$TAIL_BYTES" "$LOG_FILE" >> "$REPORT_FILE"
+                      ${pkgs.coreutils}/bin/tail -c "$TAIL_BYTES" "$FILTERED_LOG" >> "$REPORT_FILE"
                     fi
                   fi
                 fi
