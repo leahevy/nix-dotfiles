@@ -1387,5 +1387,13 @@ args@{
           ];
         };
       };
+
+    ifEnabled.linux.server.healthchecks = {
+      enabled = config: {
+        nx.linux.server.healthchecks.servicesHealthChecks."auto-upgrade" = {
+          trigger.service = "nx-auto-upgrade.service";
+        };
+      };
+    };
   };
 }

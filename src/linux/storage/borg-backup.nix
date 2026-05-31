@@ -777,5 +777,13 @@ args@{
           '';
         };
       };
+
+    ifEnabled.linux.server.healthchecks = {
+      enabled = config: {
+        nx.linux.server.healthchecks.servicesHealthChecks."borg-backup" = {
+          trigger.service = "borgbackup-job-system.service";
+        };
+      };
+    };
   };
 }

@@ -222,5 +222,18 @@ args@{
           };
         };
       };
+
+    ifEnabled.linux.server.healthchecks = {
+      enabled =
+        config:
+        lib.mkIf config.nx.linux.server.healthchecks.checkCertExpiry {
+          nx.linux.server.healthchecks.servicesHealthChecks = lib.mapAttrs' (
+            domain: _:
+            lib.nameValuePair "letsencrypt-${domain}" {
+              trigger.service = "acme-${domain}.service";
+            }
+          ) self.settings.dnsCerts;
+        };
+    };
   };
 }
