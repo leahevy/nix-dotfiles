@@ -120,7 +120,7 @@ args@{
 
     checkSmartDisk = lib.mkOption {
       type = lib.types.bool;
-      default = false;
+      default = true;
       description = "Run SMART health checks on mounted SATA and NVMe block devices.";
     };
 
