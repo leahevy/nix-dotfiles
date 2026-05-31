@@ -253,6 +253,24 @@ args@{
             ${cmd}
           '';
 
+        makeServiceActiveCheck = svc: ''
+          _elapsed=0
+          while true; do
+            _state=$(${pkgs.systemd}/bin/systemctl is-active ${lib.escapeShellArg svc} 2>/dev/null || true)
+            if [[ "$_state" == "active" ]]; then
+              exit 0
+            fi
+            if [[ "$_state" != "activating" && "$_state" != "deactivating" && "$_state" != "reloading" ]]; then
+              exit 1
+            fi
+            if [[ $_elapsed -ge 10 ]]; then
+              exit 1
+            fi
+            ${pkgs.coreutils}/bin/sleep 1
+            _elapsed=$((_elapsed + 1))
+          done
+        '';
+
         memoryCheckExpr = ''
           ${pkgs.gawk}/bin/awk '
             /MemTotal/{t=$2} /MemFree/{f=$2} /SwapTotal/{st=$2} /SwapFree/{sf=$2}
@@ -364,7 +382,7 @@ args@{
         // lib.listToAttrs (
           map (svc: {
             name = "${svc} running";
-            value = "${pkgs.systemd}/bin/systemctl is-active --quiet ${lib.escapeShellArg svc}";
+            value = makeServiceActiveCheck svc;
           }) requireServicesUp
         )
         // regularHealthChecks;
