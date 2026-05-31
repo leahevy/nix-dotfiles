@@ -141,6 +141,12 @@ args@{
       description = "Healthchecks.io project UUID (not the ping key) used to build the dashboard URL included in notifications.";
     };
 
+    healthchecksFinalChecksURL = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Computed URL to the healthchecks.io project checks page.";
+    };
+
     servicesHealthChecks = lib.mkOption {
       type = lib.types.attrsOf (
         lib.types.submodule {
@@ -181,6 +187,11 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.linux.server.healthchecks.healthchecksFinalChecksURL =
+        "${config.nx.linux.server.healthchecks.healthchecksBaseUrl}/projects/${config.nx.linux.server.healthchecks.projectUUID}/checks/";
+    };
+
     ifEnabled.linux.security.letsencrypt.enabled = config: {
       nx.linux.server.healthchecks.checkCertExpiry = lib.mkDefault true;
     };
@@ -210,6 +221,7 @@ args@{
         serviceTimeoutSec,
         healthchecksBaseUrl,
         projectUUID,
+        healthchecksFinalChecksURL,
         ...
       }:
       let
@@ -218,7 +230,6 @@ args@{
         mainUserUid = toString config.users.users.${self.host.mainUser.username}.uid;
         deploymentMode = config.nx.global.deploymentMode;
         secretPath = config.sops.secrets."${hostname}-healthchecks-uuid".path;
-        projectUrl = "${healthchecksBaseUrl}/projects/${projectUUID}/checks/";
 
         effectiveRegular =
           if enableRegularHealthCheck != null then
@@ -452,7 +463,7 @@ args@{
                   title = "Healthchecks.io";
                   message = "Auto-created check: ${endpointName}";
                   type = "info";
-                  url = projectUrl;
+                  url = healthchecksFinalChecksURL;
                   urlTitle = "View all checks";
                 };
           in
