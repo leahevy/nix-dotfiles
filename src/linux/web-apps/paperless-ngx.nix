@@ -77,7 +77,7 @@ in
             "Viewer"
           ];
           protocol = "https";
-          args = "";
+          args = "/dashboard";
         }) allHosts;
       in
       {

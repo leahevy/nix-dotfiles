@@ -19,6 +19,45 @@ let
       };
     };
   };
+
+  capitalize = s: (lib.toUpper (lib.substring 0 1 s)) + (lib.substring 1 (lib.stringLength s - 1) s);
+
+  serviceSuffixes = {
+    paperless-ngx = "/dashboard";
+  };
+
+  nixOSHosts = self.nixOSHosts or { };
+
+  remoteHostBookmarks =
+    let
+      perHost = lib.mapAttrs' (
+        profileName: hostCfg:
+        let
+          hostname = hostCfg.hostname or profileName;
+          domain = hostCfg.remote.baseDomain or (hostCfg.remote.address or null);
+          exposedServices = hostCfg.remote.exposedServices or { };
+          entries =
+            if domain == null then
+              { }
+            else
+              lib.listToAttrs (
+                lib.concatMap (
+                  serviceName:
+                  let
+                    val = exposedServices.${serviceName};
+                    subdomain = if val == true then serviceName else val;
+                    suffix = serviceSuffixes.${serviceName} or "";
+                  in
+                  lib.optional (val != false) (
+                    lib.nameValuePair (capitalize serviceName) "https://${subdomain}.${domain}${suffix}"
+                  )
+                ) (lib.attrNames exposedServices)
+              );
+        in
+        lib.nameValuePair hostname entries
+      ) nixOSHosts;
+    in
+    lib.filterAttrs (_: entries: entries != { }) perHost;
 in
 {
   name = "browser";
@@ -194,7 +233,9 @@ in
       // config.nx.common.browser.browser.additionalSearchEngines;
 
       nx.common.browser.browser.final.bookmarks =
-        lib.recursiveUpdate config.nx.common.browser.browser.baseBookmarks config.nx.common.browser.browser.bookmarks;
+        lib.recursiveUpdate
+          (lib.recursiveUpdate config.nx.common.browser.browser.baseBookmarks config.nx.common.browser.browser.bookmarks)
+          (lib.optionalAttrs (remoteHostBookmarks != { }) { "Remote Hosts" = remoteHostBookmarks; });
 
       nx.common.browser.browser.final.userContentCSS =
         lib.mkIf config.nx.common.browser.browser.themedCSS
