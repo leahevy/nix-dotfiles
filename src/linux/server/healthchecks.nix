@@ -415,7 +415,9 @@ args@{
         allDailyChecks =
           lib.optionalAttrs checkDiskUsage { "Disk space" = diskUsageExpr; }
           // lib.optionalAttrs checkCertExpiry { "Certificate expiry" = certExpiryExpr; }
-          // lib.optionalAttrs checkSmartDisk { "SMART disk health" = smartDiskExpr; }
+          // lib.optionalAttrs (checkSmartDisk && config.nx.linux.storage.smartd.enable) {
+            "SMART disk health" = smartDiskExpr;
+          }
           // dailyHealthChecks;
 
         runCheckBlock =
