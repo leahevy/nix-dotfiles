@@ -121,6 +121,7 @@ args@{
             fi
 
             sudo -v
+            sudo systemctl reset-failed nx-auto-upgrade-delayed.service 2>/dev/null || true
             sudo touch /tmp/nx-force-upgrade
             sudo systemctl start nx-auto-upgrade.service >/dev/null 2>&1 &
             echo "Auto-upgrade triggered manually"
