@@ -657,6 +657,16 @@ args@{
             FAILED=0
             TOTAL=0
 
+            while true; do
+              _trigger_state=$(${pkgs.systemd}/bin/systemctl show ${lib.escapeShellArg triggerUnit} \
+                --property=ActiveState --value 2>/dev/null || echo "unknown")
+              if [[ "$_trigger_state" != "active" && "$_trigger_state" != "activating" && \
+                    "$_trigger_state" != "deactivating" && "$_trigger_state" != "reloading" ]]; then
+                break
+              fi
+              ${pkgs.coreutils}/bin/sleep 2
+            done
+
             TOTAL=$((TOTAL + 1))
             TRIGGER_RESULT=$(${pkgs.systemd}/bin/systemctl show ${lib.escapeShellArg triggerUnit} \
               --property=Result --value 2>/dev/null || echo "unknown")
@@ -783,7 +793,7 @@ args@{
               serviceConfig = {
                 Type = "oneshot";
                 User = "root";
-                TimeoutStartSec = serviceTimeoutSec;
+                TimeoutStartSec = "infinity";
                 ExecStart = makeCompanionScript {
                   inherit
                     endpointName
