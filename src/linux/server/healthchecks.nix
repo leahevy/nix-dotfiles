@@ -70,6 +70,18 @@ args@{
       description = "Maximum 5-minute load average per CPU core before the load check fails.";
     };
 
+    loadBuildMultiplier = lib.mkOption {
+      type = lib.types.float;
+      default = 1.5;
+      description = "Multiplier applied to the load threshold during and shortly after detected nix builds.";
+    };
+
+    loadBuildGraceSeconds = lib.mkOption {
+      type = lib.types.int;
+      default = 300;
+      description = "Seconds to keep the relaxed load threshold after detected nix build activity.";
+    };
+
     memoryFreeThresholdPct = lib.mkOption {
       type = lib.types.int;
       default = 20;
@@ -221,6 +233,8 @@ args@{
         requireServicesUp,
         tempMaxCelsius,
         loadMaxPerCore,
+        loadBuildMultiplier,
+        loadBuildGraceSeconds,
         memoryFreeThresholdPct,
         enableDailyHealthCheck,
         dailyName,
@@ -459,12 +473,33 @@ args@{
         '';
 
         loadCheckExpr = ''
+          _build_marker=/run/nx-healthcheck/build-active
+          _now=$(${pkgs.coreutils}/bin/date +%s)
+          _build_mode=normal
+          if ${pkgs.procps}/bin/ps -eo pid,etimes,cmd \
+            | ${pkgs.gnugrep}/bin/grep -E 'nix build|nix-store.*realise|nix-store.*build' \
+            | ${pkgs.gnugrep}/bin/grep -v grep >/dev/null; then
+            ${pkgs.coreutils}/bin/touch "$_build_marker"
+          fi
+          if [[ -e "$_build_marker" ]]; then
+            _marker_mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$_build_marker" 2>/dev/null || echo 0)
+            if [[ $((_now - _marker_mtime)) -le ${toString loadBuildGraceSeconds} ]]; then
+              _build_mode=build-active
+            fi
+          fi
           _nproc=$(${pkgs.coreutils}/bin/nproc 2>/dev/null || echo 1)
-          ${pkgs.gawk}/bin/awk -v max=${toString loadMaxPerCore} -v nproc="$_nproc" '
+          ${pkgs.gawk}/bin/awk \
+            -v max=${toString loadMaxPerCore} \
+            -v multiplier=${toString loadBuildMultiplier} \
+            -v nproc="$_nproc" \
+            -v build_mode="$_build_mode" '
             {
               load5 = $2
               threshold = max * nproc
-              printf "load 5m: %.2f (%s cores, limit: %.1f)\n", load5, nproc, threshold > "/dev/fd/3"
+              if (build_mode == "build-active") {
+                threshold = threshold * multiplier
+              }
+              printf "load 5m: %.2f (%s cores, limit: %.1f, mode: %s)\n", load5, nproc, threshold, build_mode > "/dev/fd/3"
               exit (load5 > threshold)
             }
           ' /proc/loadavg
@@ -910,6 +945,14 @@ args@{
             sopsFile = self.profile.secretsPath "healthchecks-uuid";
             mode = "0400";
             owner = "root";
+            group = "root";
+          };
+        }
+
+        {
+          systemd.tmpfiles.settings."10-nx-healthcheck"."/run/nx-healthcheck".d = {
+            mode = "0700";
+            user = "root";
             group = "root";
           };
         }
