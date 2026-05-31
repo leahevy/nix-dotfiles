@@ -121,6 +121,7 @@ in
           keep-outputs = true;
           keep-derivations = true;
           allow-import-from-derivation = false;
+          auto-optimise-store = true;
         };
     };
   };

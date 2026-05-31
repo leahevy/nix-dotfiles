@@ -205,6 +205,7 @@ in
   nix = {
     settings = {
       experimental-features = variables.experimental-features;
+      auto-optimise-store = true;
     };
   };
 }

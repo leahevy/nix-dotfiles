@@ -191,6 +191,7 @@ in
     settings = {
       experimental-features = variables.experimental-features;
       allow-import-from-derivation = false;
+      auto-optimise-store = true;
     };
 
     package = pkgs.nix;
