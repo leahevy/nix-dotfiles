@@ -36,7 +36,6 @@ let
     home = "cd /nxcore";
     nxcore = "cd /nxcore";
     nxconfig = "cd /nxconfig";
-    nx = "nx bootstrap nixos";
     g = "git";
     gh = "g show HEAD";
     gl = "g log";
@@ -175,7 +174,7 @@ in
     (pkgs.writeShellScriptBin "nx" ''
       export ACTUAL_PWD="$PWD"
       cd /nxcore
-      exec /nxcore/nx "$@"
+      exec /nxcore/nx bootstrap nixos "$@"
     '')
     git
     colordiff
