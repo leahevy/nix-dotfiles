@@ -378,9 +378,9 @@ args@{
           ''
             TOTAL=$((TOTAL + 1))
             if ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
-              printf '[OK ] %s\n' ${lib.escapeShellArg desc} >> "$REPORT_FILE"
+              printf '[OK ] %s\n' ${lib.escapeShellArg desc} >> "$DETAIL_FILE"
             else
-              printf '[FAIL] %s\n' ${lib.escapeShellArg desc} >> "$REPORT_FILE"
+              printf '[FAIL] %s\n' ${lib.escapeShellArg desc} >> "$DETAIL_FILE"
               if [[ -s "${outFile}" ]]; then
                 { printf 'check failed: %s\n' ${lib.escapeShellArg desc}
                   ${pkgs.coreutils}/bin/cat "${outFile}"
@@ -390,7 +390,7 @@ args@{
             fi
             if [[ -s "${infoFile}" ]]; then
               ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
-                | ${pkgs.coreutils}/bin/head -10 >> "$REPORT_FILE"
+                | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
             fi
           '';
 
@@ -447,18 +447,20 @@ args@{
             TMPDIR_HC=$(${pkgs.coreutils}/bin/mktemp -d)
             trap "${pkgs.coreutils}/bin/rm -rf '$TMPDIR_HC'" EXIT
             REPORT_FILE="$TMPDIR_HC/report"
+            DETAIL_FILE="$TMPDIR_HC/detail"
             FAILED=0
             TOTAL=0
 
             ${lib.concatStringsSep "\n" (lib.mapAttrsToList runCheckBlock checkScripts)}
 
-            echo "" >> "$REPORT_FILE"
             if [[ $FAILED -eq 0 ]]; then
-              echo "All checks are healthy." >> "$REPORT_FILE"
+              echo "All checks are healthy." > "$REPORT_FILE"
             else
               PASSED=$((TOTAL - FAILED))
-              echo "$PASSED/$TOTAL checks are healthy." >> "$REPORT_FILE"
+              echo "$PASSED/$TOTAL checks are healthy." > "$REPORT_FILE"
             fi
+            echo "" >> "$REPORT_FILE"
+            ${pkgs.coreutils}/bin/cat "$DETAIL_FILE" >> "$REPORT_FILE"
 
             ${curlWithRetry { inherit endpointName networkTimeoutSec; }}
           '';
@@ -478,6 +480,7 @@ args@{
             TMPDIR_HC=$(${pkgs.coreutils}/bin/mktemp -d)
             trap "${pkgs.coreutils}/bin/rm -rf '$TMPDIR_HC'" EXIT
             REPORT_FILE="$TMPDIR_HC/report"
+            DETAIL_FILE="$TMPDIR_HC/detail"
             FAILED=0
             TOTAL=0
 
@@ -485,10 +488,10 @@ args@{
               map (svc: ''
                 TOTAL=$((TOTAL + 1))
                 if ${pkgs.systemd}/bin/systemctl is-failed --quiet ${lib.escapeShellArg svc} 2>/dev/null; then
-                  printf '[FAIL] %s\n' ${lib.escapeShellArg svc} >> "$REPORT_FILE"
+                  printf '[FAIL] %s\n' ${lib.escapeShellArg svc} >> "$DETAIL_FILE"
                   FAILED=$((FAILED + 1))
                 else
-                  printf '[OK ] %s\n' ${lib.escapeShellArg svc} >> "$REPORT_FILE"
+                  printf '[OK ] %s\n' ${lib.escapeShellArg svc} >> "$DETAIL_FILE"
                 fi
               '') verifyServices
             )}
@@ -498,9 +501,9 @@ args@{
               INFO_FILE_CS="$TMPDIR_HC/info-checkscript"
               OUT_FILE_CS="$TMPDIR_HC/out-checkscript"
               if ${compiledCheckScript} 3>"$INFO_FILE_CS" >"$OUT_FILE_CS" 2>&1; then
-                printf '[OK ] additional check\n' >> "$REPORT_FILE"
+                printf '[OK ] additional check\n' >> "$DETAIL_FILE"
               else
-                printf '[FAIL] additional check\n' >> "$REPORT_FILE"
+                printf '[FAIL] additional check\n' >> "$DETAIL_FILE"
                 if [[ -s "$OUT_FILE_CS" ]]; then
                   { printf 'service check failed: %s\n' ${lib.escapeShellArg endpointName}
                     ${pkgs.coreutils}/bin/cat "$OUT_FILE_CS"
@@ -510,9 +513,18 @@ args@{
               fi
               if [[ -s "$INFO_FILE_CS" ]]; then
                 ${pkgs.gnused}/bin/sed 's/^/  /' "$INFO_FILE_CS" \
-                  | ${pkgs.coreutils}/bin/head -10 >> "$REPORT_FILE"
+                  | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
               fi
             ''}
+
+            if [[ $FAILED -eq 0 ]]; then
+              echo "All checks are healthy." > "$REPORT_FILE"
+            else
+              PASSED=$((TOTAL - FAILED))
+              echo "$PASSED/$TOTAL checks are healthy." > "$REPORT_FILE"
+            fi
+            echo "" >> "$REPORT_FILE"
+            ${pkgs.coreutils}/bin/cat "$DETAIL_FILE" >> "$REPORT_FILE"
 
             ${curlWithRetry {
               inherit endpointName;
