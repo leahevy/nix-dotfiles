@@ -41,22 +41,23 @@ args@{
   ];
 
   module = {
-    overlays = [
-      (final: prev: {
-        vimPlugins = prev.vimPlugins // {
-          obsidian-nvim = prev.vimPlugins.obsidian-nvim.overrideAttrs (oldAttrs: {
-            nvimSkipModules = (oldAttrs.nvimSkipModules or [ ]) ++ [
-              "obsidian.pickers._fzf"
-              "obsidian.picker._fzf"
-            ];
-          });
-        };
-      })
-    ];
-
     home =
       config:
       let
+        obsidianNvim = pkgs.vimUtils.buildVimPlugin {
+          pname = "obsidian.nvim";
+          version = "2025-11-21";
+          src = pkgs.fetchFromGitHub {
+            owner = "obsidian-nvim";
+            repo = "obsidian.nvim";
+            rev = "c37aff6808061ecb08dd55f90f894efb8390a5a0";
+            sha256 = "0njf9crg5xi6qvn6r4fg3xawfnlqmjv7vc9ss6ydfsh6h2nj0kyr";
+          };
+          nvimSkipModules = [
+            "obsidian.pickers._fzf"
+            "obsidian.picker._fzf"
+          ];
+        };
         normalizedVaultPath =
           let
             path = self.settings.wikiPath;
@@ -68,7 +69,7 @@ args@{
         programs.nixvim = {
           plugins.obsidian = {
             enable = true;
-            package = pkgs.vimPlugins.obsidian-nvim;
+            package = obsidianNvim;
             settings = {
               workspaces = [
                 {
