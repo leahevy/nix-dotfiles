@@ -538,8 +538,8 @@ args@{
           _n=0
           while IFS= read -r _proc; do
             _n=$((_n + 1))
-            _cpu=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%05.2f%%", $1}')
-            _mem=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%05.2f%%", $2}')
+            _cpu=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $1}')
+            _mem=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $2}')
             _cmd=$(printf '%s' "$_proc" | ${stripProcCmd} | ${secretCensorScript})
             printf '%d. (cpu=%s, mem=%s): %s\n' "$_n" "$_cpu" "$_mem" "$_cmd" >&3
           done < <(${pkgs.procps}/bin/ps -eo pcpu,pmem,cmd --sort=-pcpu --no-headers \
@@ -551,8 +551,8 @@ args@{
           _n=0
           while IFS= read -r _proc; do
             _n=$((_n + 1))
-            _cpu=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%05.2f%%", $1}')
-            _mem=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%05.2f%%", $2}')
+            _cpu=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $1}')
+            _mem=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $2}')
             _cmd=$(printf '%s' "$_proc" | ${stripProcCmd} | ${secretCensorScript})
             printf '%d. (cpu=%s, mem=%s): %s\n' "$_n" "$_cpu" "$_mem" "$_cmd" >&3
           done < <(${pkgs.procps}/bin/ps -eo pcpu,pmem,cmd --sort=-pmem --no-headers \
