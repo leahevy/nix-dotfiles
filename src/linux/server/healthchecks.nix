@@ -306,6 +306,13 @@ args@{
             ]
             (lib.toLower key);
 
+        stripGroupPrefix =
+          key:
+          let
+            m = builtins.match ".*-(.*)" key;
+          in
+          if m != null then lib.trim (builtins.head m) else key;
+
         makeCheckScript =
           desc: cmd:
           pkgs.writeShellScript "nx-hc-check-${sanitizeName desc}" ''
@@ -512,8 +519,8 @@ args@{
         '';
 
         allRegularChecks = {
-          "Server is up" = "true";
-          "System services health" = ''
+          "10 - Server is up" = "true";
+          "40 - System services health" = ''
             _failed=$(${pkgs.systemd}/bin/systemctl --failed --plain --no-legend --no-pager 2>/dev/null \
               | ${pkgs.gawk}/bin/awk 'NF>0{print $1}')
             if [[ -n "$_failed" ]]; then
@@ -521,7 +528,7 @@ args@{
               exit 1
             fi
           '';
-          "User services health" = ''
+          "40 - User services health" = ''
             ${pkgs.systemd}/bin/systemctl is-active --quiet "user@${mainUserUid}.service" 2>/dev/null || exit 0
             _failed=$(${pkgs.systemd}/bin/systemctl --user --failed --plain --no-legend --no-pager \
               --machine=${mainUser}@.host 2>/dev/null \
@@ -531,20 +538,20 @@ args@{
               exit 1
             fi
           '';
-          "Memory and swap free" = memoryCheckExpr;
+          "20 - Memory and swap free" = memoryCheckExpr;
         }
-        // lib.optionalAttrs (!self.isVirtual) { "Temperature" = thermalCheckExpr; }
+        // lib.optionalAttrs (!self.isVirtual) { "20 - Temperature" = thermalCheckExpr; }
         // {
-          "Load" = loadCheckExpr;
+          "20 - Load" = loadCheckExpr;
         }
-        // lib.optionalAttrs (requireServicesUp != [ ]) { "Services" = servicesGroupedExpr; }
+        // lib.optionalAttrs (requireServicesUp != [ ]) { "50 - Required services" = servicesGroupedExpr; }
         // regularHealthChecks;
 
         allDailyChecks =
-          lib.optionalAttrs checkDiskUsage { "Disk space" = diskUsageExpr; }
-          // lib.optionalAttrs checkCertExpiry { "Certificate expiry" = certExpiryExpr; }
+          lib.optionalAttrs checkDiskUsage { "10 - Disk space" = diskUsageExpr; }
+          // lib.optionalAttrs checkCertExpiry { "20 - Certificate expiry" = certExpiryExpr; }
           // lib.optionalAttrs (checkSmartDisk && config.nx.linux.storage.smartd.enable) {
-            "SMART disk health" = smartDiskExpr;
+            "30 - SMART disk health" = smartDiskExpr;
           }
           // dailyHealthChecks;
 
@@ -553,15 +560,16 @@ args@{
           let
             infoFile = "$TMPDIR_HC/info-${sanitizeName desc}";
             outFile = "$TMPDIR_HC/out-${sanitizeName desc}";
+            displayName = stripGroupPrefix desc;
           in
           ''
             TOTAL=$((TOTAL + 1))
             if ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
-              printf '[OK ] %s\n' ${lib.escapeShellArg desc} >> "$DETAIL_FILE"
+              printf '[OK ] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
             else
-              printf '[FAIL] %s\n' ${lib.escapeShellArg desc} >> "$DETAIL_FILE"
+              printf '[FAIL] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
               if [[ -s "${outFile}" ]]; then
-                { printf 'check failed: %s\n' ${lib.escapeShellArg desc}
+                { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
                   ${pkgs.coreutils}/bin/cat "${outFile}"
                 } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
               fi

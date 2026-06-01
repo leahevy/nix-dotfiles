@@ -24,7 +24,7 @@ args@{
     ifEnabled.linux.server.healthchecks = {
       enabled = config: {
         nx.linux.server.healthchecks.requireServicesUp = [ "systemd-timesyncd.service" ];
-        nx.linux.server.healthchecks.regularHealthChecks."NTP synchronisation" = ''
+        nx.linux.server.healthchecks.regularHealthChecks."30 - NTP synchronisation" = ''
           _sync=$(${pkgs.systemd}/bin/timedatectl show --property=NTPSynchronized --value 2>/dev/null || echo "no")
           if [[ "$_sync" != "yes" ]]; then
             printf 'not synchronised\n' >&3
