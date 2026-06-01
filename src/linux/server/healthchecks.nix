@@ -238,6 +238,26 @@ args@{
           tag = "nx-healthcheck";
           string = "curl:";
         }
+        {
+          tag = "systemd";
+          service = "init.scope";
+          string = "nx-healthcheck-regular.service: Main process exited, code=killed, status=15/TERM";
+        }
+        {
+          tag = "systemd";
+          service = "init.scope";
+          string = "nx-healthcheck-regular.service: Failed with result 'signal'.";
+        }
+        {
+          tag = "systemd";
+          service = "init.scope";
+          string = "nx-healthcheck-daily.service: Main process exited, code=killed, status=15/TERM";
+        }
+        {
+          tag = "systemd";
+          service = "init.scope";
+          string = "nx-healthcheck-daily.service: Failed with result 'signal'.";
+        }
       ];
     };
 
