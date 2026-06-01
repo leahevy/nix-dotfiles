@@ -518,6 +518,43 @@ args@{
           ' /proc/loadavg
         '';
 
+        stripProcCmd = ''
+          ${pkgs.gawk}/bin/awk '{
+            cmd = $3
+            sub(/^\/nix\/store\/[^\/]+\/bin\//, "", cmd)
+            sub(/^\/nix\/store\/[^\/]+\//, "", cmd)
+            result = cmd
+            for (i = 4; i <= NF; i++) {
+              arg = $i
+              gsub(/\/nix\/store\/[^-]+-/, "..", arg)
+              result = result " " arg
+            }
+            print result
+          }'
+        '';
+
+        topCpuExpr = ''
+          while IFS= read -r _proc; do
+            _cpu=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%s%%", $1}')
+            _mem=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%s%%", $2}')
+            _cmd=$(printf '%s' "$_proc" | ${stripProcCmd} | ${secretCensorScript})
+            printf 'cpu:%-7s mem:%-6s %s\n' "$_cpu" "$_mem" "$_cmd" >&3
+          done < <(${pkgs.procps}/bin/ps -eo pcpu,pmem,cmd --sort=-pcpu --no-headers \
+            | ${pkgs.coreutils}/bin/head -3) || true
+          exit 0
+        '';
+
+        topMemExpr = ''
+          while IFS= read -r _proc; do
+            _mem=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%s%%", $2}')
+            _cpu=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%s%%", $1}')
+            _cmd=$(printf '%s' "$_proc" | ${stripProcCmd} | ${secretCensorScript})
+            printf 'mem:%-6s cpu:%-7s %s\n' "$_mem" "$_cpu" "$_cmd" >&3
+          done < <(${pkgs.procps}/bin/ps -eo pcpu,pmem,cmd --sort=-pmem --no-headers \
+            | ${pkgs.coreutils}/bin/head -3) || true
+          exit 0
+        '';
+
         allRegularChecks = {
           "10 - Server is up" = "true";
           "40 - System services health" = ''
@@ -545,6 +582,10 @@ args@{
           "20 - Load" = loadCheckExpr;
         }
         // lib.optionalAttrs (requireServicesUp != [ ]) { "50 - Required services" = servicesGroupedExpr; }
+        // {
+          "60 - Top CPU processes" = topCpuExpr;
+          "60 - Top memory processes" = topMemExpr;
+        }
         // regularHealthChecks;
 
         allDailyChecks =
