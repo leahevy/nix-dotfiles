@@ -18,7 +18,7 @@ args@{
     openFirewall = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Open port 443 TCP (and UDP when enableQuic is true) in the firewall";
+      description = "Open ports 80 and 443 TCP (and UDP 443 when enableQuic is true) in the firewall.";
     };
     enableQuic = lib.mkOption {
       type = lib.types.bool;
@@ -108,6 +108,12 @@ args@{
           commonHttpConfig = "access_log syslog:server=unix:/dev/log combined;";
           appendHttpConfig = ''
             server {
+              listen 0.0.0.0:80 default_server;
+              listen [::0]:80 default_server;
+              server_name _;
+              return 301 https://$host$request_uri;
+            }
+            server {
               listen 0.0.0.0:443 ssl default_server;
               listen [::0]:443 ssl default_server;
               ${lib.optionalString enableQuic ''
@@ -122,7 +128,10 @@ args@{
         users.users.nginx.extraGroups = [ "acme" ];
 
         networking.firewall = lib.mkIf (openFirewall && config.nx.linux.networking.firewall.enable) {
-          allowedTCPPorts = [ 443 ];
+          allowedTCPPorts = [
+            80
+            443
+          ];
           allowedUDPPorts = lib.mkIf enableQuic [ 443 ];
         };
 
