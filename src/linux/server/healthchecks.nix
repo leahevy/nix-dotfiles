@@ -102,8 +102,14 @@ args@{
 
     memoryFreeThresholdPct = lib.mkOption {
       type = lib.types.int;
-      default = 20;
-      description = "Minimum combined free percentage of MemFree+SwapFree relative to MemTotal before the memory check fails.";
+      default = 30;
+      description = "Minimum combined free percentage of (MemAvailable+SwapFree) relative to (MemTotal+SwapTotal) before the memory check fails.";
+    };
+
+    memoryRamUsedMaxPct = lib.mkOption {
+      type = lib.types.int;
+      default = 90;
+      description = "Maximum RAM-only used percentage (MemTotal-MemAvailable)/MemTotal before the memory check fails, regardless of swap availability.";
     };
 
     enableDailyHealthCheck = lib.mkOption {
@@ -283,6 +289,7 @@ args@{
         requiredCPUForHighLoadDetection,
         highLoadMultiplier,
         memoryFreeThresholdPct,
+        memoryRamUsedMaxPct,
         enableDailyHealthCheck,
         dailyName,
         dailyHealthCheckSchedule,
@@ -406,7 +413,7 @@ args@{
                 combined_free=(t>0) ? a*100/t : 100
                 printf "%.0f%% mem used\n", mem_used > "/dev/fd/3"
               }
-              exit (combined_free < ${toString memoryFreeThresholdPct})
+              exit (combined_free < ${toString memoryFreeThresholdPct} || mem_used > ${toString memoryRamUsedMaxPct})
             }
           ' /proc/meminfo
         '';
