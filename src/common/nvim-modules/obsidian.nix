@@ -53,9 +53,14 @@ args@{
             rev = "c37aff6808061ecb08dd55f90f894efb8390a5a0";
             sha256 = "0njf9crg5xi6qvn6r4fg3xawfnlqmjv7vc9ss6ydfsh6h2nj0kyr";
           };
+          dependencies = with pkgs.vimPlugins; [ plenary-nvim ];
           nvimSkipModules = [
             "obsidian.pickers._fzf"
             "obsidian.picker._fzf"
+            "obsidian.picker._mini"
+            "obsidian.picker._snacks"
+            "obsidian.picker._telescope"
+            "minimal"
           ];
         };
         normalizedVaultPath =
