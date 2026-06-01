@@ -82,6 +82,24 @@ args@{
       description = "Seconds to keep the relaxed load threshold after detected nix build activity.";
     };
 
+    loadHighCpuExemptCommands = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Process command names (matched as substrings against comm, not full args) that can trigger high-load-exempt mode when their CPU usage exceeds requiredCPUForHighLoadDetection.";
+    };
+
+    requiredCPUForHighLoadDetection = lib.mkOption {
+      type = lib.types.int;
+      default = 40;
+      description = "Minimum CPU percentage a matching process must consume to activate high-load-exempt mode.";
+    };
+
+    highLoadMultiplier = lib.mkOption {
+      type = lib.types.float;
+      default = 2.5;
+      description = "Load limit multiplier applied when high-load-exempt mode is active.";
+    };
+
     memoryFreeThresholdPct = lib.mkOption {
       type = lib.types.int;
       default = 20;
@@ -241,6 +259,9 @@ args@{
         loadMaxPerCore,
         loadBuildMultiplier,
         loadBuildGraceSeconds,
+        loadHighCpuExemptCommands,
+        requiredCPUForHighLoadDetection,
+        highLoadMultiplier,
         memoryFreeThresholdPct,
         enableDailyHealthCheck,
         dailyName,
@@ -485,38 +506,60 @@ args@{
           fi
         '';
 
-        loadCheckExpr = ''
-          _build_marker=/run/nx-healthcheck/build-active
-          _now=$(${pkgs.coreutils}/bin/date +%s)
-          _build_mode=normal
-          if ${pkgs.procps}/bin/ps -eo pid,etimes,cmd \
-            | ${pkgs.gnugrep}/bin/grep -E 'nix build|nix-store.*realise|nix-store.*build' \
-            | ${pkgs.gnugrep}/bin/grep -v grep >/dev/null; then
-            ${pkgs.coreutils}/bin/touch "$_build_marker"
-          fi
-          if [[ -e "$_build_marker" ]]; then
-            _marker_mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$_build_marker" 2>/dev/null || echo 0)
-            if [[ $((_now - _marker_mtime)) -le ${toString loadBuildGraceSeconds} ]]; then
-              _build_mode=build-active
+        loadCheckExpr =
+          let
+            awkCond = lib.concatStringsSep " || " (
+              map (p: "index($2, \"${p}\") > 0") loadHighCpuExemptCommands
+            );
+          in
+          ''
+            _build_marker=/run/nx-healthcheck/build-active
+            _now=$(${pkgs.coreutils}/bin/date +%s)
+            _build_mode=normal
+            if ${pkgs.procps}/bin/ps -eo pid,etimes,cmd \
+              | ${pkgs.gnugrep}/bin/grep -E 'nix build|nix-store.*realise|nix-store.*build' \
+              | ${pkgs.gnugrep}/bin/grep -v grep >/dev/null; then
+              ${pkgs.coreutils}/bin/touch "$_build_marker"
             fi
-          fi
-          _nproc=$(${pkgs.coreutils}/bin/nproc 2>/dev/null || echo 1)
-          ${pkgs.gawk}/bin/awk \
-            -v max=${toString loadMaxPerCore} \
-            -v multiplier=${toString loadBuildMultiplier} \
-            -v nproc="$_nproc" \
-            -v build_mode="$_build_mode" '
-            {
-              load5 = $2
-              threshold = max * nproc
-              if (build_mode == "build-active") {
-                threshold = threshold * multiplier
+            if [[ -e "$_build_marker" ]]; then
+              _marker_mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$_build_marker" 2>/dev/null || echo 0)
+              if [[ $((_now - _marker_mtime)) -le ${toString loadBuildGraceSeconds} ]]; then
+                _build_mode=build-active
+              fi
+            fi
+            _high_load_mode=normal
+            ${lib.optionalString (loadHighCpuExemptCommands != [ ]) ''
+              if ${pkgs.procps}/bin/ps -eo pcpu,comm --no-headers 2>/dev/null \
+                | ${pkgs.gawk}/bin/awk -v thr=${toString requiredCPUForHighLoadDetection} \
+                  'BEGIN{found=0} ($1 >= thr && (${awkCond})){found=1} END{exit !found}'; then
+                _high_load_mode=high-load-exempt
+              fi
+            ''}
+            _nproc=$(${pkgs.coreutils}/bin/nproc 2>/dev/null || echo 1)
+            ${pkgs.gawk}/bin/awk \
+              -v max=${toString loadMaxPerCore} \
+              -v build_multiplier=${toString loadBuildMultiplier} \
+              -v high_multiplier=${toString highLoadMultiplier} \
+              -v nproc="$_nproc" \
+              -v build_mode="$_build_mode" \
+              -v high_load_mode="$_high_load_mode" '
+              {
+                load5 = $2
+                threshold = max * nproc
+                mode = "normal"
+                if (build_mode == "build-active") {
+                  t = threshold * build_multiplier
+                  if (t > threshold) { threshold = t; mode = "build-active" }
+                }
+                if (high_load_mode == "high-load-exempt") {
+                  t = max * nproc * high_multiplier
+                  if (t > threshold) { threshold = t; mode = "high-load-exempt" }
+                }
+                printf "load 5m: %.2f (%s cores, limit: %.1f, mode: %s)\n", load5, nproc, threshold, mode > "/dev/fd/3"
+                exit (load5 > threshold)
               }
-              printf "load 5m: %.2f (%s cores, limit: %.1f, mode: %s)\n", load5, nproc, threshold, build_mode > "/dev/fd/3"
-              exit (load5 > threshold)
-            }
-          ' /proc/loadavg
-        '';
+            ' /proc/loadavg
+          '';
 
         stripProcCmd = pkgs.writeShellScript "nx-hc-strip-proc-cmd" ''
           ${pkgs.gawk}/bin/awk '{
