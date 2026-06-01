@@ -586,6 +586,7 @@ args@{
             _cmd=$(printf '%s' "$_proc" | ${stripProcCmd} | ${secretCensorScript})
             printf '%d. (cpu=%s, mem=%s): %s\n' "$_n" "$_cpu" "$_mem" "$_cmd" >&3
           done < <(${pkgs.procps}/bin/ps -eo pcpu,pmem,cmd --sort=-pcpu --no-headers \
+            | ${pkgs.gnugrep}/bin/grep -v "ps -eo pcpu,pmem,cmd" \
             | ${pkgs.coreutils}/bin/head -5) || true
           exit 0
         '';
