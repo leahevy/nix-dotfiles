@@ -608,6 +608,9 @@ args@{
             displayName = stripGroupPrefix desc;
           in
           ''
+            if [[ $_prev_had_info -eq 1 ]]; then
+              printf '\n' >> "$DETAIL_FILE"
+            fi
             TOTAL=$((TOTAL + 1))
             if ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
               printf '[OK ] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
@@ -621,8 +624,11 @@ args@{
               FAILED=$((FAILED + 1))
             fi
             if [[ -s "${infoFile}" ]]; then
+              _prev_had_info=1
               ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
                 | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
+            else
+              _prev_had_info=0
             fi
           '';
 
@@ -726,6 +732,7 @@ args@{
             DETAIL_FILE="$TMPDIR_HC/detail"
             FAILED=0
             TOTAL=0
+            _prev_had_info=0
 
             ${lib.concatStringsSep "\n" (lib.mapAttrsToList runCheckBlock checkScripts)}
 
