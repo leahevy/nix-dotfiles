@@ -474,7 +474,10 @@ let
         font-family: monospace !important;
       }
       [class*="icon" i] *,
-      [class~="ic" i] * {
+      [class~="ic" i] *,
+      [role="presentation"],
+      [class*="herobutton" i],
+      [class*="herobutton" i] * {
         font-family: revert !important;
       }
     '';
