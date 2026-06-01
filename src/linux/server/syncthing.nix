@@ -262,17 +262,15 @@ args@{
           users.users.syncthing.extraGroups = [ "paperless-sync" ];
           users.users.paperless.extraGroups = [ "paperless-sync" ];
 
-          systemd.tmpfiles.settings."20-paperless-sync" = {
-            "${basePath}/import".d = {
-              mode = "2770";
-              user = "paperless";
-              group = "paperless-sync";
-            };
-            "${basePath}/export".d = {
-              mode = "2770";
-              user = "paperless";
-              group = "paperless-sync";
-            };
+          systemd.tmpfiles.settings."10-paperless"."${basePath}/import".d = lib.mkForce {
+            mode = "2770";
+            user = "paperless";
+            group = "paperless-sync";
+          };
+          systemd.tmpfiles.settings."10-paperless-export"."${basePath}/export".d = lib.mkForce {
+            mode = "2770";
+            user = "paperless";
+            group = "paperless-sync";
           };
 
           services.syncthing.settings.folders = {
