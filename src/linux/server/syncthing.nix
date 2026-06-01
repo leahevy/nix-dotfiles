@@ -119,6 +119,7 @@ args@{
       let
         domain = self.host.remote.baseDomain;
         exposedService = self.host.remote.exposedServices.syncthing;
+        isExposed = exposedService != false;
         exposedSubdomain = if builtins.isString exposedService then exposedService else "syncthing";
         devicesAttr = builtins.listToAttrs (
           map (d: {
@@ -142,7 +143,7 @@ args@{
       {
         assertions = [
           {
-            assertion = config.nx.linux.security.letsencrypt.enable;
+            assertion = !isExposed || config.nx.linux.security.letsencrypt.enable;
             message = "linux.server.syncthing requires linux.security.letsencrypt to be enabled!";
           }
           {
@@ -223,8 +224,9 @@ args@{
         }:
         let
           domain = self.host.remote.baseDomain;
+          exposedService = self.host.remote.exposedServices.syncthing;
         in
-        {
+        lib.mkIf (exposedService != false) {
           services.nginx.virtualHosts."${subdomain}.${domain}" = {
             useACMEHost = domain;
             forceSSL = true;

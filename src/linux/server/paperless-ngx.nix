@@ -76,12 +76,13 @@ args@{
         domain = self.host.remote.baseDomain;
         basePath = paperlessDataBasePath;
         exposedService = self.host.remote.exposedServices.paperless-ngx;
+        isExposed = exposedService != false;
         exposedSubdomain = if builtins.isString exposedService then exposedService else "paperless-ngx";
       in
       {
         assertions = [
           {
-            assertion = config.nx.linux.security.letsencrypt.enable;
+            assertion = !isExposed || config.nx.linux.security.letsencrypt.enable;
             message = "linux.server.paperless-ngx requires linux.security.letsencrypt to be enabled!";
           }
           {
@@ -140,8 +141,9 @@ args@{
         { config, subdomain, ... }:
         let
           domain = self.host.remote.baseDomain;
+          exposedService = self.host.remote.exposedServices.paperless-ngx;
         in
-        {
+        lib.mkIf (exposedService != false) {
           services.nginx.virtualHosts."${subdomain}.${domain}" = {
             useACMEHost = domain;
             forceSSL = true;
