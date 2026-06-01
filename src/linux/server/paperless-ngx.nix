@@ -75,6 +75,8 @@ args@{
       let
         domain = self.host.remote.baseDomain;
         basePath = paperlessDataBasePath;
+        exposedService = self.host.remote.exposedServices.paperless-ngx;
+        exposedSubdomain = if builtins.isString exposedService then exposedService else "paperless-ngx";
       in
       {
         assertions = [
@@ -85,6 +87,10 @@ args@{
           {
             assertion = domain != null;
             message = "linux.server.paperless-ngx requires host.remote.baseDomain to be set!";
+          }
+          {
+            assertion = exposedService == false || exposedSubdomain == subdomain;
+            message = "linux.server.paperless-ngx: subdomain '${subdomain}' does not match exposedServices.paperless-ngx subdomain '${exposedSubdomain}'!";
           }
         ];
 
