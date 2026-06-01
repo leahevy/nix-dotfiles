@@ -518,7 +518,7 @@ args@{
           ' /proc/loadavg
         '';
 
-        stripProcCmd = ''
+        stripProcCmd = pkgs.writeShellScript "nx-hc-strip-proc-cmd" ''
           ${pkgs.gawk}/bin/awk '{
             cmd = $3
             sub(/^\/nix\/store\/[^\/]+\/bin\//, "", cmd)
