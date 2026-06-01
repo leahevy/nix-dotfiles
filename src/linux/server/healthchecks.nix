@@ -767,6 +767,34 @@ args@{
           (map lib.escapeRegex secretWipeValueLiterals) ++ secretWipeValueRegexes
         );
 
+        secretCensorScript = pkgs.writeShellScript "nx-hc-censor" ''
+          ${pkgs.gawk}/bin/awk '
+            BEGIN { IGNORECASE = 1; line_pat = "${secretWipeLineRegex}"; val_pat = "${secretWipeValueRegex}" }
+            match($0, line_pat) {
+              prefix = substr($0, 1, RSTART - 1)
+              suffix = substr($0, RSTART)
+              gsub(/[^ \t]/, "*", suffix)
+              print prefix suffix
+              next
+            }
+            match($0, val_pat) {
+              prefix = substr($0, 1, RSTART - 1)
+              rest = substr($0, RSTART)
+              if (match(rest, /[ \t]/)) {
+                token = substr(rest, 1, RSTART - 1)
+                tail = substr(rest, RSTART)
+              } else {
+                token = rest
+                tail = ""
+              }
+              gsub(/[^ \t]/, "*", token)
+              print prefix token tail
+              next
+            }
+            { print }
+          '
+        '';
+
         makeCompanionScript =
           {
             endpointName,
@@ -857,31 +885,7 @@ args@{
                 --no-pager --output=short -n 500 > "$LOG_FILE" 2>/dev/null || true
               if [[ -s "$LOG_FILE" ]]; then
                 FILTERED_LOG="$TMPDIR_HC/service-logs-filtered"
-                ${pkgs.gawk}/bin/awk '
-                  BEGIN { IGNORECASE = 1; line_pat = "${secretWipeLineRegex}"; val_pat = "${secretWipeValueRegex}" }
-                  match($0, line_pat) {
-                    prefix = substr($0, 1, RSTART - 1)
-                    suffix = substr($0, RSTART)
-                    gsub(/[^ \t]/, "*", suffix)
-                    print prefix suffix
-                    next
-                  }
-                  match($0, val_pat) {
-                    prefix = substr($0, 1, RSTART - 1)
-                    rest = substr($0, RSTART)
-                    if (match(rest, /[ \t]/)) {
-                      token = substr(rest, 1, RSTART - 1)
-                      tail = substr(rest, RSTART)
-                    } else {
-                      token = rest
-                      tail = ""
-                    }
-                    gsub(/[^ \t]/, "*", token)
-                    print prefix token tail
-                    next
-                  }
-                  { print }
-                ' "$LOG_FILE" > "$FILTERED_LOG"
+                ${secretCensorScript} < "$LOG_FILE" > "$FILTERED_LOG"
                 LOG_HDR=$'\nLogs (${triggerUnit}):\n\n'
                 LOG_HDR_SIZE=''${#LOG_HDR}
                 LOG_ELLIPSIS=$'\n[...]\n'
