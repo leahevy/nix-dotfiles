@@ -938,7 +938,7 @@ args@{
               if [[ -s "$LOG_FILE" ]]; then
                 FILTERED_LOG="$TMPDIR_HC/service-logs-filtered"
                 ${secretCensorScript} < "$LOG_FILE" > "$FILTERED_LOG"
-                LOG_HDR=$'\nLogs (${triggerUnit}):\n\n'
+                LOG_HDR=$'\n==== LOGS ====\n\n'
                 LOG_HDR_SIZE=''${#LOG_HDR}
                 LOG_ELLIPSIS=$'\n[...]\n'
                 LOG_ELLIPSIS_SIZE=''${#LOG_ELLIPSIS}
