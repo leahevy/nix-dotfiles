@@ -714,41 +714,58 @@ args@{
             exit 0
           '';
 
-        secretWipePatterns = [
+        secretWipeLineLiterals = [
+          "/bin/age"
+          "/bin/curl"
           "/bin/git"
           "/bin/gpg"
-          "/bin/ssh"
           "/bin/openssl"
-          "/bin/age"
+          "/bin/restic"
           "/bin/sops"
-          "/bin/curl"
-          "ssh://"
-          "sftp://"
-          "http://"
-          "https://"
-          "ftp://"
-          "ftps://"
-          "smtp://"
-          "smtps://"
-          "postgres://"
-          "postgresql://"
-          "mysql://"
-          "redis://"
-          "rediss://"
-          "amqp://"
-          "amqps://"
-          "secret"
-          "password"
-          "passwd"
-          "token"
+          "/bin/ssh"
+          "/bin/systemctl"
+          "/bin/wg"
+          "AGE-SECRET-KEY-1"
           "-----BEGIN"
           "Authorization:"
           "Bearer "
-          "/run/secrets"
-          config.users.users.${mainUser}.home
+          "passwd"
+          "password"
           "/root"
+          "/run/secrets"
+          "secret"
+          "token"
+          config.users.users.${mainUser}.home
         ];
-        secretWipeRegex = lib.concatStringsSep "|" (map lib.escapeRegex secretWipePatterns);
+
+        secretWipeValueLiterals = [
+          "amqp://"
+          "amqps://"
+          "ftp://"
+          "ftps://"
+          "http://"
+          "https://"
+          "mysql://"
+          "postgres://"
+          "postgresql://"
+          "redis://"
+          "rediss://"
+          "sftp://"
+          "smtp://"
+          "smtps://"
+          "ssh://"
+        ];
+
+        secretWipeValueRegexes = [
+          "[[:alnum:]_.%+-]+@[[:alnum:].-]+\\.[[:alpha:]]{2,}"
+          "\\<[0-9A-F]{40}\\>"
+          "\\<[0-9A-F]{16}\\>"
+        ];
+
+        secretWipeLineRegex = lib.concatStringsSep "|" (map lib.escapeRegex secretWipeLineLiterals);
+        secretWipeValueRegex = lib.concatStringsSep "|" (
+          (map lib.escapeRegex secretWipeValueLiterals) ++ secretWipeValueRegexes
+        );
 
         makeCompanionScript =
           {
@@ -841,12 +858,26 @@ args@{
               if [[ -s "$LOG_FILE" ]]; then
                 FILTERED_LOG="$TMPDIR_HC/service-logs-filtered"
                 ${pkgs.gawk}/bin/awk '
-                  BEGIN { IGNORECASE = 1; pat = "${secretWipeRegex}" }
-                  match($0, pat) {
+                  BEGIN { IGNORECASE = 1; line_pat = "${secretWipeLineRegex}"; val_pat = "${secretWipeValueRegex}" }
+                  match($0, line_pat) {
                     prefix = substr($0, 1, RSTART - 1)
                     suffix = substr($0, RSTART)
                     gsub(/[^ \t]/, "*", suffix)
                     print prefix suffix
+                    next
+                  }
+                  match($0, val_pat) {
+                    prefix = substr($0, 1, RSTART - 1)
+                    rest = substr($0, RSTART)
+                    if (match(rest, /[ \t]/)) {
+                      token = substr(rest, 1, RSTART - 1)
+                      tail = substr(rest, RSTART)
+                    } else {
+                      token = rest
+                      tail = ""
+                    }
+                    gsub(/[^ \t]/, "*", token)
+                    print prefix token tail
                     next
                   }
                   { print }
