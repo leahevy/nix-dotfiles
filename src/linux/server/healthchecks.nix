@@ -90,7 +90,7 @@ args@{
 
     requiredCPUForHighLoadDetection = lib.mkOption {
       type = lib.types.int;
-      default = 40;
+      default = 50;
       description = "Minimum CPU percentage a matching process must consume to activate high-load-exempt mode.";
     };
 
