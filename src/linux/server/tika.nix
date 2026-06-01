@@ -16,10 +16,19 @@ args@{
   input = "linux";
 
   options = {
+    baseOcrLanguages = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "deu"
+        "eng"
+      ];
+      description = "Base Tesseract OCR language codes always included in the Tika build, independent of module contributions.";
+    };
+
     ocrLanguages = lib.mkOption {
-      type = lib.types.nullOr (lib.types.listOf lib.types.str);
-      default = null;
-      description = "Tesseract OCR language codes for Tika embedded-image OCR, or null to auto-derive from linux.server.paperless-ngx when enabled.";
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional Tesseract OCR language codes contributed by other modules, concatenated with baseOcrLanguages.";
     };
   };
 
@@ -31,32 +40,29 @@ args@{
     };
 
     linux.system =
-      { config, ocrLanguages, ... }:
+      {
+        config,
+        baseOcrLanguages,
+        ocrLanguages,
+        ...
+      }:
       let
-        effectiveLanguages =
-          if ocrLanguages != null then
-            ocrLanguages
-          else if config.nx.linux.server.paperless-ngx.enable then
-            lib.splitString "+" config.nx.linux.server.paperless-ngx.ocrLanguage
-          else
-            [
-              "deu"
-              "eng"
-            ];
+        effectiveLanguages = lib.unique (
+          [
+            "equ"
+            "osd"
+            "eng"
+          ]
+          ++ baseOcrLanguages
+          ++ ocrLanguages
+        );
       in
       {
         services.tika = {
           enable = true;
           package = pkgs.tika.override {
             tesseract = pkgs.tesseract5.override {
-              enableLanguages = lib.unique (
-                [
-                  "equ"
-                  "osd"
-                  "eng"
-                ]
-                ++ effectiveLanguages
-              );
+              enableLanguages = effectiveLanguages;
             };
           };
         };

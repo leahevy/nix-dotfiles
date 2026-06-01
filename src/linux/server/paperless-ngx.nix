@@ -156,5 +156,12 @@ args@{
         nx.linux.server.healthchecks.requireServicesUp = [ "paperless-web.service" ];
       };
     };
+
+    ifEnabled.linux.server.tika = {
+      enabled = config: {
+        nx.linux.server.tika.ocrLanguages =
+          lib.splitString "+" config.nx.linux.server.paperless-ngx.ocrLanguage;
+      };
+    };
   };
 }
