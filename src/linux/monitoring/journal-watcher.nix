@@ -374,6 +374,8 @@ args@{
         "^lr : .*$"
         "^sp : [0-9a-f]+$"
         "^x[0-9]+ *: [0-9a-f]+.*$"
+        "prepare_slab_obj_exts_hook, bio-[0-9]+: Failed to create slab extension vector!"
+        "WARNING: CPU: [0-9]+ PID: [0-9]+ at mm/slub\\.c:[0-9]+ alloc_tagging_slab_alloc_hook"
       ];
       baseUserStringsToIgnore = [ ];
       baseStringsToHighlight = [ ];
