@@ -534,6 +534,7 @@ args@{
         '';
 
         topCpuExpr = ''
+          ${pkgs.coreutils}/bin/sleep 3
           _n=0
           while IFS= read -r _proc; do
             _n=$((_n + 1))
