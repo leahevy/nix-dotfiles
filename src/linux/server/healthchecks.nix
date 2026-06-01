@@ -96,7 +96,7 @@ args@{
 
     highLoadMultiplier = lib.mkOption {
       type = lib.types.float;
-      default = 2.5;
+      default = 2.7;
       description = "Load limit multiplier applied when high-load-exempt mode is active.";
     };
 
