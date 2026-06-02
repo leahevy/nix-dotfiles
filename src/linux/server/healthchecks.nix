@@ -632,9 +632,14 @@ args@{
             else
               _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
             fi
-            printf '%d. (cpu=%s, mem=%s): %s\n' "$_n" "$_cpu" "$_mem" "$_cmd" >&3
-          done < <(${pkgs.gawk}/bin/awk '$9+0<0.1{next} {print}' "$TMPDIR_HC/top-data" 2>/dev/null \
-            | ${pkgs.coreutils}/bin/head -5) || true
+            printf '%2d. (cpu=%s, mem=%s): %s\n' "$_n" "$_cpu" "$_mem" "$_cmd" >&3
+          done < <(${pkgs.gawk}/bin/awk '
+              { val=$9+0
+                if (val<0.1) exit
+                if (val>5) { print; above++; next }
+                if (above+below<5) { print; below++; next }
+                exit }
+            ' "$TMPDIR_HC/top-data" 2>/dev/null) || true
           if [[ $_n -eq 0 ]]; then
             printf '   [no process above 0.1%% cpu]\n' >&3
           fi
@@ -656,10 +661,15 @@ args@{
             else
               _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
             fi
-            printf '%d. (cpu=%s, mem=%s): %s\n' "$_n" "$_cpu" "$_mem" "$_cmd" >&3
-          done < <(${pkgs.gawk}/bin/awk '$10+0<0.1{next} {print}' "$TMPDIR_HC/top-data" 2>/dev/null \
-            | ${pkgs.coreutils}/bin/sort -rn -k10 \
-            | ${pkgs.coreutils}/bin/head -5) || true
+            printf '%2d. (cpu=%s, mem=%s): %s\n' "$_n" "$_cpu" "$_mem" "$_cmd" >&3
+          done < <(${pkgs.coreutils}/bin/sort -rn -k10 "$TMPDIR_HC/top-data" 2>/dev/null \
+            | ${pkgs.gawk}/bin/awk '
+                { val=$10+0
+                  if (val<0.1) exit
+                  if (val>5) { print; above++; next }
+                  if (above+below<5) { print; below++; next }
+                  exit }
+              ') || true
           if [[ $_n -eq 0 ]]; then
             printf '   [no process above 0.1%% mem]\n' >&3
           fi
