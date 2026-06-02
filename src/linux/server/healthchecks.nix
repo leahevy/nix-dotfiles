@@ -535,8 +535,8 @@ args@{
 
         loadCheckExpr =
           let
-            awkCond = lib.concatStringsSep " || " (
-              map (p: "index($2, \"${p}\") > 0") loadHighCpuExemptCommands
+            awkCondTop = lib.concatStringsSep " || " (
+              map (p: "index($NF, \"${p}\") > 0") loadHighCpuExemptCommands
             );
           in
           ''
@@ -556,9 +556,10 @@ args@{
             fi
             _high_load_mode=normal
             ${lib.optionalString (loadHighCpuExemptCommands != [ ]) ''
-              if ${pkgs.procps}/bin/ps -eo pcpu,comm --no-headers 2>/dev/null \
-                | ${pkgs.gawk}/bin/awk -v thr=${toString requiredCPUForHighLoadDetection} \
-                  'BEGIN{found=0} ($1 >= thr && (${awkCond})){found=1} END{exit !found}'; then
+              if ${pkgs.gawk}/bin/awk -v thr=${toString requiredCPUForHighLoadDetection} '
+                  ($9+0 >= thr && (${awkCondTop})) {found=1}
+                  END{exit !found}
+                ' "$TMPDIR_HC/top-data" 2>/dev/null; then
                 _high_load_mode=high-load-exempt
               fi
             ''}
@@ -603,35 +604,70 @@ args@{
           }'
         '';
 
+        topSnapshotExpr = ''
+          ${pkgs.procps}/bin/top -bn2 -d2 2>/dev/null \
+            | ${pkgs.gawk}/bin/awk '
+                /^top/{b++; next}
+                b<2{next}
+                /^Tasks|^%Cpu|^MiB|^ *PID/{next}
+                NF==0{next}
+                $NF=="top"{next}
+                {print}
+              ' > "$TMPDIR_HC/top-data" || true
+          exit 0
+        '';
+
         topCpuExpr = ''
-          ${pkgs.coreutils}/bin/sleep 3
           _n=0
-          while IFS= read -r _proc; do
+          while IFS= read -r _line; do
             _n=$((_n + 1))
-            _cpu=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $1}')
-            _mem=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $2}')
-            _cmd=$(printf '%s' "$_proc" | ${stripProcCmd} | ${secretCensorScript})
+            _pid=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $1}')
+            _cpu=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $9}')
+            _mem=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $10}')
+            _cpu_val=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $9}')
+            _mem_val=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $10}')
+            _raw=$(${pkgs.coreutils}/bin/tr '\0' ' ' < /proc/"$_pid"/cmdline 2>/dev/null)
+            if [[ -n "$_raw" ]]; then
+              _cmd=$(printf '%s %s %s' "$_cpu_val" "$_mem_val" "$_raw" | ${stripProcCmd} | ${secretCensorScript})
+            else
+              _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
+            fi
             printf '%d. (cpu=%s, mem=%s): %s\n' "$_n" "$_cpu" "$_mem" "$_cmd" >&3
-          done < <(${pkgs.procps}/bin/ps -eo pcpu,pmem,cmd --sort=-pcpu --no-headers \
-            | ${pkgs.gnugrep}/bin/grep -v "ps -eo pcpu,pmem,cmd" \
+          done < <(${pkgs.gawk}/bin/awk '$9+0<0.1{next} {print}' "$TMPDIR_HC/top-data" 2>/dev/null \
             | ${pkgs.coreutils}/bin/head -5) || true
+          if [[ $_n -eq 0 ]]; then
+            printf '   [no process above 0.1%% cpu]\n' >&3
+          fi
           exit 0
         '';
 
         topMemExpr = ''
           _n=0
-          while IFS= read -r _proc; do
+          while IFS= read -r _line; do
             _n=$((_n + 1))
-            _cpu=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $1}')
-            _mem=$(printf '%s' "$_proc" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $2}')
-            _cmd=$(printf '%s' "$_proc" | ${stripProcCmd} | ${secretCensorScript})
+            _pid=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $1}')
+            _cpu=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $9}')
+            _mem=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $10}')
+            _cpu_val=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $9}')
+            _mem_val=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $10}')
+            _raw=$(${pkgs.coreutils}/bin/tr '\0' ' ' < /proc/"$_pid"/cmdline 2>/dev/null)
+            if [[ -n "$_raw" ]]; then
+              _cmd=$(printf '%s %s %s' "$_cpu_val" "$_mem_val" "$_raw" | ${stripProcCmd} | ${secretCensorScript})
+            else
+              _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
+            fi
             printf '%d. (cpu=%s, mem=%s): %s\n' "$_n" "$_cpu" "$_mem" "$_cmd" >&3
-          done < <(${pkgs.procps}/bin/ps -eo pcpu,pmem,cmd --sort=-pmem --no-headers \
+          done < <(${pkgs.gawk}/bin/awk '$10+0<0.1{next} {print}' "$TMPDIR_HC/top-data" 2>/dev/null \
+            | ${pkgs.coreutils}/bin/sort -rn -k10 \
             | ${pkgs.coreutils}/bin/head -5) || true
+          if [[ $_n -eq 0 ]]; then
+            printf '   [no process above 0.1%% mem]\n' >&3
+          fi
           exit 0
         '';
 
         allRegularChecks = {
+          "+00 - Process snapshot" = topSnapshotExpr;
           "10 - Server is up" = "true";
           "40 - System services health" = ''
             _failed=$(${pkgs.systemd}/bin/systemctl --failed --plain --no-legend --no-pager 2>/dev/null \
