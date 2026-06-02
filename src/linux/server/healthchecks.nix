@@ -668,8 +668,8 @@ args@{
 
         allRegularChecks = {
           "+00 - Process snapshot" = topSnapshotExpr;
-          "10 - Server is up" = "true";
-          "40 - System services health" = ''
+          "+10 - Server is up" = "true";
+          "+40 - System services health" = ''
             _failed=$(${pkgs.systemd}/bin/systemctl --failed --plain --no-legend --no-pager 2>/dev/null \
               | ${pkgs.gawk}/bin/awk 'NF>0{print $1}')
             if [[ -n "$_failed" ]]; then
@@ -677,7 +677,7 @@ args@{
               exit 1
             fi
           '';
-          "40 - User services health" = ''
+          "+40 - User services health" = ''
             ${pkgs.systemd}/bin/systemctl is-active --quiet "user@${mainUserUid}.service" 2>/dev/null || exit 0
             _failed=$(${pkgs.systemd}/bin/systemctl --user --failed --plain --no-legend --no-pager \
               --machine=${mainUser}@.host 2>/dev/null \
