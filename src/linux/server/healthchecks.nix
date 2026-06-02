@@ -363,7 +363,7 @@ args@{
 
         makeCheckScript =
           desc: cmd:
-          pkgs.writeShellScript "nx-hc-check-${sanitizeName desc}" ''
+          pkgs.writeShellScript "nx-hc-check-${sanitizeName (lib.removePrefix "+" desc)}" ''
             set -e
             ${cmd}
           '';
@@ -675,34 +675,60 @@ args@{
         runCheckBlock =
           desc: script:
           let
-            infoFile = "$TMPDIR_HC/info-${sanitizeName desc}";
-            outFile = "$TMPDIR_HC/out-${sanitizeName desc}";
-            displayName = stripGroupPrefix desc;
+            silent = lib.hasPrefix "+" desc;
+            cleanDesc = if silent then lib.removePrefix "+" desc else desc;
+            infoFile = "$TMPDIR_HC/info-${sanitizeName cleanDesc}";
+            outFile = "$TMPDIR_HC/out-${sanitizeName cleanDesc}";
+            displayName = stripGroupPrefix cleanDesc;
           in
-          ''
-            if [[ $_prev_had_info -eq 1 ]]; then
-              printf '\n' >> "$DETAIL_FILE"
-            fi
-            TOTAL=$((TOTAL + 1))
-            if ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
-              printf '[OK ] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
-            else
-              printf '[FAIL] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
-              if [[ -s "${outFile}" ]]; then
-                { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
-                  ${pkgs.coreutils}/bin/cat "${outFile}"
-                } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
+          if silent then
+            ''
+              if ! ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
+                TOTAL=$((TOTAL + 1))
+                FAILED=$((FAILED + 1))
+                if [[ $_prev_had_info -eq 1 ]]; then
+                  printf '\n' >> "$DETAIL_FILE"
+                fi
+                printf '[FAIL] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
+                if [[ -s "${outFile}" ]]; then
+                  { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
+                    ${pkgs.coreutils}/bin/cat "${outFile}"
+                  } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
+                fi
+                if [[ -s "${infoFile}" ]]; then
+                  _prev_had_info=1
+                  ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
+                    | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
+                else
+                  _prev_had_info=0
+                fi
               fi
-              FAILED=$((FAILED + 1))
-            fi
-            if [[ -s "${infoFile}" ]]; then
-              _prev_had_info=1
-              ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
-                | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
-            else
-              _prev_had_info=0
-            fi
-          '';
+            ''
+          else
+            ''
+              if [[ $_prev_had_info -eq 1 ]]; then
+                printf '\n' >> "$DETAIL_FILE"
+              fi
+              TOTAL=$((TOTAL + 1))
+              if ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
+                printf '[OK ] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
+              else
+                printf '[FAIL] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
+                if [[ -s "${outFile}" ]]; then
+                  { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
+                    ${pkgs.coreutils}/bin/cat "${outFile}"
+                  } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
+                fi
+                FAILED=$((FAILED + 1))
+              fi
+              if [[ -s "${infoFile}" ]]; then
+                _prev_had_info=1
+                ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
+                  | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
+              else
+                _prev_had_info=0
+              fi
+            '';
 
         curlWithRetry =
           {
