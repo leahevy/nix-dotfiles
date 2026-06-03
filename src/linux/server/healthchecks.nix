@@ -638,7 +638,7 @@ args@{
         remoteIpExpr = ''
           _remote=$(${pkgs.curl}/bin/curl -sf --max-time 10 https://api.ipify.org 2>/dev/null || true)
           if [[ -n "$_remote" ]]; then
-            printf 'remote: %s\n' "$_remote" >&3
+            printf '%s\n' "$_remote" >&3
           fi
         '';
 
@@ -663,7 +663,7 @@ args@{
               {for(i=1;i<=NF;i++) if($i=="id,") idle=$(i-1)+0}
               END{printf "%.0f%%", 100-idle}
             ' "$TMPDIR_HC/top-cpu-summary")
-            printf '%s cpu used\n' "$_cpu_used" >&3
+            printf '%s cpu\n' "$_cpu_used" >&3
           fi
           exit 0
         '';
@@ -746,7 +746,7 @@ args@{
           "30 - Timezone" = timezoneExpr;
           "-30 - Remote IP" = remoteIpExpr;
         }
-        // lib.optionalAttrs (requireServicesUp != [ ]) { "50 - Required services" = servicesGroupedExpr; }
+        // lib.optionalAttrs (requireServicesUp != [ ]) { "!50 - Required services" = servicesGroupedExpr; }
         // {
           "!60 - Top CPU processes" = topCpuExpr;
           "!60 - Top memory processes" = topMemExpr;
