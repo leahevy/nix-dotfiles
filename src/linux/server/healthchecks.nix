@@ -842,11 +842,14 @@ args@{
           BTRFS_COUNT=0
           while IFS= read -r _mp; do
             BTRFS_COUNT=$((BTRFS_COUNT + 1))
-            _scrub_ok=1
-            _scrub_out=$(${pkgs.btrfs-progs}/bin/btrfs scrub start -Bd "$_mp" 2>&1) || _scrub_ok=0
-            if [[ $_scrub_ok -eq 0 ]]; then
+            _scrub_log="$TMPDIR_HC/scrub-$BTRFS_COUNT"
+            _scrub_exit=0
+            ${pkgs.btrfs-progs}/bin/btrfs scrub start -Bd "$_mp" 2>&1 \
+              | ${pkgs.coreutils}/bin/tee "$_scrub_log" >&2
+            _scrub_exit=''${PIPESTATUS[0]}
+            if [[ $_scrub_exit -ne 0 ]]; then
               printf '%s: scrub errors\n' "$_mp" >&3
-              printf '%s\n' "$_scrub_out" | ${pkgs.gnused}/bin/sed 's/^/  /' >&3
+              ${pkgs.gnused}/bin/sed 's/^/  /' "$_scrub_log" >&3
               BTRFS_FAILED=1
               continue
             fi
