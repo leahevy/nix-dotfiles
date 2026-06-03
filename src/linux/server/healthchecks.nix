@@ -184,6 +184,48 @@ args@{
       description = "Run SMART health checks on mounted SATA and NVMe block devices.";
     };
 
+    enableMonthlyHealthCheck = lib.mkOption {
+      type = lib.types.nullOr lib.types.bool;
+      default = null;
+      description = "Enable the monthly health check timer. Auto-enables in server and managed deployment modes.";
+    };
+
+    monthlyName = lib.mkOption {
+      type = lib.types.str;
+      default = "health-monthly";
+      description = "Endpoint name suffix for the monthly check, prefixed with the hostname.";
+    };
+
+    monthlyHealthCheckSchedule = lib.mkOption {
+      type = lib.types.str;
+      default = "*-*-01 04:00:00";
+      description = "OnCalendar schedule for the monthly health check.";
+    };
+
+    monthlyRandomDelaySec = lib.mkOption {
+      type = lib.types.int;
+      default = 3600;
+      description = "RandomizedDelaySec for the monthly health check timer in seconds.";
+    };
+
+    monthlyHealthChecks = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Additional checks for the monthly health check, as attrset of description to bash expression.";
+    };
+
+    monthlyServiceTimeoutSec = lib.mkOption {
+      type = lib.types.int;
+      default = 86400;
+      description = "TimeoutStartSec for the monthly health check service in seconds.";
+    };
+
+    checkBtrfsScrub = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Run btrfs scrub and device stats on all mounted btrfs filesystems.";
+    };
+
     serviceTimeoutSec = lib.mkOption {
       type = lib.types.int;
       default = 1200;
@@ -276,6 +318,16 @@ args@{
           service = "init.scope";
           string = "nx-healthcheck-daily.service: Failed with result 'signal'.";
         }
+        {
+          tag = "systemd";
+          service = "init.scope";
+          string = "nx-healthcheck-monthly.service: Main process exited, code=killed, status=15/TERM";
+        }
+        {
+          tag = "systemd";
+          service = "init.scope";
+          string = "nx-healthcheck-monthly.service: Failed with result 'signal'.";
+        }
       ];
     };
 
@@ -314,6 +366,13 @@ args@{
         checkUptime,
         uptimeWarnDays,
         checkSmartDisk,
+        enableMonthlyHealthCheck,
+        monthlyName,
+        monthlyHealthCheckSchedule,
+        monthlyRandomDelaySec,
+        monthlyHealthChecks,
+        monthlyServiceTimeoutSec,
+        checkBtrfsScrub,
         servicesHealthChecks,
         serviceTimeoutSec,
         healthchecksBaseUrl,
@@ -340,10 +399,17 @@ args@{
           else
             deploymentMode == "server" || deploymentMode == "managed";
 
+        effectiveMonthly =
+          if enableMonthlyHealthCheck != null then
+            enableMonthlyHealthCheck
+          else
+            deploymentMode == "server" || deploymentMode == "managed";
+
         hasServiceChecks = servicesHealthChecks != { };
 
         regularEndpointName = "${hostname}-${healthName}";
         dailyEndpointName = "${hostname}-${dailyName}";
+        monthlyEndpointName = "${hostname}-${monthlyName}";
 
         sanitizeName =
           key:
@@ -770,6 +836,44 @@ args@{
             "30 - SMART disk health" = smartDiskExpr;
           }
           // dailyHealthChecks;
+
+        btrfsScrubExpr = ''
+          BTRFS_FAILED=0
+          BTRFS_COUNT=0
+          while IFS= read -r _mp; do
+            BTRFS_COUNT=$((BTRFS_COUNT + 1))
+            _scrub_ok=1
+            _scrub_out=$(${pkgs.btrfs-progs}/bin/btrfs scrub start -Bd "$_mp" 2>&1) || _scrub_ok=0
+            if [[ $_scrub_ok -eq 0 ]]; then
+              printf '%s: scrub errors\n' "$_mp" >&3
+              printf '%s\n' "$_scrub_out" | ${pkgs.gnused}/bin/sed 's/^/  /' >&3
+              BTRFS_FAILED=1
+              continue
+            fi
+            _stats_exit=0
+            _stats=$(${pkgs.btrfs-progs}/bin/btrfs device stats -c "$_mp" 2>&1) || _stats_exit=$?
+            if [[ $_stats_exit -eq 65 ]]; then
+              printf '%s: device stats failed\n' "$_mp" >&3
+              printf '%s\n' "$_stats" | ${pkgs.gnused}/bin/sed 's/^/  /' >&3
+              BTRFS_FAILED=1
+              continue
+            elif [[ $_stats_exit -ne 0 ]]; then
+              _errs=$(printf '%s\n' "$_stats" | ${pkgs.gawk}/bin/awk '$NF+0 != 0 {print}')
+              printf '%s: device errors:\n' "$_mp" >&3
+              printf '%s\n' "$_errs" | ${pkgs.gnused}/bin/sed 's/^/  /' >&3
+              BTRFS_FAILED=1
+            else
+              printf '%s: ok\n' "$_mp" >&3
+            fi
+          done < <(${pkgs.gawk}/bin/awk '$3 == "btrfs" && !seen[$1]++ {print $2}' /proc/mounts)
+          if [[ $BTRFS_COUNT -eq 0 ]]; then
+            printf 'no btrfs filesystems found\n' >&3
+          fi
+          exit "$BTRFS_FAILED"
+        '';
+
+        allMonthlyChecks =
+          lib.optionalAttrs checkBtrfsScrub { "10 - Btrfs scrub" = btrfsScrubExpr; } // monthlyHealthChecks;
 
         runCheckBlock =
           desc: script:
@@ -1386,6 +1490,35 @@ args@{
               OnCalendar = dailyHealthCheckSchedule;
               Persistent = true;
               RandomizedDelaySec = dailyRandomDelaySec;
+            };
+          };
+        })
+
+        (lib.mkIf effectiveMonthly {
+          systemd.services.nx-healthcheck-monthly = {
+            description = "Monthly server health check";
+            wants = [ "network-online.target" ];
+            after = [ "network-online.target" ];
+            serviceConfig = {
+              Type = "oneshot";
+              User = "root";
+              TimeoutStartSec = monthlyServiceTimeoutSec;
+              SuccessExitStatus = 1;
+              ExecStart = makeTimerScript {
+                endpointName = monthlyEndpointName;
+                checks = allMonthlyChecks;
+                networkTimeoutSec = 900;
+              };
+            };
+          };
+
+          systemd.timers.nx-healthcheck-monthly = {
+            description = "Monthly server health check timer";
+            wantedBy = [ "timers.target" ];
+            timerConfig = {
+              OnCalendar = monthlyHealthCheckSchedule;
+              Persistent = true;
+              RandomizedDelaySec = monthlyRandomDelaySec;
             };
           };
         })
