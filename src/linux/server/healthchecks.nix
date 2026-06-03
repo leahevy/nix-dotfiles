@@ -853,20 +853,26 @@ args@{
               BTRFS_FAILED=1
               continue
             fi
+            _scrub_info=$(${pkgs.gnugrep}/bin/grep -iE 'error summary|total.*scrub|duration' "$_scrub_log" 2>/dev/null \
+              | ${pkgs.gnused}/bin/sed 's/^[[:space:]]*//')
             _stats_exit=0
             _stats=$(${pkgs.btrfs-progs}/bin/btrfs device stats -c "$_mp" 2>&1) || _stats_exit=$?
+            printf '%s:\n' "$_mp" >&3
+            if [[ -n "$_scrub_info" ]]; then
+              printf '%s\n' "$_scrub_info" | ${pkgs.gnused}/bin/sed 's/^/  /' >&3
+            fi
             if [[ $_stats_exit -eq 65 ]]; then
-              printf '%s: device stats failed\n' "$_mp" >&3
-              printf '%s\n' "$_stats" | ${pkgs.gnused}/bin/sed 's/^/  /' >&3
+              printf '  Device stats: failed\n' >&3
+              printf '%s\n' "$_stats" | ${pkgs.gnused}/bin/sed 's/^/    /' >&3
               BTRFS_FAILED=1
               continue
             elif [[ $_stats_exit -ne 0 ]]; then
               _errs=$(printf '%s\n' "$_stats" | ${pkgs.gawk}/bin/awk '$NF+0 != 0 {print}')
-              printf '%s: device errors:\n' "$_mp" >&3
-              printf '%s\n' "$_errs" | ${pkgs.gnused}/bin/sed 's/^/  /' >&3
+              printf '  Device stats: errors\n' >&3
+              printf '%s\n' "$_errs" | ${pkgs.gnused}/bin/sed 's/^/    /' >&3
               BTRFS_FAILED=1
             else
-              printf '%s: ok\n' "$_mp" >&3
+              printf '  Device stats: no errors\n' >&3
             fi
           done < <(${pkgs.gawk}/bin/awk '$3 == "btrfs" && !seen[$1]++ {print $2}' /proc/mounts)
           if [[ $BTRFS_COUNT -eq 0 ]]; then
