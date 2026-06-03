@@ -465,21 +465,78 @@ let
 
   firefoxSpecificCSS =
     monospaceFont:
+    let
+      skipOnHtml = [
+        '':has(body[data-theme*="fluent" i])''
+        ''[data-theme*="fluent" i]''
+      ];
+
+      monoExclusions = [
+        "i"
+        ''[class*="icon" i]''
+        ''[class~="ic" i]''
+        ''[class*="fa-" i]''
+        ''[class*="material-symbols" i]''
+        ''[role="presentation" i]''
+        ''[role="img" i]''
+        "[data-icon-name]"
+        ''[type="checkbox"]''
+        ''[class*="hero" i]''
+        '':is([class*="hero" i] *)''
+        '':is([type="checkbox"] *)''
+        ":is([data-icon-name] *)"
+        '':is([role="presentation" i] *)''
+        '':is([role="img" i] *)''
+        ":has(> [data-icon-name])"
+        '':has(> [role="presentation" i])''
+        '':has(> [role="img" i])''
+        '':has(> i[class*="icon" i])''
+      ];
+
+      monoForceElements = [
+        "input"
+        "textarea"
+        "select"
+      ];
+
+      monoButtonExclusions = [
+        ''[class*="hero" i]''
+        ''[class*="icon" i]''
+        ":has([data-icon-name])"
+        '':has([role="presentation" i])''
+        '':has([role="img" i])''
+        '':has(i[class*="icon" i])''
+      ];
+
+      revertSelectors = [
+        ''[class*="icon" i] *''
+        ''[class~="ic" i] *''
+        ''[class*="fa-" i] *''
+        ''[class*="material-symbols" i] *''
+        ''[role="presentation" i] *''
+        ''[role="img" i] *''
+        "[data-icon-name] *"
+        ''[type="checkbox"] *''
+        ''[class*="hero" i]''
+        ''[class*="hero" i] *''
+      ];
+
+      mkNotChain = lib.concatMapStrings (s: ":not(${s})");
+      rulePrefix = ":where(html${mkNotChain skipOnHtml})";
+      prefixAll = sels: lib.concatMapStringsSep ",\n" (s: "${rulePrefix} ${s}") sels;
+      joinAll = lib.concatStringsSep ",\n";
+
+      monoSelectors = [
+        ":where(${mkNotChain monoExclusions})"
+      ]
+      ++ monoForceElements
+      ++ [ "button${mkNotChain monoButtonExclusions}" ];
+    in
     lib.optionalString monospaceFont ''
-      :where(:not(i):not([class*="icon" i]):not([class~="ic" i]):not([class*="fa-" i]):not([class*="material-symbols" i]):not([role="presentation"]):not([data-icon-name]):not([class*="herobutton" i]):not(:is([class*="herobutton" i] *))),
-      input,
-      textarea,
-      select,
-      button:not([class*="herobutton" i]) {
+      ${prefixAll monoSelectors} {
         font-family: monospace !important;
       }
-      [class*="icon" i] *,
-      [class~="ic" i] *,
-      [role="presentation"],
-      [data-icon-name],
-      [data-icon-name] *,
-      [class*="herobutton" i],
-      [class*="herobutton" i] * {
+      ${joinAll revertSelectors} {
         font-family: revert !important;
       }
     '';
