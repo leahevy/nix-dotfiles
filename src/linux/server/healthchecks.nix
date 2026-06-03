@@ -753,6 +753,7 @@ args@{
           in
           if silent then
             ''
+              SILENT=$((SILENT + 1))
               if ! ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
                 TOTAL=$((TOTAL + 1))
                 FAILED=$((FAILED + 1))
@@ -900,15 +901,20 @@ args@{
             DETAIL_FILE="$TMPDIR_HC/detail"
             FAILED=0
             TOTAL=0
+            SILENT=0
             _prev_had_info=0
 
             ${lib.concatStringsSep "\n" (lib.mapAttrsToList runCheckBlock checkScripts)}
 
+            _silent_sfx=
+            if [[ $SILENT -gt 0 ]]; then
+              _silent_sfx=" ($SILENT silent)"
+            fi
             if [[ $FAILED -eq 0 ]]; then
-              echo "All checks are healthy." > "$REPORT_FILE"
+              printf 'All checks are healthy.%s\n' "$_silent_sfx" > "$REPORT_FILE"
             else
               PASSED=$((TOTAL - FAILED))
-              echo "$PASSED/$TOTAL checks are healthy." > "$REPORT_FILE"
+              printf '%d/%d checks are healthy.%s\n' "$PASSED" "$TOTAL" "$_silent_sfx" > "$REPORT_FILE"
             fi
             echo "" >> "$REPORT_FILE"
             ${pkgs.coreutils}/bin/cat "$DETAIL_FILE" >> "$REPORT_FILE"
