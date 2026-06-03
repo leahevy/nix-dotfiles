@@ -713,8 +713,8 @@ args@{
         }
         // lib.optionalAttrs (requireServicesUp != [ ]) { "50 - Required services" = servicesGroupedExpr; }
         // {
-          "60 - Top CPU processes" = topCpuExpr;
-          "60 - Top memory processes" = topMemExpr;
+          "!60 - Top CPU processes" = topCpuExpr;
+          "!60 - Top memory processes" = topMemExpr;
         }
         // regularHealthChecks;
 
