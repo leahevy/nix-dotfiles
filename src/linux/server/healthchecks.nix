@@ -166,6 +166,18 @@ args@{
       description = "Days before certificate expiry at which to start reporting failure.";
     };
 
+    checkUptime = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Fail the daily check when uptime exceeds uptimeWarnDays, indicating no kernel updates were applied for that timeframe.";
+    };
+
+    uptimeWarnDays = lib.mkOption {
+      type = lib.types.int;
+      default = 90;
+      description = "Number of days of continuous uptime after which the uptime check fails.";
+    };
+
     checkSmartDisk = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -299,6 +311,8 @@ args@{
         diskFreeThresholdPct,
         checkCertExpiry,
         certExpiryWarnDays,
+        checkUptime,
+        uptimeWarnDays,
         checkSmartDisk,
         servicesHealthChecks,
         serviceTimeoutSec,
@@ -710,8 +724,18 @@ args@{
         }
         // regularHealthChecks;
 
+        uptimeCheckExpr = ''
+          _uptime_sec=$(${pkgs.gawk}/bin/awk '{print int($1)}' /proc/uptime)
+          _uptime_days=$((_uptime_sec / 86400))
+          printf 'uptime: %d days\n' "$_uptime_days" >&3
+          if [[ $_uptime_days -ge ${toString uptimeWarnDays} ]]; then
+            exit 1
+          fi
+        '';
+
         allDailyChecks =
-          lib.optionalAttrs checkDiskUsage { "10 - Disk space" = diskUsageExpr; }
+          lib.optionalAttrs checkUptime { "00 - Uptime" = uptimeCheckExpr; }
+          // lib.optionalAttrs checkDiskUsage { "10 - Disk space" = diskUsageExpr; }
           // lib.optionalAttrs checkCertExpiry { "20 - Certificate expiry" = certExpiryExpr; }
           // lib.optionalAttrs (checkSmartDisk && config.nx.linux.storage.smartd.enable) {
             "30 - SMART disk health" = smartDiskExpr;
