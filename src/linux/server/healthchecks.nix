@@ -619,7 +619,7 @@ args@{
         '';
 
         topSnapshotExpr = ''
-          ${pkgs.procps}/bin/top -bn2 -d2 2>/dev/null \
+          ${pkgs.procps}/bin/top -bn2 -d10 2>/dev/null \
             | ${pkgs.gawk}/bin/awk '
                 /^top/{b++; next}
                 b<2{next}
