@@ -36,11 +36,16 @@ args@{
         // self.settings.additionalSettings;
       };
 
-      users.users = lib.mkIf self.settings.addMainUserToGroup {
-        "${self.host.mainUser.username}" = {
-          extraGroups = [ "docker" ];
+      users.users =
+        let
+          deploymentMode = config.nx.global.deploymentMode;
+          isServer = deploymentMode == "server" || deploymentMode == "managed";
+        in
+        lib.mkIf (self.settings.addMainUserToGroup && !isServer) {
+          "${self.host.mainUser.username}" = {
+            extraGroups = [ "docker" ];
+          };
         };
-      };
 
       environment.systemPackages = with pkgs; [
         docker-compose
