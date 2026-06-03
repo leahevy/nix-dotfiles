@@ -38,18 +38,17 @@ args@{
         }
       ];
 
-      services = {
-        openssh = {
-          enable = true;
-          ports = [ self.settings.port ];
-          settings = {
-            PasswordAuthentication = false;
-            KbdInteractiveAuthentication = false;
-            PermitEmptyPasswords = false;
-            AllowUsers = [ self.host.mainUser.username ];
-            X11Forwarding = false;
-            PermitRootLogin = "no";
-          };
+      services.openssh = {
+        enable = true;
+        startWhenNeeded = true;
+        ports = [ self.settings.port ];
+        settings = {
+          PasswordAuthentication = false;
+          KbdInteractiveAuthentication = false;
+          PermitEmptyPasswords = false;
+          AllowUsers = [ self.host.mainUser.username ];
+          X11Forwarding = false;
+          PermitRootLogin = "no";
         };
       };
 
@@ -71,7 +70,7 @@ args@{
 
     ifEnabled.linux.server.healthchecks = {
       enabled = config: {
-        nx.linux.server.healthchecks.requireServicesUp = [ "sshd.service" ];
+        nx.linux.server.healthchecks.requireServicesUp = [ "sshd.socket" ];
       };
     };
   };
