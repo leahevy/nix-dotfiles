@@ -812,7 +812,7 @@ args@{
           "30 - Timezone" = timezoneExpr;
           "-30 - Remote IP" = remoteIpExpr;
         }
-        // lib.optionalAttrs (requireServicesUp != [ ]) { "!50 - Required services" = servicesGroupedExpr; }
+        // lib.optionalAttrs (requireServicesUp != [ ]) { "+50 - Required services" = servicesGroupedExpr; }
         // {
           "!60 - Top CPU processes" = topCpuExpr;
           "!60 - Top memory processes" = topMemExpr;
