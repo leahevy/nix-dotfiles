@@ -377,7 +377,7 @@ args@{
 
         makeCheckScript =
           desc: cmd:
-          pkgs.writeShellScript "nx-hc-check-${sanitizeName (lib.removePrefix "+" desc)}" ''
+          pkgs.writeShellScript "nx-hc-check-${sanitizeName (lib.removePrefix "!" (lib.removePrefix "+" desc))}" ''
             set -e
             ${cmd}
           '';
@@ -649,14 +649,11 @@ args@{
             printf '%2d. %s %s\n' "$_n" "$_cpu" "$_cmd" >&3
           done < <(${pkgs.gawk}/bin/awk '
               { val=$9+0
-                if (val<0.1) exit
+                if (val<1.0) exit
                 if (val>5) { print; above++; next }
-                if (above+below<5) { print; below++; next }
+                if (above+below<10) { print; below++; next }
                 exit }
             ' "$TMPDIR_HC/top-data" 2>/dev/null) || true
-          if [[ $_n -eq 0 ]]; then
-            printf '   [no process above 0.1%% cpu]\n' >&3
-          fi
           exit 0
         '';
 
@@ -679,14 +676,11 @@ args@{
           done < <(${pkgs.coreutils}/bin/sort -rn -k10 "$TMPDIR_HC/top-data" 2>/dev/null \
             | ${pkgs.gawk}/bin/awk '
                 { val=$10+0
-                  if (val<0.1) exit
+                  if (val<2.5) exit
                   if (val>5) { print; above++; next }
-                  if (above+below<5) { print; below++; next }
+                  if (above+below<10) { print; below++; next }
                   exit }
               ') || true
-          if [[ $_n -eq 0 ]]; then
-            printf '   [no process above 0.1%% mem]\n' >&3
-          fi
           exit 0
         '';
 
@@ -746,7 +740,14 @@ args@{
           desc: script:
           let
             silent = lib.hasPrefix "+" desc;
-            cleanDesc = if silent then lib.removePrefix "+" desc else desc;
+            infoOnly = lib.hasPrefix "!" desc;
+            cleanDesc =
+              if silent then
+                lib.removePrefix "+" desc
+              else if infoOnly then
+                lib.removePrefix "!" desc
+              else
+                desc;
             infoFile = "$TMPDIR_HC/info-${sanitizeName cleanDesc}";
             outFile = "$TMPDIR_HC/out-${sanitizeName cleanDesc}";
             displayName = stripGroupPrefix cleanDesc;
@@ -755,6 +756,40 @@ args@{
             ''
               SILENT=$((SILENT + 1))
               if ! ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
+                TOTAL=$((TOTAL + 1))
+                FAILED=$((FAILED + 1))
+                if [[ $_prev_had_info -eq 1 ]]; then
+                  printf '\n' >> "$DETAIL_FILE"
+                fi
+                printf '[FAIL] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
+                if [[ -s "${outFile}" ]]; then
+                  { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
+                    ${pkgs.coreutils}/bin/cat "${outFile}"
+                  } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
+                fi
+                if [[ -s "${infoFile}" ]]; then
+                  _prev_had_info=1
+                  ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
+                    | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
+                else
+                  _prev_had_info=0
+                fi
+              fi
+            ''
+          else if infoOnly then
+            ''
+              if ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
+                if [[ -s "${infoFile}" ]]; then
+                  TOTAL=$((TOTAL + 1))
+                  if [[ $_prev_had_info -eq 1 ]]; then
+                    printf '\n' >> "$DETAIL_FILE"
+                  fi
+                  printf '[OK ] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
+                  ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
+                    | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
+                  _prev_had_info=1
+                fi
+              else
                 TOTAL=$((TOTAL + 1))
                 FAILED=$((FAILED + 1))
                 if [[ $_prev_had_info -eq 1 ]]; then
