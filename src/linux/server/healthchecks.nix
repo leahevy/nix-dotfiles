@@ -94,6 +94,18 @@ args@{
       description = "Minimum CPU percentage a matching process must consume to activate high-load-exempt mode.";
     };
 
+    loadHighCpuExemptCommandsSensitive = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Process command substrings that activate high-load-exempt mode at a lower CPU threshold, for background processes that spread load across many workers.";
+    };
+
+    requiredCPUForSensitiveHighLoadDetection = lib.mkOption {
+      type = lib.types.int;
+      default = 3;
+      description = "Minimum CPU percentage a sensitive-matched process must consume to activate high-load-exempt mode.";
+    };
+
     highLoadMultiplier = lib.mkOption {
       type = lib.types.float;
       default = 2.3;
@@ -293,6 +305,13 @@ args@{
       nx.linux.server.healthchecks.healthchecksFinalChecksURL =
         "${config.nx.linux.server.healthchecks.healthchecksBaseUrl}/projects/${config.nx.linux.server.healthchecks.projectUUID}/checks/";
       nx.linux.server.healthchecks.requireServicesUp = [ "nix-daemon.service" ];
+      nx.linux.server.healthchecks.loadHighCpuExemptCommandsSensitive =
+        let
+          monthly = config.nx.linux.server.healthchecks.enableMonthlyHealthCheck;
+          mode = config.nx.global.deploymentMode;
+          monthlyActive = if monthly != null then monthly else mode == "server" || mode == "managed";
+        in
+        lib.optional (monthlyActive && config.nx.linux.server.healthchecks.checkBtrfsScrub) "btrfs-scrub";
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
           tag = "nx-healthcheck";
@@ -351,6 +370,8 @@ args@{
         loadBuildGraceSeconds,
         loadHighCpuExemptCommands,
         requiredCPUForHighLoadDetection,
+        loadHighCpuExemptCommandsSensitive,
+        requiredCPUForSensitiveHighLoadDetection,
         highLoadMultiplier,
         memoryFreeThresholdPct,
         memoryRamUsedMaxPct,
@@ -618,6 +639,9 @@ args@{
             awkCondTop = lib.concatStringsSep " || " (
               map (p: "index($NF, \"${p}\") > 0") loadHighCpuExemptCommands
             );
+            awkCondSensitive = lib.concatStringsSep " || " (
+              map (p: "index($NF, \"${p}\") > 0") loadHighCpuExemptCommandsSensitive
+            );
           in
           ''
             _build_marker=/run/nx-healthcheck/build-active
@@ -638,6 +662,14 @@ args@{
             ${lib.optionalString (loadHighCpuExemptCommands != [ ]) ''
               if ${pkgs.gawk}/bin/awk -v thr=${toString requiredCPUForHighLoadDetection} '
                   ($9+0 >= thr && (${awkCondTop})) {found=1}
+                  END{exit !found}
+                ' "$TMPDIR_HC/top-data" 2>/dev/null; then
+                _high_load_mode=high-load-exempt
+              fi
+            ''}
+            ${lib.optionalString (loadHighCpuExemptCommandsSensitive != [ ]) ''
+              if ${pkgs.gawk}/bin/awk -v thr=${toString requiredCPUForSensitiveHighLoadDetection} '
+                  ($9+0 >= thr && (${awkCondSensitive})) {found=1}
                   END{exit !found}
                 ' "$TMPDIR_HC/top-data" 2>/dev/null; then
                 _high_load_mode=high-load-exempt
