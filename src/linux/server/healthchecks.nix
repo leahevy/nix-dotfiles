@@ -618,6 +618,30 @@ args@{
           }'
         '';
 
+        networkIfaceExpr = ''
+          _ifaces=$(${pkgs.iproute2}/bin/ip -o addr show up scope global 2>/dev/null \
+            | ${pkgs.gawk}/bin/awk '$3=="inet"{print $2 ": " $4}')
+          if [[ -z "$_ifaces" ]]; then
+            printf 'no connected interfaces\n' >&3
+            exit 1
+          fi
+          printf '%s\n' "$_ifaces" >&3
+        '';
+
+        timezoneExpr = ''
+          _tz=$(${pkgs.systemd}/bin/timedatectl show --property=Timezone --value 2>/dev/null || true)
+          if [[ -n "$_tz" ]]; then
+            printf '%s\n' "$_tz" >&3
+          fi
+        '';
+
+        remoteIpExpr = ''
+          _remote=$(${pkgs.curl}/bin/curl -sf --max-time 10 https://api.ipify.org 2>/dev/null || true)
+          if [[ -n "$_remote" ]]; then
+            printf 'remote: %s\n' "$_remote" >&3
+          fi
+        '';
+
         topSnapshotExpr = ''
           ${pkgs.procps}/bin/top -c -w 512 -bn2 -d10 2>/dev/null \
             | ${pkgs.gawk}/bin/awk -v cpu_out="$TMPDIR_HC/top-cpu-summary" '
@@ -629,6 +653,18 @@ args@{
                 $NF=="top"{next}
                 {print}
               ' > "$TMPDIR_HC/top-data" || true
+          exit 0
+        '';
+
+        cpuUsageExpr = ''
+          if [[ -f "$TMPDIR_HC/top-cpu-summary" ]]; then
+            _cpu_used=$(${pkgs.gawk}/bin/awk '
+              BEGIN{idle=0}
+              {for(i=1;i<=NF;i++) if($i=="id,") idle=$(i-1)+0}
+              END{printf "%.0f%%", 100-idle}
+            ' "$TMPDIR_HC/top-cpu-summary")
+            printf '%s cpu used\n' "$_cpu_used" >&3
+          fi
           exit 0
         '';
 
@@ -703,6 +739,12 @@ args@{
         // lib.optionalAttrs (!self.isVirtual) { "20 - Temperature" = thermalCheckExpr; }
         // {
           "20 - Load" = loadCheckExpr;
+          "25 - CPU usage" = cpuUsageExpr;
+        }
+        // {
+          "30 - Network interfaces" = networkIfaceExpr;
+          "30 - Timezone" = timezoneExpr;
+          "-30 - Remote IP" = remoteIpExpr;
         }
         // lib.optionalAttrs (requireServicesUp != [ ]) { "50 - Required services" = servicesGroupedExpr; }
         // {
