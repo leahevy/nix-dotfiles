@@ -741,6 +741,9 @@ args@{
         '';
 
         topSnapshotExpr = ''
+          _hc_snap_start=$(${pkgs.coreutils}/bin/date +%s)
+          ${pkgs.gawk}/bin/awk '$3 !~ /^loop|^dm-|^ram/ {rs+=$6; ws+=$10} END{print rs, ws}' /proc/diskstats > "$TMPDIR_HC/diskstats-before" 2>/dev/null || true
+          ${pkgs.gawk}/bin/awk 'NR>2 && $1 != "lo:" {rx+=$2; tx+=$10} END{print rx, tx}' /proc/net/dev > "$TMPDIR_HC/netdev-before" 2>/dev/null || true
           ${pkgs.procps}/bin/top -c -w 512 -bn2 -d10 2>/dev/null \
             | ${pkgs.gawk}/bin/awk -v cpu_out="$TMPDIR_HC/top-cpu-summary" '
                 /^top/{b++; next}
@@ -751,6 +754,12 @@ args@{
                 $NF=="top"{next}
                 {print}
               ' > "$TMPDIR_HC/top-data" || true
+          _hc_snap_end=$(${pkgs.coreutils}/bin/date +%s)
+          _hc_snap_elapsed=$((_hc_snap_end - _hc_snap_start))
+          [[ $_hc_snap_elapsed -lt 1 ]] && _hc_snap_elapsed=1
+          printf '%d\n' "$_hc_snap_elapsed" > "$TMPDIR_HC/snapshot-elapsed"
+          ${pkgs.gawk}/bin/awk '$3 !~ /^loop|^dm-|^ram/ {rs+=$6; ws+=$10} END{print rs, ws}' /proc/diskstats > "$TMPDIR_HC/diskstats-after" 2>/dev/null || true
+          ${pkgs.gawk}/bin/awk 'NR>2 && $1 != "lo:" {rx+=$2; tx+=$10} END{print rx, tx}' /proc/net/dev > "$TMPDIR_HC/netdev-after" 2>/dev/null || true
           exit 0
         '';
 
@@ -811,6 +820,43 @@ args@{
           exit 0
         '';
 
+        ioRateExpr = ''
+          if [[ -f "$TMPDIR_HC/diskstats-before" && -f "$TMPDIR_HC/diskstats-after" && -f "$TMPDIR_HC/snapshot-elapsed" ]]; then
+            _elapsed=$(${pkgs.coreutils}/bin/cat "$TMPDIR_HC/snapshot-elapsed")
+            ${pkgs.gawk}/bin/awk -v elapsed="$_elapsed" '
+              NR==1{br=$1; bw=$2}
+              NR==2{printf "reads: %.1f MB/s, writes: %.1f MB/s\n", ($1-br)/elapsed/2048, ($2-bw)/elapsed/2048}
+            ' "$TMPDIR_HC/diskstats-before" "$TMPDIR_HC/diskstats-after" >&3
+          fi
+          exit 0
+        '';
+
+        networkTrafficExpr = ''
+          if [[ -f "$TMPDIR_HC/netdev-before" && -f "$TMPDIR_HC/netdev-after" && -f "$TMPDIR_HC/snapshot-elapsed" ]]; then
+            _elapsed=$(${pkgs.coreutils}/bin/cat "$TMPDIR_HC/snapshot-elapsed")
+            ${pkgs.gawk}/bin/awk -v elapsed="$_elapsed" '
+              NR==1{brx=$1; btx=$2}
+              NR==2{printf "RX: %.1f MB/s, TX: %.1f MB/s\n", ($1-brx)/elapsed/1048576, ($2-btx)/elapsed/1048576}
+            ' "$TMPDIR_HC/netdev-before" "$TMPDIR_HC/netdev-after" >&3
+          fi
+          exit 0
+        '';
+
+        iowaitExpr = ''
+          if [[ -f "$TMPDIR_HC/top-cpu-summary" ]]; then
+            _iowait=$(${pkgs.gawk}/bin/awk '
+              {for(i=1;i<=NF;i++) if($i=="wa,") {printf "%.0f", $(i-1)+0; exit}}
+            ' "$TMPDIR_HC/top-cpu-summary")
+            if [[ -n "$_iowait" ]]; then
+              printf '%s%% iowait\n' "$_iowait" >&3
+              if [[ $_iowait -ge 60 ]]; then
+                exit 1
+              fi
+            fi
+          fi
+          exit 0
+        '';
+
         allRegularChecks = {
           "+00 - Process snapshot" = topSnapshotExpr;
           "+10 - Server is up" = "true";
@@ -838,6 +884,11 @@ args@{
         // {
           "20 - Load" = loadCheckExpr;
           "25 - CPU usage" = cpuUsageExpr;
+        }
+        // {
+          "-26 - Disk IO" = ioRateExpr;
+          "+26 - IO wait" = iowaitExpr;
+          "-27 - Network traffic" = networkTrafficExpr;
         }
         // {
           "30 - Network interfaces" = networkIfaceExpr;
