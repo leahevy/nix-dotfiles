@@ -40,6 +40,8 @@ args@{
       };
     };
 
+    repoCheckMaxDuration = 1800;
+
     withData = false;
     dataPath = "/data";
 
@@ -707,6 +709,7 @@ args@{
               ${pkgs.coreutils}/bin/echo "All snapshots deleted successfully"
             fi
             ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped
+            ${pkgs.borgbackup}/bin/borg check --repository-only --max-duration=${toString self.settings.repoCheckMaxDuration}
           '';
 
         };
