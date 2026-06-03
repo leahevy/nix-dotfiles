@@ -26,6 +26,15 @@ args@{
     system =
       config:
       let
+        normalizedRoutes = map (
+          r:
+          if lib.hasInfix "/" r then
+            r
+          else if lib.hasInfix ":" r then
+            r + "/128"
+          else
+            r + "/32"
+        ) self.settings.subnetRoutes;
         isServer = self.settings.exitNode || self.settings.subnetRoutes != [ ];
         isClient = self.settings.acceptRoutes;
 
@@ -44,8 +53,8 @@ args@{
         ]
         ++ lib.optionals self.settings.acceptRoutes [ "--accept-routes" ]
         ++ lib.optionals self.settings.exitNode [ "--advertise-exit-node" ]
-        ++ lib.optionals (self.settings.subnetRoutes != [ ]) [
-          "--advertise-routes=${lib.concatStringsSep "," self.settings.subnetRoutes}"
+        ++ lib.optionals (normalizedRoutes != [ ]) [
+          "--advertise-routes=${lib.concatStringsSep "," normalizedRoutes}"
         ];
       in
       {
