@@ -709,7 +709,7 @@ args@{
               ${pkgs.coreutils}/bin/echo "All snapshots deleted successfully"
             fi
             ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped
-            ${pkgs.borgbackup}/bin/borg check --repository-only --max-duration=${toString self.settings.repoCheckMaxDuration}
+            ${pkgs.borgbackup}/bin/borg check --repository-only --verbose --max-duration=${toString self.settings.repoCheckMaxDuration}
           '';
 
         };
