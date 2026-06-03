@@ -43,6 +43,7 @@ args@{
           enabled = true
           filter = nginx-http-auth
           backend = systemd
+          journalmatch = _SYSTEMD_UNIT=nginx.service
           maxretry = 5
           findtime = 600
           bantime = 3600
