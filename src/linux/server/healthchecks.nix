@@ -377,7 +377,7 @@ args@{
 
         makeCheckScript =
           desc: cmd:
-          pkgs.writeShellScript "nx-hc-check-${sanitizeName (lib.removePrefix "!" (lib.removePrefix "+" desc))}" ''
+          pkgs.writeShellScript "nx-hc-check-${sanitizeName (lib.removePrefix "-" (lib.removePrefix "!" (lib.removePrefix "+" desc)))}" ''
             set -e
             ${cmd}
           '';
@@ -605,11 +605,11 @@ args@{
 
         stripProcCmd = pkgs.writeShellScript "nx-hc-strip-proc-cmd" ''
           ${pkgs.gawk}/bin/awk '{
-            cmd = $3
+            cmd = $1
             sub(/^\/nix\/store\/[^\/]+\/bin\//, "", cmd)
             sub(/^\/nix\/store\/[^\/]+\//, "", cmd)
             result = cmd
-            for (i = 4; i <= NF; i++) {
+            for (i = 2; i <= NF; i++) {
               arg = $i
               gsub(/\/nix\/store\/[^-]+-/, "..", arg)
               result = result " " arg
@@ -619,11 +619,12 @@ args@{
         '';
 
         topSnapshotExpr = ''
-          ${pkgs.procps}/bin/top -bn2 -d10 2>/dev/null \
-            | ${pkgs.gawk}/bin/awk '
+          ${pkgs.procps}/bin/top -c -w 512 -bn2 -d10 2>/dev/null \
+            | ${pkgs.gawk}/bin/awk -v cpu_out="$TMPDIR_HC/top-cpu-summary" '
                 /^top/{b++; next}
                 b<2{next}
-                /^Tasks|^%Cpu|^MiB|^ *PID/{next}
+                /^%Cpu/{print > cpu_out; next}
+                /^Tasks|^MiB|^ *PID/{next}
                 NF==0{next}
                 $NF=="top"{next}
                 {print}
@@ -635,14 +636,10 @@ args@{
           _n=0
           while IFS= read -r _line; do
             _n=$((_n + 1))
-            _pid=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $1}')
             _cpu=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $9}')
-            _mem=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $10}')
-            _cpu_val=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $9}')
-            _mem_val=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $10}')
-            _raw=$(${pkgs.coreutils}/bin/tr '\0' ' ' < /proc/"$_pid"/cmdline 2>/dev/null)
+            _raw=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{r=""; for(i=12;i<=NF;i++) r=r (r==""?"": " ") $i; print r}')
             if [[ -n "$_raw" ]]; then
-              _cmd=$(printf '%s %s %s' "$_cpu_val" "$_mem_val" "$_raw" | ${stripProcCmd} | ${secretCensorScript})
+              _cmd=$(printf '%s' "$_raw" | ${stripProcCmd} | ${secretCensorScript})
             else
               _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
             fi
@@ -661,14 +658,10 @@ args@{
           _n=0
           while IFS= read -r _line; do
             _n=$((_n + 1))
-            _pid=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $1}')
-            _cpu=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $9}')
             _mem=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{printf "%5.1f%%", $10}')
-            _cpu_val=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $9}')
-            _mem_val=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $10}')
-            _raw=$(${pkgs.coreutils}/bin/tr '\0' ' ' < /proc/"$_pid"/cmdline 2>/dev/null)
+            _raw=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{r=""; for(i=12;i<=NF;i++) r=r (r==""?"": " ") $i; print r}')
             if [[ -n "$_raw" ]]; then
-              _cmd=$(printf '%s %s %s' "$_cpu_val" "$_mem_val" "$_raw" | ${stripProcCmd} | ${secretCensorScript})
+              _cmd=$(printf '%s' "$_raw" | ${stripProcCmd} | ${secretCensorScript})
             else
               _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
             fi
@@ -741,101 +734,96 @@ args@{
           let
             silent = lib.hasPrefix "+" desc;
             infoOnly = lib.hasPrefix "!" desc;
+            alwaysSucceed = lib.hasPrefix "-" desc;
             cleanDesc =
               if silent then
                 lib.removePrefix "+" desc
               else if infoOnly then
                 lib.removePrefix "!" desc
+              else if alwaysSucceed then
+                lib.removePrefix "-" desc
               else
                 desc;
             infoFile = "$TMPDIR_HC/info-${sanitizeName cleanDesc}";
             outFile = "$TMPDIR_HC/out-${sanitizeName cleanDesc}";
             displayName = stripGroupPrefix cleanDesc;
+
+            spacer = ''
+              if [[ $_prev_had_info -eq 1 ]]; then
+                printf '\n' >> "$DETAIL_FILE"
+              fi
+            '';
+            appendInfo = ''
+              ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
+                | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
+              _prev_had_info=1
+            '';
+            infoTail = ''
+              if [[ -s "${infoFile}" ]]; then
+                ${appendInfo}
+              else
+                _prev_had_info=0
+              fi
+            '';
+            showIfInfo = ''
+              if [[ -s "${infoFile}" ]]; then
+                TOTAL=$((TOTAL + 1))
+                ${spacer}
+                printf '[OK ] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
+                ${appendInfo}
+              else
+                SILENT=$((SILENT + 1))
+              fi
+            '';
+            onFail = ''
+              TOTAL=$((TOTAL + 1))
+              FAILED=$((FAILED + 1))
+              ${spacer}
+              printf '[FAIL] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
+              if [[ -s "${outFile}" ]]; then
+                { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
+                  ${pkgs.coreutils}/bin/cat "${outFile}"
+                } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
+              fi
+              ${infoTail}
+            '';
           in
           if silent then
             ''
               SILENT=$((SILENT + 1))
               if ! ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
-                TOTAL=$((TOTAL + 1))
-                FAILED=$((FAILED + 1))
-                if [[ $_prev_had_info -eq 1 ]]; then
-                  printf '\n' >> "$DETAIL_FILE"
-                fi
-                printf '[FAIL] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
-                if [[ -s "${outFile}" ]]; then
-                  { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
-                    ${pkgs.coreutils}/bin/cat "${outFile}"
-                  } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
-                fi
-                if [[ -s "${infoFile}" ]]; then
-                  _prev_had_info=1
-                  ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
-                    | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
-                else
-                  _prev_had_info=0
-                fi
+                ${onFail}
               fi
             ''
           else if infoOnly then
             ''
               if ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
-                if [[ -s "${infoFile}" ]]; then
-                  TOTAL=$((TOTAL + 1))
-                  if [[ $_prev_had_info -eq 1 ]]; then
-                    printf '\n' >> "$DETAIL_FILE"
-                  fi
-                  printf '[OK ] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
-                  ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
-                    | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
-                  _prev_had_info=1
-                else
-                  SILENT=$((SILENT + 1))
-                fi
+                ${showIfInfo}
               else
-                TOTAL=$((TOTAL + 1))
-                FAILED=$((FAILED + 1))
-                if [[ $_prev_had_info -eq 1 ]]; then
-                  printf '\n' >> "$DETAIL_FILE"
-                fi
-                printf '[FAIL] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
-                if [[ -s "${outFile}" ]]; then
-                  { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
-                    ${pkgs.coreutils}/bin/cat "${outFile}"
-                  } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
-                fi
-                if [[ -s "${infoFile}" ]]; then
-                  _prev_had_info=1
-                  ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
-                    | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
-                else
-                  _prev_had_info=0
-                fi
+                ${onFail}
               fi
+            ''
+          else if alwaysSucceed then
+            ''
+              ${script} 3>"${infoFile}" >"${outFile}" 2>&1 || true
+              ${showIfInfo}
             ''
           else
             ''
-              if [[ $_prev_had_info -eq 1 ]]; then
-                printf '\n' >> "$DETAIL_FILE"
-              fi
+              ${spacer}
               TOTAL=$((TOTAL + 1))
               if ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
                 printf '[OK ] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
               else
+                FAILED=$((FAILED + 1))
                 printf '[FAIL] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
                 if [[ -s "${outFile}" ]]; then
                   { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
                     ${pkgs.coreutils}/bin/cat "${outFile}"
                   } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
                 fi
-                FAILED=$((FAILED + 1))
               fi
-              if [[ -s "${infoFile}" ]]; then
-                _prev_had_info=1
-                ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
-                  | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
-              else
-                _prev_had_info=0
-              fi
+              ${infoTail}
             '';
 
         curlWithRetry =
@@ -941,17 +929,24 @@ args@{
             SILENT=0
             _prev_had_info=0
 
-            ${lib.concatStringsSep "\n" (lib.mapAttrsToList runCheckBlock checkScripts)}
+            ${lib.concatStringsSep "\n" (
+              let
+                stripSortKey = s: lib.removePrefix "-" (lib.removePrefix "!" (lib.removePrefix "+" s));
+                pairs = lib.mapAttrsToList (name: script: { inherit name script; }) checkScripts;
+                sorted = lib.sort (a: b: (stripSortKey a.name) < (stripSortKey b.name)) pairs;
+              in
+              map ({ name, script }: runCheckBlock name script) sorted
+            )}
 
             _silent_sfx=
             if [[ $SILENT -gt 0 ]]; then
               _silent_sfx=" ($SILENT silent)"
             fi
+            PASSED=$((TOTAL - FAILED))
             if [[ $FAILED -eq 0 ]]; then
-              printf 'All checks are healthy.%s\n' "$_silent_sfx" > "$REPORT_FILE"
+              printf '✓ %d/%d checks are healthy.%s\n' "$TOTAL" "$TOTAL" "$_silent_sfx" > "$REPORT_FILE"
             else
-              PASSED=$((TOTAL - FAILED))
-              printf '%d/%d checks are healthy.%s\n' "$PASSED" "$TOTAL" "$_silent_sfx" > "$REPORT_FILE"
+              printf '✗ %d/%d checks are healthy.%s\n' "$PASSED" "$TOTAL" "$_silent_sfx" > "$REPORT_FILE"
             fi
             echo "" >> "$REPORT_FILE"
             ${pkgs.coreutils}/bin/cat "$DETAIL_FILE" >> "$REPORT_FILE"
