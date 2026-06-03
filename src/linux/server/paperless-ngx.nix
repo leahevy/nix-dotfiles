@@ -138,21 +138,21 @@ args@{
 
     ifEnabled.linux.services.fail2ban = {
       linux.system = config: {
-        services.fail2ban.filters.nginx-paperless-auth.settings = {
-          Definition = {
-            failregex = ''^\S+ nginx: <HOST> - - \[.+\] "POST /accounts/login/\S* HTTP/\S+" 200 \S+ "https://${config.nx.linux.server.paperless-ngx.subdomain}.${self.host.remote.baseDomain}/accounts/login/'';
-            ignoreregex = "";
+        services.fail2ban.jails.nginx-paperless-auth = {
+          filter = {
+            Definition = {
+              failregex = ''^\S+ nginx: <HOST> - - \[.+\] "POST /accounts/login/\S* HTTP/\S+" 200 \S+ "https://${config.nx.linux.server.paperless-ngx.subdomain}.${self.host.remote.baseDomain}/accounts/login/'';
+              ignoreregex = "";
+            };
+          };
+          settings = {
+            backend = "systemd";
+            journalmatch = "_SYSTEMD_UNIT=nginx.service";
+            maxretry = 5;
+            findtime = 600;
+            bantime = 3600;
           };
         };
-        services.fail2ban.jails.nginx-paperless-auth = ''
-          enabled = true
-          filter = nginx-paperless-auth
-          backend = systemd
-          journalmatch = _SYSTEMD_UNIT=nginx.service
-          maxretry = 5
-          findtime = 600
-          bantime = 3600
-        '';
       };
     };
 

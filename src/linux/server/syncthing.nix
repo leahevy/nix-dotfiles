@@ -217,21 +217,21 @@ args@{
 
     ifEnabled.linux.services.fail2ban = {
       linux.system = config: {
-        services.fail2ban.filters.nginx-syncthing-auth.settings = {
-          Definition = {
-            failregex = ''^\S+ nginx: <HOST> - - \[.+\] "POST /rest/noauth/auth/password HTTP/\S+" 403 \S+ "https://${config.nx.linux.server.syncthing.subdomain}.${self.host.remote.baseDomain}/'';
-            ignoreregex = "";
+        services.fail2ban.jails.nginx-syncthing-auth = {
+          filter = {
+            Definition = {
+              failregex = ''^\S+ nginx: <HOST> - - \[.+\] "POST /rest/noauth/auth/password HTTP/\S+" 403 \S+ "https://${config.nx.linux.server.syncthing.subdomain}.${self.host.remote.baseDomain}/'';
+              ignoreregex = "";
+            };
+          };
+          settings = {
+            backend = "systemd";
+            journalmatch = "_SYSTEMD_UNIT=nginx.service";
+            maxretry = 5;
+            findtime = 600;
+            bantime = 3600;
           };
         };
-        services.fail2ban.jails.nginx-syncthing-auth = ''
-          enabled = true
-          filter = nginx-syncthing-auth
-          backend = systemd
-          journalmatch = _SYSTEMD_UNIT=nginx.service
-          maxretry = 5
-          findtime = 600
-          bantime = 3600
-        '';
       };
     };
 
