@@ -646,7 +646,7 @@ args@{
             else
               _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
             fi
-            printf '%2d. (cpu=%s, mem=%s): %s\n' "$_n" "$_cpu" "$_mem" "$_cmd" >&3
+            printf '%2d. %s %s\n' "$_n" "$_cpu" "$_cmd" >&3
           done < <(${pkgs.gawk}/bin/awk '
               { val=$9+0
                 if (val<0.1) exit
@@ -675,7 +675,7 @@ args@{
             else
               _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
             fi
-            printf '%2d. (cpu=%s, mem=%s): %s\n' "$_n" "$_cpu" "$_mem" "$_cmd" >&3
+            printf '%2d. %s %s\n' "$_n" "$_mem" "$_cmd" >&3
           done < <(${pkgs.coreutils}/bin/sort -rn -k10 "$TMPDIR_HC/top-data" 2>/dev/null \
             | ${pkgs.gawk}/bin/awk '
                 { val=$10+0
