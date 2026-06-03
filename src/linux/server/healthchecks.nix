@@ -788,6 +788,8 @@ args@{
                   ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
                     | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
                   _prev_had_info=1
+                else
+                  SILENT=$((SILENT + 1))
                 fi
               else
                 TOTAL=$((TOTAL + 1))
