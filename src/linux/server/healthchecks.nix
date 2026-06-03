@@ -958,7 +958,30 @@ args@{
             networkTimeoutSec,
           }:
           let
-            checkScripts = lib.mapAttrs makeCheckScript checks;
+            checkKeyPrefixDescs = {
+              "-" = "never fails";
+              "+" = "silent on success";
+              "!" = "show if details";
+            };
+            checkKeyPrefixClass =
+              let
+                keys = lib.attrNames checkKeyPrefixDescs;
+              in
+              if lib.elem "-" keys then
+                "-" + lib.concatStrings (lib.filter (k: k != "-") keys)
+              else
+                lib.concatStrings keys;
+            checkKeyPattern = "[${checkKeyPrefixClass}]?[0-9][0-9] - [a-zA-Z]([ a-zA-Z-]*[a-zA-Z])?";
+            invalidKeys = lib.filter (k: builtins.match checkKeyPattern k == null) (lib.attrNames checks);
+            checkScripts =
+              if invalidKeys == [ ] then
+                lib.mapAttrs makeCheckScript checks
+              else
+                throw "healthchecks (${endpointName}): invalid check key: ${
+                  lib.concatStringsSep ", " (map (k: "\"${k}\"") invalidKeys)
+                }. Prefixes: ${
+                  lib.concatStringsSep ", " (lib.mapAttrsToList (p: d: "\"${p}\" ${d}") checkKeyPrefixDescs)
+                }. Example: \"20 - Load\"!";
           in
           pkgs.writeShellScript "nx-hc-${endpointName}" ''
             set -euo pipefail
