@@ -903,6 +903,12 @@ args@{
             else
               _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
             fi
+            if [[ -z "$_cmd" ]]; then
+              _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
+            fi
+            if [[ -z "$_cmd" ]]; then
+              _cmd="<unknown>"
+            fi
             printf '%2d. %s %s\n' "$_n" "$_cpu" "$_cmd" >&3
           done < <(${pkgs.gawk}/bin/awk '
               { val=$9+0
@@ -924,6 +930,12 @@ args@{
               _cmd=$(printf '%s' "$_raw" | ${stripProcCmd} | ${secretCensorScript})
             else
               _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
+            fi
+            if [[ -z "$_cmd" ]]; then
+              _cmd=$(printf '%s' "$_line" | ${pkgs.gawk}/bin/awk '{print $NF}')
+            fi
+            if [[ -z "$_cmd" ]]; then
+              _cmd="<unknown>"
             fi
             printf '%2d. %s %s\n' "$_n" "$_mem" "$_cmd" >&3
           done < <(${pkgs.coreutils}/bin/sort -rn -k10 "$TMPDIR_HC/top-data" 2>/dev/null \
