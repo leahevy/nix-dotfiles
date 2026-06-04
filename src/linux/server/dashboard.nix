@@ -141,6 +141,44 @@ args@{
       description = "CSS font-size for the page body, or null to leave the browser default.";
     };
 
+    services = lib.mkOption {
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.str;
+              description = "Display name for a generated dashboard service entry.";
+            };
+
+            href = lib.mkOption {
+              type = lib.types.str;
+              description = "URL for a generated dashboard service entry.";
+            };
+
+            description = lib.mkOption {
+              type = lib.types.str;
+              default = "";
+              description = "Description for a generated dashboard service entry.";
+            };
+
+            icon = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Homepage icon name for a generated dashboard service entry.";
+            };
+
+            enableSiteMonitor = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Whether to configure Homepage site monitoring for this generated dashboard service entry.";
+            };
+          };
+        }
+      );
+      default = [ ];
+      description = "Service entries contributed by modules and merged into the generated Homepage services group.";
+    };
+
     serverBookmarks = lib.mkOption {
       type = lib.types.listOf lib.types.attrs;
       default = [ ];
@@ -278,6 +316,7 @@ args@{
         listenPort,
         fontFamily,
         fontSize,
+        services,
         serverBookmarks,
         otherBookmarks,
         widgets,
@@ -297,27 +336,14 @@ args@{
           else
             subdomain;
 
-        activeExposedServices = lib.filterAttrs (_: v: v != false) (
-          builtins.removeAttrs self.host.remote.exposedServices [ "additionalServices" ]
-        );
-
-        knownNames = {
-          paperless-ngx = "Paperless";
-          syncthing = "Syncthing";
-        };
-
-        exposedServiceEntries = lib.mapAttrsToList (
-          key: val:
-          let
-            svcSubdomain = if builtins.isString val then val else key;
-            displayName = knownNames.${key} or key;
-          in
-          {
-            "${displayName}" = {
-              href = "https://${svcSubdomain}.${domain}";
-            };
+        generatedServiceEntries = map (svc: {
+          "${svc.name}" = {
+            inherit (svc) href;
           }
-        ) activeExposedServices;
+          // lib.optionalAttrs svc.enableSiteMonitor { siteMonitor = svc.href; }
+          // lib.optionalAttrs (svc.icon != null) { inherit (svc) icon; }
+          // lib.optionalAttrs (svc.description != "") { inherit (svc) description; };
+        }) services;
 
         additionalServiceEntries = lib.mapAttrsToList (
           key: svc:
@@ -341,7 +367,7 @@ args@{
           }
         ) self.host.remote.exposedServices.additionalServices;
 
-        allServiceEntries = exposedServiceEntries ++ additionalServiceEntries;
+        allServiceEntries = generatedServiceEntries ++ additionalServiceEntries;
 
         backgroundAttr =
           if localBackgroundFile != null then

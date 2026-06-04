@@ -185,6 +185,26 @@ args@{
       };
     };
 
+    ifEnabled.linux.server.dashboard = {
+      enabled =
+        config:
+        let
+          domain = self.host.remote.baseDomain;
+          exposedService = self.host.remote.exposedServices.paperless-ngx;
+          subdomain = config.nx.linux.server.paperless-ngx.subdomain;
+        in
+        lib.mkIf (domain != null && exposedService != false) {
+          nx.linux.server.dashboard.services = [
+            {
+              name = "Paperless";
+              href = "https://${subdomain}.${domain}";
+              description = "Document management system";
+              icon = "paperless-ngx";
+            }
+          ];
+        };
+    };
+
     ifEnabled.linux.server.tika = {
       enabled = config: {
         nx.linux.server.tika.ocrLanguages =

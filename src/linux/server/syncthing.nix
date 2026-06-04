@@ -103,6 +103,26 @@ args@{
       };
     };
 
+    ifEnabled.linux.server.dashboard = {
+      enabled =
+        config:
+        let
+          domain = self.host.remote.baseDomain;
+          exposedService = self.host.remote.exposedServices.syncthing;
+          subdomain = config.nx.linux.server.syncthing.subdomain;
+        in
+        lib.mkIf (domain != null && exposedService != false) {
+          nx.linux.server.dashboard.services = [
+            {
+              name = "Syncthing";
+              href = "https://${subdomain}.${domain}";
+              description = "File synchronization across devices";
+              icon = "syncthing";
+            }
+          ];
+        };
+    };
+
     linux.system =
       {
         config,
