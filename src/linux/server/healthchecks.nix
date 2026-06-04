@@ -1347,7 +1347,7 @@ args@{
               val = "username";
             }
             {
-              key = self.user.fullName;
+              key = self.user.fullname;
               val = "full name";
             }
             {
