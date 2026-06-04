@@ -1296,6 +1296,7 @@ args@{
             set -euo pipefail
             TMPDIR_HC=$(${pkgs.coreutils}/bin/mktemp -d)
             trap "${pkgs.coreutils}/bin/rm -rf '$TMPDIR_HC'" EXIT
+            export TMPDIR_HC
             REPORT_FILE="$TMPDIR_HC/report"
             DETAIL_FILE="$TMPDIR_HC/detail"
             FAILED=0

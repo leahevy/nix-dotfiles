@@ -93,6 +93,18 @@ args@{
       default = true;
       description = "Whether to auto-configure shared access to paperless import and export directories when paperless-ngx is enabled.";
     };
+
+    enablePullErrorsHealthCheck = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable a standalone health check that fails when Syncthing folders report pull errors.";
+    };
+
+    pullErrorsHealthCheckInterval = lib.mkOption {
+      type = lib.types.str;
+      default = "30m";
+      description = "Interval for the standalone Syncthing pull error health check.";
+    };
   };
 
   module = {
@@ -100,6 +112,103 @@ args@{
       enabled = config: {
         nx.linux.server.healthchecks.requireServicesUp = [ "syncthing.service" ];
         nx.linux.server.healthchecks.loadHighCpuExemptCommands = [ "syncthing" ];
+        nx.linux.server.healthchecks.timedHealthChecks =
+          lib.mkIf config.nx.linux.server.syncthing.enablePullErrorsHealthCheck
+            {
+              "syncthing-pull-errors" = {
+                interval = config.nx.linux.server.syncthing.pullErrorsHealthCheckInterval;
+                checks = {
+                  "10 - Syncthing API reachable" = ''
+                    CONFIG_XML=${lib.escapeShellArg "${config.services.syncthing.configDir}/config.xml"}
+                    if [[ ! -r "$CONFIG_XML" ]]; then
+                      printf 'Syncthing config.xml is not readable!\n' >&3
+                      exit 1
+                    fi
+
+                    API_KEY=$(${pkgs.libxml2}/bin/xmllint --xpath 'string(configuration/gui/apikey)' "$CONFIG_XML" 2>/dev/null || true)
+                    if [[ -z "$API_KEY" ]]; then
+                      printf 'Could not read the Syncthing API key!\n' >&3
+                      exit 1
+                    fi
+
+                    HEADER_FILE="$TMPDIR_HC/syncthing-api-headers"
+                    ${pkgs.coreutils}/bin/chmod 600 "$HEADER_FILE"
+                    printf 'X-API-Key: %s\n' "$API_KEY" > "$HEADER_FILE"
+
+                    FOLDERS_JSON=$(${pkgs.curl}/bin/curl -fsS --connect-timeout 5 --max-time 10 \
+                      -H @"$HEADER_FILE" \
+                      "http://127.0.0.1:${toString config.nx.linux.server.syncthing.guiPort}/rest/config/folders" 2>/dev/null || true)
+                    if [[ -z "$FOLDERS_JSON" ]]; then
+                      printf 'Could not fetch folders from the Syncthing API!\n' >&3
+                      exit 1
+                    fi
+
+                    FOLDER_COUNT=$(printf '%s' "$FOLDERS_JSON" | ${pkgs.jq}/bin/jq -r 'length' 2>/dev/null || true)
+                    if [[ -z "$FOLDER_COUNT" ]]; then
+                      printf 'Syncthing folders response was not valid JSON!\n' >&3
+                      exit 1
+                    fi
+
+                    printf 'folders: %s\n' "$FOLDER_COUNT" >&3
+                  '';
+                  "20 - Syncthing pull errors" = ''
+                    CONFIG_XML=${lib.escapeShellArg "${config.services.syncthing.configDir}/config.xml"}
+                    if [[ ! -r "$CONFIG_XML" ]]; then
+                      printf 'Syncthing config.xml is not readable!\n' >&3
+                      exit 1
+                    fi
+
+                    API_KEY=$(${pkgs.libxml2}/bin/xmllint --xpath 'string(configuration/gui/apikey)' "$CONFIG_XML" 2>/dev/null || true)
+                    if [[ -z "$API_KEY" ]]; then
+                      printf 'Could not read the Syncthing API key!\n' >&3
+                      exit 1
+                    fi
+
+                    HEADER_FILE="$TMPDIR_HC/syncthing-api-headers"
+                    ${pkgs.coreutils}/bin/chmod 600 "$HEADER_FILE"
+                    printf 'X-API-Key: %s\n' "$API_KEY" > "$HEADER_FILE"
+
+                    FOLDERS=$(${pkgs.curl}/bin/curl -fsS --connect-timeout 5 --max-time 10 \
+                      -H @"$HEADER_FILE" \
+                      "http://127.0.0.1:${toString config.nx.linux.server.syncthing.guiPort}/rest/config/folders" \
+                      2>/dev/null | ${pkgs.jq}/bin/jq -r '.[].id' 2>/dev/null || true)
+
+                    if [[ -z "$FOLDERS" ]]; then
+                      printf 'No Syncthing folders configured.\n' >&3
+                      exit 0
+                    fi
+
+                    FAILED=0
+                    while IFS= read -r FOLDER; do
+                      [[ -n "$FOLDER" ]] || continue
+                      RESPONSE=$(${pkgs.curl}/bin/curl -fsS --connect-timeout 5 --max-time 10 \
+                        -H @"$HEADER_FILE" \
+                        "http://127.0.0.1:${toString config.nx.linux.server.syncthing.guiPort}/rest/db/status?folder=$FOLDER" \
+                        2>/dev/null || true)
+                      if [[ -z "$RESPONSE" ]]; then
+                        printf 'Could not fetch status for folder %s!\n' "$FOLDER" >&3
+                        FAILED=1
+                        continue
+                      fi
+                      ERRORS=$(printf '%s' "$RESPONSE" | ${pkgs.jq}/bin/jq -r '.pullErrors // 0' 2>/dev/null || true)
+                      case "$ERRORS" in
+                        ""|*[!0-9]*) ERRORS=0 ;;
+                      esac
+                      printf '%s: %s pull errors\n' "$FOLDER" "$ERRORS" >&3
+                      if [[ "$ERRORS" -gt 0 ]]; then
+                        FAILED=1
+                      fi
+                    done <<EOF
+                    $FOLDERS
+                    EOF
+
+                    if [[ "$FAILED" -ne 0 ]]; then
+                      exit 1
+                    fi
+                  '';
+                };
+              };
+            };
       };
     };
 
