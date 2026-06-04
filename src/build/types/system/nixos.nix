@@ -601,6 +601,46 @@ with lib;
                     type = types.either types.str types.bool;
                     default = false;
                   };
+                  additionalServices = mkOption {
+                    type = types.attrsOf (
+                      types.submodule {
+                        options = {
+                          subdomain = mkOption {
+                            type = types.nullOr types.str;
+                            default = null;
+                            description = "Subdomain under baseDomain where this service is reachable.";
+                          };
+                          url = mkOption {
+                            type = types.nullOr types.str;
+                            default = null;
+                            description = "Full URL for services not hosted under baseDomain.";
+                          };
+                          name = mkOption {
+                            type = types.nullOr types.str;
+                            default = null;
+                            description = "Display name for this service, defaulting to the attribute key when null.";
+                          };
+                          description = mkOption {
+                            type = types.str;
+                            default = "";
+                            description = "Short description of what this service does.";
+                          };
+                          iconName = mkOption {
+                            type = types.str;
+                            default = "firefox";
+                            description = "Icon name from the dashboard icons collection (https://dashboardicons.com/icons), for example syncthing or paperless-ngx.";
+                          };
+                          iconUrl = mkOption {
+                            type = types.nullOr types.str;
+                            default = null;
+                            description = "Full URL to a remote image used as this service's icon.";
+                          };
+                        };
+                      }
+                    );
+                    default = { };
+                    description = "Additional services provided by this host.";
+                  };
                 };
               };
               default = { };

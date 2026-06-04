@@ -36,6 +36,8 @@ let
           hostname = hostCfg.hostname or profileName;
           domain = hostCfg.remote.baseDomain or (hostCfg.remote.address or null);
           exposedServices = hostCfg.remote.exposedServices or { };
+          knownServices = builtins.removeAttrs exposedServices [ "additionalServices" ];
+          additionalServices = exposedServices.additionalServices or { };
           entries =
             if domain == null then
               { }
@@ -44,14 +46,28 @@ let
                 lib.concatMap (
                   serviceName:
                   let
-                    val = exposedServices.${serviceName};
+                    val = knownServices.${serviceName};
                     subdomain = if val == true then serviceName else val;
                     suffix = serviceSuffixes.${serviceName} or "";
                   in
                   lib.optional (val != false) (
                     lib.nameValuePair (capitalize serviceName) "https://${subdomain}.${domain}${suffix}"
                   )
-                ) (lib.attrNames exposedServices)
+                ) (lib.attrNames knownServices)
+                ++ lib.mapAttrsToList (
+                  key: svc:
+                  let
+                    displayName = if svc.name != null then svc.name else capitalize key;
+                    href =
+                      if svc.url != null then
+                        svc.url
+                      else if svc.subdomain != null then
+                        "https://${svc.subdomain}.${domain}"
+                      else
+                        "https://${key}.${domain}";
+                  in
+                  lib.nameValuePair displayName href
+                ) additionalServices
               );
         in
         lib.nameValuePair hostname entries
