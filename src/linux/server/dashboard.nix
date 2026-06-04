@@ -327,6 +327,9 @@ args@{
         hostname = self.host.hostname;
         nginxSubdomain = config.nx.linux.server.nginx.subdomain;
         enableQuic = config.nx.linux.server.nginx.enableQuic;
+        exposedService = self.host.remote.exposedServices.dashboard;
+        isExposed = exposedService != false;
+        exposedSubdomain = if builtins.isString exposedService then exposedService else effectiveSubdomain;
 
         effectiveSubdomain =
           if hostAtNginxSubdomain then
@@ -509,6 +512,14 @@ args@{
           {
             assertion = domain != null;
             message = "linux.server.dashboard requires host.remote.baseDomain to be set!";
+          }
+          {
+            assertion = !isExposed || config.nx.linux.security.letsencrypt.enable;
+            message = "linux.server.dashboard requires linux.security.letsencrypt to be enabled!";
+          }
+          {
+            assertion = exposedService == false || exposedSubdomain == effectiveSubdomain;
+            message = "linux.server.dashboard: effective subdomain '${effectiveSubdomain}' does not match exposedServices.dashboard subdomain '${exposedSubdomain}'!";
           }
         ];
 

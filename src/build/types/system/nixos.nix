@@ -593,6 +593,10 @@ with lib;
             exposedServices = mkOption {
               type = types.submodule {
                 options = {
+                  dashboard = mkOption {
+                    type = types.either types.str types.bool;
+                    default = false;
+                  };
                   paperless-ngx = mkOption {
                     type = types.either types.str types.bool;
                     default = false;
