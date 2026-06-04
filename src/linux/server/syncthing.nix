@@ -198,6 +198,21 @@ in
                       printf 'folders: %s\n' "$FOLDER_COUNT" >&3
                     '';
                     "20 - Syncthing pull errors" = ''
+                      format_folder_status() {
+                        local folder="$1"
+                        local status="$2"
+                        local width=30
+                        local len=''${#folder}
+                        local dots
+                        if [[ "$len" -ge "$width" ]]; then
+                          dots="..."
+                        else
+                          dots=$(printf '%*s' "$((width - len))" "")
+                          dots=''${dots// /.}
+                        fi
+                        printf '%s%s %s\n' "$folder" "$dots" "$status" >&3
+                      }
+
                       FOLDERS=$(${queryApiExe} /rest/config/folders --connect-timeout 5 --max-time 10 \
                         | ${pkgs.jq}/bin/jq -r '.[].id' 2>/dev/null || true)
 
@@ -236,11 +251,11 @@ in
                           ATTEMPT=$((ATTEMPT + 1))
                         done
                         if [[ -n "$LAST_REASON" ]]; then
-                          printf '%s: %s\n' "$FOLDER" "$LAST_REASON" >&3
+                          format_folder_status "$FOLDER" "$LAST_REASON"
                           FAILED=1
                           continue
                         fi
-                        printf '%s: %s pull errors\n' "$FOLDER" "$ERRORS" >&3
+                        format_folder_status "$FOLDER" "$ERRORS pull errors"
                         if [[ "$ERRORS" -gt 0 ]]; then
                           FAILED=1
                         fi
