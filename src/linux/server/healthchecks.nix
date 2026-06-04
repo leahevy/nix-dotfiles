@@ -732,14 +732,28 @@ args@{
           }'
         '';
 
+        networkRequiredIfaces =
+          lib.optional config.virtualisation.docker.enable "docker0"
+          ++ lib.optional config.services.tailscale.enable "tailscale0"
+          ++ lib.optional (self.host.ethernetDeviceName != null) self.host.ethernetDeviceName
+          ++ lib.optional (self.host.wifiDeviceName != null) self.host.wifiDeviceName;
+
         networkIfaceExpr = ''
           _ifaces=$(${pkgs.iproute2}/bin/ip -o addr show up scope global 2>/dev/null \
             | ${pkgs.gawk}/bin/awk '$3=="inet"{print $2 ": " $4}')
-          if [[ -z "$_ifaces" ]]; then
-            printf 'no connected interfaces\n' >&3
+          _missing=()
+          ${lib.concatMapStringsSep "\n" (iface: ''
+            if ! printf '%s\n' "$_ifaces" | ${pkgs.gnugrep}/bin/grep -q '^${iface}:'; then
+              _missing+=("${iface}")
+            fi
+          '') networkRequiredIfaces}
+          if [[ ''${#_missing[@]} -gt 0 ]]; then
+            printf '%s: <no ip>\n' "''${_missing[@]}" >&3
+            if [[ -n "$_ifaces" ]]; then
+              printf '%s\n' "$_ifaces" >&3
+            fi
             exit 1
           fi
-          printf '%s\n' "$_ifaces" >&3
         '';
 
         timezoneExpr = ''
@@ -908,7 +922,7 @@ args@{
           "!27 - Network traffic" = networkTrafficExpr;
         }
         // {
-          "30 - Network interfaces" = networkIfaceExpr;
+          "!30 - Network interfaces" = networkIfaceExpr;
           "30 - Timezone" = timezoneExpr;
           "-30 - Remote IP" = remoteIpExpr;
         }
