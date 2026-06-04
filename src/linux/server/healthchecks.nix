@@ -766,12 +766,24 @@ args@{
 
         remoteIpExpr = ''
           _remote_cache=/run/nx-healthcheck/remote-ip
-          _raw=$(${pkgs.curl}/bin/curl -sf --max-time 10 https://api.ipify.org 2>/dev/null || true)
+          _cache_age=99999
+          if [[ -f "$_remote_cache" ]]; then
+            _cache_age=$(( $(${pkgs.coreutils}/bin/date +%s) - $(${pkgs.coreutils}/bin/stat -c %Y "$_remote_cache") ))
+          fi
+          _raw=""
+          if [[ $_cache_age -ge 600 ]]; then
+            _raw=$(${pkgs.curl}/bin/curl -sf --max-time 10 https://api.ipify.org 2>/dev/null || true)
+          fi
           if [[ "$_raw" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             printf '%s' "$_raw" > "$_remote_cache" || true
             printf '%s\n' "$_raw" >&3
           elif [[ -f "$_remote_cache" ]]; then
-            printf '%s (cached)\n' "$(${pkgs.coreutils}/bin/cat "$_remote_cache")" >&3
+            _cached=$(${pkgs.coreutils}/bin/cat "$_remote_cache")
+            if [[ $_cache_age -ge 600 ]]; then
+              printf '%s (cached)\n' "$_cached" >&3
+            else
+              printf '%s\n' "$_cached" >&3
+            fi
           else
             printf '<no remote ip>\n' >&3
           fi
