@@ -305,6 +305,47 @@ args@{
       description = "Health checks triggered by other systemd units, keyed by endpoint name suffix.";
     };
 
+    timedHealthChecks = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            checks = lib.mkOption {
+              type = lib.types.attrsOf lib.types.str;
+              default = { };
+              description = "Named checks for this standalone timed health check, using the same key format as regular checks.";
+            };
+            interval = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Interval for this standalone timed health check. When both interval and schedule are null, a default interval of 15m is used.";
+            };
+            schedule = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "OnCalendar schedule for this standalone timed health check.";
+            };
+            randomDelaySec = lib.mkOption {
+              type = lib.types.int;
+              default = 60;
+              description = "RandomizedDelaySec for this standalone timed health check timer in seconds.";
+            };
+            timeoutSec = lib.mkOption {
+              type = lib.types.int;
+              default = 1200;
+              description = "TimeoutStartSec for this standalone timed health check service in seconds.";
+            };
+            networkTimeoutSec = lib.mkOption {
+              type = lib.types.int;
+              default = 60;
+              description = "Time in seconds to keep retrying the ping endpoint for this standalone timed health check.";
+            };
+          };
+        }
+      );
+      default = { };
+      description = "Independent timer-backed health checks, keyed by endpoint name suffix.";
+    };
+
     enableSecretReplacements = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -427,6 +468,7 @@ args@{
         monthlyServiceTimeoutSec,
         checkBtrfsScrub,
         servicesHealthChecks,
+        timedHealthChecks,
         serviceTimeoutSec,
         healthchecksBaseUrl,
         projectUUID,
@@ -460,6 +502,7 @@ args@{
             deploymentMode == "server" || deploymentMode == "managed";
 
         hasServiceChecks = servicesHealthChecks != { };
+        hasTimedChecks = timedHealthChecks != { };
 
         regularEndpointName = "${hostname}-${healthName}";
         dailyEndpointName = "${hostname}-${dailyName}";
@@ -1599,6 +1642,64 @@ args@{
           }
         ) { } servicesHealthChecks;
 
+        timedHealthServiceUnits = lib.foldlAttrs (
+          acc: key: entry:
+          let
+            entryName = sanitizeName key;
+            endpointName = "${hostname}-${entryName}";
+            unitName = "nx-healthcheck-${entryName}";
+          in
+          acc
+          // {
+            ${unitName} = {
+              description = "Standalone health check ${key}";
+              wants = [ "network-online.target" ];
+              after = [ "network-online.target" ];
+              serviceConfig = {
+                Type = "oneshot";
+                User = "root";
+                TimeoutStartSec = entry.timeoutSec;
+                SuccessExitStatus = 1;
+                ExecStart = makeTimerScript {
+                  inherit endpointName;
+                  checks = entry.checks;
+                  networkTimeoutSec = entry.networkTimeoutSec;
+                };
+              };
+            };
+          }
+        ) { } timedHealthChecks;
+
+        timedHealthTimerUnits = lib.foldlAttrs (
+          acc: key: entry:
+          let
+            entryName = sanitizeName key;
+            unitName = "nx-healthcheck-${entryName}";
+            effectiveInterval = if entry.interval != null then entry.interval else "15m";
+          in
+          acc
+          // {
+            ${unitName} = {
+              description = "Standalone health check timer ${key}";
+              wantedBy = [ "timers.target" ];
+              timerConfig =
+                if entry.schedule != null then
+                  {
+                    OnCalendar = entry.schedule;
+                    Persistent = true;
+                    RandomizedDelaySec = entry.randomDelaySec;
+                  }
+                else
+                  {
+                    OnBootSec = effectiveInterval;
+                    OnUnitInactiveSec = effectiveInterval;
+                    Persistent = true;
+                    RandomizedDelaySec = entry.randomDelaySec;
+                  };
+            };
+          }
+        ) { } timedHealthChecks;
+
       in
       lib.mkMerge [
         {
@@ -1619,6 +1720,22 @@ args@{
             {
               assertion = helpers.isValidUUID projectUUID;
               message = "linux.server.healthchecks: projectUUID must be a valid UUID!";
+            }
+            {
+              assertion = lib.all (entry: entry.checks != { }) (lib.attrValues timedHealthChecks);
+              message = "linux.server.healthchecks: timedHealthChecks entries must define at least one check!";
+            }
+            {
+              assertion = lib.all (entry: !(entry.interval != null && entry.schedule != null)) (
+                lib.attrValues timedHealthChecks
+              );
+              message = "linux.server.healthchecks: timedHealthChecks entries cannot define both interval and schedule!";
+            }
+            {
+              assertion = lib.all (entry: entry.interval != null || entry.schedule != null) (
+                lib.attrValues timedHealthChecks
+              );
+              message = "linux.server.healthchecks: timedHealthChecks entries must define either interval or schedule!";
             }
           ];
 
@@ -1737,6 +1854,11 @@ args@{
 
         (lib.mkIf hasServiceChecks {
           systemd.services = serviceCheckUnits;
+        })
+
+        (lib.mkIf hasTimedChecks {
+          systemd.services = timedHealthServiceUnits;
+          systemd.timers = timedHealthTimerUnits;
         })
       ];
   };
