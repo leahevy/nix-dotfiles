@@ -23,12 +23,22 @@ args@{
     enableQuic = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Enable QUIC/HTTP3 support on all vhosts";
+      description = "Enable QUIC/HTTP3 support on all vhosts.";
+    };
+    subdomain = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Subdomain under baseDomain for the status page vhost, defaulting to the hostname when null.";
     };
     enableTestDomain = lib.mkOption {
       type = lib.types.bool;
+      default = true;
+      description = "Serve a minimal status page at the configured subdomain under baseDomain.";
+    };
+    serverOwnsBaseDomain = lib.mkOption {
+      type = lib.types.bool;
       default = false;
-      description = "When true, serve a test page at <hostname>.<baseDomain> to verify nginx and TLS are working";
+      description = "When true, add a redirect vhost at baseDomain that forwards to the configured subdomain vhost.";
     };
   };
 
@@ -56,11 +66,14 @@ args@{
         config,
         openFirewall,
         enableQuic,
+        subdomain,
         enableTestDomain,
+        serverOwnsBaseDomain,
         ...
       }:
       let
         domain = self.host.remote.baseDomain;
+        effectiveSubdomain = if subdomain == null then self.host.hostname else subdomain;
         uncoveredVhosts = lib.filterAttrs (
           name: vh:
           let
@@ -88,12 +101,12 @@ args@{
             assertion = uncoveredVhosts == { };
             message = "linux.server.nginx: virtual hosts not covered by their ACME cert: ${lib.concatStringsSep ", " (lib.attrNames uncoveredVhosts)}!";
           }
-          (lib.mkIf enableTestDomain {
+          (lib.mkIf (enableTestDomain || serverOwnsBaseDomain) {
             assertion =
               domain != null
               && config.nx.linux.security.letsencrypt.enable
               && config.nx.linux.security.letsencrypt.dnsCerts ? ${domain};
-            message = "linux.server.nginx: enableTestDomain requires letsencrypt to be configured with a cert for '${
+            message = "linux.server.nginx: enableTestDomain/serverOwnsBaseDomain requires letsencrypt to be configured with a cert for '${
               if domain != null then domain else "null"
             }'!";
           })
@@ -136,8 +149,8 @@ args@{
           allowedUDPPorts = lib.mkIf enableQuic [ 443 ];
         };
 
-        services.nginx.virtualHosts =
-          lib.mkIf
+        services.nginx.virtualHosts = lib.mkMerge [
+          (lib.mkIf
             (
               enableTestDomain
               && domain != null
@@ -145,17 +158,38 @@ args@{
               && config.nx.linux.security.letsencrypt.dnsCerts ? ${domain}
             )
             {
-              "${self.host.hostname}.${domain}" = lib.mkDefault {
+              "${effectiveSubdomain}.${domain}" = lib.mkDefault {
                 onlySSL = true;
                 useACMEHost = domain;
                 quic = enableQuic;
                 http3 = enableQuic;
                 locations."/" = {
-                  return = "200 '${self.host.hostname} ok'";
+                  return = "200 '${effectiveSubdomain} ok'";
                   extraConfig = "add_header Content-Type text/plain;";
                 };
               };
-            };
+            }
+          )
+          (lib.mkIf
+            (
+              serverOwnsBaseDomain
+              && domain != null
+              && config.nx.linux.security.letsencrypt.enable
+              && config.nx.linux.security.letsencrypt.dnsCerts ? ${domain}
+            )
+            {
+              "${domain}" = {
+                onlySSL = true;
+                useACMEHost = domain;
+                quic = enableQuic;
+                http3 = enableQuic;
+                locations."/" = {
+                  return = "301 https://${effectiveSubdomain}.${domain}$request_uri";
+                };
+              };
+            }
+          )
+        ];
       };
   };
 }
