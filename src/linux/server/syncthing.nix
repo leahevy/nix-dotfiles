@@ -131,13 +131,14 @@ args@{
                       exit 1
                     fi
 
-                    HEADER_FILE="$TMPDIR_HC/syncthing-api-headers"
-                    ${pkgs.coreutils}/bin/chmod 600 "$HEADER_FILE"
-                    printf 'X-API-Key: %s\n' "$API_KEY" > "$HEADER_FILE"
+                      HEADER_FILE="$TMPDIR_HC/syncthing-api-headers"
+                      ${pkgs.coreutils}/bin/touch "$HEADER_FILE"
+                      ${pkgs.coreutils}/bin/chmod 600 "$HEADER_FILE"
+                      printf 'X-API-Key: %s\n' "$API_KEY" > "$HEADER_FILE"
 
-                    FOLDERS_JSON=$(${pkgs.curl}/bin/curl -fsS --connect-timeout 5 --max-time 10 \
-                      -H @"$HEADER_FILE" \
-                      "http://127.0.0.1:${toString config.nx.linux.server.syncthing.guiPort}/rest/config/folders" 2>/dev/null || true)
+                        FOLDERS_JSON=$(${pkgs.curl}/bin/curl -fsS --connect-timeout 5 --max-time 10 \
+                        -H @"$HEADER_FILE" \
+                        "http://127.0.0.1:${toString config.nx.linux.server.syncthing.guiPort}/rest/config/folders" 2>/dev/null || true)
                     if [[ -z "$FOLDERS_JSON" ]]; then
                       printf 'Could not fetch folders from the Syncthing API!\n' >&3
                       exit 1
@@ -164,25 +165,26 @@ args@{
                       exit 1
                     fi
 
-                    HEADER_FILE="$TMPDIR_HC/syncthing-api-headers"
-                    ${pkgs.coreutils}/bin/chmod 600 "$HEADER_FILE"
-                    printf 'X-API-Key: %s\n' "$API_KEY" > "$HEADER_FILE"
+                      HEADER_FILE="$TMPDIR_HC/syncthing-api-headers"
+                      ${pkgs.coreutils}/bin/touch "$HEADER_FILE"
+                      ${pkgs.coreutils}/bin/chmod 600 "$HEADER_FILE"
+                      printf 'X-API-Key: %s\n' "$API_KEY" > "$HEADER_FILE"
 
-                    FOLDERS=$(${pkgs.curl}/bin/curl -fsS --connect-timeout 5 --max-time 10 \
-                      -H @"$HEADER_FILE" \
-                      "http://127.0.0.1:${toString config.nx.linux.server.syncthing.guiPort}/rest/config/folders" \
-                      2>/dev/null | ${pkgs.jq}/bin/jq -r '.[].id' 2>/dev/null || true)
+                        FOLDERS=$(${pkgs.curl}/bin/curl -fsS --connect-timeout 5 --max-time 10 \
+                          -H @"$HEADER_FILE" \
+                        "http://127.0.0.1:${toString config.nx.linux.server.syncthing.guiPort}/rest/config/folders" \
+                        2>/dev/null | ${pkgs.jq}/bin/jq -r '.[].id' 2>/dev/null || true)
 
                     if [[ -z "$FOLDERS" ]]; then
                       printf 'No Syncthing folders configured.\n' >&3
                       exit 0
                     fi
 
-                    FAILED=0
-                    while IFS= read -r FOLDER; do
-                      [[ -n "$FOLDER" ]] || continue
-                      RESPONSE=$(${pkgs.curl}/bin/curl -fsS --connect-timeout 5 --max-time 10 \
-                        -H @"$HEADER_FILE" \
+                      FAILED=0
+                      while IFS= read -r FOLDER; do
+                          [[ -n "$FOLDER" ]] || continue
+                          RESPONSE=$(${pkgs.curl}/bin/curl -fsS --connect-timeout 5 --max-time 10 \
+                          -H @"$HEADER_FILE" \
                         "http://127.0.0.1:${toString config.nx.linux.server.syncthing.guiPort}/rest/db/status?folder=$FOLDER" \
                         2>/dev/null || true)
                       if [[ -z "$RESPONSE" ]]; then
@@ -190,7 +192,7 @@ args@{
                         FAILED=1
                         continue
                       fi
-                      ERRORS=$(printf '%s' "$RESPONSE" | ${pkgs.jq}/bin/jq -r '.pullErrors // 0' 2>/dev/null || true)
+                        ERRORS=$(printf '%s' "$RESPONSE" | ${pkgs.jq}/bin/jq -r '.pullErrors // 0' 2>/dev/null || true)
                       case "$ERRORS" in
                         ""|*[!0-9]*) ERRORS=0 ;;
                       esac
@@ -198,13 +200,13 @@ args@{
                       if [[ "$ERRORS" -gt 0 ]]; then
                         FAILED=1
                       fi
-                    done <<EOF
-                    $FOLDERS
-                    EOF
+                        done <<EOF
+                        $FOLDERS
+                        EOF
 
-                    if [[ "$FAILED" -ne 0 ]]; then
-                      exit 1
-                    fi
+                        if [[ "$FAILED" -ne 0 ]]; then
+                          exit 1
+                        fi
                   '';
                 };
               };
