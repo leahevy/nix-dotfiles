@@ -758,8 +758,9 @@ args@{
 
         timezoneExpr = ''
           _tz=$(${pkgs.systemd}/bin/timedatectl show --property=Timezone --value 2>/dev/null || true)
-          if [[ -n "$_tz" ]]; then
-            printf '%s\n' "$_tz" >&3
+          if [[ -n "$_tz" && "$_tz" != ${lib.escapeShellArg config.time.timeZone} ]]; then
+            printf 'timezone: %s (expected: %s)\n' "$_tz" ${lib.escapeShellArg config.time.timeZone} >&3
+            exit 1
           fi
         '';
 
@@ -923,7 +924,7 @@ args@{
         }
         // {
           "!30 - Network interfaces" = networkIfaceExpr;
-          "30 - Timezone" = timezoneExpr;
+          "+30 - Timezone" = timezoneExpr;
           "-30 - Remote IP" = remoteIpExpr;
         }
         // lib.optionalAttrs (requireServicesUp != [ ]) { "+50 - Required services" = servicesGroupedExpr; }
