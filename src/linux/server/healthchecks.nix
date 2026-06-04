@@ -66,7 +66,7 @@ args@{
 
     tempInfoCelsius = lib.mkOption {
       type = lib.types.int;
-      default = 55;
+      default = 57;
       description = "Minimum temperature in Celsius at which thermal readings are included in health check output.";
     };
 
@@ -874,7 +874,7 @@ args@{
             ${pkgs.gawk}/bin/awk -v elapsed="$_elapsed" '
               NR==1{br=$1; bw=$2}
               NR==2{reads=($1-br)/elapsed/2048; writes=($2-bw)/elapsed/2048
-                if (reads>=0.2 || writes>=0.2) printf "reads: %.1f MB/s, writes: %.1f MB/s\n", reads, writes > "/dev/fd/3"}
+                if (reads>=1.2 || writes>=1.2) printf "reads: %.1f MB/s, writes: %.1f MB/s\n", reads, writes > "/dev/fd/3"}
             ' "$TMPDIR_HC/diskstats-before" "$TMPDIR_HC/diskstats-after"
           fi
           exit 0
@@ -886,7 +886,7 @@ args@{
             ${pkgs.gawk}/bin/awk -v elapsed="$_elapsed" '
               NR==1{brx=$1; btx=$2}
               NR==2{rx=($1-brx)/elapsed/1048576; tx=($2-btx)/elapsed/1048576
-                if (rx>=0.1 || tx>=0.1) printf "RX: %.1f MB/s, TX: %.1f MB/s\n", rx, tx > "/dev/fd/3"}
+                if (rx>=0.2 || tx>=0.2) printf "RX: %.1f MB/s, TX: %.1f MB/s\n", rx, tx > "/dev/fd/3"}
             ' "$TMPDIR_HC/netdev-before" "$TMPDIR_HC/netdev-after"
           fi
           exit 0
