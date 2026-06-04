@@ -523,10 +523,10 @@ args@{
               if (st > 0) {
                 swap_used=(st-sf)*100/st
                 combined_free=(a+sf)*100/(t+st)
-                printf "%.0f%% mem, %.0f%% swap\n", mem_used, swap_used > "/dev/fd/3"
+                if (mem_used > 30 || swap_used > 30) printf "%.0f%% mem, %.0f%% swap\n", mem_used, swap_used > "/dev/fd/3"
               } else {
                 combined_free=(t>0) ? a*100/t : 100
-                printf "%.0f%% mem\n", mem_used > "/dev/fd/3"
+                if (mem_used > 30) printf "%.0f%% mem\n", mem_used > "/dev/fd/3"
               }
               exit (combined_free < ${toString memoryFreeThresholdPct} || mem_used > ${toString memoryRamUsedMaxPct})
             }
@@ -711,7 +711,7 @@ args@{
                   t = max * nproc * high_multiplier
                   if (t > threshold) { threshold = t; mode = "high-load-exempt" }
                 }
-                printf "load 5m: %.2f (%s cores, limit: %.1f, mode: %s)\n", load5, nproc, threshold, mode > "/dev/fd/3"
+                if (load5 > 0.4 || mode != "normal") printf "load 5m: %.2f (%s cores, limit: %.1f, mode: %s)\n", load5, nproc, threshold, mode > "/dev/fd/3"
                 exit (load5 > threshold)
               }
             ' /proc/loadavg
@@ -781,12 +781,11 @@ args@{
 
         cpuUsageExpr = ''
           if [[ -f "$TMPDIR_HC/top-cpu-summary" ]]; then
-            _cpu_used=$(${pkgs.gawk}/bin/awk '
+            ${pkgs.gawk}/bin/awk '
               BEGIN{idle=0}
               {for(i=1;i<=NF;i++) if($i=="id,") idle=$(i-1)+0}
-              END{printf "%.0f%%", 100-idle}
-            ' "$TMPDIR_HC/top-cpu-summary")
-            printf '%s\n' "$_cpu_used" >&3
+              END{pct=100-idle; if(pct>=2) printf "%.0f%%\n", pct > "/dev/fd/3"}
+            ' "$TMPDIR_HC/top-cpu-summary"
           fi
           exit 0
         '';
@@ -841,8 +840,9 @@ args@{
             _elapsed=$(${pkgs.coreutils}/bin/cat "$TMPDIR_HC/snapshot-elapsed")
             ${pkgs.gawk}/bin/awk -v elapsed="$_elapsed" '
               NR==1{br=$1; bw=$2}
-              NR==2{printf "reads: %.1f MB/s, writes: %.1f MB/s\n", ($1-br)/elapsed/2048, ($2-bw)/elapsed/2048}
-            ' "$TMPDIR_HC/diskstats-before" "$TMPDIR_HC/diskstats-after" >&3
+              NR==2{reads=($1-br)/elapsed/2048; writes=($2-bw)/elapsed/2048
+                if (reads>=0.2 || writes>=0.2) printf "reads: %.1f MB/s, writes: %.1f MB/s\n", reads, writes > "/dev/fd/3"}
+            ' "$TMPDIR_HC/diskstats-before" "$TMPDIR_HC/diskstats-after"
           fi
           exit 0
         '';
@@ -852,8 +852,9 @@ args@{
             _elapsed=$(${pkgs.coreutils}/bin/cat "$TMPDIR_HC/snapshot-elapsed")
             ${pkgs.gawk}/bin/awk -v elapsed="$_elapsed" '
               NR==1{brx=$1; btx=$2}
-              NR==2{printf "RX: %.1f MB/s, TX: %.1f MB/s\n", ($1-brx)/elapsed/1048576, ($2-btx)/elapsed/1048576}
-            ' "$TMPDIR_HC/netdev-before" "$TMPDIR_HC/netdev-after" >&3
+              NR==2{rx=($1-brx)/elapsed/1048576; tx=($2-btx)/elapsed/1048576
+                if (rx>=0.1 || tx>=0.1) printf "RX: %.1f MB/s, TX: %.1f MB/s\n", rx, tx > "/dev/fd/3"}
+            ' "$TMPDIR_HC/netdev-before" "$TMPDIR_HC/netdev-after"
           fi
           exit 0
         '';
@@ -894,17 +895,17 @@ args@{
               exit 1
             fi
           '';
-          "20 - Memory and swap used" = memoryCheckExpr;
+          "!20 - Memory and swap used" = memoryCheckExpr;
         }
         // lib.optionalAttrs (!self.isVirtual) { "!20 - Temperature" = thermalCheckExpr; }
         // {
-          "20 - Load" = loadCheckExpr;
-          "25 - CPU usage" = cpuUsageExpr;
+          "!20 - Load" = loadCheckExpr;
+          "!25 - CPU usage" = cpuUsageExpr;
         }
         // {
-          "-26 - Disk IO" = ioRateExpr;
+          "!26 - Disk IO" = ioRateExpr;
           "+26 - IO wait" = iowaitExpr;
-          "-27 - Network traffic" = networkTrafficExpr;
+          "!27 - Network traffic" = networkTrafficExpr;
         }
         // {
           "30 - Network interfaces" = networkIfaceExpr;
