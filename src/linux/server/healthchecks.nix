@@ -298,6 +298,12 @@ args@{
       default = { };
       description = "Health checks triggered by other systemd units, keyed by endpoint name suffix.";
     };
+
+    enableSecretReplacements = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Replace and redact known sensitive literals such as hostname and domain in health check output.";
+    };
   };
 
   module = {
@@ -399,6 +405,7 @@ args@{
         healthchecksBaseUrl,
         projectUUID,
         healthchecksFinalChecksURL,
+        enableSecretReplacements,
         ...
       }:
       let
@@ -1256,7 +1263,6 @@ args@{
           "/run/secrets"
           "secret"
           "token"
-          config.users.users.${mainUser}.home
         ];
 
         secretWipeValueLiterals = [
@@ -1283,38 +1289,62 @@ args@{
           "\\<[0-9A-F]{16}\\>"
         ];
 
+        secretReplaceValues = {
+          "${self.host.remote.baseDomain}" = "domain";
+          "${self.host.hostname}" = "hostname";
+          "${self.user.username}" = "username";
+          "${self.user.fullName}" = "full name";
+          "${self.user.email}" = "email";
+          "${config.users.users.${mainUser}.home}" = "home";
+        };
+
+        makeReplaceToken = label: "<${lib.replaceStrings [ " " ] [ "_" ] (lib.toUpper label)}>";
+
+        secretReplaceAwkLines = lib.mapAttrsToList (
+          val: lbl: ''gsub(/${lib.escapeRegex val}/, "${makeReplaceToken lbl}")''
+        ) secretReplaceValues;
+
         secretWipeLineRegex = lib.concatStringsSep "|" (map lib.escapeRegex secretWipeLineLiterals);
         secretWipeValueRegex = lib.concatStringsSep "|" (
           (map lib.escapeRegex secretWipeValueLiterals) ++ secretWipeValueRegexes
         );
 
-        secretCensorScript = pkgs.writeShellScript "nx-hc-censor" ''
-          ${pkgs.gawk}/bin/awk '
-            BEGIN { IGNORECASE = 1; line_pat = "${secretWipeLineRegex}"; val_pat = "${secretWipeValueRegex}" }
-            match($0, line_pat) {
-              prefix = substr($0, 1, RSTART - 1)
-              suffix = substr($0, RSTART)
-              gsub(/[^ \t]/, "*", suffix)
-              print prefix suffix
-              next
-            }
-            match($0, val_pat) {
-              prefix = substr($0, 1, RSTART - 1)
-              rest = substr($0, RSTART)
-              if (match(rest, /[ \t]/)) {
-                token = substr(rest, 1, RSTART - 1)
-                tail = substr(rest, RSTART)
-              } else {
-                token = rest
-                tail = ""
-              }
-              gsub(/[^ \t]/, "*", token)
-              print prefix token tail
-              next
-            }
-            { print }
-          '
-        '';
+        secretCensorScript =
+          if !enableSecretReplacements then
+            "${pkgs.coreutils}/bin/cat"
+          else
+            pkgs.writeShellScript "nx-hc-censor" ''
+                  ${pkgs.gawk}/bin/awk '
+                    BEGIN { IGNORECASE = 1; line_pat = "${secretWipeLineRegex}"; val_pat = "${secretWipeValueRegex}" }
+                    ${lib.optionalString (secretReplaceValues != { }) ''
+                      {
+                        ${lib.concatStringsSep "\n" secretReplaceAwkLines}
+                      }
+                    ''}
+                    match($0, line_pat) {
+                  prefix = substr($0, 1, RSTART - 1)
+                  suffix = substr($0, RSTART)
+                  gsub(/[^ \t]/, "*", suffix)
+                  print prefix suffix
+                  next
+                }
+                match($0, val_pat) {
+                  prefix = substr($0, 1, RSTART - 1)
+                  rest = substr($0, RSTART)
+                  if (match(rest, /[ \t]/)) {
+                    token = substr(rest, 1, RSTART - 1)
+                    tail = substr(rest, RSTART)
+                  } else {
+                    token = rest
+                    tail = ""
+                  }
+                  gsub(/[^ \t]/, "*", token)
+                  print prefix token tail
+                  next
+                }
+                { print }
+              '
+            '';
 
         makeCompanionScript =
           {
