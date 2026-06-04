@@ -250,6 +250,12 @@ args@{
       description = "TimeoutStartSec for all generated health check services in seconds.";
     };
 
+    detailMaxLines = lib.mkOption {
+      type = lib.types.int;
+      default = 50;
+      description = "Maximum number of fd 3 detail lines included per check in the health check body.";
+    };
+
     healthchecksBaseUrl = lib.mkOption {
       type = lib.types.str;
       default = "https://healthchecks.io";
@@ -470,6 +476,7 @@ args@{
         servicesHealthChecks,
         timedHealthChecks,
         serviceTimeoutSec,
+        detailMaxLines,
         healthchecksBaseUrl,
         projectUUID,
         healthchecksFinalChecksURL,
@@ -1105,7 +1112,7 @@ args@{
             '';
             appendInfo = ''
               ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
-                | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
+                | ${pkgs.coreutils}/bin/head -n ${toString detailMaxLines} >> "$DETAIL_FILE"
               _prev_had_info=1
             '';
             infoTail = ''
@@ -1550,7 +1557,7 @@ args@{
               fi
               if [[ -s "$INFO_FILE_CS" ]]; then
                 ${pkgs.gnused}/bin/sed 's/^/  /' "$INFO_FILE_CS" \
-                  | ${pkgs.coreutils}/bin/head -10 >> "$DETAIL_FILE"
+                  | ${pkgs.coreutils}/bin/head -n ${toString detailMaxLines} >> "$DETAIL_FILE"
               fi
             ''}
 
