@@ -367,12 +367,18 @@ args@{
     };
 
     ifEnabled.linux.server.dashboard.enabled = config: {
-      nx.linux.server.dashboard.serverBookmarks = [
+      nx.linux.server.dashboard.services = [
         {
-          Healthchecks = [
+          name = "Healthchecks";
+          href = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+          description = "Task and cron job monitoring";
+          icon = "healthchecks";
+          enableSiteMonitor = false;
+          widgets = [
             {
-              href = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
-              description = "Healthchecks";
+              type = "healthchecks";
+              url = config.nx.linux.server.healthchecks.healthchecksBaseUrl;
+              key = "{{HOMEPAGE_VAR_HEALTHCHECKS_KEY}}";
             }
           ];
         }

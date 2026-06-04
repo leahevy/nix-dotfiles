@@ -172,6 +172,12 @@ args@{
               default = true;
               description = "Whether to configure Homepage site monitoring for this generated dashboard service entry.";
             };
+
+            widgets = lib.mkOption {
+              type = lib.types.listOf lib.types.attrs;
+              default = [ ];
+              description = "Homepage service widget configurations for this generated dashboard service entry.";
+            };
           };
         }
       );
@@ -268,14 +274,6 @@ args@{
           };
         };
         services.homepage-dashboard.environmentFile = "/run/homepage-dashboard-env/env";
-        services.homepage-dashboard.widgets = [
-          {
-            healthchecks = {
-              url = config.nx.linux.server.healthchecks.healthchecksBaseUrl;
-              key = "{{HOMEPAGE_VAR_HEALTHCHECKS_KEY}}";
-            };
-          }
-        ];
       };
     };
 
@@ -342,7 +340,8 @@ args@{
           }
           // lib.optionalAttrs svc.enableSiteMonitor { siteMonitor = svc.href; }
           // lib.optionalAttrs (svc.icon != null) { inherit (svc) icon; }
-          // lib.optionalAttrs (svc.description != "") { inherit (svc) description; };
+          // lib.optionalAttrs (svc.description != "") { inherit (svc) description; }
+          // lib.optionalAttrs (svc.widgets != [ ]) { inherit (svc) widgets; };
         }) services;
 
         additionalServiceEntries = lib.mapAttrsToList (
@@ -361,6 +360,9 @@ args@{
           {
             "${displayName}" = {
               inherit href;
+            }
+            // {
+              siteMonitor = href;
             }
             // lib.optionalAttrs (icon != null) { inherit icon; }
             // lib.optionalAttrs (svc.description != "") { description = svc.description; };
