@@ -1418,9 +1418,9 @@ args@{
         ];
 
         secretWipeValueRegexes = [
-          "[[:alnum:]_.%+-]+@[[:alnum:].-]+\\.[[:alpha:]]{2,}"
-          "\\<[0-9A-F]{40}\\>"
-          "\\<[0-9A-F]{16}\\>"
+          "[[:alnum:]_.%+-]+@[[:alnum:].-]+[.][[:alpha:]]{2,}"
+          "(^|[^[:alnum:]_])[0-9A-F]{40}([^[:alnum:]_]|$)"
+          "(^|[^[:alnum:]_])[0-9A-F]{16}([^[:alnum:]_]|$)"
         ];
 
         secretReplaceValues = lib.foldl (acc: p: acc // { "${p.key}" = p.val; }) { } (
@@ -1454,8 +1454,19 @@ args@{
 
         makeReplaceToken = label: "<${lib.replaceStrings [ " " ] [ "_" ] (lib.toUpper label)}>";
 
+        escapeAwkRegexLiteral =
+          val:
+          lib.replaceStrings
+            [
+              "/"
+            ]
+            [
+              "\\/"
+            ]
+            (lib.escapeRegex val);
+
         secretReplaceAwkLines = lib.mapAttrsToList (
-          val: lbl: ''gsub(/${lib.escapeRegex val}/, "${makeReplaceToken lbl}")''
+          val: lbl: ''gsub(/${escapeAwkRegexLiteral val}/, "${makeReplaceToken lbl}")''
         ) secretReplaceValues;
 
         secretWipeLineRegex = lib.concatStringsSep "|" (map lib.escapeRegex secretWipeLineLiterals);
