@@ -1076,17 +1076,17 @@ args@{
               printf '%s\n' "$_scrub_info" | ${pkgs.gnused}/bin/sed 's/^/  /' >&3
             fi
             if [[ $_stats_exit -eq 65 ]]; then
-              printf '  Device stats:    failed\n' >&3
+              printf '  Device stats:     failed\n' >&3
               printf '%s\n' "$_stats" | ${pkgs.gnused}/bin/sed 's/^/    /' >&3
               BTRFS_FAILED=1
               continue
             elif [[ $_stats_exit -ne 0 ]]; then
               _errs=$(printf '%s\n' "$_stats" | ${pkgs.gawk}/bin/awk '$NF+0 != 0 {print}')
-              printf '  Device stats:    errors\n' >&3
+              printf '  Device stats:     errors\n' >&3
               printf '%s\n' "$_errs" | ${pkgs.gnused}/bin/sed 's/^/    /' >&3
               BTRFS_FAILED=1
             else
-              printf '  Device stats:    no errors\n' >&3
+              printf '  Device stats:     no errors found\n' >&3
             fi
           done < <(${pkgs.gawk}/bin/awk '$3 == "btrfs" && !seen[$1]++ {print $2}' /proc/mounts)
           if [[ $BTRFS_COUNT -eq 0 ]]; then
