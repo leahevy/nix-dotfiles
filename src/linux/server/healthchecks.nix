@@ -366,6 +366,19 @@ args@{
       nx.linux.server.healthchecks.checkCertExpiry = lib.mkDefault true;
     };
 
+    ifEnabled.linux.server.dashboard.enabled = config: {
+      nx.linux.server.dashboard.serverBookmarks = [
+        {
+          Healthchecks = [
+            {
+              href = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+              description = "Healthchecks";
+            }
+          ];
+        }
+      ];
+    };
+
     linux.system =
       {
         config,

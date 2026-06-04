@@ -141,10 +141,16 @@ args@{
       description = "CSS font-size for the page body, or null to leave the browser default.";
     };
 
-    bookmarks = lib.mkOption {
+    serverBookmarks = lib.mkOption {
       type = lib.types.listOf lib.types.attrs;
       default = [ ];
-      description = "Bookmark groups in Homepage bookmarks YAML format.";
+      description = "Bookmark entries added to the generated Server bookmark group.";
+    };
+
+    otherBookmarks = lib.mkOption {
+      type = lib.types.listOf lib.types.attrs;
+      default = [ ];
+      description = "Bookmark entries added to the generated Links bookmark group.";
     };
 
     widgets = lib.mkOption {
@@ -272,7 +278,8 @@ args@{
         listenPort,
         fontFamily,
         fontSize,
-        bookmarks,
+        serverBookmarks,
+        otherBookmarks,
         widgets,
         customCSS,
         extraSettings,
@@ -432,6 +439,10 @@ args@{
           ]
         );
 
+        generatedBookmarks =
+          lib.optional (serverBookmarks != [ ]) { Server = serverBookmarks; }
+          ++ lib.optional (otherBookmarks != [ ]) { Links = otherBookmarks; };
+
         baseVhost =
           lib.recursiveUpdate
             {
@@ -480,7 +491,7 @@ args@{
           listenPort = listenPort;
           allowedHosts = "${effectiveSubdomain}.${domain}";
           settings = generatedSettings;
-          inherit bookmarks;
+          bookmarks = generatedBookmarks;
           services = lib.optional (allServiceEntries != [ ]) {
             Services = allServiceEntries;
           };
