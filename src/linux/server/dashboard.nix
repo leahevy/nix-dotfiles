@@ -446,19 +446,19 @@ args@{
             }
             (
               lib.optionalAttrs (localBackgroundFile != null) {
-                locations."/dashboard-bg" = {
+                locations."= /dashboard-bg" = {
                   alias = "${self.profile.filesPath localBackgroundFile}";
                   extraConfig = ''add_header Cache-Control "max-age=86400";'';
                 };
               }
               // lib.optionalAttrs (localFaviconFile != null) {
-                locations."/dashboard-favicon" = {
+                locations."= /dashboard-favicon" = {
                   alias = "${self.profile.filesPath localFaviconFile}";
                   extraConfig = ''add_header Cache-Control "max-age=86400";'';
                 };
               }
               // lib.optionalAttrs (localLogoFile != null) {
-                locations."/dashboard-logo" = {
+                locations."= /dashboard-logo" = {
                   alias = "${self.profile.filesPath localLogoFile}";
                   extraConfig = ''add_header Cache-Control "max-age=86400";'';
                 };
