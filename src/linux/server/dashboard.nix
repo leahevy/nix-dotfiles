@@ -475,6 +475,7 @@ args@{
 
         services.homepage-dashboard = {
           enable = true;
+          openFirewall = false;
           package = pkgs.homepage-dashboard.override { enableLocalIcons = true; };
           listenPort = listenPort;
           allowedHosts = "${effectiveSubdomain}.${domain}";
