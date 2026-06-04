@@ -64,6 +64,12 @@ args@{
       description = "Maximum temperature in Celsius across all thermal zones before the temperature check fails.";
     };
 
+    tempInfoCelsius = lib.mkOption {
+      type = lib.types.int;
+      default = 55;
+      description = "Minimum temperature in Celsius at which thermal readings are included in health check output.";
+    };
+
     loadMaxPerCore = lib.mkOption {
       type = lib.types.int;
       default = 1;
@@ -371,6 +377,7 @@ args@{
         regularHealthChecks,
         requireServicesUp,
         tempMaxCelsius,
+        tempInfoCelsius,
         loadMaxPerCore,
         loadBuildMultiplier,
         loadBuildGraceSeconds,
@@ -629,12 +636,14 @@ args@{
             printf 'no thermal zones found\n' >&3
             exit 0
           fi
-          if [[ $_zone_count -eq 1 ]]; then
-            printf 'core: %dC\n' "$_temp_max" >&3
-          else
-            for (( _i=0; _i<_zone_count; _i++ )); do
-              printf '%s: %dC\n' "''${_zone_names[$_i]}" "''${_zone_temps[$_i]}" >&3
-            done
+          if [[ $_temp_max -ge ${toString tempInfoCelsius} ]]; then
+            if [[ $_zone_count -eq 1 ]]; then
+              printf 'core: %dC\n' "$_temp_max" >&3
+            else
+              for (( _i=0; _i<_zone_count; _i++ )); do
+                printf '%s: %dC\n' "''${_zone_names[$_i]}" "''${_zone_temps[$_i]}" >&3
+              done
+            fi
           fi
           if [[ $_temp_max -ge ${toString tempMaxCelsius} ]]; then
             exit 1
@@ -887,7 +896,7 @@ args@{
           '';
           "20 - Memory and swap used" = memoryCheckExpr;
         }
-        // lib.optionalAttrs (!self.isVirtual) { "20 - Temperature" = thermalCheckExpr; }
+        // lib.optionalAttrs (!self.isVirtual) { "!20 - Temperature" = thermalCheckExpr; }
         // {
           "20 - Load" = loadCheckExpr;
           "25 - CPU usage" = cpuUsageExpr;
