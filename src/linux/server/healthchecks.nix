@@ -516,10 +516,10 @@ args@{
               if (st > 0) {
                 swap_used=(st-sf)*100/st
                 combined_free=(a+sf)*100/(t+st)
-                printf "%.0f%% mem used, %.0f%% swap used\n", mem_used, swap_used > "/dev/fd/3"
+                printf "%.0f%% mem, %.0f%% swap\n", mem_used, swap_used > "/dev/fd/3"
               } else {
                 combined_free=(t>0) ? a*100/t : 100
-                printf "%.0f%% mem used\n", mem_used > "/dev/fd/3"
+                printf "%.0f%% mem\n", mem_used > "/dev/fd/3"
               }
               exit (combined_free < ${toString memoryFreeThresholdPct} || mem_used > ${toString memoryRamUsedMaxPct})
             }
@@ -777,7 +777,7 @@ args@{
               {for(i=1;i<=NF;i++) if($i=="id,") idle=$(i-1)+0}
               END{printf "%.0f%%", 100-idle}
             ' "$TMPDIR_HC/top-cpu-summary")
-            printf '%s cpu\n' "$_cpu_used" >&3
+            printf '%s\n' "$_cpu_used" >&3
           fi
           exit 0
         '';
@@ -885,7 +885,7 @@ args@{
               exit 1
             fi
           '';
-          "20 - Memory and swap free" = memoryCheckExpr;
+          "20 - Memory and swap used" = memoryCheckExpr;
         }
         // lib.optionalAttrs (!self.isVirtual) { "20 - Temperature" = thermalCheckExpr; }
         // {
