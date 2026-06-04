@@ -209,16 +209,37 @@ in
                       FAILED=0
                       while IFS= read -r FOLDER; do
                         [[ -n "$FOLDER" ]] || continue
-                        RESPONSE=$(${queryApiExe} "/rest/db/status?folder=$FOLDER" --connect-timeout 5 --max-time 10 2>/dev/null || true)
-                        if [[ -z "$RESPONSE" ]]; then
-                          printf 'Could not fetch status for folder %s!\n' "$FOLDER" >&3
+                        ERRORS=
+                        LAST_REASON=
+                        ATTEMPT=1
+                        while [[ "$ATTEMPT" -le 3 ]]; do
+                          RESPONSE=$(${queryApiExe} "/rest/db/status?folder=$FOLDER" --connect-timeout 5 --max-time 10 2>/dev/null || true)
+                          if [[ -z "$RESPONSE" ]]; then
+                            LAST_REASON="empty response"
+                          else
+                            ERRORS=$(printf '%s' "$RESPONSE" | ${pkgs.jq}/bin/jq -er '.pullErrors' 2>/dev/null || true)
+                            case "$ERRORS" in
+                              ""|*[!0-9]*)
+                                LAST_REASON="invalid pullErrors data"
+                                ERRORS=
+                                ;;
+                              *)
+                                LAST_REASON=
+                                break
+                                ;;
+                            esac
+                          fi
+                          if [[ "$ATTEMPT" -lt 3 ]]; then
+                            printf '%s: %s, retrying in %ss\n' "$FOLDER" "$LAST_REASON" "$ATTEMPT" >&2
+                            ${pkgs.coreutils}/bin/sleep "$ATTEMPT"
+                          fi
+                          ATTEMPT=$((ATTEMPT + 1))
+                        done
+                        if [[ -n "$LAST_REASON" ]]; then
+                          printf '%s: %s\n' "$FOLDER" "$LAST_REASON" >&3
                           FAILED=1
                           continue
                         fi
-                        ERRORS=$(printf '%s' "$RESPONSE" | ${pkgs.jq}/bin/jq -r '.pullErrors // 0' 2>/dev/null || true)
-                        case "$ERRORS" in
-                          ""|*[!0-9]*) ERRORS=0 ;;
-                        esac
                         printf '%s: %s pull errors\n' "$FOLDER" "$ERRORS" >&3
                         if [[ "$ERRORS" -gt 0 ]]; then
                           FAILED=1
