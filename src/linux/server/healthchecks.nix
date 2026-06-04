@@ -1111,8 +1111,12 @@ args@{
               fi
             '';
             appendInfo = ''
+              _info_lines=$(${pkgs.coreutils}/bin/wc -l < "${infoFile}")
               ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
                 | ${pkgs.coreutils}/bin/head -n ${toString detailMaxLines} >> "$DETAIL_FILE"
+              if [[ "$_info_lines" -gt ${toString detailMaxLines} ]]; then
+                printf '  [%d lines truncated]\n' "$((_info_lines - ${toString detailMaxLines}))" >> "$DETAIL_FILE"
+              fi
               _prev_had_info=1
             '';
             infoTail = ''
@@ -1556,8 +1560,12 @@ args@{
                 FAILED=$((FAILED + 1))
               fi
               if [[ -s "$INFO_FILE_CS" ]]; then
+                _info_lines_cs=$(${pkgs.coreutils}/bin/wc -l < "$INFO_FILE_CS")
                 ${pkgs.gnused}/bin/sed 's/^/  /' "$INFO_FILE_CS" \
                   | ${pkgs.coreutils}/bin/head -n ${toString detailMaxLines} >> "$DETAIL_FILE"
+                if [[ "$_info_lines_cs" -gt ${toString detailMaxLines} ]]; then
+                  printf '  [%d lines truncated]\n' "$((_info_lines_cs - ${toString detailMaxLines}))" >> "$DETAIL_FILE"
+                fi
               fi
             ''}
 
