@@ -600,6 +600,11 @@ in
       type = lib.types.nullOr lib.types.str;
       default = null;
     };
+    userContentCSSExcludedUrls = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "List of URL prefixes where Firefox userContent CSS is disabled.";
+    };
     extensions = lib.mkOption {
       type = lib.types.attrsOf extensionType;
       default = { };
@@ -625,6 +630,7 @@ in
         enableFingerprintingProtection,
         monospaceFont,
         bottomToolbars,
+        userContentCSSExcludedUrls,
         ...
       }:
       let
@@ -972,6 +978,32 @@ in
               toolbarExtensionsForceShownCSS
             ]
           );
+        userContentCSS =
+          let
+            browserUserContent = config.nx.common.browser.browser.final.userContentCSS;
+            cssData = browserUserContent.data + (firefoxSpecificCSS monospaceFont);
+            excludedUrlPattern =
+              if userContentCSSExcludedUrls == [ ] then
+                null
+              else
+                lib.concatStringsSep "|" (
+                  map (
+                    url:
+                    let
+                      normalized = lib.removeSuffix "/" url;
+                    in
+                    "${lib.escapeRegex normalized}(?:[/?#].*|$)"
+                  ) userContentCSSExcludedUrls
+                );
+          in
+          if excludedUrlPattern == null then
+            cssData
+          else
+            ''
+              @-moz-document regexp("^(?!(?:${excludedUrlPattern})).*$") {
+              ${cssData}
+              }
+            '';
       in
       {
         assertions =
@@ -1019,7 +1051,7 @@ in
           };
 
           userContent = lib.mkIf (config.nx.common.browser.browser.final.userContentCSS != null) (
-            config.nx.common.browser.browser.final.userContentCSS.data + (firefoxSpecificCSS monospaceFont)
+            userContentCSS
           );
           userChrome = userChromeCSS;
         };
