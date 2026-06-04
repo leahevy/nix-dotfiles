@@ -1332,14 +1332,34 @@ args@{
           "\\<[0-9A-F]{16}\\>"
         ];
 
-        secretReplaceValues = {
-          "${self.host.remote.baseDomain}" = "domain";
-          "${self.host.hostname}" = "hostname";
-          "${self.user.username}" = "username";
-          "${self.user.fullName}" = "full name";
-          "${self.user.email}" = "email";
-          "${config.users.users.${mainUser}.home}" = "home";
-        };
+        secretReplaceValues = lib.foldl (acc: p: acc // { "${p.key}" = p.val; }) { } (
+          lib.filter (p: p.key != null && p.key != "") [
+            {
+              key = self.host.remote.baseDomain;
+              val = "domain";
+            }
+            {
+              key = self.host.hostname;
+              val = "hostname";
+            }
+            {
+              key = self.user.username;
+              val = "username";
+            }
+            {
+              key = self.user.fullName;
+              val = "full name";
+            }
+            {
+              key = self.user.email;
+              val = "email";
+            }
+            {
+              key = config.users.users.${mainUser}.home;
+              val = "home";
+            }
+          ]
+        );
 
         makeReplaceToken = label: "<${lib.replaceStrings [ " " ] [ "_" ] (lib.toUpper label)}>";
 
