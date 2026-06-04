@@ -1135,6 +1135,11 @@ args@{
                   ${pkgs.coreutils}/bin/cat "${outFile}"
                 } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
               fi
+              if [[ -s "${infoFile}" ]]; then
+                { printf 'check details: %s\n' ${lib.escapeShellArg displayName}
+                  ${pkgs.coreutils}/bin/cat "${infoFile}"
+                } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
+              fi
               ${infoTail}
             '';
           in
@@ -1534,6 +1539,11 @@ args@{
                 if [[ -s "$OUT_FILE_CS" ]]; then
                   { printf 'service check failed: %s\n' ${lib.escapeShellArg endpointName}
                     ${pkgs.coreutils}/bin/cat "$OUT_FILE_CS"
+                  } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
+                fi
+                if [[ -s "$INFO_FILE_CS" ]]; then
+                  { printf 'service check details: %s\n' ${lib.escapeShellArg endpointName}
+                    ${pkgs.coreutils}/bin/cat "$INFO_FILE_CS"
                   } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
                 fi
                 FAILED=$((FAILED + 1))
