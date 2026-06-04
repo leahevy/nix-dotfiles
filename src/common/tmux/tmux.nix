@@ -37,7 +37,8 @@ args@{
       buildConfigs =
         config:
         let
-          allConfigs = (buildMainConfig config) // self.settings.tmuxinatorConfigs;
+          allConfigs =
+            (buildMainConfig config) // (buildRemoteHostConfigs config) // self.settings.tmuxinatorConfigs;
           allConfigsFinal =
             if allConfigs.main == allConfigs.nx then lib.removeAttrs allConfigs [ "nx" ] else allConfigs;
         in
@@ -81,6 +82,38 @@ args@{
           inherit main;
           nx = main;
         };
+
+      buildRemoteHostConfigs =
+        config:
+        let
+          isManagingMachine = lib.elem (helpers.resolveFromHostOrUser config [ "deploymentMode" ] "managed") [
+            "develop"
+            "local"
+          ];
+          currentHostname = helpers.resolveFromHost self [ "hostname" ] "";
+          sshEnabled = config.nx.common.services.ssh.enable;
+          nixOSHosts = self.nixOSHosts or { };
+        in
+        lib.optionalAttrs (isManagingMachine && sshEnabled) (
+          lib.foldl' lib.recursiveUpdate { } (
+            lib.mapAttrsToList (
+              profileName: hostCfg:
+              let
+                remoteAddress = hostCfg.remote.address or null;
+                hostname = hostCfg.hostname or profileName;
+                connectScript = "${self.binDir}/ssh-connect-${profileName}";
+              in
+              if remoteAddress == null || remoteAddress == "" || hostname == currentHostname then
+                { }
+              else
+                {
+                  "${profileName}" = {
+                    windows = [ { "󰢩 ${hostname}" = null; } ];
+                  };
+                }
+            ) nixOSHosts
+          )
+        );
 
     in
     {
@@ -271,6 +304,31 @@ args@{
           }) allConfigs;
 
           tmuxinatorPackage = self.settings.tmuxinatorPackage;
+          isManagingMachine = lib.elem deploymentMode [
+            "develop"
+            "local"
+          ];
+          sshEnabled = config.nx.common.services.ssh.enable;
+          nixOSHosts = self.nixOSHosts or { };
+          currentHostname = helpers.resolveFromHost self [ "hostname" ] "";
+          remoteSessionHookLines = lib.optionals (isManagingMachine && sshEnabled) (
+            lib.concatLists (
+              lib.mapAttrsToList (
+                profileName: hostCfg:
+                let
+                  remoteAddress = hostCfg.remote.address or null;
+                  hostname = hostCfg.hostname or profileName;
+                  connectScript = "${self.binDir}/ssh-connect-${profileName}";
+                in
+                if remoteAddress == null || remoteAddress == "" || hostname == currentHostname then
+                  [ ]
+                else
+                  [
+                    "set-hook -ga session-created 'if -F \"#{==:#{session_name},${profileName}}\" \"set-option -t ${profileName} default-command ${connectScript}\"'"
+                  ]
+              ) nixOSHosts
+            )
+          );
         in
         {
           home.sessionVariables = lib.mkMerge [
@@ -304,246 +362,252 @@ args@{
               })
             ];
 
-          home.file = tmuxinatorFiles // {
-            "${defs.binDir}/scripts/tmux-url-select" = {
-              source = self.file "tmux-url-select/tmux-url-select.pl";
-              executable = true;
-            };
+          home.file =
+            tmuxinatorFiles
+            // {
+              "${defs.binDir}/scripts/tmux-url-select" = {
+                source = self.file "tmux-url-select/tmux-url-select.pl";
+                executable = true;
+              };
 
-            "${defs.binDir}/tx" = {
-              text = ''
-                #!/usr/bin/env bash
-                unset __SHELL_BOOTSTRAPPED || true
-                if [ $# -eq 0 ]; then
-                  exec ${tmuxinatorPackage}/bin/tmuxinator start main
-                else
-                  exec ${tmuxinatorPackage}/bin/tmuxinator start "$@"
-                fi
+              "${defs.binDir}/tx" = {
+                text = ''
+                  #!/usr/bin/env bash
+                  unset __SHELL_BOOTSTRAPPED || true
+                  if [ $# -eq 0 ]; then
+                    exec ${tmuxinatorPackage}/bin/tmuxinator start main
+                  else
+                    exec ${tmuxinatorPackage}/bin/tmuxinator start "$@"
+                  fi
+                '';
+                executable = true;
+              };
+
+              "${defs.binDir}/tmux" = {
+                text = ''
+                  #!/usr/bin/env bash
+                  unset __SHELL_BOOTSTRAPPED || true
+                  if [ $# -eq 0 ]; then
+                    exec ${tmuxinatorPackage}/bin/tmuxinator start main
+                  else
+                    exec ${pkgs.tmux}/bin/tmux "$@"
+                  fi
+                '';
+                executable = true;
+              };
+
+              "${defs.binDir}/tmuxinator" = {
+                text = ''
+                  #!/usr/bin/env bash
+                  unset __SHELL_BOOTSTRAPPED || true
+                  if [ $# -eq 0 ]; then
+                    exec ${tmuxinatorPackage}/bin/tmuxinator start main
+                  else
+                    exec ${tmuxinatorPackage}/bin/tmuxinator "$@"
+                  fi
+                '';
+                executable = true;
+              };
+
+              ".tmux.conf".text = ''
+                run-shell 'for conf in ~/.config/tmux/*.conf; do [ -f "$conf" ] && tmux source-file "$conf"; done'
               '';
-              executable = true;
-            };
 
-            "${defs.binDir}/tmux" = {
-              text = ''
-                #!/usr/bin/env bash
-                unset __SHELL_BOOTSTRAPPED || true
-                if [ $# -eq 0 ]; then
-                  exec ${tmuxinatorPackage}/bin/tmuxinator start main
-                else
-                  exec ${pkgs.tmux}/bin/tmux "$@"
-                fi
-              '';
-              executable = true;
-            };
+              ".config/tmux/10-base.conf".text = ''
+                set -g default-terminal "$TERM"
+                set -ga terminal-overrides ",*256col*:Tc"
+                set -g mouse on
+                set -g base-index 1
+                setw -g pane-base-index 1
+                set -g renumber-windows on
+                set -g history-limit 50000
+                set -g display-time 4000
+                set -g status-interval 5
+                set -g focus-events on
+                setw -g aggressive-resize on
 
-            "${defs.binDir}/tmuxinator" = {
-              text = ''
-                #!/usr/bin/env bash
-                unset __SHELL_BOOTSTRAPPED || true
-                if [ $# -eq 0 ]; then
-                  exec ${tmuxinatorPackage}/bin/tmuxinator start main
-                else
-                  exec ${tmuxinatorPackage}/bin/tmuxinator "$@"
-                fi
-              '';
-              executable = true;
-            };
+                set-option -g allow-rename off
 
-            ".tmux.conf".text = ''
-              run-shell 'for conf in ~/.config/tmux/*.conf; do [ -f "$conf" ] && tmux source-file "$conf"; done'
-            '';
-
-            ".config/tmux/10-base.conf".text = ''
-              set -g default-terminal "$TERM"
-              set -ga terminal-overrides ",*256col*:Tc"
-              set -g mouse on
-              set -g base-index 1
-              setw -g pane-base-index 1
-              set -g renumber-windows on
-              set -g history-limit 50000
-              set -g display-time 4000
-              set -g status-interval 5
-              set -g focus-events on
-              setw -g aggressive-resize on
-
-              set-option -g allow-rename off
-
-              set -g visual-activity off
-              set -g visual-bell off
-              set -g visual-silence off
-              setw -g monitor-activity off
-              set -g bell-action none
-            ''
-            + (
-              if self.user.settings.terminal != "ghostty" then
-                ''
-                  set -g extended-keys on
-                  set -as terminal-features 'xterm*:extkeys'
-                ''
-              else
-                ""
-            );
-
-            ".config/tmux/20-keybindings.conf".text = ''
-              unbind C-b
-              ${
-                if isHeadless then
-                  ''
-                    set-option -g prefix ${self.settings.headlessPrefix}
-                    set-option -g prefix2 None
-                    bind-key ${self.settings.headlessPrefix} send-prefix
-                  ''
-                else
-                  ''
-                    set-option -g prefix C-n
-                    set-option -g prefix2 C-p
-                    bind-key C-n send-prefix
-                    bind-key -T prefix2 C-p send-prefix -2
-                  ''
-              }
-
-
-              bind-key 0 select-window -t :10
-              bind-key - select-window -t :11
-              bind-key = select-window -t :12
-
-              bind-key -n M-1 select-window -t :1
-              bind-key -n M-2 select-window -t :2
-              bind-key -n M-3 select-window -t :3
-              bind-key -n M-4 select-window -t :4
-              bind-key -n M-5 select-window -t :5
-              bind-key -n M-6 select-window -t :6
-              bind-key -n M-7 select-window -t :7
-              bind-key -n M-8 select-window -t :8
-              bind-key -n M-9 select-window -t :9
-              bind-key -n M-0 select-window -t :10
-              bind-key -n M-- select-window -t :11
-              bind-key -n M-= select-window -t :12
-
-              bind-key -n C-S-Left previous-window
-              bind-key -n C-S-Right next-window
-
-              bind-key -n M-[ previous-window
-              bind-key -n M-] next-window
-              bind-key -n M-Left previous-window
-              bind-key -n M-Right next-window
-
-              bind -r H resize-pane -L 10
-              bind -r J resize-pane -D 10
-              bind -r K resize-pane -U 10
-              bind -r L resize-pane -R 10
-
-              bind -r Left resize-pane -L 10
-              bind -r Down resize-pane -D 10
-              bind -r Up resize-pane -U 10
-              bind -r Right resize-pane -R 10
-
-              setw -g mode-keys vi
-              bind -T copy-mode-vi v send-keys -X begin-selection
-              bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel '${
-                if isWayland then "wl-copy --trim-newline" else "xclip -in -selection clipboard"
-              }'
-              bind -T copy-mode-vi r send-keys -X rectangle-toggle
-
-              ${
-                if isHeadless then
-                  ''
-                    bind n next-window
-                    bind p previous-window
-                    bind a copy-mode
-                    unbind C-n
-                    unbind C-p
-                  ''
-                else
-                  ''
-                    bind C-p previous-window
-                    bind C-n next-window
-                    bind n copy-mode
-                    bind p copy-mode
-                  ''
-              }
-              unbind [
-
-              bind v split-window -h -c "#{pane_current_path}"
-              bind h split-window -v -c "#{pane_current_path}"
-
-              unbind %
-              unbind '"'
-
-              bind u run-shell -b "${self.binDir}/scripts/tmux-url-select"
-
-              bind r source-file ~/.tmux.conf \; display "Config reloaded!"
-
-              unbind \;
-              unbind :
-              bind \; command-prompt
-              bind : last-pane
-
-              bind-key -n M-S-Left swap-window -t -1 \; select-window -t -1
-              bind-key -n M-S-Right swap-window -t +1 \; select-window -t +1
-            '';
-
-            ".config/tmux/25-vim-tmux-navigator.conf".text = ''
-              is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
-                | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?|fzf)(diff)?'"
-
-              bind-key -n 'C-h' if-shell "$is_vim" 'send-keys C-h'  'select-pane -L'
-              bind-key -n 'C-j' if-shell "$is_vim" 'send-keys C-j'  'select-pane -D'
-              bind-key -n 'C-k' if-shell "$is_vim" 'send-keys C-k'  'select-pane -U'
-              bind-key -n 'C-l' if-shell "$is_vim" 'send-keys C-l'  'select-pane -R'
-
-              tmux_version='$(tmux -V | sed -En "s/^tmux ([0-9]+(.[0-9]+)?).*/\1/p")'
-              if-shell -b '[ "$(echo "$tmux_version < 3.0" | bc)" = 1 ]' \
-                "bind-key -n 'C-\\' if-shell \"$is_vim\" 'send-keys C-\\'  'select-pane -l'"
-              if-shell -b '[ "$(echo "$tmux_version >= 3.0" | bc)" = 1 ]' \
-                "bind-key -n 'C-\\' if-shell \"$is_vim\" 'send-keys C-\\\\'  'select-pane -l'"
-
-              bind-key -T copy-mode-vi 'C-h' select-pane -L
-              bind-key -T copy-mode-vi 'C-j' select-pane -D
-              bind-key -T copy-mode-vi 'C-k' select-pane -U
-              bind-key -T copy-mode-vi 'C-l' select-pane -R
-              bind-key -T copy-mode-vi 'C-\' select-pane -l
-            '';
-
-            ".config/tmux/30-statusbar.conf".text =
-              let
-                statusBg = if self.settings.useTransparency then "default" else colors.statusBg;
-                statusBgInverted = colors.statusBg;
-
-                powerlineSymbols = {
-                  left = "";
-                  right = "";
-                  leftThin = "";
-                  rightThin = "";
-                };
-
-                status-left = "#{?client_prefix,#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #S #[fg=${colors.prefixBg}]#[bg=${statusBg}]${powerlineSymbols.right},#[fg=${colors.primaryFg}]#[bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg}]#[bg=${statusBg}]${powerlineSymbols.right}}";
-                status-right = "#[fg=${colors.borderColor}]#[bg=${statusBg}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.left}#[fg=${colors.secondaryFg}]#[bg=${colors.secondaryBg}] %Y-%m-%d ${powerlineSymbols.leftThin} %H:%M #{?client_prefix,#[fg=${colors.prefixBg}]#[bg=${colors.secondaryBg}]${powerlineSymbols.left}#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #h ,#[fg=${colors.primaryBg}]#[bg=${colors.secondaryBg}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.left}#[fg=${colors.primaryFg}]#[bg=${colors.primaryBg}] #h }";
-                window-status-format = "#[fg=${colors.statusFg}]#[bg=${statusBg}] #I ${powerlineSymbols.rightThin}#[fg=${colors.statusFg}]#[bg=${statusBg}] #W ";
-                window-status-current-format = "#[fg=${statusBgInverted}]#[bg=${colors.borderColor}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.right}#[fg=${colors.secondaryFg}]#[bg=${colors.borderColor}] #I ${powerlineSymbols.rightThin}#[fg=${colors.secondaryFg}]#[bg=${colors.borderColor}] #W #[fg=${colors.borderColor}]#[bg=${statusBg}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.right}";
-              in
+                set -g visual-activity off
+                set -g visual-bell off
+                set -g visual-silence off
+                setw -g monitor-activity off
+                set -g bell-action none
               ''
-                set -g status-justify "centre"
-                set -g status "on"
-                set -g status-left-style "none"
-                set -g status 2
-                set -g status-format[0] "#[bg=default] "
-                set -g status-format[1] "#[align=left]${status-left}#[align=centre]#{W:#{E:window-status-format},#{E:window-status-current-format}}#[align=right]${status-right}"
-                set -g message-command-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
-                set -g status-right-style "none"
-                set -g pane-active-border-style "fg=${colors.activeBorderColor}"
-                set -g status-style "none,bg=${statusBg}"
-                set -g message-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
-                set -g pane-border-style "fg=${colors.borderColor}"
-                set -g status-right-length "100"
-                set -g status-left-length "100"
-                setw -g window-status-activity-style "none"
-                setw -g window-status-separator ""
-                setw -g window-status-style "none,fg=${colors.statusFg},bg=${statusBg}"
-                setw -g window-status-format "${window-status-format}"
-                setw -g window-status-current-format "${window-status-current-format}"
+              + (
+                if self.user.settings.terminal != "ghostty" then
+                  ''
+                    set -g extended-keys on
+                    set -as terminal-features 'xterm*:extkeys'
+                  ''
+                else
+                  ""
+              );
+
+              ".config/tmux/20-keybindings.conf".text = ''
+                unbind C-b
+                ${
+                  if isHeadless then
+                    ''
+                      set-option -g prefix ${self.settings.headlessPrefix}
+                      set-option -g prefix2 None
+                      bind-key ${self.settings.headlessPrefix} send-prefix
+                    ''
+                  else
+                    ''
+                      set-option -g prefix C-n
+                      set-option -g prefix2 C-p
+                      bind-key C-n send-prefix
+                      bind-key -T prefix2 C-p send-prefix -2
+                    ''
+                }
+
+
+                bind-key 0 select-window -t :10
+                bind-key - select-window -t :11
+                bind-key = select-window -t :12
+
+                bind-key -n M-1 select-window -t :1
+                bind-key -n M-2 select-window -t :2
+                bind-key -n M-3 select-window -t :3
+                bind-key -n M-4 select-window -t :4
+                bind-key -n M-5 select-window -t :5
+                bind-key -n M-6 select-window -t :6
+                bind-key -n M-7 select-window -t :7
+                bind-key -n M-8 select-window -t :8
+                bind-key -n M-9 select-window -t :9
+                bind-key -n M-0 select-window -t :10
+                bind-key -n M-- select-window -t :11
+                bind-key -n M-= select-window -t :12
+
+                bind-key -n C-S-Left previous-window
+                bind-key -n C-S-Right next-window
+
+                bind-key -n M-[ previous-window
+                bind-key -n M-] next-window
+                bind-key -n M-Left previous-window
+                bind-key -n M-Right next-window
+
+                bind -r H resize-pane -L 10
+                bind -r J resize-pane -D 10
+                bind -r K resize-pane -U 10
+                bind -r L resize-pane -R 10
+
+                bind -r Left resize-pane -L 10
+                bind -r Down resize-pane -D 10
+                bind -r Up resize-pane -U 10
+                bind -r Right resize-pane -R 10
+
+                setw -g mode-keys vi
+                bind -T copy-mode-vi v send-keys -X begin-selection
+                bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel '${
+                  if isWayland then "wl-copy --trim-newline" else "xclip -in -selection clipboard"
+                }'
+                bind -T copy-mode-vi r send-keys -X rectangle-toggle
+
+                ${
+                  if isHeadless then
+                    ''
+                      bind n next-window
+                      bind p previous-window
+                      bind a copy-mode
+                      unbind C-n
+                      unbind C-p
+                    ''
+                  else
+                    ''
+                      bind C-p previous-window
+                      bind C-n next-window
+                      bind n copy-mode
+                      bind p copy-mode
+                    ''
+                }
+                unbind [
+
+                bind v split-window -h -c "#{pane_current_path}"
+                bind h split-window -v -c "#{pane_current_path}"
+
+                unbind %
+                unbind '"'
+
+                bind u run-shell -b "${self.binDir}/scripts/tmux-url-select"
+
+                bind r source-file ~/.tmux.conf \; display "Config reloaded!"
+
+                unbind \;
+                unbind :
+                bind \; command-prompt
+                bind : last-pane
+
+                bind-key -n M-S-Left swap-window -t -1 \; select-window -t -1
+                bind-key -n M-S-Right swap-window -t +1 \; select-window -t +1
               '';
-          };
+
+              ".config/tmux/25-vim-tmux-navigator.conf".text = ''
+                is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
+                  | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?|fzf)(diff)?'"
+
+                bind-key -n 'C-h' if-shell "$is_vim" 'send-keys C-h'  'select-pane -L'
+                bind-key -n 'C-j' if-shell "$is_vim" 'send-keys C-j'  'select-pane -D'
+                bind-key -n 'C-k' if-shell "$is_vim" 'send-keys C-k'  'select-pane -U'
+                bind-key -n 'C-l' if-shell "$is_vim" 'send-keys C-l'  'select-pane -R'
+
+                tmux_version='$(tmux -V | sed -En "s/^tmux ([0-9]+(.[0-9]+)?).*/\1/p")'
+                if-shell -b '[ "$(echo "$tmux_version < 3.0" | bc)" = 1 ]' \
+                  "bind-key -n 'C-\\' if-shell \"$is_vim\" 'send-keys C-\\'  'select-pane -l'"
+                if-shell -b '[ "$(echo "$tmux_version >= 3.0" | bc)" = 1 ]' \
+                  "bind-key -n 'C-\\' if-shell \"$is_vim\" 'send-keys C-\\\\'  'select-pane -l'"
+
+                bind-key -T copy-mode-vi 'C-h' select-pane -L
+                bind-key -T copy-mode-vi 'C-j' select-pane -D
+                bind-key -T copy-mode-vi 'C-k' select-pane -U
+                bind-key -T copy-mode-vi 'C-l' select-pane -R
+                bind-key -T copy-mode-vi 'C-\' select-pane -l
+              '';
+
+              ".config/tmux/30-statusbar.conf".text =
+                let
+                  statusBg = if self.settings.useTransparency then "default" else colors.statusBg;
+                  statusBgInverted = colors.statusBg;
+
+                  powerlineSymbols = {
+                    left = "";
+                    right = "";
+                    leftThin = "";
+                    rightThin = "";
+                  };
+
+                  status-left = "#{?client_prefix,#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #S #[fg=${colors.prefixBg}]#[bg=${statusBg}]${powerlineSymbols.right},#[fg=${colors.primaryFg}]#[bg=${colors.primaryBg}] #S #[fg=${colors.primaryBg}]#[bg=${statusBg}]${powerlineSymbols.right}}";
+                  status-right = "#[fg=${colors.borderColor}]#[bg=${statusBg}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.left}#[fg=${colors.secondaryFg}]#[bg=${colors.secondaryBg}] %Y-%m-%d ${powerlineSymbols.leftThin} %H:%M #{?client_prefix,#[fg=${colors.prefixBg}]#[bg=${colors.secondaryBg}]${powerlineSymbols.left}#[fg=${colors.prefixFg}]#[bg=${colors.prefixBg}] #h ,#[fg=${colors.primaryBg}]#[bg=${colors.secondaryBg}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.left}#[fg=${colors.primaryFg}]#[bg=${colors.primaryBg}] #h }";
+                  window-status-format = "#[fg=${colors.statusFg}]#[bg=${statusBg}] #I ${powerlineSymbols.rightThin}#[fg=${colors.statusFg}]#[bg=${statusBg}] #W ";
+                  window-status-current-format = "#[fg=${statusBgInverted}]#[bg=${colors.borderColor}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.right}#[fg=${colors.secondaryFg}]#[bg=${colors.borderColor}] #I ${powerlineSymbols.rightThin}#[fg=${colors.secondaryFg}]#[bg=${colors.borderColor}] #W #[fg=${colors.borderColor}]#[bg=${statusBg}]#[nobold]#[nounderscore]#[noitalics]${powerlineSymbols.right}";
+                in
+                ''
+                  set -g status-justify "centre"
+                  set -g status "on"
+                  set -g status-left-style "none"
+                  set -g status 2
+                  set -g status-format[0] "#[bg=default] "
+                  set -g status-format[1] "#[align=left]${status-left}#[align=centre]#{W:#{E:window-status-format},#{E:window-status-current-format}}#[align=right]${status-right}"
+                  set -g message-command-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
+                  set -g status-right-style "none"
+                  set -g pane-active-border-style "fg=${colors.activeBorderColor}"
+                  set -g status-style "none,bg=${statusBg}"
+                  set -g message-style "fg=${colors.secondaryFg},bg=${colors.secondaryBg}"
+                  set -g pane-border-style "fg=${colors.borderColor}"
+                  set -g status-right-length "100"
+                  set -g status-left-length "100"
+                  setw -g window-status-activity-style "none"
+                  setw -g window-status-separator ""
+                  setw -g window-status-style "none,fg=${colors.statusFg},bg=${statusBg}"
+                  setw -g window-status-format "${window-status-format}"
+                  setw -g window-status-current-format "${window-status-current-format}"
+                '';
+            }
+            // lib.optionalAttrs (remoteSessionHookLines != [ ]) {
+              ".config/tmux/40-remote-sessions.conf".text =
+                lib.concatStringsSep "\n" remoteSessionHookLines + "\n";
+            };
 
           home.persistence."${self.persist}" = {
             directories = [
