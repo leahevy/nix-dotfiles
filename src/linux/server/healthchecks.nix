@@ -765,9 +765,15 @@ args@{
         '';
 
         remoteIpExpr = ''
-          _remote=$(${pkgs.curl}/bin/curl -sf --max-time 10 https://api.ipify.org 2>/dev/null || true)
-          if [[ -n "$_remote" ]]; then
-            printf '%s\n' "$_remote" >&3
+          _remote_cache=/run/nx-healthcheck/remote-ip
+          _raw=$(${pkgs.curl}/bin/curl -sf --max-time 10 https://api.ipify.org 2>/dev/null || true)
+          if [[ "$_raw" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            printf '%s' "$_raw" > "$_remote_cache" || true
+            printf '%s\n' "$_raw" >&3
+          elif [[ -f "$_remote_cache" ]]; then
+            printf '%s (cached)\n' "$(${pkgs.coreutils}/bin/cat "$_remote_cache")" >&3
+          else
+            printf '<no remote ip>\n' >&3
           fi
         '';
 
