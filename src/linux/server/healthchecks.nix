@@ -523,10 +523,10 @@ args@{
               if (st > 0) {
                 swap_used=(st-sf)*100/st
                 combined_free=(a+sf)*100/(t+st)
-                if (mem_used > 30 || swap_used > 30) printf "%.0f%% mem, %.0f%% swap\n", mem_used, swap_used > "/dev/fd/3"
+                if (mem_used > 35 || swap_used > 35) printf "%.0f%% mem, %.0f%% swap\n", mem_used, swap_used > "/dev/fd/3"
               } else {
                 combined_free=(t>0) ? a*100/t : 100
-                if (mem_used > 30) printf "%.0f%% mem\n", mem_used > "/dev/fd/3"
+                if (mem_used > 35) printf "%.0f%% mem\n", mem_used > "/dev/fd/3"
               }
               exit (combined_free < ${toString memoryFreeThresholdPct} || mem_used > ${toString memoryRamUsedMaxPct})
             }
@@ -711,7 +711,7 @@ args@{
                   t = max * nproc * high_multiplier
                   if (t > threshold) { threshold = t; mode = "high-load-exempt" }
                 }
-                if (load5 > 0.4 || mode != "normal") printf "load 5m: %.2f (%s cores, limit: %.1f, mode: %s)\n", load5, nproc, threshold, mode > "/dev/fd/3"
+                if (load5 >= 1.0 || mode != "normal") printf "load 5m: %.2f (%s cores, limit: %.1f, mode: %s)\n", load5, nproc, threshold, mode > "/dev/fd/3"
                 exit (load5 > threshold)
               }
             ' /proc/loadavg
@@ -817,7 +817,7 @@ args@{
             ${pkgs.gawk}/bin/awk '
               BEGIN{idle=0}
               {for(i=1;i<=NF;i++) if($i=="id,") idle=$(i-1)+0}
-              END{pct=100-idle; if(pct>=2) printf "%.0f%%\n", pct > "/dev/fd/3"}
+              END{pct=100-idle; if(pct>=5) printf "%.0f%%\n", pct > "/dev/fd/3"}
             ' "$TMPDIR_HC/top-cpu-summary"
           fi
           exit 0
