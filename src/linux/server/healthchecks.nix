@@ -1610,6 +1610,14 @@ args@{
             owner = "root";
             group = "root";
           };
+
+          sops.secrets."${hostname}-healthchecks-readonly-api-key" = {
+            format = "binary";
+            sopsFile = self.profile.secretsPath "healthchecks-readonly-api-key";
+            mode = "0400";
+            owner = "root";
+            group = "root";
+          };
         }
 
         {
