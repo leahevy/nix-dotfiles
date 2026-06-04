@@ -303,7 +303,7 @@ in
         exit 1
       fi
 
-      echo "Network connectivity confirmed"
+      echo "Network connectivity verified"
     '';
   };
 

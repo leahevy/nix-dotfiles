@@ -430,7 +430,7 @@ args@{
             ${pkgs.coreutils}/bin/echo "Network not ready, waiting 30s... (attempt $retries/$max_retries)"
             ${pkgs.coreutils}/bin/sleep 30
           done
-          ${pkgs.coreutils}/bin/echo "Network connectivity confirmed"
+          ${pkgs.coreutils}/bin/echo "Network connectivity verified"
         '';
 
         cleanupSnapshotScript =
