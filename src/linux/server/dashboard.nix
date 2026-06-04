@@ -223,8 +223,7 @@ args@{
             );
           };
         };
-        systemd.services.homepage-dashboard.serviceConfig.EnvironmentFile =
-          "/run/homepage-dashboard-env/env";
+        services.homepage-dashboard.environmentFile = "/run/homepage-dashboard-env/env";
         services.homepage-dashboard.widgets = [
           {
             healthchecks = {
