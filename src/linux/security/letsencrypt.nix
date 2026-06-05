@@ -223,6 +223,26 @@ args@{
         };
       };
 
+    ifEnabled.linux.server.dashboard = {
+      enabled =
+        config:
+        let
+          baseDomain = self.host.remote.baseDomain;
+          baseDomainCert = self.settings.dnsCerts.${baseDomain} or null;
+          isCloudflare = baseDomainCert != null && baseDomainCert.provider == "cloudflare";
+        in
+        lib.mkIf isCloudflare {
+          nx.linux.server.dashboard.bookmarks = [
+            {
+              name = "Cloudflare DNS (${baseDomain})";
+              icon = "cloudflare";
+              href = "https://dash.cloudflare.com/";
+              group = "server";
+            }
+          ];
+        };
+    };
+
     ifEnabled.linux.server.healthchecks = {
       enabled =
         config:

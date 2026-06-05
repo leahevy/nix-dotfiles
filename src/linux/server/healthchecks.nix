@@ -417,6 +417,7 @@ args@{
       nx.linux.server.dashboard.services = [
         {
           name = "Healthchecks";
+          group = "server";
           href = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
           description = "Task and cron job monitoring";
           icon = "healthchecks";

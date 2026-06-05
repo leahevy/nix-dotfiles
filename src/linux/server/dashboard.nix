@@ -178,23 +178,53 @@ args@{
               default = [ ];
               description = "Homepage service widget configurations for this generated dashboard service entry.";
             };
+
+            group = lib.mkOption {
+              type = lib.types.enum [
+                "services"
+                "server"
+                "external"
+              ];
+              default = "external";
+              description = "Dashboard group this entry is placed in: services for main apps, server for internal tooling, external for user-added entries.";
+            };
           };
         }
       );
       default = [ ];
-      description = "Service entries contributed by modules and merged into the generated Homepage services group.";
+      description = "Service entries contributed by modules and merged into the generated Homepage service groups.";
     };
 
-    serverBookmarks = lib.mkOption {
-      type = lib.types.listOf lib.types.attrs;
+    bookmarks = lib.mkOption {
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.str;
+              description = "Display name for the bookmark entry.";
+            };
+            href = lib.mkOption {
+              type = lib.types.str;
+              description = "URL the bookmark points to.";
+            };
+            icon = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = "linkace";
+              description = "Homepage icon name for the bookmark entry.";
+            };
+            group = lib.mkOption {
+              type = lib.types.enum [
+                "server"
+                "links"
+              ];
+              default = "links";
+              description = "Bookmark group this entry is placed in: server for infrastructure links, links for general links.";
+            };
+          };
+        }
+      );
       default = [ ];
-      description = "Bookmark entries added to the generated Server bookmark group.";
-    };
-
-    otherBookmarks = lib.mkOption {
-      type = lib.types.listOf lib.types.attrs;
-      default = [ ];
-      description = "Bookmark entries added to the generated Links bookmark group.";
+      description = "Bookmark entries contributed by modules and merged into the generated bookmark groups.";
     };
 
     widgets = lib.mkOption {
@@ -243,6 +273,18 @@ args@{
       type = lib.types.bool;
       default = false;
       description = "Enable Docker container status in the dashboard. Also requires virtualisation.docker.enable to be true.";
+    };
+
+    addNixRepoBookmarks = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Add bookmarks for the nix repo URLs defined in variables.nix when they are non-empty.";
+    };
+
+    gatewayIP = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "IP address of the main network gateway, added as a server bookmark when set.";
     };
   };
 
@@ -315,11 +357,12 @@ args@{
         fontFamily,
         fontSize,
         services,
-        serverBookmarks,
-        otherBookmarks,
+        bookmarks,
         widgets,
         customCSS,
         extraSettings,
+        addNixRepoBookmarks,
+        gatewayIP,
         ...
       }:
       let
@@ -337,7 +380,7 @@ args@{
           else
             subdomain;
 
-        generatedServiceEntries = map (svc: {
+        mkServiceEntry = svc: {
           "${svc.name}" = {
             inherit (svc) href;
           }
@@ -345,7 +388,12 @@ args@{
           // lib.optionalAttrs (svc.icon != null) { inherit (svc) icon; }
           // lib.optionalAttrs (svc.description != "") { inherit (svc) description; }
           // lib.optionalAttrs (svc.widgets != [ ]) { inherit (svc) widgets; };
-        }) services;
+        };
+
+        servicesByGroup = lib.groupBy (svc: svc.group) services;
+
+        mainServiceEntries = map mkServiceEntry (servicesByGroup.services or [ ]);
+        serverServiceEntries = map mkServiceEntry (servicesByGroup.server or [ ]);
 
         additionalServiceEntries = lib.mapAttrsToList (
           key: svc:
@@ -372,7 +420,8 @@ args@{
           }
         ) self.host.remote.exposedServices.additionalServices;
 
-        allServiceEntries = generatedServiceEntries ++ additionalServiceEntries;
+        externalServiceEntries =
+          map mkServiceEntry (servicesByGroup.external or [ ]) ++ additionalServiceEntries;
 
         backgroundAttr =
           if localBackgroundFile != null then
@@ -470,9 +519,53 @@ args@{
           ]
         );
 
+        repoIcon =
+          url:
+          if lib.hasInfix "github.com" url then
+            "github"
+          else if lib.hasInfix "gitlab.com" url then
+            "gitlab"
+          else
+            "forgejo";
+
+        mkRepoBookmark =
+          name: url:
+          lib.optional (url != null && url != "") {
+            inherit name;
+            href = url;
+            icon = repoIcon url;
+            group = "links";
+          };
+
+        autoBookmarks =
+          lib.optional (gatewayIP != null) {
+            name = "Gateway";
+            icon = "openwrt";
+            href = "http://${gatewayIP}";
+            group = "server";
+          }
+          ++ lib.optionals addNixRepoBookmarks (
+            mkRepoBookmark "NX Core" (self.variables.coreRepoURL or null)
+            ++ mkRepoBookmark "NX Config" (self.variables.configRepoURL or null)
+          );
+
+        allBookmarks = autoBookmarks ++ bookmarks;
+        bookmarksByGroup = lib.groupBy (b: b.group) allBookmarks;
+
+        mkBookmarkAbbr =
+          name: lib.concatStrings (map (w: lib.toUpper (lib.substring 0 1 w)) (lib.splitString " " name));
+
+        mkBookmarkEntry = b: {
+          inherit (b) name href icon;
+          abbr = mkBookmarkAbbr b.name;
+        };
+
+        serverBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.server or [ ]);
+        linksBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.links or [ ]);
+
         generatedBookmarks =
-          lib.optional (serverBookmarks != [ ]) { Server = serverBookmarks; }
-          ++ lib.optional (otherBookmarks != [ ]) { Links = otherBookmarks; };
+          lib.optional (serverBookmarkEntries != [ ]) { Server = serverBookmarkEntries; }
+          ++ lib.optional (linksBookmarkEntries != [ ]) { Links = linksBookmarkEntries; };
 
         baseVhost =
           lib.recursiveUpdate
@@ -514,6 +607,14 @@ args@{
             message = "linux.server.dashboard requires host.remote.baseDomain to be set!";
           }
           {
+            assertion =
+              gatewayIP == null
+              ||
+                builtins.match "(10\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}|172\\.(1[6-9]|2[0-9]|3[01])\\.[0-9]{1,3}\\.[0-9]{1,3}|192\\.168\\.[0-9]{1,3}\\.[0-9]{1,3})" gatewayIP
+                != null;
+            message = "linux.server.dashboard: gatewayIP must be a valid private IPv4 address (10.x.x.x, 172.16-31.x.x, or 192.168.x.x)!";
+          }
+          {
             assertion = !isExposed || config.nx.linux.security.letsencrypt.enable;
             message = "linux.server.dashboard requires linux.security.letsencrypt to be enabled!";
           }
@@ -531,9 +632,10 @@ args@{
           allowedHosts = "${effectiveSubdomain}.${domain}";
           settings = generatedSettings;
           bookmarks = generatedBookmarks;
-          services = lib.optional (allServiceEntries != [ ]) {
-            Services = allServiceEntries;
-          };
+          services =
+            lib.optional (mainServiceEntries != [ ]) { Services = mainServiceEntries; }
+            ++ lib.optional (serverServiceEntries != [ ]) { Server = serverServiceEntries; }
+            ++ lib.optional (externalServiceEntries != [ ]) { External = externalServiceEntries; };
           widgets = autoWidgets ++ widgets;
           customCSS = generatedCSS;
         };

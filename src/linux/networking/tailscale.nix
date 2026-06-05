@@ -96,6 +96,19 @@ args@{
         };
       };
 
+    ifEnabled.linux.server.dashboard = {
+      enabled = config: {
+        nx.linux.server.dashboard.bookmarks = [
+          {
+            name = "Tailscale Machines";
+            icon = "tailscale";
+            href = "https://login.tailscale.com/admin/machines";
+            group = "server";
+          }
+        ];
+      };
+    };
+
     ifEnabled.linux.server.healthchecks = {
       enabled = config: {
         nx.linux.server.healthchecks.requireServicesUp = [ "tailscaled.service" ];
