@@ -200,6 +200,7 @@ args@{
               href = "https://${subdomain}.${domain}";
               description = "Document management system";
               icon = "paperless-ngx";
+              group = "services";
             }
           ];
         };

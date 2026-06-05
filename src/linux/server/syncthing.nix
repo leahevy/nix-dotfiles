@@ -288,6 +288,7 @@ in
               href = "https://${subdomain}.${domain}";
               description = "File synchronization across devices";
               icon = "syncthing";
+              group = "services";
             }
           ];
         };
