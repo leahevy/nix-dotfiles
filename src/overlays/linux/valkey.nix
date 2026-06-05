@@ -14,7 +14,7 @@ args@{
   input = "overlays";
 
   module = {
-    linux.overlays = [
+    x86_64.linux.overlays = [
       (final: prev: {
         valkey = prev.valkey.overrideAttrs (
           old:
