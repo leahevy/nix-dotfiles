@@ -45,4 +45,6 @@
   };
 
   defaultTheme = "season";
+
+  allowedCountriesByGeoIP = [ "de" ];
 }

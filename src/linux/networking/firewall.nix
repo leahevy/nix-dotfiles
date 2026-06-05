@@ -14,6 +14,10 @@ args@{
   group = "networking";
   input = "linux";
 
+  submodules = {
+    linux.networking.geo-ip = true;
+  };
+
   settings = {
     openWebServer = false;
     additionalTCPPorts = [ ];

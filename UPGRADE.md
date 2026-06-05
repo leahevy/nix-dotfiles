@@ -17,6 +17,7 @@
     - [ ] 4a. packages that arrived in nixpkgs as `vimPlugins.*` at same or later version
     - [ ] 4b. supported nixvim plugins, e.g. `programs.nixvim.plugins.*`
 - [ ] 5. Search for `fetchFromGitHub` in the repository to check if any derivations did arrive in `nixpkgs`
+    - [ ] 5a. Bump the pinned GeoIP commit in `src/linux/networking/geo-ip.nix`: first sync the fork at https://github.com/leahevy/country-ip-blocks with upstream (ipverse/country-ip-blocks), then pick a recent commit and get its hash with `nix flake prefetch "github:leahevy/country-ip-blocks/COMMIT" --json 2>/dev/null | grep '"hash"'`
 - [ ] 6. Consider removing packages specified as unstable in both `variables.nix` files
 - [ ] 7. Fix evaluation warnings until configuration builds without warnings (use `NIX_ABORT_ON_WARN=true` with build command to find warning sources)
 - [ ] 8. Build with `nx build --diff` to see the changes
