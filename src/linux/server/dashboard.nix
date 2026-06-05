@@ -136,9 +136,15 @@ args@{
     };
 
     fontSize = lib.mkOption {
+      type = lib.types.nullOr lib.types.int;
+      default = 12;
+      description = "Font size in pixels for the page body, or null to leave the browser default.";
+    };
+
+    maxWidth = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
-      default = "12px";
-      description = "CSS font-size for the page body, or null to leave the browser default.";
+      default = "800px";
+      description = "CSS max-width applied to the page container, or null to use the Tailwind default.";
     };
 
     services = lib.mkOption {
@@ -361,6 +367,7 @@ args@{
         widgets,
         customCSS,
         extraSettings,
+        maxWidth,
         addNixRepoBookmarks,
         gatewayIP,
         ...
@@ -509,12 +516,16 @@ args@{
             (lib.optionalString (fontFamily != null || fontSize != null) (
               "body {"
               + lib.optionalString (fontFamily != null) "\n  font-family: ${fontFamily};"
-              + lib.optionalString (fontSize != null) "\n  font-size: ${fontSize};"
+              + lib.optionalString (fontSize != null) "\n  font-size: ${toString fontSize}px;"
               + "\n}"
             ))
-            (lib.optionalString (
-              fontFamily != null
-            ) ".flex-1 {\n  font-family: ${fontFamily};\n  font-size: 18px;\n}")
+            (lib.optionalString (fontFamily != null || fontSize != null) (
+              ".flex-1 {"
+              + lib.optionalString (fontFamily != null) "\n  font-family: ${fontFamily};"
+              + lib.optionalString (fontSize != null) "\n  font-size: ${toString (fontSize * 3 / 2)}px;"
+              + "\n}"
+            ))
+            (lib.optionalString (maxWidth != null) ".container {\n  max-width: ${maxWidth};\n}")
             customCSS
           ]
         );
@@ -553,11 +564,20 @@ args@{
         bookmarksByGroup = lib.groupBy (b: b.group) allBookmarks;
 
         mkBookmarkAbbr =
-          name: lib.concatStrings (map (w: lib.toUpper (lib.substring 0 1 w)) (lib.splitString " " name));
+          name:
+          let
+            words = lib.splitString " " name;
+            firstAlpha = w: lib.head (builtins.match "([A-Za-z]).*" w ++ [ "" ]);
+          in
+          lib.concatStrings (map (w: lib.toUpper (firstAlpha w)) (lib.filter (w: w != "") words));
 
         mkBookmarkEntry = b: {
-          inherit (b) name href icon;
-          abbr = mkBookmarkAbbr b.name;
+          "${b.name}" = [
+            {
+              inherit (b) href icon;
+              abbr = mkBookmarkAbbr b.name;
+            }
+          ];
         };
 
         serverBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.server or [ ]);
