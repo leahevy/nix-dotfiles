@@ -230,6 +230,7 @@ args@{
             group = lib.mkOption {
               type = lib.types.enum [
                 "services"
+                "health"
                 "server"
                 "external"
               ];
@@ -266,7 +267,7 @@ args@{
                 "links"
               ];
               default = "links";
-              description = "Bookmark group this entry is placed in: server for infrastructure links, links for general links.";
+              description = "Bookmark group this entry is placed in.";
             };
           };
         }
@@ -446,6 +447,7 @@ args@{
 
         mainServiceEntries = map mkServiceEntry (servicesByGroup.services or [ ]);
         serverServiceEntries = map mkServiceEntry (servicesByGroup.server or [ ]);
+        healthServiceEntries = map mkServiceEntry (servicesByGroup.health or [ ]);
 
         additionalServiceEntries = lib.mapAttrsToList (
           key: svc:
@@ -734,6 +736,7 @@ args@{
           services =
             lib.optional (mainServiceEntries != [ ]) { Services = mainServiceEntries; }
             ++ lib.optional (serverServiceEntries != [ ]) { Server = serverServiceEntries; }
+            ++ lib.optional (healthServiceEntries != [ ]) { Health = healthServiceEntries; }
             ++ lib.optional (externalServiceEntries != [ ]) { External = externalServiceEntries; };
           widgets = autoWidgets ++ widgets;
           customCSS = generatedCSS;
