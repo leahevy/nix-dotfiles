@@ -626,7 +626,7 @@ args@{
               }
               .dark .bookmark a,
               .dark .service-card {
-                background-color: rgb(255 255 255 / 0.35);
+                background-color: rgb(var(--color-700) / 0.65);
               }'')
             customCSS
           ]
