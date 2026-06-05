@@ -631,7 +631,7 @@ args@{
                   if color == "neutral" then
                     "rgb(var(--color-700) / 0.4)"
                   else
-                    "color-mix(in srgb, rgb(var(--color-700)) 25%, #141414)"
+                    "color-mix(in srgb, rgb(var(--color-700)) 25%, rgb(20 20 20 / 0.6))"
                 };
               }'')
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null && color != "neutral") ''
