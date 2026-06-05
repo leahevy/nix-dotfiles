@@ -625,8 +625,20 @@ args@{
                 background-color: rgb(var(--color-100) / 0.65);
               }
               .dark .bookmark a,
-              .dark .service-card {
-                background-color: rgb(var(--color-700) / 0.4);
+              .dark .service-card,
+              .dark #page_wrapper input[type="text"] {
+                background-color: ${
+                  if color == "neutral" then
+                    "rgb(var(--color-700) / 0.4)"
+                  else
+                    "color-mix(in srgb, rgb(var(--color-700)) 25%, #141414)"
+                };
+              }'')
+            (lib.optionalString (backgroundBlur == null && backgroundAttr != null && color != "neutral") ''
+              .dark .bookmark-group-name,
+              .dark .service-group-name,
+              .dark .information-widget-resources {
+                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
               }'')
             customCSS
           ]
