@@ -58,8 +58,32 @@ args@{
     };
 
     color = lib.mkOption {
-      type = lib.types.str;
-      default = "black";
+      type = lib.types.enum [
+        "white"
+        "slate"
+        "gray"
+        "zinc"
+        "neutral"
+        "stone"
+        "red"
+        "orange"
+        "amber"
+        "yellow"
+        "lime"
+        "green"
+        "emerald"
+        "teal"
+        "cyan"
+        "sky"
+        "blue"
+        "indigo"
+        "violet"
+        "purple"
+        "fuchsia"
+        "pink"
+        "rose"
+      ];
+      default = "neutral";
       description = "Dashboard accent color name.";
     };
 
