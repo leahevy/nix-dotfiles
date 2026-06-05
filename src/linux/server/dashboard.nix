@@ -639,7 +639,7 @@ args@{
                 content: "";
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.3);
+                background: rgba(0, 0, 0, 0.4);
                 z-index: 0;
                 pointer-events: none;
               }
