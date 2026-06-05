@@ -635,6 +635,9 @@ args@{
                 };
               }'')
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null && color != "neutral") ''
+              #inner_wrapper {
+                background: rgba(0, 0, 0, 0.1);
+              }
               .dark .bookmark-group-name,
               .dark .service-group-name {
                 text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
