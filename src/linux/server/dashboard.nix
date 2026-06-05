@@ -685,7 +685,8 @@ args@{
         mkBookmarkEntry = b: {
           "${b.name}" = [
             {
-              inherit (b) href icon description;
+              inherit (b) href icon;
+              description = b.description or "";
               abbr = mkBookmarkAbbr b.name;
             }
           ];
