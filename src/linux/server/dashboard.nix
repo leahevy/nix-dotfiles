@@ -176,7 +176,7 @@ args@{
 
     fontSize = lib.mkOption {
       type = lib.types.nullOr lib.types.int;
-      default = 12;
+      default = 18;
       description = "Font size in pixels for the page body, or null to leave the browser default.";
     };
 
@@ -636,7 +636,7 @@ args@{
               }'')
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null && color != "neutral") ''
               #inner_wrapper {
-                background: rgba(0, 0, 0, 0.2);
+                background: rgba(0, 0, 0, 0.5);
               }
               .dark .bookmark-group-name,
               .dark .service-group-name {
