@@ -234,7 +234,7 @@ args@{
         lib.mkIf isCloudflare {
           nx.linux.server.dashboard.bookmarks = [
             {
-              name = "Cloudflare DNS";
+              name = "Cloudflare";
               icon = "cloudflare";
               href = "https://dash.cloudflare.com/";
               group = "maintenance";
