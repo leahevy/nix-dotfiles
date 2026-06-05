@@ -122,7 +122,7 @@ args@{
           "3xl"
         ]
       );
-      default = "md";
+      default = "sm";
       description = "Backdrop blur strength applied over the background image, or null to disable blurring.";
     };
 
