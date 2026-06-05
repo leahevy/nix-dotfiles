@@ -631,7 +631,7 @@ args@{
                   if color == "neutral" then
                     "rgb(var(--color-700) / 0.4)"
                   else
-                    "color-mix(in srgb, rgb(var(--color-700)) 25%, rgb(20 20 20 / 0.6))"
+                    "color-mix(in srgb, rgb(var(--color-700)) 25%, rgb(20 20 20 / 0.75))"
                 };
               }'')
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null && color != "neutral") ''
@@ -644,21 +644,12 @@ args@{
           ]
         );
 
-        repoIcon =
-          url:
-          if lib.hasInfix "github.com" url then
-            "github"
-          else if lib.hasInfix "gitlab.com" url then
-            "gitlab"
-          else
-            "forgejo";
-
         mkRepoBookmark =
           name: url:
           lib.optional (url != null && url != "") {
             inherit name;
             href = url;
-            icon = repoIcon url;
+            icon = "nixos";
             group = "links";
           };
 
