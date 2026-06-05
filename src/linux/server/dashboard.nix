@@ -635,8 +635,17 @@ args@{
                 };
               }'')
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null && color != "neutral") ''
+              #page_wrapper::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.3);
+                z-index: 0;
+                pointer-events: none;
+              }
               #inner_wrapper {
-                background: rgba(0, 0, 0, 0.5);
+                position: relative;
+                z-index: 1;
               }
               .dark .bookmark-group-name,
               .dark .service-group-name {
