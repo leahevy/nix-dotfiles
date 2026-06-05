@@ -644,8 +644,8 @@ args@{
             group = "maintenance";
           }
           ++ lib.optionals addNixRepoBookmarks (
-            mkRepoBookmark "NX Core" (self.variables.coreRepoURL or null)
-            ++ mkRepoBookmark "NX Config" (self.variables.configRepoURL or null)
+            mkRepoBookmark "Nix Core" (self.variables.coreRepoURL or null)
+            ++ mkRepoBookmark "Nix Config" (self.variables.configRepoURL or null)
           );
 
         allBookmarks = autoBookmarks ++ bookmarks;

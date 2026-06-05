@@ -100,7 +100,7 @@ args@{
       enabled = config: {
         nx.linux.server.dashboard.bookmarks = [
           {
-            name = "Tailscale Machines";
+            name = "Tailscale";
             icon = "tailscale";
             href = "https://login.tailscale.com/admin/machines";
             group = "maintenance";
