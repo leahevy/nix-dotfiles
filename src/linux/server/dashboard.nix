@@ -622,11 +622,11 @@ args@{
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null) ''
               .bookmark a,
               .service-card {
-                background-color: rgb(var(--color-100) / 0.45);
+                background-color: rgb(var(--color-100) / 0.65);
               }
               .dark .bookmark a,
               .dark .service-card {
-                background-color: rgb(255 255 255 / 0.15);
+                background-color: rgb(255 255 255 / 0.35);
               }'')
             customCSS
           ]
