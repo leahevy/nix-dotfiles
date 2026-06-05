@@ -619,6 +619,15 @@ args@{
                 font-family: ${fontFamily};
               }'')
             (lib.optionalString (maxWidth != null) ".container {\n  max-width: ${maxWidth};\n}")
+            (lib.optionalString (backgroundBlur == null && backgroundAttr != null) ''
+              .bookmark a,
+              .service-card {
+                background-color: rgb(var(--color-100) / 0.45);
+              }
+              .dark .bookmark a,
+              .dark .service-card {
+                background-color: rgb(255 255 255 / 0.15);
+              }'')
             customCSS
           ]
         );
