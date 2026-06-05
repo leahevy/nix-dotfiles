@@ -513,18 +513,20 @@ args@{
               .h-5 {
                 height: 24px;
               }''
-            (lib.optionalString (fontFamily != null || fontSize != null) (
-              "body {"
-              + lib.optionalString (fontFamily != null) "\n  font-family: ${fontFamily};"
-              + lib.optionalString (fontSize != null) "\n  font-size: ${toString fontSize}px;"
-              + "\n}"
-            ))
-            (lib.optionalString (fontFamily != null || fontSize != null) (
-              ".flex-1 {"
-              + lib.optionalString (fontFamily != null) "\n  font-family: ${fontFamily};"
-              + lib.optionalString (fontSize != null) "\n  font-size: ${toString (fontSize * 3 / 2)}px;"
-              + "\n}"
-            ))
+            (lib.optionalString (fontSize != null) ''
+              html {
+                font-size: ${toString fontSize}px;
+              }
+              .text-xs {
+                font-size: ${toString (fontSize * 10 / 12)}px;
+              }
+              .text-sm {
+                font-size: ${toString (fontSize * 11 / 12)}px;
+              }'')
+            (lib.optionalString (fontFamily != null) ''
+              body, .flex-1 {
+                font-family: ${fontFamily};
+              }'')
             (lib.optionalString (maxWidth != null) ".container {\n  max-width: ${maxWidth};\n}")
             customCSS
           ]
