@@ -111,6 +111,21 @@ args@{
       description = "Background image opacity as a percentage from 0 to 100.";
     };
 
+    backgroundBlur = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "sm"
+          "md"
+          "lg"
+          "xl"
+          "2xl"
+          "3xl"
+        ]
+      );
+      default = "md";
+      description = "Backdrop blur strength applied over the background image, or null to disable blurring.";
+    };
+
     localBackgroundFile = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -390,6 +405,7 @@ args@{
         color,
         backgroundURL,
         backgroundOpacity,
+        backgroundBlur,
         localBackgroundFile,
         faviconURL,
         localFaviconFile,
@@ -482,14 +498,14 @@ args@{
             {
               image = "/dashboard-bg";
               opacity = 100 - backgroundOpacity;
-              blur = "xl";
             }
+            // lib.optionalAttrs (backgroundBlur != null) { blur = backgroundBlur; }
           else if backgroundURL != null then
             {
               image = backgroundURL;
               opacity = 100 - backgroundOpacity;
-              blur = "xl";
             }
+            // lib.optionalAttrs (backgroundBlur != null) { blur = backgroundBlur; }
           else
             null;
 
