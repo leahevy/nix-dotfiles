@@ -569,9 +569,18 @@ args@{
           name:
           let
             words = lib.splitString " " name;
-            firstAlpha = w: lib.head (builtins.match "([A-Za-z]).*" w ++ [ "" ]);
+            firstAlpha =
+              w:
+              let
+                m = builtins.match "([A-Za-z]).*" w;
+              in
+              if m == null then "" else lib.head m;
+            abbr = lib.concatStrings (map (w: lib.toUpper (firstAlpha w)) (lib.filter (w: w != "") words));
           in
-          lib.concatStrings (map (w: lib.toUpper (firstAlpha w)) (lib.filter (w: w != "") words));
+          if abbr == "" then
+            throw "linux.server.dashboard: could not derive abbreviation from bookmark name '${name}'"
+          else
+            abbr;
 
         mkBookmarkEntry = b: {
           "${b.name}" = [
