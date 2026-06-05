@@ -105,10 +105,10 @@ args@{
       description = "Filename of a favicon image in the profile files directory, served locally via nginx when set.";
     };
 
-    backgroundOpacity = lib.mkOption {
+    backgroundOverlayOpacity = lib.mkOption {
       type = lib.types.ints.between 0 100;
-      default = 50;
-      description = "Background image opacity as a percentage from 0 to 100.";
+      default = 20;
+      description = "Opacity of the theme-colored overlay drawn over the background image.";
     };
 
     backgroundBlur = lib.mkOption {
@@ -409,7 +409,7 @@ args@{
         theme,
         color,
         backgroundURL,
-        backgroundOpacity,
+        backgroundOverlayOpacity,
         backgroundBlur,
         localBackgroundFile,
         faviconURL,
@@ -502,13 +502,13 @@ args@{
           if localBackgroundFile != null then
             {
               image = "/dashboard-bg";
-              opacity = 100 - backgroundOpacity;
+              opacity = 100 - backgroundOverlayOpacity;
             }
             // lib.optionalAttrs (backgroundBlur != null) { blur = backgroundBlur; }
           else if backgroundURL != null then
             {
               image = backgroundURL;
-              opacity = 100 - backgroundOpacity;
+              opacity = 100 - backgroundOverlayOpacity;
             }
             // lib.optionalAttrs (backgroundBlur != null) { blur = backgroundBlur; }
           else
@@ -626,7 +626,7 @@ args@{
               }
               .dark .bookmark a,
               .dark .service-card {
-                background-color: rgb(var(--color-700) / 0.65);
+                background-color: rgb(var(--color-700) / 0.4);
               }'')
             customCSS
           ]
