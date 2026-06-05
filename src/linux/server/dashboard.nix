@@ -147,6 +147,24 @@ args@{
       description = "CSS max-width applied to the page container, or null to use the Tailwind default.";
     };
 
+    enableSearchWidget = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Add a search widget to the dashboard header.";
+    };
+
+    useStartpageAsSearchEngine = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Use Startpage as the search engine when the search widget is enabled, otherwise use Google.";
+    };
+
+    searchOpenInNewTab = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Open search results in a new browser tab instead of the current tab.";
+    };
+
     services = lib.mkOption {
       type = lib.types.listOf (
         lib.types.submodule {
@@ -368,6 +386,9 @@ args@{
         customCSS,
         extraSettings,
         maxWidth,
+        enableSearchWidget,
+        useStartpageAsSearchEngine,
+        searchOpenInNewTab,
         addNixRepoBookmarks,
         gatewayIP,
         ...
@@ -462,8 +483,31 @@ args@{
           else
             null;
 
+        searchWidget = lib.optional enableSearchWidget (
+          if useStartpageAsSearchEngine then
+            {
+              search = {
+                provider = "custom";
+                url = "https://www.startpage.com/sp/search?query=";
+                target = if searchOpenInNewTab then "_blank" else "_self";
+                showSearchSuggestions = false;
+                focus = true;
+              };
+            }
+          else
+            {
+              search = {
+                provider = "google";
+                target = if searchOpenInNewTab then "_blank" else "_self";
+                showSearchSuggestions = true;
+                focus = true;
+              };
+            }
+        );
+
         autoWidgets =
-          lib.optional (logoAttr != null) {
+          searchWidget
+          ++ lib.optional (logoAttr != null) {
             logo = {
               icon = logoAttr;
             };
