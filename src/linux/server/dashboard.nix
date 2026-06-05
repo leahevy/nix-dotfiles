@@ -636,9 +636,11 @@ args@{
               }'')
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null && color != "neutral") ''
               .dark .bookmark-group-name,
-              .dark .service-group-name,
+              .dark .service-group-name {
+                text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+              }
               .dark .information-widget-resources {
-                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+                text-shadow: 0 1px 8px rgba(0, 0, 0, 1), 0 0 12px rgba(0, 0, 0, 0.9);
               }'')
             customCSS
           ]
