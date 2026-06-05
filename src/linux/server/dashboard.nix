@@ -59,7 +59,7 @@ args@{
 
     color = lib.mkOption {
       type = lib.types.str;
-      default = "cyan";
+      default = "black";
       description = "Dashboard accent color name.";
     };
 
@@ -83,7 +83,7 @@ args@{
 
     backgroundOpacity = lib.mkOption {
       type = lib.types.ints.between 0 100;
-      default = 10;
+      default = 50;
       description = "Background image opacity as a percentage from 0 to 100.";
     };
 
@@ -455,13 +455,13 @@ args@{
           if localBackgroundFile != null then
             {
               image = "/dashboard-bg";
-              opacity = backgroundOpacity;
+              opacity = 100 - backgroundOpacity;
               blur = "xl";
             }
           else if backgroundURL != null then
             {
               image = backgroundURL;
-              opacity = backgroundOpacity;
+              opacity = 100 - backgroundOpacity;
               blur = "xl";
             }
           else
