@@ -103,7 +103,7 @@ args@{
             name = "Tailscale Machines";
             icon = "tailscale";
             href = "https://login.tailscale.com/admin/machines";
-            group = "server";
+            group = "maintenance";
           }
         ];
       };

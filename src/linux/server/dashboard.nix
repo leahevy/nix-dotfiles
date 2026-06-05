@@ -262,7 +262,7 @@ args@{
             };
             group = lib.mkOption {
               type = lib.types.enum [
-                "server"
+                "maintenance"
                 "links"
               ];
               default = "links";
@@ -623,7 +623,7 @@ args@{
             name = "Gateway";
             icon = "openwrt";
             href = "http://${gatewayIP}";
-            group = "server";
+            group = "maintenance";
           }
           ++ lib.optionals addNixRepoBookmarks (
             mkRepoBookmark "NX Core" (self.variables.coreRepoURL or null)
@@ -659,11 +659,11 @@ args@{
           ];
         };
 
-        serverBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.server or [ ]);
+        maintenanceBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.maintenance or [ ]);
         linksBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.links or [ ]);
 
         generatedBookmarks =
-          lib.optional (serverBookmarkEntries != [ ]) { Server = serverBookmarkEntries; }
+          lib.optional (maintenanceBookmarkEntries != [ ]) { Maintenance = maintenanceBookmarkEntries; }
           ++ lib.optional (linksBookmarkEntries != [ ]) { Links = linksBookmarkEntries; };
 
         baseVhost =

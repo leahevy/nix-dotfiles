@@ -237,7 +237,7 @@ args@{
               name = "Cloudflare DNS (${baseDomain})";
               icon = "cloudflare";
               href = "https://dash.cloudflare.com/";
-              group = "server";
+              group = "maintenance";
             }
           ];
         };
