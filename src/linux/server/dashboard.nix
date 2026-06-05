@@ -284,6 +284,11 @@ args@{
               default = "links";
               description = "Bookmark group this entry is placed in.";
             };
+            description = lib.mkOption {
+              type = lib.types.str;
+              default = "";
+              description = "Description shown in the bookmark card.";
+            };
           };
         }
       );
@@ -671,7 +676,7 @@ args@{
         mkBookmarkEntry = b: {
           "${b.name}" = [
             {
-              inherit (b) href icon;
+              inherit (b) href icon description;
               abbr = mkBookmarkAbbr b.name;
             }
           ];
