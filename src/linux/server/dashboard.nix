@@ -636,7 +636,7 @@ args@{
               }'')
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null && color != "neutral") ''
               #inner_wrapper {
-                background: rgba(0, 0, 0, 0.1);
+                background: rgba(0, 0, 0, 0.2);
               }
               .dark .bookmark-group-name,
               .dark .service-group-name {
