@@ -1351,13 +1351,26 @@ args@{
           done <<< "$_summary"
         '';
 
+        kernelLogProcessScript = pkgs.writeShellScript "kernel-log-process" ''
+          ${pkgs.gawk}/bin/awk '
+            NR==1 { prev=$0; idx=index($0,"kernel: "); prev_key=(idx>0?substr($0,idx+8):$0); count=1; next }
+            {
+              idx=index($0,"kernel: ")
+              key=(idx>0 ? substr($0,idx+8) : $0)
+              if (key==prev_key) { prev=$0; count++ }
+              else { print prev (count>1 ? " [repeated " count " times]" : ""); prev=$0; prev_key=key; count=1 }
+            }
+            END { if (prev!="") print prev (count>1 ? " [repeated " count " times]" : "") }
+          ' | ${pkgs.gnused}/bin/sed "s/ ${self.host.hostname} kernel: / /"
+        '';
+
         kernelLogTodayExpr = ''
           KERNEL_LOG_ALL="$TMPDIR_HC/kernel-log-today-all"
           KERNEL_LOG_FILTERED="$TMPDIR_HC/kernel-log-today-filtered"
           _since=$(${pkgs.coreutils}/bin/date -d 'yesterday 00:00:00' '+%Y-%m-%d %H:%M:%S')
 
-          ${pkgs.systemd}/bin/journalctl -k --since "$_since" --no-pager > "$KERNEL_LOG_ALL" 2>/dev/null || true
-          ${pkgs.gnused}/bin/sed -i "s/ ${self.host.hostname} kernel: / /" "$KERNEL_LOG_ALL"
+          ${pkgs.systemd}/bin/journalctl -k --since "$_since" --no-pager 2>/dev/null \
+            | ${kernelLogProcessScript} > "$KERNEL_LOG_ALL" || true
           _kernel_lines=$(${pkgs.coreutils}/bin/wc -l < "$KERNEL_LOG_ALL")
 
           if [[ "$_kernel_lines" -eq 0 ]]; then
@@ -1366,9 +1379,9 @@ args@{
           fi
 
           if [[ "$_kernel_lines" -gt 200 ]]; then
-            printf '[kernel log: warning+ and last 100 lines, %d lines today]\n' "$_kernel_lines" >&3
+            printf '[kernel log: warning+, %d lines today (deduplicated)]\n' "$_kernel_lines" >&3
             ${pkgs.systemd}/bin/journalctl -k --since "$_since" -p warning..emerg --no-pager \
-              | ${pkgs.gnused}/bin/sed "s/ ${self.host.hostname} kernel: / /" \
+              | ${kernelLogProcessScript} \
               | ${secretCensorScript} > "$KERNEL_LOG_FILTERED"
           else
             ${secretCensorScript} < "$KERNEL_LOG_ALL" > "$KERNEL_LOG_FILTERED"
@@ -1376,7 +1389,7 @@ args@{
 
           ${pkgs.coreutils}/bin/cat "$KERNEL_LOG_FILTERED" >&3
           if [[ "$_kernel_lines" -gt 200 ]]; then
-            printf '\n[last 100 kernel log lines]\n' >&3
+            printf '\n[kernel log tail]\n' >&3
             ${pkgs.coreutils}/bin/tail -n 100 "$KERNEL_LOG_ALL" \
               | ${secretCensorScript} >&3
           fi
