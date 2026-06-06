@@ -374,37 +374,17 @@ args@{
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
           tag = "nx-healthcheck";
-          string = "curl:";
+          string = ".*";
+        }
+        {
+          unitless = true;
+          tag = "nx-healthcheck";
+          string = ".*";
         }
         {
           tag = "systemd";
           service = "init.scope";
-          string = "nx-healthcheck-regular.service: Main process exited, code=killed, status=15/TERM";
-        }
-        {
-          tag = "systemd";
-          service = "init.scope";
-          string = "nx-healthcheck-regular.service: Failed with result 'signal'.";
-        }
-        {
-          tag = "systemd";
-          service = "init.scope";
-          string = "nx-healthcheck-daily.service: Main process exited, code=killed, status=15/TERM";
-        }
-        {
-          tag = "systemd";
-          service = "init.scope";
-          string = "nx-healthcheck-daily.service: Failed with result 'signal'.";
-        }
-        {
-          tag = "systemd";
-          service = "init.scope";
-          string = "nx-healthcheck-monthly.service: Main process exited, code=killed, status=15/TERM";
-        }
-        {
-          tag = "systemd";
-          service = "init.scope";
-          string = "nx-healthcheck-monthly.service: Failed with result 'signal'.";
+          string = "nx-healthchecks-[a-z][a-z0-9-]*\\.service";
         }
       ];
     };
@@ -1010,7 +990,7 @@ args@{
           fi
 
           while read -r _dev _mp _type _opts _rest; do
-            case "$_mp" in /nix|/nix/*|/persist|/persist/*) ;; *) continue ;; esac
+            case "$_mp" in /nix|/persist) ;; *) continue ;; esac
             case "$_type" in squashfs|iso9660|romfs|cramfs) continue ;; esac
             case ",$_opts," in
               *,ro,*)
@@ -1702,7 +1682,7 @@ args@{
             endpointName = "${hostname}-${entryName}";
             triggerUnit = entry.trigger.service;
             serviceBaseName = lib.removeSuffix ".service" triggerUnit;
-            companionName = "nx-hc-${entryName}";
+            companionName = "nx-healthchecks-service-${entryName}";
             checkScript = entry.check.checkScript;
             includeLogs = entry.includeLogs;
           in
@@ -1747,7 +1727,7 @@ args@{
           let
             entryName = sanitizeName key;
             endpointName = "${hostname}-${entryName}";
-            unitName = "nx-healthcheck-${entryName}";
+            unitName = "nx-healthchecks-timed-${entryName}";
           in
           acc
           // {
@@ -1774,7 +1754,7 @@ args@{
           acc: key: entry:
           let
             entryName = sanitizeName key;
-            unitName = "nx-healthcheck-${entryName}";
+            unitName = "nx-healthchecks-timed-${entryName}";
             effectiveInterval = if entry.interval != null then entry.interval else "15m";
           in
           acc
@@ -1865,7 +1845,7 @@ args@{
         }
 
         (lib.mkIf effectiveRegular {
-          systemd.services.nx-healthcheck-regular = {
+          systemd.services.nx-healthchecks-builtin-regular = {
             description = "Regular server health check";
             wants = [ "network-online.target" ];
             after = [ "network-online.target" ];
@@ -1882,7 +1862,7 @@ args@{
             };
           };
 
-          systemd.timers.nx-healthcheck-regular = {
+          systemd.timers.nx-healthchecks-builtin-regular = {
             description = "Regular server health check timer";
             wantedBy = [ "timers.target" ];
             timerConfig = {
@@ -1895,7 +1875,7 @@ args@{
         })
 
         (lib.mkIf effectiveDaily {
-          systemd.services.nx-healthcheck-daily = {
+          systemd.services.nx-healthchecks-builtin-daily = {
             description = "Daily server health check";
             wants = [ "network-online.target" ];
             after = [ "network-online.target" ];
@@ -1912,7 +1892,7 @@ args@{
             };
           };
 
-          systemd.timers.nx-healthcheck-daily = {
+          systemd.timers.nx-healthchecks-builtin-daily = {
             description = "Daily server health check timer";
             wantedBy = [ "timers.target" ];
             timerConfig = {
@@ -1924,7 +1904,7 @@ args@{
         })
 
         (lib.mkIf effectiveMonthly {
-          systemd.services.nx-healthcheck-monthly = {
+          systemd.services.nx-healthchecks-builtin-monthly = {
             description = "Monthly server health check";
             wants = [ "network-online.target" ];
             after = [ "network-online.target" ];
@@ -1941,7 +1921,7 @@ args@{
             };
           };
 
-          systemd.timers.nx-healthcheck-monthly = {
+          systemd.timers.nx-healthchecks-builtin-monthly = {
             description = "Monthly server health check timer";
             wantedBy = [ "timers.target" ];
             timerConfig = {
