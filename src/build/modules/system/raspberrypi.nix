@@ -19,6 +19,9 @@ args@{
       boot.kernelParams = [
         "nvme_core.default_ps_max_latency_us=0"
         "pcie_aspm=off"
+        "pcie_port_pm=off"
+        "nvme_core.io_timeout=255"
+        "nvme_core.max_retries=10"
       ];
 
       boot.loader.raspberry-pi.configurationLimit = 15;
@@ -28,9 +31,17 @@ args@{
           enable = true;
           value = "on";
         };
+        base-dt-params.pciex1_gen = {
+          enable = true;
+          value = 1;
+        };
         dt-overlays."pciex1-compat-pi5" = {
           enable = true;
-          params.no-mip.enable = true;
+          params = {
+            no-mip.enable = true;
+            no-l0s.enable = true;
+            mmio-hi.enable = true;
+          };
         };
       };
     };
