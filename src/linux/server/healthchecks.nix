@@ -1093,11 +1093,11 @@ args@{
           fi
         '';
 
-        sshAuthExpr = ''
-          SSH_AUTH_LOG="$TMPDIR_HC/ssh-auth-log"
+        mkSshAuthExpr = runtimeScope: ''
+          SSH_AUTH_LOG="$TMPDIR_HC/ssh-auth-log-${runtimeScope}"
           _since=$(${pkgs.coreutils}/bin/date -d 'yesterday 00:00:00' '+%Y-%m-%d %H:%M:%S')
 
-          ${pkgs.systemd}/bin/journalctl SYSLOG_IDENTIFIER=sshd-session --since "$_since" --no-pager > "$SSH_AUTH_LOG" 2>/dev/null || true
+          ${pkgs.systemd}/bin/journalctl SYSLOG_IDENTIFIER=sshd-session _RUNTIME_SCOPE=${runtimeScope} --since "$_since" --no-pager > "$SSH_AUTH_LOG" 2>/dev/null || true
 
           _summary=$(
             ${pkgs.gawk}/bin/awk '
@@ -1199,8 +1199,14 @@ args@{
           // lib.optionalAttrs (checkSmartDisk && config.nx.linux.storage.smartd.enable) {
             "30 - SMART disk health" = smartDiskExpr;
           }
-          // lib.optionalAttrs config.services.openssh.enable {
-            "80 - SSH auth" = sshAuthExpr;
+          // lib.optionalAttrs (config.services.openssh.enable && !config.boot.initrd.network.ssh.enable) {
+            "80 - SSH auth" = mkSshAuthExpr "system";
+          }
+          // lib.optionalAttrs (config.services.openssh.enable && config.boot.initrd.network.ssh.enable) {
+            "80 - SSH auth (system)" = mkSshAuthExpr "system";
+          }
+          // lib.optionalAttrs config.boot.initrd.network.ssh.enable {
+            "85 - SSH auth (initrd)" = mkSshAuthExpr "initrd";
           }
           // {
             "90 - Kernel logs" = kernelLogTodayExpr;
