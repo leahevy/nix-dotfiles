@@ -500,7 +500,7 @@ args@{
         slugToTitle = slug: lib.concatStringsSep " " (map capitalizeWord (lib.splitString "-" slug));
         mkCheckService = name: uuid: {
           inherit name;
-          group = "health";
+          group = "details";
           href = "${hc.healthchecksBaseUrl}/checks/${uuid}/details/";
           description = "";
           icon = "healthchecks";

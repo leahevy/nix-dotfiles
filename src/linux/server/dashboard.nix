@@ -180,10 +180,10 @@ args@{
       description = "Font size in pixels for the page body, or null to leave the browser default.";
     };
 
-    maxWidth = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = "800px";
-      description = "CSS max-width applied to the page container, or null to use the Tailwind default.";
+    columnsPerGroup = lib.mkOption {
+      type = lib.types.int;
+      default = 1;
+      description = "Number of service cards shown per row within each group.";
     };
 
     enableSearchWidget = lib.mkOption {
@@ -248,9 +248,10 @@ args@{
                 "health"
                 "server"
                 "external"
+                "details"
               ];
               default = "external";
-              description = "Dashboard group this entry is placed in: services for main apps, server for internal tooling, external for user-added entries.";
+              description = "Dashboard group this entry is placed in: services for main apps, server for internal tooling, external for user-added entries, details for individual check cards shown on a separate tab.";
             };
           };
         }
@@ -412,7 +413,7 @@ args@{
         customCSS,
         extraSettings,
         homepageSecretEnvFiles,
-        maxWidth,
+        columnsPerGroup,
         enableSearchWidget,
         useStartpageAsSearchEngine,
         searchOpenInNewTab,
@@ -450,6 +451,7 @@ args@{
         mainServiceEntries = map mkServiceEntry (servicesByGroup.services or [ ]);
         serverServiceEntries = map mkServiceEntry (servicesByGroup.server or [ ]);
         healthServiceEntries = map mkServiceEntry (servicesByGroup.health or [ ]);
+        detailsServiceEntries = map mkServiceEntry (servicesByGroup.details or [ ]);
 
         additionalServiceEntries = lib.mapAttrsToList (
           key: svc:
@@ -554,6 +556,34 @@ args@{
             };
           };
 
+        hasSecondRow = serverServiceEntries != [ ] || externalServiceEntries != [ ];
+        hasTabs = detailsServiceEntries != [ ];
+        overviewTab = lib.optionalAttrs hasTabs { tab = "Overview"; };
+        generatedLayout =
+          lib.optional (mainServiceEntries != [ ]) { Services = overviewTab; }
+          ++ lib.optional (healthServiceEntries != [ ]) { Health = overviewTab; }
+          ++ lib.optional (serverServiceEntries != [ ]) {
+            Server = {
+              style = "row";
+              columns = columnsPerGroup;
+            }
+            // overviewTab;
+          }
+          ++ lib.optional (externalServiceEntries != [ ]) {
+            External = {
+              style = "row";
+              columns = columnsPerGroup;
+            }
+            // overviewTab;
+          }
+          ++ lib.optional hasTabs {
+            Details = {
+              style = "row";
+              columns = columnsPerGroup * 2;
+              tab = "Details";
+            };
+          };
+
         generatedSettings = lib.recursiveUpdate (
           {
             title = if title != null then title else hostname;
@@ -573,6 +603,7 @@ args@{
           // lib.optionalAttrs (description != "") { description = description; }
           // lib.optionalAttrs (backgroundAttr != null) { background = backgroundAttr; }
           // lib.optionalAttrs (faviconAttr != null) { favicon = faviconAttr; }
+          // lib.optionalAttrs (hasSecondRow || hasTabs) { layout = generatedLayout; }
         ) extraSettings;
 
         generatedCSS = lib.concatStringsSep "\n\n" (
@@ -599,7 +630,7 @@ args@{
               body, .flex-1 {
                 font-family: ${fontFamily};
               }'')
-            (lib.optionalString (maxWidth != null) ".container {\n  max-width: ${maxWidth};\n}")
+            ".container {\n  max-width: ${toString (columnsPerGroup * 800)}px;\n}"
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null) ''
               .bookmark a,
               .service-card {
@@ -768,7 +799,8 @@ args@{
             lib.optional (mainServiceEntries != [ ]) { Services = mainServiceEntries; }
             ++ lib.optional (serverServiceEntries != [ ]) { Server = serverServiceEntries; }
             ++ lib.optional (healthServiceEntries != [ ]) { Health = healthServiceEntries; }
-            ++ lib.optional (externalServiceEntries != [ ]) { External = externalServiceEntries; };
+            ++ lib.optional (externalServiceEntries != [ ]) { External = externalServiceEntries; }
+            ++ lib.optional (detailsServiceEntries != [ ]) { Details = detailsServiceEntries; };
           widgets = autoWidgets ++ widgets;
           customCSS = generatedCSS;
         };
