@@ -66,6 +66,7 @@ in
       "flakes"
     ];
     http-connections = variables.httpConnections;
+    max-substitution-jobs = variables.maxSubstitutionJobs;
   };
 
   services.openssh = {

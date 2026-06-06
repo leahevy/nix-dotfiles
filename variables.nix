@@ -31,6 +31,7 @@
   persist = "/persist";
 
   httpConnections = 15;
+  maxSubstitutionJobs = 3;
 
   unstablePackages = [
     "codex"

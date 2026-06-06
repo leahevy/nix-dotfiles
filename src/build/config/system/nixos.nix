@@ -118,6 +118,7 @@ in
           trusted-users = lib.mkForce [ ];
           allowed-users = lib.mkForce users;
           http-connections = variables.httpConnections;
+          max-substitution-jobs = variables.maxSubstitutionJobs;
           keep-outputs = true;
           keep-derivations = true;
           allow-import-from-derivation = false;
