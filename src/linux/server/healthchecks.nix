@@ -309,6 +309,11 @@ args@{
               default = null;
               description = "Healthchecks.io UUID of this check.";
             };
+            displayName = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Display name for this check in the dashboard, overriding the auto-derived name.";
+            };
           };
         }
       );
@@ -541,7 +546,10 @@ args@{
           );
         serviceServices = lib.concatLists (
           lib.mapAttrsToList (
-            k: v: lib.optional (v.uuid != null) (mkCheckService (slugToTitle k) v.uuid)
+            k: v:
+            lib.optional (v.uuid != null) (
+              mkCheckService (if v.displayName != null then v.displayName else slugToTitle k) v.uuid
+            )
           ) hc.servicesHealthChecks
         );
         timedServices = lib.concatLists (
