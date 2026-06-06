@@ -248,31 +248,36 @@ args@{
       enabled =
         config:
         lib.mkIf config.nx.linux.server.healthchecks.checkCertExpiry {
-          nx.linux.server.healthchecks.servicesHealthChecks = lib.mapAttrs' (
-            domain: _:
-            lib.nameValuePair "letsencrypt-${domain}" {
-              trigger.service = "acme-order-renew-${domain}.service";
-              uuid = self.settings.healthcheckUUIDs.${domain} or null;
-              check.checkScript = ''
-                _state=$(${pkgs.systemd}/bin/systemctl show "acme-${domain}.service" \
-                  --property=ActiveState --value 2>/dev/null || echo "unknown")
-                _sub=$(${pkgs.systemd}/bin/systemctl show "acme-${domain}.service" \
-                  --property=SubState --value 2>/dev/null || echo "unknown")
-                if [[ "$_state" != "active" ]] || [[ "$_sub" != "exited" ]]; then
-                  printf '[FAIL] acme-${domain}.service: %s (%s)\n' "$_state" "$_sub" >&3
-                  exit 1
-                fi
-                printf '[OK ] acme-${domain}.service\n' >&3
-                _mon=$(${pkgs.systemd}/bin/systemctl show "acme-monitoring-${domain}.service" \
-                  --property=ActiveState --value 2>/dev/null || echo "unknown")
-                if [[ "$_mon" == "failed" ]]; then
-                  printf '[FAIL] acme-monitoring-${domain}.service\n' >&3
-                  exit 1
-                fi
-                printf '[OK ] acme-monitoring-${domain}.service\n' >&3
-              '';
-            }
-          ) self.settings.dnsCerts;
+          nx.linux.server.healthchecks.servicesHealthChecks =
+            let
+              singleDomain = lib.length (lib.attrNames self.settings.dnsCerts) == 1;
+            in
+            lib.mapAttrs' (
+              domain: _:
+              lib.nameValuePair "letsencrypt-${domain}" {
+                trigger.service = "acme-order-renew-${domain}.service";
+                uuid = self.settings.healthcheckUUIDs.${domain} or null;
+                displayName = if singleDomain then "Letsencrypt" else null;
+                check.checkScript = ''
+                  _state=$(${pkgs.systemd}/bin/systemctl show "acme-${domain}.service" \
+                    --property=ActiveState --value 2>/dev/null || echo "unknown")
+                  _sub=$(${pkgs.systemd}/bin/systemctl show "acme-${domain}.service" \
+                    --property=SubState --value 2>/dev/null || echo "unknown")
+                  if [[ "$_state" != "active" ]] || [[ "$_sub" != "exited" ]]; then
+                    printf '[FAIL] acme-${domain}.service: %s (%s)\n' "$_state" "$_sub" >&3
+                    exit 1
+                  fi
+                  printf '[OK ] acme-${domain}.service\n' >&3
+                  _mon=$(${pkgs.systemd}/bin/systemctl show "acme-monitoring-${domain}.service" \
+                    --property=ActiveState --value 2>/dev/null || echo "unknown")
+                  if [[ "$_mon" == "failed" ]]; then
+                    printf '[FAIL] acme-monitoring-${domain}.service\n' >&3
+                    exit 1
+                  fi
+                  printf '[OK ] acme-monitoring-${domain}.service\n' >&3
+                '';
+              }
+            ) self.settings.dnsCerts;
         };
     };
   };
