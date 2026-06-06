@@ -2043,8 +2043,12 @@ args@{
               TimeoutStartSec = monthlyServiceTimeoutSec;
               ExecStart = pkgs.writeShellScript "nx-hc-monthly-crash" ''
                 set -euo pipefail
-                echo "Waiting 5 minutes for system readiness..."
-                ${pkgs.coreutils}/bin/sleep 300
+                _uptime_sec=$(${pkgs.gawk}/bin/awk '{print int($1)}' /proc/uptime)
+                if [[ "$_uptime_sec" -lt 300 ]]; then
+                  _wait_sec=$((300 - _uptime_sec))
+                  echo "Waiting $_wait_sec seconds for system readiness..."
+                  ${pkgs.coreutils}/bin/sleep "$_wait_sec"
+                fi
                 _today=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
 
                 if [ ! -e ${lib.escapeShellArg crashMarkerPath} ]; then
