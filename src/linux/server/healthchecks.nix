@@ -1010,8 +1010,8 @@ args@{
           fi
 
           while read -r _dev _mp _type _opts _rest; do
-            [[ "$_type" == "btrfs" ]] || continue
             case "$_mp" in /nix|/nix/*|/persist|/persist/*) ;; *) continue ;; esac
+            case "$_type" in squashfs|iso9660|romfs|cramfs) continue ;; esac
             case ",$_opts," in
               *,ro,*)
                 printf '%s: mounted read-only\n' "$_mp" >&3
