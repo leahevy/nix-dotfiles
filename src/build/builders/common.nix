@@ -192,15 +192,17 @@ let
         }
       );
 
+      allOverlays = overlays ++ [
+        (final: prev: unstableOverrides)
+        nixImplOverlay
+        nixToolsOverlay
+      ];
+
       buildPkgs =
         nixpkgs:
         import nixpkgs {
           inherit system;
-          overlays = overlays ++ [
-            (final: prev: unstableOverrides)
-            nixImplOverlay
-            nixToolsOverlay
-          ];
+          overlays = allOverlays;
           config = {
             allowUnfreePredicate = unfreePredicate;
             permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
@@ -216,7 +218,7 @@ let
           throw "builder: cannot determine system architecture!";
     in
     {
-      inherit pkgs pkgs-unstable;
+      inherit pkgs pkgs-unstable allOverlays;
     };
 
   getHardwareModule =
@@ -590,6 +592,7 @@ in
         })
         pkgs
         pkgs-unstable
+        allOverlays
         ;
 
       hostEval = evalConfigModule {
@@ -795,6 +798,7 @@ in
             lib
             pkgs
             pkgs-unstable
+            allOverlays
             inputs
             funcs
             defs

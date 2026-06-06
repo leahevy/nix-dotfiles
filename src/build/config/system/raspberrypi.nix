@@ -2,6 +2,7 @@
   inputs,
   host,
   variables,
+  allOverlays,
   ...
 }:
 { config, lib, ... }:
@@ -13,6 +14,7 @@
     raspberry-pi-5.bluetooth
   ];
 
+  nixpkgs.overlays = allOverlays;
   nixpkgs.config.permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
 
   boot.loader.raspberry-pi.bootloader = "kernel";
