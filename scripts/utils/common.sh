@@ -406,6 +406,7 @@ parse_build_deployment_args() {
 	TIMEOUT=14400
 	DRY_RUN=""
 	BUILD_DIFF=false
+	BUILD_KEEP=false
 	SKIP_VERIFICATION=false
 	RAW_LOG=false
 	BUILD_OVERRIDE_PROFILE=""
@@ -449,6 +450,10 @@ parse_build_deployment_args() {
 			;;
 		--diff)
 			BUILD_DIFF=true
+			shift
+			;;
+		--keep)
+			BUILD_KEEP=true
 			shift
 			;;
 		--show-derivation)
@@ -512,6 +517,11 @@ parse_build_deployment_args() {
 		exit 1
 	}
 
+	[[ "$BUILD_KEEP" == "true" && -n "$DRY_RUN" ]] && {
+		echo -e "${RED}Error: --keep and --dry-run cannot be used together${RESET}" >&2
+		exit 1
+	}
+
 	BUILD_HAS_OVERRIDE=false
 	[[ -n "$BUILD_OVERRIDE_PROFILE" || -n "$BUILD_OVERRIDE_ARCH" || "$BUILD_FORCE_NIXOS" == "true" || "$BUILD_FORCE_STANDALONE" == "true" ]] && BUILD_HAS_OVERRIDE=true
 
@@ -520,7 +530,7 @@ parse_build_deployment_args() {
 		exit 1
 	fi
 
-	export EXTRA_ARGS TIMEOUT DRY_RUN BUILD_DIFF SKIP_VERIFICATION RAW_LOG SHOW_DERIVATION
+	export EXTRA_ARGS TIMEOUT DRY_RUN BUILD_DIFF BUILD_KEEP SKIP_VERIFICATION RAW_LOG SHOW_DERIVATION
 	export BUILD_OVERRIDE_PROFILE BUILD_OVERRIDE_ARCH BUILD_FORCE_NIXOS BUILD_FORCE_STANDALONE BUILD_HAS_OVERRIDE
 }
 

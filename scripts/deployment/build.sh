@@ -18,6 +18,7 @@ fi
 
 BUILD_TMP_DIR=""
 BUILD_TMP_OUT_LINK=""
+KEEP_LINK=""
 
 cleanup_build_tmp_dir() {
 	if [[ -n "${BUILD_TMP_DIR:-}" && -d "${BUILD_TMP_DIR}" ]]; then
@@ -42,6 +43,14 @@ elif [[ -n "${BUILD_OVERRIDE_PROFILE:-}" ]]; then
 	PROFILE="$(construct_profile_name "$base_profile")"
 fi
 
+ACTIVE_OUT_LINK="$BUILD_TMP_OUT_LINK"
+if [[ "${BUILD_KEEP:-false}" == "true" ]]; then
+	KEEP_DIR="$HOME/.local/state/nx/build-outputs"
+	mkdir -p "$KEEP_DIR"
+	KEEP_LINK="${KEEP_DIR}/${PROFILE}_$(date '+%Y-%m-%d_%H-%M-%S')"
+	ACTIVE_OUT_LINK="$KEEP_LINK"
+fi
+
 context=""
 if [[ "${BUILD_FORCE_NIXOS:-false}" == "true" ]]; then
 	context="nixos"
@@ -63,7 +72,7 @@ if [[ "${SHOW_DERIVATION:-false}" == "true" ]]; then
 fi
 
 nh_common_args=(
-	--out-link "${BUILD_TMP_OUT_LINK}"
+	--out-link "${ACTIVE_OUT_LINK}"
 	--diff never
 	--print-build-logs
 )
@@ -79,7 +88,7 @@ if [[ "$context" == "nixos" ]]; then
 		notify_error "Build"
 		exit 1
 	fi
-	NEW_SYSTEM="$(readlink -f "${BUILD_TMP_OUT_LINK}")"
+	NEW_SYSTEM="$(readlink -f "${ACTIVE_OUT_LINK}")"
 
 	if [[ "${BUILD_HAS_OVERRIDE:-false}" == "true" ]]; then
 		echo
@@ -101,7 +110,7 @@ else
 		notify_error "Build"
 		exit 1
 	fi
-	NEW_HOME="$(readlink -f "${BUILD_TMP_OUT_LINK}")"
+	NEW_HOME="$(readlink -f "${ACTIVE_OUT_LINK}")"
 
 	if [[ "${BUILD_HAS_OVERRIDE:-false}" == "true" ]]; then
 		echo
@@ -117,4 +126,9 @@ else
 		echo -e "${GREEN}=== Package Diff ===${RESET}"
 		diff_packages "$CURRENT_HOME" "$NEW_HOME" || echo -e "${YELLOW}Package diff failed${RESET}"
 	fi
+fi
+
+if [[ "${BUILD_KEEP:-false}" == "true" && -n "$KEEP_LINK" ]]; then
+	echo
+	echo -e "${GREEN}Kept build:${RESET} ${WHITE}${KEEP_LINK}${RESET}"
 fi

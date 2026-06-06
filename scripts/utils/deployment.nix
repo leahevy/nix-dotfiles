@@ -96,6 +96,7 @@
           nixos = option "Force NixOS mode";
           standalone = option "Force standalone mode";
           arch = optionWithEnum "Use specific architecture" "architecture" architectures;
+          keep = option "Keep built derivation as a persistent GC root in ~/.local/state/nx/build-outputs";
         };
       };
 
