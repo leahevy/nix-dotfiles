@@ -67,6 +67,8 @@ in
     ];
     http-connections = variables.httpConnections;
     max-substitution-jobs = variables.maxSubstitutionJobs;
+    connect-timeout = variables.connectTimeout;
+    stalled-download-timeout = variables.stalledDownloadTimeout;
   };
 
   services.openssh = {

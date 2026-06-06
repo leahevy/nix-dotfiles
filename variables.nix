@@ -32,6 +32,8 @@
 
   httpConnections = 15;
   maxSubstitutionJobs = 3;
+  connectTimeout = 60;
+  stalledDownloadTimeout = 120;
 
   unstablePackages = [
     "codex"

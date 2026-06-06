@@ -119,6 +119,8 @@ in
           allowed-users = lib.mkForce users;
           http-connections = variables.httpConnections;
           max-substitution-jobs = variables.maxSubstitutionJobs;
+          connect-timeout = variables.connectTimeout;
+          stalled-download-timeout = variables.stalledDownloadTimeout;
           keep-outputs = true;
           keep-derivations = true;
           allow-import-from-derivation = false;
