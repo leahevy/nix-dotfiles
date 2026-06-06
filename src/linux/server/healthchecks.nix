@@ -1488,7 +1488,7 @@ args@{
                 "-" + lib.concatStrings (lib.filter (k: k != "-") keys)
               else
                 lib.concatStrings keys;
-            checkKeyPattern = "[${checkKeyPrefixClass}]?[0-9][0-9] - [a-zA-Z]([ ()a-zA-Z-]*[a-zA-Z)])?";
+            checkKeyPattern = "[${checkKeyPrefixClass}]?[0-9][0-9] - [a-zA-Z]([ ()0-9a-zA-Z-]*[0-9a-zA-Z)])?";
             invalidKeys = lib.filter (k: builtins.match checkKeyPattern k == null) (lib.attrNames checks);
             checkScripts =
               if invalidKeys == [ ] then
