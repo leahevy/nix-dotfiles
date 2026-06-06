@@ -164,6 +164,12 @@ in
       default = "30m";
       description = "Interval for the standalone Syncthing pull error health check.";
     };
+
+    pullErrorsHealthCheckUUID = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Healthchecks.io UUID of the Syncthing pull errors health check.";
+    };
   };
 
   module = {
@@ -184,6 +190,7 @@ in
               {
                 "syncthing-pull-errors" = {
                   interval = config.nx.linux.server.syncthing.pullErrorsHealthCheckInterval;
+                  uuid = config.nx.linux.server.syncthing.pullErrorsHealthCheckUUID;
                   checks = {
                     "10 - Syncthing API reachable" = ''
                       FOLDERS_JSON=$(${queryApiExe} /rest/config/folders --connect-timeout 5 --max-time 10 2>&1) || {

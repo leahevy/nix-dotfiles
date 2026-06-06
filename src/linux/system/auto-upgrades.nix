@@ -32,6 +32,7 @@ args@{
     alwaysNotifyOnReboot = false;
     borgMonitoringTimeoutMinutes = 180;
     borgCheckIntervalMinutes = 15;
+    healthcheckUUID = null;
   };
 
   module = {
@@ -1393,6 +1394,7 @@ args@{
       enabled = config: {
         nx.linux.server.healthchecks.servicesHealthChecks."auto-upgrade" = {
           trigger.service = "nx-auto-upgrade.service";
+          uuid = self.settings.healthcheckUUID;
         };
       };
     };

@@ -16,6 +16,7 @@ args@{
 
   settings = {
     dnsCerts = { };
+    healthcheckUUIDs = { };
     extraConfigDefaults = { };
     pushoverNotifications = true;
     warningDays = 24;
@@ -251,6 +252,7 @@ args@{
             domain: _:
             lib.nameValuePair "letsencrypt-${domain}" {
               trigger.service = "acme-order-renew-${domain}.service";
+              uuid = self.settings.healthcheckUUIDs.${domain} or null;
               check.checkScript = ''
                 _state=$(${pkgs.systemd}/bin/systemctl show "acme-${domain}.service" \
                   --property=ActiveState --value 2>/dev/null || echo "unknown")

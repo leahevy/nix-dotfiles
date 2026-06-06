@@ -53,6 +53,7 @@ args@{
     };
 
     pushoverNotifications = true;
+    healthcheckUUID = null;
   };
 
   assertions = [
@@ -785,6 +786,7 @@ args@{
       enabled = config: {
         nx.linux.server.healthchecks.servicesHealthChecks."borg-backup" = {
           trigger.service = "borgbackup-job-system.service";
+          uuid = self.settings.healthcheckUUID;
         };
       };
     };

@@ -304,6 +304,11 @@ args@{
               default = true;
               description = "Append the trigger unit's last journal logs to the ping body.";
             };
+            uuid = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Healthchecks.io UUID of this check.";
+            };
           };
         }
       );
@@ -345,6 +350,11 @@ args@{
               default = 60;
               description = "Time in seconds to keep retrying the ping endpoint for this standalone timed health check.";
             };
+            uuid = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Healthchecks.io UUID of this check.";
+            };
           };
         }
       );
@@ -371,11 +381,52 @@ args@{
               default = 60;
               description = "Time in seconds to keep retrying the ping endpoint for this oneshot health check.";
             };
+            uuid = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Healthchecks.io UUID of this check.";
+            };
           };
         }
       );
       default = { };
       description = "Manual-trigger health checks, keyed by endpoint name suffix. Each entry generates a service with no timer, started manually via systemctl.";
+    };
+
+    builtinHealthCheckUUIDs = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          regular = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Healthchecks.io UUID of the regular built-in check.";
+          };
+          daily = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Healthchecks.io UUID of the daily built-in check.";
+          };
+          monthly = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Healthchecks.io UUID of the monthly built-in check.";
+          };
+        };
+      };
+      default = { };
+      description = "UUIDs for the built-in regular, daily, and monthly health checks.";
+    };
+
+    additionalHealthChecks = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Healthchecks.io UUIDs of additional checks not managed by this system, included in dashboard widget display.";
+    };
+
+    alwaysIncludeSummaryWidget = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Always include the project-wide summary widget alongside individual UUID widgets.";
     };
 
     enableSecretReplacements = lib.mkOption {
@@ -435,27 +486,56 @@ args@{
       nx.linux.server.healthchecks.checkCertExpiry = lib.mkDefault true;
     };
 
-    ifEnabled.linux.server.dashboard.enabled = config: {
-      nx.linux.server.dashboard.services = [
-        {
-          name = "Healthchecks";
-          group = "health";
-          href = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
-          description = "Task and cron job monitoring";
-          icon = "healthchecks";
-          enableSiteMonitor = false;
-          widgets = [
-            {
-              type = "healthchecks";
-              url = config.nx.linux.server.healthchecks.healthchecksBaseUrl;
-              key = "{{HOMEPAGE_VAR_HEALTHCHECKS_KEY}}";
-            }
-          ];
-        }
-      ];
-      nx.linux.server.dashboard.homepageSecretEnvFiles.HOMEPAGE_VAR_HEALTHCHECKS_KEY =
-        config.sops.secrets."${self.host.hostname}-healthchecks-readonly-api-key".path;
-    };
+    ifEnabled.linux.server.dashboard.enabled =
+      config:
+      let
+        hc = config.nx.linux.server.healthchecks;
+        builtinUUIDs = lib.filter (u: u != null) [
+          hc.builtinHealthCheckUUIDs.regular
+          hc.builtinHealthCheckUUIDs.daily
+          hc.builtinHealthCheckUUIDs.monthly
+        ];
+        serviceUUIDs = lib.filter (u: u != null) (
+          lib.mapAttrsToList (_: v: v.uuid) hc.servicesHealthChecks
+        );
+        timedUUIDs = lib.filter (u: u != null) (lib.mapAttrsToList (_: v: v.uuid) hc.timedHealthChecks);
+        oneshotUUIDs = lib.filter (u: u != null) (lib.mapAttrsToList (_: v: v.uuid) hc.oneshotHealthChecks);
+        additionalUUIDs = hc.additionalHealthChecks;
+        allUUIDs = builtinUUIDs ++ serviceUUIDs ++ timedUUIDs ++ oneshotUUIDs ++ additionalUUIDs;
+        mkUUIDWidget = uuid: {
+          type = "healthchecks";
+          url = hc.healthchecksBaseUrl;
+          key = "{{HOMEPAGE_VAR_HEALTHCHECKS_KEY}}";
+          inherit uuid;
+        };
+        summaryWidget = {
+          type = "healthchecks";
+          url = hc.healthchecksBaseUrl;
+          key = "{{HOMEPAGE_VAR_HEALTHCHECKS_KEY}}";
+        };
+        widgets =
+          if allUUIDs == [ ] then
+            [ summaryWidget ]
+          else if hc.alwaysIncludeSummaryWidget then
+            [ summaryWidget ] ++ map mkUUIDWidget allUUIDs
+          else
+            map mkUUIDWidget allUUIDs;
+      in
+      {
+        nx.linux.server.dashboard.services = [
+          {
+            name = "Healthchecks";
+            group = "health";
+            href = hc.healthchecksFinalChecksURL;
+            description = "Task and cron job monitoring";
+            icon = "healthchecks";
+            enableSiteMonitor = false;
+            inherit widgets;
+          }
+        ];
+        nx.linux.server.dashboard.homepageSecretEnvFiles.HOMEPAGE_VAR_HEALTHCHECKS_KEY =
+          config.sops.secrets."${self.host.hostname}-healthchecks-readonly-api-key".path;
+      };
 
     linux.system =
       {
@@ -501,6 +581,9 @@ args@{
         servicesHealthChecks,
         timedHealthChecks,
         oneshotHealthChecks,
+        builtinHealthCheckUUIDs,
+        additionalHealthChecks,
+        alwaysIncludeSummaryWidget,
         serviceTimeoutSec,
         minimalDetailMaxLines,
         healthchecksBaseUrl,
@@ -2045,6 +2128,43 @@ args@{
             {
               assertion = lib.all (entry: entry.checks != { }) (lib.attrValues oneshotHealthChecks);
               message = "linux.server.healthchecks: oneshotHealthChecks entries must define at least one check!";
+            }
+            {
+              assertion = lib.all (entry: entry.uuid == null || helpers.isValidUUID entry.uuid) (
+                lib.attrValues servicesHealthChecks
+              );
+              message = "linux.server.healthchecks: all servicesHealthChecks uuid values must be valid UUIDs!";
+            }
+            {
+              assertion = lib.all (entry: entry.uuid == null || helpers.isValidUUID entry.uuid) (
+                lib.attrValues timedHealthChecks
+              );
+              message = "linux.server.healthchecks: all timedHealthChecks uuid values must be valid UUIDs!";
+            }
+            {
+              assertion = lib.all (entry: entry.uuid == null || helpers.isValidUUID entry.uuid) (
+                lib.attrValues oneshotHealthChecks
+              );
+              message = "linux.server.healthchecks: all oneshotHealthChecks uuid values must be valid UUIDs!";
+            }
+            {
+              assertion =
+                builtinHealthCheckUUIDs.regular == null || helpers.isValidUUID builtinHealthCheckUUIDs.regular;
+              message = "linux.server.healthchecks: builtinHealthCheckUUIDs.regular must be a valid UUID!";
+            }
+            {
+              assertion =
+                builtinHealthCheckUUIDs.daily == null || helpers.isValidUUID builtinHealthCheckUUIDs.daily;
+              message = "linux.server.healthchecks: builtinHealthCheckUUIDs.daily must be a valid UUID!";
+            }
+            {
+              assertion =
+                builtinHealthCheckUUIDs.monthly == null || helpers.isValidUUID builtinHealthCheckUUIDs.monthly;
+              message = "linux.server.healthchecks: builtinHealthCheckUUIDs.monthly must be a valid UUID!";
+            }
+            {
+              assertion = lib.all helpers.isValidUUID additionalHealthChecks;
+              message = "linux.server.healthchecks: all additionalHealthChecks values must be valid UUIDs!";
             }
             {
               assertion = lib.all (entry: !(entry.interval != null && entry.schedule != null)) (
