@@ -418,15 +418,15 @@ args@{
     };
 
     additionalHealthChecks = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "Healthchecks.io UUIDs of additional checks not managed by this system, included in dashboard widget display.";
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Additional checks not managed by this system, as an attrset of display name to Healthchecks.io UUID.";
     };
 
     alwaysIncludeSummaryWidget = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Always include the project-wide summary widget alongside individual UUID widgets.";
+      description = "Always include the project-wide summary service card alongside individual check cards.";
     };
 
     enableSecretReplacements = lib.mkOption {
@@ -490,49 +490,79 @@ args@{
       config:
       let
         hc = config.nx.linux.server.healthchecks;
-        builtinUUIDs = lib.filter (u: u != null) [
-          hc.builtinHealthCheckUUIDs.regular
-          hc.builtinHealthCheckUUIDs.daily
-          hc.builtinHealthCheckUUIDs.monthly
-        ];
-        serviceUUIDs = lib.filter (u: u != null) (
-          lib.mapAttrsToList (_: v: v.uuid) hc.servicesHealthChecks
-        );
-        timedUUIDs = lib.filter (u: u != null) (lib.mapAttrsToList (_: v: v.uuid) hc.timedHealthChecks);
-        oneshotUUIDs = lib.filter (u: u != null) (lib.mapAttrsToList (_: v: v.uuid) hc.oneshotHealthChecks);
-        additionalUUIDs = hc.additionalHealthChecks;
-        allUUIDs = builtinUUIDs ++ serviceUUIDs ++ timedUUIDs ++ oneshotUUIDs ++ additionalUUIDs;
-        mkUUIDWidget = uuid: {
-          type = "healthchecks";
-          url = hc.healthchecksBaseUrl;
-          key = "{{HOMEPAGE_VAR_HEALTHCHECKS_KEY}}";
-          inherit uuid;
-        };
-        summaryWidget = {
-          type = "healthchecks";
-          url = hc.healthchecksBaseUrl;
-          key = "{{HOMEPAGE_VAR_HEALTHCHECKS_KEY}}";
-        };
-        widgets =
-          if allUUIDs == [ ] then
-            [ summaryWidget ]
-          else if hc.alwaysIncludeSummaryWidget then
-            [ summaryWidget ] ++ map mkUUIDWidget allUUIDs
+        capitalizeWord =
+          word:
+          if word == "" then
+            ""
           else
-            map mkUUIDWidget allUUIDs;
+            lib.toUpper (builtins.substring 0 1 word)
+            + builtins.substring 1 (builtins.stringLength word - 1) word;
+        slugToTitle = slug: lib.concatStringsSep " " (map capitalizeWord (lib.splitString "-" slug));
+        mkCheckService = name: uuid: {
+          inherit name;
+          group = "health";
+          href = "${hc.healthchecksBaseUrl}/checks/${uuid}/details/";
+          description = "";
+          icon = "healthchecks";
+          enableSiteMonitor = false;
+          widgets = [
+            {
+              type = "healthchecks";
+              url = hc.healthchecksBaseUrl;
+              key = "{{HOMEPAGE_VAR_HEALTHCHECKS_KEY}}";
+              inherit uuid;
+            }
+          ];
+        };
+        summaryService = {
+          name = "Healthchecks";
+          group = "health";
+          href = hc.healthchecksFinalChecksURL;
+          description = "Task and cron job monitoring";
+          icon = "healthchecks";
+          enableSiteMonitor = false;
+          widgets = [
+            {
+              type = "healthchecks";
+              url = hc.healthchecksBaseUrl;
+              key = "{{HOMEPAGE_VAR_HEALTHCHECKS_KEY}}";
+            }
+          ];
+        };
+        builtinServices =
+          lib.optional (hc.builtinHealthCheckUUIDs.regular != null) (
+            mkCheckService "Regular" hc.builtinHealthCheckUUIDs.regular
+          )
+          ++ lib.optional (hc.builtinHealthCheckUUIDs.daily != null) (
+            mkCheckService "Daily" hc.builtinHealthCheckUUIDs.daily
+          )
+          ++ lib.optional (hc.builtinHealthCheckUUIDs.monthly != null) (
+            mkCheckService "Monthly" hc.builtinHealthCheckUUIDs.monthly
+          );
+        serviceServices = lib.concatLists (
+          lib.mapAttrsToList (
+            k: v: lib.optional (v.uuid != null) (mkCheckService (slugToTitle k) v.uuid)
+          ) hc.servicesHealthChecks
+        );
+        timedServices = lib.concatLists (
+          lib.mapAttrsToList (
+            k: v: lib.optional (v.uuid != null) (mkCheckService (slugToTitle k) v.uuid)
+          ) hc.timedHealthChecks
+        );
+        oneshotServices = lib.concatLists (
+          lib.mapAttrsToList (
+            k: v: lib.optional (v.uuid != null) (mkCheckService (slugToTitle k) v.uuid)
+          ) hc.oneshotHealthChecks
+        );
+        additionalServices = lib.mapAttrsToList mkCheckService hc.additionalHealthChecks;
+        allCheckServices =
+          builtinServices ++ serviceServices ++ timedServices ++ oneshotServices ++ additionalServices;
+        services =
+          lib.optional (allCheckServices == [ ] || hc.alwaysIncludeSummaryWidget) summaryService
+          ++ allCheckServices;
       in
       {
-        nx.linux.server.dashboard.services = [
-          {
-            name = "Healthchecks";
-            group = "health";
-            href = hc.healthchecksFinalChecksURL;
-            description = "Task and cron job monitoring";
-            icon = "healthchecks";
-            enableSiteMonitor = false;
-            inherit widgets;
-          }
-        ];
+        nx.linux.server.dashboard.services = services;
         nx.linux.server.dashboard.homepageSecretEnvFiles.HOMEPAGE_VAR_HEALTHCHECKS_KEY =
           config.sops.secrets."${self.host.hostname}-healthchecks-readonly-api-key".path;
       };
@@ -2163,7 +2193,7 @@ args@{
               message = "linux.server.healthchecks: builtinHealthCheckUUIDs.monthly must be a valid UUID!";
             }
             {
-              assertion = lib.all helpers.isValidUUID additionalHealthChecks;
+              assertion = lib.all helpers.isValidUUID (lib.attrValues additionalHealthChecks);
               message = "linux.server.healthchecks: all additionalHealthChecks values must be valid UUIDs!";
             }
             {
