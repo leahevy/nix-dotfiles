@@ -1093,6 +1093,76 @@ args@{
           fi
         '';
 
+        sshAuthExpr = ''
+          SSH_AUTH_LOG="$TMPDIR_HC/ssh-auth-log"
+          _since=$(${pkgs.coreutils}/bin/date -d 'yesterday 00:00:00' '+%Y-%m-%d %H:%M:%S')
+
+          ${pkgs.systemd}/bin/journalctl SYSLOG_IDENTIFIER=sshd-session --since "$_since" --no-pager > "$SSH_AUTH_LOG" 2>/dev/null || true
+
+          _summary=$(
+            ${pkgs.gawk}/bin/awk '
+              function add(status, method, user, ip, key) {
+                if (user == "" || ip == "") {
+                  next
+                }
+                key = status "\t" method "\t" user "\t" ip
+                counts[key]++
+              }
+              match($0, /Accepted password for ([^ ]+) from ([^ ]+)/, m) {
+                add("OK", "password", m[1], m[2])
+                next
+              }
+              match($0, /Failed password for invalid user ([^ ]+) from ([^ ]+)/, m) {
+                add("FAIL", "password", m[1], m[2])
+                next
+              }
+              match($0, /Failed password for ([^ ]+) from ([^ ]+)/, m) {
+                add("FAIL", "password", m[1], m[2])
+                next
+              }
+              match($0, /Accepted publickey for ([^ ]+) from ([^ ]+)/, m) {
+                add("OK", "pubkey", m[1], m[2])
+                next
+              }
+              match($0, /Invalid user ([^ ]+) from ([^ ]+)/, m) {
+                add("FAIL", "auth", m[1], m[2])
+                next
+              }
+              match($0, /maximum authentication attempts exceeded for invalid user ([^ ]+) from ([^ ]+)/, m) {
+                add("FAIL", "auth", m[1], m[2])
+                next
+              }
+              match($0, /maximum authentication attempts exceeded for ([^ ]+) from ([^ ]+)/, m) {
+                add("FAIL", "auth", m[1], m[2])
+                next
+              }
+              match($0, /Disconnecting authenticating user ([^ ]+) ([0-9A-Fa-f:.]+) port .*Too many authentication failures/, m) {
+                add("FAIL", "auth", m[1], m[2])
+                next
+              }
+              match($0, /Disconnecting invalid user ([^ ]+) ([0-9A-Fa-f:.]+) port .*Too many authentication failures/, m) {
+                add("FAIL", "auth", m[1], m[2])
+                next
+              }
+              END {
+                for (k in counts) {
+                  print counts[k] "\t" k
+                }
+              }
+            ' "$SSH_AUTH_LOG" | ${pkgs.coreutils}/bin/sort -t $'\t' -k2,2r -k1,1rn -k3,3 -k4,4 -k5,5
+          )
+
+          if [[ -z "$_summary" ]]; then
+            printf '[no ssh auth events since yesterday 00:00]\n' >&3
+            exit 0
+          fi
+
+          while IFS=$'\t' read -r _count _status _method _user _ip; do
+            [[ -n "$_status" ]] || continue
+            printf '%5s ..... %-4s %s %s from %s\n' "$_count" "$_status" "$_method" "$_user" "$_ip" >&3
+          done <<< "$_summary"
+        '';
+
         kernelLogTodayExpr = ''
           KERNEL_LOG_ALL="$TMPDIR_HC/kernel-log-today-all"
           KERNEL_LOG_FILTERED="$TMPDIR_HC/kernel-log-today-filtered"
@@ -1128,6 +1198,9 @@ args@{
           // lib.optionalAttrs checkCertExpiry { "20 - Certificate expiry" = certExpiryExpr; }
           // lib.optionalAttrs (checkSmartDisk && config.nx.linux.storage.smartd.enable) {
             "30 - SMART disk health" = smartDiskExpr;
+          }
+          // lib.optionalAttrs config.services.openssh.enable {
+            "80 - SSH auth" = sshAuthExpr;
           }
           // {
             "90 - Kernel logs" = kernelLogTodayExpr;
