@@ -659,10 +659,10 @@ args@{
                 background-color: rgba(255, 255, 255, 0.12);
               }
               #tabs button[aria-selected="true"] {
-                background-color: rgb(var(--color-400) / 0.5);
+                background-color: rgb(var(--color-400) / 0.3);
               }
               .dark #tabs button[aria-selected="true"] {
-                background-color: rgba(255, 255, 255, 0.28);
+                background-color: rgba(255, 255, 255, 0.16);
               }
               #tabs button:hover:not([aria-selected="true"]) {
                 background-color: rgb(var(--color-200) / 0.15);
