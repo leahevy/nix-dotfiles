@@ -762,6 +762,7 @@ args@{
           listenPort = listenPort;
           allowedHosts = "${effectiveSubdomain}.${domain}";
           environmentFile = "/run/homepage-dashboard-env/env";
+          restartTriggers = [ config.systemd.services.homepage-dashboard-env.serviceConfig.ExecStart ];
           settings = generatedSettings;
           bookmarks = generatedBookmarks;
           services =
