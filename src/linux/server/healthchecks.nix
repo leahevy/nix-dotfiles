@@ -565,13 +565,13 @@ args@{
         };
         builtinServices =
           lib.optional (hc.builtinHealthCheckUUIDs.regular != null) (
-            mkCheckService "Regular" hc.builtinHealthCheckUUIDs.regular "eu-calendar"
+            mkCheckService "Regular" hc.builtinHealthCheckUUIDs.regular "davical"
           )
           ++ lib.optional (hc.builtinHealthCheckUUIDs.daily != null) (
-            mkCheckService "Daily" hc.builtinHealthCheckUUIDs.daily "eu-calendar"
+            mkCheckService "Daily" hc.builtinHealthCheckUUIDs.daily "davical"
           )
           ++ lib.optional (hc.builtinHealthCheckUUIDs.monthly != null) (
-            mkCheckService "Monthly" hc.builtinHealthCheckUUIDs.monthly "eu-calendar"
+            mkCheckService "Monthly" hc.builtinHealthCheckUUIDs.monthly "davical"
           );
         serviceServices = lib.concatLists (
           lib.mapAttrsToList (
