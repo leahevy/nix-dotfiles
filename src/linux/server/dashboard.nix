@@ -665,10 +665,10 @@ args@{
                 background-color: rgba(255, 255, 255, 0.28);
               }
               #tabs button:hover:not([aria-selected="true"]) {
-                background-color: rgb(var(--color-200) / 0.3);
+                background-color: rgb(var(--color-200) / 0.15);
               }
               .dark #tabs button:hover:not([aria-selected="true"]) {
-                background-color: rgba(255, 255, 255, 0.08);
+                background-color: rgba(255, 255, 255, 0.04);
               }''
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null) ''
               .bookmark a,
