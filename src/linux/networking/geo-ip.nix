@@ -188,17 +188,11 @@ in
 
   module = {
     enabled =
-      {
-        enableGeoIPBlocks,
-        onlyAllowCountriesFromVariables,
-        allowedCountries,
-        blockedCountries,
-        allowedIPs,
-        ...
-      }:
+      config:
       let
+        cfg = config.nx.linux.networking.geo-ip;
         geo = computeGeo {
-          inherit
+          inherit (cfg)
             onlyAllowCountriesFromVariables
             allowedCountries
             blockedCountries
@@ -207,7 +201,7 @@ in
         };
       in
       {
-        nx.linux.server.healthchecks.dailyHealthChecks = lib.mkIf (geo.geoActive && enableGeoIPBlocks) {
+        nx.linux.server.healthchecks.dailyHealthChecks = lib.mkIf (geo.geoActive && cfg.enableGeoIPBlocks) {
           "40 - GeoIP dropped traffic" = ''
             GEO_CHAIN_FILE="$TMPDIR_HC/geo-filter-chain"
 
