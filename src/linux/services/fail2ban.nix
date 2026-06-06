@@ -36,9 +36,91 @@ args@{
     };
 
     ifEnabled.linux.server.healthchecks = {
-      enabled = config: {
-        nx.linux.server.healthchecks.requireServicesUp = [ "fail2ban.service" ];
-      };
+      enabled =
+        config:
+        let
+          fail2banSummaryExpr = ''
+            _since=$(${pkgs.coreutils}/bin/date -d 'yesterday 00:00:00' '+%Y-%m-%d %H:%M:%S')
+            _jails=$(
+              ${pkgs.fail2ban}/bin/fail2ban-client status \
+                | ${pkgs.gnused}/bin/sed -n 's/^`- Jail list:[[:space:]]*//p' \
+                | ${pkgs.coreutils}/bin/tr ',' ' '
+            )
+
+            if [[ -z "$_jails" ]]; then
+              printf '[no fail2ban jails]\n' >&3
+              exit 0
+            fi
+
+            _ban_counts=$(
+              ${pkgs.systemd}/bin/journalctl -u fail2ban.service --since "$_since" --output=cat --no-pager 2>/dev/null \
+                | ${pkgs.gawk}/bin/awk '
+                    match($0, /NOTICE[[:space:]]+\[([^\]]+)\][[:space:]]Ban[[:space:]]+([^[:space:]]+)/, m) {
+                      bans[m[1]]++
+                    }
+                    END {
+                      for (jail in bans) {
+                        print jail "\t" bans[jail]
+                      }
+                    }
+                  '
+            )
+
+            _total_today=0
+            while IFS= read -r _jail; do
+              [[ -n "$_jail" ]] || continue
+              _status=$(${pkgs.fail2ban}/bin/fail2ban-client status "$_jail" 2>/dev/null || true)
+              _current=$(
+                printf '%s\n' "$_status" \
+                  | ${pkgs.gnused}/bin/sed -n 's/^[[:space:]]*|- Currently banned:[[:space:]]*//p'
+              )
+              _total=$(
+                printf '%s\n' "$_status" \
+                  | ${pkgs.gnused}/bin/sed -n 's/^[[:space:]]*|- Total banned:[[:space:]]*//p'
+              )
+              _today_count=$(
+                printf '%s\n' "$_ban_counts" \
+                  | ${pkgs.gawk}/bin/awk -F '\t' -v jail="$_jail" '$1 == jail { print $2; found=1 } END { if (!found) print 0 }'
+              )
+              _total_today=$((_total_today + _today_count))
+              printf '%5s ..... %s (now %s, total %s)\n' "$_today_count" "$_jail" "''${_current:-0}" "''${_total:-0}" >&3
+            done <<< "$_jails"
+
+            printf '\n[total banned today: %s]\n' "$_total_today" >&3
+          '';
+
+          fail2banIPsExpr = ''
+            _jails=$(
+              ${pkgs.fail2ban}/bin/fail2ban-client status \
+                | ${pkgs.gnused}/bin/sed -n 's/^`- Jail list:[[:space:]]*//p' \
+                | ${pkgs.coreutils}/bin/tr ',' ' '
+            )
+
+            _had_ips=0
+            while IFS= read -r _jail; do
+              [[ -n "$_jail" ]] || continue
+              _status=$(${pkgs.fail2ban}/bin/fail2ban-client status "$_jail" 2>/dev/null || true)
+              _ips=$(
+                printf '%s\n' "$_status" \
+                  | ${pkgs.gnused}/bin/sed -n 's/^[[:space:]]*`- Banned IP list:[[:space:]]*//p'
+              )
+              [[ -n "$_ips" ]] || continue
+              _had_ips=1
+              printf '%s: %s\n' "$_jail" "$_ips" >&3
+            done <<< "$_jails"
+
+            if [[ "$_had_ips" -eq 0 ]]; then
+              exit 0
+            fi
+          '';
+        in
+        {
+          nx.linux.server.healthchecks.requireServicesUp = [ "fail2ban.service" ];
+          nx.linux.server.healthchecks.dailyHealthChecks = {
+            "70 - Fail2ban" = fail2banSummaryExpr;
+            "!75 - Fail2ban IPs" = fail2banIPsExpr;
+          };
+        };
     };
 
     ifEnabled.linux.notifications.pushover = {
