@@ -486,7 +486,7 @@ args@{
         mainUserUid = toString config.users.users.${self.host.mainUser.username}.uid;
         deploymentMode = config.nx.global.deploymentMode;
         secretPath = config.sops.secrets."${hostname}-healthchecks-uuid".path;
-        stateDir = "/var/lib/healthchecks";
+        stateDir = "/var/lib/nx-healthchecks";
         dirtyMarkerPath = "${stateDir}/pending-clean-shutdown";
         crashMarkerPath = "${stateDir}/unclean-shutdown-detected";
         crashRecoveryDatePath = "${stateDir}/monthly-crash-recovery-last-date";
