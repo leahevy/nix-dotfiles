@@ -250,10 +250,10 @@ args@{
       description = "TimeoutStartSec for all generated health check services in seconds.";
     };
 
-    detailMaxLines = lib.mkOption {
+    minimalDetailMaxLines = lib.mkOption {
       type = lib.types.int;
       default = 50;
-      description = "Maximum number of fd 3 detail lines included per check in the health check body.";
+      description = "Minimum number of fd 3 detail lines reserved per check in the health check body.";
     };
 
     healthchecksBaseUrl = lib.mkOption {
@@ -473,7 +473,7 @@ args@{
         servicesHealthChecks,
         timedHealthChecks,
         serviceTimeoutSec,
-        detailMaxLines,
+        minimalDetailMaxLines,
         healthchecksBaseUrl,
         projectUUID,
         healthchecksFinalChecksURL,
@@ -1176,9 +1176,9 @@ args@{
             appendInfo = ''
               _info_lines=$(${pkgs.coreutils}/bin/wc -l < "${infoFile}")
               ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
-                | ${pkgs.coreutils}/bin/head -n ${toString detailMaxLines} >> "$DETAIL_FILE"
-              if [[ "$_info_lines" -gt ${toString detailMaxLines} ]]; then
-                printf '  [%d lines truncated]\n' "$((_info_lines - ${toString detailMaxLines}))" >> "$DETAIL_FILE"
+                | ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" >> "$DETAIL_FILE"
+              if [[ "$_info_lines" -gt "$DETAIL_MAX_LINES" ]]; then
+                printf '  [%d lines truncated]\n' "$((_info_lines - DETAIL_MAX_LINES))" >> "$DETAIL_FILE"
               fi
               _prev_had_info=1
             '';
@@ -1382,6 +1382,17 @@ args@{
             TOTAL=0
             SILENT=0
             _prev_had_info=0
+            DETAIL_BUDGET_BYTES=80000
+            DETAIL_LINE_BYTES=50
+            MIN_DETAIL_LINES=${toString minimalDetailMaxLines}
+            MAX_CHECKS=${toString (builtins.length (lib.attrNames checks))}
+            if [[ "$MAX_CHECKS" -le 0 ]]; then
+              MAX_CHECKS=1
+            fi
+            DETAIL_MAX_LINES=$((DETAIL_BUDGET_BYTES / DETAIL_LINE_BYTES / MAX_CHECKS))
+            if [[ "$DETAIL_MAX_LINES" -lt "$MIN_DETAIL_LINES" ]]; then
+              DETAIL_MAX_LINES="$MIN_DETAIL_LINES"
+            fi
 
             ${lib.concatStringsSep "\n" (
               let
@@ -1635,10 +1646,17 @@ args@{
               fi
               if [[ -s "$INFO_FILE_CS" ]]; then
                 _info_lines_cs=$(${pkgs.coreutils}/bin/wc -l < "$INFO_FILE_CS")
+                DETAIL_BUDGET_BYTES=80000
+                DETAIL_LINE_BYTES=50
+                MIN_DETAIL_LINES=${toString minimalDetailMaxLines}
+                DETAIL_MAX_LINES=$((DETAIL_BUDGET_BYTES / DETAIL_LINE_BYTES))
+                if [[ "$DETAIL_MAX_LINES" -lt "$MIN_DETAIL_LINES" ]]; then
+                  DETAIL_MAX_LINES="$MIN_DETAIL_LINES"
+                fi
                 ${pkgs.gnused}/bin/sed 's/^/  /' "$INFO_FILE_CS" \
-                  | ${pkgs.coreutils}/bin/head -n ${toString detailMaxLines} >> "$DETAIL_FILE"
-                if [[ "$_info_lines_cs" -gt ${toString detailMaxLines} ]]; then
-                  printf '  [%d lines truncated]\n' "$((_info_lines_cs - ${toString detailMaxLines}))" >> "$DETAIL_FILE"
+                  | ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" >> "$DETAIL_FILE"
+                if [[ "$_info_lines_cs" -gt "$DETAIL_MAX_LINES" ]]; then
+                  printf '  [%d lines truncated]\n' "$((_info_lines_cs - DETAIL_MAX_LINES))" >> "$DETAIL_FILE"
                 fi
               fi
             ''}
