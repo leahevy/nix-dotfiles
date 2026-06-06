@@ -1357,6 +1357,7 @@ args@{
           _since=$(${pkgs.coreutils}/bin/date -d 'yesterday 00:00:00' '+%Y-%m-%d %H:%M:%S')
 
           ${pkgs.systemd}/bin/journalctl -k --since "$_since" --no-pager > "$KERNEL_LOG_ALL" 2>/dev/null || true
+          ${pkgs.gnused}/bin/sed -i "s/ ${self.host.hostname} kernel: / /" "$KERNEL_LOG_ALL"
           _kernel_lines=$(${pkgs.coreutils}/bin/wc -l < "$KERNEL_LOG_ALL")
 
           if [[ "$_kernel_lines" -eq 0 ]]; then
@@ -1367,6 +1368,7 @@ args@{
           if [[ "$_kernel_lines" -gt 200 ]]; then
             printf '[kernel log: warning+ and last 100 lines, %d lines today]\n' "$_kernel_lines" >&3
             ${pkgs.systemd}/bin/journalctl -k --since "$_since" -p warning..emerg --no-pager \
+              | ${pkgs.gnused}/bin/sed "s/ ${self.host.hostname} kernel: / /" \
               | ${secretCensorScript} > "$KERNEL_LOG_FILTERED"
           else
             ${secretCensorScript} < "$KERNEL_LOG_ALL" > "$KERNEL_LOG_FILTERED"
