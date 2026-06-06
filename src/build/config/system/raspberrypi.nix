@@ -3,6 +3,7 @@
   host,
   variables,
   allOverlays,
+  unfreePredicate,
   ...
 }:
 { config, lib, ... }:
@@ -15,6 +16,7 @@
   ];
 
   nixpkgs.overlays = allOverlays;
+  nixpkgs.config.allowUnfreePredicate = unfreePredicate;
   nixpkgs.config.permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
 
   boot.loader.raspberry-pi.bootloader = "kernel";

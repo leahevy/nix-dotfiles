@@ -218,7 +218,12 @@ let
           throw "builder: cannot determine system architecture!";
     in
     {
-      inherit pkgs pkgs-unstable allOverlays;
+      inherit
+        pkgs
+        pkgs-unstable
+        allOverlays
+        unfreePredicate
+        ;
     };
 
   getHardwareModule =
@@ -593,6 +598,7 @@ in
         pkgs
         pkgs-unstable
         allOverlays
+        unfreePredicate
         ;
 
       hostEval = evalConfigModule {
@@ -799,6 +805,7 @@ in
             pkgs
             pkgs-unstable
             allOverlays
+            unfreePredicate
             inputs
             funcs
             defs
