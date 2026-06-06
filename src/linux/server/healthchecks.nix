@@ -1103,7 +1103,8 @@ args@{
           SSH_AUTH_LOG="$TMPDIR_HC/ssh-auth-log-${runtimeScope}"
           _since=$(${pkgs.coreutils}/bin/date -d 'yesterday 00:00:00' '+%Y-%m-%d %H:%M:%S')
 
-          ${pkgs.systemd}/bin/journalctl SYSLOG_IDENTIFIER=sshd-session _RUNTIME_SCOPE=${runtimeScope} --since "$_since" --no-pager > "$SSH_AUTH_LOG" 2>/dev/null || true
+          ${pkgs.systemd}/bin/journalctl SYSLOG_IDENTIFIER=sshd-session --since "$_since" -o json --no-pager 2>/dev/null \
+            | ${pkgs.jq}/bin/jq -r 'select(._RUNTIME_SCOPE == "${runtimeScope}") | .MESSAGE // empty' > "$SSH_AUTH_LOG"
 
           _summary=$(
             ${pkgs.gawk}/bin/awk '
