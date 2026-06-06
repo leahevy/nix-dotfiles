@@ -20,6 +20,8 @@ args@{
     withTaildrop = false;
     exitNode = false;
     acceptRoutes = false;
+    enableDashboardIntegration = false;
+    nodeId = null;
   };
 
   module = {
@@ -98,7 +100,14 @@ args@{
 
     ifEnabled.linux.server.dashboard = {
       enabled = config: {
-        nx.linux.server.dashboard.bookmarks = [
+        assertions = [
+          {
+            assertion = !self.settings.enableDashboardIntegration || self.settings.nodeId != null;
+            message = "linux.networking.tailscale: nodeId must be set when enableDashboardIntegration is true!";
+          }
+        ];
+
+        nx.linux.server.dashboard.bookmarks = lib.mkIf (!self.settings.enableDashboardIntegration) [
           {
             name = "Tailscale";
             icon = "tailscale";
@@ -106,7 +115,43 @@ args@{
             group = "maintenance";
           }
         ];
+
+        nx.linux.server.dashboard.services = lib.mkIf self.settings.enableDashboardIntegration [
+          {
+            name = "Tailscale";
+            group = "health";
+            href = "https://login.tailscale.com/admin/machines";
+            description = "Current node status in Tailscale";
+            icon = "tailscale";
+            enableSiteMonitor = false;
+            widgets = [
+              {
+                type = "tailscale";
+                deviceid = self.settings.nodeId;
+                key = "{{HOMEPAGE_VAR_TAILSCALE_API_KEY}}";
+              }
+            ];
+          }
+        ];
+
+        nx.linux.server.dashboard.homepageSecretEnvFiles =
+          lib.mkIf self.settings.enableDashboardIntegration
+            {
+              HOMEPAGE_VAR_TAILSCALE_API_KEY = config.sops.secrets.tailscale-api-key.path;
+            };
       };
+
+      system =
+        config:
+        lib.mkIf self.settings.enableDashboardIntegration {
+          sops.secrets.tailscale-api-key = {
+            format = "binary";
+            sopsFile = self.profile.secretsPath "tailscale-api-key";
+            mode = "0400";
+            owner = "root";
+            group = "root";
+          };
+        };
     };
 
     ifEnabled.linux.server.healthchecks = {
