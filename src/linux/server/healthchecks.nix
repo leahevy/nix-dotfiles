@@ -1107,17 +1107,19 @@ args@{
           fi
 
           if [[ "$_kernel_lines" -gt 200 ]]; then
-            printf '[kernel log: warning+ only, %d lines today]\n' "$_kernel_lines" >&3
+            printf '[kernel log: warning+ and last 100 lines, %d lines today]\n' "$_kernel_lines" >&3
             ${pkgs.systemd}/bin/journalctl -k --since "$_since" -p warning..emerg --no-pager \
               | ${secretCensorScript} > "$KERNEL_LOG_FILTERED"
-            printf '\n[last 100 kernel log lines]\n' >&3
-            ${pkgs.coreutils}/bin/tail -n 100 "$KERNEL_LOG_ALL" \
-              | ${secretCensorScript} >&3
           else
             ${secretCensorScript} < "$KERNEL_LOG_ALL" > "$KERNEL_LOG_FILTERED"
           fi
 
           ${pkgs.coreutils}/bin/cat "$KERNEL_LOG_FILTERED" >&3
+          if [[ "$_kernel_lines" -gt 200 ]]; then
+            printf '\n[last 100 kernel log lines]\n' >&3
+            ${pkgs.coreutils}/bin/tail -n 100 "$KERNEL_LOG_ALL" \
+              | ${secretCensorScript} >&3
+          fi
         '';
 
         allDailyChecks =
