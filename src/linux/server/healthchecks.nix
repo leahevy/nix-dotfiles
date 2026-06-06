@@ -1093,12 +1093,39 @@ args@{
           fi
         '';
 
+        kernelLogTodayExpr = ''
+          KERNEL_LOG_ALL="$TMPDIR_HC/kernel-log-today-all"
+          KERNEL_LOG_FILTERED="$TMPDIR_HC/kernel-log-today-filtered"
+          _since=$(${pkgs.coreutils}/bin/date -d 'yesterday 00:00:00' '+%Y-%m-%d %H:%M:%S')
+
+          ${pkgs.systemd}/bin/journalctl -k --since "$_since" --no-pager > "$KERNEL_LOG_ALL" 2>/dev/null || true
+          _kernel_lines=$(${pkgs.coreutils}/bin/wc -l < "$KERNEL_LOG_ALL")
+
+          if [[ "$_kernel_lines" -eq 0 ]]; then
+            printf '[no kernel log lines today]\n' >&3
+            exit 0
+          fi
+
+          if [[ "$_kernel_lines" -gt 200 ]]; then
+            printf '[kernel log: warning+ only, %d lines today]\n' "$_kernel_lines" >&3
+            ${pkgs.systemd}/bin/journalctl -k --since "$_since" -p warning..emerg --no-pager \
+              | ${secretCensorScript} > "$KERNEL_LOG_FILTERED"
+          else
+            ${secretCensorScript} < "$KERNEL_LOG_ALL" > "$KERNEL_LOG_FILTERED"
+          fi
+
+          ${pkgs.coreutils}/bin/cat "$KERNEL_LOG_FILTERED" >&3
+        '';
+
         allDailyChecks =
           lib.optionalAttrs checkUptime { "00 - Uptime" = uptimeCheckExpr; }
           // lib.optionalAttrs checkDiskUsage { "10 - Disk space" = diskUsageExpr; }
           // lib.optionalAttrs checkCertExpiry { "20 - Certificate expiry" = certExpiryExpr; }
           // lib.optionalAttrs (checkSmartDisk && config.nx.linux.storage.smartd.enable) {
             "30 - SMART disk health" = smartDiskExpr;
+          }
+          // {
+            "90 - Kernel logs" = kernelLogTodayExpr;
           }
           // dailyHealthChecks;
 
