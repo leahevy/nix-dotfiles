@@ -186,6 +186,18 @@ args@{
       description = "Number of service cards shown per row within each group.";
     };
 
+    squareCorners = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Remove all border-radius from every element on the page.";
+    };
+
+    hideSearchPlaceholder = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Hide the static placeholder text in the search bar.";
+    };
+
     enableSearchWidget = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -414,6 +426,8 @@ args@{
         extraSettings,
         homepageSecretEnvFiles,
         columnsPerGroup,
+        squareCorners,
+        hideSearchPlaceholder,
         enableSearchWidget,
         useStartpageAsSearchEngine,
         searchOpenInNewTab,
@@ -684,6 +698,11 @@ args@{
               }
               .dark .information-widget-resources {
                 text-shadow: 0 1px 8px rgba(0, 0, 0, 1), 0 0 12px rgba(0, 0, 0, 0.9);
+              }'')
+            (lib.optionalString squareCorners "* { border-radius: 0 !important; }")
+            (lib.optionalString hideSearchPlaceholder ''
+              .information-widget-search input::placeholder {
+                color: transparent !important;
               }'')
             customCSS
           ]
