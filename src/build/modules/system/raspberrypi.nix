@@ -79,5 +79,28 @@ args@{
         }
       ];
     };
+
+    ifEnabled.linux.server.healthchecks = {
+      enabled = config: {
+        nx.linux.server.healthchecks.regularHealthChecks = {
+          "!35 - CPU throttled" = ''
+            _out=$(${
+              helpers.packageFile args pkgs.libraspberrypi "bin/vcgencmd"
+            } get_throttled 2>/dev/null || true)
+            [[ -n "$_out" ]] || exit 0
+            _hex=$(printf '%s' "$_out" | ${pkgs.gnused}/bin/sed 's/throttled=//')
+            if [[ "$_hex" =~ ^0x[0-9A-Fa-f]+$ ]]; then
+              _dec=$(( _hex ))
+              if [[ $(( _dec & 0xF000F )) -ne 0 ]]; then
+                printf '%s\n' "$_hex" >&3
+              fi
+              if [[ $(( _dec & 0xF )) -ne 0 ]]; then
+                exit 1
+              fi
+            fi
+          '';
+        };
+      };
+    };
   };
 }

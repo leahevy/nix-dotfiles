@@ -989,6 +989,53 @@ args@{
           exit 0
         '';
 
+        storageHealthExpr = ''
+          _failed=0
+
+          for _path in /run /tmp; do
+            if ! ${pkgs.coreutils}/bin/test -w "$_path" 2>/dev/null; then
+              printf '%s: not writable\n' "$_path" >&3
+              _failed=1
+            fi
+          done
+
+          if ! ${pkgs.coreutils}/bin/touch "$TMPDIR_HC/.write-test" 2>/dev/null; then
+            printf '/tmp: cannot create file\n' >&3
+            _failed=1
+          fi
+
+          if ! ${pkgs.coreutils}/bin/timeout 5 ${pkgs.coreutils}/bin/stat /nix/store >/dev/null 2>&1; then
+            printf '/nix/store: stat timeout or error\n' >&3
+            _failed=1
+          fi
+
+          while read -r _dev _mp _type _opts _rest; do
+            [[ "$_type" == "btrfs" ]] || continue
+            case "$_mp" in /nix|/nix/*|/persist|/persist/*) ;; *) continue ;; esac
+            case ",$_opts," in
+              *,ro,*)
+                printf '%s: mounted read-only\n' "$_mp" >&3
+                _failed=1
+                ;;
+            esac
+          done < /proc/mounts
+
+          for _state_file in /sys/class/nvme/nvme*/state; do
+            [[ -f "$_state_file" ]] || continue
+            _nvme_name="''${_state_file%/state}"
+            _nvme_name="''${_nvme_name##*/}"
+            _state=$(${pkgs.coreutils}/bin/cat "$_state_file" 2>/dev/null || echo unknown)
+            if [[ "$_state" == "dead" ]]; then
+              printf '%s: %s\n' "$_nvme_name" "$_state" >&3
+              _failed=1
+            fi
+          done
+
+          if [[ $_failed -ne 0 ]]; then
+            exit 1
+          fi
+        '';
+
         allRegularChecks = {
           "+00 - Process snapshot" = topSnapshotExpr;
           "+10 - Server is up" = "true";
@@ -1026,6 +1073,9 @@ args@{
           "!30 - Network interfaces" = networkIfaceExpr;
           "+30 - Timezone" = timezoneExpr;
           "-30 - Remote IP" = remoteIpExpr;
+        }
+        // {
+          "+45 - Storage health" = storageHealthExpr;
         }
         // lib.optionalAttrs (requireServicesUp != [ ]) { "50 - Services" = servicesGroupedExpr; }
         // {
