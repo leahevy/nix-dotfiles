@@ -202,7 +202,7 @@ in
       in
       {
         nx.linux.server.healthchecks.dailyHealthChecks = lib.mkIf (geo.geoActive && cfg.enableGeoIPBlocks) {
-          "40 - GeoIP dropped traffic" = ''
+          "!40 - GeoIP dropped traffic" = ''
             GEO_CHAIN_FILE="$TMPDIR_HC/geo-filter-chain"
 
             if ! ${pkgs.nftables}/bin/nft list chain inet geo-filter geo-input > "$GEO_CHAIN_FILE" 2>/dev/null; then
@@ -211,7 +211,7 @@ in
             fi
 
             DROP_LINES=$(
-              ${pkgs.gnugrep}/bin/grep -E '^[[:space:]]*counter .* drop$' "$GEO_CHAIN_FILE" \
+              ${pkgs.gnugrep}/bin/grep -E 'packets .* drop$' "$GEO_CHAIN_FILE" \
                 | ${pkgs.gnused}/bin/sed 's/^[[:space:]]*//'
             )
             if [[ -z "$DROP_LINES" ]]; then
@@ -219,7 +219,14 @@ in
               exit 1
             fi
 
-            printf '%s\n' "$DROP_LINES" >&3
+            _all_zero=true
+            while IFS= read -r _line; do
+              [[ "$_line" == *"packets 0 bytes 0 drop" ]] || _all_zero=false
+            done <<< "$DROP_LINES"
+
+            if [[ "$_all_zero" != "true" ]]; then
+              printf '%s\n' "$DROP_LINES" >&3
+            fi
 
             HANDLES=$(
               ${pkgs.nftables}/bin/nft -a list chain inet geo-filter geo-input \
