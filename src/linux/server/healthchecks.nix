@@ -1110,6 +1110,9 @@ args@{
             printf '[kernel log: warning+ only, %d lines today]\n' "$_kernel_lines" >&3
             ${pkgs.systemd}/bin/journalctl -k --since "$_since" -p warning..emerg --no-pager \
               | ${secretCensorScript} > "$KERNEL_LOG_FILTERED"
+            printf '\n[last 100 kernel log lines]\n' >&3
+            ${pkgs.coreutils}/bin/tail -n 100 "$KERNEL_LOG_ALL" \
+              | ${secretCensorScript} >&3
           else
             ${secretCensorScript} < "$KERNEL_LOG_ALL" > "$KERNEL_LOG_FILTERED"
           fi
