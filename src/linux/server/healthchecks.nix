@@ -1206,6 +1206,10 @@ args@{
                 | ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" >> "$DETAIL_FILE"
               if [[ "$_info_lines" -gt "$DETAIL_MAX_LINES" ]]; then
                 printf '  [%d lines truncated]\n' "$((_info_lines - DETAIL_MAX_LINES))" >> "$DETAIL_FILE"
+                {
+                  printf 'full check details (truncated in healthcheck body): %s\n' ${lib.escapeShellArg displayName}
+                  ${pkgs.coreutils}/bin/cat "${infoFile}"
+                } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
               fi
               _prev_had_info=1
             '';
@@ -1334,6 +1338,13 @@ args@{
               if [[ ''${FAILED:-0} -gt 0 ]]; then
                 ${pkgs.coreutils}/bin/cat "''${REPORT_FILE:-$TMPDIR_HC/report}" \
                   | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
+              fi
+              _report_size=$(${pkgs.coreutils}/bin/wc -c < "''${REPORT_FILE:-$TMPDIR_HC/report}")
+              if [[ "$_report_size" -gt 100000 ]]; then
+                {
+                  printf 'full healthcheck body (truncated before upload): %s\n' ${lib.escapeShellArg endpointName}
+                  ${pkgs.coreutils}/bin/cat "''${REPORT_FILE:-$TMPDIR_HC/report}"
+                } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
               fi
               ${pkgs.coreutils}/bin/head -c 100000 "''${REPORT_FILE:-$TMPDIR_HC/report}" > "$TMPDIR_HC/report-trunc"
               ${pkgs.coreutils}/bin/mv "$TMPDIR_HC/report-trunc" "''${REPORT_FILE:-$TMPDIR_HC/report}"
@@ -1684,6 +1695,10 @@ args@{
                   | ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" >> "$DETAIL_FILE"
                 if [[ "$_info_lines_cs" -gt "$DETAIL_MAX_LINES" ]]; then
                   printf '  [%d lines truncated]\n' "$((_info_lines_cs - DETAIL_MAX_LINES))" >> "$DETAIL_FILE"
+                  {
+                    printf 'full service check details (truncated in healthcheck body): %s\n' ${lib.escapeShellArg endpointName}
+                    ${pkgs.coreutils}/bin/cat "$INFO_FILE_CS"
+                  } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
                 fi
               fi
             ''}
@@ -1696,6 +1711,14 @@ args@{
             fi
             echo "" >> "$REPORT_FILE"
             ${pkgs.coreutils}/bin/cat "$DETAIL_FILE" >> "$REPORT_FILE"
+
+            _report_size=$(${pkgs.coreutils}/bin/wc -c < "$REPORT_FILE")
+            if [[ "$_report_size" -gt 100000 ]]; then
+              {
+                printf 'full service healthcheck body (truncated before upload): %s\n' ${lib.escapeShellArg endpointName}
+                ${pkgs.coreutils}/bin/cat "$REPORT_FILE"
+              } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
+            fi
 
             ${lib.optionalString includeLogs ''
               LOG_FILE="$TMPDIR_HC/service-logs"
