@@ -15,6 +15,26 @@ args@{
   input = "build";
 
   module = {
+    linux.system = config: {
+      boot.kernelParams = [
+        "nvme_core.default_ps_max_latency_us=0"
+        "pcie_aspm=off"
+      ];
+
+      boot.loader.raspberry-pi.configurationLimit = 15;
+
+      hardware.raspberry-pi.config.all = {
+        base-dt-params.pciex1_no_l0s = {
+          enable = true;
+          value = "on";
+        };
+        dt-overlays."pciex1-compat-pi5" = {
+          enable = true;
+          params.no-mip.enable = true;
+        };
+      };
+    };
+
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
