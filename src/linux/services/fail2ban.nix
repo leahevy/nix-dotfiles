@@ -67,7 +67,7 @@ args@{
             )
 
             _total_today=0
-            while IFS= read -r _jail; do
+            for _jail in $_jails; do
               [[ -n "$_jail" ]] || continue
               _status=$(${pkgs.fail2ban}/bin/fail2ban-client status "$_jail" 2>/dev/null || true)
               _current=$(
@@ -84,7 +84,7 @@ args@{
               )
               _total_today=$((_total_today + _today_count))
               printf '%5s ..... %s (now %s, total %s)\n' "$_today_count" "$_jail" "''${_current:-0}" "''${_total:-0}" >&3
-            done <<< "$_jails"
+            done
 
             printf '\n[total banned today: %s]\n' "$_total_today" >&3
           '';
@@ -97,7 +97,7 @@ args@{
             )
 
             _had_ips=0
-            while IFS= read -r _jail; do
+            for _jail in $_jails; do
               [[ -n "$_jail" ]] || continue
               _status=$(${pkgs.fail2ban}/bin/fail2ban-client status "$_jail" 2>/dev/null || true)
               _ips=$(
@@ -107,7 +107,7 @@ args@{
               [[ -n "$_ips" ]] || continue
               _had_ips=1
               printf '%s: %s\n' "$_jail" "$_ips" >&3
-            done <<< "$_jails"
+            done
 
             if [[ "$_had_ips" -eq 0 ]]; then
               exit 0
