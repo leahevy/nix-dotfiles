@@ -631,6 +631,25 @@ args@{
                 font-family: ${fontFamily};
               }'')
             ".container {\n  max-width: ${toString (columnsPerGroup * 800)}px;\n}"
+            ''
+              #tabs ul {
+                background-color: rgb(var(--color-200) / 0.4);
+              }
+              .dark #tabs ul {
+                background-color: rgba(255, 255, 255, 0.12);
+              }
+              #tabs button[aria-selected="true"] {
+                background-color: rgb(var(--color-400) / 0.5);
+              }
+              .dark #tabs button[aria-selected="true"] {
+                background-color: rgba(255, 255, 255, 0.28);
+              }
+              #tabs button:hover:not([aria-selected="true"]) {
+                background-color: rgb(var(--color-200) / 0.3);
+              }
+              .dark #tabs button:hover:not([aria-selected="true"]) {
+                background-color: rgba(255, 255, 255, 0.08);
+              }''
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null) ''
               .bookmark a,
               .service-card {
