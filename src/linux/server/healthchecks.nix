@@ -352,6 +352,32 @@ args@{
       description = "Independent timer-backed health checks, keyed by endpoint name suffix.";
     };
 
+    oneshotHealthChecks = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            checks = lib.mkOption {
+              type = lib.types.attrsOf lib.types.str;
+              default = { };
+              description = "Named checks for this oneshot health check, using the same key format as regular checks.";
+            };
+            timeoutSec = lib.mkOption {
+              type = lib.types.int;
+              default = 10800;
+              description = "TimeoutStartSec for this oneshot health check service in seconds.";
+            };
+            networkTimeoutSec = lib.mkOption {
+              type = lib.types.int;
+              default = 60;
+              description = "Time in seconds to keep retrying the ping endpoint for this oneshot health check.";
+            };
+          };
+        }
+      );
+      default = { };
+      description = "Manual-trigger health checks, keyed by endpoint name suffix. Each entry generates a service with no timer, started manually via systemctl.";
+    };
+
     enableSecretReplacements = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -472,6 +498,7 @@ args@{
         checkBtrfsScrub,
         servicesHealthChecks,
         timedHealthChecks,
+        oneshotHealthChecks,
         serviceTimeoutSec,
         minimalDetailMaxLines,
         healthchecksBaseUrl,
@@ -511,6 +538,7 @@ args@{
 
         hasServiceChecks = servicesHealthChecks != { };
         hasTimedChecks = timedHealthChecks != { };
+        hasOneshotChecks = oneshotHealthChecks != { };
 
         regularEndpointName = "${hostname}-${healthName}";
         dailyEndpointName = "${hostname}-${dailyName}";
@@ -1929,6 +1957,34 @@ args@{
           }
         ) { } timedHealthChecks;
 
+        oneshotHealthServiceUnits = lib.foldlAttrs (
+          acc: key: entry:
+          let
+            entryName = sanitizeName key;
+            endpointName = "${hostname}-${entryName}";
+            unitName = "nx-healthchecks-oneshot-${entryName}";
+          in
+          acc
+          // {
+            ${unitName} = {
+              description = "Oneshot health check ${key}";
+              wants = [ "network-online.target" ];
+              after = [ "network-online.target" ];
+              serviceConfig = {
+                Type = "oneshot";
+                User = "root";
+                TimeoutStartSec = entry.timeoutSec;
+                SuccessExitStatus = 1;
+                ExecStart = makeTimerScript {
+                  inherit endpointName;
+                  checks = entry.checks;
+                  networkTimeoutSec = entry.networkTimeoutSec;
+                };
+              };
+            };
+          }
+        ) { } oneshotHealthChecks;
+
         timedHealthTimerUnits = lib.foldlAttrs (
           acc: key: entry:
           let
@@ -1983,6 +2039,10 @@ args@{
             {
               assertion = lib.all (entry: entry.checks != { }) (lib.attrValues timedHealthChecks);
               message = "linux.server.healthchecks: timedHealthChecks entries must define at least one check!";
+            }
+            {
+              assertion = lib.all (entry: entry.checks != { }) (lib.attrValues oneshotHealthChecks);
+              message = "linux.server.healthchecks: oneshotHealthChecks entries must define at least one check!";
             }
             {
               assertion = lib.all (entry: !(entry.interval != null && entry.schedule != null)) (
@@ -2189,6 +2249,10 @@ args@{
         (lib.mkIf hasTimedChecks {
           systemd.services = timedHealthServiceUnits;
           systemd.timers = timedHealthTimerUnits;
+        })
+
+        (lib.mkIf hasOneshotChecks {
+          systemd.services = oneshotHealthServiceUnits;
         })
       ];
   };
