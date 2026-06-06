@@ -78,7 +78,7 @@ args@{
 
     loadBuildMultiplier = lib.mkOption {
       type = lib.types.float;
-      default = 1.5;
+      default = 2.5;
       description = "Multiplier applied to the load threshold during and shortly after detected nix builds.";
     };
 
@@ -114,7 +114,7 @@ args@{
 
     highLoadMultiplier = lib.mkOption {
       type = lib.types.float;
-      default = 2.3;
+      default = 2.0;
       description = "Load limit multiplier applied when high-load-exempt mode is active.";
     };
 
