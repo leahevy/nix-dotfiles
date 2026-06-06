@@ -450,12 +450,18 @@ args@{
           else
             subdomain;
 
+        resolveIcon =
+          icon:
+          if icon == null || lib.hasPrefix "http" icon || lib.hasPrefix "/" icon then
+            icon
+          else
+            "/icons/${icon}.png";
         mkServiceEntry = svc: {
           "${svc.name}" = {
             inherit (svc) href;
           }
           // lib.optionalAttrs svc.enableSiteMonitor { siteMonitor = svc.href; }
-          // lib.optionalAttrs (svc.icon != null) { inherit (svc) icon; }
+          // lib.optionalAttrs (svc.icon != null) { icon = resolveIcon svc.icon; }
           // lib.optionalAttrs (svc.description != "") { inherit (svc) description; }
           // lib.optionalAttrs (svc.widgets != [ ]) { inherit (svc) widgets; };
         };
@@ -478,7 +484,7 @@ args@{
                 "https://${svc.subdomain}.${domain}"
               else
                 "https://${key}.${domain}";
-            icon = if svc.iconUrl != null then svc.iconUrl else svc.iconName;
+            icon = resolveIcon (if svc.iconUrl != null then svc.iconUrl else svc.iconName);
           in
           {
             "${displayName}" = {
@@ -752,7 +758,8 @@ args@{
         mkBookmarkEntry = b: {
           "${b.name}" = [
             {
-              inherit (b) href icon;
+              inherit (b) href;
+              icon = resolveIcon b.icon;
               description = b.description or "";
               abbr = mkBookmarkAbbr b.name;
             }
