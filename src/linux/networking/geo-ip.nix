@@ -187,6 +187,60 @@ in
   };
 
   module = {
+    enabled =
+      {
+        enableGeoIPBlocks,
+        onlyAllowCountriesFromVariables,
+        allowedCountries,
+        blockedCountries,
+        allowedIPs,
+        ...
+      }:
+      let
+        geo = computeGeo {
+          inherit
+            onlyAllowCountriesFromVariables
+            allowedCountries
+            blockedCountries
+            allowedIPs
+            ;
+        };
+      in
+      {
+        nx.linux.server.healthchecks.dailyHealthChecks = lib.mkIf (geo.geoActive && enableGeoIPBlocks) {
+          "40 - GeoIP dropped traffic" = ''
+            GEO_CHAIN_FILE="$TMPDIR_HC/geo-filter-chain"
+
+            if ! ${pkgs.nftables}/bin/nft list chain inet geo-filter geo-input > "$GEO_CHAIN_FILE" 2>/dev/null; then
+              printf 'GeoIP chain missing while GeoIP blocking is enabled!\n' >&3
+              exit 1
+            fi
+
+            DROP_LINES=$(${pkgs.gnugrep}/bin/grep -E '^[[:space:]]*counter .* drop$' "$GEO_CHAIN_FILE" || true)
+            if [[ -z "$DROP_LINES" ]]; then
+              printf 'No GeoIP drop counter lines found in geo-filter chain!\n' >&3
+              exit 1
+            fi
+
+            printf '%s\n' "$DROP_LINES" >&3
+
+            HANDLES=$(
+              ${pkgs.nftables}/bin/nft -a list chain inet geo-filter geo-input \
+                | ${pkgs.gnused}/bin/sed -n 's/.*# handle \([0-9][0-9]*\)$/\1/p'
+            )
+
+            if [[ -z "$HANDLES" ]]; then
+              printf 'No GeoIP rule handles found, counters were not reset!\n' >&3
+              exit 1
+            fi
+
+            for HANDLE in $HANDLES; do
+              ${pkgs.nftables}/bin/nft reset rule inet geo-filter geo-input handle "$HANDLE" > /dev/null
+            done
+          '';
+        };
+      };
+
     linux.system =
       {
         config,
