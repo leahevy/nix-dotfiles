@@ -389,6 +389,22 @@ args@{
       ];
     };
 
+    linux.home = config: {
+      home.packages = [
+        (pkgs.writeShellScriptBin "healthcheck-run" ''
+          set -uo pipefail
+          _arg="''${1:-}"
+          case "$_arg" in
+            regular|daily|monthly) _unit="nx-healthchecks-builtin-''${_arg}.service" ;;
+            *) printf 'usage: healthcheck-run <regular|daily|monthly>\n' >&2; exit 1 ;;
+          esac
+          _start=$(${pkgs.coreutils}/bin/date +%s)
+          sudo ${pkgs.systemd}/bin/systemctl start --wait "$_unit" || true
+          ${pkgs.systemd}/bin/journalctl -u "$_unit" --since "@''${_start}" --no-pager
+        '')
+      ];
+    };
+
     ifEnabled.linux.security.letsencrypt.enabled = config: {
       nx.linux.server.healthchecks.checkCertExpiry = lib.mkDefault true;
     };
