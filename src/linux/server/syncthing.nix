@@ -188,7 +188,7 @@ in
           nx.linux.server.healthchecks.timedHealthChecks =
             lib.mkIf config.nx.linux.server.syncthing.enablePullErrorsHealthCheck
               {
-                "syncthing-pull-errors" = {
+                "syncthing" = {
                   interval = config.nx.linux.server.syncthing.pullErrorsHealthCheckInterval;
                   uuid = config.nx.linux.server.syncthing.pullErrorsHealthCheckUUID;
                   icon = "syncthing";
