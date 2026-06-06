@@ -403,7 +403,7 @@ parse_build_deployment_args() {
 	else
 		EXTRA_ARGS=()
 	fi
-	TIMEOUT=7200
+	TIMEOUT=14400
 	DRY_RUN=""
 	BUILD_DIFF=false
 	SKIP_VERIFICATION=false
@@ -436,7 +436,7 @@ parse_build_deployment_args() {
 			shift
 			;;
 		--timeout)
-			TIMEOUT="${2:-7200}"
+			TIMEOUT="${2:-14400}"
 			shift 2
 			;;
 		--dry-run)
