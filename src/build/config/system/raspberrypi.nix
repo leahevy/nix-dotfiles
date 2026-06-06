@@ -1,4 +1,9 @@
-{ inputs, host, ... }:
+{
+  inputs,
+  host,
+  variables,
+  ...
+}:
 { config, lib, ... }:
 {
   imports = with inputs.nixos-raspberrypi.nixosModules; [
@@ -7,6 +12,8 @@
     raspberry-pi-5.display-vc4
     raspberry-pi-5.bluetooth
   ];
+
+  nixpkgs.config.permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
 
   boot.loader.raspberry-pi.bootloader = "kernel";
 
