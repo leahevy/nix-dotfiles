@@ -48,7 +48,6 @@ args@{
             )
 
             if [[ -z "$_jails" ]]; then
-              printf '[no fail2ban jails]\n' >&3
               exit 0
             fi
 
@@ -67,6 +66,7 @@ args@{
             )
 
             _total_today=0
+            _summary_file="$TMPDIR_HC/fail2ban-summary"
             for _jail in $_jails; do
               [[ -n "$_jail" ]] || continue
               _status=$(${pkgs.fail2ban}/bin/fail2ban-client status "$_jail" 2>/dev/null || true)
@@ -83,10 +83,13 @@ args@{
                   | ${pkgs.gawk}/bin/awk -F '\t' -v jail="$_jail" '$1 == jail { print $2; found=1 } END { if (!found) print 0 }'
               )
               _total_today=$((_total_today + _today_count))
-              printf '%5s ..... %s (now %s, total %s)\n' "$_today_count" "$_jail" "''${_current:-0}" "''${_total:-0}" >&3
+              printf '%5s ..... %s (now %s, total %s)\n' "$_today_count" "$_jail" "''${_current:-0}" "''${_total:-0}" >> "$_summary_file"
             done
 
-            printf '\n[total banned today: %s]\n' "$_total_today" >&3
+            if [[ "$_total_today" -gt 0 ]]; then
+              ${pkgs.coreutils}/bin/cat "$_summary_file" >&3
+              printf '\n[total banned today: %s]\n' "$_total_today" >&3
+            fi
           '';
 
           fail2banIPsExpr = ''
@@ -117,7 +120,7 @@ args@{
         {
           nx.linux.server.healthchecks.requireServicesUp = [ "fail2ban.service" ];
           nx.linux.server.healthchecks.dailyHealthChecks = {
-            "70 - Fail2ban" = fail2banSummaryExpr;
+            "!70 - Fail2ban" = fail2banSummaryExpr;
             "!75 - Fail2ban IPs" = fail2banIPsExpr;
           };
         };
