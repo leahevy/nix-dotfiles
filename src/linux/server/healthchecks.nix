@@ -1342,7 +1342,6 @@ args@{
           )
 
           if [[ -z "$_summary" ]]; then
-            printf '[no ssh auth events since yesterday 00:00]\n' >&3
             exit 0
           fi
 
@@ -1389,13 +1388,13 @@ args@{
             "30 - SMART disk health" = smartDiskExpr;
           }
           // lib.optionalAttrs (config.services.openssh.enable && !config.boot.initrd.network.ssh.enable) {
-            "80 - SSH auth" = mkSshAuthExpr "system";
+            "!80 - SSH auth" = mkSshAuthExpr "system";
           }
           // lib.optionalAttrs (config.services.openssh.enable && config.boot.initrd.network.ssh.enable) {
-            "80 - SSH auth (system)" = mkSshAuthExpr "system";
+            "!80 - SSH auth (system)" = mkSshAuthExpr "system";
           }
           // lib.optionalAttrs config.boot.initrd.network.ssh.enable {
-            "85 - SSH auth (initrd)" = mkSshAuthExpr "initrd";
+            "!85 - SSH auth (initrd)" = mkSshAuthExpr "initrd";
           }
           // {
             "90 - Kernel logs" = kernelLogTodayExpr;
