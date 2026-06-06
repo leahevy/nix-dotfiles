@@ -332,7 +332,7 @@ args@{
             };
             randomDelaySec = lib.mkOption {
               type = lib.types.int;
-              default = 60;
+              default = 120;
               description = "RandomizedDelaySec for this standalone timed health check timer in seconds.";
             };
             timeoutSec = lib.mkOption {
@@ -1787,7 +1787,7 @@ args@{
                   }
                 else
                   {
-                    OnBootSec = effectiveInterval;
+                    OnBootSec = "5m";
                     OnUnitInactiveSec = effectiveInterval;
                     Persistent = true;
                     RandomizedDelaySec = entry.randomDelaySec;
