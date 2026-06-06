@@ -147,6 +147,12 @@ in
       description = "Whether to auto-configure shared access to paperless import and export directories when paperless-ngx is enabled.";
     };
 
+    paperlessFolderDevices = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Named Syncthing devices to declaratively assign to the Paperless import and export folders.";
+    };
+
     enablePullErrorsHealthCheck = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -473,6 +479,11 @@ in
         { config, ... }:
         let
           basePath = config.nx.linux.server.paperless-ngx.paperlessDataBasePath;
+          folderDevices =
+            if config.nx.linux.server.syncthing.paperlessFolderDevices == [ ] then
+              lib.attrNames config.services.syncthing.settings.devices
+            else
+              config.nx.linux.server.syncthing.paperlessFolderDevices;
         in
         {
           users.groups.paperless-sync = { };
@@ -494,12 +505,12 @@ in
             "paperless-import" = {
               path = "${basePath}/import";
               label = "Paperless Import";
-              devices = lib.attrNames config.services.syncthing.settings.devices;
+              devices = folderDevices;
             };
             "paperless-export" = {
               path = "${basePath}/export";
               label = "Paperless Export";
-              devices = lib.attrNames config.services.syncthing.settings.devices;
+              devices = folderDevices;
             };
           };
         };
