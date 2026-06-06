@@ -314,6 +314,12 @@ args@{
       description = "Attribute set deep-merged into the generated settings.yaml as a final override.";
     };
 
+    homepageSecretEnvFiles = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Environment variable names mapped to secret file paths whose contents are written to the Homepage environment file.";
+    };
+
     logoURL = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -358,34 +364,8 @@ args@{
   };
 
   module = {
-    ifEnabled.linux.server.healthchecks = {
-      enabled = config: {
-        nx.linux.server.healthchecks.requireServicesUp = [ "homepage-dashboard.service" ];
-      };
-      linux.system = config: {
-        systemd.services.homepage-dashboard-env = {
-          description = "Prepare homepage-dashboard environment";
-          before = [ "homepage-dashboard.service" ];
-          wantedBy = [ "homepage-dashboard.service" ];
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            RuntimeDirectory = "homepage-dashboard-env";
-            RuntimeDirectoryMode = "0700";
-            ExecStart = toString (
-              pkgs.writeShellScript "homepage-prepare-env" ''
-                umask 077
-                printf 'HOMEPAGE_VAR_HEALTHCHECKS_KEY=%s\n' \
-                  "$(${pkgs.coreutils}/bin/cat ${
-                    config.sops.secrets."${self.host.hostname}-healthchecks-readonly-api-key".path
-                  })" \
-                  > /run/homepage-dashboard-env/env
-              ''
-            );
-          };
-        };
-        services.homepage-dashboard.environmentFile = "/run/homepage-dashboard-env/env";
-      };
+    ifEnabled.linux.server.healthchecks.enabled = config: {
+      nx.linux.server.healthchecks.requireServicesUp = [ "homepage-dashboard.service" ];
     };
 
     when = {
@@ -431,6 +411,7 @@ args@{
         widgets,
         customCSS,
         extraSettings,
+        homepageSecretEnvFiles,
         maxWidth,
         enableSearchWidget,
         useStartpageAsSearchEngine,
@@ -780,6 +761,7 @@ args@{
           package = pkgs.homepage-dashboard.override { enableLocalIcons = true; };
           listenPort = listenPort;
           allowedHosts = "${effectiveSubdomain}.${domain}";
+          environmentFile = "/run/homepage-dashboard-env/env";
           settings = generatedSettings;
           bookmarks = generatedBookmarks;
           services =
@@ -789,6 +771,34 @@ args@{
             ++ lib.optional (externalServiceEntries != [ ]) { External = externalServiceEntries; };
           widgets = autoWidgets ++ widgets;
           customCSS = generatedCSS;
+        };
+
+        systemd.services.homepage-dashboard-env = {
+          description = "Prepare homepage-dashboard environment";
+          before = [ "homepage-dashboard.service" ];
+          wantedBy = [ "homepage-dashboard.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            RuntimeDirectory = "homepage-dashboard-env";
+            RuntimeDirectoryMode = "0700";
+            ExecStart = toString (
+              pkgs.writeShellScript "homepage-prepare-env" ''
+                umask 077
+                ${pkgs.coreutils}/bin/rm -f /run/homepage-dashboard-env/env
+                ${pkgs.coreutils}/bin/touch /run/homepage-dashboard-env/env
+                ${lib.concatStringsSep "\n" (
+                  lib.mapAttrsToList (name: path: ''
+                    {
+                      printf '%s=' ${lib.escapeShellArg name}
+                      ${pkgs.coreutils}/bin/cat ${lib.escapeShellArg path}
+                      printf '\n'
+                    } >> /run/homepage-dashboard-env/env
+                  '') homepageSecretEnvFiles
+                )}
+              ''
+            );
+          };
         };
 
         services.nginx.virtualHosts."${effectiveSubdomain}.${domain}" =

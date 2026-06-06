@@ -453,6 +453,8 @@ args@{
           ];
         }
       ];
+      nx.linux.server.dashboard.homepageSecretEnvFiles.HOMEPAGE_VAR_HEALTHCHECKS_KEY =
+        config.sops.secrets."${self.host.hostname}-healthchecks-readonly-api-key".path;
     };
 
     linux.system =
