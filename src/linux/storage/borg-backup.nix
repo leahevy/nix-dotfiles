@@ -787,6 +787,7 @@ args@{
         nx.linux.server.healthchecks.servicesHealthChecks."borg-backup" = {
           trigger.service = "borgbackup-job-system.service";
           uuid = self.settings.healthcheckUUID;
+          icon = "borg";
         };
       };
     };

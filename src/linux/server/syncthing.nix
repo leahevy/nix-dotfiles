@@ -191,6 +191,7 @@ in
                 "syncthing-pull-errors" = {
                   interval = config.nx.linux.server.syncthing.pullErrorsHealthCheckInterval;
                   uuid = config.nx.linux.server.syncthing.pullErrorsHealthCheckUUID;
+                  icon = "syncthing";
                   checks = {
                     "10 - Syncthing API reachable" = ''
                       FOLDERS_JSON=$(${queryApiExe} /rest/config/folders --connect-timeout 5 --max-time 10 2>&1) || {

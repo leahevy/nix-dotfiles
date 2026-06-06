@@ -314,6 +314,11 @@ args@{
               default = null;
               description = "Display name for this check in the dashboard, overriding the auto-derived name.";
             };
+            icon = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Homepage icon name for this check's dashboard card.";
+            };
           };
         }
       );
@@ -360,6 +365,11 @@ args@{
               default = null;
               description = "Healthchecks.io UUID of this check.";
             };
+            icon = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Homepage icon name for this check's dashboard card.";
+            };
           };
         }
       );
@@ -390,6 +400,11 @@ args@{
               type = lib.types.nullOr lib.types.str;
               default = null;
               description = "Healthchecks.io UUID of this check.";
+            };
+            icon = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Homepage icon name for this check's dashboard card.";
             };
           };
         }
@@ -423,9 +438,23 @@ args@{
     };
 
     additionalHealthChecks = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            uuid = lib.mkOption {
+              type = lib.types.str;
+              description = "Healthchecks.io UUID of this check.";
+            };
+            icon = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Homepage icon name for this check's dashboard card.";
+            };
+          };
+        }
+      );
       default = { };
-      description = "Additional checks not managed by this system, as an attrset of display name to Healthchecks.io UUID.";
+      description = "Additional checks not managed by this system, as an attrset of display name to check config.";
     };
 
     alwaysIncludeSummaryWidget = lib.mkOption {
@@ -503,12 +532,12 @@ args@{
             lib.toUpper (builtins.substring 0 1 word)
             + builtins.substring 1 (builtins.stringLength word - 1) word;
         slugToTitle = slug: lib.concatStringsSep " " (map capitalizeWord (lib.splitString "-" slug));
-        mkCheckService = name: uuid: {
+        mkCheckService = name: uuid: icon: {
           inherit name;
           group = "details";
           href = "${hc.healthchecksBaseUrl}/checks/${uuid}/details/";
           description = "";
-          icon = "healthchecks";
+          icon = if icon != null then icon else "healthchecks";
           enableSiteMonitor = false;
           widgets = [
             {
@@ -536,33 +565,35 @@ args@{
         };
         builtinServices =
           lib.optional (hc.builtinHealthCheckUUIDs.regular != null) (
-            mkCheckService "Regular" hc.builtinHealthCheckUUIDs.regular
+            mkCheckService "Regular" hc.builtinHealthCheckUUIDs.regular "eu-calendar"
           )
           ++ lib.optional (hc.builtinHealthCheckUUIDs.daily != null) (
-            mkCheckService "Daily" hc.builtinHealthCheckUUIDs.daily
+            mkCheckService "Daily" hc.builtinHealthCheckUUIDs.daily "eu-calendar"
           )
           ++ lib.optional (hc.builtinHealthCheckUUIDs.monthly != null) (
-            mkCheckService "Monthly" hc.builtinHealthCheckUUIDs.monthly
+            mkCheckService "Monthly" hc.builtinHealthCheckUUIDs.monthly "eu-calendar"
           );
         serviceServices = lib.concatLists (
           lib.mapAttrsToList (
             k: v:
             lib.optional (v.uuid != null) (
-              mkCheckService (if v.displayName != null then v.displayName else slugToTitle k) v.uuid
+              mkCheckService (if v.displayName != null then v.displayName else slugToTitle k) v.uuid v.icon
             )
           ) hc.servicesHealthChecks
         );
         timedServices = lib.concatLists (
           lib.mapAttrsToList (
-            k: v: lib.optional (v.uuid != null) (mkCheckService (slugToTitle k) v.uuid)
+            k: v: lib.optional (v.uuid != null) (mkCheckService (slugToTitle k) v.uuid v.icon)
           ) hc.timedHealthChecks
         );
         oneshotServices = lib.concatLists (
           lib.mapAttrsToList (
-            k: v: lib.optional (v.uuid != null) (mkCheckService (slugToTitle k) v.uuid)
+            k: v: lib.optional (v.uuid != null) (mkCheckService (slugToTitle k) v.uuid v.icon)
           ) hc.oneshotHealthChecks
         );
-        additionalServices = lib.mapAttrsToList mkCheckService hc.additionalHealthChecks;
+        additionalServices = lib.mapAttrsToList (
+          name: v: mkCheckService name v.uuid v.icon
+        ) hc.additionalHealthChecks;
         allCheckServices =
           builtinServices ++ serviceServices ++ timedServices ++ oneshotServices ++ additionalServices;
         services =
@@ -2201,8 +2232,8 @@ args@{
               message = "linux.server.healthchecks: builtinHealthCheckUUIDs.monthly must be a valid UUID!";
             }
             {
-              assertion = lib.all helpers.isValidUUID (lib.attrValues additionalHealthChecks);
-              message = "linux.server.healthchecks: all additionalHealthChecks values must be valid UUIDs!";
+              assertion = lib.all (v: helpers.isValidUUID v.uuid) (lib.attrValues additionalHealthChecks);
+              message = "linux.server.healthchecks: all additionalHealthChecks uuid values must be valid UUIDs!";
             }
             {
               assertion = lib.all (entry: !(entry.interval != null && entry.schedule != null)) (

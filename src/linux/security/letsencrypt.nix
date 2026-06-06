@@ -258,6 +258,7 @@ args@{
                 trigger.service = "acme-order-renew-${domain}.service";
                 uuid = self.settings.healthcheckUUIDs.${domain} or null;
                 displayName = if singleDomain then "Letsencrypt" else null;
+                icon = "letsencrypt";
                 check.checkScript = ''
                   _state=$(${pkgs.systemd}/bin/systemctl show "acme-${domain}.service" \
                     --property=ActiveState --value 2>/dev/null || echo "unknown")
