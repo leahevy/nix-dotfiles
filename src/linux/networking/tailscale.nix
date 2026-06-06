@@ -201,6 +201,11 @@ args@{
     ifEnabled.linux.notifications.pushover = {
       system =
         config:
+        let
+          rotationDate = "${toString self.settings.apiKeyRotatedAt.year}-${
+            lib.fixedWidthString 2 "0" (toString self.settings.apiKeyRotatedAt.month)
+          }-${lib.fixedWidthString 2 "0" (toString self.settings.apiKeyRotatedAt.day)}";
+        in
         lib.mkIf (self.settings.apiKeyRotatedAt != null) {
           systemd.services.tailscale-api-key-expiry-notify = {
             description = "Tailscale API key expiry notification";
