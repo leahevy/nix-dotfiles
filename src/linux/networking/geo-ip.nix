@@ -210,7 +210,10 @@ in
               exit 1
             fi
 
-            DROP_LINES=$(${pkgs.gnugrep}/bin/grep -E '^[[:space:]]*counter .* drop$' "$GEO_CHAIN_FILE" || true)
+            DROP_LINES=$(
+              ${pkgs.gnugrep}/bin/grep -E '^[[:space:]]*counter .* drop$' "$GEO_CHAIN_FILE" \
+                | ${pkgs.gnused}/bin/sed 's/^[[:space:]]*//'
+            )
             if [[ -z "$DROP_LINES" ]]; then
               printf 'No GeoIP drop counter lines found in geo-filter chain!\n' >&3
               exit 1
