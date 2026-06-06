@@ -23,6 +23,11 @@
 
   allowedUnfreePackages = [ ];
 
+  releaseTransitionInsecurePackages = [
+    "docker-28.5.2"
+    "electron-39.8.10"
+  ];
+
   persist = "/persist";
 
   httpConnections = 15;

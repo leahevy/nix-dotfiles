@@ -114,7 +114,10 @@ let
 
       pkgs-unstable = import nixpkgs-unstable {
         inherit system overlays;
-        config.allowUnfreePredicate = unfreePredicate;
+        config = {
+          allowUnfreePredicate = unfreePredicate;
+          permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
+        };
       };
 
       unstablePackages =
@@ -133,7 +136,10 @@ let
 
       pkgs-nix = import nixpkgs-nix {
         inherit system;
-        config.allowUnfreePredicate = unfreePredicate;
+        config = {
+          allowUnfreePredicate = unfreePredicate;
+          permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
+        };
       };
 
       nixImplOverlay =
@@ -195,7 +201,10 @@ let
             nixImplOverlay
             nixToolsOverlay
           ];
-          config.allowUnfreePredicate = unfreePredicate;
+          config = {
+            allowUnfreePredicate = unfreePredicate;
+            permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
+          };
         };
 
       pkgs =
