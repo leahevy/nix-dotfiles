@@ -486,6 +486,10 @@ args@{
         mainUserUid = toString config.users.users.${self.host.mainUser.username}.uid;
         deploymentMode = config.nx.global.deploymentMode;
         secretPath = config.sops.secrets."${hostname}-healthchecks-uuid".path;
+        stateDir = "/var/lib/healthchecks";
+        dirtyMarkerPath = "${stateDir}/pending-clean-shutdown";
+        crashMarkerPath = "${stateDir}/unclean-shutdown-detected";
+        crashRecoveryDatePath = "${stateDir}/monthly-crash-recovery-last-date";
 
         effectiveRegular =
           if enableRegularHealthCheck != null then
@@ -1858,6 +1862,40 @@ args@{
             user = "root";
             group = "root";
           };
+
+          systemd.tmpfiles.settings."10-nx-healthcheck"."${stateDir}".d = {
+            mode = "0700";
+            user = "root";
+            group = "root";
+          };
+
+          environment.persistence."${self.persist}" = {
+            directories = [ stateDir ];
+          };
+        }
+
+        {
+          systemd.services.nx-healthchecks-shutdown-state = {
+            description = "Healthchecks shutdown state marker";
+            wantedBy = [ "multi-user.target" ];
+            after = [ "local-fs.target" ];
+            serviceConfig = {
+              Type = "oneshot";
+              RemainAfterExit = true;
+              ExecStart = pkgs.writeShellScript "nx-hc-shutdown-state-start" ''
+                set -euo pipefail
+                if [ -e ${lib.escapeShellArg dirtyMarkerPath} ]; then
+                  ${pkgs.coreutils}/bin/touch ${lib.escapeShellArg crashMarkerPath}
+                fi
+                ${pkgs.coreutils}/bin/touch ${lib.escapeShellArg dirtyMarkerPath}
+              '';
+              ExecStop = pkgs.writeShellScript "nx-hc-shutdown-state-stop" ''
+                set -euo pipefail
+                ${pkgs.coreutils}/bin/rm -f ${lib.escapeShellArg dirtyMarkerPath}
+              '';
+              NoNewPrivileges = true;
+            };
+          };
         }
 
         (lib.mkIf effectiveRegular {
@@ -1944,6 +1982,39 @@ args@{
               OnCalendar = monthlyHealthCheckSchedule;
               Persistent = true;
               RandomizedDelaySec = monthlyRandomDelaySec;
+            };
+          };
+        })
+
+        (lib.mkIf effectiveMonthly {
+          systemd.services.nx-healthchecks-builtin-monthly-crash = {
+            description = "Monthly health check trigger after unclean previous shutdown";
+            wantedBy = [ "multi-user.target" ];
+            wants = [ "nx-healthchecks-shutdown-state.service" ];
+            after = [ "nx-healthchecks-shutdown-state.service" ];
+            serviceConfig = {
+              Type = "oneshot";
+              User = "root";
+              TimeoutStartSec = monthlyServiceTimeoutSec;
+              ExecStart = pkgs.writeShellScript "nx-hc-monthly-crash" ''
+                set -euo pipefail
+                echo "Waiting 5 minutes for system readiness..."
+                ${pkgs.coreutils}/bin/sleep 300
+                _today=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
+
+                if [ ! -e ${lib.escapeShellArg crashMarkerPath} ]; then
+                  exit 0
+                fi
+
+                if [ -f ${lib.escapeShellArg crashRecoveryDatePath} ] && \
+                   [ "$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg crashRecoveryDatePath} 2>/dev/null || true)" = "$_today" ]; then
+                  exit 0
+                fi
+
+                ${pkgs.systemd}/bin/systemctl start --wait nx-healthchecks-builtin-monthly.service
+                printf '%s\n' "$_today" > ${lib.escapeShellArg crashRecoveryDatePath}
+                ${pkgs.coreutils}/bin/rm -f ${lib.escapeShellArg crashMarkerPath}
+              '';
             };
           };
         })
