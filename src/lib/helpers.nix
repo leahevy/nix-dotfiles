@@ -825,6 +825,24 @@ rec {
     in
     usePackageByVersionCheck args pkgName predicate;
 
+  # Use pkgs.<pkgName> if it meets minVersion, otherwise return fallbackPkg.
+  # Usage: packageWithMinVersionOrFallback args "docker" "29.0.0" pkgs.docker_29
+  packageWithMinVersionOrFallback =
+    args: pkgName: minVersion: fallbackPkg:
+    let
+      minVersionParsed = parseVersion minVersion;
+      pkg = args.pkgs.${pkgName} or null;
+      meetsVersion =
+        if pkg == null || !(pkg ? version) then
+          false
+        else
+          let
+            evalResult = builtins.tryEval (compareVersions (parseVersion pkg.version) minVersionParsed >= 0);
+          in
+          evalResult.success && evalResult.value;
+    in
+    if meetsVersion then pkg else fallbackPkg;
+
   # Prepend absolute path to binary in command list or function result
   # Respects commandIsAbsolute flag (returns unchanged if true)
   # Usage: runWithAbsolutePath config textEditor textEditor.openCommand []
