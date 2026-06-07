@@ -2410,9 +2410,9 @@ args@{
           };
         })
 
-        (lib.mkIf effectiveMonthly {
-          systemd.timers.nx-healthchecks-builtin-monthly-crash = {
-            description = "Monthly health check trigger timer after unclean previous shutdown";
+        (lib.mkIf (effectiveDaily || effectiveMonthly) {
+          systemd.timers.nx-healthchecks-builtin-boot-triggers = {
+            description = "Post-boot health check triggers timer";
             wantedBy = [ "multi-user.target" ];
             wants = [
               "network-online.target"
@@ -2425,8 +2425,8 @@ args@{
             timerConfig.OnBootSec = "5m";
           };
 
-          systemd.services.nx-healthchecks-builtin-monthly-crash = {
-            description = "Monthly health check trigger after unclean previous shutdown";
+          systemd.services.nx-healthchecks-builtin-boot-triggers = {
+            description = "Post-boot health check triggers";
             wants = [
               "network-online.target"
               "nx-healthchecks-shutdown-state.service"
@@ -2439,22 +2439,28 @@ args@{
               Type = "oneshot";
               User = "root";
               TimeoutStartSec = monthlyServiceTimeoutSec;
-              ExecStart = pkgs.writeShellScript "nx-hc-monthly-crash" ''
+              ExecStart = pkgs.writeShellScript "nx-hc-boot-triggers" ''
                 set -euo pipefail
                 _today=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
 
-                if [ ! -e ${lib.escapeShellArg crashMarkerPath} ]; then
-                  exit 0
-                fi
+                ${lib.optionalString effectiveDaily ''
+                  ${pkgs.systemd}/bin/systemctl start --wait nx-healthchecks-builtin-daily.service || true
+                ''}
 
-                if [ -f ${lib.escapeShellArg crashRecoveryDatePath} ] && \
-                   [ "$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg crashRecoveryDatePath} 2>/dev/null || true)" = "$_today" ]; then
-                  exit 0
-                fi
+                ${lib.optionalString effectiveMonthly ''
+                  if [ ! -e ${lib.escapeShellArg crashMarkerPath} ]; then
+                    exit 0
+                  fi
 
-                ${pkgs.systemd}/bin/systemctl start --wait nx-healthchecks-builtin-monthly.service
-                printf '%s\n' "$_today" > ${lib.escapeShellArg crashRecoveryDatePath}
-                ${pkgs.coreutils}/bin/rm -f ${lib.escapeShellArg crashMarkerPath}
+                  if [ -f ${lib.escapeShellArg crashRecoveryDatePath} ] && \
+                     [ "$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg crashRecoveryDatePath} 2>/dev/null || true)" = "$_today" ]; then
+                    exit 0
+                  fi
+
+                  ${pkgs.systemd}/bin/systemctl start --wait nx-healthchecks-builtin-monthly.service
+                  printf '%s\n' "$_today" > ${lib.escapeShellArg crashRecoveryDatePath}
+                  ${pkgs.coreutils}/bin/rm -f ${lib.escapeShellArg crashMarkerPath}
+                ''}
               '';
             };
           };
