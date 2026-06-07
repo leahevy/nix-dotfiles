@@ -128,6 +128,10 @@ args@{
                   assertion = hostKey != null;
                   message = "host.remote.initrdSSHHostPrivateKey must be set when LUKS devices are present!";
                 }
+                {
+                  assertion = !(builtins.elem port (config.networking.firewall.allowedTCPPorts or [ ]));
+                  message = "initrd SSH port ${toString port} must not be in networking.firewall.allowedTCPPorts on the final system!";
+                }
               ];
 
               boot.initrd.network.enable = true;
@@ -173,6 +177,10 @@ args@{
               boot.initrd.systemd.users.root.shell = toString initrdShell;
 
               system.extraDependencies = lib.optional (hostKey != null && pubKey != null) keypairCheck;
+
+              networking.firewall.extraInputRules = ''
+                tcp dport ${toString port} reject
+              '';
             };
         };
       }
