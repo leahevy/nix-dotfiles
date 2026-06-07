@@ -2411,23 +2411,36 @@ args@{
         })
 
         (lib.mkIf effectiveMonthly {
+          systemd.timers.nx-healthchecks-builtin-monthly-crash = {
+            description = "Monthly health check trigger timer after unclean previous shutdown";
+            wantedBy = [ "multi-user.target" ];
+            wants = [
+              "network-online.target"
+              "nx-healthchecks-shutdown-state.service"
+            ];
+            after = [
+              "network-online.target"
+              "nx-healthchecks-shutdown-state.service"
+            ];
+            timerConfig.OnBootSec = "5m";
+          };
+
           systemd.services.nx-healthchecks-builtin-monthly-crash = {
             description = "Monthly health check trigger after unclean previous shutdown";
-            wantedBy = [ "multi-user.target" ];
-            wants = [ "nx-healthchecks-shutdown-state.service" ];
-            after = [ "nx-healthchecks-shutdown-state.service" ];
+            wants = [
+              "network-online.target"
+              "nx-healthchecks-shutdown-state.service"
+            ];
+            after = [
+              "network-online.target"
+              "nx-healthchecks-shutdown-state.service"
+            ];
             serviceConfig = {
               Type = "oneshot";
               User = "root";
               TimeoutStartSec = monthlyServiceTimeoutSec;
               ExecStart = pkgs.writeShellScript "nx-hc-monthly-crash" ''
                 set -euo pipefail
-                _uptime_sec=$(${pkgs.gawk}/bin/awk '{print int($1)}' /proc/uptime)
-                if [[ "$_uptime_sec" -lt 300 ]]; then
-                  _wait_sec=$((300 - _uptime_sec))
-                  echo "Waiting $_wait_sec seconds for system readiness..."
-                  ${pkgs.coreutils}/bin/sleep "$_wait_sec"
-                fi
                 _today=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
 
                 if [ ! -e ${lib.escapeShellArg crashMarkerPath} ]; then
