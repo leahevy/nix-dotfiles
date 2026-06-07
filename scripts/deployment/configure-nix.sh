@@ -23,6 +23,13 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
+if [[ "$CHECK_ONLY" != "true" ]] && [[ "$EUID" -ne 0 ]]; then
+	echo -e "${RED}Must be run as root when not using --check-only${RESET}" >&2
+	exit 1
+fi
+
+OS="$(uname -s)"
+
 NIX_DAEMON_FILE='/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
 ZSHRC='/etc/zshrc'
 NIX_BLOCK="
@@ -31,6 +38,33 @@ if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
 . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
 fi
 # End Nix"
+
+NX_CONF='/etc/nix/nix.conf'
+
+DESIRED_NIX_CONF_KEYS=(
+	"experimental-features:nix-command flakes"
+	"http-connections:15"
+	"max-substitution-jobs:3"
+	"connect-timeout:60"
+	"stalled-download-timeout:120"
+	"keep-outputs:true"
+	"keep-derivations:true"
+	"allow-import-from-derivation:false"
+	"auto-optimise-store:true"
+)
+
+get_nix_conf_value() {
+	local key="$1"
+	grep -E "^\s*${key}\s*=" "$NX_CONF" 2>/dev/null | tail -1 | sed 's/^[^=]*=//' | sed 's/^ *//' | sed 's/ *$//'
+}
+
+sed_inplace() {
+	if [[ "$OS" == "Darwin" ]]; then
+		sed -i '' "$@"
+	else
+		sed -i "$@"
+	fi
+}
 
 configure_zshrc_darwin() {
 	if [[ ! -f "$NIX_DAEMON_FILE" ]]; then
@@ -55,7 +89,7 @@ configure_zshrc_darwin() {
 		exit 0
 	fi
 
-	printf '\n%s\n' "$NIX_BLOCK" | sudo tee -a "$ZSHRC" >/dev/null
+	printf '\n%s\n' "$NIX_BLOCK" >>"$ZSHRC"
 
 	if ! grep -qF '# End Nix' "$ZSHRC" 2>/dev/null; then
 		echo -e "${RED}Write verification failed. Check file manually: ${WHITE}${ZSHRC}${RESET}" >&2
@@ -65,17 +99,102 @@ configure_zshrc_darwin() {
 	echo -e "${GREEN}Done. Reboot now.${RESET}"
 }
 
-DARWIN_TASKS=(configure_zshrc_darwin)
-LINUX_TASKS=()
+configure_nix_conf() {
+	if [[ ! -f "$NX_CONF" ]]; then
+		echo -e "${YELLOW}${NX_CONF}: not found, skipping${RESET}"
+		return 0
+	fi
 
-OS="$(uname -s)"
+	if [[ -L "$NX_CONF" ]]; then
+		echo -e "${RED}${NX_CONF} is a symlink; not modifying a managed config${RESET}" >&2
+		exit 1
+	fi
 
-if [[ "$OS" == "Darwin" ]]; then
-	PLATFORM_TASKS=("${DARWIN_TASKS[@]+"${DARWIN_TASKS[@]}"}")
-elif [[ "$OS" == "Linux" ]]; then
-	PLATFORM_TASKS=("${LINUX_TASKS[@]+"${LINUX_TASKS[@]}"}")
-else
-	PLATFORM_TASKS=()
+	local changes=()
+	local current desired key entry
+
+	for entry in "${DESIRED_NIX_CONF_KEYS[@]}"; do
+		key="${entry%%:*}"
+		desired="${entry#*:}"
+		current="$(get_nix_conf_value "$key")"
+
+		if [[ "$current" != "$desired" ]]; then
+			if [[ -z "$current" ]]; then
+				changes+=("${key}: <not set> -> ${desired}")
+			else
+				changes+=("${key}: ${current} -> ${desired}")
+			fi
+		fi
+	done
+
+	if [[ "${#changes[@]}" -eq 0 ]]; then
+		echo -e "${GREEN}${NX_CONF}: already configured${RESET}"
+		return 0
+	fi
+
+	echo -e "${YELLOW}${NX_CONF}: ${#changes[@]} setting(s) need updating:${RESET}"
+	for change in "${changes[@]}"; do
+		echo -e "  ${WHITE}${change}${RESET}"
+	done
+
+	if [[ "$CHECK_ONLY" == "true" ]]; then
+		return 0
+	fi
+
+	read -r -p "Apply these changes to ${NX_CONF}? [y/N] " confirm
+	if [[ "${confirm:-}" != "y" && "${confirm:-}" != "Y" ]]; then
+		echo -e "${YELLOW}Aborted.${RESET}"
+		exit 0
+	fi
+
+	for entry in "${DESIRED_NIX_CONF_KEYS[@]}"; do
+		key="${entry%%:*}"
+		desired="${entry#*:}"
+		current="$(get_nix_conf_value "$key")"
+
+		if [[ "$current" == "$desired" ]]; then
+			continue
+		fi
+
+		if grep -qE "^\s*${key}\s*=" "$NX_CONF" 2>/dev/null; then
+			sed_inplace "s|^\s*${key}\s*=.*|${key} = ${desired}|" "$NX_CONF"
+		else
+			printf '%s = %s\n' "$key" "$desired" >>"$NX_CONF"
+		fi
+	done
+
+	echo -e "${GREEN}Done. Restart the Nix daemon to apply:${RESET}"
+	if [[ "$OS" == "Darwin" ]]; then
+		echo -e "  ${WHITE}sudo launchctl kickstart -k system/org.nixos.nix-daemon${RESET}"
+		echo -e "  ${CYAN}(If the daemon was never started: ${WHITE}sudo launchctl bootstrap system /Library/LaunchDaemons/org.nixos.nix-daemon.plist${CYAN})${RESET}"
+	else
+		echo -e "  ${WHITE}sudo systemctl restart nix-daemon${RESET}"
+	fi
+}
+
+DARWIN_OS_TASKS=(configure_zshrc_darwin)
+LINUX_OS_TASKS=()
+
+NIXOS_TYPE_TASKS=()
+ALL_STANDALONE_TYPE_TASKS=(configure_nix_conf)
+
+TYPE="standalone"
+if [[ "$OS" == "Linux" ]] && [[ -e "/etc/NIXOS" ]]; then
+	TYPE="nixos"
+fi
+
+PLATFORM_TASKS=()
+
+if [[ "$OS" == "Darwin" ]] && [[ "${#DARWIN_OS_TASKS[@]}" -gt 0 ]]; then
+	PLATFORM_TASKS+=("${DARWIN_OS_TASKS[@]}")
+elif [[ "$OS" == "Linux" ]] && [[ "${#LINUX_OS_TASKS[@]}" -gt 0 ]]; then
+	PLATFORM_TASKS+=("${LINUX_OS_TASKS[@]}")
+fi
+
+if [[ "$TYPE" == "standalone" ]] && [[ "${#ALL_STANDALONE_TYPE_TASKS[@]}" -gt 0 ]]; then
+	PLATFORM_TASKS+=("${ALL_STANDALONE_TYPE_TASKS[@]}")
+elif [[ "$TYPE" == "nixos" ]] && [[ "${#NIXOS_TYPE_TASKS[@]}" -gt 0 ]]; then
+	PLATFORM_TASKS+=("${NIXOS_TYPE_TASKS[@]}")
 fi
 
 if [[ "${#PLATFORM_TASKS[@]}" -eq 0 ]]; then
@@ -83,6 +202,13 @@ if [[ "${#PLATFORM_TASKS[@]}" -eq 0 ]]; then
 	exit 0
 fi
 
+total="${#PLATFORM_TASKS[@]}"
+idx=0
 for task in "${PLATFORM_TASKS[@]}"; do
+	idx=$((idx + 1))
+	if [[ "$idx" -gt 1 ]]; then
+		echo
+	fi
+	echo -e "${GREEN}${idx}/${total}${RESET} ${WHITE}${task//_/ }${RESET}"
 	"$task"
 done
