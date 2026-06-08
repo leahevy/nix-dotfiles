@@ -540,6 +540,37 @@ let
         font-family: revert !important;
       }
     '';
+
+  mkUserContentCSS =
+    {
+      browserUserContent,
+      monospaceFont,
+      userContentCSSExcludedUrls,
+    }:
+    let
+      cssData = browserUserContent.data + (firefoxSpecificCSS monospaceFont);
+      excludedUrlPattern =
+        if userContentCSSExcludedUrls == [ ] then
+          null
+        else
+          lib.concatStringsSep "|" (
+            map (
+              url:
+              let
+                normalized = lib.removeSuffix "/" url;
+              in
+              "${lib.escapeRegex normalized}(?:[/?#].*|$)"
+            ) userContentCSSExcludedUrls
+          );
+    in
+    if excludedUrlPattern == null then
+      cssData
+    else
+      ''
+        @-moz-document regexp("^(?!(?:${excludedUrlPattern})).*$") {
+        ${cssData}
+        }
+      '';
 in
 {
   name = "firefox";
@@ -978,32 +1009,10 @@ in
               toolbarExtensionsForceShownCSS
             ]
           );
-        userContentCSS =
-          let
-            browserUserContent = config.nx.common.browser.browser.final.userContentCSS;
-            cssData = browserUserContent.data + (firefoxSpecificCSS monospaceFont);
-            excludedUrlPattern =
-              if userContentCSSExcludedUrls == [ ] then
-                null
-              else
-                lib.concatStringsSep "|" (
-                  map (
-                    url:
-                    let
-                      normalized = lib.removeSuffix "/" url;
-                    in
-                    "${lib.escapeRegex normalized}(?:[/?#].*|$)"
-                  ) userContentCSSExcludedUrls
-                );
-          in
-          if excludedUrlPattern == null then
-            cssData
-          else
-            ''
-              @-moz-document regexp("^(?!(?:${excludedUrlPattern})).*$") {
-              ${cssData}
-              }
-            '';
+        userContentCSS = mkUserContentCSS {
+          browserUserContent = config.nx.common.browser.browser.final.userContentCSS;
+          inherit monospaceFont userContentCSSExcludedUrls;
+        };
       in
       {
         assertions =
@@ -1388,6 +1397,7 @@ in
         extensions,
         defaultDownloadsName,
         monospaceFont,
+        userContentCSSExcludedUrls,
         ...
       }:
       let
@@ -1413,7 +1423,10 @@ in
                 rm -f "$css_dir/userContent.css"
                 rm -f "$css_dir/userContent.css.${self.variables.home-manager-backup-extension}"
                 cp "${
-                  pkgs.writeText "browser-user-content.css" (userCSS.data + (firefoxSpecificCSS monospaceFont))
+                  pkgs.writeText "browser-user-content.css" (mkUserContentCSS {
+                    browserUserContent = userCSS;
+                    inherit monospaceFont userContentCSSExcludedUrls;
+                  })
                 }" "$css_dir/userContent.css"
                fi
             ''} || true
