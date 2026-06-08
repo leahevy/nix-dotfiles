@@ -1382,6 +1382,9 @@ args@{
 
           while IFS=$'\t' read -r _count _status _method _user _ip; do
             [[ -n "$_status" ]] || continue
+            if [[ "$_status" == "OK" ]] && [[ "$_ip" =~ ^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.) ]]; then
+              continue
+            fi
             printf '%5s ..... %-4s %s %s from %s\n' "$_count" "$_status" "$_method" "$_user" "$_ip" >&3
           done <<< "$_summary"
         '';
