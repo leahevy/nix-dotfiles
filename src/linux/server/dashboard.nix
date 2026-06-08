@@ -374,6 +374,18 @@ args@{
       default = null;
       description = "IP address of the main network gateway, added as a server bookmark when set.";
     };
+
+    enableThemeColorOverwrite = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Automatically set the dashboard accent color and background to match the active color theme when one is enabled.";
+    };
+
+    localBackgroundFileMapping = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Map of color theme names to background image filenames in the profile files directory, used when that theme is active and enableThemeColorOverwrite is true.";
+    };
   };
 
   module = {
@@ -433,11 +445,38 @@ args@{
         searchOpenInNewTab,
         addNixRepoBookmarks,
         gatewayIP,
+        enableThemeColorOverwrite,
+        localBackgroundFileMapping,
         ...
       }:
       let
         domain = self.host.remote.baseDomain;
         hostname = self.host.hostname;
+
+        themeColorMap = {
+          blue = "blue";
+          cyan = "cyan";
+          green = "green";
+          magenta = "fuchsia";
+          orange = "orange";
+          purple = "purple";
+          red = "red";
+          white = "slate";
+          yellow = "yellow";
+        };
+
+        activeTheme = lib.findFirst (name: config.nx.themes.themes.${name}.enable) null (
+          lib.attrNames themeColorMap
+        );
+
+        effectiveColor =
+          if enableThemeColorOverwrite && activeTheme != null then themeColorMap.${activeTheme} else color;
+
+        effectiveLocalBackgroundFile =
+          if enableThemeColorOverwrite && activeTheme != null then
+            localBackgroundFileMapping.${activeTheme} or localBackgroundFile
+          else
+            localBackgroundFile;
         nginxSubdomain = config.nx.linux.server.nginx.subdomain;
         enableQuic = config.nx.linux.server.nginx.enableQuic;
         exposedService = self.host.remote.exposedServices.dashboard;
@@ -502,7 +541,7 @@ args@{
           map mkServiceEntry (servicesByGroup.external or [ ]) ++ additionalServiceEntries;
 
         backgroundAttr =
-          if localBackgroundFile != null then
+          if effectiveLocalBackgroundFile != null then
             {
               image = "/dashboard-bg";
               opacity = 100 - backgroundOverlayOpacity;
@@ -609,13 +648,13 @@ args@{
             title = if title != null then title else hostname;
             inherit
               theme
-              color
               headerStyle
               statusStyle
               showStats
               useEqualHeights
               language
               ;
+            color = effectiveColor;
             hideVersion = true;
             disableUpdateCheck = true;
             disableCollapse = true;
@@ -679,32 +718,35 @@ args@{
               .dark .service-card,
               .dark #page_wrapper input[type="text"] {
                 background-color: ${
-                  if color == "neutral" then
+                  if effectiveColor == "neutral" then
                     "rgb(var(--color-700) / 0.4)"
                   else
                     "color-mix(in srgb, rgb(var(--color-700)) 25%, rgb(20 20 20 / 0.75))"
                 };
               }'')
-            (lib.optionalString (backgroundBlur == null && backgroundAttr != null && color != "neutral") ''
-              #page_wrapper::before {
-                content: "";
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.4);
-                z-index: 0;
-                pointer-events: none;
-              }
-              #inner_wrapper {
-                position: relative;
-                z-index: 1;
-              }
-              .dark .bookmark-group-name,
-              .dark .service-group-name {
-                text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
-              }
-              .dark .information-widget-resources {
-                text-shadow: 0 1px 8px rgba(0, 0, 0, 1), 0 0 12px rgba(0, 0, 0, 0.9);
-              }'')
+            (lib.optionalString
+              (backgroundBlur == null && backgroundAttr != null && effectiveColor != "neutral")
+              ''
+                #page_wrapper::before {
+                  content: "";
+                  position: fixed;
+                  inset: 0;
+                  background: rgba(0, 0, 0, 0.4);
+                  z-index: 0;
+                  pointer-events: none;
+                }
+                #inner_wrapper {
+                  position: relative;
+                  z-index: 1;
+                }
+                .dark .bookmark-group-name,
+                .dark .service-group-name {
+                  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+                }
+                .dark .information-widget-resources {
+                  text-shadow: 0 1px 8px rgba(0, 0, 0, 1), 0 0 12px rgba(0, 0, 0, 0.9);
+                }''
+            )
             (lib.optionalString squareCorners "* { border-radius: 0 !important; }")
             (lib.optionalString hideSearchPlaceholder ''
               .information-widget-search input::placeholder {
@@ -787,9 +829,9 @@ args@{
             }
             {
               locations =
-                lib.optionalAttrs (localBackgroundFile != null) {
+                lib.optionalAttrs (effectiveLocalBackgroundFile != null) {
                   "= /dashboard-bg" = {
-                    alias = "${self.profile.filesPath localBackgroundFile}";
+                    alias = "${self.profile.filesPath effectiveLocalBackgroundFile}";
                     extraConfig = ''add_header Cache-Control "max-age=86400";'';
                   };
                 }
