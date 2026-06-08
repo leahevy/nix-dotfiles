@@ -1335,7 +1335,7 @@ args@{
 
         dnsCheckExpr = ''
           _ts=$(${pkgs.coreutils}/bin/date +%s)
-          if ! ${pkgs.dnsutils}/bin/dig "${_ts}.example.com" +time=2 2>/dev/null \
+          if ! ${pkgs.dnsutils}/bin/dig "$_ts.example.com" +timeout=5 2>/dev/null \
             | ${pkgs.gnugrep}/bin/grep -qiE 'NXDOMAIN|NOERROR'; then
             printf 'DNS resolution failed (%s.example.com)\n' "$_ts" >&3
           fi
