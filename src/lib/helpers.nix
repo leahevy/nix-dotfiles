@@ -372,6 +372,69 @@ rec {
     builtins.match "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" str
     != null;
 
+  isValidIPv4 =
+    addr:
+    let
+      parts = lib.splitString "." addr;
+      inRange =
+        n:
+        let
+          v = lib.toInt n;
+        in
+        v >= 0 && v <= 255;
+    in
+    builtins.match "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}" addr != null
+    && builtins.length parts == 4
+    && builtins.all inRange parts;
+
+  isValidIPv6 =
+    addr:
+    let
+      onlyValidChars = builtins.match "[0-9a-fA-F:.]*" addr != null;
+      hasColon = lib.hasInfix ":" addr;
+      dcParts = lib.splitString "::" addr;
+      numDC = builtins.length dcParts;
+      isHexGroup = g: builtins.match "[0-9a-fA-F]{1,4}" g != null;
+
+      validateGroups =
+        groups:
+        let
+          n = builtins.length groups;
+          lastG = if n > 0 then builtins.elemAt groups (n - 1) else "";
+          lastIsIPv4 = n > 0 && isValidIPv4 lastG;
+          prefixGroups = lib.take (n - 1) groups;
+          effectiveCount = if lastIsIPv4 then n + 1 else n;
+        in
+        {
+          valid =
+            if n == 0 then
+              true
+            else if lastIsIPv4 then
+              builtins.all isHexGroup prefixGroups
+            else
+              builtins.all isHexGroup groups;
+          count = effectiveCount;
+        };
+
+      noDC =
+        let
+          r = validateGroups (lib.splitString ":" addr);
+        in
+        r.valid && r.count == 8;
+
+      withDC =
+        let
+          leftStr = builtins.head dcParts;
+          rightStr = builtins.elemAt dcParts 1;
+          lr = validateGroups (if leftStr == "" then [ ] else lib.splitString ":" leftStr);
+          rr = validateGroups (if rightStr == "" then [ ] else lib.splitString ":" rightStr);
+        in
+        lr.valid && rr.valid && (lr.count + rr.count) < 8;
+    in
+    onlyValidChars && hasColon && numDC <= 2 && ((numDC == 1 && noDC) || (numDC == 2 && withDC));
+
+  isValidIP = addr: isValidIPv4 addr || isValidIPv6 addr;
+
   # Get absolute path to file in any input
   # Usage: getInputFilePath $INPUT $SUBPATH
   getInputFilePath = input: subPath: input + "/" + subPath;

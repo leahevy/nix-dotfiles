@@ -468,6 +468,36 @@ args@{
       default = true;
       description = "Replace and redact known sensitive literals such as hostname and domain in health check output.";
     };
+
+    ipMapping = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf lib.types.str);
+      default = { };
+      description = "Map of device names to their known IP addresses, replaced with angle-bracket tokens in all health check output.";
+    };
+
+    additionalSecretWipeLinePatterns = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional literal strings that cause the entire line to be redacted when matched anywhere in it.";
+    };
+
+    additionalSecretWipeValuePatterns = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional literal strings that cause the token containing them to be redacted.";
+    };
+
+    additionalSecretWipeValueRegexes = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional POSIX ERE patterns that cause the token matching them to be redacted.";
+    };
+
+    additionalSecretReplacements = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Additional literal strings to replace in health check output, as an attrset of literal to replacement label.";
+    };
   };
 
   module = {
@@ -659,6 +689,11 @@ args@{
         projectUUID,
         healthchecksFinalChecksURL,
         enableSecretReplacements,
+        ipMapping,
+        additionalSecretWipeLinePatterns,
+        additionalSecretWipeValuePatterns,
+        additionalSecretWipeValueRegexes,
+        additionalSecretReplacements,
         ...
       }:
       let
@@ -1742,6 +1777,9 @@ args@{
             echo "" >> "$REPORT_FILE"
             ${pkgs.coreutils}/bin/cat "$DETAIL_FILE" >> "$REPORT_FILE"
 
+            _report_ip_tmp="$TMPDIR_HC/report-ip"
+            ${ipReplaceScript} < "$REPORT_FILE" > "$_report_ip_tmp" && ${pkgs.coreutils}/bin/mv "$_report_ip_tmp" "$REPORT_FILE" || true
+
             ${curlWithRetry { inherit endpointName networkTimeoutSec; }}
           '';
 
@@ -1784,7 +1822,8 @@ args@{
           "/run/secrets"
           "secret"
           "token"
-        ];
+        ]
+        ++ additionalSecretWipeLinePatterns;
 
         secretWipeValueLiterals = [
           "amqp://"
@@ -1802,42 +1841,46 @@ args@{
           "smtp://"
           "smtps://"
           "ssh://"
-        ];
+        ]
+        ++ additionalSecretWipeValuePatterns;
 
         secretWipeValueRegexes = [
           "[[:alnum:]_.%+-]+@[[:alnum:].-]+[.][[:alpha:]]{2,}"
           "(^|[^[:alnum:]_])[0-9A-F]{40}([^[:alnum:]_]|$)"
           "(^|[^[:alnum:]_])[0-9A-F]{16}([^[:alnum:]_]|$)"
-        ];
+        ]
+        ++ additionalSecretWipeValueRegexes;
 
-        secretReplaceValues = lib.foldl (acc: p: acc // { "${p.key}" = p.val; }) { } (
-          lib.filter (p: p.key != null && p.key != "") [
-            {
-              key = self.host.remote.baseDomain;
-              val = "domain";
-            }
-            {
-              key = self.host.hostname;
-              val = "hostname";
-            }
-            {
-              key = self.user.username;
-              val = "username";
-            }
-            {
-              key = self.user.fullname;
-              val = "full name";
-            }
-            {
-              key = self.user.email;
-              val = "email";
-            }
-            {
-              key = config.users.users.${mainUser}.home;
-              val = "home";
-            }
-          ]
-        );
+        secretReplaceValues =
+          lib.foldl (acc: p: acc // { "${p.key}" = p.val; }) { } (
+            lib.filter (p: p.key != null && p.key != "") [
+              {
+                key = self.host.remote.baseDomain;
+                val = "domain";
+              }
+              {
+                key = self.host.hostname;
+                val = "hostname";
+              }
+              {
+                key = self.user.username;
+                val = "username";
+              }
+              {
+                key = self.user.fullname;
+                val = "full name";
+              }
+              {
+                key = self.user.email;
+                val = "email";
+              }
+              {
+                key = config.users.users.${mainUser}.home;
+                val = "home";
+              }
+            ]
+          )
+          // additionalSecretReplacements;
 
         makeReplaceToken = label: "<${lib.replaceStrings [ " " ] [ "_" ] (lib.toUpper label)}>";
 
@@ -1860,6 +1903,41 @@ args@{
         secretWipeValueRegex = lib.concatStringsSep "|" (
           (map lib.escapeRegex secretWipeValueLiterals) ++ secretWipeValueRegexes
         );
+
+        localhostIPs = [
+          "127.0.0.1"
+          "::1"
+          "::ffff:127.0.0.1"
+          "localhost"
+        ];
+
+        effectiveIpMapping = {
+          "${hostname}" = localhostIPs;
+        }
+        // ipMapping;
+
+        ipReplaceAwkLines = lib.concatLists (
+          lib.mapAttrsToList (
+            name: ips:
+            let
+              ipLabel = lib.replaceStrings [ " " ] [ "_" ] name;
+            in
+            map (ip: ''gsub(/${escapeAwkRegexLiteral ip}/, "<${ipLabel}>")'') ips
+          ) effectiveIpMapping
+        );
+
+        ipReplaceScript =
+          if ipReplaceAwkLines == [ ] then
+            "${pkgs.coreutils}/bin/cat"
+          else
+            pkgs.writeShellScript "nx-hc-ip-replace" ''
+              ${pkgs.gawk}/bin/awk '
+                {
+                  ${lib.concatStringsSep "\n" ipReplaceAwkLines}
+                }
+                { print }
+              '
+            '';
 
         secretCensorScript =
           if !enableSecretReplacements then
@@ -2042,6 +2120,9 @@ args@{
                 fi
               fi
             ''}
+
+            _report_ip_tmp="$TMPDIR_HC/report-ip"
+            ${ipReplaceScript} < "$REPORT_FILE" > "$_report_ip_tmp" && ${pkgs.coreutils}/bin/mv "$_report_ip_tmp" "$REPORT_FILE" || true
 
             ${curlWithRetry {
               inherit endpointName;
@@ -2261,7 +2342,16 @@ args@{
               );
               message = "linux.server.healthchecks: timedHealthChecks entries must define either interval or schedule!";
             }
-          ];
+          ]
+          ++ lib.concatLists (
+            lib.mapAttrsToList (
+              name: ips:
+              map (ip: {
+                assertion = helpers.isValidIP ip;
+                message = "linux.server.healthchecks: ipMapping.\"${name}\" entry \"${ip}\" is not a valid IPv4 or IPv6 address!";
+              }) ips
+            ) ipMapping
+          );
 
           sops.secrets."${hostname}-healthchecks-uuid" = {
             format = "binary";
