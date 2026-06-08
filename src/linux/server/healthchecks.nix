@@ -1911,10 +1911,19 @@ args@{
           "localhost"
         ];
 
-        effectiveIpMapping = {
-          "${hostname}" = localhostIPs;
-        }
-        // ipMapping;
+        effectiveIpMapping =
+          let
+            base = {
+              "${hostname}" = localhostIPs;
+            };
+            allKeys = lib.unique (builtins.attrNames base ++ builtins.attrNames ipMapping);
+          in
+          builtins.listToAttrs (
+            map (key: {
+              name = key;
+              value = (base.${key} or [ ]) ++ (ipMapping.${key} or [ ]);
+            }) allKeys
+          );
 
         ipReplaceAwkLines = lib.concatLists (
           lib.mapAttrsToList (
