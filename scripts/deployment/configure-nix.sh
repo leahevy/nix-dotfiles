@@ -23,11 +23,6 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-if [[ "$CHECK_ONLY" != "true" ]] && [[ "$EUID" -ne 0 ]]; then
-	echo -e "${RED}Must be run as root when not using --check-only${RESET}" >&2
-	exit 1
-fi
-
 OS="$(uname -s)"
 
 NIX_DAEMON_FILE='/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
@@ -55,14 +50,14 @@ DESIRED_NIX_CONF_KEYS=(
 
 get_nix_conf_value() {
 	local key="$1"
-	grep -E "^\s*${key}\s*=" "$NX_CONF" 2>/dev/null | tail -1 | sed 's/^[^=]*=//' | sed 's/^ *//' | sed 's/ *$//'
+	grep -E "^\s*${key}\s*=" "$NX_CONF" 2>/dev/null | tail -1 | sed 's/^[^=]*=//' | sed 's/^ *//' | sed 's/ *$//' || true
 }
 
 sed_inplace() {
 	if [[ "$OS" == "Darwin" ]]; then
-		sed -i '' "$@"
+		sudo sed -i '' "$@"
 	else
-		sed -i "$@"
+		sudo sed -i "$@"
 	fi
 }
 
@@ -89,7 +84,7 @@ configure_zshrc_darwin() {
 		exit 0
 	fi
 
-	printf '\n%s\n' "$NIX_BLOCK" >>"$ZSHRC"
+	printf '\n%s\n' "$NIX_BLOCK" | sudo tee -a "$ZSHRC" >/dev/null
 
 	if ! grep -qF '# End Nix' "$ZSHRC" 2>/dev/null; then
 		echo -e "${RED}Write verification failed. Check file manually: ${WHITE}${ZSHRC}${RESET}" >&2
@@ -159,7 +154,7 @@ configure_nix_conf() {
 		if grep -qE "^\s*${key}\s*=" "$NX_CONF" 2>/dev/null; then
 			sed_inplace "s|^\s*${key}\s*=.*|${key} = ${desired}|" "$NX_CONF"
 		else
-			printf '%s = %s\n' "$key" "$desired" >>"$NX_CONF"
+			printf '%s = %s\n' "$key" "$desired" | sudo tee -a "$NX_CONF" >/dev/null
 		fi
 	done
 
