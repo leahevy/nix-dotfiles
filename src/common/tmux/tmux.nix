@@ -73,7 +73,7 @@ args@{
               { "󱙺 Claude" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "claude"}"; }
             ]
             ++ lib.optionals (codexEnabled && devMode) [
-              { "󱙺 Codex" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "codex"}"; }
+              { "󱙺 Codex" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "codex"}"; }
             ]
             ++ self.settings.additionalMainConfigWindows;
           };
