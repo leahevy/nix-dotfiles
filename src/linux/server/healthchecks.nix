@@ -1382,8 +1382,9 @@ args@{
 
           while IFS=$'\t' read -r _count _status _method _user _ip; do
             [[ -n "$_status" ]] || continue
-            if [[ "$_status" == "OK" ]] && [[ "$_ip" =~ ^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.) ]]; then
-              continue
+            if [[ "$_status" == "OK" ]]; then
+              [[ "$_ip" =~ ^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.) ]] && continue
+              [[ "$_ip" =~ ${mappedIPRegex} ]] && continue
             fi
             printf '%5s ..... %-4s %s %s from %s\n' "$_count" "$_status" "$_method" "$_user" "$_ip" >&3
           done <<< "$_summary"
@@ -1391,6 +1392,7 @@ args@{
 
         kernelLogProcessScript = pkgs.writeShellScript "kernel-log-process" ''
           ${pkgs.gnugrep}/bin/grep -vE "refused connection:.*SRC=(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)" \
+          | ${pkgs.gnugrep}/bin/grep -vE "${mappedIPSrcRegex}" \
           | ${pkgs.gawk}/bin/awk '
             NR==1 { prev=$0; idx=index($0,"kernel: "); prev_key=(idx>0?substr($0,idx+8):$0); count=1; next }
             {
@@ -1928,6 +1930,20 @@ args@{
               value = (base.${key} or [ ]) ++ (ipMapping.${key} or [ ]);
             }) allKeys
           );
+
+        mappedIPRegex =
+          let
+            allIPs = lib.concatLists (lib.attrValues effectiveIpMapping);
+          in
+          "^(" + lib.concatStringsSep "|" (map lib.escapeRegex allIPs) + ")$";
+
+        mappedIPSrcRegex =
+          let
+            allIPs = lib.concatLists (lib.attrValues effectiveIpMapping);
+          in
+          "refused connection:.*SRC=("
+          + lib.concatStringsSep "|" (map lib.escapeRegex allIPs)
+          + ")([[:space:]]|$)";
 
         ipReplaceAwkLines =
           let
