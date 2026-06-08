@@ -1387,7 +1387,8 @@ args@{
         '';
 
         kernelLogProcessScript = pkgs.writeShellScript "kernel-log-process" ''
-          ${pkgs.gawk}/bin/awk '
+          ${pkgs.gnugrep}/bin/grep -vE "refused connection:.*SRC=(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)" \
+          | ${pkgs.gawk}/bin/awk '
             NR==1 { prev=$0; idx=index($0,"kernel: "); prev_key=(idx>0?substr($0,idx+8):$0); count=1; next }
             {
               idx=index($0,"kernel: ")
@@ -1414,7 +1415,7 @@ args@{
           fi
 
           if [[ "$_kernel_lines" -gt 200 ]]; then
-            printf '[kernel log: warning+, %d lines today (deduplicated)]\n' "$_kernel_lines" >&3
+            printf '[kernel log: warning+, %d lines today (filtered)]\n' "$_kernel_lines" >&3
             ${pkgs.systemd}/bin/journalctl -k --since "$_since" -p warning..emerg --no-pager \
               | ${kernelLogProcessScript} \
               | ${secretCensorScript} > "$KERNEL_LOG_FILTERED"
