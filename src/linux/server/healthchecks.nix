@@ -184,6 +184,12 @@ args@{
       description = "Days before certificate expiry at which to start reporting failure.";
     };
 
+    checkDns = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Check that DNS resolution is working by querying a unique timestamped subdomain of example.com.";
+    };
+
     checkUptime = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -667,6 +673,7 @@ args@{
         diskFreeThresholdPct,
         checkCertExpiry,
         certExpiryWarnDays,
+        checkDns,
         checkUptime,
         uptimeWarnDays,
         checkSmartDisk,
@@ -1297,6 +1304,7 @@ args@{
           "+30 - Timezone" = timezoneExpr;
           "-30 - Remote IP" = remoteIpExpr;
         }
+        // lib.optionalAttrs checkDns { "+31 - DNS resolution" = dnsCheckExpr; }
         // {
           "+45 - Storage health" = storageHealthExpr;
         }
@@ -1306,6 +1314,14 @@ args@{
           "!60 - Top memory processes" = topMemExpr;
         }
         // regularHealthChecks;
+
+        dnsCheckExpr = ''
+          _ts=$(${pkgs.coreutils}/bin/date +%s)
+          if ! ${pkgs.dnsutils}/bin/dig "${_ts}.example.com" +time=2 2>/dev/null \
+            | ${pkgs.gnugrep}/bin/grep -qiE 'NXDOMAIN|NOERROR'; then
+            printf 'DNS resolution failed (%s.example.com)\n' "$_ts" >&3
+          fi
+        '';
 
         uptimeCheckExpr = ''
           _uptime_sec=$(${pkgs.gawk}/bin/awk '{print int($1)}' /proc/uptime)
