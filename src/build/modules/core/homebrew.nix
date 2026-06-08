@@ -244,6 +244,28 @@ in
               trap cleanup EXIT INT TERM
 
               echo
+              echo -e "''${WHITE}Setting up tap trust...''${RESET}"
+              export HOMEBREW_REQUIRE_TAP_TRUST=1
+              ${lib.concatMapStrings (tap: ''
+                GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust '${tap}' >/dev/null 2>&1 || true
+              '') cfg.taps}
+              ${lib.concatMapStrings (
+                entry:
+                let
+                  name = if builtins.isString entry then entry else entry.name;
+                in
+                lib.optionalString (lib.hasInfix "/" name) ''
+                  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust --formula '${name}' >/dev/null 2>&1 || true
+                ''
+              ) cfg.brews}
+              ${lib.concatMapStrings (
+                cask:
+                lib.optionalString (lib.hasInfix "/" cask) ''
+                  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust --cask '${cask}' >/dev/null 2>&1 || true
+                ''
+              ) cfg.casks}
+
+              echo
               echo -e "''${WHITE}Updating Homebrew...''${RESET}"
               GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew update --quiet
               echo
