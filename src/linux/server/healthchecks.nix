@@ -950,6 +950,23 @@ args@{
           fi
         '';
 
+        fanCheckExpr = ''
+          for _f in /sys/class/hwmon/hwmon*/fan*_input; do
+            [[ -f "$_f" ]] || continue
+            _rpm=$(${pkgs.coreutils}/bin/cat "$_f" 2>/dev/null) || continue
+            [[ "$_rpm" =~ ^[0-9]+$ ]] || continue
+            [[ "$_rpm" -gt 0 ]] || continue
+            _hwmon="''${_f%/*}"
+            _fan="''${_f##*/}"
+            _fan="''${_fan%_input}"
+            _name=$(${pkgs.coreutils}/bin/cat "''${_hwmon}/name" 2>/dev/null || true)
+            _label=$(${pkgs.coreutils}/bin/cat "''${_hwmon}/''${_fan}_label" 2>/dev/null || true)
+            [[ -z "$_label" ]] && _label="$_fan"
+            [[ -z "$_name" ]] && _name="unknown"
+            printf '%s (%s): %s RPM\n' "$_label" "$_name" "$_rpm" >&3
+          done
+        '';
+
         loadCheckExpr =
           let
             awkCondTop = lib.concatStringsSep " || " (
@@ -1290,6 +1307,7 @@ args@{
           "!20 - Memory and swap used" = memoryCheckExpr;
         }
         // lib.optionalAttrs (!self.isVirtual) { "!20 - Temperature" = thermalCheckExpr; }
+        // lib.optionalAttrs (!self.isVirtual) { "!21 - Fans" = fanCheckExpr; }
         // {
           "!20 - Load" = loadCheckExpr;
           "!25 - CPU usage" = cpuUsageExpr;
