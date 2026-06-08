@@ -5,15 +5,9 @@
     "${self.user.home}/.gnupg" = "deny";
     "${self.user.home}/.config/sops-nix/secrets" = "deny";
     "${self.user.home}/.config/sops" = "deny";
-    "/root" = "deny";
-    "/dev" = "deny";
   };
 
   denyFilesystemDirPathsLinux = {
-    "/proc" = "deny";
-    "/sys" = "deny";
-    "/run/secrets" = "deny";
-    "/etc/sops" = "deny";
   };
 
   denyFilesystemDirPathsDarwin = { };

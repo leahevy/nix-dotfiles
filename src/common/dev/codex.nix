@@ -232,18 +232,14 @@ args@{
             );
 
           fake-ssh = pkgs.writeShellScriptBin "ssh" "exit 1";
-          codex-wrapped = pkgs.symlinkJoin {
-            name = "codex-wrapped";
-            paths = [ pkgs.codex ];
-            nativeBuildInputs = [ pkgs.makeWrapper ];
-            postBuild = ''
-              wrapProgram "$out/bin/codex" \
-                --prefix PATH : ${fake-ssh}/bin \
-                --set GIT_CONFIG_COUNT 1 \
-                --set GIT_CONFIG_KEY_0 "url.https://github.com/.insteadOf" \
-                --set GIT_CONFIG_VALUE_0 "git@github.com:"
-            '';
-          };
+          codex-wrapped = pkgs.writeShellScriptBin "codex" ''
+            export PATH=${fake-ssh}/bin:$PATH
+            export GIT_CONFIG_COUNT=1
+            export GIT_CONFIG_KEY_0=url.https://github.com/.insteadOf
+            export GIT_CONFIG_VALUE_0=git@github.com:
+            exec ${pkgs.codex}/bin/codex "$@"
+          '';
+
           codex-package =
             if githubEnforceSSH && config.nx.linux.security.yubikey.enable then codex-wrapped else pkgs.codex;
 
@@ -325,7 +321,6 @@ args@{
             analytics.enabled = false;
             feedback.enabled = false;
 
-            sandbox_mode = "read-only";
             approval_policy = defaultApprovalPolicy;
             approvals_reviewer = "user";
             allow_login_shell = false;
@@ -337,25 +332,27 @@ args@{
               skill_mcp_dependency_install = false;
             };
 
+            permissions.hardened.extends = ":workspace";
             permissions.hardened.filesystem = {
               glob_scan_max_depth = 8;
+              ":root" = "deny";
+              ":minimal" = "read";
+              "/nix/store" = "read";
+              "${self.user.home}/.agents/skills" = "read";
 
               ":workspace_roots" = {
-                "." = "read";
+                "." = "write";
                 "**/.env*" = "deny";
                 "**/*.pem" = "deny";
                 "**/*.key" = "deny";
                 "**/id_rsa" = "deny";
                 "**/*secret*" = "deny";
               };
+            };
 
-              "${self.user.home}/.agents/skills" = "read";
-              "/etc" = "deny";
-              "/proc" = "deny";
-              "/sys" = "deny";
-              "/run" = "deny";
-            }
-            // denyFilesystemPaths;
+            permissions.hardened.network = {
+              enabled = false;
+            };
 
             notice = {
               model_migrations = {
