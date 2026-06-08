@@ -1925,15 +1925,23 @@ args@{
             }) allKeys
           );
 
-        ipReplaceAwkLines = lib.concatLists (
-          lib.mapAttrsToList (
-            name: ips:
-            let
-              ipLabel = lib.replaceStrings [ " " ] [ "_" ] name;
-            in
-            map (ip: ''gsub(/${escapeAwkRegexLiteral ip}/, "<${ipLabel}>")'') ips
-          ) effectiveIpMapping
-        );
+        ipReplaceAwkLines =
+          let
+            allPairs = lib.concatLists (
+              lib.mapAttrsToList (
+                name: ips:
+                let
+                  ipLabel = lib.replaceStrings [ " " ] [ "_" ] name;
+                in
+                map (ip: {
+                  inherit ip;
+                  label = ipLabel;
+                }) ips
+              ) effectiveIpMapping
+            );
+            sorted = lib.sort (a: b: builtins.stringLength a.ip > builtins.stringLength b.ip) allPairs;
+          in
+          map ({ ip, label }: ''gsub(/${escapeAwkRegexLiteral ip}/, "<${label}>")'') sorted;
 
         ipReplaceScript =
           if ipReplaceAwkLines == [ ] then
