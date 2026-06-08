@@ -463,8 +463,12 @@ let
     }
     // extraPolicies;
 
+  monoFontBrokenDomains = [
+    "sharepoint.com"
+  ];
+
   firefoxSpecificCSS =
-    monospaceFont:
+    monospaceFont: monospaceCSSExcludedDomains:
     let
       skipOnHtml = [
         '':has(body[data-theme*="fluent" i])''
@@ -539,6 +543,11 @@ let
       ${joinAll revertSelectors} {
         font-family: revert !important;
       }
+      ${lib.concatMapStringsSep "\n" (domain: ''
+        @-moz-document domain("${domain}") {
+          *, *::before, *::after, input, textarea, select, button { font-family: revert !important; }
+        }
+      '') (monoFontBrokenDomains ++ monospaceCSSExcludedDomains)}
     '';
 in
 {
@@ -605,6 +614,11 @@ in
       default = [ ];
       description = "List of URL prefixes where Firefox userContent CSS is disabled.";
     };
+    monospaceCSSExcludedDomains = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "List of domains (and all their subdomains) where the monospace font CSS override is disabled.";
+    };
     extensions = lib.mkOption {
       type = lib.types.attrsOf extensionType;
       default = { };
@@ -631,6 +645,7 @@ in
         monospaceFont,
         bottomToolbars,
         userContentCSSExcludedUrls,
+        monospaceCSSExcludedDomains,
         ...
       }:
       let
@@ -981,7 +996,7 @@ in
         userContentCSS =
           let
             browserUserContent = config.nx.common.browser.browser.final.userContentCSS;
-            cssData = browserUserContent.data + (firefoxSpecificCSS monospaceFont);
+            cssData = browserUserContent.data + (firefoxSpecificCSS monospaceFont monospaceCSSExcludedDomains);
             excludedUrlPattern =
               if userContentCSSExcludedUrls == [ ] then
                 null
@@ -1388,6 +1403,7 @@ in
         extensions,
         defaultDownloadsName,
         monospaceFont,
+        monospaceCSSExcludedDomains,
         ...
       }:
       let
@@ -1413,7 +1429,9 @@ in
                 rm -f "$css_dir/userContent.css"
                 rm -f "$css_dir/userContent.css.${self.variables.home-manager-backup-extension}"
                 cp "${
-                  pkgs.writeText "browser-user-content.css" (userCSS.data + (firefoxSpecificCSS monospaceFont))
+                  pkgs.writeText "browser-user-content.css" (
+                    userCSS.data + (firefoxSpecificCSS monospaceFont monospaceCSSExcludedDomains)
+                  )
                 }" "$css_dir/userContent.css"
                fi
             ''} || true
