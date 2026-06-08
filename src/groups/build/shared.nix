@@ -30,6 +30,7 @@ args@{
         "man"
         "commandline"
         "unfree"
+        "flake-inputs"
       ];
       desktop = [
         "desktop"
