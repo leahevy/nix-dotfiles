@@ -1858,6 +1858,8 @@ diff_store_paths() {
 		fi
 	done <"$changed_file"
 
+	failed_loop=false
+	fail_msg=""
 	while IFS= read -r name; do
 		has_raw_diffs=true
 		[[ "$name" == "issue" ]] && continue
@@ -1877,13 +1879,19 @@ diff_store_paths() {
 
 		local old_hashes=() new_hashes=()
 
-		while IFS= read -r h; do
-			old_hashes+=("$h")
-		done < <(awk -F $'\t' -v n="$name" '$2 == n { print $1 }' "$old_file" | sort -u)
+		# shellcheck disable=SC2207
+		if ! old_hashes=($(awk -F $'\t' -v n="$name" '$2 == n { print $1 }' "$old_file" | sort -u)); then
+			failed_loop=true
+			fail_msg="failed to collect old hashes for: $name"
+			break
+		fi
 
-		while IFS= read -r h; do
-			new_hashes+=("$h")
-		done < <(awk -F $'\t' -v n="$name" '$2 == n { print $1 }' "$new_file" | sort -u)
+		# shellcheck disable=SC2207
+		if ! new_hashes=($(awk -F $'\t' -v n="$name" '$2 == n { print $1 }' "$new_file" | sort -u)); then
+			failed_loop=true
+			fail_msg="failed to collect new hashes for: $name"
+			break
+		fi
 
 		if ((${#old_hashes[@]} == 0 || ${#new_hashes[@]} == 0)); then
 			continue
@@ -1950,6 +1958,13 @@ diff_store_paths() {
 			done
 		fi
 	done <"$changed_file" >>"$out_file"
+
+	if $failed_loop; then
+		echo >&2
+		echo -e "${RED}$fail_msg${RESET}" >&2
+		echo >&2
+		return 1
+	fi
 
 	echo -en "${CYAN}${YELLOW}$num_entries${CYAN} store paths${CYAN}${RESET} "
 	if [[ -s "$out_file" ]]; then
