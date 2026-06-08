@@ -1,19 +1,19 @@
 { lib, self }:
 {
   denyFilesystemDirPathsCommon = {
-    "${self.user.home}/.ssh" = "none";
-    "${self.user.home}/.gnupg" = "none";
-    "${self.user.home}/.config/sops-nix/secrets" = "none";
-    "${self.user.home}/.config/sops" = "none";
-    "/root" = "none";
-    "/dev" = "none";
+    "${self.user.home}/.ssh" = "deny";
+    "${self.user.home}/.gnupg" = "deny";
+    "${self.user.home}/.config/sops-nix/secrets" = "deny";
+    "${self.user.home}/.config/sops" = "deny";
+    "/root" = "deny";
+    "/dev" = "deny";
   };
 
   denyFilesystemDirPathsLinux = {
-    "/proc" = "none";
-    "/sys" = "none";
-    "/run/secrets" = "none";
-    "/etc/sops" = "none";
+    "/proc" = "deny";
+    "/sys" = "deny";
+    "/run/secrets" = "deny";
+    "/etc/sops" = "deny";
   };
 
   denyFilesystemDirPathsDarwin = { };

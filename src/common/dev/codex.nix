@@ -325,16 +325,10 @@ args@{
             analytics.enabled = false;
             feedback.enabled = false;
 
-            profile = "locked_down";
-
-            profiles = {
-              locked_down = {
-                sandbox_mode = "read-only";
-                approval_policy = defaultApprovalPolicy;
-                approvals_reviewer = "user";
-                allow_login_shell = false;
-              };
-            };
+            sandbox_mode = "read-only";
+            approval_policy = defaultApprovalPolicy;
+            approvals_reviewer = "user";
+            allow_login_shell = false;
 
             default_permissions = "hardened";
 
@@ -346,20 +340,20 @@ args@{
             permissions.hardened.filesystem = {
               glob_scan_max_depth = 8;
 
-              ":project_roots" = {
+              ":workspace_roots" = {
                 "." = "read";
-                "**/.env*" = "none";
-                "**/*.pem" = "none";
-                "**/*.key" = "none";
-                "**/id_rsa" = "none";
-                "**/*secret*" = "none";
+                "**/.env*" = "deny";
+                "**/*.pem" = "deny";
+                "**/*.key" = "deny";
+                "**/id_rsa" = "deny";
+                "**/*secret*" = "deny";
               };
 
               "${self.user.home}/.agents/skills" = "read";
-              "/etc" = "none";
-              "/proc" = "none";
-              "/sys" = "none";
-              "/run" = "none";
+              "/etc" = "deny";
+              "/proc" = "deny";
+              "/sys" = "deny";
+              "/run" = "deny";
             }
             // denyFilesystemPaths;
 
