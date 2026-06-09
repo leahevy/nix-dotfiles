@@ -262,6 +262,12 @@ args@{
       description = "Minimum number of fd 3 detail lines reserved per check in the health check body.";
     };
 
+    checkMaxRetries = lib.mkOption {
+      type = lib.types.int;
+      default = 3;
+      description = "Number of attempts for checks using the R retry prefix before reporting failure.";
+    };
+
     healthchecksBaseUrl = lib.mkOption {
       type = lib.types.str;
       default = "https://healthchecks.io";
@@ -692,6 +698,7 @@ args@{
         alwaysIncludeSummaryWidget,
         serviceTimeoutSec,
         minimalDetailMaxLines,
+        checkMaxRetries,
         healthchecksBaseUrl,
         projectUUID,
         healthchecksFinalChecksURL,
@@ -778,7 +785,7 @@ args@{
 
         makeCheckScript =
           desc: cmd:
-          pkgs.writeShellScript "nx-hc-check-${sanitizeName (lib.removePrefix "-" (lib.removePrefix "!" (lib.removePrefix "+" desc)))}" ''
+          pkgs.writeShellScript "nx-hc-check-${sanitizeName (lib.removePrefix "-" (lib.removePrefix "!" (lib.removePrefix "+" (lib.removePrefix "R" desc))))}" ''
             set -e
             ${cmd}
           '';
@@ -1322,7 +1329,7 @@ args@{
           "+30 - Timezone" = timezoneExpr;
           "-30 - Remote IP" = remoteIpExpr;
         }
-        // lib.optionalAttrs checkDns { "+31 - DNS resolution" = dnsCheckExpr; }
+        // lib.optionalAttrs checkDns { "R+31 - DNS resolution" = dnsCheckExpr; }
         // {
           "+45 - Storage health" = storageHealthExpr;
         }
@@ -1541,20 +1548,24 @@ args@{
         runCheckBlock =
           desc: script:
           let
-            silent = lib.hasPrefix "+" desc;
-            infoOnly = lib.hasPrefix "!" desc;
-            alwaysSucceed = lib.hasPrefix "-" desc;
+            hasRetry = lib.hasPrefix "R" desc;
+            descNoRetry = if hasRetry then lib.removePrefix "R" desc else desc;
+            silent = lib.hasPrefix "+" descNoRetry;
+            infoOnly = lib.hasPrefix "!" descNoRetry;
+            alwaysSucceed = lib.hasPrefix "-" descNoRetry;
             cleanDesc =
               if silent then
-                lib.removePrefix "+" desc
+                lib.removePrefix "+" descNoRetry
               else if infoOnly then
-                lib.removePrefix "!" desc
+                lib.removePrefix "!" descNoRetry
               else if alwaysSucceed then
-                lib.removePrefix "-" desc
+                lib.removePrefix "-" descNoRetry
               else
-                desc;
+                descNoRetry;
             infoFile = "$TMPDIR_HC/info-${sanitizeName cleanDesc}";
             outFile = "$TMPDIR_HC/out-${sanitizeName cleanDesc}";
+            retryStatePath = "/run/nx-healthcheck/retry-${sanitizeName cleanDesc}";
+            retryMax = toString checkMaxRetries;
             displayName = stripGroupPrefix cleanDesc;
 
             spacer = ''
@@ -1610,7 +1621,73 @@ args@{
               ${infoTail}
             '';
           in
-          if silent then
+          if hasRetry && alwaysSucceed then
+            ''
+              ${script} 3>"${infoFile}" >"${outFile}" 2>&1 || true
+              ${pkgs.coreutils}/bin/rm -f "${retryStatePath}"
+              ${showIfInfo}
+            ''
+          else if hasRetry then
+            ''
+              _r_count=0
+              if [[ -f "${retryStatePath}" ]]; then
+                _r_count=$(${pkgs.coreutils}/bin/cat "${retryStatePath}" 2>/dev/null || echo 0)
+              fi
+              if ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
+                ${pkgs.coreutils}/bin/rm -f "${retryStatePath}"
+                ${
+                  if silent then
+                    ''
+                      SILENT=$((SILENT + 1))
+                    ''
+                  else if infoOnly then
+                    ''
+                      if [[ -s "${infoFile}" ]]; then
+                        TOTAL=$((TOTAL + 1))
+                        ${spacer}
+                        printf '[OK  ] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
+                        ${appendInfo}
+                      else
+                        SILENT=$((SILENT + 1))
+                      fi
+                    ''
+                  else
+                    ''
+                      ${spacer}
+                      TOTAL=$((TOTAL + 1))
+                      printf '[OK  ] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
+                      ${infoTail}
+                    ''
+                }
+              else
+                _r_count=$((_r_count + 1))
+                if [[ $_r_count -lt ${retryMax} ]]; then
+                  printf '%d\n' "$_r_count" > "${retryStatePath}"
+                  ${spacer}
+                  TOTAL=$((TOTAL + 1))
+                  printf '[RETRY] %s [Attempt %d/${retryMax}]\n' ${lib.escapeShellArg displayName} "$_r_count" >> "$DETAIL_FILE"
+                  _prev_had_info=0
+                else
+                  ${pkgs.coreutils}/bin/rm -f "${retryStatePath}"
+                  TOTAL=$((TOTAL + 1))
+                  FAILED=$((FAILED + 1))
+                  ${spacer}
+                  printf '[FAIL ] %s\n' ${lib.escapeShellArg displayName} >> "$DETAIL_FILE"
+                  if [[ -s "${outFile}" ]]; then
+                    { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
+                      ${pkgs.coreutils}/bin/cat "${outFile}"
+                    } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
+                  fi
+                  if [[ -s "${infoFile}" ]]; then
+                    { printf 'check details: %s\n' ${lib.escapeShellArg displayName}
+                      ${pkgs.coreutils}/bin/cat "${infoFile}"
+                    } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
+                  fi
+                  ${infoTail}
+                fi
+              fi
+            ''
+          else if silent then
             ''
               if ! ${script} 3>"${infoFile}" >"${outFile}" 2>&1; then
                 ${onFail}
@@ -1744,6 +1821,7 @@ args@{
             endpointName,
             checks,
             networkTimeoutSec,
+            allowRetry ? true,
           }:
           let
             checkKeyPrefixDescs = {
@@ -1759,17 +1837,23 @@ args@{
                 "-" + lib.concatStrings (lib.filter (k: k != "-") keys)
               else
                 lib.concatStrings keys;
-            checkKeyPattern = "[${checkKeyPrefixClass}]?[0-9][0-9] - [a-zA-Z]([ ()0-9a-zA-Z-]*[0-9a-zA-Z)])?";
+            checkKeyPattern = "R?[${checkKeyPrefixClass}]?[0-9][0-9] - [a-zA-Z]([ ()0-9a-zA-Z-]*[0-9a-zA-Z)])?";
             invalidKeys = lib.filter (k: builtins.match checkKeyPattern k == null) (lib.attrNames checks);
+            invalidRetryKeys =
+              if !allowRetry then lib.filter (k: lib.hasPrefix "R" k) (lib.attrNames checks) else [ ];
             checkScripts =
-              if invalidKeys == [ ] then
+              if invalidRetryKeys != [ ] then
+                throw "healthchecks (${endpointName}): invalid check keys using R retry prefix: ${
+                  lib.concatStringsSep ", " (map (k: "\"${k}\"") invalidRetryKeys)
+                }. R prefix is only allowed in regular checks!"
+              else if invalidKeys == [ ] then
                 lib.mapAttrs makeCheckScript checks
               else
                 throw "healthchecks (${endpointName}): invalid check key: ${
                   lib.concatStringsSep ", " (map (k: "\"${k}\"") invalidKeys)
-                }. Prefixes: ${
+                }. Prefixes: R (retry before other prefix), ${
                   lib.concatStringsSep ", " (lib.mapAttrsToList (p: d: "\"${p}\" ${d}") checkKeyPrefixDescs)
-                }. Example: \"20 - Load\"!";
+                }. Example: \"20 - Load\", \"R+31 - DNS\"!";
           in
           pkgs.writeShellScript "nx-hc-${endpointName}" ''
             set -euo pipefail
@@ -1796,7 +1880,8 @@ args@{
 
             ${lib.concatStringsSep "\n" (
               let
-                stripSortKey = s: lib.removePrefix "-" (lib.removePrefix "!" (lib.removePrefix "+" s));
+                stripSortKey =
+                  s: lib.removePrefix "-" (lib.removePrefix "!" (lib.removePrefix "+" (lib.removePrefix "R" s)));
                 pairs = lib.mapAttrsToList (name: script: { inherit name script; }) checkScripts;
                 sorted = lib.sort (a: b: (stripSortKey a.name) < (stripSortKey b.name)) pairs;
               in
@@ -2271,6 +2356,7 @@ args@{
                   inherit endpointName;
                   checks = entry.checks;
                   networkTimeoutSec = entry.networkTimeoutSec;
+                  allowRetry = false;
                 };
               };
             };
@@ -2299,6 +2385,7 @@ args@{
                   inherit endpointName;
                   checks = entry.checks;
                   networkTimeoutSec = entry.networkTimeoutSec;
+                  allowRetry = false;
                 };
               };
             };
@@ -2527,6 +2614,7 @@ args@{
                 endpointName = dailyEndpointName;
                 checks = allDailyChecks;
                 networkTimeoutSec = 900;
+                allowRetry = false;
               };
             };
           };
@@ -2556,6 +2644,7 @@ args@{
                 endpointName = monthlyEndpointName;
                 checks = allMonthlyChecks;
                 networkTimeoutSec = 900;
+                allowRetry = false;
               };
             };
           };
