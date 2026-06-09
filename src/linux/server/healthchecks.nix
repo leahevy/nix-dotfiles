@@ -824,18 +824,24 @@ args@{
 
         memoryCheckExpr = ''
           ${pkgs.gawk}/bin/awk '
-            /MemTotal/{t=$2} /MemAvailable/{a=$2} /SwapTotal/{st=$2} /SwapFree/{sf=$2}
+            /MemTotal/{t=$2} /MemFree/{f=$2} /^Buffers/{b=$2} /^Cached/{c=$2} /SReclaimable/{sr=$2} /MemAvailable/{a=$2} /SwapTotal/{st=$2} /SwapFree/{sf=$2}
             END{
-              mem_used=(t>0) ? (t-a)*100/t : 0
+              app_kb = t - f - b - c - sr
+              app_pct = (t > 0) ? app_kb * 100 / t : 0
+              mem_pressure = (t > 0) ? (t - a) * 100 / t : 0
               if (st > 0) {
-                swap_used=(st-sf)*100/st
-                combined_free=(a+sf)*100/(t+st)
-                if (mem_used > 35 || swap_used > 35) printf "%.0f%% mem, %.0f%% swap\n", mem_used, swap_used > "/dev/fd/3"
+                sw_kb = st - sf
+                sw_pct = sw_kb * 100 / st
+                combined_free = (a + sf) * 100 / (t + st)
+                if (app_pct > 50 || mem_pressure > 80 || sw_pct > 50)
+                  printf "%.1fG/%.1fG mem (%.0f%%), %.1fG/%.1fG swap (%.0f%%)\n",
+                    app_kb/1048576, t/1048576, app_pct, sw_kb/1048576, st/1048576, sw_pct > "/dev/fd/3"
               } else {
-                combined_free=(t>0) ? a*100/t : 100
-                if (mem_used > 35) printf "%.0f%% mem\n", mem_used > "/dev/fd/3"
+                combined_free = (t > 0) ? a * 100 / t : 100
+                if (app_pct > 50 || mem_pressure > 80)
+                  printf "%.1fG/%.1fG (%.0f%%)\n", app_kb/1048576, t/1048576, app_pct > "/dev/fd/3"
               }
-              exit (combined_free < ${toString memoryFreeThresholdPct} || mem_used > ${toString memoryRamUsedMaxPct})
+              exit (combined_free < ${toString memoryFreeThresholdPct} || mem_pressure > ${toString memoryRamUsedMaxPct})
             }
           ' /proc/meminfo
         '';
