@@ -1144,30 +1144,61 @@ args@{
           fi
         '';
 
-        remoteIpExpr = ''
-          _remote_cache=/run/nx-healthcheck/remote-ip
-          _cache_age=99999
-          if [[ -f "$_remote_cache" ]]; then
-            _cache_age=$(( $(${pkgs.coreutils}/bin/date +%s) - $(${pkgs.coreutils}/bin/stat -c %Y "$_remote_cache") ))
-          fi
-          _raw=""
-          if [[ $_cache_age -ge 600 ]]; then
-            _raw=$(${pkgs.curl}/bin/curl -sf --max-time 10 https://api.ipify.org 2>/dev/null || true)
-          fi
-          if [[ "$_raw" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            printf '%s' "$_raw" > "$_remote_cache" || true
-            printf '%s\n' "$_raw" >&3
-          elif [[ -f "$_remote_cache" ]]; then
-            _cached=$(${pkgs.coreutils}/bin/cat "$_remote_cache")
-            if [[ $_cache_age -ge 600 ]]; then
-              printf '%s (cached)\n' "$_cached" >&3
-            else
-              printf '%s\n' "$_cached" >&3
+        remoteIpExpr =
+          let
+            domain = self.host.remote.baseDomain;
+          in
+          ''
+            _remote_cache=/run/nx-healthcheck/remote-ip
+            _cache_age=99999
+            if [[ -f "$_remote_cache" ]]; then
+              _cache_age=$(( $(${pkgs.coreutils}/bin/date +%s) - $(${pkgs.coreutils}/bin/stat -c %Y "$_remote_cache") ))
             fi
-          else
-            printf '<no remote ip>\n' >&3
-          fi
-        '';
+            _raw=""
+            if [[ $_cache_age -ge 600 ]]; then
+              _raw=$(${pkgs.curl}/bin/curl -sf --max-time 10 https://api.ipify.org 2>/dev/null || true)
+            fi
+            _current_ip=""
+            _ip_label=""
+            if [[ "$_raw" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              printf '%s' "$_raw" > "$_remote_cache" || true
+              _current_ip="$_raw"
+            elif [[ -f "$_remote_cache" ]]; then
+              _current_ip=$(${pkgs.coreutils}/bin/cat "$_remote_cache")
+              [[ $_cache_age -ge 600 ]] && _ip_label=" (cached)"
+            fi
+            ${
+              if domain == null then
+                ''
+                  if [[ -n "$_current_ip" ]]; then
+                    printf '%s%s\n' "$_current_ip" "$_ip_label" >&3
+                  else
+                    printf '<no remote ip>\n' >&3
+                    exit 1
+                  fi
+                ''
+              else
+                ''
+                  if [[ -z "$_current_ip" ]]; then
+                    printf '<no remote ip>\n' >&3
+                    exit 1
+                  fi
+                  _dns_ips=$(${pkgs.dnsutils}/bin/dig +short A ${lib.escapeShellArg domain} 2>/dev/null \
+                    | ${pkgs.gnugrep}/bin/grep -Eo '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || true)
+                  _dns_first=$(printf '%s' "$_dns_ips" | head -1)
+                  if [[ -z "$_dns_first" ]]; then
+                    true
+                  elif [[ "$_dns_first" =~ ^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.) ]]; then
+                    true
+                  elif printf '%s\n' "$_dns_ips" | ${pkgs.gnugrep}/bin/grep -qF "$_current_ip"; then
+                    true
+                  else
+                    printf '%s%s (DNS: %s)\n' "$_current_ip" "$_ip_label" "$_dns_first" >&3
+                    exit 1
+                  fi
+                ''
+            }
+          '';
 
         topSnapshotExpr = ''
           _hc_snap_start=$(${pkgs.coreutils}/bin/date +%s)
@@ -1383,7 +1414,7 @@ args@{
         // {
           "!30 - Network interfaces" = networkIfaceExpr;
           "+30 - Timezone" = timezoneExpr;
-          "-30 - Remote IP" = remoteIpExpr;
+          "R!30 - Remote IP" = remoteIpExpr;
         }
         // lib.optionalAttrs checkDns { "R+31 - DNS resolution" = dnsCheckExpr; }
         // {
