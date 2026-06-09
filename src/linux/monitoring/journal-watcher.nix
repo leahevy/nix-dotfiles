@@ -436,7 +436,21 @@ args@{
         config:
         let
           pushover = config.nx.linux.notifications.pushover;
-          hcUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+          hcFinalUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+          hcBaseUrl = config.nx.linux.server.healthchecks.healthchecksBaseUrl;
+          hcRegularUUID = config.nx.linux.server.healthchecks.builtinHealthCheckUUIDs.regular;
+          hcUrl =
+            if hcRegularUUID != null && hcFinalUrl != null then
+              "${hcBaseUrl}/checks/${hcRegularUUID}/details/"
+            else
+              hcFinalUrl;
+          hcUrlTitle =
+            if hcUrl == null then
+              null
+            else if hcRegularUUID != null && hcFinalUrl != null then
+              "View check"
+            else
+              "View healthchecks";
 
           opts = self.options config;
 
@@ -636,7 +650,7 @@ args@{
                 message = "{message_text_pushover}";
                 type = "{notify_type}";
                 url = hcUrl;
-                urlTitle = if hcUrl != null then "View healthchecks" else null;
+                urlTitle = hcUrlTitle;
               }
             else
               [ ];

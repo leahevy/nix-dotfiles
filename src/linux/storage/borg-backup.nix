@@ -408,7 +408,20 @@ args@{
       config:
       let
         pushover = config.nx.linux.notifications.pushover;
-        hcUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+        hcFinalUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+        hcBaseUrl = config.nx.linux.server.healthchecks.healthchecksBaseUrl;
+        hcUrl =
+          if self.settings.healthcheckUUID != null && hcFinalUrl != null then
+            "${hcBaseUrl}/checks/${self.settings.healthcheckUUID}/details/"
+          else
+            hcFinalUrl;
+        hcUrlTitle =
+          if hcUrl == null then
+            null
+          else if self.settings.healthcheckUUID != null && hcFinalUrl != null then
+            "View Borg check"
+          else
+            "View healthchecks";
         repoUrl = "ssh://${self.settings.repository.user}@${self.settings.repository.server}:${toString self.settings.repository.port}${self.settings.repository.path}";
         snapshotBase = self.persistPath ".snapshots";
 
@@ -581,7 +594,7 @@ args@{
                 message = pushoverMessage;
                 type = pushoverType;
                 url = hcUrl;
-                urlTitle = if hcUrl != null then "View healthchecks" else null;
+                urlTitle = hcUrlTitle;
               }
             )}
             echo "${message}" ${if level == "err" then ">&2" else ""}

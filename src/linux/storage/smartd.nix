@@ -37,7 +37,21 @@ args@{
       config:
       let
         pushover = config.nx.linux.notifications.pushover;
-        hcUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+        hcFinalUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+        hcBaseUrl = config.nx.linux.server.healthchecks.healthchecksBaseUrl;
+        hcRegularUUID = config.nx.linux.server.healthchecks.builtinHealthCheckUUIDs.regular;
+        hcUrl =
+          if hcRegularUUID != null && hcFinalUrl != null then
+            "${hcBaseUrl}/checks/${hcRegularUUID}/details/"
+          else
+            hcFinalUrl;
+        hcUrlTitle =
+          if hcUrl == null then
+            null
+          else if hcRegularUUID != null && hcFinalUrl != null then
+            "View check"
+          else
+            "View healthchecks";
 
         smartdNotifyScript = pkgs.writeShellScriptBin "smartd-notify" ''
           set -euo pipefail
@@ -143,7 +157,7 @@ args@{
               type = "\${NOTIFY_TYPE}";
               shellVars = true;
               url = hcUrl;
-              urlTitle = if hcUrl != null then "View healthchecks" else null;
+              urlTitle = hcUrlTitle;
             }}
           fi
 

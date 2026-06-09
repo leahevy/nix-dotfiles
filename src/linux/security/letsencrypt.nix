@@ -28,10 +28,25 @@ args@{
       config:
       let
         pushover = config.nx.linux.notifications.pushover;
-        hcUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+        hcFinalUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+        hcBaseUrl = config.nx.linux.server.healthchecks.healthchecksBaseUrl;
         logScript =
-          level: message:
+          level: message: domain:
           let
+            domainUUID = self.settings.healthcheckUUIDs.${domain} or null;
+            hcUrl =
+              if domainUUID != null && hcFinalUrl != null then
+                "${hcBaseUrl}/checks/${domainUUID}/details/"
+              else
+                hcFinalUrl;
+            hcUrlTitle =
+              if hcUrl == null then
+                null
+              else if domainUUID != null && hcFinalUrl != null then
+                "View Letsencrypt check"
+              else
+                "View healthchecks";
+
             userNotifyEnabled = (self.isModuleEnabled "notifications.user-notify");
             pushoverEnabled = self.settings.pushoverNotifications;
 
@@ -113,7 +128,7 @@ args@{
                 message = pushoverMessage;
                 type = pushoverType;
                 url = hcUrl;
-                urlTitle = if hcUrl != null then "View healthchecks" else null;
+                urlTitle = hcUrlTitle;
               }
             )}
             echo "${message}" ${if level == "err" then ">&2" else ""}
@@ -156,7 +171,7 @@ args@{
               dnsProvider = certConfig.provider;
               group = certConfig.group or "acme";
               postRun = ''
-                ${logScript "info" "RENEWED: Certificate ${domain} successfully renewed!"}
+                ${logScript "info" "RENEWED: Certificate ${domain} successfully renewed!" domain}
               '';
             }
             // (certConfig.extraConfig or { })
@@ -177,13 +192,13 @@ args@{
                   CERT_PATH="/var/lib/acme/${domain}/cert.pem"
 
                   if [ ! -f "$CERT_PATH" ]; then
-                    ${logScript "err" "ERROR: Certificate file not found for ${domain} at $CERT_PATH!"}
+                    ${logScript "err" "ERROR: Certificate file not found for ${domain} at $CERT_PATH!" domain}
                     exit 1
                   fi
 
                   EXPIRY=$(${pkgs.openssl}/bin/openssl x509 -enddate -noout -in "$CERT_PATH" | cut -d= -f2)
                   if [ $? -ne 0 ]; then
-                    ${logScript "err" "ERROR: Failed to read certificate expiration for ${domain}!"}
+                    ${logScript "err" "ERROR: Failed to read certificate expiration for ${domain}!" domain}
                     exit 1
                   fi
 
@@ -192,7 +207,7 @@ args@{
                   DAYS_LEFT=$(((EXPIRY_EPOCH - CURRENT_EPOCH) / 86400))
 
                   if [ $DAYS_LEFT -lt ${toString self.settings.warningDays} ]; then
-                    ${logScript "warning" "WARNING: Certificate ${domain} expires in $DAYS_LEFT days!"}
+                    ${logScript "warning" "WARNING: Certificate ${domain} expires in $DAYS_LEFT days!" domain}
                   fi
                 '';
               }

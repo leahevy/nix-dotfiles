@@ -198,7 +198,20 @@ args@{
       config:
       let
         pushover = config.nx.linux.notifications.pushover;
-        hcUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+        hcFinalUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
+        hcBaseUrl = config.nx.linux.server.healthchecks.healthchecksBaseUrl;
+        hcUrl =
+          if self.settings.healthcheckUUID != null && hcFinalUrl != null then
+            "${hcBaseUrl}/checks/${self.settings.healthcheckUUID}/details/"
+          else
+            hcFinalUrl;
+        hcUrlTitle =
+          if hcUrl == null then
+            null
+          else if self.settings.healthcheckUUID != null && hcFinalUrl != null then
+            "View upgrade check"
+          else
+            "View healthchecks";
         nxcoreDir = "${self.host.mainUser.home}/.config/nx/nxcore";
         nxconfigDir = "${self.host.mainUser.home}/.config/nx/nxconfig";
         isDevelopMode = self.host.deploymentMode == "develop";
@@ -398,7 +411,7 @@ args@{
                 priority = pushoverPriorityOverride;
                 shellVars = true;
                 url = hcUrl;
-                urlTitle = if hcUrl != null then "View healthchecks" else null;
+                urlTitle = hcUrlTitle;
               }
             )}
             echo "${message}" ${if level == "err" then ">&2" else ""}
@@ -1020,7 +1033,7 @@ args@{
                       type = "emerg";
                       shellVars = true;
                       url = hcUrl;
-                      urlTitle = if hcUrl != null then "View healthchecks" else null;
+                      urlTitle = hcUrlTitle;
                     }
                   )}
                   ${config.systemd.package}/bin/shutdown -r now --no-wall
@@ -1037,7 +1050,7 @@ args@{
                     type = "emerg";
                     shellVars = true;
                     url = hcUrl;
-                    urlTitle = if hcUrl != null then "View healthchecks" else null;
+                    urlTitle = hcUrlTitle;
                   }
                 )}
                 ${config.systemd.package}/bin/shutdown -r now --no-wall
