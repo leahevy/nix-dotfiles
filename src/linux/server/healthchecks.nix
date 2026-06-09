@@ -858,7 +858,12 @@ args@{
         '';
 
         memoryCheckExpr = ''
-          ${pkgs.gawk}/bin/awk '
+          _force_mem=0
+          if [[ -f "$TMPDIR_HC/top-data" ]] && \
+             ${pkgs.gawk}/bin/awk '$10+0 >= 2.5 {found=1; exit} END{exit !found}' "$TMPDIR_HC/top-data" 2>/dev/null; then
+            _force_mem=1
+          fi
+          ${pkgs.gawk}/bin/awk -v force_info="$_force_mem" '
             /MemTotal/{t=$2} /MemFree/{f=$2} /^Buffers/{b=$2} /^Cached/{c=$2} /SReclaimable/{sr=$2} /MemAvailable/{a=$2} /SwapTotal/{st=$2} /SwapFree/{sf=$2}
             END{
               app_kb = t - f - b - c - sr
@@ -868,12 +873,12 @@ args@{
                 sw_kb = st - sf
                 sw_pct = sw_kb * 100 / st
                 combined_free = (a + sf) * 100 / (t + st)
-                if (app_pct > 50 || mem_pressure > 80 || sw_pct > 50)
+                if (app_pct > 50 || mem_pressure > 80 || sw_pct > 50 || force_info+0)
                   printf "%.1fG/%.1fG mem (%.0f%%), %.1fG/%.1fG swap (%.0f%%)\n",
                     app_kb/1048576, t/1048576, app_pct, sw_kb/1048576, st/1048576, sw_pct > "/dev/fd/3"
               } else {
                 combined_free = (t > 0) ? a * 100 / t : 100
-                if (app_pct > 50 || mem_pressure > 80)
+                if (app_pct > 50 || mem_pressure > 80 || force_info+0)
                   printf "%.1fG/%.1fG (%.0f%%)\n", app_kb/1048576, t/1048576, app_pct > "/dev/fd/3"
               }
               exit (combined_free < ${toString memoryFreeThresholdPct} || mem_pressure > ${toString memoryRamUsedMaxPct})
@@ -1224,11 +1229,16 @@ args@{
         '';
 
         cpuUsageExpr = ''
+          _force_cpu=0
+          if [[ -f "$TMPDIR_HC/top-data" ]] && \
+             ${pkgs.gawk}/bin/awk '$9+0 >= 1.0 {found=1; exit} END{exit !found}' "$TMPDIR_HC/top-data" 2>/dev/null; then
+            _force_cpu=1
+          fi
           if [[ -f "$TMPDIR_HC/top-cpu-summary" ]]; then
-            ${pkgs.gawk}/bin/awk '
+            ${pkgs.gawk}/bin/awk -v force="$_force_cpu" '
               BEGIN{idle=0}
               {for(i=1;i<=NF;i++) if($i=="id,") idle=$(i-1)+0}
-              END{pct=100-idle; if(pct>=5) printf "%.0f%%\n", pct > "/dev/fd/3"}
+              END{pct=100-idle; if(pct>=5 || force+0) printf "%.0f%%\n", pct > "/dev/fd/3"}
             ' "$TMPDIR_HC/top-cpu-summary"
           fi
           exit 0
