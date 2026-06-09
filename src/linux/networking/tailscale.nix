@@ -195,6 +195,18 @@ args@{
     ifEnabled.linux.server.healthchecks = {
       enabled = config: {
         nx.linux.server.healthchecks.requireServicesUp = [ "tailscaled.service" ];
+        nx.linux.server.healthchecks.regularHealthChecks = {
+          "R+35 - Tailscale status" = ''
+            _ts_json=$(${pkgs.tailscale}/bin/tailscale status --json 2>/dev/null || true)
+            if ! printf '%s' "$_ts_json" \
+              | ${pkgs.jq}/bin/jq -e '.BackendState == "Running" and (.TailscaleIPs | length) > 0 and .Self.Online == true' >/dev/null 2>&1; then
+              _ts_state=$(printf '%s' "$_ts_json" \
+                | ${pkgs.jq}/bin/jq -r '.BackendState // "unknown"' 2>/dev/null || echo "unknown")
+              printf 'not connected (state: %s)\n' "$_ts_state" >&3
+              exit 1
+            fi
+          '';
+        };
       };
     };
 
