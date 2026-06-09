@@ -112,6 +112,12 @@ args@{
       description = "Seconds to keep the relaxed load threshold after detected nix build activity.";
     };
 
+    loadHighLoadGraceSeconds = lib.mkOption {
+      type = lib.types.int;
+      default = 300;
+      description = "Seconds to keep high-load-exempt mode after the triggering process is no longer detected.";
+    };
+
     loadHighCpuExemptCommands = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -688,6 +694,7 @@ args@{
         loadMaxPerCore,
         loadBuildMultiplier,
         loadBuildGraceSeconds,
+        loadHighLoadGraceSeconds,
         loadHighCpuExemptCommands,
         requiredCPUForHighLoadDetection,
         loadHighCpuExemptCommandsSensitive,
@@ -1059,12 +1066,14 @@ args@{
                 _build_mode=build-active
               fi
             fi
+            _high_load_marker=/run/nx-healthcheck/high-load-active
             _high_load_mode=normal
             ${lib.optionalString (loadHighCpuExemptCommands != [ ]) ''
               if ${pkgs.gawk}/bin/awk -v thr=${toString requiredCPUForHighLoadDetection} '
                   ($9+0 >= thr && (${awkCondTop})) {found=1}
                   END{exit !found}
                 ' "$TMPDIR_HC/top-data" 2>/dev/null; then
+                ${pkgs.coreutils}/bin/touch "$_high_load_marker"
                 _high_load_mode=high-load-exempt
               fi
             ''}
@@ -1073,9 +1082,20 @@ args@{
                   ($9+0 >= thr && (${awkCondSensitive})) {found=1}
                   END{exit !found}
                 ' "$TMPDIR_HC/top-data" 2>/dev/null; then
+                ${pkgs.coreutils}/bin/touch "$_high_load_marker"
                 _high_load_mode=high-load-exempt
               fi
             ''}
+            ${lib.optionalString (loadHighCpuExemptCommands != [ ] || loadHighCpuExemptCommandsSensitive != [ ])
+              ''
+                if [[ "$_high_load_mode" != "high-load-exempt" && -e "$_high_load_marker" ]]; then
+                  _hl_marker_mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$_high_load_marker" 2>/dev/null || echo 0)
+                  if [[ $((_now - _hl_marker_mtime)) -le ${toString loadHighLoadGraceSeconds} ]]; then
+                    _high_load_mode=high-load-exempt
+                  fi
+                fi
+              ''
+            }
             _nproc=$(${pkgs.coreutils}/bin/nproc 2>/dev/null || echo 1)
             ${pkgs.gawk}/bin/awk \
               -v max=${toString loadMaxPerCore} \
