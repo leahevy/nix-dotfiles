@@ -1665,8 +1665,8 @@ args@{
                   printf '%d\n' "$_r_count" > "${retryStatePath}"
                   ${spacer}
                   TOTAL=$((TOTAL + 1))
-                  printf '[RETRY] %s [Attempt %d/${retryMax}]\n' ${lib.escapeShellArg displayName} "$_r_count" >> "$DETAIL_FILE"
-                  _prev_had_info=0
+                  printf '[RETRY] %s (Attempt %d/${retryMax})\n' ${lib.escapeShellArg displayName} "$_r_count" >> "$DETAIL_FILE"
+                  ${infoTail}
                 else
                   ${pkgs.coreutils}/bin/rm -f "${retryStatePath}"
                   TOTAL=$((TOTAL + 1))
