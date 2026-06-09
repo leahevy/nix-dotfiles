@@ -927,9 +927,20 @@ args@{
           fi
         '';
 
-        thermalCheckExpr = ''
-          _zone_count=0
+        readTempMaxExpr = ''
           _temp_max=0
+          for _tz_file in /sys/class/thermal/thermal_zone*/temp; do
+            [[ -f "$_tz_file" ]] || continue
+            _tz_raw=$(${pkgs.coreutils}/bin/cat "$_tz_file" 2>/dev/null || true)
+            [[ "$_tz_raw" =~ ^[0-9]+$ ]] || continue
+            _tz_c=$((_tz_raw / 1000))
+            [[ $_tz_c -gt $_temp_max ]] && _temp_max=$_tz_c
+          done
+        '';
+
+        thermalCheckExpr = ''
+          ${readTempMaxExpr}
+          _zone_count=0
           _zone_names=()
           _zone_temps=()
           for _zone_file in /sys/class/thermal/thermal_zone*/temp; do
@@ -941,9 +952,6 @@ args@{
             _zone_names+=("''${_zone_dir##*/}")
             _zone_temps+=($_temp_c)
             _zone_count=$((_zone_count + 1))
-            if [[ $_temp_c -gt $_temp_max ]]; then
-              _temp_max=$_temp_c
-            fi
           done
           if [[ $_zone_count -eq 0 ]]; then
             printf 'no thermal zones found\n' >&3
