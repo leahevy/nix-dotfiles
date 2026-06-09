@@ -70,6 +70,30 @@ args@{
       description = "Minimum temperature in Celsius at which thermal readings are included in health check output.";
     };
 
+    fanElevatedRPM = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          x86_64 = lib.mkOption {
+            type = lib.types.nullOr lib.types.int;
+            default = 2300;
+            description = "Elevated RPM threshold for x86_64 hosts.";
+          };
+          pi5 = lib.mkOption {
+            type = lib.types.nullOr lib.types.int;
+            default = 4000;
+            description = "Elevated RPM threshold for Raspberry Pi 5.";
+          };
+          set = lib.mkOption {
+            type = lib.types.nullOr lib.types.int;
+            default = null;
+            description = "Overrides all board and architecture detection when non-null.";
+          };
+        };
+      };
+      default = { };
+      description = "Per-platform RPM thresholds above which fan info lines are included in output, suppressed below the threshold unless temperature is also non-silent.";
+    };
+
     loadMaxPerCore = lib.mkOption {
       type = lib.types.int;
       default = 1;
@@ -660,6 +684,7 @@ args@{
         requireServicesUp,
         tempMaxCelsius,
         tempInfoCelsius,
+        fanElevatedRPM,
         loadMaxPerCore,
         loadBuildMultiplier,
         loadBuildGraceSeconds,
@@ -712,6 +737,16 @@ args@{
       }:
       let
         hostname = self.host.hostname;
+        board = helpers.resolveFromHost config [ "hardware" "board" ] null;
+        effectiveElevatedRPM =
+          if fanElevatedRPM.set != null then
+            fanElevatedRPM.set
+          else if board == "pi5" then
+            fanElevatedRPM.pi5
+          else if self.isX86_64 then
+            fanElevatedRPM.x86_64
+          else
+            null;
         mainUser = self.host.mainUser.username;
         mainUserUid = toString config.users.users.${self.host.mainUser.username}.uid;
         deploymentMode = config.nx.global.deploymentMode;
@@ -972,11 +1007,18 @@ args@{
         '';
 
         fanCheckExpr = ''
+          ${readTempMaxExpr}
+          ${lib.optionalString (effectiveElevatedRPM != null) ''
+            _fan_temp_elevated=$(( _temp_max >= ${toString tempInfoCelsius} ? 1 : 0 ))
+          ''}
           for _f in /sys/class/hwmon/hwmon*/fan*_input; do
             [[ -f "$_f" ]] || continue
             _rpm=$(${pkgs.coreutils}/bin/cat "$_f" 2>/dev/null) || continue
             [[ "$_rpm" =~ ^[0-9]+$ ]] || continue
             [[ "$_rpm" -gt 0 ]] || continue
+            ${lib.optionalString (effectiveElevatedRPM != null) ''
+              [[ $_rpm -ge ${toString effectiveElevatedRPM} || $_fan_temp_elevated -eq 1 ]] || continue
+            ''}
             _hwmon="''${_f%/*}"
             _fan="''${_f##*/}"
             _fan="''${_fan%_input}"
