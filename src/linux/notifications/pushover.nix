@@ -126,6 +126,12 @@ args@{
       description = "The pushover-send script derivation (set in system namespace, null in home)";
     };
 
+    mailScript = lib.mkOption {
+      type = lib.types.nullOr lib.types.package;
+      default = null;
+      description = "The sendmail-compatible pushover-mail script derivation (set in system namespace, null in home)";
+    };
+
     sendList = lib.mkOption {
       type = lib.types.nullOr (lib.types.functionTo (lib.types.listOf lib.types.str));
       default = null;
@@ -142,6 +148,18 @@ args@{
       type = lib.types.nullOr (lib.types.functionTo lib.types.str);
       default = null;
       description = "Function to generate a Python list string with f-strings for variable interpolation";
+    };
+
+    mkMailWrapper = lib.mkOption {
+      type = lib.types.nullOr (lib.types.functionTo lib.types.str);
+      default = null;
+      description = "Function to generate a sendmail-compatible wrapper with baked-in Pushover defaults";
+    };
+
+    enableSendmail = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Install pushover-mail as the system sendmail at /run/wrappers/bin/sendmail.";
     };
   };
 
@@ -429,6 +447,179 @@ args@{
               fi
           done
         '';
+
+      pushoverMailScript =
+        config: pushoverSendPackage:
+        pkgs.writeShellScriptBin "pushover-mail" ''
+          set -euo pipefail
+
+          show_usage() {
+              echo "Usage: $0 [--pushover-json <json>] [-t] [-f sender] [-r sender] [-i|-oi] [recipient ...]" >&2
+          }
+
+          PUSHOVER_JSON="{}"
+          EXTRACT_RECIPIENTS=false
+          IGNORE_DOT=false
+          ENVELOPE_FROM=""
+          RECIPIENTS=()
+
+          while [[ $# -gt 0 ]]; do
+              case $1 in
+                  --help|-h)
+                      show_usage
+                      exit 0
+                      ;;
+                  --pushover-json)
+                      if [[ $# -lt 2 ]]; then
+                          echo "pushover-mail: --pushover-json requires an argument" >&2
+                          exit 1
+                      fi
+                      PUSHOVER_JSON="$2"
+                      shift 2
+                      ;;
+                  -t)
+                      EXTRACT_RECIPIENTS=true
+                      shift
+                      ;;
+                  -f|-r)
+                      if [[ $# -lt 2 ]]; then
+                          echo "pushover-mail: $1 requires an argument" >&2
+                          exit 1
+                      fi
+                      ENVELOPE_FROM="$2"
+                      shift 2
+                      ;;
+                  -i|-oi)
+                      IGNORE_DOT=true
+                      shift
+                      ;;
+                  --)
+                      shift
+                      while [[ $# -gt 0 ]]; do
+                          RECIPIENTS+=("$1")
+                          shift
+                      done
+                      ;;
+                  -*)
+                      echo "pushover-mail: ignoring unsupported sendmail option: $1" >&2
+                      shift
+                      ;;
+                  *)
+                      RECIPIENTS+=("$1")
+                      shift
+                      ;;
+              esac
+          done
+
+          if ! printf '%s' "$PUSHOVER_JSON" | ${pkgs.jq}/bin/jq -e . >/dev/null 2>&1; then
+              echo "pushover-mail: invalid --pushover-json payload" >&2
+              exit 1
+          fi
+
+          TEMP_DIR=$(${pkgs.coreutils}/bin/mktemp -d)
+          trap "${pkgs.coreutils}/bin/rm -rf '$TEMP_DIR'" EXIT
+
+          MAIL_FILE="$TEMP_DIR/mail.txt"
+          ${pkgs.coreutils}/bin/touch "$MAIL_FILE"
+
+          while IFS= read -r line || [[ -n "$line" ]]; do
+              if [[ "$IGNORE_DOT" != "true" && "$line" == "." ]]; then
+                  break
+              fi
+              printf '%s\n' "$line" >> "$MAIL_FILE"
+          done
+
+          SUBJECT=$(${pkgs.gawk}/bin/awk '
+            BEGIN {
+              found = 0
+            }
+            $0 == "" {
+              exit
+            }
+            tolower($0) ~ /^subject:[[:space:]]*/ {
+              line = $0
+              sub(/^[^:]*:[[:space:]]*/, "", line)
+              print line
+              found = 1
+              next
+            }
+          ' "$MAIL_FILE")
+
+          BODY=$(${pkgs.gawk}/bin/awk '
+            BEGIN {
+              found = 0
+            }
+            found {
+              print
+              next
+            }
+            $0 == "" {
+              found = 1
+            }
+          ' "$MAIL_FILE")
+
+          CONFIG_TITLE=$(printf '%s' "$PUSHOVER_JSON" | ${pkgs.jq}/bin/jq -r '.title // empty')
+          CONFIG_MESSAGE=$(printf '%s' "$PUSHOVER_JSON" | ${pkgs.jq}/bin/jq -r '.message // empty')
+          CONFIG_TYPE=$(printf '%s' "$PUSHOVER_JSON" | ${pkgs.jq}/bin/jq -r '.type // empty')
+          CONFIG_PRIORITY=$(printf '%s' "$PUSHOVER_JSON" | ${pkgs.jq}/bin/jq -r 'if .priority == null then "" else (.priority | tostring) end')
+          CONFIG_URL=$(printf '%s' "$PUSHOVER_JSON" | ${pkgs.jq}/bin/jq -r '.url // empty')
+          CONFIG_URL_TITLE=$(printf '%s' "$PUSHOVER_JSON" | ${pkgs.jq}/bin/jq -r '.urlTitle // empty')
+          CONFIG_HTML=$(printf '%s' "$PUSHOVER_JSON" | ${pkgs.jq}/bin/jq -r 'if .html then "true" else "false" end')
+
+          FINAL_TITLE="$CONFIG_TITLE"
+          if [[ -z "$FINAL_TITLE" ]]; then
+              FINAL_TITLE="$SUBJECT"
+          fi
+          if [[ -z "$FINAL_TITLE" ]]; then
+              FINAL_TITLE="Mail notification"
+          fi
+          if [[ -z "$CONFIG_TYPE" ]]; then
+              FINAL_TITLE="✉️ $FINAL_TITLE"
+          fi
+
+          FINAL_MESSAGE="$CONFIG_MESSAGE"
+          if [[ -z "$FINAL_MESSAGE" ]]; then
+              FINAL_MESSAGE="$BODY"
+          fi
+          if [[ -z "$FINAL_MESSAGE" ]]; then
+              FINAL_MESSAGE="$SUBJECT"
+          fi
+          if [[ -z "$FINAL_MESSAGE" ]]; then
+              FINAL_MESSAGE="(empty message)"
+          fi
+
+          if [[ -n "$ENVELOPE_FROM" ]]; then
+              FINAL_MESSAGE=$(printf 'From: %s\n%s' "$ENVELOPE_FROM" "$FINAL_MESSAGE")
+          fi
+
+          CMD=(
+            "${pushoverSendPackage}/bin/pushover-send"
+            --title "$FINAL_TITLE"
+            --message "$FINAL_MESSAGE"
+          )
+
+          if [[ -n "$CONFIG_TYPE" ]]; then
+              CMD+=(--type "$CONFIG_TYPE")
+          fi
+
+          if [[ -n "$CONFIG_PRIORITY" ]]; then
+              CMD+=(--priority "$CONFIG_PRIORITY")
+          fi
+
+          if [[ -n "$CONFIG_URL" ]]; then
+              CMD+=(--url "$CONFIG_URL")
+          fi
+
+          if [[ -n "$CONFIG_URL_TITLE" ]]; then
+              CMD+=(--url-title "$CONFIG_URL_TITLE")
+          fi
+
+          if [[ "$CONFIG_HTML" == "true" ]]; then
+              CMD+=(--html)
+          fi
+
+          exec "''${CMD[@]}"
+        '';
     in
     {
       linux.init =
@@ -540,14 +731,64 @@ args@{
               toPyFStr = s: "f\"${s}\"";
             in
             if cmdList == [ ] then "[]" else "[${lib.concatStringsSep ", " (map toPyFStr cmdList)}]";
+
+          nx.linux.notifications.pushover.mkMailWrapper =
+            {
+              title ? null,
+              message ? null,
+              type ? null,
+              priority ? null,
+              url ? null,
+              urlTitle ? null,
+              html ? false,
+              path ? null,
+            }:
+            let
+              script = config.nx.linux.notifications.pushover.mailScript;
+              scriptCmd =
+                if !self.isEnabled then
+                  null
+                else if path != null then
+                  path
+                else if script != null then
+                  "${script}/bin/pushover-mail"
+                else
+                  "pushover-mail";
+              wrapperConfig = lib.filterAttrs (_: v: v != null) {
+                inherit
+                  title
+                  message
+                  type
+                  priority
+                  url
+                  urlTitle
+                  ;
+                html = if html then true else null;
+              };
+            in
+            "${
+              pkgs.writeShellScriptBin "pushover-mail-wrapper" (
+                if scriptCmd == null then
+                  ''
+                    exit 0
+                  ''
+                else
+                  ''
+                    exec > >(${pkgs.systemd}/bin/systemd-cat -t pushover-mail-wrapper -p info) 2>&1
+                    ${lib.escapeShellArg scriptCmd} --pushover-json ${lib.escapeShellArg (builtins.toJSON wrapperConfig)} "$@"
+                  ''
+              )
+            }/bin/pushover-mail-wrapper";
         };
 
       linux.enabled = config: {
         nx.linux.notifications.pushover.script = pushoverSendScript config;
+        nx.linux.notifications.pushover.mailScript =
+          pushoverMailScript config config.nx.linux.notifications.pushover.script;
       };
 
       linux.system =
-        config:
+        { config, enableSendmail, ... }:
         let
           hostname = self.host.hostname;
           mainUser = config.users.users.${self.host.mainUser.username};
@@ -555,6 +796,25 @@ args@{
           userNotifyEnabled = self.isModuleEnabled "notifications.user-notify";
         in
         {
+          assertions = lib.optionals enableSendmail [
+            {
+              assertion = !config.nx.linux.mail.sendmail.enable;
+              message = "pushover.enableSendmail and linux.mail.sendmail are mutually exclusive!";
+            }
+            {
+              assertion = !config.services.postfix.enable;
+              message = "pushover.enableSendmail and postfix are mutually exclusive!";
+            }
+          ];
+
+          security.wrappers = lib.optionalAttrs enableSendmail {
+            "sendmail" = {
+              source = "${config.nx.linux.notifications.pushover.mailScript}/bin/pushover-mail";
+              owner = "root";
+              group = "root";
+              permissions = "u+rwx,g+rx,o+rx";
+            };
+          };
           sops.secrets."pushover-user" = {
             format = "binary";
             sopsFile = self.config.secretsPath "pushover-user";
@@ -591,6 +851,7 @@ args@{
 
           environment.systemPackages = [
             config.nx.linux.notifications.pushover.script
+            config.nx.linux.notifications.pushover.mailScript
             pkgs.curl
             (pkgs.writeShellScriptBin "pushover-run" ''
               if [[ $# -eq 0 ]]; then
