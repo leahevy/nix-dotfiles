@@ -13,32 +13,36 @@ args@{
   group = "core";
   input = "build";
 
-  settings = {
-    mailNotifications = true;
-  };
-
   module = {
-    enabled = config: {
-      nx.linux.monitoring.journal-watcher.ignorePatterns = [
-        {
-          tag = "sudo";
-          all = true;
-        }
-      ];
-    };
+    enabled =
+      config:
+      let
+        isHeadless = (self.host.settings.system.desktop or null) == null;
+      in
+      {
+        nx.linux.monitoring.journal-watcher.ignorePatterns = [
+          {
+            tag = "sudo";
+            all = true;
+          }
+        ];
+        nx.linux.monitoring.journal-watcher.highlightPatterns = lib.optionals isHeadless [
+          {
+            tag = "sudo";
+            string = "3 incorrect password attempts";
+            all = true;
+            mapping = {
+              priority = "warn";
+              title = "sudo: authentication failure";
+            };
+          }
+        ];
+      };
 
     system = config: {
       security.sudo.extraConfig = ''
         Defaults lecture = never
-        ${lib.optionalString self.settings.mailNotifications ''
-          Defaults mail_badpass
-          Defaults mail_no_user
-          Defaults mail_no_host
-          Defaults mail_no_perms
-          Defaults mailto = root
-          Defaults mailsub = "Security Alert: %h sudo attempt by %u"
-          Defaults mailerpath = /run/wrappers/bin/sendmail
-        ''}
+        Defaults passwd_tries = 3
       '';
     };
   };
