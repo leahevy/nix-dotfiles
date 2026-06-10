@@ -214,7 +214,7 @@ args@{
                 _ts_age=$(( $(${pkgs.coreutils}/bin/date +%s) - _ts_last ))
                 if [[ $_ts_age -lt $_ts_grace ]]; then
                   if [[ $_ts_age -lt 60 ]]; then
-                    _ts_ago="${_ts_age}s ago"
+                    _ts_ago="''${_ts_age}s ago"
                   elif [[ $_ts_age -lt 3600 ]]; then
                     _ts_ago="$((_ts_age / 60))m ago"
                   else
