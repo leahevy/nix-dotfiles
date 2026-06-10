@@ -2835,6 +2835,14 @@ args@{
                     exit 0
                   fi
 
+                  _monthly_ts=$(${pkgs.systemd}/bin/systemctl show nx-healthchecks-builtin-monthly.service \
+                    --property=InactiveEnterTimestamp 2>/dev/null \
+                    | ${pkgs.gawk}/bin/awk -F= '{print $2}')
+                  _monthly_last_date=$(printf '%s' "$_monthly_ts" | ${pkgs.gawk}/bin/awk '{print $2}')
+                  if [[ -n "$_monthly_last_date" && "$_monthly_last_date" == "$(${pkgs.coreutils}/bin/date +%Y-%m-%d)" ]]; then
+                    exit 0
+                  fi
+
                   ${pkgs.systemd}/bin/systemctl start --wait nx-healthchecks-builtin-monthly.service
                   printf '%s\n' "$_today" > ${lib.escapeShellArg crashRecoveryDatePath}
                   ${pkgs.coreutils}/bin/rm -f ${lib.escapeShellArg crashMarkerPath}
