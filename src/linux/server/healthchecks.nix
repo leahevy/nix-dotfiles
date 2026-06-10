@@ -294,7 +294,7 @@ args@{
 
     checkMaxRetries = lib.mkOption {
       type = lib.types.int;
-      default = 3;
+      default = 5;
       description = "Number of attempts for checks using the R retry prefix before reporting failure.";
     };
 

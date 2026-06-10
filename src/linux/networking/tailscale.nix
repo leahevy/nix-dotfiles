@@ -197,11 +197,33 @@ args@{
         nx.linux.server.healthchecks.requireServicesUp = [ "tailscaled.service" ];
         nx.linux.server.healthchecks.regularHealthChecks = {
           "R+35 - Tailscale status" = ''
+            _ts_marker=/run/nx-healthcheck/tailscale-last-seen-connected
+            _ts_grace=1200
             _ts_json=$(${pkgs.tailscale}/bin/tailscale status --json 2>/dev/null || true)
-            if ! printf '%s' "$_ts_json" \
+            if printf '%s' "$_ts_json" \
               | ${pkgs.jq}/bin/jq -e '.BackendState == "Running" and (.TailscaleIPs | length) > 0 and .Self.Online == true' >/dev/null 2>&1; then
+              ${pkgs.coreutils}/bin/touch "$_ts_marker"
+            else
               _ts_state=$(printf '%s' "$_ts_json" \
                 | ${pkgs.jq}/bin/jq -r '.BackendState // "unknown"' 2>/dev/null || echo "unknown")
+              if [[ "$_ts_state" == "Running" ]]; then
+                _ts_last=0
+                if [[ -f "$_ts_marker" ]]; then
+                  _ts_last=$(${pkgs.coreutils}/bin/stat -c %Y "$_ts_marker" 2>/dev/null || echo 0)
+                fi
+                _ts_age=$(( $(${pkgs.coreutils}/bin/date +%s) - _ts_last ))
+                if [[ $_ts_age -lt $_ts_grace ]]; then
+                  if [[ $_ts_age -lt 60 ]]; then
+                    _ts_ago="${_ts_age}s ago"
+                  elif [[ $_ts_age -lt 3600 ]]; then
+                    _ts_ago="$((_ts_age / 60))m ago"
+                  else
+                    _ts_ago="$((_ts_age / 3600))h ago"
+                  fi
+                  printf 'not connected (state: %s, last-connected: %s)\n' "$_ts_state" "$_ts_ago" >&3
+                  exit 0
+                fi
+              fi
               printf 'not connected (state: %s)\n' "$_ts_state" >&3
               exit 1
             fi
