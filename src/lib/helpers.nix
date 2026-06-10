@@ -89,6 +89,15 @@ rec {
     else
       default;
 
+  # Validate an email address (RFC 5321 subset sufficient for config validation)
+  # Usage: isValidEmail $email
+  isValidEmail =
+    email:
+    let
+      e = if email == null then "" else toString email;
+    in
+    e != "" && builtins.match "[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}" e != null;
+
   # Validate SSH public key format
   # Usage: validateSSHPublicKey $key
   validateSSHPublicKey =
