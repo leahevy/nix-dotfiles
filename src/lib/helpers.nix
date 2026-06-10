@@ -367,6 +367,35 @@ rec {
     in
     map checkPath requiredPaths;
 
+  # Convert a lowercase hexadecimal string to an integer.
+  # Usage: hexToInt "deadbeef"
+  hexToInt =
+    h:
+    let
+      digit =
+        c:
+        {
+          "0" = 0;
+          "1" = 1;
+          "2" = 2;
+          "3" = 3;
+          "4" = 4;
+          "5" = 5;
+          "6" = 6;
+          "7" = 7;
+          "8" = 8;
+          "9" = 9;
+          "a" = 10;
+          "b" = 11;
+          "c" = 12;
+          "d" = 13;
+          "e" = 14;
+          "f" = 15;
+        }
+        .${c};
+    in
+    lib.foldl' (acc: d: acc * 16 + d) 0 (map digit (lib.stringToCharacters h));
+
   # Generate a UUID from a given text input
   # Usage: generateUUID $TEXT
   generateUUID =
