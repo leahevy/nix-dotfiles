@@ -1699,6 +1699,7 @@ args@{
                 {
                   printf 'full check details (truncated in healthcheck body): %s\n' ${lib.escapeShellArg displayName}
                   ${pkgs.coreutils}/bin/cat "${infoFile}"
+                  ${pkgs.coreutils}/bin/sleep 1
                 } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
               fi
               _prev_had_info=1
@@ -1728,11 +1729,13 @@ args@{
               if [[ -s "${outFile}" ]]; then
                 { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
                   ${pkgs.coreutils}/bin/cat "${outFile}"
+                  ${pkgs.coreutils}/bin/sleep 1
                 } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
               fi
               if [[ -s "${infoFile}" ]]; then
                 { printf 'check details: %s\n' ${lib.escapeShellArg displayName}
                   ${pkgs.coreutils}/bin/cat "${infoFile}"
+                  ${pkgs.coreutils}/bin/sleep 1
                 } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
               fi
               ${infoTail}
@@ -1793,11 +1796,13 @@ args@{
                   if [[ -s "${outFile}" ]]; then
                     { printf 'check failed: %s\n' ${lib.escapeShellArg displayName}
                       ${pkgs.coreutils}/bin/cat "${outFile}"
+                      ${pkgs.coreutils}/bin/sleep 1
                     } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
                   fi
                   if [[ -s "${infoFile}" ]]; then
                     { printf 'check details: %s\n' ${lib.escapeShellArg displayName}
                       ${pkgs.coreutils}/bin/cat "${infoFile}"
+                      ${pkgs.coreutils}/bin/sleep 1
                     } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
                   fi
                   ${infoTail}
@@ -1892,14 +1897,18 @@ args@{
             }
             ${lib.optionalString includeBody ''
               if [[ ''${FAILED:-0} -gt 0 ]]; then
-                ${pkgs.coreutils}/bin/cat "''${REPORT_FILE:-$TMPDIR_HC/report}" \
-                  | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
+                {
+                  printf 'healthcheck fail body: %s\n' ${lib.escapeShellArg endpointName}
+                  ${pkgs.coreutils}/bin/cat "''${REPORT_FILE:-$TMPDIR_HC/report}"
+                  ${pkgs.coreutils}/bin/sleep 1
+                } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
               fi
               _report_size=$(${pkgs.coreutils}/bin/wc -c < "''${REPORT_FILE:-$TMPDIR_HC/report}")
               if [[ "$_report_size" -gt 100000 ]]; then
                 {
                   printf 'full healthcheck body (truncated before upload): %s\n' ${lib.escapeShellArg endpointName}
                   ${pkgs.coreutils}/bin/cat "''${REPORT_FILE:-$TMPDIR_HC/report}"
+                  ${pkgs.coreutils}/bin/sleep 1
                 } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
               fi
               ${pkgs.coreutils}/bin/head -c 100000 "''${REPORT_FILE:-$TMPDIR_HC/report}" > "$TMPDIR_HC/report-trunc"
@@ -1914,15 +1923,17 @@ args@{
                 --config "$CURL_CONFIG" -w '%{http_code}' -o /dev/null 2>"$CURL_ERR" || true)
               if [[ "$HTTP_CODE" =~ ^2[0-9]{2}$ ]]; then
                 if [[ "$HTTP_CODE" == "201" ]]; then
-                  echo "Healthchecks.io check auto-created: ${endpointName}" \
-                    | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
+                  { echo "Healthchecks.io check auto-created: ${endpointName}"
+                    ${pkgs.coreutils}/bin/sleep 1
+                  } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p notice
                   ${notifyCreatedCheck}
                 fi
                 break
               fi
               if [[ -s "$CURL_ERR" ]]; then
-                ${pkgs.coreutils}/bin/cat "$CURL_ERR" \
-                  | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
+                { ${pkgs.coreutils}/bin/cat "$CURL_ERR"
+                  ${pkgs.coreutils}/bin/sleep 1
+                } | ${pkgs.systemd}/bin/systemd-cat -t nx-healthcheck -p err
               fi
               if [[ $WAITED -ge $MAX_WAIT ]]; then
                 echo "Failed to reach healthchecks endpoint after ${toString networkTimeoutSec}s" >&2
