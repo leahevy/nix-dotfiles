@@ -1834,7 +1834,7 @@ args@{
                   printf '[RETRY] %s (Attempt %d/${retryMax})\n' ${lib.escapeShellArg displayName} "$_r_count" >> "$DETAIL_FILE"
                   ${infoTail}
                 else
-                  ${pkgs.coreutils}/bin/rm -f "${retryStatePath}"
+                  printf '%s\n' "${retryMax}" > "${retryStatePath}"
                   TOTAL=$((TOTAL + 1))
                   FAILED=$((FAILED + 1))
                   ${spacer}
