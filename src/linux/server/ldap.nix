@@ -485,16 +485,45 @@ args@{
             users = config.nx.linux.server.ldap.users;
             groups = config.nx.linux.server.ldap.groups;
             baseDn = config.nx.linux.server.ldap.baseDn;
+            port = config.nx.linux.server.ldap.port;
             uidBase = config.nx.linux.server.ldap.uidBase;
             uidRange = config.nx.linux.server.ldap.uidRange;
             mkNodeId = mkId uidBase uidRange;
             userUid = u: if u.uid != null then u.uid else mkNodeId u.username;
             ldapRunPkg = mkLdapRun {
-              port = config.nx.linux.server.ldap.port;
+              inherit port;
               bindDn = config.nx.linux.server.ldap.bindDn;
               passwordFile = config.nx.linux.server.ldap.bindPasswordFile;
             };
             ldapRun = lib.getExe ldapRunPkg;
+            mkContentCheck =
+              bindDn: passwordFile:
+              let
+                ldapSearch = "${pkgs.openldap}/bin/ldapsearch -x -H \"ldap://127.0.0.1:${toString port}\" -D \"${bindDn}\" -y \"${passwordFile}\"";
+              in
+              ''
+                ${ldapRun} search -b "${baseDn}" -s base "(objectClass=*)" >/dev/null 2>&1 || exit 0
+                _ldap_people=$(${ldapSearch} -b "ou=people,${baseDn}" -s one "(objectClass=inetOrgPerson)" uid 2>&1) || {
+                  printf 'ldapsearch people failed: %s\n' "$_ldap_people" >&3
+                  exit 1
+                }
+                _ldap_groups=$(${ldapSearch} -b "ou=groups,${baseDn}" -s one "(objectClass=posixGroup)" cn 2>&1) || {
+                  printf 'ldapsearch groups failed: %s\n' "$_ldap_groups" >&3
+                  exit 1
+                }
+                ${lib.concatMapStrings (u: ''
+                  if ! printf '%s' "$_ldap_people" | ${pkgs.gnugrep}/bin/grep -q "^uid: ${u.username}$"; then
+                    printf 'user ${u.username} not found in LDAP\n' >&3
+                    exit 1
+                  fi
+                '') users}
+                ${lib.concatMapStrings (g: ''
+                  if ! printf '%s' "$_ldap_groups" | ${pkgs.gnugrep}/bin/grep -q "^cn: ${g}$"; then
+                    printf 'group ${g} not found in LDAP\n' >&3
+                    exit 1
+                  fi
+                '') (groups ++ lib.optional (users != [ ]) "ldap-users")}
+              '';
           in
           {
             nx.linux.server.healthchecks.requireServicesUp = [ "openldap.service" ];
@@ -536,31 +565,33 @@ args@{
                   exit 1
                 }
               '';
-
-              "R+38 - LDAP content" = ''
-                ${ldapRun} search -b "${baseDn}" -s base "(objectClass=*)" >/dev/null 2>&1 || exit 0
-                _ldap_people=$(${ldapRun} search -b "ou=people,${baseDn}" -s one "(objectClass=inetOrgPerson)" uid 2>&1) || {
-                  printf 'ldapsearch people failed: %s\n' "$_ldap_people" >&3
-                  exit 1
-                }
-                _ldap_groups=$(${ldapRun} search -b "ou=groups,${baseDn}" -s one "(objectClass=posixGroup)" cn 2>&1) || {
-                  printf 'ldapsearch groups failed: %s\n' "$_ldap_groups" >&3
-                  exit 1
-                }
-                ${lib.concatMapStrings (u: ''
-                  if ! printf '%s' "$_ldap_people" | ${pkgs.gnugrep}/bin/grep -q "^uid: ${u.username}$"; then
-                    printf 'user ${u.username} not found in LDAP\n' >&3
-                    exit 1
-                  fi
-                '') users}
-                ${lib.concatMapStrings (g: ''
-                  if ! printf '%s' "$_ldap_groups" | ${pkgs.gnugrep}/bin/grep -q "^cn: ${g}$"; then
-                    printf 'group ${g} not found in LDAP\n' >&3
-                    exit 1
-                  fi
-                '') (groups ++ lib.optional (users != [ ]) "ldap-users")}
-              '';
-            };
+            }
+            // lib.listToAttrs (
+              map
+                (
+                  {
+                    label,
+                    bindDn,
+                    passwordFile,
+                  }:
+                  {
+                    name = label;
+                    value = mkContentCheck bindDn passwordFile;
+                  }
+                )
+                [
+                  {
+                    label = "R+38 - LDAP content";
+                    bindDn = config.nx.linux.server.ldap.bindDn;
+                    passwordFile = config.nx.linux.server.ldap.bindPasswordFile;
+                  }
+                  {
+                    label = "R+39 - LDAP content (reader)";
+                    bindDn = config.nx.linux.server.ldap.readerDn;
+                    passwordFile = config.nx.linux.server.ldap.readerPasswordFile;
+                  }
+                ]
+            );
           };
       };
     };
