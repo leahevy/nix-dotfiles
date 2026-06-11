@@ -403,7 +403,7 @@ args@{
                       path = config.sops.secrets."openldap-root-pass".path;
                     };
                     olcAccess = [
-                      "to attrs=userPassword by * none"
+                      "to attrs=userPassword by anonymous auth by * none"
                       "to * by dn.exact=\"cn=nx-ldap-reader,${baseDn}\" read by * none"
                     ];
                   };
