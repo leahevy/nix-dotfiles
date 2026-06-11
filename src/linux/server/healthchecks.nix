@@ -853,7 +853,7 @@ args@{
               _elapsed=$((_elapsed + 1))
             done
             if [[ $_svc_ok -eq 1 ]]; then
-              printf '[OK ] %s\n' ${lib.escapeShellArg svc} >&3
+              printf '[OK  ] %s\n' ${lib.escapeShellArg svc} >&3
             else
               printf '[FAIL] %s\n' ${lib.escapeShellArg svc} >&3
               _svc_failed=$((_svc_failed + 1))
