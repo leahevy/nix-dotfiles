@@ -196,7 +196,7 @@ args@{
           uidRange = config.nx.linux.server.ldap.uidRange;
           usernames = map (u: u.username) users;
           mkNodeId = mkId uidBase uidRange;
-          userUid = u: if u.uid != null then u.uid else userUid u;
+          userUid = u: if u.uid != null then u.uid else mkNodeId u.username;
           allUids = map userUid users;
           allGroupGids = map mkNodeId (groups ++ [ "ldap-users" ]);
           allIds = allUids ++ allGroupGids;
@@ -290,7 +290,7 @@ args@{
           dcOrg = lib.removePrefix "dc=" (builtins.head (lib.splitString "," baseDn));
 
           mkNodeId = mkId uidBase uidRange;
-          userUid = u: if u.uid != null then u.uid else userUid u;
+          userUid = u: if u.uid != null then u.uid else mkNodeId u.username;
           ldapUsersGid = mkNodeId "ldap-users";
 
           ldapRunPkg = mkLdapRun {
