@@ -153,7 +153,7 @@ args@{
           shift || true
           case "$_subcmd" in
             search|add|modify|delete)
-              exec "${pkgs.openldap}/bin/ldap$_subcmd" -x -Q -H "ldap://127.0.0.1:${toString port}" -D "${bindDn}" -y "${passwordFile}" "$@" ;;
+              exec "${pkgs.openldap}/bin/ldap$_subcmd" -x -H "ldap://127.0.0.1:${toString port}" -D "${bindDn}" -y "${passwordFile}" "$@" ;;
             *)
               printf 'Usage: ldap-run <search|add|modify|delete> [args...]\n' >&2; exit 1 ;;
           esac
@@ -499,7 +499,7 @@ args@{
             mkContentCheck =
               bindDn: passwordFile:
               let
-                ldapSearch = "${pkgs.openldap}/bin/ldapsearch -x -Q -H \"ldap://127.0.0.1:${toString port}\" -D \"${bindDn}\" -y \"${passwordFile}\"";
+                ldapSearch = "${pkgs.openldap}/bin/ldapsearch -x -H \"ldap://127.0.0.1:${toString port}\" -D \"${bindDn}\" -y \"${passwordFile}\"";
               in
               ''
                 ${ldapRun} search -b "${baseDn}" -s base "(objectClass=*)" >/dev/null 2>&1 || exit 0
