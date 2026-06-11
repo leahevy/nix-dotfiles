@@ -339,6 +339,10 @@ in
       {
         assertions = [
           {
+            assertion = isExposed;
+            message = "linux.server.pocket-id requires host.remote.exposedServices.auth to be set: Pocket ID requires HTTPS for WebAuthn to function!";
+          }
+          {
             assertion = !isExposed || config.nx.linux.security.letsencrypt.enable;
             message = "linux.server.pocket-id requires linux.security.letsencrypt to be enabled when exposed!";
           }
@@ -347,7 +351,7 @@ in
             message = "linux.server.pocket-id requires host.remote.baseDomain to be set!";
           }
           {
-            assertion = exposedService == false || exposedSubdomain == subdomain;
+            assertion = !isExposed || exposedSubdomain == subdomain;
             message = "linux.server.pocket-id: subdomain '${subdomain}' does not match exposedServices.auth subdomain '${exposedSubdomain}'!";
           }
         ];
