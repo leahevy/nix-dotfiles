@@ -298,8 +298,6 @@ args@{
             passwordFile = bindPasswordFile;
           };
 
-          userDn = u: "uid=${u.username},ou=people,${baseDn}";
-
           nonEmptyGroups = lib.filter (g: builtins.any (u: builtins.elem g u.groups) users) groups;
 
           mkUserEntry =
@@ -323,20 +321,16 @@ args@{
               members = lib.filter (u: builtins.elem g u.groups) users;
             in
             "dn: cn=${g},ou=groups,${baseDn}\n"
-            + "objectClass: groupOfNames\n"
             + "objectClass: posixGroup\n"
             + "cn: ${g}\n"
             + "gidNumber: ${toString (mkNodeId g)}\n"
-            + lib.concatMapStrings (u: "member: ${userDn u}\n") members
             + lib.concatMapStrings (u: "memberUid: ${u.username}\n") members;
 
           ldapUsersEntry =
             "dn: cn=ldap-users,ou=groups,${baseDn}\n"
-            + "objectClass: groupOfNames\n"
             + "objectClass: posixGroup\n"
             + "cn: ldap-users\n"
             + "gidNumber: ${toString ldapUsersGid}\n"
-            + lib.concatMapStrings (u: "member: ${userDn u}\n") users
             + lib.concatMapStrings (u: "memberUid: ${u.username}\n") users;
 
           ldifContents =
