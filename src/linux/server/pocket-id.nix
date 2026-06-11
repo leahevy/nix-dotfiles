@@ -467,6 +467,14 @@ in
           };
         };
 
+        systemd.tmpfiles.settings."pocket-id-state" = {
+          "/var/lib/pocket-id".d = {
+            mode = "0700";
+            user = "pocket-id";
+            group = "pocket-id";
+          };
+        };
+
         systemd.services.nx-pocket-id-ensure-apps = {
           description = "Pocket-ID OIDC client sync";
           after = [
