@@ -593,6 +593,10 @@ with lib;
             exposedServices = mkOption {
               type = types.submodule {
                 options = {
+                  auth = mkOption {
+                    type = types.either types.str types.bool;
+                    default = false;
+                  };
                   dashboard = mkOption {
                     type = types.either types.str types.bool;
                     default = false;
