@@ -499,30 +499,36 @@ args@{
           {
             nx.linux.server.healthchecks.requireServicesUp = [ "openldap.service" ];
             nx.linux.server.healthchecks.regularHealthChecks = {
-              "+36 - LDAP home directories" = lib.concatMapStrings (
-                u:
-                let
-                  uid = toString (userUid u);
-                in
-                ''
-                  _ldap_home="${homeBase}/${u.username}"
-                  _ldap_uid="${uid}"
-                  if [[ ! -d "$_ldap_home" ]]; then
-                    printf 'home dir missing for ${u.username}: %s\n' "$_ldap_home" >&3
-                    exit 1
-                  fi
-                  _ldap_mode=$(${pkgs.coreutils}/bin/stat -c %a "$_ldap_home" 2>/dev/null || echo "0")
-                  if [[ "$_ldap_mode" != "700" ]]; then
-                    printf 'wrong permissions on %s: %s (expected 700)\n' "$_ldap_home" "$_ldap_mode" >&3
-                    exit 1
-                  fi
-                  _ldap_owner=$(${pkgs.coreutils}/bin/stat -c %u "$_ldap_home" 2>/dev/null || echo "0")
-                  if [[ "$_ldap_owner" != "$_ldap_uid" ]]; then
-                    printf 'wrong owner on %s: %s (expected %s)\n' "$_ldap_home" "$_ldap_owner" "$_ldap_uid" >&3
-                    exit 1
-                  fi
-                ''
-              ) users;
+              "+36 - LDAP home directories" =
+                "_ldap_dir_fail=0\n"
+                + lib.concatMapStrings (
+                  u:
+                  let
+                    uid = toString (userUid u);
+                  in
+                  ''
+                    _ldap_home="${homeBase}/${u.username}"
+                    _ldap_uid="${uid}"
+                    if [[ ! -d "$_ldap_home" ]]; then
+                      printf 'home dir missing for ${u.username}: %s\n' "$_ldap_home" >&3
+                      _ldap_dir_fail=1
+                    else
+                      _ldap_mode=$(${pkgs.coreutils}/bin/stat -c %a "$_ldap_home" 2>/dev/null || echo "0")
+                      if [[ "$_ldap_mode" != "700" ]]; then
+                        printf 'wrong permissions on %s: %s (expected 700)\n' "$_ldap_home" "$_ldap_mode" >&3
+                        _ldap_dir_fail=1
+                      fi
+                      _ldap_owner=$(${pkgs.coreutils}/bin/stat -c %u "$_ldap_home" 2>/dev/null || echo "0")
+                      if [[ "$_ldap_owner" != "$_ldap_uid" ]]; then
+                        printf 'wrong owner on %s: %s (expected %s)\n' "$_ldap_home" "$_ldap_owner" "$_ldap_uid" >&3
+                        _ldap_dir_fail=1
+                      fi
+                    fi
+                  ''
+                ) users
+                + ''
+                  if [[ "$_ldap_dir_fail" -ne 0 ]]; then exit 1; fi
+                '';
 
               "R+37 - LDAP reachability" = ''
                 _ldap_out=$(${ldapRun} search -b "${baseDn}" -s base "(objectClass=*)" 2>&1) || {
@@ -532,6 +538,7 @@ args@{
               '';
 
               "R+38 - LDAP content" = ''
+                ${ldapRun} search -b "${baseDn}" -s base "(objectClass=*)" >/dev/null 2>&1 || exit 0
                 _ldap_people=$(${ldapRun} search -b "ou=people,${baseDn}" -s one "(objectClass=inetOrgPerson)" uid 2>&1) || {
                   printf 'ldapsearch people failed: %s\n' "$_ldap_people" >&3
                   exit 1
