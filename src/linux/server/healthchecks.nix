@@ -52,6 +52,30 @@ args@{
       description = "Additional checks for the regular health check, as attrset of description to bash expression.";
     };
 
+    logFilterPatterns = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          regular = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = "Patterns suppressed in the regular health check service, each added as a deny entry.";
+          };
+          daily = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = "Patterns suppressed in the daily health check service, each added as a deny entry.";
+          };
+          monthly = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = "Patterns suppressed in the monthly health check service, each added as a deny entry.";
+          };
+        };
+      };
+      default = { };
+      description = "Log filter patterns for suppressing known-noisy log lines in the built-in health check services.";
+    };
+
     requireServicesUp = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -361,6 +385,11 @@ args@{
               default = null;
               description = "Homepage icon name for this check's dashboard card.";
             };
+            logFilterPatterns = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Patterns suppressed in this check's companion service, each added as a deny entry.";
+            };
           };
         }
       );
@@ -412,6 +441,11 @@ args@{
               default = null;
               description = "Homepage icon name for this check's dashboard card.";
             };
+            logFilterPatterns = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Patterns suppressed in this timed check's service, each added as a deny entry.";
+            };
           };
         }
       );
@@ -447,6 +481,11 @@ args@{
               type = lib.types.nullOr lib.types.str;
               default = null;
               description = "Homepage icon name for this check's dashboard card.";
+            };
+            logFilterPatterns = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Patterns suppressed in this oneshot check's service, each added as a deny entry.";
             };
           };
         }
@@ -788,6 +827,13 @@ args@{
         regularEndpointName = "${hostname}-${healthName}";
         dailyEndpointName = "${hostname}-${dailyName}";
         monthlyEndpointName = "${hostname}-${monthlyName}";
+
+        mkLogFilterAttrs =
+          patterns:
+          lib.optionalAttrs (patterns != [ ]) {
+            LogFilterPatterns = lib.concatStringsSep " " (map (p: "~${p}") patterns);
+          };
+        builtinLogFilter = config.nx.linux.server.healthchecks.logFilterPatterns;
 
         sanitizeName =
           key:
@@ -2457,7 +2503,8 @@ args@{
                     includeLogs
                     ;
                 };
-              };
+              }
+              // (mkLogFilterAttrs entry.logFilterPatterns);
             };
           }
         ) { } servicesHealthChecks;
@@ -2486,7 +2533,8 @@ args@{
                   networkTimeoutSec = entry.networkTimeoutSec;
                   allowRetry = false;
                 };
-              };
+              }
+              // (mkLogFilterAttrs entry.logFilterPatterns);
             };
           }
         ) { } timedHealthChecks;
@@ -2515,7 +2563,8 @@ args@{
                   networkTimeoutSec = entry.networkTimeoutSec;
                   allowRetry = false;
                 };
-              };
+              }
+              // (mkLogFilterAttrs entry.logFilterPatterns);
             };
           }
         ) { } oneshotHealthChecks;
@@ -2713,7 +2762,8 @@ args@{
                 checks = allRegularChecks;
                 networkTimeoutSec = 60;
               };
-            };
+            }
+            // (mkLogFilterAttrs builtinLogFilter.regular);
           };
 
           systemd.timers.nx-healthchecks-builtin-regular = {
@@ -2744,7 +2794,8 @@ args@{
                 networkTimeoutSec = 900;
                 allowRetry = false;
               };
-            };
+            }
+            // (mkLogFilterAttrs builtinLogFilter.daily);
           };
 
           systemd.timers.nx-healthchecks-builtin-daily = {
@@ -2774,7 +2825,8 @@ args@{
                 networkTimeoutSec = 900;
                 allowRetry = false;
               };
-            };
+            }
+            // (mkLogFilterAttrs builtinLogFilter.monthly);
           };
 
           systemd.timers.nx-healthchecks-builtin-monthly = {

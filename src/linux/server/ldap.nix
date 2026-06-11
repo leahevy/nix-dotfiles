@@ -527,6 +527,7 @@ args@{
           in
           {
             nx.linux.server.healthchecks.requireServicesUp = [ "openldap.service" ];
+            nx.linux.server.healthchecks.logFilterPatterns.regular = [ "DIGEST-MD5" ];
             nx.linux.server.healthchecks.regularHealthChecks = {
               "+36 - LDAP home directories" =
                 "_ldap_dir_fail=0\n"
