@@ -447,6 +447,29 @@ args@{
             }) groups
           );
 
+          systemd.tmpfiles.settings."ldap-homes" = lib.listToAttrs (
+            lib.concatMap (
+              u:
+              let
+                entry = {
+                  mode = "0700";
+                  user = u.username;
+                  group = u.username;
+                };
+              in
+              [
+                {
+                  name = "${homeBase}/${u.username}";
+                  value."d" = entry;
+                }
+              ]
+              ++ lib.optional self.host.impermanence {
+                name = "${self.persist}${homeBase}/${u.username}";
+                value."d" = entry;
+              }
+            ) users
+          );
+
           environment.systemPackages = [ ldapRunPkg ];
 
           environment.persistence."${self.persist}" = {
