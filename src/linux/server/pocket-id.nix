@@ -574,7 +574,7 @@ in
             LDAP_BIND_DN = ldap.readerDn;
             LDAP_SKIP_CERT_VERIFY = true;
             LDAP_USER_SEARCH_FILTER = "(objectClass=posixAccount)";
-            LDAP_USER_GROUP_SEARCH_FILTER = "(objectClass=posixGroup)";
+            LDAP_USER_GROUP_SEARCH_FILTER = ldap.groupSearchFilter;
             LDAP_ATTRIBUTE_USER_UNIQUE_IDENTIFIER = "uid";
             LDAP_ATTRIBUTE_USER_USERNAME = "uid";
             LDAP_ATTRIBUTE_USER_EMAIL = "mail";
@@ -582,7 +582,7 @@ in
             LDAP_ATTRIBUTE_USER_LAST_NAME = "sn";
             LDAP_ATTRIBUTE_GROUP_UNIQUE_IDENTIFIER = "cn";
             LDAP_ATTRIBUTE_GROUP_NAME = "cn";
-            LDAP_ATTRIBUTE_GROUP_MEMBER = "memberUid";
+            LDAP_ATTRIBUTE_GROUP_MEMBER = ldap.groupMemberAttribute;
           };
         };
     };

@@ -126,6 +126,18 @@ args@{
       default = null;
       description = "Path to the SOPS-decrypted reader password file, set by this module.";
     };
+
+    groupSearchFilter = lib.mkOption {
+      type = lib.types.str;
+      default = "(objectClass=groupOfNames)";
+      description = "LDAP search filter for group entries, set by this module for consumers.";
+    };
+
+    groupMemberAttribute = lib.mkOption {
+      type = lib.types.str;
+      default = "member";
+      description = "LDAP attribute containing group member DNs, set by this module for consumers.";
+    };
   };
 
   module =
@@ -270,6 +282,8 @@ args@{
           nx.linux.server.ldap.bindPasswordFile = config.sops.secrets."openldap-root-pass".path;
           nx.linux.server.ldap.readerDn = "cn=nx-ldap-reader,${baseDn}";
           nx.linux.server.ldap.readerPasswordFile = config.sops.secrets."openldap-reader-pass".path;
+          nx.linux.server.ldap.groupSearchFilter = "(objectClass=groupOfNames)";
+          nx.linux.server.ldap.groupMemberAttribute = "member";
         };
 
       linux.system =
@@ -333,6 +347,22 @@ args@{
             + "gidNumber: ${toString ldapUsersGid}\n"
             + lib.concatMapStrings (u: "memberUid: ${u.username}\n") users;
 
+          mkDnGroupEntry =
+            g:
+            let
+              members = lib.filter (u: builtins.elem g u.groups) users;
+            in
+            "dn: cn=${g},ou=dn-groups,${baseDn}\n"
+            + "objectClass: groupOfNames\n"
+            + "cn: ${g}\n"
+            + lib.concatMapStrings (u: "member: uid=${u.username},ou=people,${baseDn}\n") members;
+
+          ldapUsersDnEntry =
+            "dn: cn=ldap-users,ou=dn-groups,${baseDn}\n"
+            + "objectClass: groupOfNames\n"
+            + "cn: ldap-users\n"
+            + lib.concatMapStrings (u: "member: uid=${u.username},ou=people,${baseDn}\n") users;
+
           ldifContents =
             "dn: ${baseDn}\n"
             + "objectClass: dcObject\n"
@@ -356,7 +386,13 @@ args@{
             + "\n"
             + lib.concatMapStrings (u: mkUserEntry u + "\n") users
             + (if users != [ ] then ldapUsersEntry + "\n" else "")
-            + lib.concatMapStrings (g: mkGroupEntry g + "\n") nonEmptyGroups;
+            + lib.concatMapStrings (g: mkGroupEntry g + "\n") nonEmptyGroups
+            + "dn: ou=dn-groups,${baseDn}\n"
+            + "objectClass: organizationalUnit\n"
+            + "ou: dn-groups\n"
+            + "\n"
+            + (if users != [ ] then ldapUsersDnEntry + "\n" else "")
+            + lib.concatMapStrings (g: mkDnGroupEntry g + "\n") nonEmptyGroups;
         in
         {
           sops.secrets."openldap-root-pass" = {
