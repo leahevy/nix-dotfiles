@@ -20,23 +20,27 @@ args@{
         isHeadless = (self.host.settings.system.desktop or null) == null;
       in
       {
-        nx.linux.monitoring.journal-watcher.ignorePatterns = [
-          {
-            tag = "sudo";
-            all = true;
-          }
-        ];
-        nx.linux.monitoring.journal-watcher.highlightPatterns = lib.optionals isHeadless [
-          {
-            tag = "sudo";
-            string = "3 incorrect password attempts";
-            all = true;
-            mapping = {
-              priority = "warn";
-              title = "sudo: authentication failure";
-            };
-          }
-        ];
+        nx.linux.monitoring.journal-watcher.ignorePatterns =
+          if !isHeadless then
+            [
+              {
+                tag = "sudo";
+                all = true;
+              }
+            ]
+          else
+            [
+              {
+                tag = "sudo";
+                string = "a password is required";
+                all = true;
+              }
+              {
+                tag = "sudo";
+                string = "pam_unix\\(sudo:auth\\): conversation failed";
+                all = true;
+              }
+            ];
       };
 
     system = config: {
