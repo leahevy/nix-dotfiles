@@ -56,7 +56,7 @@ let
           ;;
       esac
 
-      exec ${pkgs.curl}/bin/curl -sS -H @"$HEADER_FILE" \
+      ${pkgs.curl}/bin/curl -sS -H @"$HEADER_FILE" \
         "$@" \
         "http://127.0.0.1:${toString guiPort}$API_PATH"
     '';
