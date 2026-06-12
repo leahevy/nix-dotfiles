@@ -90,8 +90,8 @@ args@{
     ifEnabled.linux.server.dashboard = {
       enabled =
         config:
-        lib.mkIf (config.nx.linux.server.auth.baseUrl != null) {
-          nx.linux.server.dashboard.services = [
+        lib.mkIf (config.nx.linux.server.auth.enable && config.nx.linux.server.auth.baseUrl != null) {
+          nx.linux.server.dashboard.services = lib.mkOrder 0 [
             {
               name = "Login";
               href = config.nx.linux.server.auth.baseUrl;
@@ -100,6 +100,21 @@ args@{
               group = "services";
             }
           ];
+          nx.linux.server.dashboard.customCSS = lib.mkOrder 2000 ''
+            li.service[data-name="Login"] .service-card {
+              box-shadow:
+                0 0 0 1px rgb(255 255 255 / 0.10),
+                0 10px 30px rgb(0 0 0 / 0.28);
+              transform: translateY(-1px);
+            }
+
+            li.service[data-name="Login"] .service-card:hover {
+              box-shadow:
+                0 0 0 1px rgb(255 255 255 / 0.14),
+                0 14px 36px rgb(0 0 0 / 0.34);
+              transform: translateY(-2px);
+            }
+          '';
         };
     };
 
