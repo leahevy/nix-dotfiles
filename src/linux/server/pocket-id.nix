@@ -242,8 +242,8 @@ in
 
             GROUP_ID=""
             if [[ -n "$ALLOWED_GROUP" ]]; then
-              GROUPS=$(api GET /api/user-groups) || true
-              GROUP_ID=$("$JQ" -r --arg n "$ALLOWED_GROUP" '.data[]? | select(.name == $n) | .id' <<< "$GROUPS")
+              USER_GROUPS_JSON=$(api GET /api/user-groups) || true
+              GROUP_ID=$("$JQ" -r --arg n "$ALLOWED_GROUP" '.data[]? | select(.name == $n) | .id' <<< "$USER_GROUPS_JSON")
               if [[ -z "$GROUP_ID" ]]; then
                 printf 'Group %s not found in Pocket-ID, skipping group restriction for %s\n' "$ALLOWED_GROUP" "$CLIENT_NAME" >&2
               fi
