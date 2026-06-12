@@ -81,39 +81,6 @@ in
       description = "Environment variable names mapped to secret file paths whose contents are appended to the Pocket-ID environment file by the prepare service.";
     };
 
-    clients = lib.mkOption {
-      type = lib.types.attrsOf (
-        lib.types.submodule {
-          options = {
-            name = lib.mkOption {
-              type = lib.types.str;
-              description = "Display name shown in the Pocket-ID UI for this client.";
-            };
-
-            callbackUrls = lib.mkOption {
-              type = lib.types.listOf lib.types.str;
-              default = [ ];
-              description = "Allowed redirect URIs for this OIDC client.";
-            };
-
-            allowedUserGroup = lib.mkOption {
-              type = lib.types.nullOr lib.types.str;
-              default = null;
-              description = "LDAP group name restricting access to this client, or null for all users.";
-            };
-
-            sopsSecretPath = lib.mkOption {
-              type = lib.types.nullOr lib.types.str;
-              default = null;
-              description = "Runtime path of the SOPS-decrypted secret file for this client, set by the consuming module.";
-            };
-          };
-        }
-      );
-      default = { };
-      description = "OIDC clients managed declaratively by the ensure-apps service.";
-    };
-
     bootstrapMode = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -141,12 +108,12 @@ in
       {
         config,
         port,
-        clients,
         envVarFiles,
         bootstrapMode,
         ...
       }:
       let
+        clients = config.nx.linux.server.auth.clients;
         domain = self.host.remote.baseDomain;
         subdomain = config.nx.linux.server.auth.subdomain;
         baseUrl = "https://${subdomain}.${domain}";
@@ -548,17 +515,8 @@ in
         config:
         let
           ldap = config.nx.linux.server.ldap;
-          clientEntries = lib.attrValues config.nx.linux.server.pocket-id.clients;
         in
         {
-          assertions = lib.concatMap (
-            entry:
-            lib.optional (entry.allowedUserGroup != null) {
-              assertion = builtins.elem entry.allowedUserGroup ldap.groups;
-              message = "linux.server.pocket-id: client '${entry.name}' references LDAP group '${entry.allowedUserGroup}' which is not declared in linux.server.ldap.groups!";
-            }
-          ) clientEntries;
-
           systemd.services.pocket-id = {
             after = [ "openldap.service" ];
             bindsTo = [ "openldap.service" ];

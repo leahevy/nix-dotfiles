@@ -54,6 +54,36 @@ args@{
       default = null;
       description = "URL users are redirected to after logout, set by the implementation module.";
     };
+
+    clients = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.str;
+              description = "Display name shown in the OIDC provider UI for this client.";
+            };
+            callbackUrls = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Allowed redirect URIs for this OIDC client.";
+            };
+            allowedUserGroup = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "LDAP group name restricting access to this client, or null for all users.";
+            };
+            sopsSecretPath = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Runtime path of the SOPS-decrypted secret file for this client, set by the consuming service module.";
+            };
+          };
+        }
+      );
+      default = { };
+      description = "OIDC clients managed declaratively by the active provider, keyed by service name.";
+    };
   };
 
   module = {
@@ -71,6 +101,18 @@ args@{
             }
           ];
         };
+    };
+
+    ifEnabled.linux.server.ldap = {
+      linux.system = config: {
+        assertions = lib.concatMap (
+          entry:
+          lib.optional (entry.allowedUserGroup != null) {
+            assertion = builtins.elem entry.allowedUserGroup config.nx.linux.server.ldap.groups;
+            message = "linux.server.auth: client '${entry.name}' references LDAP group '${entry.allowedUserGroup}' which is not declared in linux.server.ldap.groups!";
+          }
+        ) (lib.attrValues config.nx.linux.server.auth.clients);
+      };
     };
 
     linux.system = config: {
