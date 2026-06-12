@@ -96,7 +96,7 @@ args@{
               name = "Login";
               href = config.nx.linux.server.auth.baseUrl;
               description = "Single sign-on provider";
-              icon = "nforwardauth";
+              icon = "bitwarden";
               group = "services";
             }
           ];
