@@ -643,11 +643,15 @@ args@{
           }
           ++ lib.optional (maintenanceBookmarkEntries != [ ]) {
             Maintenance = {
+              style = "row";
+              columns = 1;
               tab = "Admin";
             };
           }
           ++ lib.optional (adminLinksBookmarkEntries != [ ]) {
             "Links (Admin)" = {
+              style = "row";
+              columns = 1;
               tab = "Admin";
             };
           }
