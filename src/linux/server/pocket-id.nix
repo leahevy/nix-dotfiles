@@ -95,18 +95,20 @@ in
         domain = self.host.remote.baseDomain;
         subdomain = config.nx.linux.server.auth.subdomain;
       in
-      lib.optionalAttrs (domain != null) {
-        nx.linux.server.auth.baseUrl = "https://${subdomain}.${domain}";
-        nx.linux.server.auth.oidcDiscoveryUrl =
-          "https://${subdomain}.${domain}/.well-known/openid-configuration";
-        nx.linux.server.auth.oidcProviderName = "Pocket-ID";
-        nx.linux.server.auth.oidcProviderId = "pocket-id";
-        nx.linux.server.auth.logoutUrl =
+      {
+        nx.linux.server.auth.baseUrl = lib.mkIf (domain != null) "https://${subdomain}.${domain}";
+        nx.linux.server.auth.oidcDiscoveryUrl = lib.mkIf (
+          domain != null
+        ) "https://${subdomain}.${domain}/.well-known/openid-configuration";
+        nx.linux.server.auth.oidcProviderName = lib.mkIf (domain != null) "Pocket-ID";
+        nx.linux.server.auth.oidcProviderId = lib.mkIf (domain != null) "pocket-id";
+        nx.linux.server.auth.logoutUrl = lib.mkIf (domain != null) (
           let
             base = "https://${subdomain}.${domain}/oidc/session/end";
             redirect = config.nx.linux.server.auth.postLogoutRedirectUrl;
           in
-          if redirect != null then "${base}?post_logout_redirect_uri=${redirect}" else base;
+          if redirect != null then "${base}?post_logout_redirect_uri=${redirect}" else base
+        );
       };
 
     linux.system =
