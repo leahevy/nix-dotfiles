@@ -620,12 +620,14 @@ args@{
           lib.optional (homeServiceEntries != [ ]) {
             Services = {
               style = "row";
-              columns = 2;
+              columns = columnsPerGroup * 2;
               tab = "Home";
             };
           }
           ++ lib.optional (linksBookmarkEntries != [ ]) {
             Links = {
+              style = "row";
+              columns = columnsPerGroup * 2;
               tab = "Home";
             };
           }
@@ -641,6 +643,8 @@ args@{
           }
           ++ lib.optional (adminLinksBookmarkEntries != [ ]) {
             "Links (Admin)" = {
+              style = "row";
+              columns = columnsPerGroup * 2;
               tab = "Admin";
             };
           }
@@ -790,7 +794,7 @@ args@{
             inherit name;
             href = url;
             icon = "nixos";
-            group = "links";
+            group = "links-admin";
           };
 
         autoBookmarks =
