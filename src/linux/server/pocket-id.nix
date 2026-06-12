@@ -240,11 +240,11 @@ in
 
             EXISTING_ID=$("$JQ" -r --arg n "$CLIENT_NAME" '.data[]? | select(.name == $n) | .id' <<< "$CURRENT")
 
-            GROUP_ID=""
+            GROUP_JSON=""
             if [[ -n "$ALLOWED_GROUP" ]]; then
               USER_GROUPS_JSON=$(api GET /api/user-groups) || true
-              GROUP_ID=$("$JQ" -r --arg n "$ALLOWED_GROUP" '.data[]? | select(.name == $n) | .id' <<< "$USER_GROUPS_JSON")
-              if [[ -z "$GROUP_ID" ]]; then
+              GROUP_JSON=$("$JQ" -c --arg n "$ALLOWED_GROUP" '.data[]? | select(.name == $n)' <<< "$USER_GROUPS_JSON")
+              if [[ -z "$GROUP_JSON" || "$GROUP_JSON" == "null" ]]; then
                 printf 'Group %s not found in Pocket-ID, skipping group restriction for %s\n' "$ALLOWED_GROUP" "$CLIENT_NAME" >&2
               fi
             fi
@@ -255,13 +255,13 @@ in
             fi
 
             PAYLOAD_FILE="$WORK_DIR/payload_$KEY"
-            if [[ -n "$GROUP_ID" ]]; then
+            if [[ -n "$GROUP_JSON" && "$GROUP_JSON" != "null" ]]; then
               "$JQ" -n \
                 --arg name "$CLIENT_NAME" \
                 --argjson urls "$CALLBACK_URLS" \
                 --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
-                --arg gid "$GROUP_ID" \
-                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true, allowedUserGroups: [{id: $gid}]}' > "$PAYLOAD_FILE"
+                --argjson groups "[${GROUP_JSON}]" \
+                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true, allowedUserGroups: $groups}' > "$PAYLOAD_FILE"
             else
               "$JQ" -n \
                 --arg name "$CLIENT_NAME" \
