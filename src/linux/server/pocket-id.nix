@@ -134,14 +134,21 @@ in
         apiKeyPath = if bootstrapMode then "" else config.sops.secrets."pocket-id-api-key".path;
 
         postLogoutRedirectUrl = config.nx.linux.server.auth.postLogoutRedirectUrl;
+        providerId =
+          if config.nx.linux.server.auth.oidcProviderId != null then
+            config.nx.linux.server.auth.oidcProviderId
+          else
+            "";
 
         declaredJson = builtins.toJSON (
           lib.mapAttrs (_k: c: {
             inherit (c)
               name
-              callbackUrls
               allowedUserGroup
               ;
+            callbackUrls = map (
+              url: builtins.replaceStrings [ "{providerId}" ] [ providerId ] url
+            ) c.callbackUrls;
           }) clients
         );
 

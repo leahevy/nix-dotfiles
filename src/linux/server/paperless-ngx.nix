@@ -231,15 +231,14 @@ args@{
         let
           domain = self.host.remote.baseDomain;
           subdomain = config.nx.linux.server.paperless-ngx.subdomain;
-          providerId = config.nx.linux.server.auth.oidcProviderId;
         in
         {
           nx.linux.server.auth.clients.paperless =
-            lib.mkIf (config.nx.linux.server.paperless-ngx.enableOIDC && domain != null && providerId != null)
+            lib.mkIf (config.nx.linux.server.paperless-ngx.enableOIDC && domain != null)
               {
                 name = "Paperless";
                 callbackUrls = [
-                  "https://${subdomain}.${domain}/accounts/oidc/${providerId}/login/callback/"
+                  "https://${subdomain}.${domain}/accounts/oidc/{providerId}/login/callback/"
                 ];
                 allowedUserGroup = "paperless";
               };
