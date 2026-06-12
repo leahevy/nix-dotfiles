@@ -63,10 +63,10 @@ args@{
         lib.mkIf (config.nx.linux.server.auth.baseUrl != null) {
           nx.linux.server.dashboard.services = [
             {
-              name = config.nx.linux.server.auth.oidcProviderName;
+              name = "Login";
               href = config.nx.linux.server.auth.baseUrl;
               description = "Single sign-on provider";
-              icon = config.nx.linux.server.auth.oidcProviderId;
+              icon = "nforwardauth";
               group = "services";
             }
           ];
