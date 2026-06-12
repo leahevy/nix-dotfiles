@@ -22,12 +22,6 @@ args@{
     acceptRoutes = false;
     enableDashboardIntegration = false;
     nodeId = null;
-    apiKeyRotatedAt = {
-      year = 1970;
-      month = 1;
-      day = 1;
-    };
-    apiKeyLifetimeDays = 90;
   };
 
   submodules = {
@@ -115,9 +109,7 @@ args@{
           (lib.mkIf self.settings.enableDashboardIntegration {
             nx.linux.security.api-keys.keys.tailscale = {
               displayName = "Tailscale";
-              lifetimeDays = lib.mkDefault self.settings.apiKeyLifetimeDays;
               secretName = lib.mkDefault "tailscale-api-key";
-              rotatedAt = lib.mkDefault self.settings.apiKeyRotatedAt;
             };
           })
           {

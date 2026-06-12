@@ -91,35 +91,6 @@ in
       description = "Allow graceful skip when the API key is not yet configured; when false the env-prepare and ensure-apps services fail hard if the key is absent or malformed.";
     };
 
-    apiKeyRotatedAt = lib.mkOption {
-      type = lib.types.submodule {
-        options = {
-          year = lib.mkOption {
-            type = lib.types.int;
-            default = 1970;
-            description = "Year the API key was rotated.";
-          };
-          month = lib.mkOption {
-            type = lib.types.ints.between 1 12;
-            default = 1;
-            description = "Month the API key was rotated.";
-          };
-          day = lib.mkOption {
-            type = lib.types.ints.between 1 31;
-            default = 1;
-            description = "Day the API key was rotated.";
-          };
-        };
-      };
-      default = { };
-      description = "Date the Pocket-ID API key was last rotated, passed through to linux.security.api-keys for expiry tracking.";
-    };
-
-    apiKeyLifetimeDays = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 365;
-      description = "Expected lifetime in days of the Pocket-ID API key before rotation is required.";
-    };
   };
 
   module = {
@@ -151,9 +122,7 @@ in
       do.enabled = config: {
         nx.linux.security.api-keys.keys."pocket-id" = {
           displayName = "Pocket-ID";
-          lifetimeDays = lib.mkDefault config.nx.linux.server.pocket-id.apiKeyLifetimeDays;
           secretName = lib.mkDefault "pocket-id-api-key";
-          rotatedAt = lib.mkDefault config.nx.linux.server.pocket-id.apiKeyRotatedAt;
         };
       };
     };

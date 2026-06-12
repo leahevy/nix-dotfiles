@@ -75,7 +75,7 @@ args@{
           assertions =
             lib.mapAttrsToList (keyId: keyCfg: {
               assertion = keyCfg.rotatedAt.year != 1970;
-              message = "linux.security.api-keys: key '${keyId}' (${keyCfg.displayName}) rotatedAt is still at the default. This key was registered by a module that requires an API key. Set nx.linux.security.api-keys.keys.\"${keyId}\".rotatedAt to the date the key was last rotated!";
+              message = "linux.security.api-keys: key '${keyId}' (${keyCfg.displayName}) rotatedAt is still at the 1970 default. Set nx.linux.security.api-keys.keys.\"${keyId}\".rotatedAt in your profile to the date the key was last rotated!";
             }) keys
             ++ lib.mapAttrsToList (keyId: keyCfg: {
               assertion = keyCfg.lifetimeDays >= 10;
