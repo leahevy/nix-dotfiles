@@ -224,6 +224,13 @@ args@{
               group = "ldap-users";
             };
           }
+          // lib.optionalAttrs (!self.host.impermanence) {
+            "/var/lib/samba/private".d = {
+              mode = "0700";
+              user = "root";
+              group = "root";
+            };
+          }
           // lib.listToAttrs (
             lib.concatMap (
               share:
@@ -248,6 +255,11 @@ args@{
           )
           // lib.optionalAttrs self.host.impermanence {
             "${self.persist}/var/lib/samba".d = {
+              mode = "0700";
+              user = "root";
+              group = "root";
+            };
+            "${self.persist}/var/lib/samba/private".d = {
               mode = "0700";
               user = "root";
               group = "root";
