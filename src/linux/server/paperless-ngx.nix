@@ -260,7 +260,7 @@ args@{
                       --arg pid ${lib.escapeShellArg providerId} \
                       --arg pname ${lib.escapeShellArg providerName} \
                       --arg url ${lib.escapeShellArg serverUrl} \
-                      '{"openid_connect":{"APPS":[{"provider_id":$pid,"name":$pname,"client_id":($cid_raw|rtrimstr("\n")),"secret":($secret_raw|rtrimstr("\n")),"settings":{"server_url":$url}}]}}'
+                      '{"openid_connect":{"APPS":[{"provider_id":$pid,"name":$pname,"client_id":($cid_raw|rtrimstr("\n")),"secret":($secret_raw|rtrimstr("\n")),"settings":{"server_url":$url,"oauth_pkce_enabled":true}}]}}'
                   } >> /run/paperless-oidc/providers.env
                   ${pkgs.coreutils}/bin/chmod 600 /run/paperless-oidc/providers.env
                 ''
