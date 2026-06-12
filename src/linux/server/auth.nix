@@ -103,7 +103,8 @@ args@{
           nx.linux.server.dashboard.customCSS = lib.mkOrder 2000 ''
             li.service[data-name="Login"] .service-card {
               box-shadow:
-                inset 0 0 0 1px rgb(255 255 255 / 0.10),
+                inset 0 0 0 2px rgb(255 255 255 / 0.20),
+                inset 0 0 24px rgb(255 255 255 / 0.08),
                 0 10px 30px rgb(0 0 0 / 0.28);
             }
           '';

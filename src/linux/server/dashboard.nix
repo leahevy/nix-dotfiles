@@ -710,11 +710,14 @@ args@{
                 background-color: rgba(255, 255, 255, 0.04);
               }''
             ''
-              li.service .service-card {
+              li.service .service-card,
+              li.bookmark a {
                 transition: transform 160ms ease;
+                transform-origin: center center;
               }
-              li.service:hover .service-card {
-                transform: translateY(-2px);
+              li.service:hover .service-card,
+              li.bookmark:hover a {
+                transform: scale(1.018);
               }''
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null) ''
               .bookmark a,
