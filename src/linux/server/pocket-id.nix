@@ -375,8 +375,10 @@ in
 
         environment.systemPackages = [
           captureSecretsScript
-          (mkPocketIdQueryApi { inherit port; })
-        ];
+        ]
+        ++ lib.optional (!bootstrapMode) (mkPocketIdQueryApi {
+          inherit port;
+        });
 
         systemd.services.nx-pocket-id-env = {
           description = "Prepare Pocket-ID environment file";
