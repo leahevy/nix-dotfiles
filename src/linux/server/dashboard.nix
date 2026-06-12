@@ -709,6 +709,13 @@ args@{
               .dark #tabs button:hover:not([aria-selected="true"]) {
                 background-color: rgba(255, 255, 255, 0.04);
               }''
+            ''
+              li.service .service-card {
+                transition: transform 160ms ease;
+              }
+              li.service:hover .service-card {
+                transform: translateY(-2px);
+              }''
             (lib.optionalString (backgroundBlur == null && backgroundAttr != null) ''
               .bookmark a,
               .service-card {
