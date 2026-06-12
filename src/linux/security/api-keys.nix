@@ -31,11 +31,6 @@ args@{
               default = 30;
               description = "Number of days before expiry at which notifications begin.";
             };
-            sopsPath = lib.mkOption {
-              type = lib.types.nullOr lib.types.str;
-              default = null;
-              description = "Runtime path to the decrypted API key secret on disk.";
-            };
             secretName = lib.mkOption {
               type = lib.types.nullOr lib.types.str;
               default = null;
@@ -83,10 +78,6 @@ args@{
               message = "linux.security.api-keys: key '${keyId}' (${keyCfg.displayName}) rotatedAt is still at the default. This key was registered by a module that requires an API key. Set nx.linux.security.api-keys.keys.\"${keyId}\".rotatedAt to the date the key was last rotated!";
             }) keys
             ++ lib.mapAttrsToList (keyId: keyCfg: {
-              assertion = keyCfg.sopsPath == null || keyCfg.secretName != null;
-              message = "linux.security.api-keys: key '${keyId}' (${keyCfg.displayName}) has sopsPath set but secretName is null. Set nx.linux.security.api-keys.keys.\"${keyId}\".secretName to the SOPS secret entry name!";
-            }) keys
-            ++ lib.mapAttrsToList (keyId: keyCfg: {
               assertion = keyCfg.lifetimeDays >= 10;
               message = "linux.security.api-keys: key '${keyId}' (${keyCfg.displayName}) lifetimeDays (${toString keyCfg.lifetimeDays}) must be at least 10 to allow a valid notifyThresholdDays!";
             }) keys
@@ -129,9 +120,7 @@ args@{
               }-${lib.fixedWidthString 2 "0" (toString keyCfg.rotatedAt.day)}";
               serviceName = "api-key-expiry-notify-${keyId}";
               markerFile = "/var/lib/nx-api-keys/${keyId}-last-notified";
-              secretInfo =
-                lib.optionalString (keyCfg.secretName != null) "\n\nSecret: ${keyCfg.secretName}"
-                + lib.optionalString (keyCfg.sopsPath != null) "\nPath: ${keyCfg.sopsPath}";
+              secretInfo = lib.optionalString (keyCfg.secretName != null) "\n\nSecret: ${keyCfg.secretName}";
               pushoverEnabled = config.nx.linux.notifications.pushover.enable;
             in
             {

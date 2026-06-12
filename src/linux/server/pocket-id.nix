@@ -152,7 +152,6 @@ in
         nx.linux.security.api-keys.keys."pocket-id" = {
           displayName = "Pocket-ID";
           lifetimeDays = lib.mkDefault config.nx.linux.server.pocket-id.apiKeyLifetimeDays;
-          sopsPath = lib.mkDefault config.sops.secrets."pocket-id-api-key".path;
           secretName = lib.mkDefault "pocket-id-api-key";
           rotatedAt = lib.mkDefault config.nx.linux.server.pocket-id.apiKeyRotatedAt;
         };

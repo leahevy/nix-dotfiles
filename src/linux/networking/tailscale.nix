@@ -116,7 +116,6 @@ args@{
             nx.linux.security.api-keys.keys.tailscale = {
               displayName = "Tailscale";
               lifetimeDays = lib.mkDefault self.settings.apiKeyLifetimeDays;
-              sopsPath = lib.mkDefault config.sops.secrets."tailscale-api-key".path;
               secretName = lib.mkDefault "tailscale-api-key";
               rotatedAt = lib.mkDefault self.settings.apiKeyRotatedAt;
             };
