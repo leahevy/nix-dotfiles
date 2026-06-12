@@ -399,7 +399,7 @@ in
 
         systemd.services.pocket-id = {
           after = [ "nx-pocket-id-env.service" ];
-          requires = [ "nx-pocket-id-env.service" ];
+          bindsTo = [ "nx-pocket-id-env.service" ];
           restartTriggers = [
             config.sops.secrets."pocket-id-secret-key".sopsFile
           ]
