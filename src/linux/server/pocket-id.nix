@@ -101,7 +101,12 @@ in
           "https://${subdomain}.${domain}/.well-known/openid-configuration";
         nx.linux.server.auth.oidcProviderName = "Pocket-ID";
         nx.linux.server.auth.oidcProviderId = "pocket-id";
-        nx.linux.server.auth.logoutUrl = "https://${subdomain}.${domain}/oidc/session/end";
+        nx.linux.server.auth.logoutUrl =
+          let
+            base = "https://${subdomain}.${domain}/oidc/session/end";
+            redirect = config.nx.linux.server.auth.postLogoutRedirectUrl;
+          in
+          if redirect != null then "${base}?post_logout_redirect_uri=${redirect}" else base;
       };
 
     linux.system =
@@ -126,53 +131,22 @@ in
         secretKeyPath = config.sops.secrets."pocket-id-secret-key".path;
         apiKeyPath = if bootstrapMode then "" else config.sops.secrets."pocket-id-api-key".path;
 
+        postLogoutRedirectUrl = config.nx.linux.server.auth.postLogoutRedirectUrl;
+
         declaredJson = builtins.toJSON (
           lib.mapAttrs (_k: c: {
             inherit (c)
               name
               callbackUrls
               allowedUserGroup
-              sopsSecretPath
               ;
           }) clients
         );
-
-        captureSecretsScript = pkgs.writeShellScriptBin "nx-pocket-id-capture-secrets" ''
-          set -euo pipefail
-
-          SECRETS_DIR="/run/pocket-id/client-secrets"
-
-          if [[ "$EUID" -ne 0 ]]; then
-            printf 'Must be run as root!\n' >&2
-            exit 1
-          fi
-
-          if [[ ! -d "$SECRETS_DIR" ]]; then
-            printf 'No client-secrets directory at %s - has pocket-id run yet?\n' "$SECRETS_DIR" >&2
-            exit 1
-          fi
-
-          FOUND=0
-          while IFS= read -r f; do
-            [[ -f "$f" ]] || continue
-            KEY=$(${pkgs.coreutils}/bin/basename "$f")
-            CLIENT_ID=$(${pkgs.gnugrep}/bin/grep '^CLIENT_ID=' "$f" | ${pkgs.coreutils}/bin/cut -d= -f2-)
-            CLIENT_SECRET=$(${pkgs.gnugrep}/bin/grep '^CLIENT_SECRET=' "$f" | ${pkgs.coreutils}/bin/cut -d= -f2-)
-            printf '--- %s-oidc-env (paste into sops) ---\n' "$KEY"
-            printf 'CLIENT_ID=%s\nCLIENT_SECRET=%s\n\n' "$CLIENT_ID" "$CLIENT_SECRET"
-            FOUND=$((FOUND + 1))
-          done < <(${pkgs.findutils}/bin/find "$SECRETS_DIR" -maxdepth 1 -type f | ${pkgs.coreutils}/bin/sort)
-
-          if [[ "$FOUND" -eq 0 ]]; then
-            printf 'No pending client secrets in %s\n' "$SECRETS_DIR"
-          fi
-        '';
 
         ensureAppsScript = pkgs.writeShellScript "nx-pocket-id-ensure-apps" ''
           set -euo pipefail
 
           LOCAL_URL="http://127.0.0.1:${toString port}"
-          SECRETS_DIR="/run/pocket-id/client-secrets"
           JQ="${pkgs.jq}/bin/jq"
           CURL="${pkgs.curl}/bin/curl"
           DECLARED=${lib.escapeShellArg declaredJson}
@@ -210,14 +184,6 @@ in
             exit 1
           }
 
-          while IFS= read -r f; do
-            KEY=$(${pkgs.coreutils}/bin/basename "$f")
-            if ! "$JQ" -e --arg k "$KEY" 'has($k)' <<< "$DECLARED" >/dev/null 2>&1; then
-              printf 'Removing stale secret file: %s\n' "$KEY"
-              ${pkgs.coreutils}/bin/rm -f "$f"
-            fi
-          done < <(${pkgs.findutils}/bin/find "$SECRETS_DIR" -maxdepth 1 -type f 2>/dev/null || true)
-
           DECLARED_NAMES=$("$JQ" '[to_entries[].value.name]' <<< "$DECLARED")
           while IFS=$'\t' read -r CID CNAME; do
             [[ -n "$CID" ]] || continue
@@ -233,7 +199,11 @@ in
             CLIENT_NAME=$("$JQ" -r --arg k "$KEY" '.[$k].name' <<< "$DECLARED")
             CALLBACK_URLS=$("$JQ" -c --arg k "$KEY" '.[$k].callbackUrls' <<< "$DECLARED")
             ALLOWED_GROUP=$("$JQ" -r --arg k "$KEY" '.[$k].allowedUserGroup // empty' <<< "$DECLARED")
-            SOPS_SECRET=$("$JQ" -r --arg k "$KEY" '.[$k].sopsSecretPath // empty' <<< "$DECLARED")
+            LOGOUT_CALLBACK_URLS=${
+              lib.escapeShellArg (
+                builtins.toJSON (if postLogoutRedirectUrl != null then [ postLogoutRedirectUrl ] else [ ])
+              )
+            }
 
             EXISTING_ID=$("$JQ" -r --arg n "$CLIENT_NAME" '.[] | select(.name == $n) | .id' <<< "$CURRENT")
 
@@ -246,58 +216,30 @@ in
               fi
             fi
 
+            if [[ -z "$EXISTING_ID" ]]; then
+              printf 'Skipping client %s: not found in pocket-id, create it manually in the UI first\n' "$CLIENT_NAME" >&2
+              continue
+            fi
+
             PAYLOAD_FILE="$WORK_DIR/payload_$KEY"
             if [[ -n "$GROUP_ID" ]]; then
               "$JQ" -n \
                 --arg name "$CLIENT_NAME" \
                 --argjson urls "$CALLBACK_URLS" \
+                --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
                 --arg gid "$GROUP_ID" \
-                '{name: $name, callbackURLs: $urls, isPublic: false, pkceEnabled: true, allowedUserGroups: [{id: $gid}]}' > "$PAYLOAD_FILE"
+                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true, allowedUserGroups: [{id: $gid}]}' > "$PAYLOAD_FILE"
             else
               "$JQ" -n \
                 --arg name "$CLIENT_NAME" \
                 --argjson urls "$CALLBACK_URLS" \
-                '{name: $name, callbackURLs: $urls, isPublic: false, pkceEnabled: true}' > "$PAYLOAD_FILE"
+                --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
+                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true}' > "$PAYLOAD_FILE"
             fi
             ${pkgs.coreutils}/bin/chmod 600 "$PAYLOAD_FILE"
 
-            if [[ -z "$EXISTING_ID" ]]; then
-              printf 'Creating client: %s\n' "$CLIENT_NAME"
-              RESP=$(api POST /api/oidc/clients -d @"$PAYLOAD_FILE")
-              EXISTING_ID=$("$JQ" -r '.id' <<< "$RESP")
-              printf 'Created client %s with id %s\n' "$CLIENT_NAME" "$EXISTING_ID"
-            else
-              printf 'Updating client: %s\n' "$CLIENT_NAME"
-              api PUT "/api/oidc/clients/$EXISTING_ID" -d @"$PAYLOAD_FILE" >/dev/null
-            fi
-
-            SECRET_FILE="$SECRETS_DIR/$KEY"
-            if [[ -n "$SOPS_SECRET" && -f "$SOPS_SECRET" ]]; then
-              STORED_ID=$(${pkgs.gnugrep}/bin/grep '^CLIENT_ID=' "$SOPS_SECRET" | ${pkgs.coreutils}/bin/cut -d= -f2-)
-              STORED_SECRET=$(${pkgs.gnugrep}/bin/grep '^CLIENT_SECRET=' "$SOPS_SECRET" | ${pkgs.coreutils}/bin/cut -d= -f2-)
-              AUTH_DATA="$WORK_DIR/auth_data_$KEY"
-              printf 'grant_type=client_credentials&client_id=%s&client_secret=%s' "$STORED_ID" "$STORED_SECRET" > "$AUTH_DATA"
-              ${pkgs.coreutils}/bin/chmod 600 "$AUTH_DATA"
-              TOKEN_RESP=$("$CURL" -sf -X POST \
-                -H "Content-Type: application/x-www-form-urlencoded" \
-                --data "@$AUTH_DATA" \
-                "$LOCAL_URL/oidc/token" 2>&1) && VERIFIED=1 || VERIFIED=0
-              if [[ "$VERIFIED" -eq 0 ]]; then
-                printf 'ERROR: Secret for client %s failed verification! Rotate manually: remove from SOPS, redeploy, re-run.\n' "$CLIENT_NAME" >&2
-                exit 1
-              fi
-              printf 'Client %s: secret verified\n' "$CLIENT_NAME"
-              ${pkgs.coreutils}/bin/rm -f "$SECRET_FILE"
-            else
-              printf 'Generating new secret for client: %s\n' "$CLIENT_NAME"
-              NEW_RESP=$(api POST "/api/oidc/clients/$EXISTING_ID/secret")
-              NEW_SECRET=$("$JQ" -r '.secret' <<< "$NEW_RESP")
-              SECRET_OUT="$WORK_DIR/secret_out_$KEY"
-              printf 'CLIENT_ID=%s\nCLIENT_SECRET=%s\n' "$EXISTING_ID" "$NEW_SECRET" > "$SECRET_OUT"
-              ${pkgs.coreutils}/bin/chmod 400 "$SECRET_OUT"
-              ${pkgs.coreutils}/bin/mv "$SECRET_OUT" "$SECRET_FILE"
-              printf 'New secret written to %s - run nx-pocket-id-capture-secrets before next reboot!\n' "$SECRET_FILE"
-            fi
+            printf 'Updating client: %s\n' "$CLIENT_NAME"
+            api PUT "/api/oidc/clients/$EXISTING_ID" -d @"$PAYLOAD_FILE" >/dev/null
           done < <("$JQ" -r 'keys[]' <<< "$DECLARED")
 
           printf 'Pocket-ID client sync complete\n'
@@ -340,10 +282,7 @@ in
           };
         };
 
-        environment.systemPackages = [
-          captureSecretsScript
-        ]
-        ++ lib.optional (!bootstrapMode) (mkPocketIdQueryApi {
+        environment.systemPackages = lib.optional (!bootstrapMode) (mkPocketIdQueryApi {
           inherit port;
         });
 
@@ -429,11 +368,6 @@ in
 
         systemd.tmpfiles.settings."pocket-id-run" = {
           "/run/pocket-id".d = {
-            mode = "0700";
-            user = "root";
-            group = "root";
-          };
-          "/run/pocket-id/client-secrets".d = {
             mode = "0700";
             user = "root";
             group = "root";

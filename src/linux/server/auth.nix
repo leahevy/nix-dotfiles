@@ -55,6 +55,18 @@ args@{
       description = "URL users are redirected to after logout, set by the implementation module.";
     };
 
+    postLogoutRedirectUrl = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "URL registered as logoutCallbackURL with every OIDC client.";
+    };
+
+    enforceOIDC = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "When true, all connected services disable regular login and require OIDC authentication, unless the service sets disableOIDCEnforcement = true.";
+    };
+
     clients = lib.mkOption {
       type = lib.types.attrsOf (
         lib.types.submodule {
@@ -72,11 +84,6 @@ args@{
               type = lib.types.nullOr lib.types.str;
               default = null;
               description = "LDAP group name restricting access to this client, or null for all users.";
-            };
-            sopsSecretPath = lib.mkOption {
-              type = lib.types.nullOr lib.types.str;
-              default = null;
-              description = "Runtime path of the SOPS-decrypted secret file for this client, set by the consuming service module.";
             };
           };
         }
