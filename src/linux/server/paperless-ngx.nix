@@ -270,7 +270,7 @@ args@{
 
           paperless-web = {
             after = [ "nx-paperless-oidc-prep.service" ];
-            requires = [ "nx-paperless-oidc-prep.service" ];
+            bindsTo = [ "nx-paperless-oidc-prep.service" ];
           };
         };
       };
