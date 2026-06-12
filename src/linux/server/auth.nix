@@ -8,6 +8,16 @@ args@{
   self,
   ...
 }:
+let
+  oidcIntegrations = [
+    {
+      moduleName = "paperless-ngx";
+      clientName = "Paperless";
+      allowedUserGroup = "paperless-users";
+      callbackPath = "/accounts/oidc/{providerId}/login/callback/";
+    }
+  ];
+in
 {
   name = "auth";
   group = "server";
@@ -91,41 +101,6 @@ args@{
       description = "OIDC clients managed declaratively by the active provider, keyed by service name.";
     };
 
-    oidcIntegrations = lib.mkOption {
-      type = lib.types.listOf (
-        lib.types.submodule {
-          options = {
-            moduleName = lib.mkOption {
-              type = lib.types.str;
-              description = "Module name under linux.server used to read enableOIDC, subdomain, disableOIDCEnforcement, and oidcConfiguration.";
-            };
-            clientName = lib.mkOption {
-              type = lib.types.str;
-              description = "Display name shown in the OIDC provider UI for this client.";
-            };
-            allowedUserGroup = lib.mkOption {
-              type = lib.types.nullOr lib.types.str;
-              default = null;
-              description = "LDAP group name restricting access to this client, or null for all users.";
-            };
-            callbackPath = lib.mkOption {
-              type = lib.types.str;
-              description = "URL path appended to the service base URL to form the OIDC callback URL. Use {providerId} as a placeholder for the provider slug.";
-            };
-          };
-        }
-      );
-      default = [
-        {
-          moduleName = "paperless-ngx";
-          clientName = "Paperless";
-          allowedUserGroup = "paperless-users";
-          callbackPath = "/accounts/oidc/{providerId}/login/callback/";
-        }
-      ];
-      readOnly = true;
-      description = "Service integration definitions used to auto-generate auth.clients entries and inject oidcConfiguration into each service module.";
-    };
   };
 
   module = {
@@ -202,7 +177,7 @@ args@{
             }
           ];
       in
-      lib.mkMerge (map mkServiceConfig config.nx.linux.server.auth.oidcIntegrations);
+      lib.mkMerge (map mkServiceConfig oidcIntegrations);
 
     ifEnabled.linux.server.ldap = {
       linux.system = config: {
