@@ -214,7 +214,7 @@ args@{
 
           systemd.tmpfiles.settings."nx-samba" = {
             "/var/lib/samba".d = {
-              mode = "0700";
+              mode = "0755";
               user = "root";
               group = "root";
             };
@@ -255,7 +255,7 @@ args@{
           )
           // lib.optionalAttrs self.host.impermanence {
             "${self.persist}/var/lib/samba".d = {
-              mode = "0700";
+              mode = "0755";
               user = "root";
               group = "root";
             };
