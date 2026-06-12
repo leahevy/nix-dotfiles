@@ -143,7 +143,11 @@ in
             "https://${domain}"
           else
             null;
-        providerId = if config.nx.linux.server.pocket-id.enable then "pocket-id" else "";
+        providerId =
+          if config.nx.linux.server.auth.oidcProviderId != null then
+            config.nx.linux.server.auth.oidcProviderId
+          else
+            "";
 
         declaredJson = builtins.toJSON (
           lib.mapAttrs (_k: c: {
