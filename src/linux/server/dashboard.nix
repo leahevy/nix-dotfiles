@@ -797,19 +797,19 @@ args@{
             group = "links-admin";
           };
 
-        autoBookmarks =
-          lib.optional (gatewayIP != null) {
-            name = "Gateway";
-            icon = "openwrt";
-            href = "http://${gatewayIP}";
-            group = "links-admin";
-          }
-          ++ lib.optionals addNixRepoBookmarks (
-            mkRepoBookmark "Nix Core" (self.variables.coreRepoURL or null)
-            ++ mkRepoBookmark "Nix Config" (self.variables.configRepoURL or null)
-          );
+        autoBookmarks = lib.optional (gatewayIP != null) {
+          name = "Gateway";
+          icon = "openwrt";
+          href = "http://${gatewayIP}";
+          group = "links-admin";
+        };
 
-        allBookmarks = autoBookmarks ++ bookmarks;
+        repoBookmarks = lib.optionals addNixRepoBookmarks (
+          mkRepoBookmark "Nix Core" (self.variables.coreRepoURL or null)
+          ++ mkRepoBookmark "Nix Config" (self.variables.configRepoURL or null)
+        );
+
+        allBookmarks = autoBookmarks ++ bookmarks ++ repoBookmarks;
         bookmarksByGroup = lib.groupBy (b: b.group) allBookmarks;
 
         mkBookmarkAbbr =
