@@ -233,14 +233,16 @@ args@{
           subdomain = config.nx.linux.server.paperless-ngx.subdomain;
           providerId = config.nx.linux.server.auth.oidcProviderId;
         in
-        lib.mkIf (config.nx.linux.server.paperless-ngx.enableOIDC && domain != null && providerId != null) {
-          nx.linux.server.auth.clients.paperless = {
-            name = "Paperless";
-            callbackUrls = [
-              "https://${subdomain}.${domain}/accounts/oidc/${providerId}/login/callback/"
-            ];
-            allowedUserGroup = "paperless";
-          };
+        {
+          nx.linux.server.auth.clients.paperless =
+            lib.mkIf (config.nx.linux.server.paperless-ngx.enableOIDC && domain != null && providerId != null)
+              {
+                name = "Paperless";
+                callbackUrls = [
+                  "https://${subdomain}.${domain}/accounts/oidc/${providerId}/login/callback/"
+                ];
+                allowedUserGroup = "paperless";
+              };
         };
 
       linux.system =

@@ -407,8 +407,10 @@ args@{
             else
               dashSubdomain;
         in
-        lib.mkIf (domain != null) {
-          nx.linux.server.auth.postLogoutRedirectUrl = "https://${effectiveSubdomain}.${domain}";
+        {
+          nx.linux.server.auth.postLogoutRedirectUrl = lib.mkIf (
+            domain != null
+          ) "https://${effectiveSubdomain}.${domain}";
         };
     };
 
