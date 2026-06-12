@@ -143,7 +143,7 @@ args@{
               callbackUrls = [
                 "https://${paperlessSubdomain}.${domain}/accounts/oidc/{providerId}/login/callback/"
               ];
-              allowedUserGroup = "paperless";
+              allowedUserGroup = "paperless-users";
             };
         nx.linux.server.paperless-ngx.oidcConfiguration =
           lib.mkIf (config.nx.linux.server.paperless-ngx.enableOIDC)
