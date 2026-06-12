@@ -571,6 +571,7 @@ in
 
           services.pocket-id.settings = {
             LDAP_ENABLED = true;
+            LDAP_SOFT_DELETE_USERS = false;
             LDAP_URL = ldap.ldapUrl;
             LDAP_BASE = ldap.baseDn;
             LDAP_BIND_DN = ldap.readerDn;
