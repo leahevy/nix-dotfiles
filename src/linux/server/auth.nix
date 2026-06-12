@@ -102,7 +102,16 @@ args@{
           ];
           nx.linux.server.dashboard.customCSS = lib.mkOrder 2000 ''
             li.service[data-name="Login"] .service-card {
+              background-color: color-mix(in srgb, rgb(var(--color-100) / 0.65) 80%, white) !important;
               box-shadow: 0 10px 30px rgb(0 0 0 / 0.28);
+            }
+
+            .dark li.service[data-name="Login"] .service-card {
+              background-color: color-mix(
+                in srgb,
+                rgb(var(--color-700) / 0.4) 80%,
+                white
+              ) !important;
             }
 
             li.service[data-name="Login"] .service-card::after {
