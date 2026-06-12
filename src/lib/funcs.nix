@@ -1453,55 +1453,52 @@ rec {
 
   mergeModuleFunctions =
     prefix: moduleIdentifier: moduleNxPath: fns:
-    if fns == [ ] then
-      { }
-    else
+    let
+      contextSpecific = [
+        "home"
+        "system"
+        "integrated"
+        "standalone"
+      ];
+      normalizeStyle =
+        fn:
+        if moduleNxPath != null && builtins.functionArgs fn != { } then
+          let
+            moduleArgNames = builtins.filter (a: a != "config") (builtins.attrNames (builtins.functionArgs fn));
+          in
+          c:
+          fn (
+            {
+              config = c;
+            }
+            // lib.genAttrs moduleArgNames (name: (lib.attrByPath ([ "nx" ] ++ moduleNxPath) { } c).${name})
+          )
+        else
+          fn;
+    in
+    map (
+      {
+        fn,
+        type,
+        wrap ? null,
+      }:
       { config, ... }:
       let
-        contextSpecific = [
-          "home"
-          "system"
-          "integrated"
-          "standalone"
-        ];
-        normalizeStyle =
-          fn:
-          if moduleNxPath != null && builtins.functionArgs fn != { } then
-            let
-              moduleArgNames = builtins.filter (a: a != "config") (builtins.attrNames (builtins.functionArgs fn));
-            in
-            c:
-            fn (
-              {
-                config = c;
-              }
-              // lib.genAttrs moduleArgNames (name: (lib.attrByPath ([ "nx" ] ++ moduleNxPath) { } c).${name})
-            )
+        isNewStyle = moduleNxPath != null && builtins.functionArgs fn != { };
+        normalizedFn =
+          if builtins.elem type contextSpecific then
+            normalizeStyle fn
+          else if isNewStyle then
+            throw "Module ${moduleIdentifier}: the { config, opt, ... } signature is disallowed for ${prefix}.${type}. Use ${prefix}.${type} = config: { ... } and access options via config.nx directly."
           else
             fn;
-        callAndValidate =
-          {
-            fn,
-            type,
-            wrap ? null,
-          }:
-          let
-            isNewStyle = moduleNxPath != null && builtins.functionArgs fn != { };
-            normalizedFn =
-              if builtins.elem type contextSpecific then
-                normalizeStyle fn
-              else if isNewStyle then
-                throw "Module ${moduleIdentifier}: the { config, opt, ... } signature is disallowed for ${prefix}.${type}. Use ${prefix}.${type} = config: { ... } and access options via config.nx directly."
-              else
-                fn;
-            result = (if wrap != null then wrap normalizedFn else normalizedFn) config;
-          in
-          if (result ? nx) && (builtins.elem type contextSpecific) then
-            throw "Module ${moduleIdentifier}: nx.* options cannot be set in ${prefix}.${type}.\n\nUse ${prefix}.init or ${prefix}.enabled for shared options!"
-          else
-            result;
+        result = (if wrap != null then wrap normalizedFn else normalizedFn) config;
       in
-      lib.mkMerge (map callAndValidate fns);
+      if (result ? nx) && (builtins.elem type contextSpecific) then
+        throw "Module ${moduleIdentifier}: nx.* options cannot be set in ${prefix}.${type}.\n\nUse ${prefix}.init or ${prefix}.enabled for shared options!"
+      else
+        result
+    ) fns;
 
   importModule =
     args: moduleSpec: allProcessedModules: buildContext: exportsPerInput:
@@ -1587,14 +1584,14 @@ rec {
         ];
       };
 
-      configFn = mergeModuleFunctions "module" (toString modulePath) [
+      configFns = mergeModuleFunctions "module" (toString modulePath) [
         moduleSpec.inputName
         moduleSpec.group
         moduleSpec.name
       ] applicableFns;
     in
     {
-      configuration = configFn;
+      configurations = configFns;
       submodules = moduleResult.submodules or { };
     };
 
@@ -1613,7 +1610,7 @@ rec {
       ) moduleSpecs;
     in
     {
-      modules = map (result: result.configuration) moduleResults;
+      modules = lib.flatten (map (result: result.configurations) moduleResults);
       submodules = lib.foldl lib.recursiveUpdate { } (map (result: result.submodules) moduleResults);
     };
 
@@ -1686,17 +1683,11 @@ rec {
       contextFns = builtins.filter (f: f.type != "init") appliedFns;
     in
     {
-      initModules =
-        if initFns == [ ] then
-          [ ]
-        else
-          [ (mergeModuleFunctions "profile" "profile:${profileType}/${profileName}" null initFns) ];
+      initModules = mergeModuleFunctions "profile" "profile:${profileType}/${profileName}" null initFns;
 
       contextModules =
-        if contextFns == [ ] then
-          [ ]
-        else
-          [ (mergeModuleFunctions "profile" "profile:${profileType}/${profileName}" null contextFns) ];
+        mergeModuleFunctions "profile" "profile:${profileType}/${profileName}" null
+          contextFns;
     };
 
   mkProfileOptionsModule =
