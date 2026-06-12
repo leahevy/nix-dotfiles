@@ -217,6 +217,7 @@ in
           }
 
           DECLARED_NAMES=$("$JQ" '[to_entries[].value.name]' <<< "$DECLARED")
+          CURRENT_CLIENT_ROWS=$("$JQ" -r '.data[]? | [.id, .name] | @tsv' <<< "$CURRENT")
           while IFS=$'\t' read -r CID CNAME; do
             [[ -n "$CID" ]] || continue
             IN_DECL=$("$JQ" -r --arg n "$CNAME" 'map(. == $n) | any' <<< "$DECLARED_NAMES")
@@ -224,7 +225,7 @@ in
               printf 'Removing client no longer declared: %s\n' "$CNAME"
               api DELETE "/api/oidc/clients/$CID" >/dev/null
             fi
-          done < <("$JQ" -r '.[] | [.id, .name] | @tsv' <<< "$CURRENT")
+          done <<< "$CURRENT_CLIENT_ROWS"
 
           while IFS= read -r KEY; do
             [[ -n "$KEY" ]] || continue
@@ -237,7 +238,7 @@ in
               )
             }
 
-            EXISTING_ID=$("$JQ" -r --arg n "$CLIENT_NAME" '.[] | select(.name == $n) | .id' <<< "$CURRENT")
+            EXISTING_ID=$("$JQ" -r --arg n "$CLIENT_NAME" '.data[]? | select(.name == $n) | .id' <<< "$CURRENT")
 
             GROUP_ID=""
             if [[ -n "$ALLOWED_GROUP" ]]; then
@@ -426,7 +427,10 @@ in
           ];
           partOf = [ "pocket-id.service" ];
           wantedBy = [ "pocket-id.service" ];
-          restartTriggers = [ (builtins.toJSON clients) ];
+          restartTriggers = [
+            (builtins.toJSON clients)
+            ensureAppsScript
+          ];
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
