@@ -15,6 +15,7 @@ let
       clientName = "Paperless";
       allowedUserGroup = "paperless-users";
       callbackPath = "/accounts/oidc/{providerId}/login/callback/";
+      pkceEnabled = true;
     }
   ];
 in
@@ -94,6 +95,11 @@ in
               default = null;
               description = "URL shown as the launch button for this client in the auth provider UI.";
             };
+            pkceEnabled = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Whether PKCE is required for this OIDC client.";
+            };
           };
         }
       );
@@ -164,6 +170,7 @@ in
                 callbackUrls = [ "https://${sub}.${domain}${svc.callbackPath}" ];
                 allowedUserGroup = svc.allowedUserGroup;
                 launchUrl = "https://${sub}.${domain}";
+                pkceEnabled = svc.pkceEnabled;
               };
             }
             {

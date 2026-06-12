@@ -155,6 +155,7 @@ in
               name
               allowedUserGroup
               launchUrl
+              pkceEnabled
               ;
             callbackUrls = map (
               url: builtins.replaceStrings [ "{providerId}" ] [ providerId ] url
@@ -234,6 +235,7 @@ in
             CALLBACK_URLS=$("$JQ" -c --arg k "$KEY" '.[$k].callbackUrls' <<< "$DECLARED")
             ALLOWED_GROUP=$("$JQ" -r --arg k "$KEY" '.[$k].allowedUserGroup // empty' <<< "$DECLARED")
             LAUNCH_URL=$("$JQ" -r --arg k "$KEY" '.[$k].launchUrl // empty' <<< "$DECLARED")
+            PKCE_ENABLED=$("$JQ" -r --arg k "$KEY" '.[$k].pkceEnabled' <<< "$DECLARED")
             LOGOUT_CALLBACK_URLS=${
               lib.escapeShellArg (
                 builtins.toJSON (if postLogoutRedirectUrl != null then [ postLogoutRedirectUrl ] else [ ])
@@ -262,14 +264,16 @@ in
                 --arg name "$CLIENT_NAME" \
                 --argjson urls "$CALLBACK_URLS" \
                 --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
+                --argjson pkce "$PKCE_ENABLED" \
                 --arg launchUrl "$LAUNCH_URL" \
-                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true, requiresReauthentication: false, launchURL: $launchUrl}' > "$PAYLOAD_FILE"
+                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: $pkce, requiresReauthentication: false, launchURL: $launchUrl}' > "$PAYLOAD_FILE"
             else
               "$JQ" -n \
                 --arg name "$CLIENT_NAME" \
                 --argjson urls "$CALLBACK_URLS" \
                 --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
-                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true, requiresReauthentication: false}' > "$PAYLOAD_FILE"
+                --argjson pkce "$PKCE_ENABLED" \
+                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: $pkce, requiresReauthentication: false}' > "$PAYLOAD_FILE"
             fi
             ${pkgs.coreutils}/bin/chmod 600 "$PAYLOAD_FILE"
 
