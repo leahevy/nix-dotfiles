@@ -1486,6 +1486,30 @@ args@{
           "!26 - Disk IO" = ioRateExpr;
           "+26 - IO wait" = iowaitExpr;
           "!27 - Network traffic" = networkTrafficExpr;
+          "+28 - Tmp entries" = ''
+            _tmp_entries=$(${pkgs.coreutils}/bin/ls -1A /tmp 2>/dev/null | ${pkgs.coreutils}/bin/wc -l)
+            _tmp_entries=$(${pkgs.coreutils}/bin/printf '%s' "$_tmp_entries" | ${pkgs.gnused}/bin/sed 's/[[:space:]]//g')
+            if [[ "$_tmp_entries" =~ ^[0-9]+$ ]] && [[ $_tmp_entries -gt 10000 ]]; then
+              printf '/tmp has %s entries, limit is 10000\n' "$_tmp_entries" >&3
+              exit 1
+            fi
+          '';
+          "+29 - Tmp free space" = ''
+            _tmp_free_mb=$(${pkgs.coreutils}/bin/df --output=avail -BM /tmp 2>/dev/null | ${pkgs.coreutils}/bin/tail -n 1)
+            _tmp_free_mb=$(${pkgs.coreutils}/bin/printf '%s' "$_tmp_free_mb" | ${pkgs.gnused}/bin/sed 's/[^0-9]//g')
+            if [[ "$_tmp_free_mb" =~ ^[0-9]+$ ]] && [[ $_tmp_free_mb -lt 500 ]]; then
+              printf '/tmp has %s MiB free, minimum is 500 MiB\n' "$_tmp_free_mb" >&3
+              exit 1
+            fi
+          '';
+          "+29 - Run free space" = ''
+            _run_free_mb=$(${pkgs.coreutils}/bin/df --output=avail -BM /run 2>/dev/null | ${pkgs.coreutils}/bin/tail -n 1)
+            _run_free_mb=$(${pkgs.coreutils}/bin/printf '%s' "$_run_free_mb" | ${pkgs.gnused}/bin/sed 's/[^0-9]//g')
+            if [[ "$_run_free_mb" =~ ^[0-9]+$ ]] && [[ $_run_free_mb -lt 250 ]]; then
+              printf '/run has %s MiB free, minimum is 250 MiB\n' "$_run_free_mb" >&3
+              exit 1
+            fi
+          '';
         }
         // {
           "!30 - Network interfaces" = networkIfaceExpr;
