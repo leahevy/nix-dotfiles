@@ -94,6 +94,11 @@ in
       let
         domain = self.host.remote.baseDomain;
         subdomain = config.nx.linux.server.auth.subdomain;
+        postLogoutRedirectUrl =
+          if domain != null && config.nx.linux.server.nginx.serverOwnsBaseDomain then
+            "https://${domain}"
+          else
+            null;
       in
       {
         nx.linux.server.auth.baseUrl = lib.mkIf (domain != null) "https://${subdomain}.${domain}";
@@ -105,7 +110,7 @@ in
         nx.linux.server.auth.logoutUrl = lib.mkIf (domain != null) (
           let
             base = "https://${subdomain}.${domain}/oidc/session/end";
-            redirect = config.nx.linux.server.auth.postLogoutRedirectUrl;
+            redirect = postLogoutRedirectUrl;
           in
           if redirect != null then "${base}?post_logout_redirect_uri=${redirect}" else base
         );
@@ -133,7 +138,11 @@ in
         secretKeyPath = config.sops.secrets."pocket-id-secret-key".path;
         apiKeyPath = if bootstrapMode then "" else config.sops.secrets."pocket-id-api-key".path;
 
-        postLogoutRedirectUrl = config.nx.linux.server.auth.postLogoutRedirectUrl;
+        postLogoutRedirectUrl =
+          if domain != null && config.nx.linux.server.nginx.serverOwnsBaseDomain then
+            "https://${domain}"
+          else
+            null;
         providerId =
           if config.nx.linux.server.auth.oidcProviderId != null then
             config.nx.linux.server.auth.oidcProviderId

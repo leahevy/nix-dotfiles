@@ -55,12 +55,6 @@ args@{
       description = "URL users are redirected to after logout, set by the implementation module.";
     };
 
-    postLogoutRedirectUrl = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "URL registered as logoutCallbackURL with every OIDC client.";
-    };
-
     enforceOIDC = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -94,14 +88,6 @@ args@{
   };
 
   module = {
-    ifEnabled.linux.server.nginx = {
-      enabled = config: {
-        nx.linux.server.auth.postLogoutRedirectUrl = lib.mkIf (
-          self.host.remote.baseDomain != null && config.nx.linux.server.nginx.serverOwnsBaseDomain
-        ) "https://${self.host.remote.baseDomain}";
-      };
-    };
-
     ifEnabled.linux.server.dashboard = {
       enabled =
         config:
