@@ -303,15 +303,17 @@ args@{
         {
           tag = "winbindd";
           string = ".*winbindd_sig_term_handler.*";
+          all = true;
         }
         {
           tag = "winbindd";
           string = ".*Got sig\\[15\\] terminate.*";
+          all = true;
         }
         {
-          service = "samba-smbd.service";
           tag = "smbd";
           string = ".*smbXsrv_session_disconnect_xconn: empty session_table, nothing to do\\..*";
+          all = true;
         }
       ];
     };
