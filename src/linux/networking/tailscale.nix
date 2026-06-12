@@ -125,7 +125,7 @@ args@{
                 name = "Tailscale";
                 icon = "tailscale";
                 href = "https://login.tailscale.com/admin/machines";
-                group = "maintenance";
+                group = "links-admin";
               }
             ];
 

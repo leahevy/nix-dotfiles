@@ -253,7 +253,7 @@ args@{
               name = "Cloudflare";
               icon = "cloudflare";
               href = "https://dash.cloudflare.com/";
-              group = "maintenance";
+              group = "links-admin";
             }
           ];
         };

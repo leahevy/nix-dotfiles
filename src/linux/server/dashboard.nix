@@ -290,9 +290,9 @@ args@{
             };
             group = lib.mkOption {
               type = lib.types.enum [
-                "maintenance"
                 "links"
                 "links-admin"
+                "links-details"
               ];
               default = "links";
               description = "Bookmark group this entry is placed in.";
@@ -626,8 +626,6 @@ args@{
           }
           ++ lib.optional (linksBookmarkEntries != [ ]) {
             Links = {
-              style = "row";
-              columns = 2;
               tab = "Home";
             };
           }
@@ -641,18 +639,14 @@ args@{
               tab = "Admin";
             };
           }
-          ++ lib.optional (maintenanceBookmarkEntries != [ ]) {
-            Maintenance = {
-              style = "row";
-              columns = 1;
+          ++ lib.optional (adminLinksBookmarkEntries != [ ]) {
+            "Links (Admin)" = {
               tab = "Admin";
             };
           }
-          ++ lib.optional (adminLinksBookmarkEntries != [ ]) {
-            "Links (Admin)" = {
-              style = "row";
-              columns = 1;
-              tab = "Admin";
+          ++ lib.optional (detailsLinksBookmarkEntries != [ ]) {
+            "Links (Details)" = {
+              tab = "Details";
             };
           }
           ++ lib.optional hasDetailsTab {
@@ -678,6 +672,8 @@ args@{
             hideVersion = true;
             disableUpdateCheck = true;
             disableCollapse = true;
+            maxServiceGroupColumns = columnsPerGroup * 2;
+            maxBookmarkGroupColumns = columnsPerGroup * 2;
           }
           // lib.optionalAttrs (description != "") { description = description; }
           // lib.optionalAttrs (backgroundAttr != null) { background = backgroundAttr; }
@@ -794,7 +790,7 @@ args@{
             inherit name;
             href = url;
             icon = "nixos";
-            group = "links-admin";
+            group = "links";
           };
 
         autoBookmarks =
@@ -802,7 +798,7 @@ args@{
             name = "Gateway";
             icon = "openwrt";
             href = "http://${gatewayIP}";
-            group = "maintenance";
+            group = "links-admin";
           }
           ++ lib.optionals addNixRepoBookmarks (
             mkRepoBookmark "Nix Core" (self.variables.coreRepoURL or null)
@@ -840,14 +836,16 @@ args@{
           ];
         };
 
-        maintenanceBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.maintenance or [ ]);
         linksBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.links or [ ]);
         adminLinksBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.links-admin or [ ]);
+        detailsLinksBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.links-details or [ ]);
 
         generatedBookmarks =
-          lib.optional (maintenanceBookmarkEntries != [ ]) { Maintenance = maintenanceBookmarkEntries; }
-          ++ lib.optional (linksBookmarkEntries != [ ]) { Links = linksBookmarkEntries; }
-          ++ lib.optional (adminLinksBookmarkEntries != [ ]) { "Links (Admin)" = adminLinksBookmarkEntries; };
+          lib.optional (linksBookmarkEntries != [ ]) { Links = linksBookmarkEntries; }
+          ++ lib.optional (adminLinksBookmarkEntries != [ ]) { "Links (Admin)" = adminLinksBookmarkEntries; }
+          ++ lib.optional (detailsLinksBookmarkEntries != [ ]) {
+            "Links (Details)" = detailsLinksBookmarkEntries;
+          };
 
         baseVhost =
           lib.recursiveUpdate
