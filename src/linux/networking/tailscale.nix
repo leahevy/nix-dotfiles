@@ -30,13 +30,6 @@ args@{
     system =
       config:
       let
-        rotationDate =
-          if self.settings.apiKeyRotatedAt == null then
-            null
-          else
-            "${toString self.settings.apiKeyRotatedAt.year}-${
-              lib.fixedWidthString 2 "0" (toString self.settings.apiKeyRotatedAt.month)
-            }-${lib.fixedWidthString 2 "0" (toString self.settings.apiKeyRotatedAt.day)}";
         normalizedRoutes = map (
           r:
           if lib.hasInfix "/" r then
