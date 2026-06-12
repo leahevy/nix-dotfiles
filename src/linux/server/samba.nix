@@ -92,6 +92,15 @@ args@{
           );
           setupScript = pkgs.writeShellScript "nx-samba-password-setup" ''
             set -euo pipefail
+            _retries=0
+            until [ -f /var/lib/samba/private/secrets.tdb ] || [ $_retries -ge 30 ]; do
+              sleep 1
+              _retries=$((_retries + 1))
+            done
+            if [ ! -f /var/lib/samba/private/secrets.tdb ]; then
+              printf 'samba private directory not initialized after 30s\n' >&2
+              exit 1
+            fi
             ${lib.concatMapStrings (u: ''
               _pass=$(${pkgs.coreutils}/bin/cat ${
                 lib.escapeShellArg config.sops.secrets."samba-pass-${u.username}".path
@@ -137,11 +146,10 @@ args@{
             ) users
           );
 
-          systemd.services.samba-smbd.requires = [ "nx-samba-password-setup.service" ];
-
           systemd.services.nx-samba-password-setup = {
             description = "Samba password initialization";
-            before = [ "samba-smbd.service" ];
+            after = [ "samba-smbd.service" ];
+            requires = [ "samba-smbd.service" ];
             wantedBy = [ "samba-smbd.service" ];
             bindsTo = [ "samba-smbd.service" ];
             restartTriggers = map (u: config.sops.secrets."samba-pass-${u.username}".sopsFile) users;
