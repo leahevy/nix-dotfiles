@@ -102,10 +102,18 @@ args@{
           ];
           nx.linux.server.dashboard.customCSS = lib.mkOrder 2000 ''
             li.service[data-name="Login"] .service-card {
+              box-shadow: 0 10px 30px rgb(0 0 0 / 0.28);
+            }
+
+            li.service[data-name="Login"] .service-card::after {
+              content: "";
+              position: absolute;
+              inset: 3px;
+              border-radius: inherit;
               box-shadow:
                 inset 0 0 0 2px rgb(255 255 255 / 0.20),
-                inset 0 0 24px rgb(255 255 255 / 0.08),
-                0 10px 30px rgb(0 0 0 / 0.28);
+                inset 0 0 24px rgb(255 255 255 / 0.08);
+              pointer-events: none;
             }
           '';
         };
