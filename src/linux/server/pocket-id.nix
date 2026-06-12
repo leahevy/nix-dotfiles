@@ -240,11 +240,11 @@ in
 
             EXISTING_ID=$("$JQ" -r --arg n "$CLIENT_NAME" '.data[]? | select(.name == $n) | .id' <<< "$CURRENT")
 
-            GROUP_JSON=""
+            GROUP_ID=""
             if [[ -n "$ALLOWED_GROUP" ]]; then
               USER_GROUPS_JSON=$(api GET /api/user-groups) || true
-              GROUP_JSON=$("$JQ" -c --arg n "$ALLOWED_GROUP" '.data[]? | select(.name == $n)' <<< "$USER_GROUPS_JSON")
-              if [[ -z "$GROUP_JSON" || "$GROUP_JSON" == "null" ]]; then
+              GROUP_ID=$("$JQ" -r --arg n "$ALLOWED_GROUP" '.data[]? | select(.name == $n) | .id' <<< "$USER_GROUPS_JSON")
+              if [[ -z "$GROUP_ID" ]]; then
                 printf 'Group %s not found in Pocket-ID, skipping group restriction for %s\n' "$ALLOWED_GROUP" "$CLIENT_NAME" >&2
               fi
             fi
@@ -255,24 +255,24 @@ in
             fi
 
             PAYLOAD_FILE="$WORK_DIR/payload_$KEY"
-            if [[ -n "$GROUP_JSON" && "$GROUP_JSON" != "null" ]]; then
-              "$JQ" -n \
-                --arg name "$CLIENT_NAME" \
-                --argjson urls "$CALLBACK_URLS" \
-                --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
-                --argjson groups "[''${GROUP_JSON}]" \
-                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true, allowedUserGroups: $groups}' > "$PAYLOAD_FILE"
-            else
-              "$JQ" -n \
-                --arg name "$CLIENT_NAME" \
-                --argjson urls "$CALLBACK_URLS" \
-                --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
-                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true}' > "$PAYLOAD_FILE"
-            fi
+            "$JQ" -n \
+              --arg name "$CLIENT_NAME" \
+              --argjson urls "$CALLBACK_URLS" \
+              --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
+              '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true}' > "$PAYLOAD_FILE"
             ${pkgs.coreutils}/bin/chmod 600 "$PAYLOAD_FILE"
 
             printf 'Updating client: %s\n' "$CLIENT_NAME"
             api PUT "/api/oidc/clients/$EXISTING_ID" -d @"$PAYLOAD_FILE" >/dev/null
+
+            GROUPS_PAYLOAD_FILE="$WORK_DIR/groups_payload_$KEY"
+            if [[ -n "$GROUP_ID" ]]; then
+              "$JQ" -n --argjson ids "[\"$GROUP_ID\"]" '{"userGroupIds": $ids}' > "$GROUPS_PAYLOAD_FILE"
+            else
+              "$JQ" -n '{"userGroupIds": []}' > "$GROUPS_PAYLOAD_FILE"
+            fi
+            ${pkgs.coreutils}/bin/chmod 600 "$GROUPS_PAYLOAD_FILE"
+            api PUT "/api/oidc/clients/$EXISTING_ID/allowed-user-groups" -d @"$GROUPS_PAYLOAD_FILE" >/dev/null
           done < <("$JQ" -r 'keys[]' <<< "$DECLARED")
 
           printf 'Pocket-ID client sync complete\n'
