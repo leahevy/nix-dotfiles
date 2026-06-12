@@ -129,6 +129,24 @@ args@{
         };
     };
 
+    enabled =
+      config:
+      let
+        domain = self.host.remote.baseDomain;
+        paperlessSubdomain = config.nx.linux.server.paperless-ngx.subdomain;
+      in
+      {
+        nx.linux.server.auth.clients.paperless =
+          lib.mkIf (config.nx.linux.server.paperless-ngx.enableOIDC && domain != null)
+            {
+              name = "Paperless";
+              callbackUrls = [
+                "https://${paperlessSubdomain}.${domain}/accounts/oidc/{providerId}/login/callback/"
+              ];
+              allowedUserGroup = "paperless";
+            };
+      };
+
     ifEnabled.linux.server.ldap = {
       linux.system = config: {
         assertions = lib.concatMap (
