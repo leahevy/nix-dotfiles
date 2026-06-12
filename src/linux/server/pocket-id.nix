@@ -197,6 +197,20 @@ in
               "$@" "$LOCAL_URL$path"
           }
 
+          _wait_elapsed=0
+          _wait_sleep=1
+          while ! api GET /api/oidc/clients >/dev/null 2>&1; do
+            if [[ $_wait_elapsed -ge 60 ]]; then
+              printf 'Failed to reach Pocket-ID API after %ss\n' "$_wait_elapsed" >&2
+              exit 1
+            fi
+            sleep "$_wait_sleep"
+            _wait_elapsed=$((_wait_elapsed + _wait_sleep))
+            if [[ $_wait_sleep -lt 10 ]]; then
+              _wait_sleep=$((_wait_sleep + 1))
+            fi
+          done
+
           CURRENT=$(api GET /api/oidc/clients) || {
             printf 'Failed to reach Pocket-ID API\n' >&2
             exit 1
