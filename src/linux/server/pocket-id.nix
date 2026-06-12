@@ -259,7 +259,7 @@ in
               --arg name "$CLIENT_NAME" \
               --argjson urls "$CALLBACK_URLS" \
               --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
-              '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true}' > "$PAYLOAD_FILE"
+              '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true, requiresReauthentication: false}' > "$PAYLOAD_FILE"
             ${pkgs.coreutils}/bin/chmod 600 "$PAYLOAD_FILE"
 
             printf 'Updating client: %s\n' "$CLIENT_NAME"
