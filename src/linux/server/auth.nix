@@ -97,22 +97,11 @@ args@{
     ifEnabled.linux.server.dashboard = {
       enabled =
         config:
-        let
-          domain = self.host.remote.baseDomain;
-          nginxSubdomain = config.nx.linux.server.nginx.subdomain;
-          hostAtNginxSubdomain = config.nx.linux.server.dashboard.hostAtNginxSubdomain;
-          dashSubdomain = config.nx.linux.server.dashboard.subdomain;
-          effectiveSubdomain =
-            if hostAtNginxSubdomain then
-              (if nginxSubdomain == null then self.host.hostname else nginxSubdomain)
-            else
-              dashSubdomain;
-        in
         lib.mkMerge [
           {
             nx.linux.server.auth.postLogoutRedirectUrl = lib.mkIf (
-              domain != null
-            ) "https://${effectiveSubdomain}.${domain}";
+              self.host.remote.baseDomain != null && config.nx.linux.server.nginx.serverOwnsBaseDomain
+            ) "https://${self.host.remote.baseDomain}";
           }
           (lib.mkIf (config.nx.linux.server.auth.baseUrl != null) {
             nx.linux.server.dashboard.services = lib.mkOrder 0 [
