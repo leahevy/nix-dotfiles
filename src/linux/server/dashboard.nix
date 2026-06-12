@@ -258,12 +258,11 @@ args@{
               type = lib.types.enum [
                 "services"
                 "health"
-                "server"
-                "external"
+                "admin"
                 "details"
               ];
-              default = "external";
-              description = "Dashboard group this entry is placed in: services for main apps, server for internal tooling, external for user-added entries, details for individual check cards shown on a separate tab.";
+              default = "services";
+              description = "Dashboard group this entry is placed in: services for user-facing apps, admin for internal tooling, health for admin status widgets, and details for individual check cards shown on a separate tab.";
             };
           };
         }
@@ -293,6 +292,7 @@ args@{
               type = lib.types.enum [
                 "maintenance"
                 "links"
+                "links-admin"
               ];
               default = "links";
               description = "Bookmark group this entry is placed in.";
@@ -508,7 +508,7 @@ args@{
         servicesByGroup = lib.groupBy (svc: svc.group) services;
 
         mainServiceEntries = map mkServiceEntry (servicesByGroup.services or [ ]);
-        serverServiceEntries = map mkServiceEntry (servicesByGroup.server or [ ]);
+        adminServiceEntries = map mkServiceEntry (servicesByGroup.admin or [ ]);
         healthServiceEntries = map mkServiceEntry (servicesByGroup.health or [ ]);
         detailsServiceEntries = map mkServiceEntry (servicesByGroup.details or [ ]);
 
@@ -537,8 +537,8 @@ args@{
           }
         ) self.host.remote.exposedServices.additionalServices;
 
-        externalServiceEntries =
-          map mkServiceEntry (servicesByGroup.external or [ ]) ++ additionalServiceEntries;
+        externalServiceEntries = additionalServiceEntries;
+        homeServiceEntries = mainServiceEntries ++ externalServiceEntries;
 
         backgroundAttr =
           if effectiveLocalBackgroundFile != null then
@@ -615,27 +615,43 @@ args@{
             };
           };
 
-        hasSecondRow = serverServiceEntries != [ ] || externalServiceEntries != [ ];
-        hasTabs = detailsServiceEntries != [ ];
-        overviewTab = lib.optionalAttrs hasTabs { tab = "Overview"; };
+        hasDetailsTab = detailsServiceEntries != [ ];
         generatedLayout =
-          lib.optional (mainServiceEntries != [ ]) { Services = overviewTab; }
-          ++ lib.optional (healthServiceEntries != [ ]) { Health = overviewTab; }
-          ++ lib.optional (serverServiceEntries != [ ]) {
-            Server = {
+          lib.optional (homeServiceEntries != [ ]) {
+            Services = {
               style = "row";
-              columns = columnsPerGroup;
-            }
-            // overviewTab;
+              columns = 2;
+              tab = "Home";
+            };
           }
-          ++ lib.optional (externalServiceEntries != [ ]) {
-            External = {
+          ++ lib.optional (linksBookmarkEntries != [ ]) {
+            Links = {
               style = "row";
-              columns = columnsPerGroup;
-            }
-            // overviewTab;
+              columns = 2;
+              tab = "Home";
+            };
           }
-          ++ lib.optional hasTabs {
+          ++ lib.optional (adminServiceEntries != [ ]) {
+            Administration = {
+              tab = "Admin";
+            };
+          }
+          ++ lib.optional (healthServiceEntries != [ ]) {
+            Health = {
+              tab = "Admin";
+            };
+          }
+          ++ lib.optional (maintenanceBookmarkEntries != [ ]) {
+            Maintenance = {
+              tab = "Admin";
+            };
+          }
+          ++ lib.optional (adminLinksBookmarkEntries != [ ]) {
+            "Links (Admin)" = {
+              tab = "Admin";
+            };
+          }
+          ++ lib.optional hasDetailsTab {
             Details = {
               style = "row";
               columns = columnsPerGroup * 2;
@@ -662,7 +678,9 @@ args@{
           // lib.optionalAttrs (description != "") { description = description; }
           // lib.optionalAttrs (backgroundAttr != null) { background = backgroundAttr; }
           // lib.optionalAttrs (faviconAttr != null) { favicon = faviconAttr; }
-          // lib.optionalAttrs (hasSecondRow || hasTabs) { layout = generatedLayout; }
+          // {
+            layout = generatedLayout;
+          }
         ) extraSettings;
 
         generatedCSS = lib.concatStringsSep "\n\n" (
@@ -772,7 +790,7 @@ args@{
             inherit name;
             href = url;
             icon = "nixos";
-            group = "links";
+            group = "links-admin";
           };
 
         autoBookmarks =
@@ -820,10 +838,12 @@ args@{
 
         maintenanceBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.maintenance or [ ]);
         linksBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.links or [ ]);
+        adminLinksBookmarkEntries = map mkBookmarkEntry (bookmarksByGroup.links-admin or [ ]);
 
         generatedBookmarks =
           lib.optional (maintenanceBookmarkEntries != [ ]) { Maintenance = maintenanceBookmarkEntries; }
-          ++ lib.optional (linksBookmarkEntries != [ ]) { Links = linksBookmarkEntries; };
+          ++ lib.optional (linksBookmarkEntries != [ ]) { Links = linksBookmarkEntries; }
+          ++ lib.optional (adminLinksBookmarkEntries != [ ]) { "Links (Admin)" = adminLinksBookmarkEntries; };
 
         baseVhost =
           lib.recursiveUpdate
@@ -893,10 +913,9 @@ args@{
           settings = generatedSettings;
           bookmarks = generatedBookmarks;
           services =
-            lib.optional (mainServiceEntries != [ ]) { Services = mainServiceEntries; }
-            ++ lib.optional (serverServiceEntries != [ ]) { Server = serverServiceEntries; }
+            lib.optional (homeServiceEntries != [ ]) { Services = homeServiceEntries; }
+            ++ lib.optional (adminServiceEntries != [ ]) { Administration = adminServiceEntries; }
             ++ lib.optional (healthServiceEntries != [ ]) { Health = healthServiceEntries; }
-            ++ lib.optional (externalServiceEntries != [ ]) { External = externalServiceEntries; }
             ++ lib.optional (detailsServiceEntries != [ ]) { Details = detailsServiceEntries; };
           widgets = autoWidgets ++ widgets;
           customCSS = generatedCSS;
