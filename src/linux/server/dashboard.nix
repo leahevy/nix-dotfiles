@@ -393,27 +393,6 @@ args@{
       nx.linux.server.healthchecks.requireServicesUp = [ "homepage-dashboard.service" ];
     };
 
-    ifEnabled.linux.server.auth = {
-      enabled =
-        config:
-        let
-          domain = self.host.remote.baseDomain;
-          nginxSubdomain = config.nx.linux.server.nginx.subdomain;
-          hostAtNginxSubdomain = config.nx.linux.server.dashboard.hostAtNginxSubdomain;
-          dashSubdomain = config.nx.linux.server.dashboard.subdomain;
-          effectiveSubdomain =
-            if hostAtNginxSubdomain then
-              (if nginxSubdomain == null then self.host.hostname else nginxSubdomain)
-            else
-              dashSubdomain;
-        in
-        {
-          nx.linux.server.auth.postLogoutRedirectUrl = lib.mkIf (
-            domain != null
-          ) "https://${effectiveSubdomain}.${domain}";
-        };
-    };
-
     when = {
       option.dockerIntegration = true;
       condition = config: config.virtualisation.docker.enable;
