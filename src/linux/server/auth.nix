@@ -145,6 +145,17 @@ args@{
               ];
               allowedUserGroup = "paperless";
             };
+        nx.linux.server.paperless-ngx.oidcConfiguration =
+          lib.mkIf (config.nx.linux.server.paperless-ngx.enableOIDC)
+            {
+              providerId = config.nx.linux.server.auth.oidcProviderId;
+              providerName = config.nx.linux.server.auth.oidcProviderName;
+              serverUrl = config.nx.linux.server.auth.baseUrl;
+              logoutUrl = config.nx.linux.server.auth.logoutUrl;
+              enforceOIDC =
+                config.nx.linux.server.auth.enforceOIDC
+                && !config.nx.linux.server.paperless-ngx.disableOIDCEnforcement;
+            };
       };
 
     ifEnabled.linux.server.ldap = {
