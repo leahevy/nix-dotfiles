@@ -260,7 +260,7 @@ in
                 --arg name "$CLIENT_NAME" \
                 --argjson urls "$CALLBACK_URLS" \
                 --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
-                --argjson groups "[${GROUP_JSON}]" \
+                --argjson groups "[''${GROUP_JSON}]" \
                 '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true, allowedUserGroups: $groups}' > "$PAYLOAD_FILE"
             else
               "$JQ" -n \
