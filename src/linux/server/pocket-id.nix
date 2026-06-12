@@ -154,6 +154,7 @@ in
             inherit (c)
               name
               allowedUserGroup
+              launchUrl
               ;
             callbackUrls = map (
               url: builtins.replaceStrings [ "{providerId}" ] [ providerId ] url
@@ -232,6 +233,7 @@ in
             CLIENT_NAME=$("$JQ" -r --arg k "$KEY" '.[$k].name' <<< "$DECLARED")
             CALLBACK_URLS=$("$JQ" -c --arg k "$KEY" '.[$k].callbackUrls' <<< "$DECLARED")
             ALLOWED_GROUP=$("$JQ" -r --arg k "$KEY" '.[$k].allowedUserGroup // empty' <<< "$DECLARED")
+            LAUNCH_URL=$("$JQ" -r --arg k "$KEY" '.[$k].launchUrl // empty' <<< "$DECLARED")
             LOGOUT_CALLBACK_URLS=${
               lib.escapeShellArg (
                 builtins.toJSON (if postLogoutRedirectUrl != null then [ postLogoutRedirectUrl ] else [ ])
@@ -255,11 +257,20 @@ in
             fi
 
             PAYLOAD_FILE="$WORK_DIR/payload_$KEY"
-            "$JQ" -n \
-              --arg name "$CLIENT_NAME" \
-              --argjson urls "$CALLBACK_URLS" \
-              --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
-              '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true, requiresReauthentication: false}' > "$PAYLOAD_FILE"
+            if [[ -n "$LAUNCH_URL" ]]; then
+              "$JQ" -n \
+                --arg name "$CLIENT_NAME" \
+                --argjson urls "$CALLBACK_URLS" \
+                --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
+                --arg launchUrl "$LAUNCH_URL" \
+                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true, requiresReauthentication: false, launchURL: $launchUrl}' > "$PAYLOAD_FILE"
+            else
+              "$JQ" -n \
+                --arg name "$CLIENT_NAME" \
+                --argjson urls "$CALLBACK_URLS" \
+                --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
+                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: true, requiresReauthentication: false}' > "$PAYLOAD_FILE"
+            fi
             ${pkgs.coreutils}/bin/chmod 600 "$PAYLOAD_FILE"
 
             printf 'Updating client: %s\n' "$CLIENT_NAME"

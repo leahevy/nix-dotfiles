@@ -79,11 +79,52 @@ args@{
               default = null;
               description = "LDAP group name restricting access to this client, or null for all users.";
             };
+            launchUrl = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "URL shown as the launch button for this client in the auth provider UI.";
+            };
           };
         }
       );
       default = { };
       description = "OIDC clients managed declaratively by the active provider, keyed by service name.";
+    };
+
+    oidcIntegrations = lib.mkOption {
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            moduleName = lib.mkOption {
+              type = lib.types.str;
+              description = "Module name under linux.server used to read enableOIDC, subdomain, disableOIDCEnforcement, and oidcConfiguration.";
+            };
+            clientName = lib.mkOption {
+              type = lib.types.str;
+              description = "Display name shown in the OIDC provider UI for this client.";
+            };
+            allowedUserGroup = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "LDAP group name restricting access to this client, or null for all users.";
+            };
+            callbackPath = lib.mkOption {
+              type = lib.types.str;
+              description = "URL path appended to the service base URL to form the OIDC callback URL. Use {providerId} as a placeholder for the provider slug.";
+            };
+          };
+        }
+      );
+      default = [
+        {
+          moduleName = "paperless-ngx";
+          clientName = "Paperless";
+          allowedUserGroup = "paperless-users";
+          callbackPath = "/accounts/oidc/{providerId}/login/callback/";
+        }
+      ];
+      readOnly = true;
+      description = "Service integration definitions used to auto-generate auth.clients entries and inject oidcConfiguration into each service module.";
     };
   };
 
@@ -133,30 +174,35 @@ args@{
       config:
       let
         domain = self.host.remote.baseDomain;
-        paperlessSubdomain = config.nx.linux.server.paperless-ngx.subdomain;
+
+        mkServiceConfig =
+          svc:
+          let
+            svcCfg = config.nx.linux.server.${svc.moduleName};
+            active = svcCfg.enable && svcCfg.enableOIDC;
+            sub = svcCfg.subdomain;
+          in
+          lib.mkMerge [
+            {
+              nx.linux.server.auth.clients.${svc.moduleName} = lib.mkIf (active && domain != null) {
+                name = svc.clientName;
+                callbackUrls = [ "https://${sub}.${domain}${svc.callbackPath}" ];
+                allowedUserGroup = svc.allowedUserGroup;
+                launchUrl = "https://${sub}.${domain}";
+              };
+            }
+            {
+              nx.linux.server.${svc.moduleName}.oidcConfiguration = lib.mkIf active {
+                providerId = config.nx.linux.server.auth.oidcProviderId;
+                providerName = config.nx.linux.server.auth.oidcProviderName;
+                serverUrl = config.nx.linux.server.auth.baseUrl;
+                logoutUrl = config.nx.linux.server.auth.logoutUrl;
+                enforceOIDC = config.nx.linux.server.auth.enforceOIDC && !svcCfg.disableOIDCEnforcement;
+              };
+            }
+          ];
       in
-      {
-        nx.linux.server.auth.clients.paperless =
-          lib.mkIf (config.nx.linux.server.paperless-ngx.enableOIDC && domain != null)
-            {
-              name = "Paperless";
-              callbackUrls = [
-                "https://${paperlessSubdomain}.${domain}/accounts/oidc/{providerId}/login/callback/"
-              ];
-              allowedUserGroup = "paperless-users";
-            };
-        nx.linux.server.paperless-ngx.oidcConfiguration =
-          lib.mkIf (config.nx.linux.server.paperless-ngx.enableOIDC)
-            {
-              providerId = config.nx.linux.server.auth.oidcProviderId;
-              providerName = config.nx.linux.server.auth.oidcProviderName;
-              serverUrl = config.nx.linux.server.auth.baseUrl;
-              logoutUrl = config.nx.linux.server.auth.logoutUrl;
-              enforceOIDC =
-                config.nx.linux.server.auth.enforceOIDC
-                && !config.nx.linux.server.paperless-ngx.disableOIDCEnforcement;
-            };
-      };
+      lib.mkMerge (map mkServiceConfig config.nx.linux.server.auth.oidcIntegrations);
 
     ifEnabled.linux.server.ldap = {
       linux.system = config: {
