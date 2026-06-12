@@ -301,12 +301,10 @@ args@{
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
-          service = "samba-winbindd.service";
           tag = "winbindd";
           string = ".*winbindd_sig_term_handler.*";
         }
         {
-          service = "samba-winbindd.service";
           tag = "winbindd";
           string = ".*Got sig\\[15\\] terminate.*";
         }
