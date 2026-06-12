@@ -94,52 +94,53 @@ args@{
   };
 
   module = {
+    ifEnabled.linux.server.nginx = {
+      enabled = config: {
+        nx.linux.server.auth.postLogoutRedirectUrl = lib.mkIf (
+          self.host.remote.baseDomain != null && config.nx.linux.server.nginx.serverOwnsBaseDomain
+        ) "https://${self.host.remote.baseDomain}";
+      };
+    };
+
     ifEnabled.linux.server.dashboard = {
       enabled =
         config:
-        lib.mkMerge [
-          {
-            nx.linux.server.auth.postLogoutRedirectUrl = lib.mkIf (
-              self.host.remote.baseDomain != null && config.nx.linux.server.nginx.serverOwnsBaseDomain
-            ) "https://${self.host.remote.baseDomain}";
-          }
-          (lib.mkIf (config.nx.linux.server.auth.baseUrl != null) {
-            nx.linux.server.dashboard.services = lib.mkOrder 0 [
-              {
-                name = "Login";
-                href = config.nx.linux.server.auth.baseUrl;
-                description = "Single sign-on provider";
-                icon = "bitwarden";
-                group = "services";
-              }
-            ];
-            nx.linux.server.dashboard.customCSS = lib.mkOrder 2000 ''
-              li.service[data-name="Login"] .service-card {
-                background-color: color-mix(in srgb, rgb(var(--color-100) / 0.65) 88%, white) !important;
-                box-shadow: 0 10px 30px rgb(0 0 0 / 0.28);
-              }
+        lib.mkIf (config.nx.linux.server.auth.baseUrl != null) {
+          nx.linux.server.dashboard.services = lib.mkOrder 0 [
+            {
+              name = "Login";
+              href = config.nx.linux.server.auth.baseUrl;
+              description = "Single sign-on provider";
+              icon = "bitwarden";
+              group = "services";
+            }
+          ];
+          nx.linux.server.dashboard.customCSS = lib.mkOrder 2000 ''
+            li.service[data-name="Login"] .service-card {
+              background-color: color-mix(in srgb, rgb(var(--color-100) / 0.65) 88%, white) !important;
+              box-shadow: 0 10px 30px rgb(0 0 0 / 0.28);
+            }
 
-              .dark li.service[data-name="Login"] .service-card {
-                background-color: color-mix(
-                  in srgb,
-                  rgb(var(--color-700) / 0.4) 88%,
-                  white
-                ) !important;
-              }
+            .dark li.service[data-name="Login"] .service-card {
+              background-color: color-mix(
+                in srgb,
+                rgb(var(--color-700) / 0.4) 88%,
+                white
+              ) !important;
+            }
 
-              li.service[data-name="Login"] .service-card::after {
-                content: "";
-                position: absolute;
-                inset: 3px;
-                border-radius: inherit;
-                box-shadow:
-                  inset 0 0 0 2px rgb(255 255 255 / 0.20),
-                  inset 0 0 24px rgb(255 255 255 / 0.08);
-                pointer-events: none;
-              }
-            '';
-          })
-        ];
+            li.service[data-name="Login"] .service-card::after {
+              content: "";
+              position: absolute;
+              inset: 3px;
+              border-radius: inherit;
+              box-shadow:
+                inset 0 0 0 2px rgb(255 255 255 / 0.20),
+                inset 0 0 24px rgb(255 255 255 / 0.08);
+              pointer-events: none;
+            }
+          '';
+        };
     };
 
     ifEnabled.linux.server.ldap = {
