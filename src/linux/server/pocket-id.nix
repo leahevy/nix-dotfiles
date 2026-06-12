@@ -441,7 +441,7 @@ in
             TRUST_PROXY = true;
             ANALYTICS_DISABLED = true;
             UI_CONFIG_DISABLED = true;
-            ALLOW_USER_SIGNUPS = false;
+            ALLOW_USER_SIGNUPS = "disabled";
             ALLOW_OWN_ACCOUNT_EDIT = false;
             ACCENT_COLOR = accentColor;
           };
