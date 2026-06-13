@@ -190,7 +190,7 @@ args@{
                 u:
                 lib.nameValuePair u.username {
                   path = "${homeBase}/${u.username}";
-                  browseable = "no";
+                  browseable = "yes";
                   "read only" = "no";
                   "valid users" = u.username;
                   "create mask" = "0600";
