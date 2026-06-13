@@ -178,7 +178,7 @@ args@{
                 security = "user";
                 "passdb backend" = "tdbsam";
                 "server min protocol" = "SMB3";
-                "server smb encrypt" = "required";
+                "server smb encrypt" = "if_required";
                 "hosts allow" = allowedHosts;
                 "hosts deny" = "ALL";
                 "map to guest" = "Never";
@@ -197,6 +197,7 @@ args@{
                   "directory mask" = "0700";
                   "force user" = u.username;
                   "force group" = u.username;
+                  "server smb encrypt" = "required";
                 }
               ) users
             )
@@ -211,6 +212,7 @@ args@{
                   "create mask" = "0664";
                   "directory mask" = "0775";
                   "force group" = "ldap-users";
+                  "server smb encrypt" = "required";
                 }
               ) shares
             );
