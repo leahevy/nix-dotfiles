@@ -177,8 +177,8 @@ args@{
                 "server string" = serverString;
                 security = "user";
                 "passdb backend" = "tdbsam";
-                "server min protocol" = "SMB3_02";
-                "server smb encrypt" = "desired";
+                "server min protocol" = "SMB3";
+                "server smb encrypt" = "required";
                 "hosts allow" = allowedHosts;
                 "hosts deny" = "ALL";
                 "map to guest" = "Never";
