@@ -33,5 +33,11 @@ args@{
         nix-diff
       ];
     };
+
+    linux.system = config: {
+      environment.systemPackages = with pkgs; [
+        nixos-rebuild
+      ];
+    };
   };
 }
