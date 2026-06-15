@@ -228,6 +228,12 @@ args@{
       description = "Override the search widget URL, taking precedence over useStartpageAsSearchEngine when set.";
     };
 
+    suggestionURL = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Autocomplete suggestions endpoint URL passed to the search widget when showSearchSuggestions is true.";
+    };
+
     services = lib.mkOption {
       type = lib.types.listOf (
         lib.types.submodule {
@@ -457,6 +463,7 @@ args@{
         searchOpenInNewTab,
         showSearchSuggestions,
         searchURL,
+        suggestionURL,
         addNixRepoBookmarks,
         gatewayIP,
         enableThemeColorOverwrite,
@@ -595,7 +602,8 @@ args@{
                 target = if searchOpenInNewTab then "_blank" else "_self";
                 showSearchSuggestions = showSearchSuggestions;
                 focus = true;
-              };
+              }
+              // lib.optionalAttrs (suggestionURL != null) { suggestionUrl = suggestionURL; };
             }
           else if useStartpageAsSearchEngine then
             {
@@ -911,6 +919,10 @@ args@{
       in
       {
         assertions = [
+          {
+            assertion = !showSearchSuggestions || suggestionURL != null;
+            message = "linux.server.dashboard: showSearchSuggestions requires suggestionURL to be set!";
+          }
           {
             assertion = domain != null;
             message = "linux.server.dashboard requires host.remote.baseDomain to be set!";
