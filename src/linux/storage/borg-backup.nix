@@ -194,13 +194,20 @@ args@{
                 exit 1
               fi
               _decrypt() { sudo -u "$SUDO_USER" -- ${pkgs.sops}/bin/sops -d "$1"; }
+              for _secret in ${sshKeyPath} ${knownHostsPath} ${passphrasePath}; do
+                if [[ ! -f "$_secret" ]]; then
+                  echo "Error: borg secret not found: $_secret" >&2
+                  exit 1
+                fi
+              done
               _tmpdir=$(${pkgs.coreutils}/bin/mktemp -d)
               trap '${pkgs.coreutils}/bin/rm -rf "$_tmpdir"' EXIT
               _decrypt ${sshKeyPath} > "$_tmpdir/ssh-key"
               ${pkgs.coreutils}/bin/chmod 600 "$_tmpdir/ssh-key"
               _decrypt ${knownHostsPath} > "$_tmpdir/known-hosts"
               export BORG_RSH="ssh -i '$_tmpdir/ssh-key' -o UserKnownHostsFile='$_tmpdir/known-hosts'"
-              export BORG_PASSPHRASE="$(_decrypt ${passphrasePath})"
+              BORG_PASSPHRASE=$(_decrypt ${passphrasePath})
+              export BORG_PASSPHRASE
               export BORG_REPO="ssh://${hostEntry.user or "root"}@${hostEntry.server}:${
                 toString (hostEntry.port or 22)
               }${hostEntry.path}"
