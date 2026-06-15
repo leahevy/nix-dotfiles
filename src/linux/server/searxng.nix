@@ -221,6 +221,9 @@ args@{
           services.nginx.virtualHosts."${exposedSubdomain}.${domain}" = {
             useACMEHost = domain;
             forceSSL = true;
+            locations."/preferences" = {
+              return = "302 https://${exposedSubdomain}.${domain}/";
+            };
             locations."/" = {
               proxyPass = "http://127.0.0.1:${toString port}";
             };
