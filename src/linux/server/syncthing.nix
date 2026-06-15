@@ -419,6 +419,10 @@ in
           };
         };
 
+        systemd.services.syncthing.restartTriggers = [
+          (builtins.toJSON config.users.users.syncthing.extraGroups)
+        ];
+
         networking.firewall = lib.mkIf config.nx.linux.networking.firewall.enable {
           allowedTCPPorts = lib.optionals enableTCP [ port ];
           allowedUDPPorts = lib.optionals enableQuic [ port ];

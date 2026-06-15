@@ -233,46 +233,58 @@ args@{
           };
         };
 
-        systemd.services = lib.mkIf enableOIDC {
-          nx-paperless-oidc-prep = {
-            description = "Prepare Paperless OIDC provider environment";
-            before = [ "paperless-web.service" ];
-            wantedBy = [ "paperless-web.service" ];
-            partOf = [ "paperless-web.service" ];
-            restartTriggers = [
-              config.sops.secrets."paperless-oidc-id".sopsFile
-              config.sops.secrets."paperless-oidc-secret".sopsFile
+        systemd.services = lib.mkMerge [
+          {
+            paperless-web.restartTriggers = [ (builtins.toJSON config.users.users.paperless.extraGroups) ];
+            paperless-scheduler.restartTriggers = [
+              (builtins.toJSON config.users.users.paperless.extraGroups)
             ];
-            serviceConfig = {
-              Type = "oneshot";
-              RemainAfterExit = true;
-              ExecStart = toString (
-                pkgs.writeShellScript "nx-paperless-oidc-prep" ''
-                  set -euo pipefail
-                  umask 077
-                  ${pkgs.coreutils}/bin/rm -f /run/paperless-oidc/providers.env
-                  ${pkgs.coreutils}/bin/touch /run/paperless-oidc/providers.env
-                  {
-                    printf 'PAPERLESS_SOCIALACCOUNT_PROVIDERS='
-                    ${pkgs.jq}/bin/jq -cn \
-                      --rawfile cid_raw ${lib.escapeShellArg config.sops.secrets."paperless-oidc-id".path} \
-                      --rawfile secret_raw ${lib.escapeShellArg config.sops.secrets."paperless-oidc-secret".path} \
-                      --arg pid ${lib.escapeShellArg providerId} \
-                      --arg pname ${lib.escapeShellArg providerName} \
-                      --arg url ${lib.escapeShellArg serverUrl} \
-                      '{"openid_connect":{"APPS":[{"provider_id":$pid,"name":$pname,"client_id":($cid_raw|rtrimstr("\n")),"secret":($secret_raw|rtrimstr("\n")),"settings":{"server_url":$url,"oauth_pkce_enabled":true}}]}}'
-                  } >> /run/paperless-oidc/providers.env
-                  ${pkgs.coreutils}/bin/chmod 600 /run/paperless-oidc/providers.env
-                ''
-              );
+            paperless-task-queue.restartTriggers = [
+              (builtins.toJSON config.users.users.paperless.extraGroups)
+            ];
+            paperless-consumer.restartTriggers = [ (builtins.toJSON config.users.users.paperless.extraGroups) ];
+          }
+          (lib.mkIf enableOIDC {
+            nx-paperless-oidc-prep = {
+              description = "Prepare Paperless OIDC provider environment";
+              before = [ "paperless-web.service" ];
+              wantedBy = [ "paperless-web.service" ];
+              partOf = [ "paperless-web.service" ];
+              restartTriggers = [
+                config.sops.secrets."paperless-oidc-id".sopsFile
+                config.sops.secrets."paperless-oidc-secret".sopsFile
+              ];
+              serviceConfig = {
+                Type = "oneshot";
+                RemainAfterExit = true;
+                ExecStart = toString (
+                  pkgs.writeShellScript "nx-paperless-oidc-prep" ''
+                    set -euo pipefail
+                    umask 077
+                    ${pkgs.coreutils}/bin/rm -f /run/paperless-oidc/providers.env
+                    ${pkgs.coreutils}/bin/touch /run/paperless-oidc/providers.env
+                    {
+                      printf 'PAPERLESS_SOCIALACCOUNT_PROVIDERS='
+                      ${pkgs.jq}/bin/jq -cn \
+                        --rawfile cid_raw ${lib.escapeShellArg config.sops.secrets."paperless-oidc-id".path} \
+                        --rawfile secret_raw ${lib.escapeShellArg config.sops.secrets."paperless-oidc-secret".path} \
+                        --arg pid ${lib.escapeShellArg providerId} \
+                        --arg pname ${lib.escapeShellArg providerName} \
+                        --arg url ${lib.escapeShellArg serverUrl} \
+                        '{"openid_connect":{"APPS":[{"provider_id":$pid,"name":$pname,"client_id":($cid_raw|rtrimstr("\n")),"secret":($secret_raw|rtrimstr("\n")),"settings":{"server_url":$url,"oauth_pkce_enabled":true}}]}}'
+                    } >> /run/paperless-oidc/providers.env
+                    ${pkgs.coreutils}/bin/chmod 600 /run/paperless-oidc/providers.env
+                  ''
+                );
+              };
             };
-          };
 
-          paperless-web = {
-            after = [ "nx-paperless-oidc-prep.service" ];
-            bindsTo = [ "nx-paperless-oidc-prep.service" ];
-          };
-        };
+            paperless-web = {
+              after = [ "nx-paperless-oidc-prep.service" ];
+              bindsTo = [ "nx-paperless-oidc-prep.service" ];
+            };
+          })
+        ];
       };
 
     ifEnabled.linux.services.fail2ban = {
