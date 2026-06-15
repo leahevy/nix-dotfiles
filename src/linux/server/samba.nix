@@ -310,6 +310,54 @@ args@{
           string = ".*smbXsrv_session_disconnect_xconn: empty session_table, nothing to do\\..*";
           all = true;
         }
+        {
+          service = "samba-smbd.service";
+          string = "\\[.*\\] \\.\\./\\.\\./source3/";
+        }
+        {
+          service = "samba-nmbd.service";
+          string = "\\[.*\\] \\.\\./\\.\\./source3/";
+        }
+        {
+          tag = "samba-dcerpcd";
+          string = "rpc_worker_exited: No worker with PID";
+        }
+        {
+          tag = "rpcd_classic";
+          string = "Failed to fetch record";
+        }
+        {
+          tag = "rpcd_classic";
+          string = "pcap cache not loaded";
+        }
+        {
+          tag = "smbd";
+          string = "idmap range not specified for domain";
+        }
+        {
+          tag = "smbd";
+          string = "not permitted to access this share";
+        }
+        {
+          tag = "smbd";
+          string = "create_connection_session_info failed: NT_STATUS_ACCESS_DENIED";
+        }
+        {
+          tag = "smbd";
+          string = "Profiling turned OFF from pid";
+        }
+        {
+          tag = "nmbd";
+          string = "become_local_master_stage2";
+        }
+        {
+          tag = "nmbd";
+          string = "is now a local master browser for workgroup";
+        }
+        {
+          tag = "nmbd";
+          string = "\\*{5}";
+        }
       ];
     };
 
