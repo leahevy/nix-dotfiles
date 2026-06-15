@@ -183,9 +183,10 @@ args@{
           profileName: hostEntry:
           let
             secretsBase = self.config.rootPath "profiles/nixos/${profileName}/secrets";
-            sshKeyPath = secretsBase + "/borg.ssh-key";
-            passphrasePath = secretsBase + "/borg.passphrase";
-            knownHostsPath = secretsBase + "/borg.known-hosts";
+            runtimeSecretsBase = "${self.user.home}/.config/nx/nxconfig/profiles/nixos/${profileName}/secrets";
+            sshKeyPath = runtimeSecretsBase + "/borg.ssh-key";
+            passphrasePath = runtimeSecretsBase + "/borg.passphrase";
+            knownHostsPath = runtimeSecretsBase + "/borg.known-hosts";
             crossBorgEnvSetup = ''
               if [[ $EUID -ne 0 ]]; then echo "Must be run as root!" >&2; exit 1; fi
               if [[ -z "''${SUDO_USER:-}" ]]; then
