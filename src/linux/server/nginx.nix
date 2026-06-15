@@ -40,6 +40,12 @@ args@{
       default = false;
       description = "When true, add a redirect vhost at baseDomain that forwards to the configured subdomain vhost.";
     };
+
+    trustedCIDRs = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "CIDR ranges considered internal or trusted, exposed as the nginx variable nx_is_internal (1 for matching clients, 0 otherwise).";
+    };
   };
 
   module = {
@@ -69,11 +75,26 @@ args@{
         subdomain,
         enableTestDomain,
         serverOwnsBaseDomain,
+        trustedCIDRs,
         ...
       }:
       let
         domain = self.host.remote.baseDomain;
         effectiveSubdomain = if subdomain == null then self.host.hostname else subdomain;
+        normalizeCIDR =
+          cidr:
+          if lib.hasInfix "/" cidr then
+            cidr
+          else if lib.hasInfix ":" cidr then
+            "${cidr}/128"
+          else
+            "${cidr}/32";
+
+        effectiveTrustedCIDRs = map normalizeCIDR trustedCIDRs ++ [
+          "127.0.0.1/32"
+          "::1/128"
+        ];
+
         uncoveredVhosts = lib.filterAttrs (
           name: vh:
           let
@@ -119,7 +140,13 @@ args@{
           recommendedTlsSettings = true;
           recommendedGzipSettings = true;
           recommendedOptimisation = true;
-          commonHttpConfig = "access_log syslog:server=unix:/dev/log combined;";
+          commonHttpConfig = ''
+            access_log syslog:server=unix:/dev/log combined;
+            geo $nx_is_internal {
+              default 0;
+              ${lib.concatMapStringsSep "\n      " (cidr: "${cidr} 1;") effectiveTrustedCIDRs}
+            }
+          '';
           appendHttpConfig = ''
             server {
               listen 0.0.0.0:80 default_server;

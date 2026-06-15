@@ -466,6 +466,7 @@ in
               proxyWebsockets = true;
               recommendedProxySettings = false;
               extraConfig = ''
+                if ($nx_is_internal = 0) { return 403; }
                 proxy_set_header Host "localhost:${toString guiPort}";
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
