@@ -394,6 +394,12 @@ args@{
       description = "Add bookmarks for the nix repo URLs defined in variables.nix when they are non-empty.";
     };
 
+    addDefaultLinks = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Add a default set of bookmark links to the links group.";
+    };
+
     gatewayIP = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -419,6 +425,37 @@ args@{
         "homepage-dashboard.service"
         "homepage-dashboard-restricted.service"
       ];
+    };
+
+    enabled = config: {
+      nx.linux.server.dashboard.bookmarks = lib.mkIf config.nx.linux.server.dashboard.addDefaultLinks (
+        lib.mkBefore [
+          {
+            name = "Google";
+            href = "https://www.google.de";
+            icon = "google";
+            group = "links";
+          }
+          {
+            name = "Startpage";
+            href = "https://www.startpage.com";
+            icon = "startpage";
+            group = "links";
+          }
+          {
+            name = "YouTube";
+            href = "https://www.youtube.com";
+            icon = "youtube";
+            group = "links";
+          }
+          {
+            name = "Amazon";
+            href = "https://www.amazon.de";
+            icon = "amazon";
+            group = "links";
+          }
+        ]
+      );
     };
 
     when = {
