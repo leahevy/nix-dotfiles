@@ -62,6 +62,12 @@ args@{
       default = true;
       description = "Whether to open the standard Samba ports in the host firewall.";
     };
+
+    dfreeCapPercent = lib.mkOption {
+      type = lib.types.ints.between 1 100;
+      default = 100;
+      description = "Percentage of real disk space reported to SMB clients as total capacity, 100 reports actual values.";
+    };
   };
 
   module = {
@@ -74,6 +80,7 @@ args@{
           shares,
           additionalAllowedHosts,
           openFirewall,
+          dfreeCapPercent,
           ...
         }:
         let
@@ -115,6 +122,21 @@ args@{
               fi
             '') users}
           '';
+          dfreeAttrs = {
+            "dfree command" = toString (
+              pkgs.writeShellScript "nx-samba-dfree" ''
+                set -euo pipefail
+                _dfout=$(${pkgs.coreutils}/bin/df -Pk "''${1:-.}")
+                _vals=$(printf '%s\n' "$_dfout" | ${pkgs.gawk}/bin/awk 'NR==2 {print $2, $4}')
+                _total="''${_vals%% *}"
+                _avail="''${_vals##* }"
+                _cap=$((_total * ${toString dfreeCapPercent} / 100))
+                _used=$((_total - _avail))
+                _free=$(( _used >= _cap ? 0 : _cap - _used ))
+                printf '%s %s\n' "$_cap" "$_free"
+              ''
+            );
+          };
         in
         {
           assertions = [
@@ -185,7 +207,8 @@ args@{
                 "map to guest" = "Never";
                 "log level" = "1";
                 "logging" = "systemd";
-              };
+              }
+              // dfreeAttrs;
             }
             // lib.listToAttrs (
               map (
