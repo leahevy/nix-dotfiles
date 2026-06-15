@@ -275,12 +275,13 @@ args@{
             group = lib.mkOption {
               type = lib.types.enum [
                 "services"
+                "services-internal"
                 "health"
                 "admin"
                 "details"
               ];
               default = "services";
-              description = "Dashboard group this entry is placed in: services for user-facing apps, admin for internal tooling, health for admin status widgets, and details for individual check cards shown on a separate tab.";
+              description = "Dashboard group this entry is placed in: services for public user-facing apps, services-internal for apps shown on the Home tab only to trusted clients, admin for internal tooling, health for admin status widgets, and details for individual check cards shown on a separate tab.";
             };
           };
         }
@@ -529,6 +530,7 @@ args@{
         servicesByGroup = lib.groupBy (svc: svc.group) services;
 
         mainServiceEntries = map mkServiceEntry (servicesByGroup.services or [ ]);
+        internalServiceEntries = map mkServiceEntry (servicesByGroup."services-internal" or [ ]);
         adminServiceEntries = map mkServiceEntry (servicesByGroup.admin or [ ]);
         healthServiceEntries = map mkServiceEntry (servicesByGroup.health or [ ]);
         detailsServiceEntries = map mkServiceEntry (servicesByGroup.details or [ ]);
@@ -560,6 +562,7 @@ args@{
 
         externalServiceEntries = additionalServiceEntries;
         homeServiceEntries = mainServiceEntries ++ externalServiceEntries;
+        fullHomeServiceEntries = homeServiceEntries ++ internalServiceEntries;
 
         backgroundAttr =
           if effectiveLocalBackgroundFile != null then
@@ -649,7 +652,7 @@ args@{
 
         hasDetailsTab = detailsServiceEntries != [ ];
         generatedLayout =
-          lib.optional (homeServiceEntries != [ ]) {
+          lib.optional (fullHomeServiceEntries != [ ]) {
             Services = {
               style = "row";
               columns = columnsPerGroup;
@@ -883,6 +886,32 @@ args@{
             "Links (Details)" = detailsLinksBookmarkEntries;
           };
 
+        restrictedListenPort = listenPort + 1;
+        yamlFormat = pkgs.formats.yaml { };
+
+        restrictedLayout =
+          lib.optional (homeServiceEntries != [ ]) {
+            Services = {
+              style = "row";
+              columns = columnsPerGroup;
+            };
+          }
+          ++ lib.optional (linksBookmarkEntries != [ ]) {
+            Links = {
+              style = "row";
+              columns = columnsPerGroup * 2;
+            };
+          };
+
+        restrictedSettings = generatedSettings // {
+          showStats = false;
+          layout = restrictedLayout;
+        };
+
+        restrictedServices = lib.optional (homeServiceEntries != [ ]) { Services = homeServiceEntries; };
+
+        restrictedBookmarks = lib.optional (linksBookmarkEntries != [ ]) { Links = linksBookmarkEntries; };
+
         baseVhost =
           lib.recursiveUpdate
             {
@@ -891,7 +920,7 @@ args@{
               quic = enableQuic;
               http3 = enableQuic;
               locations."/" = {
-                proxyPass = "http://127.0.0.1:${toString listenPort}";
+                proxyPass = "http://$dashboard_upstream";
                 proxyWebsockets = true;
               };
             }
@@ -955,7 +984,7 @@ args@{
           settings = generatedSettings;
           bookmarks = generatedBookmarks;
           services =
-            lib.optional (homeServiceEntries != [ ]) { Services = homeServiceEntries; }
+            lib.optional (fullHomeServiceEntries != [ ]) { Services = fullHomeServiceEntries; }
             ++ lib.optional (adminServiceEntries != [ ]) { Administration = adminServiceEntries; }
             ++ lib.optional (healthServiceEntries != [ ]) { Health = healthServiceEntries; }
             ++ lib.optional (detailsServiceEntries != [ ]) { Details = detailsServiceEntries; };
@@ -969,8 +998,14 @@ args@{
 
         systemd.services.homepage-dashboard-env = {
           description = "Prepare homepage-dashboard environment";
-          before = [ "homepage-dashboard.service" ];
-          wantedBy = [ "homepage-dashboard.service" ];
+          before = [
+            "homepage-dashboard.service"
+            "homepage-dashboard-restricted.service"
+          ];
+          wantedBy = [
+            "homepage-dashboard.service"
+            "homepage-dashboard-restricted.service"
+          ];
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
@@ -992,6 +1027,58 @@ args@{
                 )}
               ''
             );
+          };
+        };
+
+        services.nginx.commonHttpConfig = ''
+          map $nx_is_internal $dashboard_upstream {
+            1 127.0.0.1:${toString listenPort};
+            default 127.0.0.1:${toString restrictedListenPort};
+          }
+        '';
+
+        environment.etc = {
+          "homepage-dashboard-restricted/custom.css".text = generatedCSS;
+          "homepage-dashboard-restricted/custom.js".text = "";
+          "homepage-dashboard-restricted/bookmarks.yaml".source =
+            yamlFormat.generate "bookmarks-restricted.yaml" restrictedBookmarks;
+          "homepage-dashboard-restricted/docker.yaml".source =
+            yamlFormat.generate "docker-restricted.yaml"
+              { };
+          "homepage-dashboard-restricted/kubernetes.yaml".source =
+            yamlFormat.generate "kubernetes-restricted.yaml"
+              { };
+          "homepage-dashboard-restricted/services.yaml".source =
+            yamlFormat.generate "services-restricted.yaml" restrictedServices;
+          "homepage-dashboard-restricted/settings.yaml".source =
+            yamlFormat.generate "settings-restricted.yaml" restrictedSettings;
+          "homepage-dashboard-restricted/widgets.yaml".source =
+            yamlFormat.generate "widgets-restricted.yaml" searchWidget;
+          "homepage-dashboard-restricted/proxmox.yaml".source =
+            yamlFormat.generate "proxmox-restricted.yaml"
+              { };
+        };
+
+        systemd.services.homepage-dashboard-restricted = {
+          description = "Homepage Dashboard (Restricted)";
+          after = [
+            "network.target"
+            "homepage-dashboard-env.service"
+          ];
+          wants = [ "homepage-dashboard-env.service" ];
+          wantedBy = [ "multi-user.target" ];
+          inherit (config.systemd.services.homepage-dashboard) preStart enableStrictShellChecks;
+          restartTriggers = [
+            config.systemd.services.homepage-dashboard-env.serviceConfig.ExecStart
+          ];
+          environment = config.systemd.services.homepage-dashboard.environment // {
+            HOMEPAGE_CONFIG_DIR = "/etc/homepage-dashboard-restricted";
+            NIXPKGS_HOMEPAGE_CACHE_DIR = "/var/cache/homepage-dashboard-restricted";
+            PORT = toString restrictedListenPort;
+          };
+          serviceConfig = config.systemd.services.homepage-dashboard.serviceConfig // {
+            StateDirectory = "homepage-dashboard-restricted";
+            CacheDirectory = "homepage-dashboard-restricted";
           };
         };
 
