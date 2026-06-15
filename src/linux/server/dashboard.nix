@@ -216,6 +216,18 @@ args@{
       description = "Open search results in a new browser tab instead of the current tab.";
     };
 
+    showSearchSuggestions = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Show search suggestions when a custom searchURL is set.";
+    };
+
+    searchURL = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Override the search widget URL, taking precedence over useStartpageAsSearchEngine when set.";
+    };
+
     services = lib.mkOption {
       type = lib.types.listOf (
         lib.types.submodule {
@@ -443,6 +455,8 @@ args@{
         enableSearchWidget,
         useStartpageAsSearchEngine,
         searchOpenInNewTab,
+        showSearchSuggestions,
+        searchURL,
         addNixRepoBookmarks,
         gatewayIP,
         enableThemeColorOverwrite,
@@ -573,7 +587,17 @@ args@{
             null;
 
         searchWidget = lib.optional enableSearchWidget (
-          if useStartpageAsSearchEngine then
+          if searchURL != null then
+            {
+              search = {
+                provider = "custom";
+                url = searchURL;
+                target = if searchOpenInNewTab then "_blank" else "_self";
+                showSearchSuggestions = showSearchSuggestions;
+                focus = true;
+              };
+            }
+          else if useStartpageAsSearchEngine then
             {
               search = {
                 provider = "custom";
