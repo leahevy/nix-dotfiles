@@ -34,6 +34,18 @@ args@{
       description = "Additional engine names from SearXNG's built-in set to enable alongside Startpage.";
     };
 
+    fontFamily = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = "monospace";
+      description = "CSS font-family for the SearXNG UI, or null to use the browser default.";
+    };
+
+    squareCorners = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Remove all border-radius from every element in the SearXNG UI.";
+    };
+
     extraEngines = lib.mkOption {
       type = lib.types.listOf lib.types.attrs;
       default = [ ];
@@ -133,7 +145,12 @@ args@{
           enable = true;
           settings = {
             use_default_settings = {
-              engines.keep_only = [ "Startpage" ] ++ extraDefaultEngines;
+              engines.keep_only = [
+                "startpage"
+                "startpage news"
+                "startpage images"
+              ]
+              ++ extraDefaultEngines;
             };
             server = {
               port = port;
@@ -219,6 +236,8 @@ args@{
           config,
           port,
           subdomain,
+          fontFamily,
+          squareCorners,
           ...
         }:
         let
@@ -245,11 +264,29 @@ args@{
               if ($http_origin = "${o}") { set $searxng_cors $http_origin; }
             '') allowedCorsOrigins
             + "add_header Access-Control-Allow-Origin $searxng_cors always;";
+          customCss = pkgs.writeText "searxng-custom.css" (
+            lib.concatStrings [
+              "body,html{background-color:#000!important}"
+              (lib.optionalString (
+                fontFamily != null
+              ) "body,input,button,select,textarea{font-family:${fontFamily}!important}")
+              (lib.optionalString squareCorners "*{border-radius:0!important}")
+            ]
+          );
         in
         lib.mkIf (exposedService != false) {
           services.nginx.virtualHosts."${exposedSubdomain}.${domain}" = {
             useACMEHost = domain;
             forceSSL = true;
+            extraConfig = ''
+              sub_filter '</head>' '<link rel="stylesheet" href="/nx-custom.css"></head>';
+              sub_filter_once on;
+              proxy_set_header Accept-Encoding "";
+            '';
+            locations."= /nx-custom.css" = {
+              alias = "${customCss}";
+              extraConfig = ''add_header Content-Type "text/css";'';
+            };
             locations."= /static/themes/simple/img/searxng.png".extraConfig = "empty_gif;";
             locations."/preferences" = {
               return = "302 https://${exposedSubdomain}.${domain}/";
