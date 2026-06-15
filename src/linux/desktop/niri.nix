@@ -249,7 +249,6 @@ args@{
         wlsunset = true;
         bongocat = true;
         programs = {
-          installOfficeSuite = true;
           installSystemSettings = true;
         };
         clipboard-persistence = true;

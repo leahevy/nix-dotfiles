@@ -611,6 +611,11 @@ in
                 default = null;
                 description = "Preferred advanced drawing/image editing program";
               };
+              officeSuite = lib.mkOption {
+                type = lib.types.nullOr programType;
+                default = null;
+                description = "Preferred office suite";
+              };
               appLauncher = lib.mkOption {
                 type = lib.types.nullOr appLauncherType;
                 default = null;

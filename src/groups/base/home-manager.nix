@@ -74,6 +74,10 @@ let
       nvim-modules = {
         minuet = !self.isVirtual;
       };
+      office = {
+        libreoffice = false;
+        onlyoffice = true;
+      };
     };
     groups.shell = [ "shell" ];
   };

@@ -471,15 +471,6 @@ let
   };
 
   sharedPrograms = {
-    officeSuite = mkProgram {
-      name = "onlyoffice";
-      package = pkgs.onlyoffice-desktopeditors;
-      desktopFile = "onlyoffice-desktopeditors.desktop";
-      dirsToPersist = [
-        ".config/onlyoffice"
-        ".local/share/onlyoffice"
-      ];
-    };
     drawingProgram = mkProgram {
       name = "gimp";
       package = pkgs.gimp;
@@ -563,7 +554,6 @@ in
     additionalGnomeFilesToPersist = [ ];
     installGames = false;
     installSystemSettings = false;
-    installOfficeSuite = false;
     additionalIconThemes = [ ];
   };
 
@@ -693,7 +683,6 @@ in
           ++ (getProgramPackages selectedPrograms.gamesCards)
           ++ (getProgramPackages selectedPrograms.sudoku);
 
-        officeSuitePackages = getProgramPackages selectedPrograms.officeSuite;
       in
       {
         home.packages =
@@ -723,7 +712,7 @@ in
           ++ (getProgramPackages prefs.webBrowser)
           ++ (getProgramPackages prefs.gitGui)
           ++ (getProgramPackages prefs.drawingProgram)
-          ++ (lib.optionals self.settings.installOfficeSuite officeSuitePackages)
+          ++ (getProgramPackages prefs.officeSuite)
           ++ (lib.optionals self.settings.installGames gamePackages)
           ++ self.settings.additionalPackages
           ++ self.settings.additionalPrograms
@@ -831,25 +820,19 @@ in
             "text/vcard" = prefs.contacts.desktopFile;
             "text/x-vcard" = prefs.contacts.desktopFile;
           }
-          // (
-            if self.settings.installOfficeSuite then
-              {
-                "application/vnd.oasis.opendocument.text" = selectedPrograms.officeSuite.desktopFile;
-                "application/vnd.oasis.opendocument.spreadsheet" = selectedPrograms.officeSuite.desktopFile;
-                "application/vnd.oasis.opendocument.presentation" = selectedPrograms.officeSuite.desktopFile;
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document" =
-                  selectedPrograms.officeSuite.desktopFile;
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" =
-                  selectedPrograms.officeSuite.desktopFile;
-                "application/vnd.openxmlformats-officedocument.presentationml.presentation" =
-                  selectedPrograms.officeSuite.desktopFile;
-                "application/msword" = selectedPrograms.officeSuite.desktopFile;
-                "application/vnd.ms-excel" = selectedPrograms.officeSuite.desktopFile;
-                "application/vnd.ms-powerpoint" = selectedPrograms.officeSuite.desktopFile;
-              }
-            else
-              { }
-          );
+          // lib.optionalAttrs (prefs.officeSuite != null) {
+            "application/vnd.oasis.opendocument.text" = prefs.officeSuite.desktopFile;
+            "application/vnd.oasis.opendocument.spreadsheet" = prefs.officeSuite.desktopFile;
+            "application/vnd.oasis.opendocument.presentation" = prefs.officeSuite.desktopFile;
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" =
+              prefs.officeSuite.desktopFile;
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" = prefs.officeSuite.desktopFile;
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation" =
+              prefs.officeSuite.desktopFile;
+            "application/msword" = prefs.officeSuite.desktopFile;
+            "application/vnd.ms-excel" = prefs.officeSuite.desktopFile;
+            "application/vnd.ms-powerpoint" = prefs.officeSuite.desktopFile;
+          };
         };
 
         xdg.configFile = {
@@ -931,7 +914,7 @@ in
               ++ (getProgramDirs prefs.webBrowser)
               ++ (getProgramDirs prefs.gitGui)
               ++ (getProgramDirs prefs.drawingProgram)
-              ++ (lib.optionals self.settings.installOfficeSuite (getProgramDirs selectedPrograms.officeSuite));
+              ++ (getProgramDirs prefs.officeSuite);
 
             allProgramFiles =
               (getProgramFiles prefs.wallet)
@@ -958,7 +941,7 @@ in
               ++ (getProgramFiles prefs.webBrowser)
               ++ (getProgramFiles prefs.gitGui)
               ++ (getProgramFiles prefs.drawingProgram)
-              ++ (lib.optionals self.settings.installOfficeSuite (getProgramFiles selectedPrograms.officeSuite));
+              ++ (getProgramFiles prefs.officeSuite);
           in
           {
             directories = [
