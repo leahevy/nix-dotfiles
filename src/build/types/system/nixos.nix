@@ -609,6 +609,10 @@ with lib;
                     type = types.either types.str types.bool;
                     default = false;
                   };
+                  searxng = mkOption {
+                    type = types.either types.str types.bool;
+                    default = false;
+                  };
                   additionalServices = mkOption {
                     type = types.attrsOf (
                       types.submodule {

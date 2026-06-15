@@ -1,0 +1,237 @@
+args@{
+  lib,
+  pkgs,
+  pkgs-unstable,
+  funcs,
+  helpers,
+  defs,
+  self,
+  ...
+}:
+{
+  name = "searxng";
+  description = "SearXNG privacy-respecting metasearch engine";
+
+  group = "server";
+  input = "linux";
+
+  options = {
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 8889;
+      description = "Local port the SearXNG service listens on.";
+    };
+
+    subdomain = lib.mkOption {
+      type = lib.types.str;
+      default = "search";
+      description = "Subdomain under baseDomain where SearXNG is served via nginx.";
+    };
+
+    extraEngines = lib.mkOption {
+      type = lib.types.listOf lib.types.attrs;
+      default = [ ];
+      description = "Additional search engine configurations contributed by other modules.";
+    };
+
+    extraEnvironmentFiles = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional environment file paths whose variables are substituted into engine configuration.";
+    };
+  };
+
+  module = {
+    linux.system =
+      {
+        config,
+        port,
+        subdomain,
+        extraEngines,
+        extraEnvironmentFiles,
+        ...
+      }:
+      let
+        domain = self.host.remote.baseDomain;
+        exposedService = self.host.remote.exposedServices.searxng;
+        isExposed = exposedService != false;
+        exposedSubdomain = if builtins.isString exposedService then exposedService else subdomain;
+        envFile = "/run/nx-searxng-env/env";
+        allEnvFiles = [ envFile ] ++ extraEnvironmentFiles;
+      in
+      {
+        assertions = [
+          {
+            assertion = domain != null;
+            message = "linux.server.searxng requires host.remote.baseDomain to be set!";
+          }
+          {
+            assertion = !isExposed || config.nx.linux.security.letsencrypt.enable;
+            message = "linux.server.searxng requires linux.security.letsencrypt to be enabled when exposed!";
+          }
+          {
+            assertion = exposedService == false || exposedSubdomain == subdomain;
+            message = "linux.server.searxng: subdomain '${subdomain}' does not match exposedServices.searxng subdomain '${exposedSubdomain}'!";
+          }
+        ];
+
+        environment.persistence."${self.persist}" = {
+          directories = [
+            "/var/lib/searx"
+            "/var/cache/searx"
+          ];
+        };
+
+        systemd.services.nx-searxng-secret = {
+          description = "Prepare SearXNG secret key environment";
+          before = [ "searx-init.service" ];
+          wantedBy = [ "searx-init.service" ];
+          partOf = [ "searx-init.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            User = "searx";
+            Group = "searx";
+            StateDirectory = "searx";
+            StateDirectoryMode = "0750";
+            RuntimeDirectory = "nx-searxng-env";
+            RuntimeDirectoryMode = "0700";
+            ExecStart = toString (
+              pkgs.writeShellScript "nx-searxng-secret" ''
+                set -euo pipefail
+                if [ ! -f /var/lib/searx/secret_key ]; then
+                  ${pkgs.openssl}/bin/openssl rand -hex 32 > /var/lib/searx/secret_key
+                  ${pkgs.coreutils}/bin/chmod 600 /var/lib/searx/secret_key
+                fi
+                umask 077
+                {
+                  printf 'SEARXNG_SECRET_KEY='
+                  ${pkgs.coreutils}/bin/cat /var/lib/searx/secret_key
+                } > /run/nx-searxng-env/env
+              ''
+            );
+          };
+        };
+
+        systemd.services.searx-init = {
+          after = [ "nx-searxng-secret.service" ];
+          bindsTo = [ "nx-searxng-secret.service" ];
+          restartTriggers = [ config.systemd.services.nx-searxng-secret.serviceConfig.ExecStart ];
+          serviceConfig.EnvironmentFile = allEnvFiles;
+        };
+
+        systemd.services.searx = {
+          restartTriggers = [ config.systemd.services.nx-searxng-secret.serviceConfig.ExecStart ];
+          serviceConfig.EnvironmentFile = allEnvFiles;
+        };
+
+        services.searx = {
+          enable = true;
+          settings = {
+            use_default_settings = true;
+            server = {
+              port = port;
+              bind_address = "127.0.0.1";
+              secret_key = "$SEARXNG_SECRET_KEY";
+            }
+            // lib.optionalAttrs (domain != null && isExposed) {
+              base_url = "https://${exposedSubdomain}.${domain}/";
+            };
+            search.safe_search = 0;
+          }
+          // lib.optionalAttrs (extraEngines != [ ]) { engines = extraEngines; };
+        };
+
+        systemd.tmpfiles.settings."10-searxng" = {
+          "/var/lib/searx".d = {
+            mode = "0750";
+            user = "searx";
+            group = "searx";
+          };
+          "/var/cache/searx".d = {
+            mode = "0750";
+            user = "searx";
+            group = "searx";
+          };
+        }
+        // lib.optionalAttrs self.host.impermanence {
+          "${self.persist}/var/lib/searx".d = {
+            mode = "0750";
+            user = "searx";
+            group = "searx";
+          };
+          "${self.persist}/var/cache/searx".d = {
+            mode = "0750";
+            user = "searx";
+            group = "searx";
+          };
+        };
+      };
+
+    ifEnabled.linux.server.dashboard = {
+      enabled =
+        config:
+        let
+          domain = self.host.remote.baseDomain;
+          exposedService = self.host.remote.exposedServices.searxng;
+          exposedSubdomain = if builtins.isString exposedService then exposedService else "search";
+        in
+        {
+          nx.linux.server.dashboard.searchURL = lib.mkIf (
+            domain != null && exposedService != false
+          ) "https://${exposedSubdomain}.${domain}/search?q=";
+          nx.linux.server.dashboard.suggestionURL = lib.mkIf (
+            domain != null && exposedService != false
+          ) "https://${exposedSubdomain}.${domain}/autocompleter";
+          nx.linux.server.dashboard.services = lib.optionals (domain != null && exposedService != false) [
+            {
+              name = "SearXNG";
+              href = "https://${exposedSubdomain}.${domain}";
+              description = "Privacy-respecting metasearch engine";
+              icon = "searxng";
+              group = "admin";
+            }
+          ];
+        };
+    };
+
+    ifEnabled.linux.server.nginx = {
+      linux.system =
+        {
+          config,
+          port,
+          subdomain,
+          ...
+        }:
+        let
+          domain = self.host.remote.baseDomain;
+          exposedService = self.host.remote.exposedServices.searxng;
+          exposedSubdomain = if builtins.isString exposedService then exposedService else subdomain;
+        in
+        lib.mkIf (exposedService != false) {
+          services.nginx.virtualHosts."${exposedSubdomain}.${domain}" = {
+            useACMEHost = domain;
+            forceSSL = true;
+            locations."/" = {
+              proxyPass = "http://127.0.0.1:${toString port}";
+            };
+          };
+        };
+    };
+
+    ifEnabled.linux.server.healthchecks = {
+      enabled = config: {
+        nx.linux.server.healthchecks.requireServicesUp = [
+          "nx-searxng-secret.service"
+          "searx.service"
+        ];
+        nx.linux.server.healthchecks.regularHealthChecks."+51 - SearXNG http reachable" = ''
+          _code=$(${pkgs.curl}/bin/curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            "http://localhost:${toString config.nx.linux.server.searxng.port}/" 2>/dev/null || true)
+          printf 'http://localhost:${toString config.nx.linux.server.searxng.port}/ -> HTTP %s\n' "$_code" >&3
+          [[ "$_code" =~ ^[23] ]]
+        '';
+      };
+    };
+  };
+}
