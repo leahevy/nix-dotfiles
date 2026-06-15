@@ -137,16 +137,14 @@ args@{
             search = {
               safe_search = 0;
               autocomplete = "startpage";
+              favicon_resolver = "duckduckgo";
             };
             preferences.lock = [
               "autocomplete"
-              "categories"
               "center_alignment"
               "doi_resolver"
               "favicon_resolver"
               "image_proxy"
-              "language"
-              "locale"
               "method"
               "query_in_title"
               "results_on_new_tab"
@@ -216,6 +214,26 @@ args@{
           domain = self.host.remote.baseDomain;
           exposedService = self.host.remote.exposedServices.searxng;
           exposedSubdomain = if builtins.isString exposedService then exposedService else subdomain;
+          dashboardExposedService = self.host.remote.exposedServices.dashboard;
+          dashboardSubdomain =
+            if builtins.isString dashboardExposedService then
+              dashboardExposedService
+            else if config.nx.linux.server.dashboard.hostAtNginxSubdomain then
+              config.nx.linux.server.nginx.subdomain
+            else
+              config.nx.linux.server.dashboard.subdomain;
+          allowedCorsOrigins = lib.unique (
+            lib.optional (
+              config.nx.linux.server.dashboard.enable && dashboardExposedService != false
+            ) "https://${dashboardSubdomain}.${domain}"
+            ++ [ "https://${domain}" ]
+          );
+          corsExtraConfig =
+            ''set $searxng_cors "";''
+            + lib.concatMapStrings (o: ''
+              if ($http_origin = "${o}") { set $searxng_cors $http_origin; }
+            '') allowedCorsOrigins
+            + "add_header Access-Control-Allow-Origin $searxng_cors always;";
         in
         lib.mkIf (exposedService != false) {
           services.nginx.virtualHosts."${exposedSubdomain}.${domain}" = {
@@ -223,6 +241,13 @@ args@{
             forceSSL = true;
             locations."/preferences" = {
               return = "302 https://${exposedSubdomain}.${domain}/";
+            };
+            locations."/info" = {
+              return = "302 https://${exposedSubdomain}.${domain}/";
+            };
+            locations."/autocompleter" = {
+              proxyPass = "http://127.0.0.1:${toString port}";
+              extraConfig = corsExtraConfig;
             };
             locations."/" = {
               proxyPass = "http://127.0.0.1:${toString port}";
