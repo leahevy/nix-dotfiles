@@ -184,6 +184,7 @@ args@{
                 "hosts deny" = "ALL";
                 "map to guest" = "Never";
                 "log level" = "1";
+                "logging" = "systemd";
               };
             }
             // lib.listToAttrs (
