@@ -186,6 +186,12 @@ args@{
       description = "Number of service cards shown per row within each group.";
     };
 
+    mainGroupName = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Display name for the main services group, overriding the default of 'Services' on the full dashboard and 'Home' on the restricted dashboard.";
+    };
+
     squareCorners = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -472,6 +478,7 @@ args@{
         gatewayIP,
         enableThemeColorOverwrite,
         localBackgroundFileMapping,
+        mainGroupName,
         ...
       }:
       let
@@ -656,7 +663,7 @@ args@{
         hasDetailsTab = detailsServiceEntries != [ ];
         generatedLayout =
           lib.optional (fullHomeServiceEntries != [ ]) {
-            Services = {
+            ${effectiveMainGroupName} = {
               style = "row";
               columns = columnsPerGroup;
               tab = "Home";
@@ -889,12 +896,14 @@ args@{
             "Links (Details)" = detailsLinksBookmarkEntries;
           };
 
+        effectiveMainGroupName = if mainGroupName != null then mainGroupName else "Services";
+        effectiveRestrictedGroupName = if mainGroupName != null then mainGroupName else "Home";
         restrictedListenPort = listenPort + 1;
         yamlFormat = pkgs.formats.yaml { };
 
         restrictedLayout =
           lib.optional (homeServiceEntries != [ ]) {
-            Services = {
+            ${effectiveRestrictedGroupName} = {
               style = "row";
               columns = columnsPerGroup;
             };
@@ -911,7 +920,9 @@ args@{
           layout = restrictedLayout;
         };
 
-        restrictedServices = lib.optional (homeServiceEntries != [ ]) { Services = homeServiceEntries; };
+        restrictedServices = lib.optional (homeServiceEntries != [ ]) {
+          ${effectiveRestrictedGroupName} = homeServiceEntries;
+        };
 
         restrictedBookmarks = lib.optional (linksBookmarkEntries != [ ]) { Links = linksBookmarkEntries; };
 
@@ -987,7 +998,7 @@ args@{
           settings = generatedSettings;
           bookmarks = generatedBookmarks;
           services =
-            lib.optional (fullHomeServiceEntries != [ ]) { Services = fullHomeServiceEntries; }
+            lib.optional (fullHomeServiceEntries != [ ]) { ${effectiveMainGroupName} = fullHomeServiceEntries; }
             ++ lib.optional (adminServiceEntries != [ ]) { Administration = adminServiceEntries; }
             ++ lib.optional (healthServiceEntries != [ ]) { Health = healthServiceEntries; }
             ++ lib.optional (detailsServiceEntries != [ ]) { Details = detailsServiceEntries; };
