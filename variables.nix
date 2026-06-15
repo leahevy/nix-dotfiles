@@ -21,6 +21,8 @@
 
   isoManagementSSHKey = null;
 
+  disallowSymlinks = true;
+
   allowedUnfreePackages = [ ];
 
   releaseTransitionInsecurePackages = [

@@ -268,15 +268,21 @@
           additionalInputs = extraInputs;
         };
 
-        helpers = import (nxinputs.lib + "/helpers.nix") {
+        helpers-base = import (nxinputs.lib + "/helpers.nix") {
           inherit lib defs;
           additionalInputs = extraInputs;
         };
 
-        variables = helpers.deepMergeComplex {
+        variables = helpers-base.deepMergeComplex {
           base = variables-base;
           override = variables-config;
           forbidNewDeep = true;
+        };
+
+        helpers = import (nxinputs.lib + "/helpers.nix") {
+          inherit lib defs;
+          additionalInputs = extraInputs;
+          inherit variables;
         };
 
         standalone-user-files = builtins.filter (name: !(lib.strings.hasPrefix "." name)) (

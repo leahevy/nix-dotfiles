@@ -2,6 +2,7 @@
   lib,
   defs,
   additionalInputs,
+  variables ? { },
 }:
 rec {
   # Returns if building for native or compatible architecture
@@ -327,12 +328,21 @@ rec {
 
   # Create symlink to absolute path
   # Usage: symlink $CONFIG $SUBPATH
-  symlink = config: subpath: config.lib.file.mkOutOfStoreSymlink subpath;
+  symlink =
+    config: subpath:
+    if (variables.disallowSymlinks or false) && lib.hasInfix ".config/nx" subpath then
+      throw "Symlinks into .config/nx are forbidden (variables.disallowSymlinks = true)!"
+    else
+      config.lib.file.mkOutOfStoreSymlink subpath;
 
   # Create symlink to path relative to home directory
   # Usage: symlinkToHomeDirPath $CONFIG $SUBPATH
   symlinkToHomeDirPath =
-    config: subpath: (config.lib.file.mkOutOfStoreSymlink (config.home.homeDirectory + "/" + subpath));
+    config: subpath:
+    if (variables.disallowSymlinks or false) && lib.hasPrefix ".config/nx" subpath then
+      throw "Symlinks into .config/nx are forbidden (variables.disallowSymlinks = true)!"
+    else
+      config.lib.file.mkOutOfStoreSymlink (config.home.homeDirectory + "/" + subpath);
 
   # Validate required options are not null with error messages
   # Usage: assertNotNull $PROFILETYPE $OBJ $REQUIREDPATHS
@@ -490,10 +500,12 @@ rec {
   # Usage: symlinkInputFile $CONFIG $INPUTNAME $SUBPATH
   symlinkInputFile =
     config: inputName: subPath:
-    if builtins.elem inputName defs.coreInputs then
+    if variables.disallowSymlinks or false then
+      throw "Symlinks are globally forbidden (variables.disallowSymlinks = true) ${inputName}: ${subPath}!"
+    else if builtins.elem inputName defs.coreInputs then
       throw "Symlinks to core inputs are not allowed (input '${inputName}')."
     else if (config.nx.global.deploymentMode or "develop") == "managed" then
-      throw "Symlinks are not allowed in managed deployment mode!"
+      throw "Symlinks are not allowed in managed deployment mode  (${inputName}: ${subPath})!"
     else if isLocalDevelopmentInput null inputName then
       symlink config ((getLocalSourcePath inputName) + "/" + subPath)
     else

@@ -91,7 +91,9 @@ rec {
     # Usage: symlinkFromInput $SELF $CONFIG $INPUT $SUBPATH
     symlinkFromInput =
       self: config: input: subpath:
-      if builtins.elem self.moduleInputName defs.coreInputs then
+      if self.variables.disallowSymlinks or false then
+        throw "Symlinks are globally forbidden (variables.disallowSymlinks = true) (module: ${self.moduleBasePath})!"
+      else if builtins.elem self.moduleInputName defs.coreInputs then
         throw "Symlinks are not allowed in core input '${self.moduleInputName}' (module: ${self.moduleBasePath})."
       else if (self.host.deploymentMode or "develop") == "managed" then
         throw "Symlinks are not allowed in managed deployment mode (module: ${self.moduleBasePath})!"
@@ -244,7 +246,9 @@ rec {
           moduleContext.user.deploymentMode or "develop"
         else
           "develop";
-      fileFunctions = generateFileFunctions inputName moduleBasePath deploymentMode;
+      fileFunctions = generateFileFunctions inputName moduleBasePath deploymentMode (
+        moduleContext.variables or { }
+      );
       moduleFunctions = generateModuleFunctions inputName moduleContext;
       sameModuleFunctions = generateSameModuleFunctions inputName moduleContext moduleBasePath;
     in
@@ -370,7 +374,7 @@ rec {
 
   # Generate file access functions for specific input and module path
   # Usage: generateFileFunctions $INPUTNAME $MODULEBASEPATH $DEPLOYMENTMODE
-  generateFileFunctions = inputName: moduleBasePath: deploymentMode: {
+  generateFileFunctions = inputName: moduleBasePath: deploymentMode: variables: {
     rootPath = subPath: additionalInputs.${inputName} + "/" + subPath;
 
     file =
@@ -467,7 +471,9 @@ rec {
     # Create symlink to file in this module's input; not allowed in core inputs
     symlinkFile =
       config: subPath:
-      if builtins.elem inputName defs.coreInputs then
+      if variables.disallowSymlinks or false then
+        throw "Symlinks are globally forbidden (variables.disallowSymlinks = true) (module: ${moduleBasePath})!"
+      else if builtins.elem inputName defs.coreInputs then
         throw "Symlinks are not allowed in core input '${inputName}' (module: ${moduleBasePath})."
       else if deploymentMode == "managed" then
         throw "Symlinks are not allowed in managed deployment mode (module: ${moduleBasePath})!"
@@ -488,7 +494,9 @@ rec {
     # Create symlink to secret file in this module's input; not allowed in core inputs
     symlinkSecret =
       config: subPath:
-      if builtins.elem inputName defs.coreInputs then
+      if variables.disallowSymlinks or false then
+        throw "Symlinks are globally forbidden (variables.disallowSymlinks = true) (module: ${moduleBasePath})!"
+      else if builtins.elem inputName defs.coreInputs then
         throw "Symlinks are not allowed in core input '${inputName}' (module: ${moduleBasePath})."
       else if deploymentMode == "managed" then
         throw "Symlinks are not allowed in managed deployment mode (module: ${moduleBasePath})!"
