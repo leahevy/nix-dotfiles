@@ -381,6 +381,14 @@ args@{
           tag = "nmbd";
           string = "\\*{5}";
         }
+        {
+          service = "samba-smbd.service";
+          string = "terminate: Got SIGTERM: going down";
+        }
+        {
+          service = "samba-nmbd.service";
+          string = "terminate: Got SIGTERM: going down";
+        }
       ];
     };
 
