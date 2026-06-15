@@ -41,6 +41,11 @@ args@{
               default = null;
               description = "Healthchecks.io UUID for the API key expiry timed check.";
             };
+            healthchecksIcon = lib.mkOption {
+              type = lib.types.str;
+              default = "passbolt";
+              description = "Homepage icon name for the expiry timed check's dashboard card.";
+            };
             healthchecksWarnDays = lib.mkOption {
               type = lib.types.ints.positive;
               default = 5;
@@ -93,7 +98,7 @@ args@{
               schedule = "*-*-* 10:30:00";
               randomDelaySec = 900;
               uuid = keyCfg.healthchecksUUID;
-              icon = "key";
+              icon = keyCfg.healthchecksIcon;
               checks = {
                 "10 - Key expiry" = ''
                   ROTATED_AT=${lib.escapeShellArg rotationDate}

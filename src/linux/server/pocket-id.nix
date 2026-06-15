@@ -123,6 +123,7 @@ in
         nx.linux.security.api-keys.keys."pocket-id" = {
           displayName = "Pocket-ID";
           secretName = lib.mkDefault "pocket-id-api-key";
+          healthchecksIcon = "pocket-id";
         };
       };
     };
