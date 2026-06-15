@@ -409,7 +409,10 @@ args@{
 
   module = {
     ifEnabled.linux.server.healthchecks.enabled = config: {
-      nx.linux.server.healthchecks.requireServicesUp = [ "homepage-dashboard.service" ];
+      nx.linux.server.healthchecks.requireServicesUp = [
+        "homepage-dashboard.service"
+        "homepage-dashboard-restricted.service"
+      ];
     };
 
     when = {
