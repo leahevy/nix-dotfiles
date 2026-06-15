@@ -499,12 +499,12 @@ in
           users.users.syncthing.extraGroups = [ "paperless-sync" ];
           users.users.paperless.extraGroups = [ "paperless-sync" ];
 
-          systemd.tmpfiles.settings."10-paperless"."${basePath}/import".d = lib.mkForce {
+          systemd.tmpfiles.settings."10-paperless"."${basePath}/import".d = lib.mkOverride 75 {
             mode = "2770";
             user = "paperless";
             group = "paperless-sync";
           };
-          systemd.tmpfiles.settings."10-paperless-export"."${basePath}/export".d = lib.mkForce {
+          systemd.tmpfiles.settings."10-paperless-export"."${basePath}/export".d = lib.mkOverride 75 {
             mode = "2770";
             user = "paperless";
             group = "paperless-sync";

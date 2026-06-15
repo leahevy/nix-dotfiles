@@ -37,7 +37,12 @@ args@{
           options = {
             name = lib.mkOption {
               type = lib.types.str;
-              description = "Share name and subdirectory name under /var/lib/samba-shared.";
+              description = "Share name used as SMB identifier and subdirectory name under /var/lib/samba-shared when no explicit path is set.";
+            };
+            path = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Explicit filesystem path for this share, or null to use /var/lib/samba-shared/<name>.";
             };
             validUsers = lib.mkOption {
               type = lib.types.listOf lib.types.str;
@@ -87,7 +92,7 @@ args@{
           users = config.nx.linux.server.ldap.users;
           homeBase = config.nx.linux.server.ldap.homeBase;
           usernames = map (u: u.username) users;
-          shareNames = map (share: share.name) shares;
+          shareNames = map (share: share.name) allShares;
           allowedHosts = lib.concatStringsSep " " (
             [
               "127.0.0.1"
@@ -122,6 +127,20 @@ args@{
               fi
             '') users}
           '';
+          allShares =
+            shares
+            ++ lib.optionals config.nx.linux.server.paperless-ngx.enable [
+              {
+                name = "paperless-import";
+                path = "${config.nx.linux.server.paperless-ngx.paperlessDataBasePath}/import";
+                validUsers = [ "@ldap-users" ];
+              }
+              {
+                name = "paperless-export";
+                path = "${config.nx.linux.server.paperless-ngx.paperlessDataBasePath}/export";
+                validUsers = [ "@ldap-users" ];
+              }
+            ];
           dfreeAttrs = {
             "dfree command" = toString (
               pkgs.writeShellScript "nx-samba-dfree" ''
@@ -152,11 +171,11 @@ args@{
           ++ map (share: {
             assertion = builtins.match "^[a-z0-9_-]+$" share.name != null;
             message = "linux.server.samba: share name '${share.name}' must match ^[a-z0-9_-]+$!";
-          }) shares
+          }) allShares
           ++ map (share: {
             assertion = !builtins.elem share.name usernames;
             message = "linux.server.samba: share name '${share.name}' conflicts with an LDAP username and would collide with the generated home share!";
-          }) shares;
+          }) allShares;
 
           sops.secrets = lib.listToAttrs (
             map (
@@ -230,7 +249,7 @@ args@{
               map (
                 share:
                 lib.nameValuePair share.name {
-                  path = "/var/lib/samba-shared/${share.name}";
+                  path = if share.path != null then share.path else "/var/lib/samba-shared/${share.name}";
                   browseable = "yes";
                   "read only" = "no";
                   "valid users" = lib.concatStringsSep " " share.validUsers;
@@ -239,7 +258,7 @@ args@{
                   "force group" = "ldap-users";
                   "server smb encrypt" = "required";
                 }
-              ) shares
+              ) allShares
             );
           };
 
@@ -272,17 +291,19 @@ args@{
                   group = "ldap-users";
                 };
               in
-              [
-                {
-                  name = "/var/lib/samba-shared/${share.name}";
+              lib.optionals (share.path == null) (
+                [
+                  {
+                    name = "/var/lib/samba-shared/${share.name}";
+                    value."d" = entry;
+                  }
+                ]
+                ++ lib.optional self.host.impermanence {
+                  name = "${self.persist}/var/lib/samba-shared/${share.name}";
                   value."d" = entry;
                 }
-              ]
-              ++ lib.optional self.host.impermanence {
-                name = "${self.persist}/var/lib/samba-shared/${share.name}";
-                value."d" = entry;
-              }
-            ) shares
+              )
+            ) allShares
           )
           // lib.optionalAttrs self.host.impermanence {
             "${self.persist}/var/lib/samba".d = {
@@ -324,6 +345,31 @@ args@{
           "samba-nmbd.service"
         ];
       };
+    };
+
+    ifEnabled.linux.server.paperless-ngx = {
+      linux.system =
+        config:
+        let
+          basePath = config.nx.linux.server.paperless-ngx.paperlessDataBasePath;
+        in
+        {
+          users.users.paperless.extraGroups = [ "ldap-users" ];
+          users.users.syncthing.extraGroups = lib.mkIf config.nx.linux.server.syncthing.enable [
+            "ldap-users"
+          ];
+
+          systemd.tmpfiles.settings."10-paperless"."${basePath}/import".d = lib.mkForce {
+            mode = "2770";
+            user = "paperless";
+            group = "ldap-users";
+          };
+          systemd.tmpfiles.settings."10-paperless-export"."${basePath}/export".d = lib.mkForce {
+            mode = "2770";
+            user = "paperless";
+            group = "ldap-users";
+          };
+        };
     };
 
     enabled = config: {
