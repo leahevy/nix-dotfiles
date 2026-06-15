@@ -141,6 +141,15 @@ args@{
                 validUsers = [ "@ldap-users" ];
               }
             ];
+          appleQuirks = {
+            "vfs objects" = "fruit streams_xattr";
+            "fruit:metadata" = "stream";
+            "fruit:model" = "MacSamba";
+            "fruit:veto_appledouble" = "no";
+            "fruit:nfs_aces" = "no";
+            "fruit:wipe_intentionally_left_blank_rfork" = "yes";
+            "fruit:delete_empty_adfiles" = "yes";
+          };
           dfreeAttrs = {
             "dfree command" = toString (
               pkgs.writeShellScript "nx-samba-dfree" ''
@@ -227,7 +236,8 @@ args@{
                 "log level" = "1";
                 "logging" = "systemd";
               }
-              // dfreeAttrs;
+              // dfreeAttrs
+              // appleQuirks;
             }
             // lib.listToAttrs (
               map (
