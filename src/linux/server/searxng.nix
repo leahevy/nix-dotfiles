@@ -146,8 +146,9 @@ args@{
           settings = {
             use_default_settings = {
               engines.keep_only = [
-                "startpage"
-                "startpage images"
+                "brave"
+                "brave.images"
+                "brave.news"
               ]
               ++ extraDefaultEngines;
             };
@@ -161,7 +162,7 @@ args@{
             };
             search = {
               safe_search = 0;
-              autocomplete = "duckduckgo";
+              autocomplete = "brave";
               favicon_resolver = "duckduckgo";
             };
             ui.theme_args.simple_style = "black";
