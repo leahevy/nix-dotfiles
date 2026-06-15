@@ -134,7 +134,10 @@ args@{
             // lib.optionalAttrs (domain != null && isExposed) {
               base_url = "https://${exposedSubdomain}.${domain}/";
             };
-            search.safe_search = 0;
+            search = {
+              safe_search = 0;
+              autocomplete = "startpage";
+            };
             preferences.lock = [
               "autocomplete"
               "categories"
@@ -185,7 +188,10 @@ args@{
           ) "https://${exposedSubdomain}.${domain}/search?q=";
           nx.linux.server.dashboard.suggestionURL = lib.mkIf (
             domain != null && exposedService != false
-          ) "https://${exposedSubdomain}.${domain}/autocompleter";
+          ) "https://${exposedSubdomain}.${domain}/autocompleter?q=";
+          nx.linux.server.dashboard.showSearchSuggestions = lib.mkIf (
+            domain != null && exposedService != false
+          ) true;
           nx.linux.server.dashboard.services = lib.optionals (domain != null && exposedService != false) [
             {
               name = "SearXNG";
