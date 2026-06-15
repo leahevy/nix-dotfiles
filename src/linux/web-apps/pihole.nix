@@ -17,9 +17,7 @@ args@{
   settings = {
     name = "Pihole";
     webapp = "pihole";
-    iconPath = "${helpers.packageFile args pkgs.papirus-icon-theme
-      "share/icons/Papirus/48x48/apps/advert-block.svg"
-    }";
+    iconPath = "${helpers.packageFile args pkgs.pihole-web.src "img/logo.svg"}";
     categories = [
       "Network"
       "System"

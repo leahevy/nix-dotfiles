@@ -9,21 +9,23 @@ args@{
   ...
 }:
 let
-  home-assistant-frontend = pkgs.python3Packages.buildPythonPackage rec {
-    pname = "home_assistant_frontend";
-    version = "20250903.5";
-    format = "wheel";
-
-    src = pkgs.fetchPypi {
-      inherit version format;
-      pname = "home_assistant_frontend";
-      dist = "py3";
-      python = "py3";
-      hash = "sha256-aN6OLdDwBpXkeiswK/bpz+q5J4QG/WzeJwk37xRYJm8=";
-    };
-
-    doCheck = false;
+  ha-assets = pkgs.fetchFromGitHub {
+    owner = "home-assistant";
+    repo = "assets";
+    rev = "690cb80f94a305b51297f5584aa6d640dd96ec4b";
+    hash = "sha256-T2aHj1XF39MNAAcztzU0q6DA1AXswzHoLO5CO6o9Ymo=";
   };
+
+  ha-icon =
+    pkgs.runCommand "home-assistant-icon.png"
+      {
+        nativeBuildInputs = [ pkgs.unzip ];
+      }
+      ''
+        unzip ${ha-assets}/logo/home-assistant-logo.zip \
+          home-assistant-social-media-logo-square.png
+        cp home-assistant-social-media-logo-square.png $out
+      '';
 in
 {
   name = "home-assistant";
@@ -34,7 +36,7 @@ in
   settings = {
     name = "Home-Assistant";
     webapp = "home-assistant";
-    iconPath = "${home-assistant-frontend}/lib/python3.12/site-packages/hass_frontend/static/icons/favicon-192x192.png";
+    iconPath = "${ha-icon}";
     categories = [
       "Network"
       "System"

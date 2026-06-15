@@ -17,9 +17,7 @@ args@{
   settings = {
     name = "Immich";
     webapp = "immich";
-    iconPath = "${helpers.packageFile args pkgs.papirus-icon-theme
-      "share/icons/Papirus/48x48/apps/multimedia-photo-manager.svg"
-    }";
+    iconPath = "${helpers.packageFile args pkgs.immich.src "design/immich-logo.svg"}";
     categories = [
       "Photography"
       "Graphics"
