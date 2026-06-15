@@ -147,7 +147,6 @@ args@{
             use_default_settings = {
               engines.keep_only = [
                 "startpage"
-                "startpage news"
                 "startpage images"
               ]
               ++ extraDefaultEngines;
@@ -266,7 +265,7 @@ args@{
             + "add_header Access-Control-Allow-Origin $searxng_cors always;";
           customCss = pkgs.writeText "searxng-custom.css" (
             lib.concatStrings [
-              "body,html{background-color:#000!important}"
+              "body,html,main,#results,footer{background-color:#000!important}"
               (lib.optionalString (
                 fontFamily != null
               ) "body,input,button,select,textarea{font-family:${fontFamily}!important}")
