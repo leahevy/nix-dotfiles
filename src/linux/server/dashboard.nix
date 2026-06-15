@@ -661,9 +661,10 @@ args@{
                 provider = "custom";
                 url = "https://www.startpage.com/sp/search?query=";
                 target = if searchOpenInNewTab then "_blank" else "_self";
-                showSearchSuggestions = false;
+                showSearchSuggestions = showSearchSuggestions;
                 focus = true;
-              };
+              }
+              // lib.optionalAttrs (suggestionURL != null) { suggestionUrl = suggestionURL; };
             }
           else
             {
