@@ -76,10 +76,7 @@ args@{
         ];
 
         environment.persistence."${self.persist}" = {
-          directories = [
-            "/var/lib/searx"
-            "/var/cache/searx"
-          ];
+          directories = [ "/var/lib/searx" ];
         };
 
         systemd.services.nx-searxng-secret = {
@@ -148,19 +145,9 @@ args@{
             user = "searx";
             group = "searx";
           };
-          "/var/cache/searx".d = {
-            mode = "0750";
-            user = "searx";
-            group = "searx";
-          };
         }
         // lib.optionalAttrs self.host.impermanence {
           "${self.persist}/var/lib/searx".d = {
-            mode = "0750";
-            user = "searx";
-            group = "searx";
-          };
-          "${self.persist}/var/cache/searx".d = {
             mode = "0750";
             user = "searx";
             group = "searx";
