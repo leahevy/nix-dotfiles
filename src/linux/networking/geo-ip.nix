@@ -199,8 +199,40 @@ in
             allowedIPs
             ;
         };
+        enableLogging = config.nx.linux.networking.geo-ip.enableLogging;
+        effectiveLogging =
+          if enableLogging == null then
+            !(builtins.elem config.nx.global.deploymentMode [
+              "server"
+              "managed"
+            ])
+          else
+            enableLogging;
       in
       {
+        nx.linux.monitoring.journal-watcher.ignorePatterns = lib.optionals effectiveLogging [
+          {
+            string = "geo-ip-drop: .*PROTO=TCP.*ACK PSH URGP=0";
+            kernel = true;
+          }
+          {
+            string = "geo-ip-drop: .*PROTO=TCP.*ACK URGP=0";
+            kernel = true;
+          }
+          {
+            string = "geo-ip-drop: .*PROTO=TCP.*ACK FIN URGP=0";
+            kernel = true;
+          }
+          {
+            string = "geo-ip-drop: .*PROTO=TCP.*RST URGP=0";
+            kernel = true;
+          }
+          {
+            string = "geo-ip-drop: .*PROTO=TCP.*ACK RST URGP=0";
+            kernel = true;
+          }
+        ];
+
         nx.linux.server.healthchecks.dailyHealthChecks = lib.mkIf (geo.geoActive && cfg.enableGeoIPBlocks) {
           "!40 - GeoIP dropped traffic" = ''
             GEO_CHAIN_FILE="$TMPDIR_HC/geo-filter-chain"
@@ -210,22 +242,17 @@ in
               exit 1
             fi
 
-            DROP_LINES=$(
-              ${pkgs.gnugrep}/bin/grep -E 'packets .* drop$' "$GEO_CHAIN_FILE" \
+            SYN_LINE=$(
+              ${pkgs.gnugrep}/bin/grep -E 'flags.*syn.*counter' "$GEO_CHAIN_FILE" \
                 | ${pkgs.gnused}/bin/sed 's/^[[:space:]]*//'
             )
-            if [[ -z "$DROP_LINES" ]]; then
-              printf 'No GeoIP drop counter lines found in geo-filter chain!\n' >&3
+            if [[ -z "$SYN_LINE" ]]; then
+              printf 'No GeoIP SYN counter line found in geo-filter chain!\n' >&3
               exit 1
             fi
 
-            _all_zero=true
-            while IFS= read -r _line; do
-              [[ "$_line" == *"packets 0 bytes 0 drop" ]] || _all_zero=false
-            done <<< "$DROP_LINES"
-
-            if [[ "$_all_zero" != "true" ]]; then
-              printf '%s\n' "$DROP_LINES" >&3
+            if [[ "$SYN_LINE" != *"packets 0 bytes 0"* ]]; then
+              printf '%s\n' "$SYN_LINE" >&3
             fi
 
             HANDLES=$(
@@ -330,6 +357,7 @@ in
                       ip saddr @${geo.setPrefix}-v4 counter ${acceptOrDrop}
                       ip6 saddr @${geo.setPrefix}-v6 counter ${acceptOrDrop}
                     ''}
+                    tcp flags & syn == syn counter
                     ${lib.optionalString effectiveLogging ''log prefix "geo-ip-drop: "''}
                     counter ${chainPolicy}
                   }
