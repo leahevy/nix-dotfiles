@@ -146,9 +146,17 @@ args@{
           settings = {
             use_default_settings = {
               engines.keep_only = [
-                "brave"
-                "brave.images"
-                "brave.news"
+                "startpage"
+                "startpage images"
+                "startpage news"
+                "duckduckgo"
+                "duckduckgo images"
+                "duckduckgo news"
+                "mojeek"
+                "mojeek images"
+                "mojeek news"
+                "wikipedia"
+                "nixos wiki"
               ]
               ++ extraDefaultEngines;
             };
