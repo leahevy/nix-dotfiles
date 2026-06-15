@@ -32,7 +32,10 @@ args@{
       };
 
     linux.system = config: {
-      environment.systemPackages = [ pkgs.cifs-utils ];
+      environment.systemPackages = [
+        pkgs.cifs-utils
+        pkgs.samba
+      ];
     };
   };
 }
