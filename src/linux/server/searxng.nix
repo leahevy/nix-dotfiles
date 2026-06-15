@@ -31,7 +31,7 @@ args@{
     extraDefaultEngines = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      description = "Additional engine names from SearXNG's built-in set to enable alongside Startpage.";
+      description = "Additional engine names from SearXNG's built-in set to add to the keep_only filter.";
     };
 
     fontFamily = lib.mkOption {
@@ -146,11 +146,6 @@ args@{
           settings = {
             use_default_settings = {
               engines.keep_only = [
-                "startpage"
-                "startpage images"
-                "startpage news"
-                "duckduckgo"
-                "duckduckgo images"
                 "duckduckgo news"
                 "mojeek"
                 "mojeek images"
@@ -188,8 +183,26 @@ args@{
               "simple_style"
               "theme"
             ];
-          }
-          // lib.optionalAttrs (extraEngines != [ ]) { engines = extraEngines; };
+            engines = [
+              {
+                name = "mojeek";
+                disabled = false;
+              }
+              {
+                name = "mojeek images";
+                disabled = false;
+              }
+              {
+                name = "mojeek news";
+                disabled = false;
+              }
+              {
+                name = "nixos wiki";
+                disabled = false;
+              }
+            ]
+            ++ extraEngines;
+          };
         };
 
         systemd.tmpfiles.settings."10-searxng" = {
