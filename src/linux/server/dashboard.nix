@@ -644,7 +644,7 @@ args@{
           lib.optional (homeServiceEntries != [ ]) {
             Services = {
               style = "row";
-              columns = columnsPerGroup * 2;
+              columns = columnsPerGroup;
               tab = "Home";
             };
           }
