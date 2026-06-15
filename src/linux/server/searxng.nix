@@ -195,6 +195,7 @@ args@{
               {
                 name = "nixos wiki";
                 disabled = false;
+                categories = [ "general" ];
               }
             ]
             ++ extraEngines;
