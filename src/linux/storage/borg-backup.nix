@@ -54,33 +54,41 @@ args@{
 
     pushoverNotifications = true;
     healthcheckUUID = null;
+    disableOwnBackups = false;
+    crossHostBorgHosts = { };
   };
 
   assertions = [
     {
-      assertion = self.settings.repository.server != "";
+      assertion = !self.settings.disableOwnBackups || self.settings.crossHostBorgHosts != { };
+      message = "borg-backup: crossHostBorgHosts must not be empty when disableOwnBackups is true!";
+    }
+    {
+      assertion = self.settings.disableOwnBackups || self.settings.repository.server != "";
       message = "borg-backup: repository.server must be configured";
     }
     {
-      assertion = self.settings.repository.path != "";
+      assertion = self.settings.disableOwnBackups || self.settings.repository.path != "";
       message = "borg-backup: repository.path must be configured";
     }
   ];
 
   module = {
-    enabled = config: {
-      nx.linux.desktop.niri.powerMenuChecks = lib.mkIf (self.isModuleEnabled "desktop.niri") [
-        {
-          condition = "${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service";
-          message = "Cannot access power options while Borg backup is running!";
-        }
-      ];
-      nx.linux.monitoring.journal-watcher.ignorePatterns = [
-        { service = "borgbackup-job-system.service"; }
-        { string = "borgbackup-job-system.service"; }
-        { string = "BorgBackup job system"; }
-      ];
-    };
+    enabled =
+      config:
+      lib.mkIf (!self.settings.disableOwnBackups) {
+        nx.linux.desktop.niri.powerMenuChecks = lib.mkIf (self.isModuleEnabled "desktop.niri") [
+          {
+            condition = "${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service";
+            message = "Cannot access power options while Borg backup is running!";
+          }
+        ];
+        nx.linux.monitoring.journal-watcher.ignorePatterns = [
+          { service = "borgbackup-job-system.service"; }
+          { string = "borgbackup-job-system.service"; }
+          { string = "BorgBackup job system"; }
+        ];
+      };
 
     home =
       config:
@@ -111,9 +119,10 @@ args@{
           }
         '';
 
-        translatePath =
+        mkTranslatePath =
+          isImpermanence:
           (
-            if impermanence then
+            if isImpermanence then
               ''
                 translate_path() {
                   local path="$1"
@@ -166,222 +175,369 @@ args@{
           )
           + "\n"
           + makePatternFn;
+
+        translatePath = mkTranslatePath impermanence;
       in
-      {
-
-        home.file."${defs.binDir}/borg-backup-status" = {
-          text = ''
-            #!/usr/bin/env bash
-            set -euo pipefail
-
-            GREEN='\033[1;32m'
-            BLUE='\033[1;34m'
-            RED='\033[1;31m'
-            YELLOW='\033[1;33m'
-            NC='\033[0m'
-
-            echo -e "''${BLUE}=== BORG BACKUP STATUS ===''${NC}"
-            echo
-
-            echo -e "''${GREEN}=== TIMER STATUS ===''${NC}"
-            systemctl status borgbackup-job-system.timer --no-pager --lines=3 2>/dev/null || echo "Borg timer not found"
-            echo
-
-            echo -e "''${GREEN}=== LAST BACKUP STATUS ===''${NC}"
-            if systemctl is-active --quiet borgbackup-job-system.service; then
-              echo -e "''${YELLOW}Backup currently running...''${NC}"
-            else
-              systemctl status borgbackup-job-system.service --no-pager --lines=5 2>/dev/null || true
-            fi
-            echo
-
-            echo -e "''${GREEN}=== RECENT BACKUP LOGS (last 10 lines) ===''${NC}"
-            nx-user-notify-logs recent 2>/dev/null | grep -i "borg" || echo "No backup logs found"
-            echo
-
-            if ! systemctl is-active --quiet borgbackup-job-system.service && systemctl is-failed --quiet borgbackup-job-system.service; then
-              echo -e "''${RED}=== BACKUP SERVICE FAILURE LOGS ===''${NC}"
-              journalctl -u borgbackup-job-system.service --no-pager --lines=15 --reverse 2>/dev/null
-              echo
-            fi
-
-            echo
-            echo -e "''${BLUE}Press any key to exit...''${NC}"
-            read -n 1
-          '';
-          executable = true;
-        };
-
-        home.file."${defs.binDir}/borg-backup-list" = {
-          text = ''
-            #!/usr/bin/env bash
-            set -euo pipefail
-
-            if [[ $EUID -ne 0 ]]; then
-              echo "Must be run as root!"
-              exit 1
-            fi
-
-            ${borgEnvSetup}
-
-            borg list
-          '';
-          executable = true;
-        };
-
-        home.file."${defs.binDir}/borg-backup-restore" = {
-          text = ''
-            #!/usr/bin/env bash
-            set -euo pipefail
-
-            if [[ $EUID -ne 0 ]]; then
-              echo "Must be run as root!"
-              exit 1
-            fi
-
-            if [[ $# -lt 2 ]]; then
-              echo "Usage: $0 BACKUP_NAME PATH_INSIDE_BACKUP [TARGET_LOCATION]"
-              exit 1
-            fi
-
-            BACKUP_NAME="$1"
-            PATH_INSIDE_BACKUP="$2"
-            TARGET_LOCATION="''${3:-./borg-backup-restore-$(date +%Y%m%d-%H%M%S)}"
-
-            ${borgEnvSetup}
-            ${translatePath}
-
-            PATTERN=$(make_pattern "$PATH_INSIDE_BACKUP")
-
-            if ! borg list "::$BACKUP_NAME" "$PATTERN" >/dev/null 2>&1; then
-              echo "Error: Path '$PATH_INSIDE_BACKUP' not found in backup '$BACKUP_NAME'"
-              exit 1
-            fi
-
-            mkdir -p "$TARGET_LOCATION"
-            cd "$TARGET_LOCATION"
-
-            borg extract "::$BACKUP_NAME" "$(translate_path "$PATH_INSIDE_BACKUP")"
-            echo "Restored to: $(pwd)"
-          '';
-          executable = true;
-        };
-
-        home.file."${defs.binDir}/borg-backup-search" = {
-          text = ''
-            #!/usr/bin/env bash
-            set -euo pipefail
-
-            if [[ $EUID -ne 0 ]]; then
-              echo "Must be run as root!"
-              exit 1
-            fi
-
-            if [[ $# -ne 2 ]]; then
-              echo "Usage: $0 BACKUP_NAME PATH_GREP"
-              exit 1
-            fi
-
-            BACKUP_NAME="$1"
-            PATH_GREP="$2"
-
-            ${borgEnvSetup}
-            ${translatePath}
-
-            PATTERN=$(make_pattern "$PATH_GREP")
-
-            borg list "::$BACKUP_NAME" "$PATTERN" 2>/dev/null || true
-          '';
-          executable = true;
-        };
-
-        home.file."${defs.binDir}/borg-backup-find-archives" = {
-          text = ''
-            #!/usr/bin/env bash
-            set -euo pipefail
-
-            if [[ $EUID -ne 0 ]]; then
-              echo "Must be run as root!"
-              exit 1
-            fi
-
-            if [[ $# -ne 1 ]]; then
-              echo "Usage: $0 PATH_GREP"
-              exit 1
-            fi
-
-            PATH_GREP="$1"
-
-            ${borgEnvSetup}
-            ${translatePath}
-
-            PATTERN=$(make_pattern "$PATH_GREP")
-
-            borg list --short | while read -r archive; do
-              matches=$(borg list "::$archive" "$PATTERN" 2>/dev/null)
-              if [[ -n "$matches" ]]; then
-                echo "$archive:"
-                echo "$matches" | sed 's/^/  /'
+      let
+        mkCrossHostFiles =
+          profileName: hostEntry:
+          let
+            secretsBase = self.config.rootPath "profiles/nixos/${profileName}/secrets";
+            sshKeyPath = secretsBase + "/borg.ssh-key";
+            passphrasePath = secretsBase + "/borg.passphrase";
+            knownHostsPath = secretsBase + "/borg.known-hosts";
+            crossBorgEnvSetup = ''
+              if [[ $EUID -ne 0 ]]; then echo "Must be run as root!" >&2; exit 1; fi
+              if [[ -z "''${SUDO_USER:-}" ]]; then
+                echo "Error: run this script via sudo as your regular user, not directly as root!" >&2
+                exit 1
               fi
-            done
-          '';
-          executable = true;
-        };
+              _decrypt() { sudo -u "$SUDO_USER" -- ${pkgs.sops}/bin/sops -d "$1"; }
+              _tmpdir=$(${pkgs.coreutils}/bin/mktemp -d)
+              trap '${pkgs.coreutils}/bin/rm -rf "$_tmpdir"' EXIT
+              _decrypt ${sshKeyPath} > "$_tmpdir/ssh-key"
+              ${pkgs.coreutils}/bin/chmod 600 "$_tmpdir/ssh-key"
+              _decrypt ${knownHostsPath} > "$_tmpdir/known-hosts"
+              export BORG_RSH="ssh -i '$_tmpdir/ssh-key' -o UserKnownHostsFile='$_tmpdir/known-hosts'"
+              export BORG_PASSPHRASE="$(_decrypt ${passphrasePath})"
+              export BORG_REPO="ssh://${hostEntry.user or "root"}@${hostEntry.server}:${
+                toString (hostEntry.port or 22)
+              }${hostEntry.path}"
+            '';
+            n = profileName;
+            crossTranslatePath = mkTranslatePath (self.nixOSHosts.${profileName}.impermanence or false);
+          in
+          {
+            home.file."${defs.binDir}/borg-backup-${n}-list" = {
+              text = ''
+                #!/usr/bin/env bash
+                set -euo pipefail
+                ${crossBorgEnvSetup}
+                ${pkgs.borgbackup}/bin/borg list
+              '';
+              executable = true;
+            };
+            home.file."${defs.binDir}/borg-backup-${n}-run" = {
+              text = ''
+                #!/usr/bin/env bash
+                set -euo pipefail
+                ${crossBorgEnvSetup}
+                ${pkgs.borgbackup}/bin/borg "$@"
+              '';
+              executable = true;
+            };
+            home.file."${defs.binDir}/borg-backup-${n}-restore" = {
+              text = ''
+                #!/usr/bin/env bash
+                set -euo pipefail
+                if [[ $# -lt 2 ]]; then
+                  echo "Usage: $0 BACKUP_NAME PATH_INSIDE_BACKUP [TARGET_DIR]"
+                  exit 1
+                fi
+                BACKUP_NAME="$1"
+                PATH_INSIDE_BACKUP="$2"
+                TARGET_DIR="''${3:-./borg-restore-$(date +%Y%m%d-%H%M%S)}"
+                ${crossBorgEnvSetup}
+                ${crossTranslatePath}
+                PATTERN=$(make_pattern "$PATH_INSIDE_BACKUP")
+                if ! ${pkgs.borgbackup}/bin/borg list "::$BACKUP_NAME" "$PATTERN" >/dev/null 2>&1; then
+                  echo "Error: Path '$PATH_INSIDE_BACKUP' not found in backup '$BACKUP_NAME'"
+                  exit 1
+                fi
+                mkdir -p "$TARGET_DIR"
+                cd "$TARGET_DIR"
+                ${pkgs.borgbackup}/bin/borg extract "::$BACKUP_NAME" "$(translate_path "$PATH_INSIDE_BACKUP")"
+                echo "Restored to: $(pwd)"
+              '';
+              executable = true;
+            };
+            home.file."${defs.binDir}/borg-backup-${n}-search" = {
+              text = ''
+                #!/usr/bin/env bash
+                set -euo pipefail
+                if [[ $# -ne 2 ]]; then echo "Usage: $0 BACKUP_NAME PATH_GREP"; exit 1; fi
+                BACKUP_NAME="$1"
+                PATH_GREP="$2"
+                ${crossBorgEnvSetup}
+                ${crossTranslatePath}
+                PATTERN=$(make_pattern "$PATH_GREP")
+                ${pkgs.borgbackup}/bin/borg list "::$BACKUP_NAME" "$PATTERN" 2>/dev/null || true
+              '';
+              executable = true;
+            };
+            home.file."${defs.binDir}/borg-backup-${n}-find-archives" = {
+              text = ''
+                #!/usr/bin/env bash
+                set -euo pipefail
+                if [[ $# -ne 1 ]]; then
+                  echo "Usage: $0 PATH_GREP"
+                  exit 1
+                fi
+                PATH_GREP="$1"
+                ${crossBorgEnvSetup}
+                ${crossTranslatePath}
+                PATTERN=$(make_pattern "$PATH_GREP")
+                ${pkgs.borgbackup}/bin/borg list --short | while read -r archive; do
+                  matches=$(${pkgs.borgbackup}/bin/borg list "::$archive" "$PATTERN" 2>/dev/null)
+                  if [[ -n "$matches" ]]; then
+                    echo "$archive:"
+                    echo "$matches" | sed 's/^/  /'
+                  fi
+                done
+              '';
+              executable = true;
+            };
+          };
+      in
+      lib.foldl' (acc: extra: lib.recursiveUpdate acc extra)
+        {
+          assertions = lib.flatten (
+            map (
+              profileName:
+              let
+                secretsBase = self.config.rootPath "profiles/nixos/${profileName}/secrets";
+              in
+              [
+                {
+                  assertion = builtins.hasAttr profileName (self.nixOSHosts or { });
+                  message = "linux.storage.borg-backup: crossHostBorgHosts.${profileName} does not match any NixOS host!";
+                }
+                {
+                  assertion = builtins.pathExists (secretsBase + "/borg.ssh-key");
+                  message = "linux.storage.borg-backup: crossHostBorgHosts.${profileName}: borg.ssh-key not found in nxconfig secrets!";
+                }
+                {
+                  assertion = builtins.pathExists (secretsBase + "/borg.passphrase");
+                  message = "linux.storage.borg-backup: crossHostBorgHosts.${profileName}: borg.passphrase not found in nxconfig secrets!";
+                }
+                {
+                  assertion = builtins.pathExists (secretsBase + "/borg.known-hosts");
+                  message = "linux.storage.borg-backup: crossHostBorgHosts.${profileName}: borg.known-hosts not found in nxconfig secrets!";
+                }
+              ]
+            ) (lib.attrNames self.settings.crossHostBorgHosts)
+          );
+        }
+        (
+          lib.optionals (!self.settings.disableOwnBackups) [
+            {
 
-        home.file."${defs.binDir}/borg-backup-run" = {
-          text = ''
-            #!/usr/bin/env bash
-            set -euo pipefail
+              home.file."${defs.binDir}/borg-backup-status" = {
+                text = ''
+                  #!/usr/bin/env bash
+                  set -euo pipefail
 
-            if [[ $EUID -ne 0 ]]; then
-              echo "Must be run as root!"
-              exit 1
-            fi
+                  GREEN='\033[1;32m'
+                  BLUE='\033[1;34m'
+                  RED='\033[1;31m'
+                  YELLOW='\033[1;33m'
+                  NC='\033[0m'
 
-            ${borgEnvSetup}
+                  echo -e "''${BLUE}=== BORG BACKUP STATUS ===''${NC}"
+                  echo
 
-            borg "$@"
-          '';
-          executable = true;
-        };
+                  echo -e "''${GREEN}=== TIMER STATUS ===''${NC}"
+                  systemctl status borgbackup-job-system.timer --no-pager --lines=3 2>/dev/null || echo "Borg timer not found"
+                  echo
 
-        home.file."${defs.binDir}/borg-backup-trigger-manually" = {
-          text = ''
-                      #!/usr/bin/env bash
-                      set -euo pipefail
+                  echo -e "''${GREEN}=== LAST BACKUP STATUS ===''${NC}"
+                  if systemctl is-active --quiet borgbackup-job-system.service; then
+                    echo -e "''${YELLOW}Backup currently running...''${NC}"
+                  else
+                    systemctl status borgbackup-job-system.service --no-pager --lines=5 2>/dev/null || true
+                  fi
+                  echo
 
-                      if [[ $EUID -eq 0 ]]; then
-                        echo "Must be run as user!"
-                        exit 1
-                      fi
+                  echo -e "''${GREEN}=== RECENT BACKUP LOGS (last 10 lines) ===''${NC}"
+                  nx-user-notify-logs recent 2>/dev/null | grep -i "borg" || echo "No backup logs found"
+                  echo
 
-                      if systemctl is-active --quiet borgbackup-job-system.service; then
-                        echo "Error: Backup is already running!"
-                        exit 1
-                      fi
+                  if ! systemctl is-active --quiet borgbackup-job-system.service && systemctl is-failed --quiet borgbackup-job-system.service; then
+                    echo -e "''${RED}=== BACKUP SERVICE FAILURE LOGS ===''${NC}"
+                    journalctl -u borgbackup-job-system.service --no-pager --lines=15 --reverse 2>/dev/null
+                    echo
+                  fi
 
-                      echo "Starting backup manually..."
-                      sudo touch /tmp/nx-force-backup
-                      sudo systemctl start borgbackup-job-system.service
-                      echo "Success: Backup triggered manually"
+                  echo
+                  echo -e "''${BLUE}Press any key to exit...''${NC}"
+                  read -n 1
+                '';
+                executable = true;
+              };
 
-            ${
-              if isHeadless then
-                ""
-              else
-                "${self.notifyUser {
-                  inherit pkgs;
-                  title = "Backup Triggered";
-                  body = "Manual backup triggered - will start in 2 minutes";
-                  icon = "archive";
-                  urgency = "normal";
-                  validation = { inherit config; };
-                }}"
+              home.file."${defs.binDir}/borg-backup-list" = {
+                text = ''
+                  #!/usr/bin/env bash
+                  set -euo pipefail
+
+                  if [[ $EUID -ne 0 ]]; then
+                    echo "Must be run as root!"
+                    exit 1
+                  fi
+
+                  ${borgEnvSetup}
+
+                  borg list
+                '';
+                executable = true;
+              };
+
+              home.file."${defs.binDir}/borg-backup-restore" = {
+                text = ''
+                  #!/usr/bin/env bash
+                  set -euo pipefail
+
+                  if [[ $EUID -ne 0 ]]; then
+                    echo "Must be run as root!"
+                    exit 1
+                  fi
+
+                  if [[ $# -lt 2 ]]; then
+                    echo "Usage: $0 BACKUP_NAME PATH_INSIDE_BACKUP [TARGET_LOCATION]"
+                    exit 1
+                  fi
+
+                  BACKUP_NAME="$1"
+                  PATH_INSIDE_BACKUP="$2"
+                  TARGET_LOCATION="''${3:-./borg-backup-restore-$(date +%Y%m%d-%H%M%S)}"
+
+                  ${borgEnvSetup}
+                  ${translatePath}
+
+                  PATTERN=$(make_pattern "$PATH_INSIDE_BACKUP")
+
+                  if ! borg list "::$BACKUP_NAME" "$PATTERN" >/dev/null 2>&1; then
+                    echo "Error: Path '$PATH_INSIDE_BACKUP' not found in backup '$BACKUP_NAME'"
+                    exit 1
+                  fi
+
+                  mkdir -p "$TARGET_LOCATION"
+                  cd "$TARGET_LOCATION"
+
+                  borg extract "::$BACKUP_NAME" "$(translate_path "$PATH_INSIDE_BACKUP")"
+                  echo "Restored to: $(pwd)"
+                '';
+                executable = true;
+              };
+
+              home.file."${defs.binDir}/borg-backup-search" = {
+                text = ''
+                  #!/usr/bin/env bash
+                  set -euo pipefail
+
+                  if [[ $EUID -ne 0 ]]; then
+                    echo "Must be run as root!"
+                    exit 1
+                  fi
+
+                  if [[ $# -ne 2 ]]; then
+                    echo "Usage: $0 BACKUP_NAME PATH_GREP"
+                    exit 1
+                  fi
+
+                  BACKUP_NAME="$1"
+                  PATH_GREP="$2"
+
+                  ${borgEnvSetup}
+                  ${translatePath}
+
+                  PATTERN=$(make_pattern "$PATH_GREP")
+
+                  borg list "::$BACKUP_NAME" "$PATTERN" 2>/dev/null || true
+                '';
+                executable = true;
+              };
+
+              home.file."${defs.binDir}/borg-backup-find-archives" = {
+                text = ''
+                  #!/usr/bin/env bash
+                  set -euo pipefail
+
+                  if [[ $EUID -ne 0 ]]; then
+                    echo "Must be run as root!"
+                    exit 1
+                  fi
+
+                  if [[ $# -ne 1 ]]; then
+                    echo "Usage: $0 PATH_GREP"
+                    exit 1
+                  fi
+
+                  PATH_GREP="$1"
+
+                  ${borgEnvSetup}
+                  ${translatePath}
+
+                  PATTERN=$(make_pattern "$PATH_GREP")
+
+                  borg list --short | while read -r archive; do
+                    matches=$(borg list "::$archive" "$PATTERN" 2>/dev/null)
+                    if [[ -n "$matches" ]]; then
+                      echo "$archive:"
+                      echo "$matches" | sed 's/^/  /'
+                    fi
+                  done
+                '';
+                executable = true;
+              };
+
+              home.file."${defs.binDir}/borg-backup-run" = {
+                text = ''
+                  #!/usr/bin/env bash
+                  set -euo pipefail
+
+                  if [[ $EUID -ne 0 ]]; then
+                    echo "Must be run as root!"
+                    exit 1
+                  fi
+
+                  ${borgEnvSetup}
+
+                  borg "$@"
+                '';
+                executable = true;
+              };
+
+              home.file."${defs.binDir}/borg-backup-trigger-manually" = {
+                text = ''
+                            #!/usr/bin/env bash
+                            set -euo pipefail
+
+                            if [[ $EUID -eq 0 ]]; then
+                              echo "Must be run as user!"
+                              exit 1
+                            fi
+
+                            if systemctl is-active --quiet borgbackup-job-system.service; then
+                              echo "Error: Backup is already running!"
+                              exit 1
+                            fi
+
+                            echo "Starting backup manually..."
+                            sudo touch /tmp/nx-force-backup
+                            sudo systemctl start borgbackup-job-system.service
+                            echo "Success: Backup triggered manually"
+
+                  ${
+                    if isHeadless then
+                      ""
+                    else
+                      "${self.notifyUser {
+                        inherit pkgs;
+                        title = "Backup Triggered";
+                        body = "Manual backup triggered - will start in 2 minutes";
+                        icon = "archive";
+                        urgency = "normal";
+                        validation = { inherit config; };
+                      }}"
+                  }
+                '';
+                executable = true;
+              };
             }
-          '';
-          executable = true;
-        };
-      };
+          ]
+          ++ lib.mapAttrsToList mkCrossHostFiles self.settings.crossHostBorgHosts
+        );
 
     ifEnabled.linux.desktop.niri.home =
       config:
@@ -391,7 +547,7 @@ args@{
           cmd:
           lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
       in
-      {
+      lib.mkIf (!self.settings.disableOwnBackups) {
         programs.niri = {
           settings = {
             binds = with config.lib.niri.actions; {
@@ -620,7 +776,7 @@ args@{
           );
 
       in
-      {
+      lib.mkIf (!self.settings.disableOwnBackups) {
         environment.systemPackages = [
           pkgs.borgbackup
           pkgs.btrfs-progs
@@ -796,13 +952,15 @@ args@{
       };
 
     ifEnabled.linux.server.healthchecks = {
-      enabled = config: {
-        nx.linux.server.healthchecks.servicesHealthChecks."borg-backup" = {
-          trigger.service = "borgbackup-job-system.service";
-          uuid = self.settings.healthcheckUUID;
-          icon = "borg";
+      enabled =
+        config:
+        lib.mkIf (!self.settings.disableOwnBackups) {
+          nx.linux.server.healthchecks.servicesHealthChecks."borg-backup" = {
+            trigger.service = "borgbackup-job-system.service";
+            uuid = self.settings.healthcheckUUID;
+            icon = "borg";
+          };
         };
-      };
     };
   };
 }
