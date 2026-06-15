@@ -28,6 +28,12 @@ args@{
       description = "Subdomain under baseDomain where SearXNG is served via nginx.";
     };
 
+    extraDefaultEngines = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional engine names from SearXNG's built-in set to enable alongside Startpage.";
+    };
+
     extraEngines = lib.mkOption {
       type = lib.types.listOf lib.types.attrs;
       default = [ ];
@@ -47,6 +53,7 @@ args@{
         config,
         port,
         subdomain,
+        extraDefaultEngines,
         extraEngines,
         extraEnvironmentFiles,
         ...
@@ -125,7 +132,9 @@ args@{
         services.searx = {
           enable = true;
           settings = {
-            use_default_settings = true;
+            use_default_settings = {
+              engines.keep_only = [ "Startpage" ] ++ extraDefaultEngines;
+            };
             server = {
               port = port;
               bind_address = "127.0.0.1";
@@ -136,9 +145,10 @@ args@{
             };
             search = {
               safe_search = 0;
-              autocomplete = "startpage";
+              autocomplete = "duckduckgo";
               favicon_resolver = "duckduckgo";
             };
+            ui.theme_args.simple_style = "black";
             preferences.lock = [
               "autocomplete"
               "center_alignment"
@@ -150,6 +160,7 @@ args@{
               "results_on_new_tab"
               "safesearch"
               "search_on_category_select"
+              "simple_style"
               "theme"
             ];
           }
@@ -239,6 +250,7 @@ args@{
           services.nginx.virtualHosts."${exposedSubdomain}.${domain}" = {
             useACMEHost = domain;
             forceSSL = true;
+            locations."= /static/themes/simple/img/searxng.png".extraConfig = "empty_gif;";
             locations."/preferences" = {
               return = "302 https://${exposedSubdomain}.${domain}/";
             };
