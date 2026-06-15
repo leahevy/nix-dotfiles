@@ -135,6 +135,22 @@ args@{
               base_url = "https://${exposedSubdomain}.${domain}/";
             };
             search.safe_search = 0;
+            preferences.lock = [
+              "autocomplete"
+              "categories"
+              "center_alignment"
+              "doi_resolver"
+              "favicon_resolver"
+              "image_proxy"
+              "language"
+              "locale"
+              "method"
+              "query_in_title"
+              "results_on_new_tab"
+              "safesearch"
+              "search_on_category_select"
+              "theme"
+            ];
           }
           // lib.optionalAttrs (extraEngines != [ ]) { engines = extraEngines; };
         };
