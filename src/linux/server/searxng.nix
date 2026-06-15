@@ -46,6 +46,18 @@ args@{
       description = "Remove all border-radius from every element in the SearXNG UI.";
     };
 
+    injectSearchURL = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Set the dashboard search URL to this SearXNG instance when the dashboard module is enabled.";
+    };
+
+    injectSuggestionURL = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Set the dashboard suggestion URL to the SearXNG autocomplete endpoint when the dashboard module is enabled.";
+    };
+
     extraEngines = lib.mkOption {
       type = lib.types.listOf lib.types.attrs;
       default = [ ];
@@ -146,10 +158,6 @@ args@{
           settings = {
             use_default_settings = {
               engines.keep_only = [
-                "duckduckgo news"
-                "mojeek"
-                "mojeek images"
-                "mojeek news"
                 "wikipedia"
                 "nixos wiki"
               ]
@@ -185,18 +193,6 @@ args@{
             ];
             engines = [
               {
-                name = "mojeek";
-                disabled = false;
-              }
-              {
-                name = "mojeek images";
-                disabled = false;
-              }
-              {
-                name = "mojeek news";
-                disabled = false;
-              }
-              {
                 name = "nixos wiki";
                 disabled = false;
               }
@@ -231,23 +227,25 @@ args@{
         in
         {
           nx.linux.server.dashboard.searchURL = lib.mkIf (
-            domain != null && exposedService != false
+            config.nx.linux.server.searxng.injectSearchURL && domain != null && exposedService != false
           ) "https://${exposedSubdomain}.${domain}/search?q=";
           nx.linux.server.dashboard.suggestionURL = lib.mkIf (
-            domain != null && exposedService != false
+            config.nx.linux.server.searxng.injectSuggestionURL && domain != null && exposedService != false
           ) "https://${exposedSubdomain}.${domain}/autocompleter?q=";
           nx.linux.server.dashboard.showSearchSuggestions = lib.mkIf (
-            domain != null && exposedService != false
+            config.nx.linux.server.searxng.injectSuggestionURL && domain != null && exposedService != false
           ) true;
-          nx.linux.server.dashboard.services = lib.optionals (domain != null && exposedService != false) [
-            {
-              name = "SearXNG";
-              href = "https://${exposedSubdomain}.${domain}";
-              description = "Privacy-respecting metasearch engine";
-              icon = "searxng";
-              group = "admin";
-            }
-          ];
+          nx.linux.server.dashboard.services = lib.mkOrder 10 (
+            lib.optionals (domain != null && exposedService != false) [
+              {
+                name = "Search";
+                href = "https://${exposedSubdomain}.${domain}";
+                description = "Wiki and internal search";
+                icon = "searxng";
+                group = "services";
+              }
+            ]
+          );
         };
     };
 
