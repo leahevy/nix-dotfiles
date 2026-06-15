@@ -36,6 +36,16 @@ args@{
               default = null;
               description = "Name of the SOPS secret entry holding this API key.";
             };
+            healthchecksUUID = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Healthchecks.io UUID for the API key expiry timed check.";
+            };
+            healthchecksWarnDays = lib.mkOption {
+              type = lib.types.ints.positive;
+              default = 5;
+              description = "Number of days before expiry at which the healthchecks.io timed check starts failing.";
+            };
             rotatedAt = lib.mkOption {
               type = lib.types.submodule {
                 options = {
@@ -68,6 +78,56 @@ args@{
   };
 
   module = {
+    ifEnabled.linux.server.healthchecks = {
+      enabled =
+        config:
+        let
+          mkTimedCheck =
+            keyId: keyCfg:
+            let
+              rotationDate = "${toString keyCfg.rotatedAt.year}-${
+                lib.fixedWidthString 2 "0" (toString keyCfg.rotatedAt.month)
+              }-${lib.fixedWidthString 2 "0" (toString keyCfg.rotatedAt.day)}";
+            in
+            lib.nameValuePair "api-key-expiry-${keyId}" {
+              schedule = "*-*-* 10:30:00";
+              randomDelaySec = 900;
+              uuid = keyCfg.healthchecksUUID;
+              icon = "key";
+              checks = {
+                "10 - Key expiry" = ''
+                  ROTATED_AT=${lib.escapeShellArg rotationDate}
+                  LIFETIME_DAYS=${toString keyCfg.lifetimeDays}
+                  WARN_DAYS=${toString keyCfg.healthchecksWarnDays}
+                  DISPLAY_NAME=${lib.escapeShellArg keyCfg.displayName}
+                  ROTATED_EPOCH=$(${pkgs.coreutils}/bin/date -d "$ROTATED_AT" +%s 2>/dev/null || true)
+                  if [[ -z "$ROTATED_EPOCH" ]]; then
+                    printf 'invalid rotatedAt date: %s\n' "$ROTATED_AT" >&3
+                    exit 1
+                  fi
+                  EXPIRY_EPOCH=$((ROTATED_EPOCH + LIFETIME_DAYS * 86400))
+                  NOW_EPOCH=$(${pkgs.coreutils}/bin/date +%s)
+                  DAYS_LEFT=$(((EXPIRY_EPOCH - NOW_EPOCH) / 86400))
+                  EXPIRY_DATE=$(${pkgs.coreutils}/bin/date -d "@$EXPIRY_EPOCH" +%Y-%m-%d)
+                  if [[ "$DAYS_LEFT" -lt 0 ]]; then
+                    DAYS_OVERDUE=$((0 - DAYS_LEFT))
+                    printf '%s: expired %d days ago (expiry: %s)\n' "$DISPLAY_NAME" "$DAYS_OVERDUE" "$EXPIRY_DATE" >&3
+                    exit 1
+                  elif [[ "$DAYS_LEFT" -le "$WARN_DAYS" ]]; then
+                    printf '%s: expires in %d days (expiry: %s)\n' "$DISPLAY_NAME" "$DAYS_LEFT" "$EXPIRY_DATE" >&3
+                    exit 1
+                  fi
+                  printf '%s: %d days remaining (expiry: %s)\n' "$DISPLAY_NAME" "$DAYS_LEFT" "$EXPIRY_DATE" >&3
+                '';
+              };
+            };
+        in
+        {
+          nx.linux.server.healthchecks.timedHealthChecks =
+            lib.mapAttrs' mkTimedCheck config.nx.linux.security.api-keys.keys;
+        };
+    };
+
     linux.system =
       { config, keys, ... }:
       {
