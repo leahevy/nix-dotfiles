@@ -110,6 +110,7 @@ args@{
             nx.linux.security.api-keys.keys.tailscale = {
               displayName = "Tailscale";
               secretName = lib.mkDefault "tailscale-api-key";
+              lifetimeDays = lib.mkDefault 90;
             };
           })
           {
