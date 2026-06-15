@@ -15,6 +15,12 @@ fi
 
 NIXOS_VERSION="$1"
 
+if [[ ! -d "$NXCORE_DIR" || ! -d "$CONFIG_DIR" ]]; then
+	echo -e "${RED}Error: dist-upgrade requires both nxcore and nxconfig to be present${RESET}" >&2
+	echo -e "This command can only run on a full development machine.${RESET}" >&2
+	exit 1
+fi
+
 if ! [[ "$NIXOS_VERSION" =~ ^[0-9][0-9]\.[0-9][0-9]$ ]]; then
 	echo -e "${RED}Error: Invalid NixOS version format${RESET}" >&2
 	echo >&2
@@ -85,5 +91,11 @@ echo -e "Created marker files with hash: ${WHITE}$core_flake_hash${RESET}"
 
 echo
 echo -e "${GREEN}NixOS version bump to $NIXOS_VERSION completed successfully!${RESET}"
+
+TASK_DIR="$CONFIG_DIR/current-tasks"
+if [[ ! -d "$TASK_DIR" ]]; then
+	TASK_DIR="$CONFIG_DIR"
+fi
+sed "1s/next release/$NIXOS_VERSION/" "$NXCORE_DIR/UPGRADE.md" >"$TASK_DIR/upgrade-nixos-$NIXOS_VERSION.md"
 echo
-echo -e "${YELLOW}Next steps: Please read UPGRADE.md for the complete upgrade process${RESET}"
+echo -e "${YELLOW}Upgrade checklist written to ${WHITE}$TASK_DIR/upgrade-nixos-$NIXOS_VERSION.md${RESET}"

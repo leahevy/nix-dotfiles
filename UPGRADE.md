@@ -1,4 +1,4 @@
-# NixOS Upgrade Guide
+# NixOS Upgrade to next release
 
 ## Prerequisites
 
