@@ -50,6 +50,12 @@ args@{
       description = "Username for the paperless superuser account.";
     };
 
+    enableSearxng = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable SearXNG integration for document search using the paperless-searxng SOPS secret containing the raw Paperless API token.";
+    };
+
     enableOIDC = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -362,6 +368,44 @@ args@{
         nx.linux.server.tika.ocrLanguages =
           lib.splitString "+" config.nx.linux.server.paperless-ngx.ocrLanguage;
       };
+    };
+
+    ifEnabled.linux.server.searxng = {
+      enabled = config: {
+        nx.linux.server.searxng.extraSecrets = lib.mkIf config.nx.linux.server.paperless-ngx.enableSearxng {
+          "PAPERLESS_TOKEN" = config.sops.secrets."paperless-searxng".path;
+        };
+        nx.linux.server.searxng.engines = lib.mkIf config.nx.linux.server.paperless-ngx.enableSearxng {
+          "Paperless" = {
+            engine = "json_engine";
+            shortcut = "plx";
+            categories = [ "files" ];
+            search_url = "http://127.0.0.1:28981/api/documents/?query={query}";
+            headers = {
+              Authorization = "Token $PAPERLESS_TOKEN";
+            };
+            results_query = "results";
+            title_query = "title";
+            content_query = "content";
+            url_query = "id";
+            url_prefix = "http://127.0.0.1:28981/documents/";
+            weight = 2;
+            paging = false;
+          };
+        };
+      };
+
+      linux.system =
+        { config, enableSearxng, ... }:
+        lib.mkIf enableSearxng {
+          sops.secrets."paperless-searxng" = {
+            format = "binary";
+            sopsFile = self.profile.secretsPath "paperless-searxng";
+            owner = "searx";
+            group = "searx";
+            mode = "0400";
+          };
+        };
     };
 
     enabled = config: {
