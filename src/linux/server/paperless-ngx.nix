@@ -270,7 +270,7 @@ args@{
                     ${pkgs.coreutils}/bin/rm -f /run/paperless-oidc/providers.env
                     ${pkgs.coreutils}/bin/touch /run/paperless-oidc/providers.env
                     {
-                      printf 'PAPERLESS_SOCIALACCOUNT_PROVIDERS='
+                      printf "PAPERLESS_SOCIALACCOUNT_PROVIDERS='"
                       ${pkgs.jq}/bin/jq -cn \
                         --rawfile cid_raw ${lib.escapeShellArg config.sops.secrets."paperless-oidc-id".path} \
                         --rawfile secret_raw ${lib.escapeShellArg config.sops.secrets."paperless-oidc-secret".path} \
@@ -278,6 +278,7 @@ args@{
                         --arg pname ${lib.escapeShellArg providerName} \
                         --arg url ${lib.escapeShellArg serverUrl} \
                         '{"openid_connect":{"APPS":[{"provider_id":$pid,"name":$pname,"client_id":($cid_raw|rtrimstr("\n")),"secret":($secret_raw|rtrimstr("\n")),"settings":{"server_url":$url,"oauth_pkce_enabled":true}}]}}'
+                      printf "'"
                     } >> /run/paperless-oidc/providers.env
                     ${pkgs.coreutils}/bin/chmod 600 /run/paperless-oidc/providers.env
                   ''
