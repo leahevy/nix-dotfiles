@@ -241,6 +241,10 @@ args@{
 
         systemd.services = lib.mkMerge [
           {
+            paperless-web.serviceConfig.TimeoutStopSec = 600;
+            paperless-scheduler.serviceConfig.TimeoutStopSec = 600;
+            paperless-task-queue.serviceConfig.TimeoutStopSec = 600;
+            paperless-consumer.serviceConfig.TimeoutStopSec = 600;
             paperless-web.restartTriggers = [ (builtins.toJSON config.users.users.paperless.extraGroups) ];
             paperless-scheduler.restartTriggers = [
               (builtins.toJSON config.users.users.paperless.extraGroups)
