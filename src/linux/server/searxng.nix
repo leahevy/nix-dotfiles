@@ -113,6 +113,17 @@ args@{
               }
             ];
           };
+          google = {
+            categories = [ "general" ];
+          };
+          "google images" = {
+            categories = [
+              {
+                name = "images";
+                icon = "fa-image";
+              }
+            ];
+          };
         };
         allEngines = baseEngines // engines;
         catName = cat: if builtins.isString cat then cat else cat.name;
