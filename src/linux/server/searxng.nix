@@ -58,6 +58,24 @@ args@{
       description = "Set the dashboard suggestion URL to the SearXNG autocomplete endpoint when the dashboard module is enabled.";
     };
 
+    title = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Short text rendered as the instance icon, or null to suppress the default branding.";
+    };
+
+    titleColor = lib.mkOption {
+      type = lib.types.str;
+      default = "white";
+      description = "CSS color applied to the title text in the generated icon.";
+    };
+
+    titleFontSize = lib.mkOption {
+      type = lib.types.int;
+      default = 24;
+      description = "Font size in SVG units used for the title text in the generated icon.";
+    };
+
     extraEngines = lib.mkOption {
       type = lib.types.listOf lib.types.attrs;
       default = [ ];
@@ -258,6 +276,9 @@ args@{
           subdomain,
           fontFamily,
           squareCorners,
+          title,
+          titleColor,
+          titleFontSize,
           ...
         }:
         let
@@ -293,6 +314,16 @@ args@{
               (lib.optionalString squareCorners "*{border-radius:0!important}")
             ]
           );
+          iconSvg =
+            if title != null then
+              pkgs.writeText "searxng-icon.svg" ''
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+                  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
+                        font-family="monospace" font-size="${toString titleFontSize}" fill="${titleColor}">${title}</text>
+                </svg>
+              ''
+            else
+              null;
         in
         lib.mkIf (exposedService != false) {
           services.nginx.virtualHosts."${exposedSubdomain}.${domain}" = {
@@ -307,7 +338,14 @@ args@{
               alias = "${customCss}";
               extraConfig = ''add_header Content-Type "text/css";'';
             };
-            locations."= /static/themes/simple/img/searxng.png".extraConfig = "empty_gif;";
+            locations."= /static/themes/simple/img/searxng.png" =
+              if iconSvg == null then
+                { extraConfig = "empty_gif;"; }
+              else
+                {
+                  alias = "${iconSvg}";
+                  extraConfig = ''add_header Content-Type "image/svg+xml";'';
+                };
             locations."/preferences" = {
               return = "302 https://${exposedSubdomain}.${domain}/";
             };
