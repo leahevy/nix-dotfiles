@@ -113,12 +113,6 @@ args@{
               }
             ];
           };
-          google = {
-            categories = [ "general" ];
-          };
-          "google images" = {
-            categories = [ "images" ];
-          };
         };
         allEngines = baseEngines // engines;
         catName = cat: if builtins.isString cat then cat else cat.name;
@@ -341,7 +335,7 @@ args@{
           iconSvg =
             if title != null then
               pkgs.writeText "searxng-icon.svg" ''
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 64">
                   <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
                         font-family="monospace" font-size="${toString titleFontSize}" fill="${titleColor}">${title}</text>
                 </svg>
