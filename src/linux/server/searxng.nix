@@ -117,12 +117,7 @@ args@{
             categories = [ "general" ];
           };
           "google images" = {
-            categories = [
-              {
-                name = "images";
-                icon = "fa-image";
-              }
-            ];
+            categories = [ "images" ];
           };
         };
         allEngines = baseEngines // engines;
@@ -136,11 +131,7 @@ args@{
             map (cat: lib.nameValuePair (catName cat) (catTabEntry cat)) (engine.categories or [ ])
           )
         ) { } allEngines;
-        allCategories = derivedCategories // {
-          general = {
-            icon = "fa-globe";
-          };
-        };
+        allCategories = derivedCategories;
         enginesList = lib.mapAttrsToList (
           name: engine:
           {
