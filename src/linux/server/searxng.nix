@@ -128,7 +128,7 @@ args@{
           wikipedia = {
             categories = [
               "general"
-              "Web"
+              "web"
             ];
           };
           "nixos wiki" = {
@@ -145,7 +145,7 @@ args@{
             inactive = false;
             categories = [
               "general"
-              "Web"
+              "web"
             ];
           };
         };

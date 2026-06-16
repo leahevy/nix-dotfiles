@@ -401,7 +401,7 @@ args@{
               engine = "json_engine";
               shortcut = "plx";
               categories = [
-                "Paperless"
+                "paperless"
                 "general"
               ];
               enable_http = true;
