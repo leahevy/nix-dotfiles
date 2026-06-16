@@ -76,10 +76,16 @@ args@{
       description = "Search engines to load and enable, keyed by SearXNG engine name, merged over the built-in engines.";
     };
 
-    extraEnvironmentFiles = lib.mkOption {
+    extraSecrets = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Additional environment variables written to the SearXNG env file, keyed by variable name with the SOPS decrypted file path as value.";
+    };
+
+    blockedHostnames = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      description = "Additional environment file paths whose variables are substituted into engine configuration.";
+      description = "Plain domain names whose results are removed from all searches (e.g. example.com).";
     };
 
     enableCustomBraveSearch = lib.mkOption {
@@ -96,7 +102,8 @@ args@{
         port,
         subdomain,
         engines,
-        extraEnvironmentFiles,
+        extraSecrets,
+        blockedHostnames,
         enableCustomBraveSearch,
         ...
       }:
@@ -106,7 +113,11 @@ args@{
         isExposed = exposedService != false;
         exposedSubdomain = if builtins.isString exposedService then exposedService else subdomain;
         envFile = "/run/nx-searxng-env/env";
-        allEnvFiles = [ envFile ] ++ extraEnvironmentFiles;
+        allExtraSecrets =
+          lib.optionalAttrs enableCustomBraveSearch {
+            "BRAVE_API_KEY" = config.sops.secrets."searxng-brave-api-key".path;
+          }
+          // extraSecrets;
         baseEngines = {
           wikipedia = {
             categories = [ "general" ];
@@ -147,6 +158,12 @@ args@{
           {
             assertion = domain != null;
             message = "linux.server.searxng requires host.remote.baseDomain to be set!";
+          }
+          {
+            assertion = builtins.all (
+              d: builtins.match "[a-zA-Z0-9][a-zA-Z0-9.-]*\\.[a-zA-Z0-9]+" d != null
+            ) blockedHostnames;
+            message = "linux.server.searxng: blockedHostnames entries must be plain domain names (e.g. example.com)!";
           }
           {
             assertion = !isExposed || config.nx.linux.security.letsencrypt.enable;
@@ -200,13 +217,13 @@ args@{
                 {
                   printf 'SEARXNG_SECRET_KEY='
                   ${pkgs.coreutils}/bin/cat /var/lib/searx/secret_key
-                  ${lib.optionalString enableCustomBraveSearch ''
-                    printf 'BRAVE_API_KEY='
-                    ${pkgs.coreutils}/bin/tr -d '\n' < ${
-                      lib.escapeShellArg config.sops.secrets."searxng-brave-api-key".path
-                    }
-                    printf '\n'
-                  ''}
+                  ${lib.concatStrings (
+                    lib.mapAttrsToList (envVar: secretPath: ''
+                      printf '${envVar}='
+                      ${pkgs.coreutils}/bin/tr -d '\n' < ${lib.escapeShellArg secretPath}
+                      printf '\n'
+                    '') allExtraSecrets
+                  )}
                 } > /run/nx-searxng-env/env
               ''
             );
@@ -217,12 +234,12 @@ args@{
           after = [ "nx-searxng-secret.service" ];
           bindsTo = [ "nx-searxng-secret.service" ];
           restartTriggers = [ config.systemd.services.nx-searxng-secret.serviceConfig.ExecStart ];
-          serviceConfig.EnvironmentFile = allEnvFiles;
+          serviceConfig.EnvironmentFile = envFile;
         };
 
         systemd.services.searx = {
           restartTriggers = [ config.systemd.services.nx-searxng-secret.serviceConfig.ExecStart ];
-          serviceConfig.EnvironmentFile = allEnvFiles;
+          serviceConfig.EnvironmentFile = envFile;
         };
 
         services.searx = {
@@ -261,6 +278,9 @@ args@{
             ];
             categories_as_tabs = allCategories;
             engines = enginesList;
+          }
+          // lib.optionalAttrs (blockedHostnames != [ ]) {
+            hostnames.remove = map (d: "(.*\\.)?${lib.replaceStrings [ "." ] [ "\\." ] d}$") blockedHostnames;
           };
         };
 
