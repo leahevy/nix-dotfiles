@@ -384,7 +384,11 @@ args@{
           "Paperless" = {
             engine = "json_engine";
             shortcut = "plx";
-            categories = [ "files" ];
+            categories = [
+              "documents"
+              "general"
+            ];
+            enable_http = true;
             search_url = "http://127.0.0.1:28981/api/documents/?query={query}";
             headers = {
               Authorization = "Token $PAPERLESS_TOKEN";
