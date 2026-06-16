@@ -81,6 +81,12 @@ args@{
       default = [ ];
       description = "Additional environment file paths whose variables are substituted into engine configuration.";
     };
+
+    enableCustomBraveSearch = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable the Brave Search API engine using the searxng-brave-api-key SOPS secret.";
+    };
   };
 
   module = {
@@ -91,6 +97,7 @@ args@{
         subdomain,
         engines,
         extraEnvironmentFiles,
+        enableCustomBraveSearch,
         ...
       }:
       let
@@ -112,6 +119,12 @@ args@{
                 icon = "fa-snowflake";
               }
             ];
+          };
+        }
+        // lib.optionalAttrs enableCustomBraveSearch {
+          braveapi = {
+            api_key = "$BRAVE_API_KEY";
+            categories = [ "general" ];
           };
         };
         allEngines = baseEngines // engines;
@@ -152,6 +165,16 @@ args@{
           }
         ];
 
+        sops.secrets = lib.optionalAttrs enableCustomBraveSearch {
+          "searxng-brave-api-key" = {
+            format = "binary";
+            sopsFile = self.profile.secretsPath "searxng-brave-api-key";
+            mode = "0400";
+            owner = "searx";
+            group = "searx";
+          };
+        };
+
         environment.persistence."${self.persist}" = {
           directories = [ "/var/lib/searx" ];
         };
@@ -161,6 +184,9 @@ args@{
           before = [ "searx-init.service" ];
           wantedBy = [ "searx-init.service" ];
           partOf = [ "searx-init.service" ];
+          restartTriggers = lib.optionals enableCustomBraveSearch [
+            config.sops.secrets."searxng-brave-api-key".sopsFile
+          ];
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
@@ -181,6 +207,13 @@ args@{
                 {
                   printf 'SEARXNG_SECRET_KEY='
                   ${pkgs.coreutils}/bin/cat /var/lib/searx/secret_key
+                  ${lib.optionalString enableCustomBraveSearch ''
+                    printf 'BRAVE_API_KEY='
+                    ${pkgs.coreutils}/bin/tr -d '\n' < ${
+                      lib.escapeShellArg config.sops.secrets."searxng-brave-api-key".path
+                    }
+                    printf '\n'
+                  ''}
                 } > /run/nx-searxng-env/env
               ''
             );
