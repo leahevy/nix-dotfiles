@@ -112,6 +112,7 @@ args@{
             categories = [ "general" ];
           };
           "nixos wiki" = {
+            weight = 0.5;
             categories = [
               "general"
               "nix"
