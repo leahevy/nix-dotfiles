@@ -243,7 +243,7 @@ args@{
                 href = "https://${exposedSubdomain}.${domain}";
                 description = "Wiki and internal search";
                 icon = "searxng";
-                group = "services";
+                group = if config.nx.linux.server.searxng.injectSearchURL then "admin" else "services";
               }
             ]
           );
