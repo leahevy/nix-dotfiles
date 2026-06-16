@@ -376,33 +376,49 @@ args@{
     };
 
     ifEnabled.linux.server.searxng = {
-      enabled = config: {
-        nx.linux.server.searxng.extraSecrets = lib.mkIf config.nx.linux.server.paperless-ngx.enableSearxng {
-          "PAPERLESS_TOKEN" = config.sops.secrets."paperless-searxng".path;
-        };
-        nx.linux.server.searxng.engines = lib.mkIf config.nx.linux.server.paperless-ngx.enableSearxng {
-          "Paperless" = {
-            engine = "json_engine";
-            shortcut = "plx";
-            categories = [
-              "documents"
-              "general"
-            ];
-            enable_http = true;
-            search_url = "http://127.0.0.1:28981/api/documents/?query={query}";
-            headers = {
-              Authorization = "Token $PAPERLESS_TOKEN";
+      enabled =
+        config:
+        let
+          domain = self.host.remote.baseDomain;
+          paperlessExposed = self.host.remote.exposedServices."paperless-ngx";
+          paperlessSubdomain =
+            if builtins.isString paperlessExposed then
+              paperlessExposed
+            else
+              config.nx.linux.server.paperless-ngx.subdomain;
+          publicBase =
+            if domain != null && paperlessExposed != false then
+              "https://${paperlessSubdomain}.${domain}"
+            else
+              "http://127.0.0.1:28981";
+        in
+        {
+          nx.linux.server.searxng.extraSecrets = lib.mkIf config.nx.linux.server.paperless-ngx.enableSearxng {
+            "PAPERLESS_TOKEN" = config.sops.secrets."paperless-searxng".path;
+          };
+          nx.linux.server.searxng.engines = lib.mkIf config.nx.linux.server.paperless-ngx.enableSearxng {
+            "Paperless" = {
+              engine = "json_engine";
+              shortcut = "plx";
+              categories = [
+                "documents"
+                "general"
+              ];
+              enable_http = true;
+              search_url = "http://127.0.0.1:28981/api/documents/?query={query}";
+              headers = {
+                Authorization = "Token $PAPERLESS_TOKEN";
+              };
+              results_query = "results";
+              title_query = "title";
+              content_query = "content";
+              url_query = "id";
+              url_prefix = "${publicBase}/documents/";
+              weight = 2;
+              paging = false;
             };
-            results_query = "results";
-            title_query = "title";
-            content_query = "content";
-            url_query = "id";
-            url_prefix = "http://127.0.0.1:28981/documents/";
-            weight = 2;
-            paging = false;
           };
         };
-      };
 
       linux.system =
         { config, enableSearxng, ... }:
