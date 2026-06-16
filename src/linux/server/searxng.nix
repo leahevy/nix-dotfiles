@@ -66,7 +66,7 @@ args@{
 
     titleFontSize = lib.mkOption {
       type = lib.types.int;
-      default = 24;
+      default = 48;
       description = "Font size in SVG units used for the title text in the generated icon.";
     };
 
