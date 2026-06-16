@@ -1046,6 +1046,7 @@ args@{
 
         systemd.services.homepage-dashboard.restartTriggers = [
           config.systemd.services.homepage-dashboard-env.serviceConfig.ExecStart
+          (builtins.toJSON generatedSettings)
         ];
 
         systemd.services.homepage-dashboard-env = {
@@ -1122,6 +1123,7 @@ args@{
           inherit (config.systemd.services.homepage-dashboard) preStart enableStrictShellChecks;
           restartTriggers = [
             config.systemd.services.homepage-dashboard-env.serviceConfig.ExecStart
+            (builtins.toJSON restrictedSettings)
           ];
           environment = config.systemd.services.homepage-dashboard.environment // {
             HOMEPAGE_CONFIG_DIR = "/etc/homepage-dashboard-restricted";
