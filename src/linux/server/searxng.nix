@@ -76,6 +76,27 @@ args@{
       description = "Font size in SVG units used for the title text in the generated icon.";
     };
 
+    ensureCategories = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Display name for the tab, or null to derive it from the key.";
+            };
+            icon = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "FontAwesome class name for the tab icon, or null for no icon.";
+            };
+          };
+        }
+      );
+      default = { };
+      description = "Extra category tabs added to the SearXNG UI alongside the built-in tabs.";
+    };
+
     extraEngines = lib.mkOption {
       type = lib.types.listOf lib.types.attrs;
       default = [ ];
@@ -96,6 +117,7 @@ args@{
         port,
         subdomain,
         extraDefaultEngines,
+        ensureCategories,
         extraEngines,
         extraEnvironmentFiles,
         ...
@@ -209,11 +231,27 @@ args@{
               "simple_style"
               "theme"
             ];
+            categories_as_tabs = {
+              general = {
+                icon = "fa-globe";
+              };
+              nix = {
+                icon = "fa-snowflake";
+              };
+            }
+            // lib.mapAttrs (
+              _: cat:
+              lib.optionalAttrs (cat.name != null) { name = cat.name; }
+              // lib.optionalAttrs (cat.icon != null) { icon = cat.icon; }
+            ) ensureCategories;
             engines = [
               {
                 name = "nixos wiki";
                 disabled = false;
-                categories = [ "general" ];
+                categories = [
+                  "general"
+                  "nix"
+                ];
               }
             ]
             ++ extraEngines;
