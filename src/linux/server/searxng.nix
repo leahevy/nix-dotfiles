@@ -114,29 +114,21 @@ args@{
           "nixos wiki" = {
             categories = [
               "general"
-              {
-                name = "nix";
-                icon = "fa-snowflake";
-              }
+              "nix"
             ];
           };
         }
         // lib.optionalAttrs enableCustomBraveSearch {
           braveapi = {
             api_key = "$BRAVE_API_KEY";
+            inactive = false;
             categories = [ "general" ];
           };
         };
         allEngines = baseEngines // engines;
-        catName = cat: if builtins.isString cat then cat else cat.name;
-        catTabEntry =
-          cat: if builtins.isString cat then { } else lib.optionalAttrs (cat ? icon) { icon = cat.icon; };
         derivedCategories = lib.foldlAttrs (
           acc: _: engine:
-          acc
-          // lib.listToAttrs (
-            map (cat: lib.nameValuePair (catName cat) (catTabEntry cat)) (engine.categories or [ ])
-          )
+          acc // lib.genAttrs (engine.categories or [ ]) (_: { })
         ) { } allEngines;
         allCategories = derivedCategories;
         enginesList = lib.mapAttrsToList (
@@ -146,7 +138,7 @@ args@{
             disabled = false;
           }
           // (builtins.removeAttrs engine [ "categories" ])
-          // lib.optionalAttrs (engine ? categories) { categories = map catName engine.categories; }
+          // lib.optionalAttrs (engine ? categories) { categories = engine.categories; }
         ) allEngines;
       in
       {
@@ -438,6 +430,7 @@ args@{
         ];
         nx.linux.server.healthchecks.regularHealthChecks."+51 - SearXNG http reachable" = ''
           _code=$(${pkgs.curl}/bin/curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            -H "X-Real-IP: 127.0.0.1" \
             "http://localhost:${toString config.nx.linux.server.searxng.port}/" 2>/dev/null || true)
           printf 'http://localhost:${toString config.nx.linux.server.searxng.port}/ -> HTTP %s\n' "$_code" >&3
           [[ "$_code" =~ ^[23] ]]
