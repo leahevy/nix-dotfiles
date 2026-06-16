@@ -221,7 +221,7 @@ args@{
             };
             search = {
               safe_search = 0;
-              autocomplete = "brave";
+              autocomplete = "google";
               favicon_resolver = "duckduckgo";
             };
             ui.theme_args.simple_style = "black";
