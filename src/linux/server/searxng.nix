@@ -40,6 +40,12 @@ args@{
       description = "Remove all border-radius from every element in the SearXNG UI.";
     };
 
+    maxShownResultLines = lib.mkOption {
+      type = lib.types.nullOr lib.types.int;
+      default = 3;
+      description = "Maximum number of lines shown for result content previews, or null to show the full content.";
+    };
+
     injectSearchURL = lib.mkOption {
       type = lib.types.nullOr lib.types.bool;
       default = null;
@@ -346,6 +352,7 @@ args@{
           subdomain,
           fontFamily,
           squareCorners,
+          maxShownResultLines,
           title,
           titleColor,
           titleFontSize,
@@ -378,6 +385,9 @@ args@{
           customCss = pkgs.writeText "searxng-custom.css" (
             lib.concatStrings [
               "body,html,main,#results,footer{background-color:#000!important}"
+              (lib.optionalString (maxShownResultLines != null)
+                "p.content{overflow:hidden;display:-webkit-box;-webkit-line-clamp:${toString maxShownResultLines};-webkit-box-orient:vertical}"
+              )
               (lib.optionalString (
                 fontFamily != null
               ) "body,input,button,select,textarea{font-family:${fontFamily}!important}")
