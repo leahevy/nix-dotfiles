@@ -41,9 +41,9 @@ args@{
     };
 
     injectSearchURL = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Set the dashboard search URL to this SearXNG instance when the dashboard module is enabled.";
+      type = lib.types.nullOr lib.types.bool;
+      default = null;
+      description = "Set the dashboard search URL to this SearXNG instance when the dashboard module is enabled, or null to auto-enable when enableCustomBraveSearch is true.";
     };
 
     injectSuggestionURL = lib.mkOption {
@@ -286,10 +286,16 @@ args@{
           domain = self.host.remote.baseDomain;
           exposedService = self.host.remote.exposedServices.searxng;
           exposedSubdomain = if builtins.isString exposedService then exposedService else "search";
+          rawInjectSearch = config.nx.linux.server.searxng.injectSearchURL;
+          effectiveInjectSearch =
+            if rawInjectSearch != null then
+              rawInjectSearch
+            else
+              config.nx.linux.server.searxng.enableCustomBraveSearch;
         in
         {
           nx.linux.server.dashboard.searchURL = lib.mkIf (
-            config.nx.linux.server.searxng.injectSearchURL && domain != null && exposedService != false
+            effectiveInjectSearch && domain != null && exposedService != false
           ) "https://${exposedSubdomain}.${domain}/search?q=";
           nx.linux.server.dashboard.suggestionURL = lib.mkIf (
             config.nx.linux.server.searxng.injectSuggestionURL && domain != null && exposedService != false
@@ -304,7 +310,7 @@ args@{
                 href = "https://${exposedSubdomain}.${domain}";
                 description = "Wiki and internal search";
                 icon = "searxng";
-                group = if config.nx.linux.server.searxng.injectSearchURL then "admin" else "services";
+                group = if effectiveInjectSearch then "admin" else "services";
               }
             ]
           );
