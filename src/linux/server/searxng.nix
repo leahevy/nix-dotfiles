@@ -28,12 +28,6 @@ args@{
       description = "Subdomain under baseDomain where SearXNG is served via nginx.";
     };
 
-    extraDefaultEngines = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "Additional engine names from SearXNG's built-in set to add to the keep_only filter.";
-    };
-
     fontFamily = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = "monospace";
@@ -76,31 +70,10 @@ args@{
       description = "Font size in SVG units used for the title text in the generated icon.";
     };
 
-    ensureCategories = lib.mkOption {
-      type = lib.types.attrsOf (
-        lib.types.submodule {
-          options = {
-            name = lib.mkOption {
-              type = lib.types.nullOr lib.types.str;
-              default = null;
-              description = "Display name for the tab, or null to derive it from the key.";
-            };
-            icon = lib.mkOption {
-              type = lib.types.nullOr lib.types.str;
-              default = null;
-              description = "FontAwesome class name for the tab icon, or null for no icon.";
-            };
-          };
-        }
-      );
+    engines = lib.mkOption {
+      type = lib.types.attrsOf lib.types.attrs;
       default = { };
-      description = "Extra category tabs added to the SearXNG UI alongside the built-in tabs.";
-    };
-
-    extraEngines = lib.mkOption {
-      type = lib.types.listOf lib.types.attrs;
-      default = [ ];
-      description = "Additional search engine configurations contributed by other modules.";
+      description = "Search engines to load and enable, keyed by SearXNG engine name, merged over the built-in engines.";
     };
 
     extraEnvironmentFiles = lib.mkOption {
@@ -116,9 +89,7 @@ args@{
         config,
         port,
         subdomain,
-        extraDefaultEngines,
-        ensureCategories,
-        extraEngines,
+        engines,
         extraEnvironmentFiles,
         ...
       }:
@@ -129,6 +100,45 @@ args@{
         exposedSubdomain = if builtins.isString exposedService then exposedService else subdomain;
         envFile = "/run/nx-searxng-env/env";
         allEnvFiles = [ envFile ] ++ extraEnvironmentFiles;
+        baseEngines = {
+          wikipedia = {
+            categories = [ "general" ];
+          };
+          "nixos wiki" = {
+            categories = [
+              "general"
+              {
+                name = "nix";
+                icon = "fa-snowflake";
+              }
+            ];
+          };
+        };
+        allEngines = baseEngines // engines;
+        catName = cat: if builtins.isString cat then cat else cat.name;
+        catTabEntry =
+          cat: if builtins.isString cat then { } else lib.optionalAttrs (cat ? icon) { icon = cat.icon; };
+        derivedCategories = lib.foldlAttrs (
+          acc: _: engine:
+          acc
+          // lib.listToAttrs (
+            map (cat: lib.nameValuePair (catName cat) (catTabEntry cat)) (engine.categories or [ ])
+          )
+        ) { } allEngines;
+        allCategories = derivedCategories // {
+          general = {
+            icon = "fa-globe";
+          };
+        };
+        enginesList = lib.mapAttrsToList (
+          name: engine:
+          {
+            inherit name;
+            disabled = false;
+          }
+          // (builtins.removeAttrs engine [ "categories" ])
+          // lib.optionalAttrs (engine ? categories) { categories = map catName engine.categories; }
+        ) allEngines;
       in
       {
         assertions = [
@@ -197,11 +207,7 @@ args@{
           enable = true;
           settings = {
             use_default_settings = {
-              engines.keep_only = [
-                "wikipedia"
-                "nixos wiki"
-              ]
-              ++ extraDefaultEngines;
+              engines.keep_only = lib.attrNames allEngines;
             };
             server = {
               port = port;
@@ -231,30 +237,8 @@ args@{
               "simple_style"
               "theme"
             ];
-            categories_as_tabs = {
-              general = {
-                icon = "fa-globe";
-              };
-              nix = {
-                icon = "fa-snowflake";
-              };
-            }
-            // lib.mapAttrs (
-              _: cat:
-              lib.optionalAttrs (cat.name != null) { name = cat.name; }
-              // lib.optionalAttrs (cat.icon != null) { icon = cat.icon; }
-            ) ensureCategories;
-            engines = [
-              {
-                name = "nixos wiki";
-                disabled = false;
-                categories = [
-                  "general"
-                  "nix"
-                ];
-              }
-            ]
-            ++ extraEngines;
+            categories_as_tabs = allCategories;
+            engines = enginesList;
           };
         };
 
