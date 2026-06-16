@@ -126,7 +126,10 @@ args@{
           // extraSecrets;
         baseEngines = {
           wikipedia = {
-            categories = [ "general" ];
+            categories = [
+              "general"
+              "Web"
+            ];
           };
           "nixos wiki" = {
             weight = 0.2;
@@ -140,7 +143,10 @@ args@{
           braveapi = {
             api_key = "$BRAVE_API_KEY";
             inactive = false;
-            categories = [ "general" ];
+            categories = [
+              "general"
+              "Web"
+            ];
           };
         };
         allEngines = baseEngines // engines;
