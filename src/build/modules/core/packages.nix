@@ -59,7 +59,9 @@ in
     system = config: {
       environment.etc."nx/system-packages.json" = {
         text = builtins.toJSON (
-          collectPackageInventory config.nx.packages.ignore config.environment.systemPackages
+          collectPackageInventory config.nx.packages.ignore (
+            config.environment.systemPackages ++ config.nx.packages.extra
+          )
         );
         mode = "0444";
       };
@@ -78,6 +80,7 @@ in
           else
             "aarch64-darwin";
         nextRelease = helpers.nextNixOSRelease config.nx.global.currentRelease;
+        dataHomeRel = lib.removePrefix "${config.home.homeDirectory}/" config.xdg.dataHome;
 
         mkScript =
           name: release:
@@ -110,10 +113,10 @@ in
               fi
 
               HOME_PKGS=()
-              if [[ -f "$HOME/.config/nx/home-packages.json" ]]; then
+              if [[ -f "${config.xdg.dataHome}/nx/home-packages.json" ]]; then
                 while IFS= read -r pkg; do
                   [[ -n "$pkg" ]] && HOME_PKGS+=("$pkg")
-                done < <(jq -r '.[] | select(.unfree != true) | .pname' "$HOME/.config/nx/home-packages.json")
+                done < <(jq -r '.[] | select(.unfree != true) | .pname' "${config.xdg.dataHome}/nx/home-packages.json")
               fi
 
               ALL_PACKAGES=("''${SYSTEM_PKGS[@]+"''${SYSTEM_PKGS[@]}"}" "''${HOME_PKGS[@]+"''${HOME_PKGS[@]}"}" "$@")
@@ -181,7 +184,7 @@ in
       {
         home.packages = [ pkgs.hydra-check ];
 
-        home.file.".config/nx/home-packages.json".text = builtins.toJSON (
+        home.file."${dataHomeRel}/nx/home-packages.json".text = builtins.toJSON (
           collectPackageInventory config.nx.packages.ignore (config.home.packages ++ config.nx.packages.extra)
         );
 
