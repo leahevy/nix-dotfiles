@@ -1155,8 +1155,7 @@ args@{
           };
         };
 
-        services.nginx.virtualHosts."${effectiveSubdomain}.${domain}" =
-          if hostAtNginxSubdomain then lib.mkForce baseVhost else baseVhost;
+        services.nginx.virtualHosts."${effectiveSubdomain}.${domain}" = baseVhost;
       };
   };
 }
