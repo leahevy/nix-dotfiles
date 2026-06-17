@@ -112,6 +112,7 @@ in
         ) "https://${subdomain}.${domain}/.well-known/openid-configuration";
         nx.linux.server.auth.oidcProviderName = lib.mkIf (domain != null) "Pocket-ID";
         nx.linux.server.auth.oidcProviderId = lib.mkIf (domain != null) "pocket-id";
+        nx.linux.server.auth.oidcProviderSystemdService = "pocket-id.service";
         nx.linux.server.auth.logoutUrl = lib.mkIf (
           domain != null && postLogoutRedirectUrl != null
         ) postLogoutRedirectUrl;

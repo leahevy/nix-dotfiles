@@ -60,6 +60,12 @@ in
       description = "Provider slug used in callback URLs, set by the implementation module.";
     };
 
+    oidcProviderSystemdService = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Systemd service name of the active OIDC provider, set by the implementation module.";
+    };
+
     logoutUrl = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -470,7 +476,12 @@ in
             };
 
             systemd.services.oauth2-proxy = {
-              after = [ "nx-oauth2-proxy-env.service" ];
+              after = [
+                "nx-oauth2-proxy-env.service"
+              ]
+              ++ lib.optional (
+                config.nx.linux.server.auth.oidcProviderSystemdService != null
+              ) config.nx.linux.server.auth.oidcProviderSystemdService;
               bindsTo = [ "nx-oauth2-proxy-env.service" ];
             };
 
