@@ -246,12 +246,10 @@ in
           exposedService = self.host.remote.exposedServices.proxy;
           exposedSubdomain = if builtins.isString exposedService then exposedService else oauthProxySubdomain;
           proxyDomain = "${exposedSubdomain}.${domain}";
-          logoutUrl = config.nx.linux.server.auth.logoutUrl;
-
           cookieSetupScript = pkgs.writeShellScript "nx-oauth2-proxy-cookie" ''
             set -euo pipefail
             if [ ! -f /var/lib/oauth2-proxy/cookie-secret ]; then
-              ${pkgs.openssl}/bin/openssl rand -base64 32 \
+              ${pkgs.openssl}/bin/openssl rand -base64 24 \
                 > /var/lib/oauth2-proxy/cookie-secret
               ${pkgs.coreutils}/bin/chmod 600 /var/lib/oauth2-proxy/cookie-secret
             fi
@@ -277,10 +275,6 @@ in
         in
         lib.mkIf (enableOAuthProxy && domain != null && exposedService != false) {
           assertions = [
-            {
-              assertion = logoutUrl != null;
-              message = "linux.server.auth: enableOAuthProxy requires a provider with a logoutUrl!";
-            }
             {
               assertion = config.nx.linux.security.letsencrypt.enable;
               message = "linux.server.auth: enableOAuthProxy requires linux.security.letsencrypt to be enabled!";
