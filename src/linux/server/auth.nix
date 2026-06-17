@@ -84,6 +84,12 @@ in
       description = "Deploy an OIDC-backed oauth2-proxy to protect services without native OIDC support.";
     };
 
+    oauthProxyClientName = lib.mkOption {
+      type = lib.types.str;
+      default = "Proxy";
+      description = "Display name of the oauth2-proxy OIDC client shown in the provider login UI.";
+    };
+
     oauthProxySubdomain = lib.mkOption {
       type = lib.types.str;
       default = "proxy";
@@ -273,7 +279,7 @@ in
         ++ [
           (lib.mkIf (config.nx.linux.server.auth.enableOAuthProxy && domain != null) {
             nx.linux.server.auth.clients.oauth-proxy = {
-              name = "Proxy";
+              name = config.nx.linux.server.auth.oauthProxyClientName;
               callbackUrls = [
                 "https://${config.nx.linux.server.auth.oauthProxySubdomain}.${domain}/oauth2/callback"
               ];
