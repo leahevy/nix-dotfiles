@@ -374,9 +374,6 @@ in
               httpOnly = true;
             };
             keyFile = "/run/oauth2-proxy/env";
-            extraConfig = lib.optionalAttrs (logoutUrl != null) {
-              post-logout-redirect-uri = logoutUrl;
-            };
           };
 
           services.oauth2-proxy.nginx = {
