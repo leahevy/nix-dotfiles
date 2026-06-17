@@ -443,6 +443,10 @@ in
             after = [ "nx-oauth2-proxy-env.service" ];
             bindsTo = [ "nx-oauth2-proxy-env.service" ];
           };
+
+          systemd.services.nginx.restartTriggers = [
+            (builtins.toJSON proxyProtectedVhosts)
+          ];
         };
     };
 
