@@ -465,6 +465,17 @@ args@{
         };
     };
 
+    ifEnabled.linux.server.auth = {
+      enabled =
+        config:
+        let
+          exposedService = self.host.remote.exposedServices.searxng;
+        in
+        lib.mkIf (config.nx.linux.server.auth.enableOAuthProxy && exposedService != false) {
+          nx.linux.server.auth.proxyProtectedVhosts = [ config.nx.linux.server.searxng.subdomain ];
+        };
+    };
+
     ifEnabled.linux.server.healthchecks = {
       enabled = config: {
         nx.linux.server.healthchecks.requireServicesUp = [

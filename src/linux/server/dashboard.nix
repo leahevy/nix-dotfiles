@@ -420,6 +420,17 @@ args@{
   };
 
   module = {
+    ifEnabled.linux.server.auth = {
+      enabled =
+        config:
+        let
+          exposedService = self.host.remote.exposedServices.dashboard;
+        in
+        lib.mkIf (config.nx.linux.server.auth.enableOAuthProxy && exposedService != false) {
+          nx.linux.server.auth.proxyProtectedVhosts = [ config.nx.linux.server.dashboard.subdomain ];
+        };
+    };
+
     ifEnabled.linux.server.healthchecks.enabled = config: {
       nx.linux.server.healthchecks.requireServicesUp = [
         "homepage-dashboard.service"

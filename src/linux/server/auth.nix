@@ -72,6 +72,24 @@ in
       description = "When true, all connected services disable regular login and require OIDC authentication, unless the service sets disableOIDCEnforcement = true.";
     };
 
+    enableOAuthProxy = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Deploy an OIDC-backed oauth2-proxy to protect services without native OIDC support.";
+    };
+
+    oauthProxySubdomain = lib.mkOption {
+      type = lib.types.str;
+      default = "proxy";
+      description = "Subdomain under baseDomain hosting the oauth2-proxy sign-in and callback endpoints.";
+    };
+
+    proxyProtectedVhosts = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Virtual hosts to protect via oauth2-proxy, each either a bare subdomain name under baseDomain or a fully qualified domain name.";
+    };
+
     clients = lib.mkOption {
       type = lib.types.attrsOf (
         lib.types.submodule {
@@ -184,7 +202,20 @@ in
             }
           ];
       in
-      lib.mkMerge (map mkServiceConfig oidcIntegrations);
+      lib.mkMerge (
+        map mkServiceConfig oidcIntegrations
+        ++ lib.optional (config.nx.linux.server.auth.enableOAuthProxy && domain != null) {
+          nx.linux.server.auth.clients.oauth-proxy = {
+            name = "Proxy";
+            callbackUrls = [
+              "https://${config.nx.linux.server.auth.oauthProxySubdomain}.${domain}/oauth2/callback"
+            ];
+            allowedUserGroup = null;
+            launchUrl = null;
+            pkceEnabled = false;
+          };
+        }
+      );
 
     ifEnabled.linux.server.ldap = {
       linux.system = config: {
@@ -196,6 +227,181 @@ in
           }
         ) (lib.attrValues config.nx.linux.server.auth.clients);
       };
+    };
+
+    ifEnabled.linux.server.nginx = {
+      linux.system =
+        {
+          config,
+          enableOAuthProxy,
+          oauthProxySubdomain,
+          proxyProtectedVhosts,
+          ...
+        }:
+        let
+          domain = self.host.remote.baseDomain;
+          hostname = self.host.hostname;
+          exposedService = self.host.remote.exposedServices.proxy;
+          exposedSubdomain = if builtins.isString exposedService then exposedService else oauthProxySubdomain;
+          proxyDomain = "${exposedSubdomain}.${domain}";
+          logoutUrl = config.nx.linux.server.auth.logoutUrl;
+
+          cookieSetupScript = pkgs.writeShellScript "nx-oauth2-proxy-cookie" ''
+            set -euo pipefail
+            if [ ! -f /var/lib/oauth2-proxy/cookie-secret ]; then
+              ${pkgs.openssl}/bin/openssl rand -base64 32 \
+                > /var/lib/oauth2-proxy/cookie-secret
+              ${pkgs.coreutils}/bin/chmod 600 /var/lib/oauth2-proxy/cookie-secret
+            fi
+          '';
+
+          envBuildScript = pkgs.writeShellScript "nx-oauth2-proxy-env" ''
+            set -euo pipefail
+            umask 077
+            {
+              printf 'OAUTH2_PROXY_CLIENT_ID='
+              ${pkgs.coreutils}/bin/tr -d '\n' \
+                < ${lib.escapeShellArg config.sops.secrets."${hostname}-oauth-proxy-client-id".path}
+              printf '\n'
+              printf 'OAUTH2_PROXY_CLIENT_SECRET='
+              ${pkgs.coreutils}/bin/tr -d '\n' \
+                < ${lib.escapeShellArg config.sops.secrets."${hostname}-oauth-proxy-client-secret".path}
+              printf '\n'
+              printf 'OAUTH2_PROXY_COOKIE_SECRET='
+              ${pkgs.coreutils}/bin/tr -d '\n' < /var/lib/oauth2-proxy/cookie-secret
+              printf '\n'
+            } > /run/oauth2-proxy/env
+          '';
+        in
+        lib.mkIf (enableOAuthProxy && domain != null && exposedService != false) {
+          assertions = [
+            {
+              assertion = logoutUrl != null;
+              message = "linux.server.auth: enableOAuthProxy requires a provider with a logoutUrl!";
+            }
+            {
+              assertion = config.nx.linux.security.letsencrypt.enable;
+              message = "linux.server.auth: enableOAuthProxy requires linux.security.letsencrypt to be enabled!";
+            }
+            {
+              assertion = exposedSubdomain == oauthProxySubdomain;
+              message = "linux.server.auth: oauthProxySubdomain '${oauthProxySubdomain}' does not match exposedServices.proxy subdomain '${exposedSubdomain}'!";
+            }
+          ];
+
+          sops.secrets."${hostname}-oauth-proxy-client-id" = {
+            format = "binary";
+            sopsFile = self.profile.secretsPath "oauth-proxy-client-id";
+            owner = "root";
+            mode = "0400";
+          };
+
+          sops.secrets."${hostname}-oauth-proxy-client-secret" = {
+            format = "binary";
+            sopsFile = self.profile.secretsPath "oauth-proxy-client-secret";
+            owner = "root";
+            mode = "0400";
+          };
+
+          systemd.tmpfiles.settings."nx-oauth2-proxy" = {
+            "/run/oauth2-proxy".d = {
+              mode = "0700";
+              user = "root";
+              group = "root";
+            };
+            "/var/lib/oauth2-proxy".d = {
+              mode = "0700";
+              user = "root";
+              group = "root";
+            };
+          }
+          // lib.optionalAttrs self.host.impermanence {
+            "${self.persist}/var/lib/oauth2-proxy".d = {
+              mode = "0700";
+              user = "root";
+              group = "root";
+            };
+          };
+
+          environment.persistence."${self.persist}" = {
+            directories = [ "/var/lib/oauth2-proxy" ];
+          };
+
+          systemd.services.nx-oauth2-proxy-cookie = {
+            description = "OAuth2 proxy cookie secret initialization";
+            before = [ "nx-oauth2-proxy-env.service" ];
+            wantedBy = [ "nx-oauth2-proxy-env.service" ];
+            partOf = [ "nx-oauth2-proxy-env.service" ];
+            serviceConfig = {
+              Type = "oneshot";
+              RemainAfterExit = true;
+              ExecStart = toString cookieSetupScript;
+            };
+          };
+
+          systemd.services.nx-oauth2-proxy-env = {
+            description = "OAuth2 proxy environment assembly";
+            after = [ "nx-oauth2-proxy-cookie.service" ];
+            requires = [ "nx-oauth2-proxy-cookie.service" ];
+            before = [ "oauth2-proxy.service" ];
+            wantedBy = [ "oauth2-proxy.service" ];
+            partOf = [ "oauth2-proxy.service" ];
+            restartTriggers = [
+              config.sops.secrets."${hostname}-oauth-proxy-client-id".sopsFile
+              config.sops.secrets."${hostname}-oauth-proxy-client-secret".sopsFile
+            ];
+            serviceConfig = {
+              Type = "oneshot";
+              RemainAfterExit = true;
+              ExecStart = toString envBuildScript;
+            };
+          };
+
+          services.oauth2-proxy = {
+            enable = true;
+            provider = "oidc";
+            oidcIssuerUrl = config.nx.linux.server.auth.baseUrl;
+            redirectURL = "https://${proxyDomain}/oauth2/callback";
+            scope = "openid email profile groups";
+            reverseProxy = true;
+            setXauthrequest = true;
+            email.domains = [ "*" ];
+            cookie = {
+              domain = ".${domain}";
+              secure = true;
+              httpOnly = true;
+            };
+            keyFile = "/run/oauth2-proxy/env";
+            extraConfig = lib.optionalAttrs (logoutUrl != null) {
+              post-logout-redirect-uri = logoutUrl;
+            };
+          };
+
+          services.oauth2-proxy.nginx = {
+            domain = proxyDomain;
+            virtualHosts = builtins.listToAttrs (
+              map (
+                v:
+                lib.nameValuePair (if builtins.match ".*\\..*" v != null then v else "${v}.${domain}") {
+                  allowed_groups = [ "ldap-users" ];
+                }
+              ) (lib.unique proxyProtectedVhosts)
+            );
+          };
+
+          services.nginx.virtualHosts.${proxyDomain} = {
+            useACMEHost = domain;
+            forceSSL = true;
+            locations."/" = {
+              return = "302 /oauth2/sign_in";
+            };
+          };
+
+          systemd.services.oauth2-proxy = {
+            after = [ "nx-oauth2-proxy-env.service" ];
+            bindsTo = [ "nx-oauth2-proxy-env.service" ];
+          };
+        };
     };
 
     linux.system = config: {
