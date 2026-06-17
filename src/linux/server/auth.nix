@@ -469,10 +469,10 @@ in
             "nx-oauth2-proxy-env.service"
             "nx-oauth2-proxy-cookie.service"
           ];
-          nx.linux.server.healthchecks.regularHealthChecks."+52 - OAuth2-Proxy ping" = ''
+          nx.linux.server.healthchecks.regularHealthChecks."+52 - OAuth2-Proxy ready" = ''
             _code=$(${pkgs.curl}/bin/curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-              "http://127.0.0.1:4180/oauth2/ping" 2>/dev/null || true)
-            printf 'http://127.0.0.1:4180/oauth2/ping - HTTP %s\n' "$_code" >&3
+              "http://127.0.0.1:4180/ready" 2>/dev/null || true)
+            printf 'http://127.0.0.1:4180/ready - HTTP %s\n' "$_code" >&3
             [[ "$_code" =~ ^2 ]]
           '';
         };
