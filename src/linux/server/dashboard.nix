@@ -991,6 +991,8 @@ args@{
               locations."/" = {
                 proxyPass = "http://$dashboard_upstream";
                 proxyWebsockets = true;
+                return = null;
+                extraConfig = "";
               };
             }
             {
