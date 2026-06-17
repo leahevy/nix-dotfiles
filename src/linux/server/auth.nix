@@ -374,6 +374,8 @@ in
                 "127.0.0.1"
                 "::1"
               ];
+              whitelist-domain = ".${domain}";
+              insecure-oidc-allow-unverified-email = true;
             };
           };
 

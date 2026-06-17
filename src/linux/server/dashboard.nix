@@ -425,9 +425,15 @@ args@{
         config:
         let
           exposedService = self.host.remote.exposedServices.dashboard;
+          nginxSubdomain = config.nx.linux.server.nginx.subdomain;
+          effectiveSubdomain =
+            if config.nx.linux.server.dashboard.hostAtNginxSubdomain then
+              (if nginxSubdomain == null then self.host.hostname else nginxSubdomain)
+            else
+              config.nx.linux.server.dashboard.subdomain;
         in
         lib.mkIf (config.nx.linux.server.auth.enableOAuthProxy && exposedService != false) {
-          nx.linux.server.auth.proxyProtectedVhosts = [ config.nx.linux.server.dashboard.subdomain ];
+          nx.linux.server.auth.proxyProtectedVhosts = [ effectiveSubdomain ];
         };
     };
 
