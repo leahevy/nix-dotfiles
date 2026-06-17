@@ -204,17 +204,19 @@ in
       in
       lib.mkMerge (
         map mkServiceConfig oidcIntegrations
-        ++ lib.optional (config.nx.linux.server.auth.enableOAuthProxy && domain != null) {
-          nx.linux.server.auth.clients.oauth-proxy = {
-            name = "Proxy";
-            callbackUrls = [
-              "https://${config.nx.linux.server.auth.oauthProxySubdomain}.${domain}/oauth2/callback"
-            ];
-            allowedUserGroup = null;
-            launchUrl = null;
-            pkceEnabled = false;
-          };
-        }
+        ++ [
+          (lib.mkIf (config.nx.linux.server.auth.enableOAuthProxy && domain != null) {
+            nx.linux.server.auth.clients.oauth-proxy = {
+              name = "Proxy";
+              callbackUrls = [
+                "https://${config.nx.linux.server.auth.oauthProxySubdomain}.${domain}/oauth2/callback"
+              ];
+              allowedUserGroup = null;
+              launchUrl = null;
+              pkceEnabled = false;
+            };
+          })
+        ]
       );
 
     ifEnabled.linux.server.ldap = {
