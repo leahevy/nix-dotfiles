@@ -436,7 +436,14 @@ in
 
         systemd.tmpfiles.settings."pocket-id-state" = {
           "/var/lib/pocket-id".d = {
-            mode = "0700";
+            mode = "0755";
+            user = "pocket-id";
+            group = "pocket-id";
+          };
+        }
+        // lib.optionalAttrs self.host.impermanence {
+          "${self.persist}/var/lib/pocket-id".d = {
+            mode = "0755";
             user = "pocket-id";
             group = "pocket-id";
           };

@@ -369,16 +369,43 @@ args@{
             "ldap-users"
           ];
 
-          systemd.tmpfiles.settings."10-paperless"."${basePath}/import".d = lib.mkForce {
-            mode = "2770";
-            user = "paperless";
-            group = "ldap-users";
+          systemd.tmpfiles.settings."10-paperless" = {
+            "${basePath}/import".d = lib.mkForce {
+              mode = "2770";
+              user = "paperless";
+              group = "ldap-users";
+            };
+          }
+          // lib.optionalAttrs self.host.impermanence {
+            "${self.persist}${basePath}/import".d = lib.mkForce {
+              mode = "2770";
+              user = "paperless";
+              group = "ldap-users";
+            };
           };
-          systemd.tmpfiles.settings."10-paperless-export"."${basePath}/export".d = lib.mkForce {
-            mode = "2770";
-            user = "paperless";
-            group = "ldap-users";
+          systemd.tmpfiles.settings."10-paperless-export" = {
+            "${basePath}/export".d = lib.mkForce {
+              mode = "2770";
+              user = "paperless";
+              group = "ldap-users";
+            };
+          }
+          // lib.optionalAttrs self.host.impermanence {
+            "${self.persist}${basePath}/export".d = lib.mkForce {
+              mode = "2770";
+              user = "paperless";
+              group = "ldap-users";
+            };
           };
+
+          systemd.services.samba-smbd.restartTriggers = [
+            (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless" or { }))
+            (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless-export" or { }))
+          ];
+          systemd.services.samba-nmbd.restartTriggers = [
+            (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless" or { }))
+            (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless-export" or { }))
+          ];
         };
     };
 

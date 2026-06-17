@@ -375,6 +375,21 @@ in
           directories = [ dataDir ];
         };
 
+        systemd.tmpfiles.settings."nx-syncthing" = {
+          "${dataDir}".d = {
+            mode = "0700";
+            user = "syncthing";
+            group = "syncthing";
+          };
+        }
+        // lib.optionalAttrs self.host.impermanence {
+          "${self.persist}${dataDir}".d = {
+            mode = "0700";
+            user = "syncthing";
+            group = "syncthing";
+          };
+        };
+
         sops.secrets."${self.host.hostname}-syncthing-gui-pass" = {
           format = "binary";
           sopsFile = self.profile.secretsPath "syncthing-gui-pass";
@@ -503,15 +518,33 @@ in
           users.users.syncthing.extraGroups = [ "paperless-sync" ];
           users.users.paperless.extraGroups = [ "paperless-sync" ];
 
-          systemd.tmpfiles.settings."10-paperless"."${basePath}/import".d = lib.mkOverride 75 {
-            mode = "2770";
-            user = "paperless";
-            group = "paperless-sync";
+          systemd.tmpfiles.settings."10-paperless" = {
+            "${basePath}/import".d = lib.mkOverride 75 {
+              mode = "2770";
+              user = "paperless";
+              group = "paperless-sync";
+            };
+          }
+          // lib.optionalAttrs self.host.impermanence {
+            "${self.persist}${basePath}/import".d = lib.mkOverride 75 {
+              mode = "2770";
+              user = "paperless";
+              group = "paperless-sync";
+            };
           };
-          systemd.tmpfiles.settings."10-paperless-export"."${basePath}/export".d = lib.mkOverride 75 {
-            mode = "2770";
-            user = "paperless";
-            group = "paperless-sync";
+          systemd.tmpfiles.settings."10-paperless-export" = {
+            "${basePath}/export".d = lib.mkOverride 75 {
+              mode = "2770";
+              user = "paperless";
+              group = "paperless-sync";
+            };
+          }
+          // lib.optionalAttrs self.host.impermanence {
+            "${self.persist}${basePath}/export".d = lib.mkOverride 75 {
+              mode = "2770";
+              user = "paperless";
+              group = "paperless-sync";
+            };
           };
 
           services.syncthing.settings.folders = {
@@ -526,6 +559,11 @@ in
               devices = folderDevices;
             };
           };
+
+          systemd.services.syncthing.restartTriggers = [
+            (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless" or { }))
+            (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless-export" or { }))
+          ];
         };
     };
   };

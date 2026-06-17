@@ -188,10 +188,19 @@ args@{
 
         };
 
-        systemd.tmpfiles.settings."10-paperless-export"."${basePath}/export".d = {
-          mode = "0750";
-          user = "paperless";
-          group = "paperless";
+        systemd.tmpfiles.settings."10-paperless-export" = {
+          "${basePath}/export".d = {
+            mode = "0750";
+            user = "paperless";
+            group = "paperless";
+          };
+        }
+        // lib.optionalAttrs self.host.impermanence {
+          "${self.persist}${basePath}".d = {
+            mode = "0750";
+            user = "paperless";
+            group = "paperless";
+          };
         };
 
         services.paperless = {
@@ -245,14 +254,26 @@ args@{
             paperless-scheduler.serviceConfig.TimeoutStopSec = 600;
             paperless-task-queue.serviceConfig.TimeoutStopSec = 600;
             paperless-consumer.serviceConfig.TimeoutStopSec = 600;
-            paperless-web.restartTriggers = [ (builtins.toJSON config.users.users.paperless.extraGroups) ];
+            paperless-web.restartTriggers = [
+              (builtins.toJSON config.users.users.paperless.extraGroups)
+              (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless" or { }))
+              (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless-export" or { }))
+            ];
             paperless-scheduler.restartTriggers = [
               (builtins.toJSON config.users.users.paperless.extraGroups)
+              (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless" or { }))
+              (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless-export" or { }))
             ];
             paperless-task-queue.restartTriggers = [
               (builtins.toJSON config.users.users.paperless.extraGroups)
+              (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless" or { }))
+              (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless-export" or { }))
             ];
-            paperless-consumer.restartTriggers = [ (builtins.toJSON config.users.users.paperless.extraGroups) ];
+            paperless-consumer.restartTriggers = [
+              (builtins.toJSON config.users.users.paperless.extraGroups)
+              (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless" or { }))
+              (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless-export" or { }))
+            ];
           }
           (lib.mkIf enableOIDC {
             nx-paperless-oidc-prep = {

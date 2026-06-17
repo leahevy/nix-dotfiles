@@ -67,6 +67,21 @@ args@{
         environment.persistence."${self.persist}" = {
           directories = [ config.services.postgresql.dataDir ];
         };
+
+        systemd.tmpfiles.settings."nx-postgresql" = {
+          "${config.services.postgresql.dataDir}".d = {
+            mode = "0750";
+            user = "postgres";
+            group = "postgres";
+          };
+        }
+        // lib.optionalAttrs self.host.impermanence {
+          "${self.persist}${config.services.postgresql.dataDir}".d = {
+            mode = "0750";
+            user = "postgres";
+            group = "postgres";
+          };
+        };
       };
 
     ifEnabled.linux.server.healthchecks = {

@@ -2730,16 +2730,24 @@ args@{
         }
 
         {
-          systemd.tmpfiles.settings."10-nx-healthcheck"."/run/nx-healthcheck".d = {
-            mode = "0700";
-            user = "root";
-            group = "root";
-          };
-
-          systemd.tmpfiles.settings."10-nx-healthcheck"."${stateDir}".d = {
-            mode = "0700";
-            user = "root";
-            group = "root";
+          systemd.tmpfiles.settings."10-nx-healthcheck" = {
+            "/run/nx-healthcheck".d = {
+              mode = "0700";
+              user = "root";
+              group = "root";
+            };
+            "${stateDir}".d = {
+              mode = "0700";
+              user = "root";
+              group = "root";
+            };
+          }
+          // lib.optionalAttrs self.host.impermanence {
+            "${self.persist}${stateDir}".d = {
+              mode = "0700";
+              user = "root";
+              group = "root";
+            };
           };
 
           environment.persistence."${self.persist}" = {
