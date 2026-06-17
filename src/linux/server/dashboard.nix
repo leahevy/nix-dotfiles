@@ -479,6 +479,7 @@ args@{
           }
         ]
       );
+      nx.packages.extra = [ pkgs.homepage-dashboard ];
     };
 
     when = {

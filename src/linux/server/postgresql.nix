@@ -36,6 +36,10 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.packages.extra = [ pkgs.postgresql ];
+    };
+
     linux.home = config: {
       home.shellAliases.psql = "sudo -u postgres psql";
     };

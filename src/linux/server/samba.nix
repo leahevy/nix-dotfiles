@@ -473,6 +473,7 @@ args@{
           string = "terminate: Got SIGTERM: going down";
         }
       ];
+      nx.packages.extra = [ pkgs.samba ];
     };
 
   };

@@ -255,6 +255,7 @@ in
               pkceEnabled = true;
             };
           })
+          { nx.packages.extra = [ pkgs.oauth2-proxy ]; }
         ]
       );
 

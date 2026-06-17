@@ -511,6 +511,8 @@ args@{
           environment.persistence."${self.persist}" = {
             directories = map (u: "${homeBase}/${u.username}") users;
           };
+
+          nx.packages.extra = [ pkgs.openldap ];
         };
 
       ifEnabled.linux.server.healthchecks = {

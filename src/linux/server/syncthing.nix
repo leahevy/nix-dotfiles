@@ -173,6 +173,10 @@ in
   };
 
   module = {
+    enabled = config: {
+      nx.packages.extra = [ pkgs.syncthing ];
+    };
+
     ifEnabled.linux.server.healthchecks = {
       enabled =
         config:

@@ -102,6 +102,10 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.packages.extra = [ pkgs.searxng ];
+    };
+
     linux.system =
       {
         config,

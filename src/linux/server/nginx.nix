@@ -49,6 +49,10 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.packages.extra = [ pkgs.nginx ];
+    };
+
     ifEnabled.linux.server.healthchecks.enabled = config: {
       nx.linux.server.healthchecks.requireServicesUp = [ "nginx.service" ];
     };

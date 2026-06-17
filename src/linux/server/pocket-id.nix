@@ -115,6 +115,7 @@ in
         nx.linux.server.auth.logoutUrl = lib.mkIf (
           domain != null && postLogoutRedirectUrl != null
         ) postLogoutRedirectUrl;
+        nx.packages.extra = [ pkgs.pocket-id ];
       };
 
     when = {

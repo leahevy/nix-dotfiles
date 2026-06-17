@@ -462,6 +462,7 @@ args@{
           string = "Redis does not require authentication";
         }
       ];
+      nx.packages.extra = [ pkgs.paperless-ngx ];
     };
 
   };

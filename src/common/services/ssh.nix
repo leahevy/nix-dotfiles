@@ -69,6 +69,10 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.packages.extra = [ pkgs.openssh ];
+    };
+
     home =
       {
         config,

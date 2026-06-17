@@ -15,6 +15,10 @@ args@{
   input = "common";
 
   module = {
+    enabled = config: {
+      nx.packages.extra = [ pkgs.openssh ];
+    };
+
     home = config: {
       services = {
         ssh-agent.enable = true;
