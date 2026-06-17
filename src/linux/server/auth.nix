@@ -213,7 +213,7 @@ in
               ];
               allowedUserGroup = null;
               launchUrl = null;
-              pkceEnabled = false;
+              pkceEnabled = true;
             };
           })
         ]
@@ -368,6 +368,13 @@ in
               httpOnly = true;
             };
             keyFile = "/run/oauth2-proxy/env";
+            extraConfig = {
+              code-challenge-method = "S256";
+              trusted-proxy-ip = [
+                "127.0.0.1"
+                "::1"
+              ];
+            };
           };
 
           services.oauth2-proxy.nginx = {
