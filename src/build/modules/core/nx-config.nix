@@ -46,6 +46,10 @@ args@{
         ];
         description = "Deployment mode for this machine";
       };
+      currentRelease = lib.mkOption {
+        type = lib.types.str;
+        description = "Current NixOS release channel version";
+      };
       enabledCommands = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
@@ -84,6 +88,7 @@ args@{
   module = {
     enabled = config: {
       nx.global = self.variables.nx.config // {
+        currentRelease = self.variables."current-release";
         deploymentMode = helpers.resolveFromHostOrUser config [ "deploymentMode" ] "develop";
         enabledCommands = builtins.attrNames config.nx.commandline;
         vmsDir = helpers.resolveFromHost config [ "settings" "system" "vmsDataPath" ] null;

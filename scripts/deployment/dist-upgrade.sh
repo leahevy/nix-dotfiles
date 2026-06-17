@@ -37,6 +37,9 @@ check_git_worktrees_clean
 echo -e "Updating version references in ${WHITE}nxcore/flake.nix${RESET}..."
 sed -i "s/[0-9][0-9]\.[0-9][0-9]/$NIXOS_VERSION/g" "$NXCORE_DIR/flake.nix"
 
+echo -e "Updating current-release in ${WHITE}nxcore/variables.nix${RESET}..."
+sed -i "s/current-release = \"[0-9][0-9]\.[0-9][0-9]\"/current-release = \"$NIXOS_VERSION\"/g" "$NXCORE_DIR/variables.nix"
+
 echo -e "Updating state-version in ${WHITE}nxcore/variables.nix${RESET}..."
 sed -i "s/state-version = \"[0-9][0-9]\.[0-9][0-9]\"/state-version = \"$NIXOS_VERSION\"/g" "$NXCORE_DIR/variables.nix"
 
@@ -51,6 +54,9 @@ if [[ -d "$CONFIG_DIR/.git" ]]; then
 	(cd "$CONFIG_DIR" && sed -i "s/[0-9][0-9]\.[0-9][0-9]/$NIXOS_VERSION/g" flake.nix)
 
 	if [[ -f "$CONFIG_DIR/variables.nix" ]]; then
+		echo -e "Updating current-release in ${WHITE}nxconfig/variables.nix${RESET}..."
+		(cd "$CONFIG_DIR" && sed -i "s/current-release = \"[0-9][0-9]\.[0-9][0-9]\"/current-release = \"$NIXOS_VERSION\"/g" variables.nix)
+
 		echo -e "Updating state-version in ${WHITE}nxconfig/variables.nix${RESET}..."
 		(cd "$CONFIG_DIR" && sed -i "s/state-version = \"[0-9][0-9]\.[0-9][0-9]\"/state-version = \"$NIXOS_VERSION\"/g" variables.nix)
 	fi

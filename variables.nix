@@ -5,6 +5,7 @@
   latestLinuxOverride = null; # e.g. "linux_6_16";
   ltsLinuxOverride = null; # e.g. "linux_6_12";
 
+  current-release = "25.11";
   state-version = "25.11";
 
   experimental-features = [

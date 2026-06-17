@@ -166,6 +166,9 @@ get_nx_default() {
 	"vmsDir")
 		echo "$HOME/.cache/nx/vms"
 		;;
+	"currentRelease")
+		echo ""
+		;;
 	*)
 		echo ""
 		;;
@@ -1321,8 +1324,9 @@ load_nx_config() {
 	NX_DEPLOYMENT_MODE=$(get_config_value "deploymentMode" "$config_json")
 	ENABLED_COMMANDS_JSON=$(echo "${config_json:-{\}}" | jq -c '.enabledCommands // []' 2>/dev/null || echo "[]")
 	NX_VMS_DIR="$(expand_home_path "$(get_config_value "vmsDir" "$config_json")")"
+	NX_CURRENT_RELEASE=$(get_config_value "currentRelease" "$config_json")
 
-	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE ENABLED_COMMANDS_JSON NX_VMS_DIR
+	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE ENABLED_COMMANDS_JSON NX_VMS_DIR NX_CURRENT_RELEASE
 }
 
 check_brew_activity() {
