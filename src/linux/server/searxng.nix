@@ -474,6 +474,18 @@ args@{
         lib.mkIf (config.nx.linux.server.auth.enableOAuthProxy && exposedService != false) {
           nx.linux.server.auth.proxyProtectedVhosts = [ config.nx.linux.server.searxng.subdomain ];
         };
+      linux.system =
+        { config, subdomain, ... }:
+        let
+          domain = self.host.remote.baseDomain;
+          exposedService = self.host.remote.exposedServices.searxng;
+          exposedSubdomain = if builtins.isString exposedService then exposedService else subdomain;
+        in
+        lib.mkIf (config.nx.linux.server.auth.enableOAuthProxy && exposedService != false && domain != null)
+          {
+            services.nginx.virtualHosts."${exposedSubdomain}.${domain}".locations."/autocompleter".extraConfig =
+              "auth_request off;";
+          };
     };
 
     ifEnabled.linux.server.healthchecks = {
