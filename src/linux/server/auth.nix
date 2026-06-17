@@ -128,7 +128,7 @@ in
   };
 
   module = {
-    overlays = [
+    hotfixes."25.11" = [
       (final: prev: {
         oauth2-proxy = final.buildGoModule rec {
           pname = "oauth2-proxy";

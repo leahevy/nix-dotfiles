@@ -99,7 +99,7 @@ let
       nixpkgs-nix ? inputs.nixpkgs-nix,
     }:
     let
-      moduleOverlays = funcs.collectModuleOverlays system;
+      moduleOverlays = funcs.collectModuleOverlays system variables;
       packageFuncsModule = import (additionalInputs.lib + "/packageFuncs.nix") {
         inherit defs additionalInputs helpers;
       };
@@ -518,7 +518,7 @@ in
       };
       profileOverlays = funcs.extractOverlaysFromModule {
         module = preEval.config.host.module or { };
-        inherit system;
+        inherit system variables;
       };
 
       mainUserProfileName = preEval.config.host.mainUser;
@@ -872,7 +872,7 @@ in
       };
       profileOverlays = funcs.extractOverlaysFromModule {
         module = preEval.config.user.module or { };
-        inherit system;
+        inherit system variables;
       };
 
       preBuildModules = funcs.computeStandaloneBuildModules {

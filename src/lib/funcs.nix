@@ -823,7 +823,13 @@ rec {
             else
               l1FnNamesNoInit;
           allowedKeys =
-            fnNames ++ lib.optional (mode == "base") "overlays" ++ keysOfLayersUpTo upToIdx ++ extraAllowedKeys;
+            fnNames
+            ++ lib.optionals (mode == "base") [
+              "overlays"
+              "hotfixes"
+            ]
+            ++ keysOfLayersUpTo upToIdx
+            ++ extraAllowedKeys;
           containerName = if topErr then "on" else "${prefix}.${level}";
           fnPathPrefix = if level == "" then "" else "${level}.";
           invalidErrors = checkInvalid containerName allowedKeys attrset;
@@ -1063,6 +1069,54 @@ rec {
             ) condModule
           );
 
+      isValidRelease =
+        r:
+        let
+          m = builtins.match "([0-9]+)\\.(05|11)" r;
+        in
+        m != null && lib.toInt (builtins.elemAt m 0) >= 25;
+
+      collectHotfixErrors =
+        path: attrset:
+        let
+          ownErrors =
+            if !(attrset ? hotfixes) then
+              [ ]
+            else if !builtins.isAttrs attrset.hotfixes then
+              [ "${prefix}.${path}hotfixes must be an attrset" ]
+            else
+              let
+                invalidKeys = builtins.filter (k: !isValidRelease k) (builtins.attrNames attrset.hotfixes);
+                keyErrors =
+                  if invalidKeys != [ ] then
+                    [
+                      "${prefix}.${path}hotfixes has invalid release keys: ${builtins.concatStringsSep ", " invalidKeys}. Keys must be XX.YY where XX >= 25 and YY is 05 or 11"
+                    ]
+                  else
+                    [ ];
+                valueErrors = lib.flatten (
+                  lib.mapAttrsToList (
+                    key: value:
+                    if !builtins.isList value then
+                      [ "${prefix}.${path}hotfixes.\"${key}\" must be a list of overlay functions" ]
+                    else
+                      [ ]
+                  ) attrset.hotfixes
+                );
+              in
+              keyErrors ++ valueErrors;
+          nestedErrors = lib.concatMap (
+            key:
+            if attrset ? ${key} && builtins.isAttrs attrset.${key} then
+              collectHotfixErrors "${path}${key}." attrset.${key}
+            else
+              [ ]
+          ) (keysOfLayersUpTo topLayerIdx);
+        in
+        ownErrors ++ nestedErrors;
+
+      hotfixErrors = collectHotfixErrors "" module;
+
       topErrors = mkValidateLevel {
         mode = "base";
         upToIdx = topLayerIdx;
@@ -1099,7 +1153,7 @@ rec {
         else
           [ ];
 
-      allErrors = topErrors ++ conditionalErrors ++ whenErrors;
+      allErrors = topErrors ++ conditionalErrors ++ whenErrors ++ hotfixErrors;
     in
     if allErrors != [ ] then
       throw "Module ${modulePath} has invalid 'on' configuration:\n  ${builtins.concatStringsSep "\n  " allErrors}"
@@ -2153,7 +2207,11 @@ rec {
       [ ];
 
   extractOverlaysFromModule =
-    { module, system }:
+    {
+      module,
+      system,
+      variables,
+    }:
     let
       isLinux = helpers.isLinuxArch system;
       isDarwin = helpers.isDarwinArch system;
@@ -2180,14 +2238,21 @@ rec {
           archModule.darwin or { }
         else
           { };
+      currentRelease = variables.currentRelease or null;
+      collectHotfixOverlays =
+        attrset: if currentRelease == null then [ ] else (attrset.hotfixes or { }).${currentRelease} or [ ];
     in
     (module.overlays or [ ])
+    ++ collectHotfixOverlays module
     ++ (platModule.overlays or [ ])
+    ++ collectHotfixOverlays platModule
     ++ (archModule.overlays or [ ])
-    ++ (archPlatModule.overlays or [ ]);
+    ++ collectHotfixOverlays archModule
+    ++ (archPlatModule.overlays or [ ])
+    ++ collectHotfixOverlays archPlatModule;
 
   collectModuleOverlays =
-    system:
+    system: variables:
     let
       minimalArgs = {
         inherit lib;
@@ -2214,7 +2279,7 @@ rec {
             if moduleResult.success then
               extractOverlaysFromModule {
                 module = moduleResult.value.module or { };
-                inherit system;
+                inherit system variables;
               }
             else
               [ ]
