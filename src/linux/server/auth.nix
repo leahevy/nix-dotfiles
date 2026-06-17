@@ -148,7 +148,6 @@ in
                 href = config.nx.linux.server.auth.baseUrl;
                 icon = "bitwarden";
                 group = "links";
-                description = "Manage passkeys and account settings";
               }
             ]
           );
