@@ -1370,10 +1370,15 @@ in
               "ignore noinput"
               "ignore nou2f"
             ]
-            ++ lib.optionals (config.nx.linux.location.geoclue2.enable) [
+            ++ lib.optionals (config.nx.linux.location.geoclue2.enable || config.hardware.bluetooth.enable) [
               "ignore dbus-system none"
               "dbus-system filter"
+            ]
+            ++ lib.optionals config.nx.linux.location.geoclue2.enable [
               "dbus-system.talk org.freedesktop.GeoClue2"
+            ]
+            ++ lib.optionals config.hardware.bluetooth.enable [
+              "dbus-system.talk org.bluez"
             ]
             ++ firejailExtraRules
           );
