@@ -2,6 +2,7 @@
 
 ## Prerequisites
 
+- [ ] Run `nx check --next-release` to check which packages have not yet been built on the target channel. Repeat periodically and wait for a good build ratio before proceeding.
 - [ ] Ensure clean git state (all changes committed or stashed)
 
 ## Upgrade Steps

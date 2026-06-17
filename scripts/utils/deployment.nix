@@ -220,6 +220,14 @@
         group = "evaluation";
       };
 
+      check = {
+        description = "Check Hydra build status for installed packages";
+        group = "evaluation";
+        options = {
+          next-release = option "Check against the next NixOS release instead of current";
+        };
+      };
+
       config = {
         description = "Open a shell in the config directory";
         group = "folder";

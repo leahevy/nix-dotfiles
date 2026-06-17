@@ -1112,6 +1112,18 @@ rec {
       };
   };
 
+  nextNixOSRelease =
+    release:
+    let
+      parts = lib.splitString "." release;
+      year = lib.toInt (builtins.elemAt parts 0);
+      month = lib.toInt (builtins.elemAt parts 1);
+      nextYear = if month == 11 then year + 1 else year;
+      nextMonth = if month == 11 then 5 else 11;
+      pad = n: if n < 10 then "0${toString n}" else toString n;
+    in
+    "${toString nextYear}.${pad nextMonth}";
+
   isModulesOnlyInput = inputName: builtins.elem inputName defs.modulesOnlyInputs;
 
   allModuleInputsToScan =

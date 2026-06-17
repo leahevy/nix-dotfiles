@@ -93,6 +93,9 @@ args@{
     # disabled = config: { };
 
     # Enabled, home context (prefer { config, opt, ... } for direct option access; config: also allowed)
+    # Packages added to home.packages are auto-discovered for hydra checks.
+    # For packages installed via services (not home.packages), declare them in enabled:
+    # enabled = config: { nx.packages.extra = [ pkgs.mypkg ]; };
     home =
       { config, ... }:
       {
@@ -103,6 +106,9 @@ args@{
       };
 
     # Enabled, system context
+    # Packages added to environment.systemPackages are auto-discovered for hydra checks.
+    # For packages installed via services (not environment.systemPackages), declare them in enabled:
+    # enabled = config: { nx.packages.extra = [ pkgs.mypkg ]; };
     # system = { config, ... }: {
     #   environment.persistence."${self.persist}" = {
     #     directories = [ ];

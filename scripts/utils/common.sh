@@ -1505,6 +1505,8 @@ diff_store_paths() {
 		"org.nix-community.home.sops-nix.plist"
 		"sops-nix-user"
 		"source"
+		"etc-nx-system-packages.json"
+		"hm_.confignxhomepackages.json"
 		"hm_fontconfigconf.d10hmfonts.conf"
 		"hm_.localsharenvimtemplatesnixnixmoduleraw.md"
 		"hm_.localsharenvimtemplatesnixnixmodule.tpl"

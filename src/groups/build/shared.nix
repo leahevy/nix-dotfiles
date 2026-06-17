@@ -18,6 +18,7 @@ args@{
   submodules = {
     build = {
       core = [
+        "packages"
         "programs"
         "utils"
         "tokens"
