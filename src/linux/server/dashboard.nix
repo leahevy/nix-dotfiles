@@ -460,6 +460,12 @@ args@{
             group = "links";
           }
           {
+            name = "DuckDuckGo";
+            href = "https://duckduckgo.com";
+            icon = "duckduckgo";
+            group = "links";
+          }
+          {
             name = "YouTube";
             href = "https://www.youtube.com";
             icon = "youtube";
