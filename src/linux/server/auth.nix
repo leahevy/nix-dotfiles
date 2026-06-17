@@ -435,7 +435,7 @@ in
             useACMEHost = domain;
             forceSSL = true;
             locations."/" = {
-              return = "302 /oauth2/sign_in";
+              return = "302 ${config.nx.linux.server.auth.baseUrl}";
             };
           };
 
