@@ -86,6 +86,11 @@ in
           name: release:
           let
             channel = if self.isDarwin then "nixpkgs-${release}-darwin" else "nixos-${release}";
+            pnameFilter =
+              if self.isDarwin then
+                ''to_entries[] | select(.value[0].success != true) | .key | rtrimstr(".\($arch)")''
+              else
+                ''to_entries[] | select(.value[0].success != true) | .key | sub("^[^.]+\\."; "") | rtrimstr(".\($arch)")'';
           in
           pkgs.writeShellApplication {
             inherit name;
@@ -170,7 +175,7 @@ in
                   else
                     CURRENT_LINE="''${CURRENT_LINE} ''${pkg_name}"
                   fi
-                done < <(echo "''${OUTPUT}" | jq -r --arg arch "''${ARCH}" 'to_entries[] | select(.value[0].success != true) | .key | sub("^[^.]+\\."; "") | rtrimstr(".\($arch)")' | sort -f)
+                done < <(echo "''${OUTPUT}" | jq -r --arg arch "''${ARCH}" '${pnameFilter}' | sort -f)
                 [[ -n "''${CURRENT_LINE}" ]] && echo "  ''${WHITE}''${CURRENT_LINE}''${RESET}"
                 echo
                 echo "''${WHITE}Run ''${GRAY}\"hydra-check --channel ''${CHANNEL} <package>\"''${WHITE} to find out more details about a failed package!''${RESET}"
