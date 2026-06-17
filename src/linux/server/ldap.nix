@@ -284,6 +284,7 @@ args@{
           nx.linux.server.ldap.readerPasswordFile = config.sops.secrets."openldap-reader-pass".path;
           nx.linux.server.ldap.groupSearchFilter = "(objectClass=groupOfNames)";
           nx.linux.server.ldap.groupMemberAttribute = "member";
+          nx.packages.extra = [ pkgs.openldap ];
         };
 
       linux.system =
@@ -511,8 +512,6 @@ args@{
           environment.persistence."${self.persist}" = {
             directories = map (u: "${homeBase}/${u.username}") users;
           };
-
-          nx.packages.extra = [ pkgs.openldap ];
         };
 
       ifEnabled.linux.server.healthchecks = {
