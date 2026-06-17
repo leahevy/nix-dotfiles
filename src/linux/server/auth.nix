@@ -29,27 +29,6 @@ in
     linux.server.pocket-id = true;
   };
 
-  overlays = [
-    (final: prev: {
-      oauth2-proxy = final.buildGoModule rec {
-        pname = "oauth2-proxy";
-        version = "7.15.2";
-        src = final.fetchFromGitHub {
-          repo = "oauth2-proxy";
-          owner = "oauth2-proxy";
-          sha256 = "sha256-qhWU6i57WS8TWJ5ggzwmeoIv0osQjA9wdwqnvxMddrc=";
-          rev = "v${version}";
-        };
-        vendorHash = "sha256-Iu1dm0f3eYJpr9eR8RL7wAV8UGwpOway0aP8r5wci0M=";
-        ldflags = [ "-X github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version.VERSION=v${version}" ];
-        nativeInstallCheckInputs = [ final.versionCheckHook ];
-        versionCheckProgramArg = "--version";
-        doInstallCheck = true;
-        meta = prev.oauth2-proxy.meta;
-      };
-    })
-  ];
-
   options = {
     subdomain = lib.mkOption {
       type = lib.types.str;
@@ -149,6 +128,27 @@ in
   };
 
   module = {
+    overlays = [
+      (final: prev: {
+        oauth2-proxy = final.buildGoModule rec {
+          pname = "oauth2-proxy";
+          version = "7.15.2";
+          src = final.fetchFromGitHub {
+            repo = "oauth2-proxy";
+            owner = "oauth2-proxy";
+            sha256 = "sha256-qhWU6i57WS8TWJ5ggzwmeoIv0osQjA9wdwqnvxMddrc=";
+            rev = "v${version}";
+          };
+          vendorHash = "sha256-Iu1dm0f3eYJpr9eR8RL7wAV8UGwpOway0aP8r5wci0M=";
+          ldflags = [ "-X github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version.VERSION=v${version}" ];
+          nativeInstallCheckInputs = [ final.versionCheckHook ];
+          versionCheckProgramArg = "--version";
+          doInstallCheck = true;
+          meta = prev.oauth2-proxy.meta;
+        };
+      })
+    ];
+
     ifEnabled.linux.server.dashboard = {
       enabled =
         config:
