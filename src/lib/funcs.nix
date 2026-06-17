@@ -2238,9 +2238,12 @@ rec {
           archModule.darwin or { }
         else
           { };
-      currentRelease = variables.currentRelease or null;
-      collectHotfixOverlays =
-        attrset: if currentRelease == null then [ ] else (attrset.hotfixes or { }).${currentRelease} or [ ];
+      currentRelease =
+        let
+          v = variables."current-release" or null;
+        in
+        if v == null then throw "variables.\"current-release\" must be set!" else v;
+      collectHotfixOverlays = attrset: (attrset.hotfixes or { }).${currentRelease} or [ ];
     in
     (module.overlays or [ ])
     ++ collectHotfixOverlays module
