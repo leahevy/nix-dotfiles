@@ -18,7 +18,10 @@ args@{
     enableXone = true;
   };
 
-  unfree = [ "xow_dongle-firmware" ];
+  unfree = [
+    "xow_dongle-firmware"
+    "xone-dongle-firmware"
+  ];
 
   module = {
     linux.system = config: {

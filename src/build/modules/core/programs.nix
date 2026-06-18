@@ -46,7 +46,7 @@ args@{
           shfmt
           shellcheck
           nix-output-monitor
-          nixfmt-rfc-style
+          nixfmt
           nixfmt-tree
           nix-search
           nix-prefetch-github

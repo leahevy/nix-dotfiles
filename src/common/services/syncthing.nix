@@ -998,7 +998,10 @@ args@{
           overrideDevices = true;
           overrideFolders = true;
           guiAddress = "127.0.0.1:${builtins.toString self.settings.guiPort}";
-          passwordFile = config.sops.secrets."${self.host.hostname}-syncthing-password".path;
+          guiCredentials = {
+            username = self.user.username;
+            passwordFile = config.sops.secrets."${self.host.hostname}-syncthing-password".path;
+          };
           extraOptions = [ ];
           tray.enable = self.settings.trayEnabled;
           key = "${config.sops.secrets."${self.host.hostname}-syncthing-key".path}";

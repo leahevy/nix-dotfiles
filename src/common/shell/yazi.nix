@@ -70,6 +70,8 @@ args@{
           enableFishIntegration = true;
           enableZshIntegration = true;
 
+          shellWrapperName = "y";
+
           settings = lib.recursiveUpdate self.settings.baseSettings self.settings.additionalSettings;
         };
 

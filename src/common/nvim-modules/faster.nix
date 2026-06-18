@@ -14,6 +14,8 @@ args@{
   group = "nvim-modules";
   input = "common";
 
+  unfree = [ "faster.nvim" ];
+
   settings = {
     bigfile = {
       filesize = 3.5;

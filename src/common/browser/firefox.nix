@@ -1183,6 +1183,8 @@ in
       };
 
     linux.home = config: {
+      programs.firefox.configPath = ".mozilla/firefox";
+
       home.sessionVariables.MOZ_ENABLE_WAYLAND = "1";
 
       home.persistence."${self.persist}" = {

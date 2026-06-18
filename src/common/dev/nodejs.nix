@@ -14,20 +14,17 @@ args@{
   group = "dev";
   input = "common";
 
-  settings = {
-    basePackages = [
-      "npm"
-    ];
-    additionalPackages = [ ];
+  options = {
+    additionalPackages = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = [ ];
+      description = "Additional Node.js packages to install alongside nodejs and yarn.";
+    };
   };
 
   module = {
     home =
-      config:
-      let
-        minPackages = [ "npm" ];
-        combinedPackages = self.settings.basePackages ++ self.settings.additionalPackages;
-      in
+      { config, additionalPackages, ... }:
       {
         home.packages =
           with pkgs;
@@ -35,9 +32,7 @@ args@{
             (lib.lowPrio nodejs)
             yarn
           ]
-          ++ lib.optionals (combinedPackages != minPackages) (
-            map (pkg: pkgs.nodePackages.${pkg}) combinedPackages
-          );
+          ++ additionalPackages;
 
         home.persistence."${self.persist}" = {
           directories = [

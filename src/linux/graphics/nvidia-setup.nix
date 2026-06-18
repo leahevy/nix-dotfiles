@@ -18,6 +18,7 @@ args@{
     "nvidia-x11"
     "nvidia-settings"
     "nvidia-persistenced"
+    "nvidia-kernel-modules"
   ];
 
   settings = {
@@ -104,6 +105,9 @@ args@{
 
     linux.system = config: {
       hardware.nvidia = {
+        package = lib.mkIf (
+          self.host.hardware.gpuArchitecture == "pascal"
+        ) config.boot.kernelPackages.nvidiaPackages.legacy_580;
         powerManagement = lib.mkIf self.settings.withPowerManagement {
           enable = true;
           finegrained = false;

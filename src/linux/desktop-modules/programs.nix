@@ -313,7 +313,6 @@ let
       name = "kwallet";
       additionalPackages = [
         kde.kwalletmanager
-        pkgs.kwalletcli
       ];
       dirsToPersist = [ ".local/share/kwalletd" ];
       filesToPersist = [ ".config/kwalletrc" ];

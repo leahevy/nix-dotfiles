@@ -390,9 +390,7 @@ args@{
           programs.codex = {
             enable = true;
             package = codex-package;
-            custom-instructions = lib.mkIf (
-              customInstructions != null && customInstructions != ""
-            ) customInstructions;
+            context = lib.mkIf (customInstructions != null && customInstructions != "") customInstructions;
           };
 
           home.activation.materializeCodexSkills = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''

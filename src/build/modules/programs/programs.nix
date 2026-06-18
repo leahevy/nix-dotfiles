@@ -23,7 +23,7 @@ args@{
           htop
           btop
           vim
-          nixfmt-rfc-style
+          nixfmt
           nixfmt-tree
           nix-prefetch-github
           git-crypt

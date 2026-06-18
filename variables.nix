@@ -27,7 +27,6 @@
   allowedUnfreePackages = [ ];
 
   releaseTransitionInsecurePackages = [
-    "docker-28.5.2"
     "electron-39.8.10"
   ];
 
@@ -42,7 +41,7 @@
     "codex"
     "claude-code"
   ];
-  unstableLinuxPackages = [ "protonmail-desktop" ];
+  unstableLinuxPackages = [ ];
   unstableDarwinPackages = [ ];
 
   nx.config = {

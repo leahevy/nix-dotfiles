@@ -2,6 +2,8 @@ args@{
   lib,
   pkgs,
   pkgs-unstable,
+  allOverlays,
+  unfreePredicate,
   inputs,
   host,
   user,
@@ -200,6 +202,11 @@ in
     home-manager = {
       enable = true;
     };
+  };
+
+  nixpkgs = {
+    config.allowUnfreePredicate = unfreePredicate;
+    overlays = allOverlays;
   };
 
   nix = {

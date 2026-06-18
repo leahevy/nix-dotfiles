@@ -14,6 +14,11 @@ args@{
   group = "nvim-modules";
   input = "common";
 
+  unfree = [
+    "cmp-spell"
+    "cmp-emoji"
+  ];
+
   settings = {
     baseSourcesToEnable = [
       "nvim_lsp"

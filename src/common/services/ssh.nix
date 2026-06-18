@@ -411,7 +411,17 @@ args@{
 
             block1 =
               let
-                baseBlock = lib.filterAttrs (k: _: builtins.elem k normalSupportedKeys) validatedBlock;
+                settingsRenames = {
+                  setEnv = "SetEnv";
+                  localForward = "LocalForward";
+                  remoteForward = "RemoteForward";
+                  dynamicForward = "DynamicForward";
+                };
+
+                baseBlock = lib.mapAttrs' (k: v: {
+                  name = settingsRenames.${k} or k;
+                  value = v;
+                }) (lib.filterAttrs (k: _: builtins.elem k normalSupportedKeys) validatedBlock);
 
                 computedBlock = {
                   inherit
@@ -439,12 +449,9 @@ args@{
                     {
                       identityFile = resolvedIdentityFile;
                     };
-                extraOptionsBlock = lib.optionalAttrs (extraOptionsGenerated != { }) {
-                  extraOptions = extraOptionsGenerated;
-                };
               in
               lib.recursiveUpdate baseBlock (
-                lib.recursiveUpdate computedBlock (lib.recursiveUpdate identityBlock extraOptionsBlock)
+                lib.recursiveUpdate computedBlock (lib.recursiveUpdate identityBlock extraOptionsGenerated)
               );
           in
           {
@@ -893,7 +900,7 @@ args@{
         programs.ssh = {
           enable = true;
           enableDefaultConfig = false;
-          matchBlocks = processedHosts;
+          settings = processedHosts;
           extraOptionOverrides = {
             Include = "~/.ssh/${configOverridesName}";
           };

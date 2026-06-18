@@ -217,5 +217,26 @@ in
         message = "boot.initrd.systemd.enable must be true when LUKS is present on a remotely managed host (required for initrd SSH unlock)!";
       }
     ]
-  );
+  )
+  ++ [
+    {
+      assertion = host.hardware.gpuArchitecture != "pascal" || host.hardware.gpu == "nvidia";
+      message = "host.hardware.gpuArchitecture = \"pascal\" requires host.hardware.gpu = \"nvidia\"!";
+    }
+    {
+      assertion =
+        host.hardware.gpuArchitecture != "pascal"
+        || (config.nx.linux.graphics."nvidia-setup".enable or false);
+      message = "host.hardware.gpuArchitecture = \"pascal\" requires linux.graphics.nvidia-setup to be enabled!";
+    }
+    {
+      assertion =
+        !(
+          !config.nx.profile.isVirtual
+          && host.hardware.gpuArchitecture == "pascal"
+          && lib.versionAtLeast (variables."current-release" or "99.99") "28.05"
+        );
+      message = "Pascal GPU support (legacy_580 driver) ends August 2028. NixOS 28.05+ requires migrating to nouveau or replacing the GPU!";
+    }
+  ];
 }

@@ -44,6 +44,7 @@ args@{
 
           xdg.userDirs = {
             enable = true;
+            setSessionVariables = true;
           }
           // lib.mapAttrs (xdgName: dirName: "${config.home.homeDirectory}/${dirName}") self.settings;
 
@@ -74,6 +75,7 @@ args@{
 
           xdg.userDirs = {
             enable = true;
+            setSessionVariables = true;
           }
           // lib.mapAttrs (xdgName: dirName: "${config.home.homeDirectory}/${dirName}") self.settings;
         };

@@ -31,17 +31,17 @@ args@{
       curl
     ];
     desktopLibraries = with args.pkgs; [
-      xorg.libX11
-      xorg.libXrandr
-      xorg.libXcomposite
-      xorg.libXdamage
-      xorg.libXext
-      xorg.libXfixes
-      xorg.libXrender
-      xorg.libXtst
-      xorg.libXau
-      xorg.libXdmcp
-      xorg.libxcb
+      libx11
+      libxrandr
+      libxcomposite
+      libxdamage
+      libxext
+      libxfixes
+      libxrender
+      libxtst
+      libxau
+      libxdmcp
+      libxcb
       libGL
       libdrm
       mesa

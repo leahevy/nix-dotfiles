@@ -895,6 +895,8 @@ in
         })
         pkgs
         pkgs-unstable
+        allOverlays
+        unfreePredicate
         ;
 
       inherit (evalAllProfiles { inherit pkgs pkgs-unstable; })
@@ -958,6 +960,8 @@ in
             lib
             pkgs
             pkgs-unstable
+            allOverlays
+            unfreePredicate
             inputs
             funcs
             defs

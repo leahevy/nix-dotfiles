@@ -14,6 +14,10 @@ args@{
   group = "notes";
   input = "common";
 
+  unfree = [
+    "appflowy"
+  ];
+
   module = {
     linux.home = config: {
       home.packages = with pkgs; [

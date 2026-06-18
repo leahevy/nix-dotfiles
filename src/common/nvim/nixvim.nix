@@ -237,6 +237,7 @@ args@{
         programs.nixvim = {
           enable = true;
           package = pkgs.neovim-unwrapped;
+          nixpkgs.pkgs = pkgs;
 
           performance = lib.mkIf self.settings.withPerformanceOptimisations {
             byteCompileLua = {

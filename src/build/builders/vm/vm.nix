@@ -35,6 +35,7 @@ let
           ethernetDeviceName = null;
           hardware = {
             board = null;
+            gpuArchitecture = null;
           };
           kernel = {
             bootModules = [ ];
