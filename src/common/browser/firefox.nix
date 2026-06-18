@@ -545,29 +545,52 @@ let
     {
       browserUserContent,
       monospaceFont,
-      userContentCSSExcludedUrls,
+      userContentCSSExcludedDomains,
     }:
     let
       cssData = browserUserContent.data + (firefoxSpecificCSS monospaceFont);
-      excludedUrlPattern =
-        if userContentCSSExcludedUrls == [ ] then
+      cssStringEscapeRegex = regex: lib.replaceStrings [ "\\" "\"" ] [ "\\\\" "\\\"" ] regex;
+
+      stripIPv6Brackets =
+        addr:
+        if lib.hasPrefix "[" addr && lib.hasSuffix "]" addr then
+          lib.removeSuffix "]" (lib.removePrefix "[" addr)
+        else
+          addr;
+
+      mkExcludedDomainRegex =
+        domain:
+        let
+          normalized = lib.toLower (lib.removeSuffix "/" domain);
+          unbracketed = stripIPv6Brackets normalized;
+
+          isLocalhost = normalized == "localhost";
+          isIPv4 = helpers.isValidIPv4 normalized;
+          isIPv6 = helpers.isValidIPv6 unbracketed;
+
+          hostPattern =
+            if isIPv6 then
+              "\\[${lib.escapeRegex unbracketed}\\]"
+            else if isLocalhost || isIPv4 then
+              lib.escapeRegex normalized
+            else
+              "(?:[^./?#:]+\\.)*${lib.escapeRegex normalized}";
+        in
+        "https?://${hostPattern}(?::[0-9]+)?(?:[/?#].*|$)";
+
+      excludedDomainPattern =
+        if userContentCSSExcludedDomains == [ ] then
           null
         else
-          lib.concatStringsSep "|" (
-            map (
-              url:
-              let
-                normalized = lib.removeSuffix "/" url;
-              in
-              "${lib.escapeRegex normalized}(?:[/?#].*|$)"
-            ) userContentCSSExcludedUrls
+          cssStringEscapeRegex (
+            lib.concatStringsSep "|" (map mkExcludedDomainRegex userContentCSSExcludedDomains)
           );
     in
-    if excludedUrlPattern == null then
+    if excludedDomainPattern == null then
       cssData
     else
       ''
-        @-moz-document regexp("^(?!(?:${excludedUrlPattern})).*$") {
+        @-moz-document regexp("^(?!(?:${excludedDomainPattern})).*$") {
         ${cssData}
         }
       '';
@@ -631,10 +654,10 @@ in
       type = lib.types.nullOr lib.types.str;
       default = null;
     };
-    userContentCSSExcludedUrls = lib.mkOption {
+    userContentCSSExcludedDomains = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      description = "List of URL prefixes where Firefox userContent CSS is disabled.";
+      description = "List of domains (e.g. 'example.com') where Firefox userContent CSS is disabled.";
     };
     extensions = lib.mkOption {
       type = lib.types.attrsOf extensionType;
@@ -661,7 +684,7 @@ in
         enableFingerprintingProtection,
         monospaceFont,
         bottomToolbars,
-        userContentCSSExcludedUrls,
+        userContentCSSExcludedDomains,
         ...
       }:
       let
@@ -1011,7 +1034,7 @@ in
           );
         userContentCSS = mkUserContentCSS {
           browserUserContent = config.nx.common.browser.browser.final.userContentCSS;
-          inherit monospaceFont userContentCSSExcludedUrls;
+          inherit monospaceFont userContentCSSExcludedDomains;
         };
       in
       {
@@ -1029,7 +1052,31 @@ in
               in
               (hasSha && hasId && hasFile) || (!hasSha && !hasId && !hasFile);
             message = "nx.common.browser.firefox: extension '${name}' requires sha256, fileId, and filename to all be set together or not at all!";
-          }) allExtensions;
+          }) allExtensions
+          ++ lib.concatMap (
+            d:
+            let
+              stripped = lib.removeSuffix "/" d;
+              unbracketed =
+                if lib.hasPrefix "[" stripped && lib.hasSuffix "]" stripped then
+                  lib.removeSuffix "]" (lib.removePrefix "[" stripped)
+                else
+                  stripped;
+              isValidHostname =
+                builtins.match "[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?" stripped != null
+                && builtins.match ".*[a-zA-Z].*" stripped != null;
+            in
+            [
+              {
+                assertion =
+                  stripped == "localhost"
+                  || helpers.isValidIPv4 stripped
+                  || helpers.isValidIPv6 unbracketed
+                  || isValidHostname;
+                message = "nx.common.browser.firefox.userContentCSSExcludedDomains: '${d}' is not a valid domain or IP address (no schemes, no regex chars, use plain hostnames or IPs)!";
+              }
+            ]
+          ) userContentCSSExcludedDomains;
 
         programs.firefox.enable = true;
 
@@ -1402,7 +1449,7 @@ in
         extensions,
         defaultDownloadsName,
         monospaceFont,
-        userContentCSSExcludedUrls,
+        userContentCSSExcludedDomains,
         ...
       }:
       let
@@ -1430,7 +1477,7 @@ in
                 cp "${
                   pkgs.writeText "browser-user-content.css" (mkUserContentCSS {
                     browserUserContent = userCSS;
-                    inherit monospaceFont userContentCSSExcludedUrls;
+                    inherit monospaceFont userContentCSSExcludedDomains;
                   })
                 }" "$css_dir/userContent.css"
                fi
