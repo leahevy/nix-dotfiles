@@ -456,7 +456,7 @@ args@{
           {
             name = "Startpage";
             href = "https://www.startpage.com";
-            icon = "startpage";
+            icon = "searxng";
             group = "links";
           }
           {
