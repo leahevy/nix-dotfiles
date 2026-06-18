@@ -110,15 +110,15 @@
     # -----------------------------------------------------------------------------
 
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/nixos-25.11";
+      url = "github:NixOS/nixpkgs/nixos-26.05";
     };
 
     nixpkgs-nix = {
-      url = "github:NixOS/nixpkgs/nixos-25.11";
+      url = "github:NixOS/nixpkgs/nixos-26.05";
     };
 
     nixpkgs-darwin = {
-      url = "github:NixOS/nixpkgs/nixpkgs-25.11-darwin";
+      url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     };
 
     nixpkgs-unstable = {
@@ -130,28 +130,26 @@
     # -----------------------------------------------------------------------------
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     stylix = {
-      url = "github:nix-community/stylix/release-25.11";
+      url = "github:nix-community/stylix/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-parts.follows = "flake-parts";
       inputs.systems.follows = "nix-systems";
     };
 
     nixvim = {
-      url = "github:nix-community/nixvim/nixos-25.11";
+      url = "github:nix-community/nixvim/nixos-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-parts.follows = "flake-parts";
       inputs.systems.follows = "nix-systems";
-      inputs.nuschtosSearch.inputs.nixpkgs.follows = "nixpkgs";
-      inputs.nuschtosSearch.inputs.flake-utils.follows = "flake-utils";
     };
 
     nix-darwin = {
-      url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
+      url = "github:nix-darwin/nix-darwin/nix-darwin-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

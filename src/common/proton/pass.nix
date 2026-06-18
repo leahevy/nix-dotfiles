@@ -60,7 +60,7 @@ args@{
         ++ (with pkgs; [
           proton-authenticator
         ])
-        ++ (with pkgs-unstable; [
+        ++ (with pkgs; [
           proton-pass-cli
         ]);
 
