@@ -65,9 +65,9 @@ fi
 echo
 echo -e "Migrating packages from unstable to stable in ${WHITE}nxcore/src${RESET}..."
 
-find "$NXCORE_DIR/src" -name "*.nix" -type f -exec sed -i 's/with pkgs-unstable/with pkgs/g' {} \;
-find "$NXCORE_DIR/src" -name "*.nix" -type f -exec sed -i 's/pkgs-unstable\./pkgs\./g' {} \;
-find "$NXCORE_DIR/src" -name "*.nix" -type f -exec sed -i 's/self\.pkgs-unstable/self\.pkgs/g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/with pkgs-unstable/with pkgs/g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/pkgs-unstable\./pkgs\./g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/self\.pkgs-unstable/self\.pkgs/g' {} \;
 
 if [[ -d "$CONFIG_DIR/.git" ]]; then
 	echo -e "Migrating packages from unstable to stable in ${WHITE}nxconfig/modules${RESET}..."
