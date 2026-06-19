@@ -14,6 +14,8 @@ args@{
   group = "nvim-modules";
   input = "common";
 
+  broken = true;
+
   settings = {
     autoEnable = true;
     showCursor = false;

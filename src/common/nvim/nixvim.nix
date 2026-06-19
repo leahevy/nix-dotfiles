@@ -67,7 +67,7 @@ args@{
         autoclose = true;
         twilight = true;
         neoscroll = true;
-        codewindow = true;
+        codewindow = false;
         notify = true;
         cursorline = true;
         trouble = true;
