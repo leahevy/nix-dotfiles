@@ -5,11 +5,16 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 simple_deployment_script_setup "configure-nix"
 
 CHECK_ONLY=false
+UPGRADE=false
 
 while [[ $# -gt 0 ]]; do
 	case "${1:-}" in
 	--check-only)
 		CHECK_ONLY=true
+		shift
+		;;
+	--upgrade)
+		UPGRADE=true
 		shift
 		;;
 	-*)
@@ -24,6 +29,20 @@ while [[ $# -gt 0 ]]; do
 done
 
 OS="$(uname -s)"
+
+if [[ "$UPGRADE" == "true" ]]; then
+	if [[ "$OS" != "Darwin" ]]; then
+		echo -e "${RED}--upgrade is only supported on Darwin${RESET}" >&2
+		exit 1
+	fi
+	if [[ ! -d /nix/var/nix/profiles/default ]]; then
+		echo -e "${RED}Nix profile not found: ${WHITE}/nix/var/nix/profiles/default${RESET}" >&2
+		exit 1
+	fi
+	echo -e "${CYAN}Upgrading Nix via ${WHITE}/nix/var/nix/profiles/default${RESET}"
+	sudo nix upgrade-nix --profile /nix/var/nix/profiles/default
+	exit
+fi
 
 NIX_DAEMON_FILE='/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
 ZSHRC='/etc/zshrc'

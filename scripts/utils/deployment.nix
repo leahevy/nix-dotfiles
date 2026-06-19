@@ -161,6 +161,7 @@
         group = "switch";
         options = {
           check-only = option "Run checks only without making changes";
+          upgrade = option "Upgrade Nix to the latest version (Darwin only)";
         };
       };
 
