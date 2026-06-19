@@ -94,7 +94,9 @@ args@{
 
             nvim_socket_for_dir() {
               local dir="$1"
-              local socket_dir="''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}}/nvim-sockets"
+              local socket_dir="${
+                if self.isLinux then ''"''${XDG_RUNTIME_DIR:-/tmp}/nvim-sockets"'' else ''"/tmp/nvim-sockets"''
+              }"
               echo "$socket_dir/$(echo "$dir" | ${pkgs.coreutils}/bin/sha256sum | cut -c1-12).socket"
             }
 
@@ -125,6 +127,11 @@ args@{
               return 1
             }
 
+            ${lib.optionalString self.isLinux ''
+              : "''${XDG_RUNTIME_DIR:=/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+            ''}
+            : "''${USER:=$(${pkgs.coreutils}/bin/id -un)}"
+
             SOCKET_PATH=""
             if SOCKET_PATH=$(find_nvim_socket); then
               echo "Found nvim socket: $SOCKET_PATH" >&2
@@ -134,7 +141,7 @@ args@{
             fi
 
             export NVIM_SOCKET_PATH="$SOCKET_PATH"
-            exec mcp-neovim-server "$@"
+            exec ${mcp-neovim-server}/bin/mcp-neovim-server "$@"
           '';
         };
       };

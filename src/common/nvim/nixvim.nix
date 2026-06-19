@@ -1362,7 +1362,12 @@ args@{
 
             ${lib.optionalString self.settings.withSocket ''
               if [[ "$PWD" == /home/* || "$PWD" == /Users/* ]]; then
-                SOCKET_DIR="''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}}/nvim-sockets"
+                ${
+                  if self.isLinux then
+                    ''SOCKET_DIR="''${XDG_RUNTIME_DIR:-/tmp}/nvim-sockets"''
+                  else
+                    ''SOCKET_DIR="/tmp/nvim-sockets"''
+                }
                 mkdir -p "$SOCKET_DIR"
                 SOCKET_NAME="$SOCKET_DIR/$(echo "$PWD" | ${pkgs.coreutils}/bin/sha256sum | cut -c1-12).socket"
 
