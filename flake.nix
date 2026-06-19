@@ -93,6 +93,7 @@
 
     nixos-hardware = {
       url = "github:leahevy/nixos-hardware/master";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nirimation = {
