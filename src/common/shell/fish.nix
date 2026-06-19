@@ -63,7 +63,7 @@ args@{
 
           interactiveShellInit = ''
             function __disown_bg_on_exit --on-event fish_exit
-              builtin disown
+              builtin disown 2>/dev/null
             end
 
             set -gx __SHELL_BOOTSTRAPPED 1
