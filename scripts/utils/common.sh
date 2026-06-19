@@ -510,6 +510,10 @@ parse_build_deployment_args() {
 				echo -e "${RED}Error: --max-retries requires a count${RESET}" >&2
 				exit 1
 			}
+			[[ ! "$2" =~ ^[0-9]+$ ]] && {
+				echo -e "${RED}Error: --max-retries requires a positive integer${RESET}" >&2
+				exit 1
+			}
 			BUILD_MAX_RETRIES="$2"
 			shift 2
 			;;
