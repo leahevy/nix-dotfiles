@@ -34,6 +34,8 @@ echo
 
 check_git_worktrees_clean
 
+OLD_VERSION=$(sed -n 's/.*current-release = "\([0-9][0-9]\.[0-9][0-9]\)".*/\1/p' "$NXCORE_DIR/variables.nix" | head -1)
+
 echo -e "Updating version references in ${WHITE}nxcore/flake.nix${RESET}..."
 sed -i "s/[0-9][0-9]\.[0-9][0-9]/$NIXOS_VERSION/g" "$NXCORE_DIR/flake.nix"
 
@@ -102,6 +104,6 @@ TASK_DIR="$CONFIG_DIR/current-tasks"
 if [[ ! -d "$TASK_DIR" ]]; then
 	TASK_DIR="$CONFIG_DIR"
 fi
-sed "1s/next release/$NIXOS_VERSION/" "$NXCORE_DIR/UPGRADE.md" >"$TASK_DIR/upgrade-nixos-$NIXOS_VERSION.md"
+sed "1s/next release/$NIXOS_VERSION/;s/<TARGET_VERSION>/$NIXOS_VERSION/g;s/<OLD_VERSION>/$OLD_VERSION/g" "$NXCORE_DIR/UPGRADE.md" >"$TASK_DIR/upgrade-nixos-$NIXOS_VERSION.md"
 echo
 echo -e "${YELLOW}Upgrade checklist written to ${WHITE}$TASK_DIR/upgrade-nixos-$NIXOS_VERSION.md${RESET}"
