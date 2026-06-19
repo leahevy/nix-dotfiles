@@ -200,7 +200,7 @@ args@{
 
     home = config: {
       home.packages = [
-        self.inputs.nixos-anywhere.packages.${pkgs.system}.default
+        self.inputs.nixos-anywhere.packages.${pkgs.stdenv.hostPlatform.system}.default
       ];
       home.persistence."${self.persist}".directories = [
         ".local/share/nx/deploy-keys"
