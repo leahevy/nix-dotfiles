@@ -32,7 +32,7 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Mod+Ctrl+Alt+I" = {
-              action = spawn-sh "niri-scratchpad --app-id BeeperTexts --all-windows --spawn beeper";
+              action = spawn-sh "niri-scratchpad --app-id Beeper --all-windows --spawn beeper";
               hotkey-overlay.title = "Apps:Chat app";
             };
           };
@@ -41,8 +41,7 @@ args@{
             {
               matches = [
                 {
-                  app-id = "BeeperTexts";
-                  title = "Beeper";
+                  app-id = "Beeper";
                 }
               ];
               min-width = 1500;
