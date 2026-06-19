@@ -33,7 +33,7 @@ args@{
         };
 
         plugins.treesitter.grammarPackages = lib.mkIf (self.isModuleEnabled "nvim-modules.treesitter") [
-          pkgs.vimPlugins.nvim-treesitter.builtGrammars.http
+          config.programs.nixvim.plugins.treesitter.package.builtGrammars.http
         ];
 
         autoCmd = [
