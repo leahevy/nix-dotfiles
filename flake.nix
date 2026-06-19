@@ -177,15 +177,19 @@
 
     mac-app-util = {
       url = "github:hraban/mac-app-util";
-      inputs.nixpkgs.follows = "nixpkgs-darwin";
+      inputs.nixpkgs.follows = "nixpkgs-mac-app-util";
       inputs.systems.follows = "nix-systems-darwin";
       inputs.flake-utils.follows = "flake-utils";
       inputs.flake-compat.follows = "flake-compat";
       inputs.treefmt-nix.follows = "treefmt-nix";
-      inputs.cl-nix-lite.inputs.nixpkgs.follows = "nixpkgs-darwin";
+      inputs.cl-nix-lite.inputs.nixpkgs.follows = "nixpkgs-mac-app-util";
       inputs.cl-nix-lite.inputs.treefmt-nix.follows = "treefmt-nix";
       inputs.cl-nix-lite.inputs.flake-parts.follows = "flake-parts";
       inputs.cl-nix-lite.inputs.systems.follows = "nix-systems";
+    };
+
+    nixpkgs-mac-app-util = {
+      url = "github:NixOS/nixpkgs/af51545ec9a44eadf3fe3547610a5cdd882bc34e";
     };
 
     nix-plist-manager = {

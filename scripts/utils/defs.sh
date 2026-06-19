@@ -150,6 +150,7 @@ export TRUNCATE_INPUTS=(
 
 export THIRD_PARTY_INPUTS=(
 	"mac-app-util"
+	"nixpkgs-mac-app-util"
 	"nix-plist-manager"
 )
 

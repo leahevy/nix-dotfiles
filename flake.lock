@@ -90,7 +90,7 @@
           "flake-parts"
         ],
         "nixpkgs": [
-          "nixpkgs-darwin"
+          "nixpkgs-mac-app-util"
         ],
         "systems": [
           "nix-systems"
@@ -354,7 +354,7 @@
           "flake-utils"
         ],
         "nixpkgs": [
-          "nixpkgs-darwin"
+          "nixpkgs-mac-app-util"
         ],
         "systems": [
           "nix-systems-darwin"
@@ -766,6 +766,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-mac-app-util": {
+      "locked": {
+        "lastModified": 1732617236,
+        "narHash": "sha256-PYkz6U0bSEaEB1al7O1XsqVNeSNS+s3NVclJw7YC43w=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "af51545ec9a44eadf3fe3547610a5cdd882bc34e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "af51545ec9a44eadf3fe3547610a5cdd882bc34e",
+        "type": "github"
+      }
+    },
     "nixpkgs-nix": {
       "locked": {
         "lastModified": 1781216227,
@@ -899,6 +915,7 @@
         "nixos-raspberrypi": "nixos-raspberrypi",
         "nixpkgs": "nixpkgs",
         "nixpkgs-darwin": "nixpkgs-darwin",
+        "nixpkgs-mac-app-util": "nixpkgs-mac-app-util",
         "nixpkgs-nix": "nixpkgs-nix",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",

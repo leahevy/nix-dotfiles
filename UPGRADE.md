@@ -14,7 +14,7 @@
 - [ ] 5. Update flake inputs not covered by automatic updates:
     - [ ] 5a. Forked inputs (sync the fork with upstream, verify no conflicts): **sops-nix**, **disko**, **impermanence**, **lanzaboote**, **nixos-anywhere**, **niri-flake**, **nixos-hardware**
         - [ ] 5a-i. For tag-pinned forks, also bump the version tag in `flake.nix` (auto-update cannot move an immutable tag)
-    - [ ] 5b. Third-party inputs (review diffs for breaking changes): **mac-app-util**, **nix-plist-manager**
+    - [ ] 5b. Third-party inputs (review diffs for breaking changes): **mac-app-util**, **nixpkgs-mac-app-util**, **nix-plist-manager**
     - [ ] 5c. Rolling-tag inputs (bump the tag in `flake.nix` after checking the upstream source for the current tag): **nixos-raspberrypi**
 - [ ] 6. Consider removing packages specified as unstable in both `variables.nix` files
     - [ ] 6a. Clear `releaseTransitionInsecurePackages` in `variables.nix` (packages only listed there because nixpkgs EOL'd them mid-release cycle; the new release should ship non-EOL replacements)
