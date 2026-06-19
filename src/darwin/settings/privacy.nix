@@ -9,7 +9,7 @@ args@{
   ...
 }:
 {
-  name = "widgets";
+  name = "privacy";
 
   group = "settings";
   input = "darwin";
@@ -28,15 +28,9 @@ args@{
         options = {
           applications = {
             systemSettings = {
-              desktopAndDock = {
-                widgets = {
-                  useIphoneWidgets = false;
-                  dimWidgetsOnDesktop = "Automatically";
-                  showWidgets = {
-                    inStageManager = true;
-                    onDesktop = false;
-                  };
-                };
+              appleIntelligenceAndSiri = {
+                appleIntelligence = false;
+                siri.enable = false;
               };
             };
           };

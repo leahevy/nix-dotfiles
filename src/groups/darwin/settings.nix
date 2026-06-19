@@ -29,6 +29,8 @@ args@{
       "sound"
       "spotlight"
       "control-center"
+      "date-and-time"
+      "privacy"
     ];
   };
 }

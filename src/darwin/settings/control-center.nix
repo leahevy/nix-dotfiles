@@ -28,7 +28,7 @@ args@{
         options = {
           applications = {
             systemSettings = {
-              controlCenter = {
+              menuBar = {
                 accessibilityShortcuts = {
                   showInMenuBar = false;
                   showInControlCenter = true;

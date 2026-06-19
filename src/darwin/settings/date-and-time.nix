@@ -22,8 +22,6 @@ args@{
     };
   };
 
-  error = "Broken as nix-plist-manager tries to call 'defaults' without absolute path for general.* settings";
-
   settings = {
     use24HourTime = false;
   };

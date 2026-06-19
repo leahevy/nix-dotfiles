@@ -505,11 +505,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1765533928,
-        "narHash": "sha256-ZyfP9fpulv00Ca+AXpZ/QWf8HgGudWYhxUdBpNWCv0w=",
+        "lastModified": 1780429022,
+        "narHash": "sha256-PjyVi3OzypfHfLzNxCUJfiWy93FwpUqze02m6sVAbvQ=",
         "owner": "SushyDev",
         "repo": "nix-plist-manager",
-        "rev": "c6824af7470182c73c900a750f443fa6ff15ea4f",
+        "rev": "c7b708ed45f0d25c474e286320a8c9831c7c9a3b",
         "type": "github"
       },
       "original": {

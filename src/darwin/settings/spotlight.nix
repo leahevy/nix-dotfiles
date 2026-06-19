@@ -30,6 +30,7 @@ args@{
             systemSettings = {
               spotlight = {
                 helpAppleImproveSearch = false;
+                resultsFromClipboard = false;
               };
             };
           };
