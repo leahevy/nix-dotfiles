@@ -417,6 +417,8 @@ parse_build_deployment_args() {
 	BUILD_FORCE_NIXOS=false
 	BUILD_FORCE_STANDALONE=false
 	SHOW_DERIVATION=false
+	BUILD_RETRY=false
+	BUILD_MAX_RETRIES=10
 
 	local _branch_config _branch_core
 	_branch_config="$(git branch --show-current)"
@@ -499,6 +501,18 @@ parse_build_deployment_args() {
 			BUILD_FORCE_STANDALONE=true
 			shift
 			;;
+		--retry)
+			BUILD_RETRY=true
+			shift
+			;;
+		--max-retries)
+			[[ $# -lt 2 ]] && {
+				echo -e "${RED}Error: --max-retries requires a count${RESET}" >&2
+				exit 1
+			}
+			BUILD_MAX_RETRIES="$2"
+			shift 2
+			;;
 		-*)
 			echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
 			exit 1
@@ -535,6 +549,7 @@ parse_build_deployment_args() {
 
 	export EXTRA_ARGS TIMEOUT DRY_RUN BUILD_DIFF BUILD_KEEP SKIP_VERIFICATION RAW_LOG SHOW_DERIVATION
 	export BUILD_OVERRIDE_PROFILE BUILD_OVERRIDE_ARCH BUILD_FORCE_NIXOS BUILD_FORCE_STANDALONE BUILD_HAS_OVERRIDE
+	export BUILD_RETRY BUILD_MAX_RETRIES
 }
 
 ensure_nixos_only() {

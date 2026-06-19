@@ -97,6 +97,8 @@
           standalone = option "Force standalone mode";
           arch = optionWithEnum "Use specific architecture" "architecture" architectures;
           keep = option "Keep built derivation as a persistent GC root in ~/.local/state/nx/build-outputs";
+          retry = option "Automatically retry on failure after a short delay";
+          max-retries = optionWithDefault "Maximum number of retry attempts" "count" "int" "10";
         };
       };
 

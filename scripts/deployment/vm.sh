@@ -155,6 +155,12 @@ while [[ $# -gt 0 ]]; do
 		build_args+=("$1")
 		shift
 		;;
+	--retry)
+		shift
+		;;
+	--max-retries)
+		shift 2
+		;;
 	--diff | --show-derivation | --nixos | --standalone | --dry-run | --raw)
 		print_error "Option $1 is not supported for 'nx vm'"
 		exit 1

@@ -81,13 +81,35 @@ if [[ -n "${DRY_RUN:-}" ]]; then
 	nh_common_args+=(--dry)
 fi
 
-if [[ "$context" == "nixos" ]]; then
-	if timeout "${TIMEOUT}s" nh os build -H "$PROFILE" "${nh_common_args[@]:-}" "${log_format_args[@]:-}" -- "${EXTRA_ARGS[@]:-}"; then
-		notify_success "Build"
+_retry_attempt=0
+_build_ok=false
+while true; do
+	if [[ "$context" == "nixos" ]]; then
+		if timeout "${TIMEOUT}s" nh os build -H "$PROFILE" "${nh_common_args[@]:-}" "${log_format_args[@]:-}" -- "${EXTRA_ARGS[@]:-}"; then
+			_build_ok=true
+		fi
 	else
-		notify_error "Build"
-		exit 1
+		if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nh home build -c "$PROFILE" "${nh_common_args[@]:-}" "${log_format_args[@]:-}" -- "${EXTRA_ARGS[@]:-}"; then
+			_build_ok=true
+		fi
 	fi
+	[[ "$_build_ok" == "true" ]] && break
+	_retry_attempt=$((_retry_attempt + 1))
+	if [[ "${BUILD_RETRY:-false}" != "true" || $_retry_attempt -ge "${BUILD_MAX_RETRIES:-10}" ]]; then
+		break
+	fi
+	echo -e "${YELLOW}Build failed, retrying in 5 seconds (attempt ${_retry_attempt}/${BUILD_MAX_RETRIES:-10})...${RESET}"
+	sleep 5
+done
+
+if [[ "$_build_ok" == "true" ]]; then
+	notify_success "Build"
+else
+	notify_error "Build"
+	exit 1
+fi
+
+if [[ "$context" == "nixos" ]]; then
 	NEW_SYSTEM="$(readlink -f "${ACTIVE_OUT_LINK}")"
 
 	if [[ "${BUILD_HAS_OVERRIDE:-false}" == "true" ]]; then
@@ -104,12 +126,6 @@ if [[ "$context" == "nixos" ]]; then
 		diff_packages /run/current-system "$NEW_SYSTEM" || echo -e "${YELLOW}Package diff failed${RESET}"
 	fi
 else
-	if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nh home build -c "$PROFILE" "${nh_common_args[@]:-}" "${log_format_args[@]:-}" -- "${EXTRA_ARGS[@]:-}"; then
-		notify_success "Build"
-	else
-		notify_error "Build"
-		exit 1
-	fi
 	NEW_HOME="$(readlink -f "${ACTIVE_OUT_LINK}")"
 
 	if [[ "${BUILD_HAS_OVERRIDE:-false}" == "true" ]]; then
