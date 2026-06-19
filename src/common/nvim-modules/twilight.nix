@@ -144,6 +144,7 @@ args@{
     ];
     exclude = [
       "sh"
+      "text"
       "undotree"
       "diff"
       "markdown"
