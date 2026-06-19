@@ -208,10 +208,10 @@ args@{
         home.activation = {
           mergeVibeConfig = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
             run mkdir -p "$HOME/.vibe"
-            run ${mergeScript} || true
+            run ${mergeScript} || echo "vibe: config merge failed (non-fatal)" >&2
           '';
           materializeVibeSkills = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
-            run ${skillsScript} || true
+            run ${skillsScript} || echo "vibe: skill materialization failed (non-fatal)" >&2
           '';
         };
 
