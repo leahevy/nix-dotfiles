@@ -41,6 +41,10 @@ if [[ "$UPGRADE" == "true" ]]; then
 	fi
 	echo -e "${CYAN}Upgrading Nix via ${WHITE}/nix/var/nix/profiles/default${RESET}"
 	sudo nix upgrade-nix --profile /nix/var/nix/profiles/default
+	echo
+
+	echo -e "${CYAN}Restarting Nix daemon...${RESET}"
+	sudo launchctl kickstart -k system/org.nixos.nix-daemon
 	exit
 fi
 
