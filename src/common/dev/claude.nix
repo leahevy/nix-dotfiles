@@ -132,56 +132,6 @@ args@{
 
         mergedAgents = sharedAgents.agents // agents;
 
-        claudeSkillFiles = lib.mapAttrs' (name: value: {
-          name = ".claude/skills/${name}/SKILL.md";
-          value = {
-            text =
-              let
-                payload =
-                  if lib.isString value then
-                    {
-                      description = "Custom skill ${name}.";
-                      text = value;
-                    }
-                  else
-                    {
-                      description = value.description or "Custom skill ${name}.";
-                      text = value.text;
-                    };
-              in
-              ''
-                ---
-                name: ${builtins.toJSON name}
-                description: ${builtins.toJSON payload.description}
-                ---
-
-                ${payload.text}
-              '';
-          };
-        }) mergedSkills;
-
-        claudeAgentFiles = lib.mapAttrs' (name: value: {
-          name = ".claude/agents/${name}.md";
-          value = {
-            text =
-              let
-                desc = value.description or "Custom agent ${name}.";
-                toolsLine = lib.concatStringsSep ", " value.tools;
-              in
-              ''
-                ---
-                name: ${builtins.toJSON name}
-                description: ${builtins.toJSON desc}
-                tools: ${toolsLine}
-                ---
-
-                # ${name}
-
-                ${value.text}
-              '';
-          };
-        }) mergedAgents;
-
         gitUrl = (config.programs.git.settings.url or { });
         githubEnforceSSH =
           gitUrl ? "git@github.com:"
@@ -219,37 +169,75 @@ args@{
         programs.claude-code = {
           enable = true;
           package = claude-package;
-          mcpServers = config.nx.common.dev.agents.mcpServers;
+          enableMcpIntegration = true;
+          context = mergedContext;
+          skills = lib.mapAttrs (
+            name: value:
+            let
+              payload =
+                if lib.isString value then
+                  {
+                    description = "Custom skill ${name}.";
+                    text = value;
+                  }
+                else
+                  {
+                    description = value.description or "Custom skill ${name}.";
+                    text = value.text;
+                  };
+            in
+            ''
+              ---
+              name: ${builtins.toJSON name}
+              description: ${builtins.toJSON payload.description}
+              ---
+
+              ${payload.text}
+            ''
+          ) mergedSkills;
+          agents = lib.mapAttrs (
+            name: value:
+            let
+              desc = value.description or "Custom agent ${name}.";
+              toolsLine = lib.concatStringsSep ", " value.tools;
+            in
+            ''
+              ---
+              name: ${builtins.toJSON name}
+              description: ${builtins.toJSON desc}
+              tools: ${toolsLine}
+              ---
+
+              # ${name}
+
+              ${value.text}
+            ''
+          ) mergedAgents;
         };
 
         home = {
-          file =
-            claudeSkillFiles
-            // claudeAgentFiles
-            // {
-              ".claude/CLAUDE.md".text = mergedContext;
+          file = {
+            ".config/doom/config/80-claude.el".text =
+              if (self.isModuleEnabled "emacs.doom") then
+                ''
+                  (use-package claude-code-ide
+                    :bind ("C-c '" . claude-code-ide-menu)
+                    :config
+                    (claude-code-ide-emacs-tools-setup)
+                    (setq claude-code-ide-terminal-backend 'eat))
+                ''
+              else
+                "";
 
-              ".config/doom/config/80-claude.el".text =
-                if (self.isModuleEnabled "emacs.doom") then
-                  ''
-                    (use-package claude-code-ide
-                      :bind ("C-c '" . claude-code-ide-menu)
-                      :config
-                      (claude-code-ide-emacs-tools-setup)
-                      (setq claude-code-ide-terminal-backend 'eat))
-                  ''
-                else
-                  "";
-
-              ".config/doom/packages/80-claude.el".text =
-                if (self.isModuleEnabled "emacs.doom") then
-                  ''
-                    (package! claude-code-ide
-                      :recipe (:host github :repo "manzaltu/claude-code-ide.el" :files ("*.el")))
-                  ''
-                else
-                  "";
-            };
+            ".config/doom/packages/80-claude.el".text =
+              if (self.isModuleEnabled "emacs.doom") then
+                ''
+                  (package! claude-code-ide
+                    :recipe (:host github :repo "manzaltu/claude-code-ide.el" :files ("*.el")))
+                ''
+              else
+                "";
+          };
 
           persistence."${self.persist}" = {
             directories = [
