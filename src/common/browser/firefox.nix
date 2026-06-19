@@ -1183,13 +1183,12 @@ in
       };
 
     linux.home = config: {
-      programs.firefox.configPath = ".mozilla/firefox";
+      programs.firefox.configPath = "${config.xdg.configHome}/mozilla/firefox";
 
       home.sessionVariables.MOZ_ENABLE_WAYLAND = "1";
 
       home.persistence."${self.persist}" = {
         directories = [
-          ".mozilla"
           ".config/mozilla"
           ".local/share/mozilla"
           ".cache/mozilla/firefox"
