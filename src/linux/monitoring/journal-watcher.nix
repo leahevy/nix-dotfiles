@@ -376,6 +376,8 @@ args@{
         "^x[0-9]+ *: [0-9a-f]+.*$"
         "prepare_slab_obj_exts_hook, bio-[0-9]+: Failed to create slab extension vector!"
         "WARNING: CPU: [0-9]+ PID: [0-9]+ at mm/slub\\.c:[0-9]+ alloc_tagging_slab_alloc_hook"
+        "device-mapper: core: CONFIG_IMA_DISABLE_HTABLE is disabled\\. Duplicate IMA measurements will not be recorded in the IMA log\\."
+        "uvcvideo.*: Failed to query \\(GET_INFO\\) UVC control [0-9]+ on unit [0-9]+:.*\\(exp\\. [0-9]+\\)\\."
       ];
       baseUserStringsToIgnore = [ ];
       baseStringsToHighlight = [ ];

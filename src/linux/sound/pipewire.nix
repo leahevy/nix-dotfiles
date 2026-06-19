@@ -155,6 +155,18 @@ args@{
           user = true;
           unitless = true;
         }
+        {
+          tag = "pipewire-pulse";
+          string = "mod\\.protocol-pulse: setsockopt\\(SO_PRIORITY\\) failed: Bad file descriptor";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "pipewire-pulse";
+          string = "mod\\.protocol-pulse: client 0x[0-9a-f]+: no peercred: Bad file descriptor";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 
