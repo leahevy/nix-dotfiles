@@ -27,6 +27,14 @@ args@{
         plugins.project-nvim = {
           enable = true;
           enableTelescope = true;
+          package = pkgs.vimPlugins.project-nvim.overrideAttrs (old: {
+            postPatch = (old.postPatch or "") + ''
+              substituteInPlace lua/project/util/history.lua \
+                --replace \
+                "Defering call to \`%s.write_history()\`'):format(MODSTR)" \
+                "Deferring call to \`write_history()\`'):format(MODSTR)"
+            '';
+          });
           settings = {
             lsp = {
               enabled = true;
