@@ -33,6 +33,7 @@ args@{
     suppressDiagnostics = {
       nixd = [
         "sema-unused-def-lambda"
+        "sema-primop-removed-prefix"
       ];
     };
   };
