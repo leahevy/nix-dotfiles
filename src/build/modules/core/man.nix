@@ -15,9 +15,15 @@ args@{
   input = "build";
 
   module = {
-    home = config: {
+    standalone = config: {
       programs.man = {
         generateCaches = self.user.settings.generateManCaches;
+      };
+    };
+
+    integrated = config: {
+      programs.man = {
+        generateCaches = false;
       };
     };
 
