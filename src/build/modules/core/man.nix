@@ -20,5 +20,10 @@ args@{
         generateCaches = self.user.settings.generateManCaches;
       };
     };
+
+    linux.system = config: {
+      documentation.man.cache.enable = self.user.settings.generateManCaches;
+      documentation.man.cache.generateAtRuntime = self.user.settings.generateManCaches;
+    };
   };
 }
