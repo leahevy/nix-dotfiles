@@ -10,7 +10,7 @@
 - [ ] 1. Run `nx switch-branch upgrade-nixos-<TARGET_VERSION>`
 - [ ] 2. Run `nx dist-upgrade <TARGET_VERSION>` (requires clean git repo)
 - [ ] 3. Read the release notes and apply any nxcore breaking-change fixes: https://nixos.org/manual/nixos/stable/release-notes#sec-release-<TARGET_VERSION>
-- [ ] 4. Baseline checkpoint: verify eval succeeds and `nx build --keep` passes — do not proceed until clean
+- [ ] 4. Baseline checkpoint: verify eval succeeds and `nx build --keep` passes - do not proceed until clean
 - [ ] 5. Update flake inputs not covered by automatic updates:
     - [ ] 5a. Forked inputs (sync the fork with upstream, verify no conflicts): **sops-nix**, **disko**, **impermanence**, **lanzaboote**, **nixos-anywhere**, **niri-flake**, **nixos-hardware**
         - [ ] 5a-i. For tag-pinned forks, also bump the version tag in `flake.nix` (auto-update cannot move an immutable tag)
