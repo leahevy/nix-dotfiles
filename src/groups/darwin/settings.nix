@@ -29,7 +29,7 @@ args@{
       "sound"
       "spotlight"
       "control-center"
-      "date-and-time"
+      # "date-and-time"
       "privacy"
     ];
   };

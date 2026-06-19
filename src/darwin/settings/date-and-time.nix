@@ -14,6 +14,8 @@ args@{
   group = "settings";
   input = "darwin";
 
+  broken = true;
+
   submodules = {
     darwin = {
       settings = {
