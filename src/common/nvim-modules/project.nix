@@ -28,7 +28,9 @@ args@{
           enable = true;
           enableTelescope = true;
           settings = {
-            use_lsp = true;
+            lsp = {
+              enabled = true;
+            };
             patterns = [
               ".git"
               ".hg"
