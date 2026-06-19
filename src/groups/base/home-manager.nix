@@ -30,6 +30,7 @@ let
         "claude"
         "codex"
         "opencode"
+        "vibe"
         "nodejs"
         "typescript-lsp"
         "jujutsu"

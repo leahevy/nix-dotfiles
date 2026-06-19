@@ -56,6 +56,7 @@ args@{
           vimEnabled = config.nx.common.nvim.nixvim.enable;
           claudeEnabled = config.nx.common.dev.claude.enable;
           codexEnabled = config.nx.common.dev.codex.enable;
+          vibeEnabled = config.nx.common.dev."vibe".enable;
 
           main = {
             windows = [
@@ -74,6 +75,9 @@ args@{
             ]
             ++ lib.optionals (codexEnabled && devMode) [
               { "󱙺 Codex" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "codex"}"; }
+            ]
+            ++ lib.optionals (vibeEnabled && devMode) [
+              { "󱙺 Vibe" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vibe"}"; }
             ]
             ++ self.settings.additionalMainConfigWindows;
           };
