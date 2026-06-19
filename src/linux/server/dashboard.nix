@@ -1058,7 +1058,7 @@ args@{
           package = pkgs.homepage-dashboard.override { enableLocalIcons = true; };
           listenPort = listenPort;
           allowedHosts = "${effectiveSubdomain}.${domain}";
-          environmentFile = "/run/homepage-dashboard-env/env";
+          environmentFiles = [ "/run/homepage-dashboard-env/env" ];
           settings = generatedSettings;
           bookmarks = generatedBookmarks;
           services =
