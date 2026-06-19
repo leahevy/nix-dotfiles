@@ -659,6 +659,9 @@ args@{
                   local init_duration_ms = (init_end_time - init_start_time) / 1000000
                   vim.defer_fn(function()
                     vim.api.nvim_echo({{string.format("Init: %.2fms", init_duration_ms), "Normal"}}, true, {})
+                    vim.defer_fn(function()
+                      vim.cmd("echo \"\"")
+                    end, 500)
                   end, 150)
 
                   _G.nx_modules = nil
