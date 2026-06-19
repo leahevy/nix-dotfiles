@@ -28,6 +28,9 @@ args@{
       {
         environment.systemPackages = [ pkgs.keyutils ];
         environment.etc."request-key.conf".text = lib.concatStringsSep "\n" rules + "\n";
+        systemd.tmpfiles.settings."request-key-sbin"."/sbin/request-key"."L+" = {
+          argument = "${pkgs.keyutils}/bin/request-key";
+        };
       };
   };
 }
