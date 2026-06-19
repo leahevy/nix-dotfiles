@@ -62,6 +62,10 @@ args@{
           enable = true;
 
           interactiveShellInit = ''
+            function __disown_bg_on_exit --on-event fish_exit
+              builtin disown
+            end
+
             set -gx __SHELL_BOOTSTRAPPED 1
 
             set -g fish_color_normal ${
