@@ -325,7 +325,9 @@ args@{
               else if validatedBlock ? identitiesOnly then
                 validatedBlock.identitiesOnly
               else
-                identityFile != null || keyIdentityFile != null;
+                identityFile != null
+                || keyIdentityFile != null
+                || (hostKey != "*" && defaultSSHIdentityFile != null);
 
             visualHostKey = if disableHostKeyChecking then "yes" else "no";
 
