@@ -27,9 +27,15 @@ args@{
       };
     };
 
-    linux.system = config: {
-      documentation.man.cache.enable = self.user.settings.generateManCaches;
-      documentation.man.cache.generateAtRuntime = self.user.settings.generateManCaches;
-    };
+    linux.system =
+      config:
+      lib.mkIf self.user.settings.generateManCaches {
+        documentation.man.cache.enable = true;
+        documentation.man.cache.generateAtRuntime = true;
+
+        environment.persistence."${self.persist}" = {
+          directories = [ "/var/cache/man" ];
+        };
+      };
   };
 }
