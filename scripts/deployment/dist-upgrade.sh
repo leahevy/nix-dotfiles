@@ -67,16 +67,16 @@ fi
 echo
 echo -e "Migrating packages from unstable to stable in ${WHITE}nxcore/src${RESET}..."
 
-find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/with pkgs-unstable/with pkgs/g' {} \;
-find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/pkgs-unstable\./pkgs\./g' {} \;
-find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/self\.pkgs-unstable/self\.pkgs/g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/with pkgs\.unstable/with pkgs/g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/pkgs\.unstable\./pkgs\./g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/\bunstable\.\([a-zA-Z_][a-zA-Z0-9_-]*\)/\1/g' {} \;
 
 if [[ -d "$CONFIG_DIR/.git" ]]; then
 	echo -e "Migrating packages from unstable to stable in ${WHITE}nxconfig/modules${RESET}..."
 
-	(cd "$CONFIG_DIR" && find modules -name "*.nix" -type f -exec sed -i 's/with pkgs-unstable/with pkgs/g' {} \; 2>/dev/null || true)
-	(cd "$CONFIG_DIR" && find modules -name "*.nix" -type f -exec sed -i 's/pkgs-unstable\./pkgs\./g' {} \; 2>/dev/null || true)
-	(cd "$CONFIG_DIR" && find modules -name "*.nix" -type f -exec sed -i 's/self\.pkgs-unstable/self\.pkgs/g' {} \; 2>/dev/null || true)
+	(cd "$CONFIG_DIR" && find modules profiles -name "*.nix" -type f -exec sed -i 's/with pkgs\.unstable/with pkgs/g' {} \; 2>/dev/null || true)
+	(cd "$CONFIG_DIR" && find modules profiles -name "*.nix" -type f -exec sed -i 's/pkgs\.unstable\./pkgs\./g' {} \; 2>/dev/null || true)
+	(cd "$CONFIG_DIR" && find modules profiles -name "*.nix" -type f -exec sed -i 's/\bunstable\.\([a-zA-Z_][a-zA-Z0-9_-]*\)/\1/g' {} \; 2>/dev/null || true)
 fi
 
 echo

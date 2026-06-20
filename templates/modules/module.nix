@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -31,7 +30,7 @@ args@{
   unfree = [ ];
 
   # Helpers exported to other modules, accessed as self.INPUT.GROUP.MODULE.exports.NAME
-  # exports = { lib, pkgs, pkgs-unstable, funcs, helpers, defs, self, ... }: { };
+  # exports = { lib, pkgs, funcs, helpers, defs, self, ... }: { };
 
   # warning = "This module is work in progress.";
   # error = "This module is currently broken!";

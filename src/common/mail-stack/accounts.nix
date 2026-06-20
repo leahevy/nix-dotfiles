@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -117,7 +116,6 @@ rec {
     {
       lib,
       pkgs,
-      pkgs-unstable,
       funcs,
       helpers,
       defs,

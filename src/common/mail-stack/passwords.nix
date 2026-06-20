@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -21,7 +20,6 @@ args@{
     {
       lib,
       pkgs,
-      pkgs-unstable,
       funcs,
       helpers,
       defs,

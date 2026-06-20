@@ -839,7 +839,7 @@ rec {
   usePackageByVersionCheck =
     args: pkgName: predicate:
     let
-      unstablePkgs = args.pkgs-unstable or { };
+      unstablePkgs = (args.pkgs or { }).unstable or { };
 
       stablePkg = args.pkgs.${pkgName} or null;
       unstablePkg = unstablePkgs.${pkgName} or null;

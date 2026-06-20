@@ -196,6 +196,7 @@ let
         (final: prev: unstableOverrides)
         nixImplOverlay
         nixToolsOverlay
+        (final: prev: { unstable = pkgs-unstable; })
       ];
 
       buildPkgs =
@@ -270,7 +271,6 @@ let
   buildSpecialArgs =
     {
       pkgs,
-      pkgs-unstable,
       host ? { },
       users ? { },
       user ? { },
@@ -281,7 +281,6 @@ let
       homeStandaloneUsers ? { },
     }:
     {
-      inherit pkgs-unstable;
       inherit inputs;
       inherit variables;
       inherit funcs;
@@ -717,7 +716,6 @@ in
         inherit
           lib
           pkgs
-          pkgs-unstable
           inputs
           variables
           defs
@@ -776,7 +774,6 @@ in
         inherit
           system
           pkgs
-          pkgs-unstable
           lib
           ;
         host = hostConfig.host;
@@ -789,7 +786,6 @@ in
         specialArgs = buildSpecialArgs {
           inherit
             pkgs
-            pkgs-unstable
             ;
           configInputs = config.configInputs or { };
           host = hostConfig.host;
@@ -803,7 +799,6 @@ in
           inherit
             lib
             pkgs
-            pkgs-unstable
             allOverlays
             unfreePredicate
             inputs
@@ -938,7 +933,6 @@ in
         inherit
           system
           pkgs
-          pkgs-unstable
           lib
           ;
         user = finalUserConfig;
@@ -946,7 +940,6 @@ in
         specialArgs = buildSpecialArgs {
           inherit
             pkgs
-            pkgs-unstable
             ;
           configInputs = config.configInputs or { };
           user = finalUserConfig;
@@ -959,7 +952,6 @@ in
           inherit
             lib
             pkgs
-            pkgs-unstable
             allOverlays
             unfreePredicate
             inputs

@@ -648,7 +648,6 @@ rec {
         moduleResult = import modulePath {
           lib = args.lib;
           pkgs = args.pkgs;
-          pkgs-unstable = args.pkgs-unstable;
           funcs = args.funcs;
           helpers = args.helpers;
           defs = args.defs;
@@ -1568,7 +1567,6 @@ rec {
       basicModuleResult = import modulePath {
         lib = args.lib;
         pkgs = args.pkgs;
-        pkgs-unstable = args.pkgs-unstable;
         funcs = args.funcs;
         helpers = args.helpers;
         defs = args.defs;
@@ -1606,7 +1604,6 @@ rec {
       consolidatedArgs = {
         lib = args.lib;
         pkgs = args.pkgs;
-        pkgs-unstable = args.pkgs-unstable;
         funcs = args.funcs;
         helpers = args.helpers;
         defs = args.defs;
@@ -1783,7 +1780,6 @@ rec {
                   moduleResult = import modulePath {
                     lib = args.lib;
                     pkgs = args.pkgs;
-                    pkgs-unstable = args.pkgs-unstable;
                     funcs = args.funcs;
                     helpers = args.helpers;
                     defs = args.defs;
@@ -1838,7 +1834,6 @@ rec {
       consolidatedArgs = {
         lib = args.lib;
         pkgs = args.pkgs;
-        pkgs-unstable = args.pkgs-unstable;
         funcs = args.funcs;
         helpers = args.helpers;
         defs = args.defs;
@@ -1910,7 +1905,6 @@ rec {
           consolidatedArgs = {
             lib = args.lib;
             pkgs = args.pkgs;
-            pkgs-unstable = args.pkgs-unstable;
             funcs = args.funcs;
             helpers = args.helpers;
             defs = args.defs;
@@ -2260,7 +2254,6 @@ rec {
       minimalArgs = {
         inherit lib;
         pkgs = { };
-        pkgs-unstable = { };
         funcs = { };
         helpers = helpers;
         defs = defs;
@@ -2312,7 +2305,6 @@ rec {
       minimalArgs = {
         inherit lib;
         pkgs = args.pkgs;
-        pkgs-unstable = args.pkgs-unstable;
         funcs = { };
         helpers = args.helpers;
         defs = args.defs;
@@ -2390,7 +2382,6 @@ rec {
           inputs
           ;
         pkgs = { };
-        pkgs-unstable = { };
         funcs = { };
         configInputs = { };
         inherit host;
@@ -2429,7 +2420,6 @@ rec {
       minimalArgs = {
         inherit lib defs;
         pkgs = { };
-        pkgs-unstable = { };
         funcs = { };
         helpers = helpers;
         self = minimalSelf;
@@ -2529,7 +2519,6 @@ rec {
             exportsCallArgs = {
               inherit lib;
               pkgs = args.pkgs;
-              pkgs-unstable = args.pkgs-unstable;
               funcs = args.funcs;
               helpers = args.helpers;
               defs = args.defs;
@@ -2766,7 +2755,6 @@ rec {
                 consolidatedArgs = {
                   lib = args.lib;
                   pkgs = args.pkgs;
-                  pkgs-unstable = args.pkgs-unstable;
                   funcs = args.funcs;
                   helpers = args.helpers;
                   defs = args.defs;
@@ -2853,7 +2841,6 @@ rec {
                 consolidatedArgs = {
                   lib = args.lib;
                   pkgs = args.pkgs;
-                  pkgs-unstable = args.pkgs-unstable;
                   funcs = args.funcs;
                   helpers = args.helpers;
                   defs = args.defs;

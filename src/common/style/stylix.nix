@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -257,7 +256,7 @@ args@{
               useUnstable = if builtins.isString fontConfig then false else (fontConfig.useUnstable or false);
               packageName = lib.head (lib.splitString "/" fontPath);
               packageParts = lib.splitString "." packageName;
-              pkgSet = if useUnstable then pkgs-unstable else pkgs;
+              pkgSet = if useUnstable then pkgs.unstable else pkgs;
             in
             if lib.length packageParts > 1 then
               lib.getAttrFromPath packageParts pkgSet

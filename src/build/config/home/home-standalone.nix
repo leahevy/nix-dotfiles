@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   allOverlays,
   unfreePredicate,
   inputs,
