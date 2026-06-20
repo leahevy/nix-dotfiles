@@ -347,9 +347,11 @@ parse_common_deployment_args() {
 
 	local _branch_config _branch_core
 	_branch_config="$(git branch --show-current)"
+	[[ -z "$_branch_config" ]] && _branch_config="(detached @ $(git rev-parse --short HEAD 2>/dev/null || echo "?"))"
 	_branch_core=""
 	if [[ -n "${NXCORE_DIR:-}" ]] && [[ -d "$NXCORE_DIR/.git" ]]; then
 		_branch_core="$(cd "$NXCORE_DIR" && git branch --show-current)"
+		[[ -z "$_branch_core" ]] && _branch_core="(detached @ $(git -C "$NXCORE_DIR" rev-parse --short HEAD 2>/dev/null || echo "?"))"
 	fi
 	if [[ "$_branch_config" != "main" || (-n "$_branch_core" && "$_branch_core" != "main") ]]; then
 		echo -e "${CYAN}Active branches:${RESET}"
@@ -422,9 +424,11 @@ parse_build_deployment_args() {
 
 	local _branch_config _branch_core
 	_branch_config="$(git branch --show-current)"
+	[[ -z "$_branch_config" ]] && _branch_config="(detached @ $(git rev-parse --short HEAD 2>/dev/null || echo "?"))"
 	_branch_core=""
 	if [[ -n "${NXCORE_DIR:-}" ]] && [[ -d "$NXCORE_DIR/.git" ]]; then
 		_branch_core="$(cd "$NXCORE_DIR" && git branch --show-current)"
+		[[ -z "$_branch_core" ]] && _branch_core="(detached @ $(git -C "$NXCORE_DIR" rev-parse --short HEAD 2>/dev/null || echo "?"))"
 	fi
 	if [[ "$_branch_config" != "main" || (-n "$_branch_core" && "$_branch_core" != "main") ]]; then
 		echo -e "${CYAN}Active branches:${RESET}"
