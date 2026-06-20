@@ -17,6 +17,14 @@ args@{
   module = {
     linux.enabled = config: {
       nx.linux.desktop.common.graphicalSessionServices = [ "swaync" ];
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          string = "sway_notification_center_notification_window_get_latest_notification: code should not be reached";
+          user = true;
+          unitless = true;
+          tag = "swaync";
+        }
+      ];
     };
 
     linux.home = config: {
