@@ -457,6 +457,111 @@ args@{
                       )
 
 
+              def niri_json(*args):
+                  result = subprocess.run(
+                      [NIRI, "msg", "--json", *args],
+                      capture_output=True, text=True,
+                  )
+                  if result.returncode != 0:
+                      log.warning(
+                          "failed to query niri json for %s: %s",
+                          " ".join(args), result.stderr.strip(),
+                      )
+                      return None
+                  try:
+                      return json.loads(result.stdout)
+                  except json.JSONDecodeError:
+                      log.warning(
+                          "failed to decode niri json for %s",
+                          " ".join(args),
+                      )
+                      return None
+
+
+              def center_floating_window(wid, app_id, title):
+                  windows = niri_json("windows")
+                  if windows is None:
+                      return
+
+                  window = next((w for w in windows if w.get("id") == wid), None)
+                  if window is None:
+                      log.warning("window %d not found for centering", wid)
+                      return
+                  if not window.get("is_floating"):
+                      log.info("window %d is not floating, skipping centering", wid)
+                      return
+
+                  layout = window.get("layout") or {}
+                  size = layout.get("tile_size") or layout.get("window_size")
+                  invalid_size = any([
+                      size is None,
+                      not isinstance(size, list),
+                      len(size) < 2 if isinstance(size, list) else True,
+                      size[0] is None if isinstance(size, list) and len(size) > 0 else True,
+                      size[1] is None if isinstance(size, list) and len(size) > 1 else True,
+                  ])
+                  if invalid_size:
+                      log.warning("window %d has no usable size, skipping centering", wid)
+                      return
+
+                  workspace_id = window.get("workspace_id")
+                  if workspace_id is None:
+                      log.warning(
+                          "window %d has no workspace id, skipping centering", wid,
+                      )
+                      return
+
+                  workspaces = niri_json("workspaces")
+                  if workspaces is None:
+                      return
+                  workspace = next(
+                      (ws for ws in workspaces if ws.get("id") == workspace_id),
+                      None,
+                  )
+                  if workspace is None:
+                      log.warning(
+                          "workspace %s not found for window %d, skipping centering",
+                          workspace_id, wid,
+                      )
+                      return
+
+                  output_name = workspace.get("output")
+                  if not output_name:
+                      log.warning(
+                          "workspace %s has no output, skipping centering",
+                          workspace_id,
+                      )
+                      return
+
+                  outputs = niri_json("outputs")
+                  if outputs is None:
+                      return
+                  output = outputs.get(output_name)
+                  logical = (output or {}).get("logical") or {}
+                  output_width = logical.get("width")
+                  output_height = logical.get("height")
+                  if output_width is None or output_height is None:
+                      log.warning(
+                          "output %s has no logical size, skipping centering",
+                          output_name,
+                      )
+                      return
+
+                  x = max(0, round((output_width - size[0]) / 2))
+                  anchor_to_top = size[1] >= (output_height * 0.8)
+                  if anchor_to_top:
+                      y = 0
+                  else:
+                      y = max(0, round((output_height - size[1]) / 2))
+                  niri_action(
+                      app_id, title,
+                      "move-floating-window",
+                      "--id", str(wid),
+                      "-x", str(x),
+                      "-y", str(y),
+                  )
+
+
               def apply_rule(rule, wid, app_id, title):
                   a = rule["apply"]
                   m = rule["match"]
@@ -489,6 +594,8 @@ args@{
                           app_id, title,
                           "set-window-height", "--id", wid_s, a["height"],
                       )
+                  if a.get("float") is True:
+                      center_floating_window(wid, app_id, title)
                   if a.get("focus") is True:
                       niri_action(
                           app_id, title,
