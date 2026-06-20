@@ -8,25 +8,6 @@ args@{
   self,
   ...
 }:
-let
-  ha-assets = pkgs.fetchFromGitHub {
-    owner = "home-assistant";
-    repo = "assets";
-    rev = "690cb80f94a305b51297f5584aa6d640dd96ec4b";
-    hash = "sha256-T2aHj1XF39MNAAcztzU0q6DA1AXswzHoLO5CO6o9Ymo=";
-  };
-
-  ha-icon =
-    pkgs.runCommand "home-assistant-icon.png"
-      {
-        nativeBuildInputs = [ pkgs.unzip ];
-      }
-      ''
-        unzip ${ha-assets}/logo/home-assistant-logo.zip \
-          home-assistant-social-media-logo-square.png
-        cp home-assistant-social-media-logo-square.png $out
-      '';
-in
 {
   name = "home-assistant";
 
@@ -36,7 +17,6 @@ in
   settings = {
     name = "Home-Assistant";
     webapp = "home-assistant";
-    iconPath = "${ha-icon}";
     categories = [
       "Network"
       "System"
@@ -74,10 +54,20 @@ in
   ];
 
   module = {
-    linux.home = config: {
-      home.file = (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings).homeFiles;
-      xdg.desktopEntries =
-        (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings).desktopEntries;
-    };
+    linux.home =
+      config:
+      let
+        iconPath = "${helpers.packageFile args config.nx.linux.desktop-modules.web-app.dashboardIcons
+          "svg/home-assistant.svg"
+        }";
+        webAppSettings = self.settings // {
+          inherit iconPath;
+        };
+      in
+      {
+        home.file = (config.nx.linux.desktop-modules.web-app.buildWebApp webAppSettings).homeFiles;
+        xdg.desktopEntries =
+          (config.nx.linux.desktop-modules.web-app.buildWebApp webAppSettings).desktopEntries;
+      };
   };
 }

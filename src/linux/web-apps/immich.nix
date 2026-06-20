@@ -17,7 +17,6 @@ args@{
   settings = {
     name = "Immich";
     webapp = "immich";
-    iconPath = "${helpers.packageFile args pkgs.immich.src "design/immich-logo.svg"}";
     categories = [
       "Photography"
       "Graphics"
@@ -54,10 +53,20 @@ args@{
   ];
 
   module = {
-    linux.home = config: {
-      home.file = (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings).homeFiles;
-      xdg.desktopEntries =
-        (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings).desktopEntries;
-    };
+    linux.home =
+      config:
+      let
+        iconPath = "${helpers.packageFile args config.nx.linux.desktop-modules.web-app.dashboardIcons
+          "svg/immich.svg"
+        }";
+        webAppSettings = self.settings // {
+          inherit iconPath;
+        };
+      in
+      {
+        home.file = (config.nx.linux.desktop-modules.web-app.buildWebApp webAppSettings).homeFiles;
+        xdg.desktopEntries =
+          (config.nx.linux.desktop-modules.web-app.buildWebApp webAppSettings).desktopEntries;
+      };
   };
 }

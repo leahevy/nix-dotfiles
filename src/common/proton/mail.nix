@@ -17,6 +17,9 @@ args@{
   settings = {
     forceX11 = true;
     isolateConfig = true;
+    makeMailDefault = true;
+    makeCalendarDefault = true;
+    makeContactsDefault = true;
   };
 
   requirePlatforms = [ "linux" ];
@@ -44,22 +47,23 @@ args@{
     enabled =
       config:
       let
-        protonConfig = {
-          name = lib.mkForce "proton-mail";
-          package = lib.mkForce null;
-          localBin = lib.mkForce true;
-          openCommand = lib.mkForce [ "proton-mail" ];
-          openFileCommand = lib.mkForce (path: [
+        mkEntry = flag: value: if flag then lib.mkForce value else lib.mkDefault value;
+        protonProg = flag: {
+          name = mkEntry flag "proton-mail";
+          package = mkEntry flag null;
+          localBin = mkEntry flag true;
+          openCommand = mkEntry flag [ "proton-mail" ];
+          openFileCommand = mkEntry flag (path: [
             "proton-mail"
             path
           ]);
-          desktopFile = lib.mkForce "proton-mail.desktop";
+          desktopFile = mkEntry flag "proton-mail.desktop";
         };
       in
       {
-        nx.preferences.desktop.programs.emailClient = protonConfig;
-        nx.preferences.desktop.programs.calendar = protonConfig;
-        nx.preferences.desktop.programs.contacts = protonConfig;
+        nx.preferences.desktop.programs.emailClient = protonProg self.settings.makeMailDefault;
+        nx.preferences.desktop.programs.calendar = protonProg self.settings.makeCalendarDefault;
+        nx.preferences.desktop.programs.contacts = protonProg self.settings.makeContactsDefault;
       };
 
     home =

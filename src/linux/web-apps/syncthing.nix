@@ -42,8 +42,8 @@ in
     linux.home =
       { config, additionalHosts, ... }:
       let
-        iconPath = "${helpers.packageFile args pkgs.syncthing
-          "share/icons/hicolor/scalable/apps/syncthing.svg"
+        iconPath = "${helpers.packageFile args config.nx.linux.desktop-modules.web-app.dashboardIcons
+          "svg/syncthing.svg"
         }";
 
         fromAutoHosts = lib.mapAttrsToList (

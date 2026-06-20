@@ -23,6 +23,21 @@ args@{
         Set by the active backend (qutebrowser or chromium).
       '';
     };
+    dashboardIcons = lib.mkOption {
+      type = lib.types.package;
+      description = "The homarr-labs/dashboard-icons source derivation for use in web-app icon paths.";
+    };
+  };
+
+  module = {
+    init = config: {
+      nx.linux.desktop-modules.web-app.dashboardIcons = pkgs.fetchFromGitHub {
+        owner = "homarr-labs";
+        repo = "dashboard-icons";
+        rev = "f222c55843b888a82e9f2fe2697365841cbe6025";
+        hash = "sha256-VOWQh8ZadsqNInoXcRKYuXfWn5MK0qJpuYEWgM7Pny8=";
+      };
+    };
   };
 
   assertions = [

@@ -42,8 +42,8 @@ in
     linux.home =
       { config, additionalHosts, ... }:
       let
-        iconPath = "${helpers.packageFile args pkgs.paperless-ngx.src
-          "src/paperless/static/paperless/img/logo-dark.png"
+        iconPath = "${helpers.packageFile args config.nx.linux.desktop-modules.web-app.dashboardIcons
+          "svg/paperless-ngx.svg"
         }";
 
         fromAutoHosts = lib.mapAttrsToList (

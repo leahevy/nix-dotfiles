@@ -17,7 +17,6 @@ args@{
   settings = {
     name = "Pihole";
     webapp = "pihole";
-    iconPath = "${helpers.packageFile args pkgs.pihole-web.src "img/logo.svg"}";
     categories = [
       "Network"
       "System"
@@ -78,7 +77,12 @@ args@{
     home =
       config:
       let
-        mainSettings = lib.filterAttrs (name: value: name != "additionalPiholes") self.settings;
+        iconPath = "${helpers.packageFile args config.nx.linux.desktop-modules.web-app.dashboardIcons
+          "svg/pi-hole.svg"
+        }";
+        mainSettings = (lib.filterAttrs (name: value: name != "additionalPiholes") self.settings) // {
+          inherit iconPath;
+        };
 
         allSettings = [
           mainSettings
