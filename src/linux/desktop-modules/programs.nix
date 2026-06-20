@@ -386,6 +386,12 @@ let
           user = true;
           unitless = true;
         }
+        {
+          tag = "okular";
+          string = "Couldn't write \".*\\.config/okularrc\"";
+          user = true;
+          unitless = true;
+        }
       ];
     };
     videoPlayer = mkKdeProgram { name = "dragon"; };
