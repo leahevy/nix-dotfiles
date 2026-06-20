@@ -99,6 +99,10 @@
           keep = option "Keep built derivation as a persistent GC root in ~/.local/state/nx/build-outputs";
           retry = option "Automatically retry on failure after a short delay";
           max-retries = optionWithDefault "Maximum number of retry attempts" "count" "int" "10";
+          fallback = option "Fall back to building from source if a substituter fails";
+          repair = option "Re-download and rebuild corrupted store paths";
+          fail-early = option "Stop on first build failure instead of continuing with independent derivations";
+          option = optionRepeatable "Pass a raw nix option (key=value)" "key=value" "string";
         };
       };
 

@@ -151,9 +151,17 @@ while [[ $# -gt 0 ]]; do
 		build_args+=("$1" "$2")
 		shift 2
 		;;
-	--allow-ifd | --show-trace | --skip-verification)
+	--allow-ifd | --show-trace | --skip-verification | --fallback | --repair | --fail-early)
 		build_args+=("$1")
 		shift
+		;;
+	--option)
+		[[ $# -lt 2 ]] && {
+			print_error "--option requires key=value"
+			exit 1
+		}
+		build_args+=("$1" "$2")
+		shift 2
 		;;
 	--retry)
 		shift

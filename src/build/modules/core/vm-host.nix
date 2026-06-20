@@ -30,6 +30,7 @@ args@{
               optionWith
               optionWithDefault
               optionWithEnum
+              optionRepeatable
               architectures
               ;
           in
@@ -49,6 +50,10 @@ args@{
               show-trace = option "Show detailed Nix error traces";
               allow-ifd = option "Allow import-from-derivation";
               skip-verification = option "Skip commit signature verification";
+              fallback = option "Fall back to building from source if a substituter fails";
+              repair = option "Re-download and rebuild corrupted store paths";
+              fail-early = option "Stop on first build failure instead of continuing with independent derivations";
+              option = optionRepeatable "Pass a raw nix option (key=value)" "key=value" "string";
               keep = option "Save VM image with timestamp instead of using ephemeral storage";
               no-run = option "Build VM image without starting it";
               reuse-latest = option "Run the most recently saved image without rebuilding";

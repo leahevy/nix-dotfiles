@@ -421,6 +421,7 @@ parse_build_deployment_args() {
 	SHOW_DERIVATION=false
 	BUILD_RETRY=false
 	BUILD_MAX_RETRIES=10
+	BUILD_FAIL_EARLY=false
 
 	local _branch_config _branch_core
 	_branch_config="$(git branch --show-current)"
@@ -521,6 +522,36 @@ parse_build_deployment_args() {
 			BUILD_MAX_RETRIES="$2"
 			shift 2
 			;;
+		--fallback)
+			EXTRA_ARGS+=("--fallback")
+			shift
+			;;
+		--repair)
+			EXTRA_ARGS+=("--repair")
+			shift
+			;;
+		--fail-early)
+			BUILD_FAIL_EARLY=true
+			shift
+			;;
+		--option)
+			[[ $# -lt 2 ]] && {
+				echo -e "${RED}Error: --option requires key=value${RESET}" >&2
+				exit 1
+			}
+			[[ "$2" != *=* ]] && {
+				echo -e "${RED}Error: --option argument must be in key=value format${RESET}" >&2
+				exit 1
+			}
+			_opt_key="${2%%=*}"
+			_opt_val="${2#*=}"
+			[[ -z "$_opt_key" || -z "$_opt_val" ]] && {
+				echo -e "${RED}Error: --option key=value requires non-empty key and value${RESET}" >&2
+				exit 1
+			}
+			EXTRA_ARGS+=("--option" "$_opt_key" "$_opt_val")
+			shift 2
+			;;
 		-*)
 			echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
 			exit 1
@@ -531,6 +562,10 @@ parse_build_deployment_args() {
 			;;
 		esac
 	done
+
+	if [[ "$BUILD_FAIL_EARLY" != "true" ]]; then
+		EXTRA_ARGS+=("--keep-going")
+	fi
 
 	[[ "$BUILD_FORCE_NIXOS" == "true" && "$BUILD_FORCE_STANDALONE" == "true" ]] && {
 		echo -e "${RED}Error: --nixos and --standalone cannot be used together${RESET}" >&2
