@@ -442,6 +442,10 @@ in
               redirectURL = "https://${proxyDomain}/oauth2/callback";
               scope = "openid email profile groups";
               reverseProxy = true;
+              trustedProxyIP = [
+                "127.0.0.1"
+                "::1"
+              ];
               setXauthrequest = true;
               email.domains = [ "*" ];
               cookie = {
@@ -452,10 +456,6 @@ in
               keyFile = "/run/oauth2-proxy/env";
               extraConfig = {
                 code-challenge-method = "S256";
-                trusted-proxy-ip = [
-                  "127.0.0.1"
-                  "::1"
-                ];
                 whitelist-domain = ".${domain}";
                 insecure-oidc-allow-unverified-email = true;
               };
