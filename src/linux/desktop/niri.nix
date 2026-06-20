@@ -71,6 +71,96 @@ args@{
       default = [ ];
       description = "Window rules applied via IPC when app-id/title change after window creation.";
     };
+    autoTiler = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Whether to run the auto-tiler service.";
+          };
+          windowsPerColumn = lib.mkOption {
+            type = lib.types.int;
+            default = 2;
+            description = "Maximum number of windows stacked vertically in a column before a new column is started.";
+          };
+          firstColumnStacks = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Whether the first column participates in auto-stacking or always remains a single full-height window.";
+          };
+          columnLimit = lib.mkOption {
+            type = lib.types.int;
+            default = 0;
+            description = "Number of columns auto-tiling applies to, or 0 for unlimited.";
+          };
+          applyOnMove = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Whether to re-apply tiling when a window is moved to a different workspace.";
+          };
+          ignoredWorkspaces = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ "scratch" ];
+            description = "Workspace names where auto-tiling is never applied.";
+          };
+          ignoredAppIds = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = "App-ids excluded from auto-tiling and from being stacked with other windows.";
+          };
+          startupDelayMs = lib.mkOption {
+            type = lib.types.int;
+            default = 1000;
+            description = "Milliseconds to wait after niri is ready before the service starts processing events.";
+          };
+          soloWindowBehavior = lib.mkOption {
+            type = lib.types.enum [
+              "nothing"
+              "maximize"
+              "resize"
+            ];
+            default = "resize";
+            description = "What to do when a workspace has exactly one tiling window.";
+          };
+          soloWindowWidth = lib.mkOption {
+            type = lib.types.str;
+            default = "50%";
+            description = "Column width applied to the solo window when soloWindowBehavior is resize.";
+          };
+          soloWindowHeight = lib.mkOption {
+            type = lib.types.str;
+            default = "100%";
+            description = "Window height applied to the solo window when soloWindowBehavior is resize.";
+          };
+          resetKeybind = lib.mkOption {
+            type = lib.types.str;
+            default = "Mod+Shift+R";
+            description = "Keybind that re-applies tiling to all windows on the focused workspace.";
+          };
+          floatingCarryOver = lib.mkOption {
+            type = lib.types.submodule {
+              options = {
+                enable = lib.mkOption {
+                  type = lib.types.bool;
+                  default = true;
+                  description = "Move floating windows to the newly activated workspace on workspace switches.";
+                };
+                excludedWorkspaces = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ "scratch" ];
+                  description = "Workspace names that block carry-over when they are the source or target.";
+                };
+              };
+            };
+            default = { };
+            description = "Carry-over behavior for floating windows on workspace switches.";
+          };
+        };
+      };
+      default = { };
+      description = "Automatically stack newly opened tiled windows into columns.";
+    };
     powerMenuChecks = lib.mkOption {
       type = lib.types.listOf (
         lib.types.submodule {
@@ -278,6 +368,10 @@ args@{
   ];
 
   module = {
+    enabled = config: {
+      nx.linux.desktop.niri.autoTiler.ignoredAppIds = [ "org.nx.scratchpad" ];
+    };
+
     home =
       config:
       let
@@ -372,8 +466,56 @@ args@{
 
         lateRules = (self.options config).lateWindowRules;
         hasLateRules = lateRules != [ ];
+        autoTilerConfig = (self.options config).autoTiler;
+        hasAutoTiler = autoTilerConfig.enable;
+
+        lateRuleAppIds = lib.unique (
+          lib.filter (id: id != null) (
+            map (rule: rule.match."app-id") (
+              lib.filter (
+                rule: rule.match."app-id" != null && (rule.apply.float == true || rule.apply.workspace != null)
+              ) lateRules
+            )
+          )
+        );
+        autoTilerEffectiveConfig = autoTilerConfig // {
+          ignoredAppIds = lib.unique (autoTilerConfig.ignoredAppIds ++ lateRuleAppIds);
+        };
 
         lateRulesJson = pkgs.writeText "niri-late-rules.json" (builtins.toJSON lateRules);
+        autoTilerJson = pkgs.writeText "niri-auto-tiler.json" (builtins.toJSON autoTilerEffectiveConfig);
+
+        autoTilerCmdScript =
+          pkgs.writers.writePython3 "niri-auto-tiler-cmd"
+            {
+              flakeIgnore = [ "E501" ];
+            }
+            ''
+              import os
+              import socket
+              import sys
+
+
+              def main():
+                  if len(sys.argv) < 2:
+                      print("Usage: niri-auto-tiler-cmd <command>", file=sys.stderr)
+                      sys.exit(1)
+                  sock_path = os.path.join(
+                      os.environ.get("XDG_RUNTIME_DIR", ""),
+                      "niri-auto-tiler.sock",
+                  )
+                  try:
+                      with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                          s.connect(sock_path)
+                          s.sendall((sys.argv[1] + "\n").encode())
+                  except Exception as e:
+                      print(f"error: {e}", file=sys.stderr)
+                      sys.exit(1)
+
+
+              if __name__ == "__main__":
+                  main()
+            '';
 
         lateRulesScript =
           pkgs.writers.writePython3 "niri-late-rules"
@@ -664,6 +806,818 @@ args@{
                       elif "WindowClosed" in event:
                           wid = event["WindowClosed"]["id"]
                           handled.discard(wid)
+
+                  log.error("event stream ended unexpectedly")
+                  sys.exit(1)
+
+
+              if __name__ == "__main__":
+                  main()
+            '';
+
+        autoTilerScript =
+          pkgs.writers.writePython3 "niri-auto-tiler"
+            {
+              flakeIgnore = [ "E501" ];
+            }
+            ''
+              import json
+              import logging
+              import os
+              import queue
+              import socket
+              import subprocess
+              import sys
+              import threading
+              import time
+
+              NIRI = "${pkgs.niri}/bin/niri"
+              logging.basicConfig(
+                  level=logging.INFO,
+                  format="%(asctime)s %(levelname)s %(message)s",
+                  datefmt="%H:%M:%S",
+              )
+              log = logging.getLogger("niri-auto-tiler")
+
+
+              def wait_for_niri(timeout=30):
+                  deadline = time.monotonic() + timeout
+                  attempt = 0
+                  while time.monotonic() < deadline:
+                      attempt += 1
+                      result = subprocess.run(
+                          [NIRI, "msg", "--json", "outputs"],
+                          capture_output=True, text=True,
+                      )
+                      if result.returncode == 0:
+                          try:
+                              outputs = json.loads(result.stdout)
+                              if len(outputs) > 0:
+                                  log.info(
+                                      "niri ready after %d attempt(s):"
+                                      " %d output(s) confirmed",
+                                      attempt, len(outputs),
+                                  )
+                                  return True
+                          except json.JSONDecodeError:
+                              pass
+                      log.info(
+                          "waiting for niri (attempt %d, %.0fs remaining)",
+                          attempt, deadline - time.monotonic(),
+                      )
+                      time.sleep(1)
+                  return False
+
+
+              def load_config():
+                  with open("${autoTilerJson}") as f:
+                      return json.load(f)
+
+
+              def niri_action(*args):
+                  cmd = [NIRI, "msg", "action", *args]
+                  log.info("niri cmd: %s", " ".join(args))
+                  result = subprocess.run(cmd, capture_output=True, text=True)
+                  if result.returncode != 0:
+                      log.warning("niri cmd failed: %s", result.stderr.strip())
+                      return False
+                  return True
+
+
+              def normalize_window(window):
+                  data = dict(window)
+                  data["layout"] = dict(window.get("layout") or {})
+                  return data
+
+
+              def workspace_name(workspaces_by_id, workspace_id):
+                  workspace = workspaces_by_id.get(workspace_id) or {}
+                  return workspace.get("name")
+
+
+              def is_ignored_workspace(config, workspaces_by_id, workspace_id):
+                  name = workspace_name(workspaces_by_id, workspace_id)
+                  return name in config["ignoredWorkspaces"]
+
+
+              def layout_position(window):
+                  layout = window.get("layout") or {}
+                  pos = layout.get("pos_in_scrolling_layout")
+                  valid_pos = all([
+                      isinstance(pos, list),
+                      len(pos) >= 2 if isinstance(pos, list) else False,
+                      pos[0] is not None if isinstance(pos, list) and len(pos) > 0 else False,
+                      pos[1] is not None if isinstance(pos, list) and len(pos) > 1 else False,
+                  ])
+                  if not valid_pos:
+                      return None
+                  return (pos[0], pos[1])
+
+
+              def is_fullscreen_window(window):
+                  layout = window.get("layout") or {}
+                  offset = layout.get("window_offset_in_tile")
+                  return offset is not None and offset[0] == 0 and offset[1] == 0
+
+
+              def is_tiling_candidate(config, workspaces_by_id, window):
+                  if window is None:
+                      return False
+                  if window.get("is_floating"):
+                      return False
+                  if is_fullscreen_window(window):
+                      return False
+                  workspace_id = window.get("workspace_id")
+                  if workspace_id is None:
+                      return False
+                  if is_ignored_workspace(config, workspaces_by_id, workspace_id):
+                      return False
+                  if window.get("app_id") in config["ignoredAppIds"]:
+                      return False
+                  return layout_position(window) is not None
+
+
+              def physical_columns_for_workspace(windows_by_id, workspace_id):
+                  cols = set()
+                  for window in windows_by_id.values():
+                      if window.get("workspace_id") != workspace_id:
+                          continue
+                      pos = layout_position(window)
+                      if pos is not None:
+                          cols.add(pos[0])
+                  return cols
+
+
+              def tiling_windows_for_workspace(config, workspaces_by_id, windows_by_id, workspace_id):
+                  windows = []
+                  for window in windows_by_id.values():
+                      if window.get("workspace_id") != workspace_id:
+                          continue
+                      if not is_tiling_candidate(config, workspaces_by_id, window):
+                          continue
+                      windows.append(window)
+                  windows.sort(
+                      key=lambda w: (
+                          layout_position(w)[0],
+                          layout_position(w)[1],
+                          w["id"],
+                      ),
+                  )
+                  return windows
+
+
+              def columns_for_windows(windows):
+                  columns = {}
+                  for window in windows:
+                      col_idx, _row_idx = layout_position(window)
+                      columns.setdefault(col_idx, []).append(window["id"])
+                  return columns
+
+
+              def can_stack_into_column(config, columns, target_col, neighbor_col):
+                  target_ids = columns.get(target_col) or []
+                  neighbor_ids = columns.get(neighbor_col) or []
+                  if len(target_ids) != 1:
+                      return False
+                  if len(neighbor_ids) == 0:
+                      return False
+                  if len(target_ids) + len(neighbor_ids) > config["windowsPerColumn"]:
+                      return False
+                  return True
+
+
+              def should_skip_due_to_first_column(config, sorted_cols, neighbor_col):
+                  if config["firstColumnStacks"]:
+                      return False
+                  if len(sorted_cols) <= 2:
+                      return True
+                  return neighbor_col == sorted_cols[0]
+
+
+              def with_focus(wid, fn):
+                  result = subprocess.run(
+                      [NIRI, "msg", "--json", "focused-window"],
+                      capture_output=True, text=True,
+                  )
+                  focused_id = None
+                  if result.returncode == 0:
+                      try:
+                          data = json.loads(result.stdout)
+                          if data:
+                              focused_id = data.get("id")
+                      except json.JSONDecodeError:
+                          pass
+                  needs_restore = focused_id is not None and focused_id != wid
+                  if needs_restore:
+                      niri_action("focus-window", "--id", str(wid))
+                  fn()
+                  if needs_restore:
+                      niri_action("focus-window", "--id", str(focused_id))
+
+
+              def apply_solo_behavior(config, wid, app_id):
+                  behavior = config["soloWindowBehavior"]
+                  if behavior == "nothing":
+                      return
+                  log.info(
+                      "applying solo behavior '%s' to window %d (app-id=%s)",
+                      behavior, wid, app_id,
+                  )
+                  if behavior == "maximize":
+                      with_focus(wid, lambda: niri_action("maximize-column"))
+                  elif behavior == "resize":
+                      def do_resize():
+                          niri_action("set-column-width", config["soloWindowWidth"])
+                          niri_action("set-window-height", config["soloWindowHeight"])
+                      with_focus(wid, do_resize)
+
+
+              def undo_solo_maximize(solo_maximized, workspace_id, windows_by_id):
+                  for solo_wid in list(solo_maximized):
+                      window = windows_by_id.get(solo_wid)
+                      if window and window.get("workspace_id") == workspace_id:
+                          log.info(
+                              "un-maximizing previous solo window %d (app-id=%s)",
+                              solo_wid, window.get("app_id", ""),
+                          )
+                          with_focus(solo_wid, lambda: niri_action("maximize-column"))
+                          solo_maximized.discard(solo_wid)
+
+
+              def undo_solo_resize(solo_resized, workspace_id, windows_by_id):
+                  for solo_wid in list(solo_resized):
+                      window = windows_by_id.get(solo_wid)
+                      if window and window.get("workspace_id") == workspace_id:
+                          orig_col_px = solo_resized[solo_wid]
+                          log.info(
+                              "un-resizing previous solo window %d (app-id=%s)",
+                              solo_wid, window.get("app_id", ""),
+                          )
+
+                          def do_undo(w=orig_col_px):
+                              if w is not None:
+                                  niri_action("set-column-width", str(w))
+                              niri_action("reset-window-height")
+
+                          with_focus(solo_wid, do_undo)
+                          solo_resized.pop(solo_wid, None)
+
+
+              def process_window(
+                  config,
+                  workspaces_by_id,
+                  windows_by_id,
+                  handled,
+                  pending,
+                  deferred_once,
+                  solo_maximized,
+                  solo_resized,
+                  wid,
+              ):
+                  window = windows_by_id.get(wid)
+                  app_id = (window or {}).get("app_id", "")
+                  if window is None or layout_position(window) is None:
+                      return False
+                  if not is_tiling_candidate(config, workspaces_by_id, window):
+                      log.info(
+                          "skipping window %d (app-id=%s), not an eligible tiling candidate",
+                          wid, app_id,
+                      )
+                      handled.add(wid)
+                      pending.discard(wid)
+                      return True
+
+                  workspace_id = window.get("workspace_id")
+                  workspace_windows = tiling_windows_for_workspace(
+                      config, workspaces_by_id, windows_by_id, workspace_id,
+                  )
+                  if not any(w["id"] == wid for w in workspace_windows):
+                      log.info(
+                          "skipping window %d (app-id=%s), missing from workspace %s tiling set",
+                          wid, app_id, workspace_id,
+                      )
+                      return False
+
+                  columns = columns_for_windows(workspace_windows)
+                  sorted_cols = sorted(columns.keys())
+                  column_count = len(sorted_cols)
+                  log.info(
+                      "processing window %d (app-id=%s) on workspace %s with %d tiling window(s) across %d column(s)",
+                      wid, app_id, workspace_id, len(workspace_windows), column_count,
+                  )
+
+                  if config["columnLimit"] > 0 and column_count > config["columnLimit"]:
+                      log.info(
+                          "marking window %d (app-id=%s) handled, column limit %d exceeded",
+                          wid, app_id, config["columnLimit"],
+                      )
+                      handled.add(wid)
+                      pending.discard(wid)
+                      return True
+
+                  if len(workspace_windows) <= 1:
+                      log.info(
+                          "marking window %d (app-id=%s) handled as solo window on workspace %s",
+                          wid, app_id, workspace_id,
+                      )
+                      handled.add(wid)
+                      pending.discard(wid)
+                      if config["soloWindowBehavior"] == "resize":
+                          _layout = (windows_by_id.get(wid) or {}).get("layout") or {}
+                          _ws = _layout.get("window_size")
+                          _orig_col_px = int(_ws[0]) if _ws else None
+                      apply_solo_behavior(config, wid, app_id)
+                      if config["soloWindowBehavior"] == "maximize":
+                          solo_maximized.add(wid)
+                      elif config["soloWindowBehavior"] == "resize":
+                          solo_resized[wid] = _orig_col_px
+                      return True
+
+                  if len(workspace_windows) == 2 and config["soloWindowBehavior"] == "maximize":
+                      undo_solo_maximize(solo_maximized, workspace_id, windows_by_id)
+                  elif len(workspace_windows) == 2 and config["soloWindowBehavior"] == "resize":
+                      undo_solo_resize(solo_resized, workspace_id, windows_by_id)
+
+                  new_col, _new_row = layout_position(window)
+                  if len(columns.get(new_col) or []) != 1:
+                      if wid not in deferred_once:
+                          deferred_once.add(wid)
+                          log.info(
+                              "deferring window %d (app-id=%s), column %s has %d windows, waiting for layout to settle",
+                              wid, app_id, new_col, len(columns.get(new_col) or []),
+                          )
+                          return False
+                      deferred_once.discard(wid)
+                      log.info(
+                          "marking window %d (app-id=%s) handled, column %s already has %d window(s)",
+                          wid, app_id, new_col, len(columns.get(new_col) or []),
+                      )
+                      handled.add(wid)
+                      pending.discard(wid)
+                      return True
+
+                  if len(workspace_windows) == 2 and not config["firstColumnStacks"]:
+                      log.info(
+                          "marking window %d (app-id=%s) handled, firstColumnStacks is disabled for a two-window workspace",
+                          wid, app_id,
+                      )
+                      handled.add(wid)
+                      pending.discard(wid)
+                      return True
+
+                  left_cols = [col for col in sorted_cols if col < new_col]
+                  right_cols = [col for col in sorted_cols if col > new_col]
+                  candidate_cols = []
+                  if left_cols:
+                      candidate_cols.append(left_cols[-1])
+                  if right_cols:
+                      candidate_cols.append(right_cols[0])
+
+                  physical_cols = physical_columns_for_workspace(windows_by_id, workspace_id)
+
+                  for neighbor_col in candidate_cols:
+                      lo, hi = min(new_col, neighbor_col), max(new_col, neighbor_col)
+                      if any(lo < c < hi for c in physical_cols):
+                          log.info(
+                              "skipping neighbor column %s for window %d (app-id=%s), non-tiling column between %s and %s",
+                              neighbor_col, wid, app_id, new_col, neighbor_col,
+                          )
+                          continue
+                      if should_skip_due_to_first_column(
+                          config, sorted_cols, neighbor_col,
+                      ):
+                          log.info(
+                              "skipping neighbor column %s for window %d (app-id=%s), first column stacking disabled",
+                              neighbor_col, wid, app_id,
+                          )
+                          continue
+                      if not can_stack_into_column(
+                          config, columns, new_col, neighbor_col,
+                      ):
+                          log.info(
+                              "skipping neighbor column %s for window %d (app-id=%s), target column %s has %d window(s) and neighbor has %d",
+                              neighbor_col,
+                              wid,
+                              app_id,
+                              new_col,
+                              len(columns.get(new_col) or []),
+                              len(columns.get(neighbor_col) or []),
+                          )
+                          continue
+                      log.info(
+                          "stacking window %d (app-id=%s), merging neighbor column %s into new column %s",
+                          wid, app_id, neighbor_col, new_col,
+                      )
+                      if neighbor_col < new_col:
+                          niri_action(
+                              "consume-or-expel-window-left",
+                              "--id", str(wid),
+                          )
+                      else:
+                          niri_action(
+                              "consume-or-expel-window-right",
+                              "--id", str(wid),
+                          )
+                      merged_wids = columns.get(neighbor_col) or []
+                      combined_wids = [wid] + merged_wids
+                      equal_pct = f"{int(100 / len(combined_wids))}%"
+                      for w in combined_wids:
+                          niri_action("set-window-height", "--id", str(w), equal_pct)
+                      new_layout = dict(windows_by_id[wid].get("layout") or {})
+                      for merged_wid in merged_wids:
+                          if merged_wid in windows_by_id:
+                              windows_by_id[merged_wid]["layout"] = new_layout
+                      for w in combined_wids:
+                          handled.add(w)
+                          pending.discard(w)
+                      return "acted"
+
+                  my_wids = columns.get(new_col) or []
+                  min_cols = -(-len(workspace_windows) // config["windowsPerColumn"])
+                  if len(my_wids) == 1 and 2 <= config["windowsPerColumn"] and len(sorted_cols) > min_cols:
+                      for neighbor_col in candidate_cols:
+                          neighbor_wids = columns.get(neighbor_col) or []
+                          if len(neighbor_wids) <= 1:
+                              continue
+                          lo, hi = min(new_col, neighbor_col), max(new_col, neighbor_col)
+                          if any(lo < c < hi for c in physical_cols):
+                              continue
+                          if should_skip_due_to_first_column(config, sorted_cols, neighbor_col):
+                              continue
+                          pull_wid = min(
+                              neighbor_wids,
+                              key=lambda w_id: (layout_position(windows_by_id.get(w_id) or {}) or (0, 0))[1],
+                          )
+                          pull_cmd = (
+                              "consume-or-expel-window-left"
+                              if neighbor_col > new_col
+                              else "consume-or-expel-window-right"
+                          )
+                          log.info(
+                              "pulling window %d from over-full column %s into column %s for window %d (app-id=%s)",
+                              pull_wid, neighbor_col, new_col, wid, app_id,
+                          )
+                          niri_action(pull_cmd, "--id", str(pull_wid))
+                          niri_action(pull_cmd, "--id", str(pull_wid))
+                          for w in [wid, pull_wid]:
+                              niri_action("set-window-height", "--id", str(w), "50%")
+                          remaining = [w_id for w_id in neighbor_wids if w_id != pull_wid]
+                          if remaining:
+                              rem_pct = f"{int(100 / len(remaining))}%"
+                              for w_id in remaining:
+                                  niri_action("set-window-height", "--id", str(w_id), rem_pct)
+                          windows_by_id[pull_wid]["layout"] = dict(windows_by_id[wid].get("layout") or {})
+                          for w_id in [wid, pull_wid] + remaining:
+                              handled.add(w_id)
+                              pending.discard(w_id)
+                          return "acted"
+
+                  log.info(
+                      "marking window %d (app-id=%s) handled, no eligible neighboring column found",
+                      wid, app_id,
+                  )
+                  if len(my_wids) == 1:
+                      niri_action("set-window-height", "--id", str(wid), "100%")
+                  handled.add(wid)
+                  pending.discard(wid)
+                  return True
+
+
+              def process_pending(config, workspaces_by_id, windows_by_id, handled, pending, deferred_once, solo_maximized, solo_resized):
+                  for wid in list(sorted(pending)):
+                      if wid in handled:
+                          pending.discard(wid)
+                          continue
+                      result = process_window(
+                          config, workspaces_by_id, windows_by_id,
+                          handled, pending, deferred_once, solo_maximized, solo_resized, wid,
+                      )
+                      if result == "acted":
+                          return "acted"
+                  return True
+
+
+              def handle_reset(config, workspaces_by_id, windows_by_id, handled, pending, deferred_once, solo_maximized, solo_resized):
+                  w_result = subprocess.run(
+                      [NIRI, "msg", "--json", "windows"],
+                      capture_output=True, text=True,
+                  )
+                  if w_result.returncode == 0:
+                      try:
+                          for window in json.loads(w_result.stdout):
+                              wid = window["id"]
+                              if wid in windows_by_id:
+                                  windows_by_id[wid] = normalize_window(window)
+                      except (json.JSONDecodeError, KeyError, TypeError):
+                          pass
+                  result = subprocess.run(
+                      [NIRI, "msg", "--json", "focused-window"],
+                      capture_output=True, text=True,
+                  )
+                  if result.returncode != 0:
+                      log.warning("reset: could not get focused window")
+                      return
+                  try:
+                      focused = json.loads(result.stdout)
+                  except json.JSONDecodeError:
+                      log.warning("reset: could not parse focused window")
+                      return
+                  if not focused:
+                      log.info("reset: no focused window, nothing to do")
+                      return
+                  focused_workspace_id = focused.get("workspace_id")
+                  target_windows = tiling_windows_for_workspace(
+                      config, workspaces_by_id, windows_by_id, focused_workspace_id,
+                  )
+                  log.info(
+                      "resetting workspace %s with %d tiling window(s)",
+                      focused_workspace_id, len(target_windows),
+                  )
+                  for w in target_windows:
+                      wid = w["id"]
+                      handled.discard(wid)
+                      deferred_once.discard(wid)
+                      solo_maximized.discard(wid)
+                      solo_resized.pop(wid, None)
+                      pending.add(wid)
+
+
+              def carry_over_floating(source_ws_id, target_ws_id, config, workspaces_by_id, windows_by_id):
+                  cfg = config.get("floatingCarryOver", {})
+                  if not cfg.get("enable", False):
+                      return
+                  excluded = cfg.get("excludedWorkspaces", [])
+                  source_ws = workspaces_by_id.get(source_ws_id) or {}
+                  target_ws = workspaces_by_id.get(target_ws_id) or {}
+                  source_name = source_ws.get("name") or ""
+                  target_name = target_ws.get("name") or ""
+                  if source_name in excluded or target_name in excluded:
+                      return
+                  floating = [
+                      w for w in windows_by_id.values()
+                      if w.get("workspace_id") == source_ws_id and w.get("is_floating", False)
+                  ]
+                  if not floating:
+                      return
+                  target_ref = target_name or str(target_ws.get("idx", target_ws_id))
+                  for window in floating:
+                      wid = window["id"]
+                      log.info(
+                          "carrying over floating window %d (app-id=%s) from workspace %s to %s",
+                          wid, window.get("app_id", ""), source_name, target_name,
+                      )
+                      niri_action(
+                          "move-window-to-workspace",
+                          "--window-id", str(wid),
+                          "--focus", "false",
+                          target_ref,
+                      )
+
+
+              def socket_listener(sock_path, cmd_queue):
+                  try:
+                      os.unlink(sock_path)
+                  except FileNotFoundError:
+                      pass
+                  server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                  server.bind(sock_path)
+                  server.listen(5)
+                  log.info("socket listener started at %s", sock_path)
+                  while True:
+                      conn, _ = server.accept()
+                      with conn:
+                          data = conn.recv(1024).decode().strip()
+                          if data:
+                              log.info("received socket command: %s", data)
+                              cmd_queue.put(data)
+
+
+              def main():
+                  config = load_config()
+                  log.info("starting auto tiler")
+
+                  if not wait_for_niri():
+                      log.error("niri not ready after 30s, exiting")
+                      sys.exit(1)
+
+                  startup_delay = max(0, config["startupDelayMs"]) / 1000.0
+                  if startup_delay > 0:
+                      time.sleep(startup_delay)
+
+                  sock_path = os.path.join(
+                      os.environ.get("XDG_RUNTIME_DIR", ""),
+                      "niri-auto-tiler.sock",
+                  )
+                  cmd_queue = queue.Queue()
+                  t = threading.Thread(
+                      target=socket_listener, args=(sock_path, cmd_queue), daemon=True,
+                  )
+                  t.start()
+
+                  windows_by_id = {}
+                  workspaces_by_id = {}
+                  active_workspace_per_output = {}
+                  handled = set()
+                  pending = set()
+                  deferred_once = set()
+                  solo_maximized = set()
+                  solo_resized = {}
+                  saw_workspaces = False
+                  saw_windows = False
+                  bootstrapped = False
+
+                  proc = subprocess.Popen(
+                      [NIRI, "msg", "--json", "event-stream"],
+                      stdout=subprocess.PIPE,
+                      text=True,
+                  )
+
+                  event_queue = queue.Queue()
+
+                  def _read_events(proc, event_queue):
+                      for line in proc.stdout:
+                          event_queue.put(line)
+                      event_queue.put(None)
+
+                  threading.Thread(
+                      target=_read_events, args=(proc, event_queue), daemon=True,
+                  ).start()
+
+                  while True:
+                      try:
+                          line = event_queue.get(timeout=0.1)
+                      except queue.Empty:
+                          if bootstrapped:
+                              had_reset = not cmd_queue.empty()
+                              while not cmd_queue.empty():
+                                  cmd_queue.get_nowait()
+                                  handle_reset(
+                                      config, workspaces_by_id, windows_by_id,
+                                      handled, pending, deferred_once, solo_maximized, solo_resized,
+                                  )
+                              if had_reset:
+                                  process_pending(
+                                      config, workspaces_by_id, windows_by_id,
+                                      handled, pending, deferred_once, solo_maximized, solo_resized,
+                                  )
+                          continue
+                      if line is None:
+                          break
+
+                      try:
+                          event = json.loads(line)
+                      except json.JSONDecodeError:
+                          continue
+
+                      if "WorkspacesChanged" in event:
+                          saw_workspaces = True
+                          workspaces = event["WorkspacesChanged"]["workspaces"]
+                          if not bootstrapped:
+                              for ws in workspaces:
+                                  if ws.get("is_active") and ws.get("output"):
+                                      active_workspace_per_output[ws["output"]] = ws["id"]
+                          workspaces_by_id = {
+                              workspace["id"]: workspace
+                              for workspace in workspaces
+                          }
+
+                      elif "WorkspaceActivated" in event:
+                          activated = event["WorkspaceActivated"]
+                          new_ws_id = activated["id"]
+                          if activated.get("focused", False):
+                              new_ws = workspaces_by_id.get(new_ws_id) or {}
+                              output = new_ws.get("output")
+                              if output:
+                                  old_ws_id = active_workspace_per_output.get(output)
+                                  if bootstrapped and old_ws_id is not None and old_ws_id != new_ws_id:
+                                      carry_over_floating(
+                                          old_ws_id, new_ws_id,
+                                          config, workspaces_by_id, windows_by_id,
+                                      )
+                                  active_workspace_per_output[output] = new_ws_id
+
+                      elif "WindowsChanged" in event:
+                          saw_windows = True
+                          windows = event["WindowsChanged"]["windows"]
+                          windows_by_id = {
+                              window["id"]: normalize_window(window)
+                              for window in windows
+                          }
+
+                      elif "WindowOpenedOrChanged" in event:
+                          window = normalize_window(
+                              event["WindowOpenedOrChanged"]["window"],
+                          )
+                          wid = window["id"]
+                          app_id = window.get("app_id", "")
+                          previous = windows_by_id.get(wid)
+                          windows_by_id[wid] = window
+                          if bootstrapped:
+                              if previous is None:
+                                  log.info(
+                                      "queued new window %d (app-id=%s) for auto tiling",
+                                      wid, app_id,
+                                  )
+                                  pending.add(wid)
+                              elif config["applyOnMove"] and previous.get("workspace_id") != window.get("workspace_id"):
+                                  log.info(
+                                      "re-queued moved window %d (app-id=%s) from workspace %s to %s",
+                                      wid,
+                                      app_id,
+                                      previous.get("workspace_id"),
+                                      window.get("workspace_id"),
+                                  )
+                                  handled.discard(wid)
+                                  pending.add(wid)
+                              elif not previous.get("is_floating") and window.get("is_floating"):
+                                  handled.discard(wid)
+                                  ws_id = window.get("workspace_id")
+                                  if ws_id is not None and config["soloWindowBehavior"] != "nothing":
+                                      remaining = tiling_windows_for_workspace(
+                                          config, workspaces_by_id, windows_by_id, ws_id,
+                                      )
+                                      if len(remaining) == 1:
+                                          solo_wid = remaining[0]["id"]
+                                          solo_app_id = remaining[0].get("app_id", "")
+                                          log.info(
+                                              "applying solo behavior to window %d (app-id=%s) after window %d floated",
+                                              solo_wid, solo_app_id, wid,
+                                          )
+                                          if config["soloWindowBehavior"] == "resize":
+                                              _layout = (windows_by_id.get(solo_wid) or {}).get("layout") or {}
+                                              _ws = _layout.get("window_size")
+                                              _orig_col_px = int(_ws[0]) if _ws else None
+                                          apply_solo_behavior(config, solo_wid, solo_app_id)
+                                          handled.discard(solo_wid)
+                                          if config["soloWindowBehavior"] == "maximize":
+                                              solo_maximized.add(solo_wid)
+                                          elif config["soloWindowBehavior"] == "resize":
+                                              solo_resized[solo_wid] = _orig_col_px
+                              elif previous.get("is_floating") and not window.get("is_floating"):
+                                  log.info(
+                                      "re-queued window %d (app-id=%s) as it became tiling",
+                                      wid, app_id,
+                                  )
+                                  handled.discard(wid)
+                                  pending.add(wid)
+
+                      elif "WindowLayoutsChanged" in event:
+                          for wid, layout in event["WindowLayoutsChanged"]["changes"]:
+                              if wid in windows_by_id and layout:
+                                  windows_by_id[wid]["layout"].update(layout)
+
+                      elif "WindowClosed" in event:
+                          wid = event["WindowClosed"]["id"]
+                          closing_window = windows_by_id.pop(wid, None)
+                          handled.discard(wid)
+                          pending.discard(wid)
+                          deferred_once.discard(wid)
+                          solo_maximized.discard(wid)
+                          solo_resized.pop(wid, None)
+                          if bootstrapped and closing_window is not None and config["soloWindowBehavior"] != "nothing":
+                              closing_workspace_id = closing_window.get("workspace_id")
+                              if closing_workspace_id is not None:
+                                  remaining = tiling_windows_for_workspace(
+                                      config, workspaces_by_id, windows_by_id, closing_workspace_id,
+                                  )
+                                  if len(remaining) == 1:
+                                      solo_wid = remaining[0]["id"]
+                                      solo_app_id = remaining[0].get("app_id", "")
+                                      log.info(
+                                          "applying solo behavior to remaining window %d (app-id=%s) after close",
+                                          solo_wid, solo_app_id,
+                                      )
+                                      if config["soloWindowBehavior"] == "resize":
+                                          _layout = (windows_by_id.get(solo_wid) or {}).get("layout") or {}
+                                          _ws = _layout.get("window_size")
+                                          _orig_col_px = int(_ws[0]) if _ws else None
+                                      apply_solo_behavior(config, solo_wid, solo_app_id)
+                                      if config["soloWindowBehavior"] == "maximize":
+                                          solo_maximized.add(solo_wid)
+                                      elif config["soloWindowBehavior"] == "resize":
+                                          solo_resized[solo_wid] = _orig_col_px
+
+                      if not bootstrapped and saw_workspaces and saw_windows:
+                          handled = set(windows_by_id.keys())
+                          pending.clear()
+                          bootstrapped = True
+                          log.info(
+                              "bootstrapped with %d existing window(s)",
+                              len(handled),
+                          )
+                          continue
+
+                      if bootstrapped:
+                          while not cmd_queue.empty():
+                              cmd_queue.get_nowait()
+                              handle_reset(
+                                  config, workspaces_by_id, windows_by_id,
+                                  handled, pending, deferred_once, solo_maximized, solo_resized,
+                              )
+                          process_pending(
+                              config, workspaces_by_id, windows_by_id,
+                              handled, pending, deferred_once, solo_maximized, solo_resized,
+                          )
 
                   log.error("event stream ended unexpectedly")
                   sys.exit(1)
@@ -1129,25 +2083,50 @@ args@{
           '';
         };
 
-        systemd.user.services = lib.optionalAttrs hasLateRules {
-          "niri-late-rules" = {
-            Unit = {
-              Description = "Niri late window rules";
-              PartOf = [ "graphical-session.target" ];
-              After = [ "graphical-session.target" ];
-              StartLimitIntervalSec = 0;
-            };
-            Service = {
-              ExecStart = "${lateRulesScript}";
-              Restart = "always";
-              RestartSec = "2s";
-              Type = "simple";
-            };
-            Install = {
-              WantedBy = [ "graphical-session.target" ];
-            };
-          };
+        home.file."${defs.binDir}/niri-auto-tiler-cmd" = lib.mkIf hasAutoTiler {
+          executable = true;
+          source = autoTilerCmdScript;
         };
+
+        systemd.user.services =
+          (lib.optionalAttrs hasLateRules {
+            "niri-late-rules" = {
+              Unit = {
+                Description = "Niri late window rules";
+                PartOf = [ "graphical-session.target" ];
+                After = [ "graphical-session.target" ];
+                StartLimitIntervalSec = 0;
+              };
+              Service = {
+                ExecStart = "${lateRulesScript}";
+                Restart = "always";
+                RestartSec = "2s";
+                Type = "simple";
+              };
+              Install = {
+                WantedBy = [ "graphical-session.target" ];
+              };
+            };
+          })
+          // (lib.optionalAttrs hasAutoTiler {
+            "niri-auto-tiler" = {
+              Unit = {
+                Description = "Niri auto tiler";
+                PartOf = [ "graphical-session.target" ];
+                After = [ "graphical-session.target" ];
+                StartLimitIntervalSec = 0;
+              };
+              Service = {
+                ExecStart = "${autoTilerScript}";
+                Restart = "always";
+                RestartSec = "2s";
+                Type = "simple";
+              };
+              Install = {
+                WantedBy = [ "graphical-session.target" ];
+              };
+            };
+          });
 
         programs.niri = {
           package = pkgs.niri;
@@ -1799,6 +2778,12 @@ args@{
                   "Mod+Shift+Tab" = {
                     action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-next";
                     hotkey-overlay.title = "Monitor:Cycle monitor focus";
+                  };
+                }
+                // lib.optionalAttrs hasAutoTiler {
+                  ${autoTilerConfig.resetKeybind} = {
+                    action = spawn-sh "niri-auto-tiler-cmd reset";
+                    hotkey-overlay.title = "Tiling:Reset workspace tiling";
                   };
                 };
               in

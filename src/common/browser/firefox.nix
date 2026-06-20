@@ -1490,6 +1490,10 @@ in
       nx.homebrew.casks = [ "firefox" ];
     };
 
+    ifEnabled.linux.desktop.niri.enabled = config: {
+      nx.linux.desktop.niri.autoTiler.ignoredAppIds = [ "firefox" ];
+    };
+
     ifEnabled.linux.desktop.niri.home =
       { config, enableNiriKeybinds, ... }:
       let
