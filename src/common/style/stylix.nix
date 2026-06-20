@@ -398,12 +398,29 @@ args@{
         in
         {
           home.packages = shared.fontPackages;
-          stylix = shared.stylixAttrs // {
+          stylix = lib.recursiveUpdate shared.stylixAttrs {
             targets = {
               kde.enable = false;
               gnome.enable = false;
             };
           };
+        };
+
+      home =
+        config:
+        let
+          theme = config.nx.preferences.theme;
+          fg = theme.colors.main.foregrounds.strong.html;
+        in
+        {
+          stylix.targets.gtk.extraCss = ''
+            @define-color accent_fg_color ${fg};
+            @define-color destructive_fg_color ${fg};
+            @define-color success_fg_color ${fg};
+            @define-color warning_fg_color ${fg};
+            @define-color error_fg_color ${fg};
+            button { color: ${fg}; background-color: @window_bg_color; }
+          '';
         };
 
       darwin.home =
