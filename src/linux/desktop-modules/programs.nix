@@ -383,7 +383,7 @@ let
       journalPatternsToIgnore = [
         {
           tag = "okular";
-          string = "Couldn't write \".*\\.config/okularrc\" \\. Disk full\\?";
+          string = "Couldn't write to config: \".*\\.config/okularrc\"";
           user = true;
           unitless = true;
         }
