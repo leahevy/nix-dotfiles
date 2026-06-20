@@ -126,8 +126,27 @@ args@{
 
     loadBuildMultiplier = lib.mkOption {
       type = lib.types.float;
-      default = 2.5;
+      default = 2.75;
       description = "Multiplier applied to the load threshold during and shortly after detected nix builds.";
+    };
+
+    loadBuildBoardMultiplier = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          pi5 = lib.mkOption {
+            type = lib.types.float;
+            default = 1.6;
+            description = "Additional build-mode load multiplier for Raspberry Pi 5.";
+          };
+          set = lib.mkOption {
+            type = lib.types.nullOr lib.types.float;
+            default = null;
+            description = "Overrides all board detection when non-null.";
+          };
+        };
+      };
+      default = { };
+      description = "Per-board additional multiplier applied on top of loadBuildMultiplier during nix builds.";
     };
 
     loadBuildGraceSeconds = lib.mkOption {
@@ -732,6 +751,7 @@ args@{
         fanElevatedRPM,
         loadMaxPerCore,
         loadBuildMultiplier,
+        loadBuildBoardMultiplier,
         loadBuildGraceSeconds,
         loadHighLoadGraceSeconds,
         loadHighCpuExemptCommands,
@@ -793,6 +813,14 @@ args@{
             fanElevatedRPM.x86_64
           else
             null;
+        effectiveBoardBuildMultiplier =
+          if loadBuildBoardMultiplier.set != null then
+            loadBuildBoardMultiplier.set
+          else if board == "pi5" then
+            loadBuildBoardMultiplier.pi5
+          else
+            1.0;
+        effectiveBuildMultiplier = loadBuildMultiplier * effectiveBoardBuildMultiplier;
         mainUser = self.host.mainUser.username;
         mainUserUid = toString config.users.users.${self.host.mainUser.username}.uid;
         deploymentMode = config.nx.global.deploymentMode;
@@ -1145,7 +1173,7 @@ args@{
             _nproc=$(${pkgs.coreutils}/bin/nproc 2>/dev/null || echo 1)
             ${pkgs.gawk}/bin/awk \
               -v max=${toString loadMaxPerCore} \
-              -v build_multiplier=${toString loadBuildMultiplier} \
+              -v build_multiplier=${toString effectiveBuildMultiplier} \
               -v high_multiplier=${toString highLoadMultiplier} \
               -v nproc="$_nproc" \
               -v build_mode="$_build_mode" \
