@@ -873,14 +873,26 @@ args@{
                   fi
                 ''}
 
-                if ! ${pkgs.nixos-rebuild}/bin/nixos-rebuild $REBUILD_ACTION \
-                  --flake ".#${profileName}" \
-                  --no-update-lock-file \
-                  --print-build-logs \
-                  --fallback \
-                  --show-trace; then
-                  exit 1
-                fi
+                _rebuild_attempt=0
+                _rebuild_max_retries=3
+                _rebuild_wait=30
+                while true; do
+                  if ${pkgs.nixos-rebuild}/bin/nixos-rebuild $REBUILD_ACTION \
+                    --flake ".#${profileName}" \
+                    --no-update-lock-file \
+                    --print-build-logs \
+                    --fallback \
+                    --show-trace; then
+                    break
+                  fi
+                  if [[ $_rebuild_attempt -ge $_rebuild_max_retries ]]; then
+                    exit 1
+                  fi
+                  _rebuild_attempt=$((_rebuild_attempt + 1))
+                  ${logScript "err" "WARNING: Rebuild attempt $_rebuild_attempt failed, retrying in $_rebuild_wait s"}
+                  ${pkgs.coreutils}/bin/sleep $_rebuild_wait
+                  _rebuild_wait=$((_rebuild_wait * 3))
+                done
                 ${lib.optionalString (
                   !self.settings.allowReboot
                 ) "${logScript "info" "SUCCESS: Auto-upgrade completed successfully"}"}
