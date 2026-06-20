@@ -83,7 +83,7 @@
         description = "Test build configuration without deploying";
         group = "switch";
         options = {
-          timeout = optionWithDefault "Set timeout in seconds" "seconds" "int" "14400";
+          timeout = optionWithDefault "Set timeout in seconds" "seconds" "int" "43200";
           dry-run = option "Test build without actual building";
           offline = option "Build without network access";
           diff = option "Compare built config with current active system";
