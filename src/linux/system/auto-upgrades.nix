@@ -858,7 +858,7 @@ args@{
                     REBUILD_ACTION="boot"
                   fi
                 ''}
-                ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild $REBUILD_ACTION --flake '.#${profileName}' --impure --print-build-logs"
+                ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild $REBUILD_ACTION --flake '.#${profileName}' --impure --print-build-logs --fallback"
                 ${logScript "info" "System rebuild command prepared"}
               ''
             else
@@ -878,6 +878,7 @@ args@{
                   --impure \
                   --no-update-lock-file \
                   --print-build-logs \
+                  --fallback \
                   --show-trace; then
                   exit 1
                 fi
