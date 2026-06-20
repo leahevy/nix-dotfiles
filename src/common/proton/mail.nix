@@ -42,6 +42,22 @@ args@{
       nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
         "proton-mail"
       ];
+      nx.linux.desktop.niri.lateWindowRules =
+        lib.mkIf (self.linux.isModuleEnabled "desktop.niri" && !(self.isModuleEnabled "mail-stack.neomutt"))
+          [
+            {
+              match = {
+                app-id = "proton-mail";
+              };
+              skipStaticRule = true;
+              apply = {
+                float = true;
+                workspace = "scratch";
+                width = "1500";
+                height = "800";
+              };
+            }
+          ];
     };
 
     enabled =
@@ -128,14 +144,6 @@ args@{
             }
           ]
           ++ lib.optionals (!(self.isModuleEnabled "mail-stack.neomutt")) [
-            {
-              matches = [ { app-id = "proton-mail"; } ];
-              min-width = 1500;
-              min-height = 800;
-              open-on-workspace = "scratch";
-              open-floating = true;
-              open-focused = false;
-            }
             {
               matches = [
                 {
