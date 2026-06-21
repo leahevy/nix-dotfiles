@@ -17,7 +17,6 @@
       raspberry-pi-5.bluetooth
       trusted-nix-caches
     ]
-    ++ [ inputs.nixos-raspberrypi.lib.inject-overlays ]
     ++ lib.optionals (host.settings.system.desktop == null) [
       inputs.nixos-raspberrypi.lib.inject-overlays-global
     ];
