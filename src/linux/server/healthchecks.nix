@@ -1652,16 +1652,15 @@ args@{
             ${pkgs.systemd}/bin/journalctl -k --since "$_since" -p warning..emerg --no-pager \
               | ${kernelLogProcessScript} \
               | ${secretCensorScript} > "$KERNEL_LOG_FILTERED"
+            printf '[kernel log tail]\n' >&3
+            ${pkgs.coreutils}/bin/tail -n 100 "$KERNEL_LOG_ALL" \
+              | ${secretCensorScript} >&3
+            printf '\n[kernel log warnings]\n' >&3
           else
             ${secretCensorScript} < "$KERNEL_LOG_ALL" > "$KERNEL_LOG_FILTERED"
           fi
 
           ${pkgs.coreutils}/bin/cat "$KERNEL_LOG_FILTERED" >&3
-          if [[ "$_kernel_lines" -gt 200 ]]; then
-            printf '\n[kernel log tail]\n' >&3
-            ${pkgs.coreutils}/bin/tail -n 100 "$KERNEL_LOG_ALL" \
-              | ${secretCensorScript} >&3
-          fi
         '';
 
         allDailyChecks =
