@@ -377,6 +377,7 @@ args@{
         "WARNING: CPU: [0-9]+ PID: [0-9]+ at mm/slub\\.c:[0-9]+ alloc_tagging_slab_alloc_hook"
         "device-mapper: core: CONFIG_IMA_DISABLE_HTABLE is disabled\\. Duplicate IMA measurements will not be recorded in the IMA log\\."
         "uvcvideo.*: Failed to query \\(GET_INFO\\) UVC control [0-9]+ on unit [0-9]+:.*\\(exp\\. [0-9]+\\)\\."
+        "^.+ invoked oom-killer: gfp_mask=0x[0-9a-fA-F]+"
         "^Tasks state \\(memory values in pages\\):$"
         "^\\[  pid  \\]"
         "^\\[[ 0-9]+\\][ 0-9]"
