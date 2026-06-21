@@ -17,12 +17,10 @@
       raspberry-pi-5.bluetooth
       trusted-nix-caches
     ]
-    ++ (
-      if host.settings.system.desktop == null then
-        [ inputs.nixos-raspberrypi.lib.inject-overlays-global ]
-      else
-        [ inputs.nixos-raspberrypi.lib.inject-overlays ]
-    );
+    ++ [ inputs.nixos-raspberrypi.lib.inject-overlays ]
+    ++ lib.optionals (host.settings.system.desktop == null) [
+      inputs.nixos-raspberrypi.lib.inject-overlays-global
+    ];
 
   nixpkgs.overlays = allOverlays;
   nixpkgs.config.allowUnfreePredicate = unfreePredicate;
