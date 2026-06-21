@@ -1562,9 +1562,46 @@ args@{
                                   pending.add(wid)
 
                       elif "WindowLayoutsChanged" in event:
-                          for wid, layout in event["WindowLayoutsChanged"]["changes"]:
+                          changes = event["WindowLayoutsChanged"]["changes"]
+                          old_positions = {
+                              wid: layout_position(windows_by_id[wid])
+                              for wid, _layout in changes
+                              if wid in windows_by_id
+                          }
+                          for wid, layout in changes:
                               if wid in windows_by_id and layout:
                                   windows_by_id[wid]["layout"].update(layout)
+                          if bootstrapped:
+                              for wid, _layout in changes:
+                                  if wid not in windows_by_id:
+                                      continue
+                                  w = windows_by_id[wid]
+                                  if not is_tiling_candidate(config, workspaces_by_id, w):
+                                      continue
+                                  old_pos = old_positions.get(wid)
+                                  new_pos = layout_position(w)
+                                  if old_pos is None or new_pos is None or old_pos[0] == new_pos[0]:
+                                      continue
+                                  old_col = old_pos[0]
+                                  new_col = new_pos[0]
+                                  ws_id = w.get("workspace_id")
+                                  if ws_id is None:
+                                      continue
+                                  old_col_remaining = [ow for ow in windows_by_id.values() if ow.get("workspace_id") == ws_id and is_tiling_candidate(config, workspaces_by_id, ow) and (layout_position(ow) or (None, None))[0] == old_col]
+                                  if len(old_col_remaining) == 1:
+                                      lone = old_col_remaining[0]
+                                      log.info(
+                                          "resetting height of window %d (app-id=%s) left alone after window %d moved column",
+                                          lone["id"], lone.get("app_id", ""), wid,
+                                      )
+                                      niri_action("reset-window-height", "--id", str(lone["id"]))
+                                  new_col_occupants = [ow for ow in windows_by_id.values() if ow.get("workspace_id") == ws_id and is_tiling_candidate(config, workspaces_by_id, ow) and (layout_position(ow) or (None, None))[0] == new_col]
+                                  if len(new_col_occupants) == 1:
+                                      log.info(
+                                          "resetting height of window %d (app-id=%s) displaced to solo column",
+                                          wid, w.get("app_id", ""),
+                                      )
+                                      niri_action("reset-window-height", "--id", str(wid))
 
                       elif "WindowClosed" in event:
                           wid = event["WindowClosed"]["id"]
