@@ -1675,11 +1675,10 @@ args@{
           fi
 
           if [[ "$_kernel_lines" -gt 200 ]]; then
-            printf '[kernel log: warning+, %d lines today (filtered)]\n' "$_kernel_lines" >&3
             ${pkgs.systemd}/bin/journalctl -k --since "$_since" -p warning..emerg --no-pager \
               | ${kernelLogProcessScript} \
               | ${secretCensorScript} > "$KERNEL_LOG_FILTERED"
-            printf '[kernel log tail]\n' >&3
+            printf '[kernel log tail | %d lines today]\n' "$_kernel_lines" >&3
             ${pkgs.coreutils}/bin/tail -n 100 "$KERNEL_LOG_ALL" \
               | ${secretCensorScript} >&3
             printf '\n[kernel log warnings]\n' >&3
