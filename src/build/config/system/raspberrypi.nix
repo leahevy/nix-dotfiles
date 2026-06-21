@@ -21,7 +21,17 @@
       inputs.nixos-raspberrypi.lib.inject-overlays-global
     ];
 
-  nixpkgs.overlays = allOverlays;
+  nixpkgs.overlays = allOverlays ++ [
+    (final: prev: {
+      python313Packages = prev.python313Packages.overrideScope (
+        _: pprev: {
+          cryptography = pprev.cryptography.overrideAttrs (_: {
+            doCheck = false;
+          });
+        }
+      );
+    })
+  ];
   nixpkgs.config.allowUnfreePredicate = unfreePredicate;
   nixpkgs.config.permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
 
