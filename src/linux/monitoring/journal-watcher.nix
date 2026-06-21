@@ -378,6 +378,7 @@ args@{
         "WARNING: CPU: [0-9]+ PID: [0-9]+ at mm/slub\\.c:[0-9]+ alloc_tagging_slab_alloc_hook"
         "^Mem-Info:$"
         "^active_anon:[0-9]+ inactive_anon:[0-9]+"
+        "^\\s+(active_file|isolated_anon|isolated_file|unevictable|dirty|writeback|slab_reclaimable|slab_unreclaimable|mapped|shmem|pagetables|sec_pagetables|bounce|kernel_misc_reclaimable|free):[0-9]+"
         "^Node [0-9]+ (active_anon|DMA free|Normal free):[0-9]+"
         "^Node [0-9]+ (DMA|Normal): [0-9]+\\*[0-9]+kB"
         "^[0-9]+ total pagecache pages$"
