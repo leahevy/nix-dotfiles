@@ -23,13 +23,13 @@
 
   nixpkgs.overlays = allOverlays ++ [
     (final: prev: {
-      python313 = prev.python313.override {
-        packageOverrides = _: pprev: {
+      pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+        (_: pprev: {
           cryptography = pprev.cryptography.overrideAttrs (_: {
             dontUsePytestCheck = true;
           });
-        };
-      };
+        })
+      ];
     })
   ];
   nixpkgs.config.allowUnfreePredicate = unfreePredicate;
