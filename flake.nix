@@ -86,7 +86,7 @@
     };
 
     niri-flake = {
-      url = "github:leahevy/niri-flake";
+      url = "github:leahevy/niri-flake/nx-patches";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
       inputs.nixpkgs-stable.follows = "nixpkgs";
     };
