@@ -288,6 +288,16 @@ args@{
         secondary = null;
       };
     };
+    blurAppIds = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "App IDs for which to enable blur with xray via window rules.";
+    };
+    blurAppIdsNoXray = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "App IDs for which to enable blur without xray via window rules.";
+    };
   };
 
   submodules = {
@@ -370,6 +380,7 @@ args@{
   module = {
     enabled = config: {
       nx.linux.desktop.niri.autoTiler.ignoredAppIds = [ "org.nx.scratchpad" ];
+      nx.linux.desktop.niri.blurAppIdsNoXray = [ "org.nx.scratchpad" ];
     };
 
     home =
@@ -1785,6 +1796,13 @@ args@{
 
         screenshotDir = builtins.dirOf screenshotPath;
 
+        blurCfg = {
+          passes = 2;
+          offset = "3.0";
+          noise = "0.02";
+          saturation = "1.5";
+        };
+
         generateStartupCommands = apps: map (app: { sh = "sleep 1 && uwsm app -- ${app}"; }) apps;
 
         generateDelayedStartupCommands = apps: map (app: { sh = "sleep 6 && uwsm app -- ${app}"; }) apps;
@@ -2019,65 +2037,6 @@ args@{
             '';
           };
 
-        home.file."${defs.binDir}/niri-window-switcher" = {
-          executable = true;
-          text = ''
-            #!/usr/bin/env bash
-
-            set -euo pipefail
-
-            get_icon_name() {
-              local app_id="$1"
-              local desktop_dir="/etc/profiles/per-user/${self.user.username}/share/applications"
-              local desktop_file="$desktop_dir/$app_id.desktop"
-
-              case "$app_id" in
-                ${lib.concatStringsSep "\n              " (
-                  lib.mapAttrsToList (k: v: "\"${k}\") echo \"${v}\" ;;") effectiveAppIdMapping
-                )}
-                *)
-                  if [[ -f "$desktop_file" ]]; then
-                    local icon
-                    icon=$(grep -m1 "^Icon=" "$desktop_file" 2>/dev/null | cut -d'=' -f2)
-                    if [[ -n "$icon" ]]; then
-                      echo "$icon"
-                      return
-                    fi
-                  fi
-
-                  local found_file
-                  found_file=$(find "$desktop_dir" -maxdepth 1 -iname "$app_id.desktop" 2>/dev/null | head -1)
-                  if [[ -n "$found_file" ]]; then
-                    local icon
-                    icon=$(grep -m1 "^Icon=" "$found_file" 2>/dev/null | cut -d'=' -f2)
-                    if [[ -n "$icon" ]]; then
-                      echo "$icon"
-                      return
-                    fi
-                  fi
-
-                  echo "$app_id"
-                  ;;
-              esac
-            }
-
-            window_ids=()
-            window_titles=()
-
-            while IFS=$'\t' read -r window_id app_id title; do
-              window_ids+=("$window_id")
-              icon_name=$(get_icon_name "$app_id")
-              window_titles+=("$title\0icon\x1f$icon_name")
-            done < <(niri msg --json windows | jq -r '.[] | [.id, .app_id, .title] | @tsv')
-
-            result=$(printf "%b\n" "''${window_titles[@]}" | ${appLauncherDmenuIndex { }})
-
-            if [[ -n "$result" ]] && [[ "$result" != -1 ]]; then
-              niri msg action focus-window --id "''${window_ids[$result]}"
-            fi
-          '';
-        };
-
         home.file."${defs.binDir}/niri-workspace-action" = {
           executable = true;
           text = ''
@@ -2186,6 +2145,76 @@ args@{
         programs.niri = {
           package = pkgs.niri;
           settings = {
+            includes = [
+              (toString (
+                pkgs.writeText "niri-blur-global.kdl" ''
+                  blur {
+                      passes ${toString blurCfg.passes}
+                      offset ${blurCfg.offset}
+                      noise ${blurCfg.noise}
+                      saturation ${blurCfg.saturation}
+                  }
+                ''
+              ))
+            ]
+            ++ map (
+              appId:
+              toString (
+                pkgs.writeText "niri-blur-${appId}.kdl" ''
+                  window-rule {
+                      match app-id="${appId}"
+                      background-effect {
+                          blur true
+                          xray true
+                          noise ${blurCfg.noise}
+                          saturation ${blurCfg.saturation}
+                      }
+                  }
+                ''
+              )
+            ) (self.options config).blurAppIds
+            ++ map (
+              appId:
+              toString (
+                pkgs.writeText "niri-blur-noxray-${appId}.kdl" ''
+                  window-rule {
+                      match app-id="${appId}"
+                      background-effect {
+                          blur true
+                          xray false
+                          noise ${blurCfg.noise}
+                          saturation ${blurCfg.saturation}
+                      }
+                  }
+                ''
+              )
+            ) (self.options config).blurAppIdsNoXray
+            ++ [
+              (toString (
+                pkgs.writeText "niri-recent-windows.kdl" ''
+                  recent-windows {
+                      on
+                      debounce-ms 750
+                      open-delay-ms 150
+                      highlight {
+                          active-color "${activeColor}ff"
+                          urgent-color "${theme.colors.semantic.warning.html}ff"
+                          padding 30
+                          corner-radius 0
+                      }
+                      previews {
+                          max-height 480
+                          max-scale 0.5
+                      }
+                      binds {
+                          Mod+Shift+Space { next-window; }
+                          Mod+Ctrl+Shift+Space { previous-window; }
+                      }
+                  }
+                ''
+              ))
+            ];
+
             prefer-no-csd = true;
             hotkey-overlay.skip-at-startup = true;
             screenshot-path = screenshotPath;
@@ -2439,11 +2468,6 @@ args@{
                   "Mod+Space" = {
                     action = spawn-sh appLauncherCmd;
                     hotkey-overlay.title = "Apps:App launcher";
-                  };
-
-                  "Mod+Shift+Space" = {
-                    action = spawn-sh "niri-window-switcher";
-                    hotkey-overlay.title = "Apps:Window switcher";
                   };
 
                   "Mod+Q" = {
@@ -2842,7 +2866,8 @@ args@{
                   };
                 };
               in
-              nopBindings // actualBindings;
+              (lib.filterAttrs (k: _: k != "Mod+Shift+Space" && k != "Mod+Ctrl+Shift+Space") nopBindings)
+              // actualBindings;
 
             animations = {
               slowdown = 2.5;
@@ -3011,7 +3036,43 @@ args@{
             ) (lib.filter (r: !r.skipStaticRule) lateRules));
           };
         };
+
+        assertions = [
+          {
+            assertion =
+              !(lib.hasAttrByPath [
+                "Mod+Shift+Space"
+                "hotkey-overlay"
+                "title"
+              ] config.programs.niri.settings.binds);
+            message = "Mod+Shift+Space is reserved for the built-in window switcher. Remove the custom binding!";
+          }
+          {
+            assertion =
+              !(lib.hasAttrByPath [
+                "Mod+Ctrl+Shift+Space"
+                "hotkey-overlay"
+                "title"
+              ] config.programs.niri.settings.binds);
+            message = "Mod+Ctrl+Shift+Space is reserved for the built-in window switcher. Remove the custom binding!";
+          }
+        ];
       };
+
+    ifEnabled.linux.desktop-modules.nwg-wrapper = {
+      enabled = config: {
+        nx.linux.desktop-modules.nwg-wrapper.extraKeybindings = [
+          {
+            key = "Mod+Shift+Space";
+            title = "Apps:Window switcher next";
+          }
+          {
+            key = "Mod+Ctrl+Shift+Space";
+            title = "Apps:Window switcher prev";
+          }
+        ];
+      };
+    };
 
     linux.system = config: {
       programs.niri = {
