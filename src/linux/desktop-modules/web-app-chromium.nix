@@ -36,7 +36,17 @@ args@{
       chromiumArgs = self.settings.args;
       bin = package + "/bin/${program}";
 
+      mkChromiumAppId =
+        webAppSettings:
+        let
+          host = "${webAppSettings.subdomain}.${webAppSettings.domain}";
+          path = builtins.head (lib.splitString "#" (lib.removePrefix "/" webAppSettings.args));
+          pathEncoded = builtins.replaceStrings [ "/" ] [ "_" ] path;
+        in
+        "chrome-${host}__${pathEncoded}-Default";
+
       buildWebAppFn = config: webAppSettings: {
+        appIds = [ (mkChromiumAppId webAppSettings) ];
         homeFiles = {
           "${defs.binDir}/${webAppSettings.webapp}-webapp" = {
             executable = true;

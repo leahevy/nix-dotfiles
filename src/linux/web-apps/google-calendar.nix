@@ -43,6 +43,19 @@ args@{
         };
       };
 
+    linux.enabled =
+      config:
+      lib.mkIf (config.nx.linux.desktop-modules.web-app.buildWebApp != null) {
+        nx.linux.desktop.niri.autoTiler.ignoredAppIds =
+          (config.nx.linux.desktop-modules.web-app.buildWebApp {
+            webapp = "google-calendar";
+            subdomain = "calendar";
+            domain = "google.com";
+            protocol = "https";
+            args = "/${config.nx.linux.web-apps.google-calendar.pathSuffix}";
+          }).appIds;
+      };
+
     linux.home =
       { config, pathSuffix, ... }:
       let

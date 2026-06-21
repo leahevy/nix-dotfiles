@@ -17,10 +17,7 @@ args@{
     buildWebApp = lib.mkOption {
       type = lib.types.nullOr (lib.types.functionTo lib.types.attrs);
       default = null;
-      description = ''
-        Function to build a web app. Takes webAppSettings, returns { homeFiles, desktopEntries }.
-        Set by the active backend (qutebrowser or chromium).
-      '';
+      description = "Function to build a web app, returning { homeFiles, desktopEntries, appIds }. Set by the active backend.";
     };
     dashboardIcons = lib.mkOption {
       type = lib.types.package;

@@ -52,6 +52,19 @@ args@{
   ];
 
   module = {
+    linux.enabled =
+      config:
+      lib.mkIf (config.nx.linux.desktop-modules.web-app.buildWebApp != null) {
+        nx.linux.desktop.niri.autoTiler.ignoredAppIds =
+          (config.nx.linux.desktop-modules.web-app.buildWebApp {
+            webapp = "immich";
+            subdomain = config.nx.linux.web-apps.immich.subdomain;
+            domain = config.nx.linux.web-apps.immich.domain;
+            protocol = "https";
+            args = config.nx.linux.web-apps.immich.args;
+          }).appIds;
+      };
+
     linux.home =
       config:
       let

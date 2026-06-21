@@ -38,6 +38,39 @@ in
   };
 
   module = {
+    linux.enabled =
+      config:
+      let
+        buildFn = config.nx.linux.desktop-modules.web-app.buildWebApp;
+        fromAutoHosts = lib.mapAttrsToList (
+          profileName: hostCfg:
+          let
+            val = hostCfg.remote.exposedServices.syncthing;
+            subdomain = if val == true then "syncthing" else val;
+            domain = hostCfg.remote.baseDomain or (hostCfg.remote.address or null);
+          in
+          {
+            label = hostCfg.hostname or profileName;
+            inherit subdomain domain;
+          }
+        ) autoHosts;
+        fromAddlHosts = lib.mapAttrsToList (name: host: {
+          label = name;
+          inherit (host) subdomain domain;
+        }) config.nx.linux.web-apps.syncthing.additionalHosts;
+        allHosts = fromAutoHosts ++ fromAddlHosts;
+        useHostname = config.nx.common.services.syncthing.enable || lib.length allHosts > 1;
+        allSettings = lib.imap0 (i: host: {
+          webapp = if useHostname then "syncthing-${toString i}" else "syncthing";
+          inherit (host) subdomain domain;
+          protocol = "https";
+          args = "";
+        }) allHosts;
+      in
+      lib.mkIf (buildFn != null && allHosts != [ ]) {
+        nx.linux.desktop.niri.autoTiler.ignoredAppIds = lib.concatMap (s: (buildFn s).appIds) allSettings;
+      };
+
     linux.home =
       { config, additionalHosts, ... }:
       let

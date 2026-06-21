@@ -53,6 +53,19 @@ args@{
   ];
 
   module = {
+    linux.enabled =
+      config:
+      lib.mkIf (config.nx.linux.desktop-modules.web-app.buildWebApp != null) {
+        nx.linux.desktop.niri.autoTiler.ignoredAppIds =
+          (config.nx.linux.desktop-modules.web-app.buildWebApp {
+            webapp = "home-assistant";
+            subdomain = config.nx.linux.web-apps.home-assistant.subdomain;
+            domain = config.nx.linux.web-apps.home-assistant.domain;
+            protocol = "https";
+            args = config.nx.linux.web-apps.home-assistant.args;
+          }).appIds;
+      };
+
     linux.home =
       config:
       let

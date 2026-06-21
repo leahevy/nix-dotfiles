@@ -225,6 +225,7 @@ args@{
           '';
         in
         {
+          appIds = [ "org.qutebrowser.${appName}" ];
           homeFiles = {
             "${defs.binDir}/${appName}-webapp" = {
               executable = true;

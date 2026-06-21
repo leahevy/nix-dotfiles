@@ -73,6 +73,32 @@ args@{
   ];
 
   module = {
+    linux.enabled =
+      config:
+      let
+        buildFn = config.nx.linux.desktop-modules.web-app.buildWebApp;
+        piholeCfg = config.nx.linux.web-apps.pihole;
+        mainSettings = {
+          webapp = "pihole";
+          subdomain = piholeCfg.subdomain;
+          domain = piholeCfg.domain;
+          protocol = "https";
+          args = piholeCfg.args;
+        };
+        additionalSettings = lib.mapAttrsToList (name: pCfg: {
+          webapp = "pihole-${name}";
+          subdomain = pCfg.subdomain;
+          domain = pCfg.domain;
+          protocol = "https";
+          args = piholeCfg.args;
+        }) piholeCfg.additionalPiholes;
+      in
+      lib.mkIf (buildFn != null) {
+        nx.linux.desktop.niri.autoTiler.ignoredAppIds = lib.concatMap (s: (buildFn s).appIds) (
+          [ mainSettings ] ++ additionalSettings
+        );
+      };
+
     home =
       config:
       let
