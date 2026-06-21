@@ -15,6 +15,9 @@ args@{
 
   module = {
     linux.system = config: {
+      nix.settings.max-jobs = 1;
+      nix.settings.cores = 4;
+
       boot.kernelParams = [
         "nvme_core.default_ps_max_latency_us=0"
         "pcie_aspm=off"
