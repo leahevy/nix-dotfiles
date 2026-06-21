@@ -522,6 +522,11 @@ in
           users.users.paperless.extraGroups = [ "paperless-sync" ];
 
           systemd.tmpfiles.settings."10-paperless" = {
+            "${basePath}".d = lib.mkOverride 75 {
+              mode = "0750";
+              user = "paperless";
+              group = "paperless-sync";
+            };
             "${basePath}/import".d = lib.mkOverride 75 {
               mode = "2770";
               user = "paperless";
@@ -529,6 +534,11 @@ in
             };
           }
           // lib.optionalAttrs self.host.impermanence {
+            "${self.persist}${basePath}".d = lib.mkOverride 75 {
+              mode = "0750";
+              user = "paperless";
+              group = "paperless-sync";
+            };
             "${self.persist}${basePath}/import".d = lib.mkOverride 75 {
               mode = "2770";
               user = "paperless";
