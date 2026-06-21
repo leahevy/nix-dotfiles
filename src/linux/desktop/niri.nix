@@ -1574,28 +1574,46 @@ args@{
                           deferred_once.discard(wid)
                           solo_maximized.discard(wid)
                           solo_resized.pop(wid, None)
-                          if bootstrapped and closing_window is not None and config["soloWindowBehavior"] != "nothing" and is_tiling_candidate(config, workspaces_by_id, closing_window):
+                          if bootstrapped and closing_window is not None and is_tiling_candidate(config, workspaces_by_id, closing_window):
                               closing_workspace_id = closing_window.get("workspace_id")
                               if closing_workspace_id is not None:
-                                  remaining = tiling_windows_for_workspace(
-                                      config, workspaces_by_id, windows_by_id, closing_workspace_id,
-                                  )
-                                  if len(remaining) == 1:
-                                      solo_wid = remaining[0]["id"]
-                                      solo_app_id = remaining[0].get("app_id", "")
-                                      log.info(
-                                          "applying solo behavior to remaining window %d (app-id=%s) after close",
-                                          solo_wid, solo_app_id,
+                                  closing_col = layout_position(closing_window)
+                                  if closing_col is not None:
+                                      closing_col_idx = closing_col[0]
+                                      for w in list(windows_by_id.values()):
+                                          if w.get("workspace_id") == closing_workspace_id and is_tiling_candidate(config, workspaces_by_id, w):
+                                              w_pos = layout_position(w)
+                                              if w_pos is not None and w_pos[0] == closing_col_idx:
+                                                  w_id = w["id"]
+                                                  log.info(
+                                                      "re-queued column-mate window %d (app-id=%s) after window %d closed",
+                                                      w_id, w.get("app_id", ""), wid,
+                                                  )
+                                                  handled.discard(w_id)
+                                                  deferred_once.discard(w_id)
+                                                  pending.add(w_id)
+                                  if config["soloWindowBehavior"] != "nothing":
+                                      remaining = tiling_windows_for_workspace(
+                                          config, workspaces_by_id, windows_by_id, closing_workspace_id,
                                       )
-                                      if config["soloWindowBehavior"] == "resize":
-                                          _layout = (windows_by_id.get(solo_wid) or {}).get("layout") or {}
-                                          _ws = _layout.get("window_size")
-                                          _orig_col_px = int(_ws[0]) if _ws else None
-                                      apply_solo_behavior(config, solo_wid, solo_app_id)
-                                      if config["soloWindowBehavior"] == "maximize":
-                                          solo_maximized.add(solo_wid)
-                                      elif config["soloWindowBehavior"] == "resize":
-                                          solo_resized[solo_wid] = _orig_col_px
+                                      if len(remaining) == 1:
+                                          solo_wid = remaining[0]["id"]
+                                          solo_app_id = remaining[0].get("app_id", "")
+                                          log.info(
+                                              "applying solo behavior to remaining window %d (app-id=%s) after close",
+                                              solo_wid, solo_app_id,
+                                          )
+                                          if config["soloWindowBehavior"] == "resize":
+                                              _layout = (windows_by_id.get(solo_wid) or {}).get("layout") or {}
+                                              _ws = _layout.get("window_size")
+                                              _orig_col_px = int(_ws[0]) if _ws else None
+                                          apply_solo_behavior(config, solo_wid, solo_app_id)
+                                          if config["soloWindowBehavior"] == "maximize":
+                                              solo_maximized.add(solo_wid)
+                                          elif config["soloWindowBehavior"] == "resize":
+                                              solo_resized[solo_wid] = _orig_col_px
+                                          handled.add(solo_wid)
+                                          pending.discard(solo_wid)
 
                       if not bootstrapped and saw_workspaces and saw_windows:
                           handled = set(windows_by_id.keys())
