@@ -13,12 +13,50 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
-  settings = {
-    usedShell = "bash";
-    niriKeybindings = false;
-    withBorder = true;
-    withBackground = true;
-    centerOffset = null;
+  options = {
+    usedShell = lib.mkOption {
+      type = lib.types.str;
+      default = "bash";
+      description = "Shell name shown in the fastfetch details widget.";
+    };
+    niriKeybindings = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Whether to show a niri keybindings overlay panel.";
+    };
+    withBorder = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Whether to draw a border around the overlay windows.";
+    };
+    withBackground = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Whether to draw a semi-transparent background behind the overlay windows.";
+    };
+    centerOffset = lib.mkOption {
+      type = lib.types.nullOr lib.types.int;
+      default = null;
+      description = "Horizontal offset in pixels for centering panels, or null to auto-detect from display width.";
+    };
+    extraKeybindings = lib.mkOption {
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            key = lib.mkOption {
+              type = lib.types.str;
+              description = "Key binding string shown in the overlay.";
+            };
+            title = lib.mkOption {
+              type = lib.types.str;
+              description = "Display title in Group:Description format.";
+            };
+          };
+        }
+      );
+      default = [ ];
+      description = "Additional key bindings to display in the keybindings overlay beyond those auto-detected from niri config.";
+    };
   };
 
   module = {
@@ -26,7 +64,7 @@ args@{
       nx.linux.desktop.common.graphicalSessionServices = [
         "nx-nwg-wrapper-1"
       ]
-      ++ lib.optionals self.settings.niriKeybindings [
+      ++ lib.optionals config.nx.linux.desktop-modules.nwg-wrapper.niriKeybindings [
         "nx-nwg-wrapper-2"
       ];
 
@@ -43,7 +81,7 @@ args@{
           unitless = true;
         }
       ]
-      ++ lib.optionals self.settings.niriKeybindings [
+      ++ lib.optionals config.nx.linux.desktop-modules.nwg-wrapper.niriKeybindings [
         {
           service = "nx-nwg-wrapper-2.service";
           string = "Failed with result 'exit-code'\.";
@@ -53,7 +91,16 @@ args@{
     };
 
     home =
-      config:
+      {
+        config,
+        usedShell,
+        niriKeybindings,
+        withBorder,
+        withBackground,
+        centerOffset,
+        extraKeybindings,
+        ...
+      }:
       let
         seasonWallpaperInfo = self.inputs.nix-season-wallpaper.resolveWallpaperBySeason self.inputs.newestFlake.self;
         dailyWallpaperInfo = self.inputs.nix-season-wallpaper.resolveDailyWallpaper self.inputs.newestFlake.self;
@@ -66,8 +113,8 @@ args@{
             "center";
         isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] false;
         effectiveCenterOffset =
-          if self.settings.centerOffset != null then
-            self.settings.centerOffset
+          if centerOffset != null then
+            centerOffset
           else
             (if isWidescreen then 3440 * 4 / 10 else 1920 * 4 / 10);
         terminal = config.nx.preferences.desktop.programs.terminal;
@@ -79,7 +126,10 @@ args@{
           mainDisplay
         ];
 
-        niriBinds = config.programs.niri.settings.binds or { };
+        fakeNiriBinds = lib.listToAttrs (
+          map (b: lib.nameValuePair b.key { "hotkey-overlay"."title" = b.title; }) extraKeybindings
+        );
+        niriBinds = (config.programs.niri.settings.binds or { }) // fakeNiriBinds;
 
         bindingMap = {
           XF86AudioRaiseVolume = "Vol+";
@@ -330,7 +380,7 @@ args@{
                 { "type": "kernel" },
                 { "type": "uptime" },
                 { "type": "packages" },
-                { "type": "shell", "format": "${self.settings.usedShell}" },
+                { "type": "shell", "format": "${usedShell}" },
                 { "type": "display" },
                 { "type": "wm" },
                 { "type": "theme" },
@@ -349,7 +399,7 @@ args@{
           '';
         };
 
-        home.file."${defs.binDir}/keybindings-all.sh" = lib.mkIf self.settings.niriKeybindings {
+        home.file."${defs.binDir}/keybindings-all.sh" = lib.mkIf niriKeybindings {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -365,7 +415,7 @@ args@{
           text = ''
             window {
                 background-color: ${
-                  if self.settings.withBackground then
+                  if withBackground then
                     let
                       bgColor = config.nx.preferences.theme.colors.main.backgrounds.primary.html;
                       rgb = lib.removePrefix "#" bgColor;
@@ -378,7 +428,7 @@ args@{
                     "transparent"
                 };
                 border: ${
-                  if self.settings.withBorder then
+                  if withBorder then
                     "1px solid ${config.nx.preferences.theme.colors.separators.normal.html}"
                   else
                     "none"
@@ -394,11 +444,11 @@ args@{
           '';
         };
 
-        home.file.".config/nwg-wrapper/keybindings.css" = lib.mkIf self.settings.niriKeybindings {
+        home.file.".config/nwg-wrapper/keybindings.css" = lib.mkIf niriKeybindings {
           text = ''
             window {
                 background-color: ${
-                  if self.settings.withBackground then
+                  if withBackground then
                     let
                       bgColor = config.nx.preferences.theme.colors.main.backgrounds.primary.html;
                       rgb = lib.removePrefix "#" bgColor;
@@ -411,7 +461,7 @@ args@{
                     "transparent"
                 };
                 border: ${
-                  if self.settings.withBorder then
+                  if withBorder then
                     "1px solid ${config.nx.preferences.theme.colors.separators.normal.html}"
                   else
                     "none"
@@ -435,7 +485,7 @@ args@{
             #!/usr/bin/env bash
             systemctl --user restart nx-nwg-wrapper-1 || true
             ${
-              if self.settings.niriKeybindings then
+              if niriKeybindings then
                 ''
                   systemctl --user restart nx-nwg-wrapper-2 || true
                 ''
@@ -465,7 +515,7 @@ args@{
           };
         };
 
-        systemd.user.services.nx-nwg-wrapper-2 = lib.mkIf self.settings.niriKeybindings {
+        systemd.user.services.nx-nwg-wrapper-2 = lib.mkIf niriKeybindings {
           Unit = {
             Description = "Background window daemon 2 - Keybindings";
             After = [
