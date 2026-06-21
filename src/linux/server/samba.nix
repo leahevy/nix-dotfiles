@@ -370,6 +370,11 @@ args@{
           ];
 
           systemd.tmpfiles.settings."10-paperless" = {
+            "${basePath}".d = lib.mkForce {
+              mode = "0750";
+              user = "paperless";
+              group = "ldap-users";
+            };
             "${basePath}/import".d = lib.mkForce {
               mode = "2770";
               user = "paperless";
@@ -377,6 +382,11 @@ args@{
             };
           }
           // lib.optionalAttrs self.host.impermanence {
+            "${self.persist}${basePath}".d = lib.mkForce {
+              mode = "0750";
+              user = "paperless";
+              group = "ldap-users";
+            };
             "${self.persist}${basePath}/import".d = lib.mkForce {
               mode = "2770";
               user = "paperless";
