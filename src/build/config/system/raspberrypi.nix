@@ -24,8 +24,14 @@
 
   assertions = [
     {
-      assertion = (config.boot.initrd.luks.devices or { }) == { } || host.ethernetDeviceName != null;
-      message = "Raspberry Pi 5 with encrypted (LUKS) devices requires host.ethernetDeviceName to be set: remote initrd LUKS unlock works over wired ethernet only!";
+      assertion =
+        (config.boot.initrd.luks.devices or { }) == { }
+        || host.ethernetDeviceName != null
+        || !builtins.elem (host.deploymentMode or "develop") [
+          "server"
+          "managed"
+        ];
+      message = "Raspberry Pi 5 with encrypted (LUKS) devices in server or managed mode requires host.ethernetDeviceName to be set: remote initrd LUKS unlock works over wired ethernet only!";
     }
   ];
 }
