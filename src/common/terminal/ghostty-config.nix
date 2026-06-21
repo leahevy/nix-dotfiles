@@ -83,7 +83,9 @@ args@{
           font-size = lib.mkForce self.settings.fontSize;
           font-thicken = lib.mkForce true;
           font-family = [ self.settings.fontFamily ];
-          background-opacity = lib.mkForce self.settings.opacity;
+          background-opacity = lib.mkForce (
+            if self.isLinux && self.linux.isModuleEnabled "desktop.niri" then 0.85 else self.settings.opacity
+          );
           background-blur = lib.mkForce true;
           background = lib.mkForce (
             lib.removePrefix "#" (config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html)
@@ -120,6 +122,11 @@ args@{
     };
 
     linux = {
+      enabled = config: {
+        nx.linux.desktop.niri.blurAppIdsNoXray = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
+          "com.mitchellh.ghostty"
+        ];
+      };
       home =
         config:
         lib.mkIf (self.linux.isModuleEnabled "desktop.niri") {
