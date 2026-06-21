@@ -33,6 +33,9 @@ args@{
     borgMonitoringTimeoutMinutes = 180;
     borgCheckIntervalMinutes = 15;
     healthcheckUUID = null;
+    requiredBranch = "main";
+    requiredBranchNxcore = null;
+    requiredBranchNxconfig = null;
   };
 
   module = {
@@ -216,6 +219,16 @@ args@{
         nxconfigDir = "${self.host.mainUser.home}/.config/nx/nxconfig";
         isDevelopMode = self.host.deploymentMode == "develop";
         effectiveDryRun = self.settings.dryRun || isDevelopMode;
+        effectiveBranchNxcore =
+          if self.settings.requiredBranchNxcore != null then
+            self.settings.requiredBranchNxcore
+          else
+            self.settings.requiredBranch;
+        effectiveBranchNxconfig =
+          if self.settings.requiredBranchNxconfig != null then
+            self.settings.requiredBranchNxconfig
+          else
+            self.settings.requiredBranch;
         hasLuks = (config.boot.initrd.luks.devices or { }) != { };
 
         profileName = "${self.host.hostname}--${self.host.architecture}";
@@ -629,22 +642,24 @@ args@{
           check_on_main_branch() {
             local repo_path="$1"
             local repo_name="$2"
+            local required_branch="$3"
 
             cd "$repo_path"
             local current_branch=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git branch --show-current)
+            [[ -z "$current_branch" ]] && current_branch="(detached @ $(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse --short HEAD 2>/dev/null || echo "?"))"
 
-            if [[ "$current_branch" != "main" ]]; then
-              ${logScript "err" "WARNING: Repository $repo_name is on branch '$current_branch', not 'main'. Auto-upgrade requires main branch!"}
+            if [[ "$current_branch" != "$required_branch" ]]; then
+              ${logScript "err" "WARNING: Repository $repo_name is on branch '$current_branch', not '$required_branch'. Auto-upgrade requires $required_branch branch!"}
               exit 2
             fi
           }
 
           ${lib.optionalString isDevelopMode ''
             if [[ -d "${nxcoreDir}/.git" ]]; then
-              check_on_main_branch "${nxcoreDir}" "nxcore"
+              check_on_main_branch "${nxcoreDir}" "nxcore" "${effectiveBranchNxcore}"
             fi
           ''}
-          check_on_main_branch "${nxconfigDir}" "nxconfig"
+          check_on_main_branch "${nxconfigDir}" "nxconfig" "${effectiveBranchNxconfig}"
         '';
 
         setupRemotesScript = ''
@@ -687,6 +702,7 @@ args@{
           check_for_changes() {
             local repo_path="$1"
             local repo_name="$2"
+            local required_branch="$3"
 
             cd "$repo_path"
 
@@ -696,9 +712,9 @@ args@{
             fi
 
             local local_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse HEAD)
-            local remote_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse nx-auto-upgrade/main)
+            local remote_commit=$(${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git rev-parse nx-auto-upgrade/"$required_branch")
 
-            if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git merge-base --is-ancestor "$local_commit" nx-auto-upgrade/main >/dev/null 2>&1; then
+            if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git merge-base --is-ancestor "$local_commit" nx-auto-upgrade/"$required_branch" >/dev/null 2>&1; then
               ${logScript "err" "WARNING: Repository $repo_name local commit is ahead of remote!"}
               exit 2
             fi
@@ -716,13 +732,13 @@ args@{
 
           ${lib.optionalString isDevelopMode ''
             if [[ -d "${nxcoreDir}/.git" ]]; then
-              if check_for_changes "${nxcoreDir}" "nxcore"; then
+              if check_for_changes "${nxcoreDir}" "nxcore" "${effectiveBranchNxcore}"; then
                 nxcore_changed=true
               fi
             fi
           ''}
 
-          if check_for_changes "${nxconfigDir}" "nxconfig"; then
+          if check_for_changes "${nxconfigDir}" "nxconfig" "${effectiveBranchNxconfig}"; then
             nxconfig_changed=true
           fi
 
@@ -742,6 +758,7 @@ args@{
           pull_repo() {
             local repo_path="$1"
             local repo_name="$2"
+            local required_branch="$3"
 
             cd "$repo_path"
 
@@ -758,12 +775,12 @@ args@{
                 ''
               else
                 ''
-                  if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git pull nx-auto-upgrade main; then
+                  if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git pull nx-auto-upgrade "$required_branch"; then
                     ${logScript "err" "FAILURE: Failed to pull $repo_name repository!"}
                     exit 1
                   fi
 
-                  ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git update-ref refs/remotes/origin/main refs/remotes/nx-auto-upgrade/main
+                  ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git update-ref refs/remotes/origin/"$required_branch" refs/remotes/nx-auto-upgrade/"$required_branch"
 
                   ${pkgs.coreutils}/bin/chown -R ${self.host.mainUser.username}:${
                     config.users.users.${self.host.mainUser.username}.group
@@ -780,11 +797,11 @@ args@{
             }
           }
 
-          pull_repo "${nxconfigDir}" "nxconfig"
+          pull_repo "${nxconfigDir}" "nxconfig" "${effectiveBranchNxconfig}"
 
           ${lib.optionalString isDevelopMode ''
             if [[ -d "${nxcoreDir}/.git" ]]; then
-              pull_repo "${nxcoreDir}" "nxcore"
+              pull_repo "${nxcoreDir}" "nxcore" "${effectiveBranchNxcore}"
             fi
           ''}
         '';
