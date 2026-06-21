@@ -1532,7 +1532,7 @@ args@{
                               elif not previous.get("is_floating") and window.get("is_floating"):
                                   handled.discard(wid)
                                   ws_id = window.get("workspace_id")
-                                  if ws_id is not None and config["soloWindowBehavior"] != "nothing":
+                                  if ws_id is not None and config["soloWindowBehavior"] != "nothing" and is_tiling_candidate(config, workspaces_by_id, previous):
                                       remaining = tiling_windows_for_workspace(
                                           config, workspaces_by_id, windows_by_id, ws_id,
                                       )
@@ -1574,7 +1574,7 @@ args@{
                           deferred_once.discard(wid)
                           solo_maximized.discard(wid)
                           solo_resized.pop(wid, None)
-                          if bootstrapped and closing_window is not None and config["soloWindowBehavior"] != "nothing":
+                          if bootstrapped and closing_window is not None and config["soloWindowBehavior"] != "nothing" and is_tiling_candidate(config, workspaces_by_id, closing_window):
                               closing_workspace_id = closing_window.get("workspace_id")
                               if closing_workspace_id is not None:
                                   remaining = tiling_windows_for_workspace(
