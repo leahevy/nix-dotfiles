@@ -2056,7 +2056,19 @@ args@{
           pkgs.writeShellScript "nx-hc-${endpointName}" ''
             set -euo pipefail
             TMPDIR_HC=$(${pkgs.coreutils}/bin/mktemp -d)
-            trap "${pkgs.coreutils}/bin/rm -rf '$TMPDIR_HC'" EXIT
+            _hc_ping_sent=0
+            _hc_emergency_cleanup() {
+              local _code=$?
+              ${pkgs.coreutils}/bin/rm -rf "''${TMPDIR_HC:-}"
+              if [[ $_code -ne 0 && ''${_hc_ping_sent:-0} -eq 0 ]]; then
+                _pk=$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg secretPath} 2>/dev/null) || return 0
+                ${pkgs.curl}/bin/curl -sf -m 30 --connect-timeout 10 \
+                  "${pingBaseUrl}/''${_pk}/${endpointName}/fail?create=1" \
+                  --data-binary "Health check script crashed unexpectedly" \
+                  -o /dev/null 2>/dev/null || true
+              fi
+            }
+            trap _hc_emergency_cleanup EXIT
             export TMPDIR_HC
             REPORT_FILE="$TMPDIR_HC/report"
             DETAIL_FILE="$TMPDIR_HC/detail"
@@ -2104,6 +2116,7 @@ args@{
             ${ipReplaceScript} < "$REPORT_FILE" > "$_report_ip_tmp" && ${pkgs.coreutils}/bin/mv "$_report_ip_tmp" "$REPORT_FILE" || true
 
             ${curlWithRetry { inherit endpointName networkTimeoutSec; }}
+            _hc_ping_sent=1
           '';
 
         makeStartPingScript =
