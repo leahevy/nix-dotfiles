@@ -13,6 +13,7 @@
     raspberry-pi-5.page-size-16k
     raspberry-pi-5.display-vc4
     raspberry-pi-5.bluetooth
+    trusted-nix-caches
   ];
 
   nixpkgs.overlays = allOverlays;
