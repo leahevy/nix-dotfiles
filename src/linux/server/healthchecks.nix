@@ -1762,8 +1762,8 @@ args@{
             '';
             appendInfo = ''
               _info_lines=$(${pkgs.coreutils}/bin/wc -l < "${infoFile}")
-              ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
-                | ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" >> "$DETAIL_FILE"
+              ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" "${infoFile}" \
+                | ${pkgs.gnused}/bin/sed 's/^/  /' >> "$DETAIL_FILE"
               if [[ "$_info_lines" -gt "$DETAIL_MAX_LINES" ]]; then
                 printf '  [%d lines truncated]\n' "$((_info_lines - DETAIL_MAX_LINES))" >> "$DETAIL_FILE"
                 {
@@ -2410,8 +2410,8 @@ args@{
                 if [[ "$DETAIL_MAX_LINES" -lt "$MIN_DETAIL_LINES" ]]; then
                   DETAIL_MAX_LINES="$MIN_DETAIL_LINES"
                 fi
-                ${pkgs.gnused}/bin/sed 's/^/  /' "$INFO_FILE_CS" \
-                  | ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" >> "$DETAIL_FILE"
+                ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" "$INFO_FILE_CS" \
+                  | ${pkgs.gnused}/bin/sed 's/^/  /' >> "$DETAIL_FILE"
                 if [[ "$_info_lines_cs" -gt "$DETAIL_MAX_LINES" ]]; then
                   printf '  [%d lines truncated]\n' "$((_info_lines_cs - DETAIL_MAX_LINES))" >> "$DETAIL_FILE"
                   {
