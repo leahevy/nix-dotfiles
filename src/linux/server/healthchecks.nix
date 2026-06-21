@@ -1679,16 +1679,15 @@ args@{
             ${pkgs.systemd}/bin/journalctl -k --since "$_since" -p warning..emerg --no-pager \
               | ${kernelLogProcessScript} \
               | ${secretCensorScript} > "$KERNEL_LOG_FILTERED"
+            printf '[kernel log tail]\n' >&3
+            ${pkgs.coreutils}/bin/tail -n 100 "$KERNEL_LOG_ALL" \
+              | ${secretCensorScript} >&3
+            printf '\n[kernel log warnings]\n' >&3
           else
             ${secretCensorScript} < "$KERNEL_LOG_ALL" > "$KERNEL_LOG_FILTERED"
           fi
 
           ${pkgs.coreutils}/bin/cat "$KERNEL_LOG_FILTERED" >&3
-          if [[ "$_kernel_lines" -gt 200 ]]; then
-            printf '\n[kernel log tail]\n' >&3
-            ${pkgs.coreutils}/bin/tail -n 100 "$KERNEL_LOG_ALL" \
-              | ${secretCensorScript} >&3
-          fi
         '';
 
         allDailyChecks =
@@ -1789,8 +1788,8 @@ args@{
             '';
             appendInfo = ''
               _info_lines=$(${pkgs.coreutils}/bin/wc -l < "${infoFile}")
-              ${pkgs.gnused}/bin/sed 's/^/  /' "${infoFile}" \
-                | ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" >> "$DETAIL_FILE"
+              ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" "${infoFile}" \
+                | ${pkgs.gnused}/bin/sed 's/^/  /' >> "$DETAIL_FILE"
               if [[ "$_info_lines" -gt "$DETAIL_MAX_LINES" ]]; then
                 printf '  [%d lines truncated]\n' "$((_info_lines - DETAIL_MAX_LINES))" >> "$DETAIL_FILE"
                 {
@@ -2083,7 +2082,19 @@ args@{
           pkgs.writeShellScript "nx-hc-${endpointName}" ''
             set -euo pipefail
             TMPDIR_HC=$(${pkgs.coreutils}/bin/mktemp -d)
-            trap "${pkgs.coreutils}/bin/rm -rf '$TMPDIR_HC'" EXIT
+            _hc_ping_sent=0
+            _hc_emergency_cleanup() {
+              local _code=$?
+              ${pkgs.coreutils}/bin/rm -rf "''${TMPDIR_HC:-}"
+              if [[ $_code -ne 0 && ''${_hc_ping_sent:-0} -eq 0 ]]; then
+                _pk=$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg secretPath} 2>/dev/null) || return 0
+                ${pkgs.curl}/bin/curl -sf -m 30 --connect-timeout 10 \
+                  "${pingBaseUrl}/''${_pk}/${endpointName}/fail?create=1" \
+                  --data-binary "Health check script crashed unexpectedly" \
+                  -o /dev/null 2>/dev/null || true
+              fi
+            }
+            trap _hc_emergency_cleanup EXIT
             export TMPDIR_HC
             REPORT_FILE="$TMPDIR_HC/report"
             DETAIL_FILE="$TMPDIR_HC/detail"
@@ -2131,6 +2142,7 @@ args@{
             ${ipReplaceScript} < "$REPORT_FILE" > "$_report_ip_tmp" && ${pkgs.coreutils}/bin/mv "$_report_ip_tmp" "$REPORT_FILE" || true
 
             ${curlWithRetry { inherit endpointName networkTimeoutSec; }}
+            _hc_ping_sent=1
           '';
 
         makeStartPingScript =
@@ -2437,8 +2449,8 @@ args@{
                 if [[ "$DETAIL_MAX_LINES" -lt "$MIN_DETAIL_LINES" ]]; then
                   DETAIL_MAX_LINES="$MIN_DETAIL_LINES"
                 fi
-                ${pkgs.gnused}/bin/sed 's/^/  /' "$INFO_FILE_CS" \
-                  | ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" >> "$DETAIL_FILE"
+                ${pkgs.coreutils}/bin/head -n "$DETAIL_MAX_LINES" "$INFO_FILE_CS" \
+                  | ${pkgs.gnused}/bin/sed 's/^/  /' >> "$DETAIL_FILE"
                 if [[ "$_info_lines_cs" -gt "$DETAIL_MAX_LINES" ]]; then
                   printf '  [%d lines truncated]\n' "$((_info_lines_cs - DETAIL_MAX_LINES))" >> "$DETAIL_FILE"
                   {
