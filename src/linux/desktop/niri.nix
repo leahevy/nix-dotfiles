@@ -308,6 +308,16 @@ args@{
       default = [ ];
       description = "App IDs for which to enable xray without blur.";
     };
+    blurLayerNamespaces = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Layer-shell namespaces for which to enable blur with xray via layer rules.";
+    };
+    blurLayerNamespacesNoXray = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Layer-shell namespaces for which to enable blur without xray via layer rules.";
+    };
   };
 
   submodules = {
@@ -2225,6 +2235,38 @@ args@{
                 ''
               ))
             ]
+            ++ map (
+              ns:
+              toString (
+                pkgs.writeText "niri-blur-layer-${ns}.kdl" ''
+                  layer-rule {
+                      match namespace="${ns}"
+                      background-effect {
+                          blur true
+                          xray true
+                          noise ${blurCfg.noise}
+                          saturation ${blurCfg.saturation}
+                      }
+                  }
+                ''
+              )
+            ) (lib.unique (self.options config).blurLayerNamespaces)
+            ++ map (
+              ns:
+              toString (
+                pkgs.writeText "niri-blur-noxray-layer-${ns}.kdl" ''
+                  layer-rule {
+                      match namespace="${ns}"
+                      background-effect {
+                          blur true
+                          xray ${if (self.options config).enableNonXrayBlur then "false" else "true"}
+                          noise ${blurCfg.noise}
+                          saturation ${blurCfg.saturation}
+                      }
+                  }
+                ''
+              )
+            ) (lib.unique (self.options config).blurLayerNamespacesNoXray)
             ++ [
               (toString (
                 pkgs.writeText "niri-recent-windows.kdl" ''
@@ -3134,6 +3176,22 @@ args@{
               lib.concatStringsSep ", " (
                 builtins.filter (id: builtins.elem id (self.options config).xrayOnlyAppIds)
                   (self.options config).blurAppIdsNoXray
+              )
+            }!";
+          }
+          {
+            assertion =
+              let
+                dups = builtins.filter (ns: builtins.elem ns (self.options config).blurLayerNamespacesNoXray) (
+                  lib.unique (self.options config).blurLayerNamespaces
+                );
+              in
+              dups == [ ];
+            message = "blurLayerNamespaces and blurLayerNamespacesNoXray must be mutually exclusive, but share: ${
+              lib.concatStringsSep ", " (
+                builtins.filter (ns: builtins.elem ns (self.options config).blurLayerNamespacesNoXray) (
+                  lib.unique (self.options config).blurLayerNamespaces
+                )
               )
             }!";
           }
