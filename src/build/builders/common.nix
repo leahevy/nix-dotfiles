@@ -18,12 +18,15 @@
 
 let
   makeFuncs =
-    profilePath:
+    profilePath: userProfilePath:
     import (additionalInputs.lib + "/funcs.nix") {
       inherit lib defs;
-      additionalInputs = additionalInputs // {
-        profile = profilePath;
-      };
+      additionalInputs =
+        additionalInputs
+        // {
+          profile = profilePath;
+        }
+        // (if userProfilePath != null then { userProfile = userProfilePath; } else { });
     };
 
   mkProfileSelf =
@@ -491,7 +494,9 @@ in
       localHelpers = helpers // {
         isHostArchitecture = arch == buildArch;
       };
-      funcs = makeFuncs (config + "/profiles/nixos/${profileName}");
+      funcs = makeFuncs (config + "/profiles/nixos/${profileName}") (
+        config + "/profiles/home-integrated/${mainUserProfileName}"
+      );
       hostConfigPath = config + "/profiles/nixos/${profileName}/${profileName}.nix";
 
       system = arch;
@@ -716,7 +721,6 @@ in
         inherit
           lib
           pkgs
-          inputs
           variables
           defs
           funcs
@@ -727,6 +731,9 @@ in
           homeIntegratedUsers
           homeStandaloneUsers
           ;
+        inputs = inputs // {
+          userProfile = config + "/profiles/home-integrated/${mainUserProfileName}";
+        };
         helpers = localHelpers;
         host = resolvedHost;
         user = mainUser;
@@ -840,7 +847,9 @@ in
       localHelpers = helpers // {
         isHostArchitecture = arch == buildArch;
       };
-      funcs = makeFuncs (config + "/profiles/home-standalone/${profileName}");
+      funcs = makeFuncs (config + "/profiles/home-standalone/${profileName}") (
+        config + "/profiles/home-standalone/${profileName}"
+      );
       userConfigPath = config + "/profiles/home-standalone/${profileName}/${profileName}.nix";
 
       system = arch;
@@ -954,11 +963,13 @@ in
             pkgs
             allOverlays
             unfreePredicate
-            inputs
             funcs
             defs
             variables
             ;
+          inputs = inputs // {
+            userProfile = config + "/profiles/home-standalone/${profileName}";
+          };
           helpers = localHelpers;
           user = finalUserConfig;
           host = { };

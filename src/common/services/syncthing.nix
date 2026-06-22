@@ -943,22 +943,22 @@ args@{
         sops.secrets = {
           "${self.host.hostname}-syncthing-key" = {
             format = "binary";
-            sopsFile = self.profile.secretsPath "syncthing.key";
+            sopsFile = self.userProfile.secretsPath "syncthing.key";
           };
 
           "${self.host.hostname}-syncthing-cert" = {
             format = "binary";
-            sopsFile = self.profile.secretsPath "syncthing.cert";
+            sopsFile = self.userProfile.secretsPath "syncthing.cert";
           };
 
           "${self.host.hostname}-syncthing-password" = {
             format = "binary";
-            sopsFile = self.profile.secretsPath "syncthing.password";
+            sopsFile = self.userProfile.secretsPath "syncthing.password";
           };
 
           "${self.host.hostname}-syncthing-api-key" = {
             format = "binary";
-            sopsFile = self.profile.secretsPath "syncthing.api-key";
+            sopsFile = self.userProfile.secretsPath "syncthing.api-key";
           };
         }
         // builtins.listToAttrs (
@@ -966,7 +966,7 @@ args@{
             name = "syncthing-${d.name}-encryption-password";
             value = {
               format = "binary";
-              sopsFile = self.profile.secretsPath "syncthing-${d.name}-encryption.password";
+              sopsFile = self.userProfile.secretsPath "syncthing-${d.name}-encryption.password";
             };
           }) untrustedDevices
         );

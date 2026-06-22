@@ -33,7 +33,7 @@ args@{
       in
       {
         sops.secrets.${self.settings.passwordSopsFile} = {
-          sopsFile = self.profile.secretsPath self.settings.passwordSopsFile;
+          sopsFile = self.userProfile.secretsPath self.settings.passwordSopsFile;
           format = "binary";
           mode = "0400";
         };
