@@ -31,7 +31,7 @@ args@{
           // {
             "cryptomator-${name}-pass" = {
               format = "binary";
-              sopsFile = self.config.secretsPath "cryptomator-${name}-pass";
+              sopsFile = self.userProfile.secretsPath "cryptomator-${name}-pass";
               mode = "0400";
             };
           }

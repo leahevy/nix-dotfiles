@@ -50,7 +50,7 @@ args@{
     home = config: {
       sops.secrets."bitwarden-api-token" = lib.mkIf self.settings.withSecretManager {
         format = "binary";
-        sopsFile = self.config.secretsPath "bitwarden-api-token";
+        sopsFile = self.userProfile.secretsPath "bitwarden-api-token";
         mode = "0400";
       };
 
