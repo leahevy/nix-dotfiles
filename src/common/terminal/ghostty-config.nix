@@ -126,12 +126,12 @@ args@{
               content = content.replace("saturate(TRAIL_COLOR, 1.5)", "saturate(TRAIL_COLOR, 1.0)")
               content = content.replace(
                   "sdfCurrentCursor + .002, 0.004",
-                  "sdfCurrentCursor + .001, 0.002"
+                  "sdfCurrentCursor + .0015, 0.0015"
               )
-              content = content.replace("float mod = .007;", "float mod = .005;")
+              content = content.replace("float mod = .007;", "float mod = .003;")
               content = content.replace(
                   "easedProgress * lineLength));",
-                  "easedProgress * (0.002 + lineLength * 0.01)));"
+                  "easedProgress * (0.0015 + lineLength * 0.003)));"
               )
 
               with open(os.environ["out"], "w") as f:
