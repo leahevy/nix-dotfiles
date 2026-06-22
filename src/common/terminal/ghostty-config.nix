@@ -24,7 +24,7 @@ args@{
   settings = {
     fontSize = 12;
     opacity = 0.95;
-    blurOpacity = 0.90;
+    blurOpacity = 0.87;
     shaders = [
       #"cursor_blaze"
       "cursor_smear"
