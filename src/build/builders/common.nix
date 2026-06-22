@@ -516,7 +516,7 @@ in
         };
       };
       profileOverlays = funcs.extractOverlaysFromModule {
-        module = preEval.config.host.module or { };
+        module = preEval.config.host.profile or { };
         inherit system variables;
       };
 
@@ -866,7 +866,7 @@ in
         };
       };
       profileOverlays = funcs.extractOverlaysFromModule {
-        module = preEval.config.user.module or { };
+        module = preEval.config.user.profile or { };
         inherit system variables;
       };
 
