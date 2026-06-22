@@ -288,6 +288,11 @@ args@{
         secondary = null;
       };
     };
+    enableNonXrayBlur = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "When disabled, all blur uses xray and no non-xray blur or layer rules are generated.";
+    };
     blurAppIds = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -297,6 +302,11 @@ args@{
       type = lib.types.listOf lib.types.str;
       default = [ ];
       description = "App IDs for which to enable blur without xray via window rules.";
+    };
+    xrayOnlyAppIds = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "App IDs for which to enable xray without blur.";
     };
   };
 
@@ -2181,7 +2191,7 @@ args@{
                       match app-id="${appId}"
                       background-effect {
                           blur true
-                          xray false
+                          xray ${if (self.options config).enableNonXrayBlur then "false" else "true"}
                           noise ${blurCfg.noise}
                           saturation ${blurCfg.saturation}
                       }
@@ -2189,6 +2199,32 @@ args@{
                 ''
               )
             ) (self.options config).blurAppIdsNoXray
+            ++ map (
+              appId:
+              toString (
+                pkgs.writeText "niri-xray-${appId}.kdl" ''
+                  window-rule {
+                      match app-id="${appId}"
+                      background-effect {
+                          xray true
+                      }
+                  }
+                ''
+              )
+            ) (self.options config).xrayOnlyAppIds
+            ++ lib.optionals (self.options config).enableNonXrayBlur [
+              (toString (
+                pkgs.writeText "niri-layer-rule-noxray.kdl" ''
+                  layer-rule {
+                      match layer="top"
+                      match layer="overlay"
+                      background-effect {
+                          xray false
+                      }
+                  }
+                ''
+              ))
+            ]
             ++ [
               (toString (
                 pkgs.writeText "niri-recent-windows.kdl" ''
@@ -3055,6 +3091,51 @@ args@{
                 "title"
               ] config.programs.niri.settings.binds);
             message = "Mod+Ctrl+Shift+Space is reserved for the built-in window switcher. Remove the custom binding!";
+          }
+          {
+            assertion =
+              let
+                dups = builtins.filter (
+                  id: builtins.elem id (self.options config).blurAppIdsNoXray
+                ) (self.options config).blurAppIds;
+              in
+              dups == [ ];
+            message = "blurAppIds and blurAppIdsNoXray must be mutually exclusive, but share: ${
+              lib.concatStringsSep ", " (
+                builtins.filter (id: builtins.elem id (self.options config).blurAppIdsNoXray)
+                  (self.options config).blurAppIds
+              )
+            }!";
+          }
+          {
+            assertion =
+              let
+                dups = builtins.filter (
+                  id: builtins.elem id (self.options config).xrayOnlyAppIds
+                ) (self.options config).blurAppIds;
+              in
+              dups == [ ];
+            message = "blurAppIds and xrayOnlyAppIds must be mutually exclusive, but share: ${
+              lib.concatStringsSep ", " (
+                builtins.filter (id: builtins.elem id (self.options config).xrayOnlyAppIds)
+                  (self.options config).blurAppIds
+              )
+            }!";
+          }
+          {
+            assertion =
+              let
+                dups = builtins.filter (
+                  id: builtins.elem id (self.options config).xrayOnlyAppIds
+                ) (self.options config).blurAppIdsNoXray;
+              in
+              dups == [ ];
+            message = "blurAppIdsNoXray and xrayOnlyAppIds must be mutually exclusive, but share: ${
+              lib.concatStringsSep ", " (
+                builtins.filter (id: builtins.elem id (self.options config).xrayOnlyAppIds)
+                  (self.options config).blurAppIdsNoXray
+              )
+            }!";
           }
         ];
       };
