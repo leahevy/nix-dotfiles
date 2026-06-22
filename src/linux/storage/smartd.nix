@@ -19,7 +19,9 @@ args@{
     autodetect = true;
     devices = [ ];
 
-    monitoring = "-a -o on -S on -W 2,45,55";
+    monitoring = "-a -o on -S on -W 2,MIN,MAX";
+    minTemperature = 45;
+    maxTemperature = 55;
 
     testNotifications = false;
     pushoverNotifications = true;
@@ -163,7 +165,12 @@ args@{
           echo "SMART ''${FAILURE_TYPE}: ''${DEVICE} - ''${MESSAGE}" >&2
         '';
 
-        baseOptions = "${self.settings.monitoring} -m root";
+        resolvedMonitoring =
+          builtins.replaceStrings
+            [ "MIN" "MAX" ]
+            [ (toString self.settings.minTemperature) (toString self.settings.maxTemperature) ]
+            self.settings.monitoring;
+        baseOptions = "${resolvedMonitoring} -m root";
         testOptions = if self.settings.testNotifications then " -M test" else "";
 
         autodetectedOptions = "${baseOptions}${testOptions}";
