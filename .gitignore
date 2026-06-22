@@ -9,3 +9,8 @@ __pycache__/
 *.pyo
 .mypy_cache/
 /.codex
+
+/AGENTS.md
+/CLAUDE.md
+/current-tasks/
+/task-templates/
