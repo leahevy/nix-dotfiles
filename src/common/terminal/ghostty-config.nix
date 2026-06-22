@@ -24,6 +24,7 @@ args@{
   settings = {
     fontSize = 12;
     opacity = 0.95;
+    blurOpacity = 0.90;
     shaders = [
       #"cursor_blaze"
       "cursor_smear"
@@ -84,7 +85,10 @@ args@{
           font-thicken = lib.mkForce true;
           font-family = [ self.settings.fontFamily ];
           background-opacity = lib.mkForce (
-            if self.isLinux && self.linux.isModuleEnabled "desktop.niri" then 0.85 else self.settings.opacity
+            if self.isLinux && self.linux.isModuleEnabled "desktop.niri" then
+              self.settings.blurOpacity
+            else
+              self.settings.opacity
           );
           background-blur = lib.mkForce true;
           background = lib.mkForce (
