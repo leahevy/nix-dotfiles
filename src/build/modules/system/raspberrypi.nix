@@ -18,6 +18,8 @@ args@{
       nix.settings.max-jobs = 1;
       nix.settings.cores = 2;
 
+      systemd.services.nix-daemon.serviceConfig.CPUQuota = "150%";
+
       boot.kernelParams = [
         "nvme_core.default_ps_max_latency_us=0"
         "pcie_aspm=off"
