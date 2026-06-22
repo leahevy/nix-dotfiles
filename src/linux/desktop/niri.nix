@@ -2285,8 +2285,8 @@ args@{
                           max-scale 0.5
                       }
                       binds {
-                          Mod+Shift+Space { next-window; }
-                          Mod+Ctrl+Shift+Space { previous-window; }
+                          Mod+Tab { next-window scope="output"; }
+                          Mod+Shift+Tab { previous-window scope="output"; }
                       }
                   }
                 ''
@@ -2636,7 +2636,7 @@ args@{
                     hotkey-overlay.title = "Windows:Toggle overview";
                   };
 
-                  "Mod+Tab" = {
+                  "Mod+Shift+Space" = {
                     action = focus-workspace-previous;
                     hotkey-overlay.title = "Workspace:Toggle workspaces";
                   };
@@ -2932,7 +2932,7 @@ args@{
                     hotkey-overlay.title = "Monitor:Move column to next monitor";
                   };
 
-                  "Mod+Shift+Tab" = {
+                  "Mod+Ctrl+Shift+Space" = {
                     action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-next";
                     hotkey-overlay.title = "Monitor:Cycle monitor focus";
                   };
@@ -2944,8 +2944,7 @@ args@{
                   };
                 };
               in
-              (lib.filterAttrs (k: _: k != "Mod+Shift+Space" && k != "Mod+Ctrl+Shift+Space") nopBindings)
-              // actualBindings;
+              (lib.filterAttrs (k: _: k != "Mod+Tab" && k != "Mod+Shift+Tab") nopBindings) // actualBindings;
 
             animations = {
               slowdown = 2.5;
@@ -3119,20 +3118,20 @@ args@{
           {
             assertion =
               !(lib.hasAttrByPath [
-                "Mod+Shift+Space"
+                "Mod+Tab"
                 "hotkey-overlay"
                 "title"
               ] config.programs.niri.settings.binds);
-            message = "Mod+Shift+Space is reserved for the built-in window switcher. Remove the custom binding!";
+            message = "Mod+Tab is reserved for the built-in window switcher. Remove the custom binding!";
           }
           {
             assertion =
               !(lib.hasAttrByPath [
-                "Mod+Ctrl+Shift+Space"
+                "Mod+Shift+Tab"
                 "hotkey-overlay"
                 "title"
               ] config.programs.niri.settings.binds);
-            message = "Mod+Ctrl+Shift+Space is reserved for the built-in window switcher. Remove the custom binding!";
+            message = "Mod+Shift+Tab is reserved for the built-in window switcher. Remove the custom binding!";
           }
           {
             assertion =
@@ -3202,11 +3201,11 @@ args@{
       enabled = config: {
         nx.linux.desktop-modules.nwg-wrapper.extraKeybindings = [
           {
-            key = "Mod+Shift+Space";
+            key = "Mod+Tab";
             title = "Apps:Window switcher next";
           }
           {
-            key = "Mod+Ctrl+Shift+Space";
+            key = "Mod+Shift+Tab";
             title = "Apps:Window switcher prev";
           }
         ];
