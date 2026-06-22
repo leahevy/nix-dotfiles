@@ -100,10 +100,8 @@ echo -e "Created marker files with hash: ${WHITE}$core_flake_hash${RESET}"
 echo
 echo -e "${GREEN}NixOS version bump to $NIXOS_VERSION completed successfully!${RESET}"
 
-TASK_DIR="$CONFIG_DIR/current-tasks"
-if [[ ! -d "$TASK_DIR" ]]; then
-	TASK_DIR="$CONFIG_DIR"
-fi
+TASK_DIR="$NXCORE_DIR/current-tasks"
+mkdir -p "$TASK_DIR"
 sed "1s/next release/$NIXOS_VERSION/;s/<TARGET_VERSION>/$NIXOS_VERSION/g;s/<OLD_VERSION>/$OLD_VERSION/g" "$NXCORE_DIR/UPGRADE.md" >"$TASK_DIR/upgrade-nixos-$NIXOS_VERSION.md"
 echo
 echo -e "${YELLOW}Upgrade checklist written to ${WHITE}$TASK_DIR/upgrade-nixos-$NIXOS_VERSION.md${RESET}"
