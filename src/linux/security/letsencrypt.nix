@@ -293,6 +293,10 @@ args@{
                 '';
               }
             ) self.settings.dnsCerts;
+          nx.linux.server.healthchecks.ignoredSystemServices = lib.concatMap (domain: [
+            "acme-${domain}.service"
+            "acme-monitoring-${domain}.service"
+          ]) (lib.attrNames self.settings.dnsCerts);
         };
     };
   };

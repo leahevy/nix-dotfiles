@@ -597,6 +597,18 @@ args@{
       default = { };
       description = "Additional literal strings to replace in health check output, as an attrset of literal to replacement label.";
     };
+
+    ignoredSystemServices = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "System service units excluded from the system services health check failure. Failed units in this list are shown as info only and do not fail the check.";
+    };
+
+    ignoredUserServices = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "User service units excluded from the user services health check failure. Failed units in this list are shown as info only and do not fail the check.";
+    };
   };
 
   module = {
@@ -798,6 +810,8 @@ args@{
         additionalSecretWipeValuePatterns,
         additionalSecretWipeValueRegexes,
         additionalSecretReplacements,
+        ignoredSystemServices,
+        ignoredUserServices,
         ...
       }:
       let
@@ -850,6 +864,9 @@ args@{
         hasServiceChecks = servicesHealthChecks != { };
         hasTimedChecks = timedHealthChecks != { };
         hasOneshotChecks = oneshotHealthChecks != { };
+
+        allIgnoredSystemServices =
+          ignoredSystemServices ++ lib.mapAttrsToList (_k: v: v.trigger.service) servicesHealthChecks;
 
         regularEndpointName = "${hostname}-${healthName}";
         dailyEndpointName = "${hostname}-${dailyName}";
@@ -1483,21 +1500,53 @@ args@{
         allRegularChecks = {
           "+00 - Process snapshot" = topSnapshotExpr;
           "+10 - Server is up" = "true";
-          "+40 - System services health" = ''
+          "!40 - System services health" = ''
             _failed=$(${pkgs.systemd}/bin/systemctl --failed --plain --no-legend --no-pager 2>/dev/null \
               | ${pkgs.gawk}/bin/awk 'NF>0{print $1}')
-            if [[ -n "$_failed" ]]; then
-              printf '%s\n' "$_failed" >&3
+            if [[ -z "$_failed" ]]; then
+              exit 0
+            fi
+            _real_failed=0
+            while IFS= read -r _svc; do
+              [[ -z "$_svc" ]] && continue
+              _is_ignored=0
+              ${lib.concatMapStringsSep "\n" (svc: ''
+                [[ "$_svc" == ${lib.escapeShellArg svc} ]] && _is_ignored=1
+              '') allIgnoredSystemServices}
+              if [[ $_is_ignored -eq 1 ]]; then
+                printf '%s [failure ignored]\n' "$_svc" >&3
+              else
+                printf '%s\n' "$_svc" >&3
+                _real_failed=$((_real_failed + 1))
+              fi
+            done <<< "$_failed"
+            if [[ $_real_failed -gt 0 ]]; then
               exit 1
             fi
           '';
-          "+40 - User services health" = ''
+          "!40 - User services health" = ''
             ${pkgs.systemd}/bin/systemctl is-active --quiet "user@${mainUserUid}.service" 2>/dev/null || exit 0
             _failed=$(${pkgs.systemd}/bin/systemctl --user --failed --plain --no-legend --no-pager \
               --machine=${mainUser}@.host 2>/dev/null \
               | ${pkgs.gawk}/bin/awk 'NF>0{print $1}')
-            if [[ -n "$_failed" ]]; then
-              printf '%s\n' "$_failed" >&3
+            if [[ -z "$_failed" ]]; then
+              exit 0
+            fi
+            _real_failed=0
+            while IFS= read -r _svc; do
+              [[ -z "$_svc" ]] && continue
+              _is_ignored=0
+              ${lib.concatMapStringsSep "\n" (svc: ''
+                [[ "$_svc" == ${lib.escapeShellArg svc} ]] && _is_ignored=1
+              '') ignoredUserServices}
+              if [[ $_is_ignored -eq 1 ]]; then
+                printf '%s [failure ignored]\n' "$_svc" >&3
+              else
+                printf '%s\n' "$_svc" >&3
+                _real_failed=$((_real_failed + 1))
+              fi
+            done <<< "$_failed"
+            if [[ $_real_failed -gt 0 ]]; then
               exit 1
             fi
           '';

@@ -1438,6 +1438,7 @@ args@{
           uuid = self.settings.healthcheckUUID;
           icon = "nixos";
         };
+        nx.linux.server.healthchecks.ignoredSystemServices = [ "nx-auto-upgrade-delayed.service" ];
       };
     };
   };
