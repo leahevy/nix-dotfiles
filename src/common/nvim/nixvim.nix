@@ -421,52 +421,7 @@ args@{
 
                 ''
                   _G.nx_modules["10-blinking-cursor"] = function()
-                    vim.opt.guicursor = ""
-
-                    local function update_cursor()
-                      local mode = vim.fn.mode()
-                      if mode == 'i' or mode == 'ic' or mode == 'ix' then
-                        io.write("\27[5 q")
-                      elseif mode == 'R' or mode == 'Rc' or mode == 'Rx' or mode == 'Rv' then
-                        io.write("\27[3 q")
-                      elseif mode == 'c' or mode == 'cv' or mode == 'ce' then
-                        io.write("\27[5 q")
-                      elseif mode == 't' then
-                        io.write("\27[5 q")
-                      else
-                        io.write("\27[1 q")
-                      end
-                    end
-
-                    vim.api.nvim_create_autocmd({"InsertEnter", "CmdlineEnter", "TermEnter"}, {
-                      callback = function()
-                        io.write("\27[5 q")
-                      end
-                    })
-
-                    vim.api.nvim_create_autocmd({"InsertLeave", "CmdlineLeave"}, {
-                      callback = function()
-                        io.write("\27[1 q")
-                      end
-                    })
-
-                    vim.api.nvim_create_autocmd({"TermLeave"}, {
-                      callback = function()
-                        vim.defer_fn(update_cursor, 10)
-                      end
-                    })
-
-                    vim.api.nvim_create_autocmd({"VimEnter", "BufEnter", "WinEnter"}, {
-                      callback = function()
-                        vim.defer_fn(update_cursor, 10)
-                      end
-                    })
-
-                    vim.api.nvim_create_autocmd({"FocusGained"}, {
-                      callback = function()
-                        vim.defer_fn(update_cursor, 50)
-                      end
-                    })
+                    vim.opt.guicursor = "n-v-sm:block-blinkwait700-blinkoff400-blinkon250,i-ci-c:ver25-blinkwait700-blinkoff400-blinkon250,r-cr:hor20-blinkwait700-blinkoff400-blinkon250"
                   end
                 ''
 
