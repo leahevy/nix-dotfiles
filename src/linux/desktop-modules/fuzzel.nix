@@ -13,6 +13,10 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
+  settings = {
+    backgroundTransparency = "bb";
+  };
+
   module = {
     enabled = config: {
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
@@ -23,6 +27,12 @@ args@{
           unitless = true;
         }
       ];
+    };
+
+    ifEnabled.linux.desktop.niri = {
+      enabled = config: {
+        nx.linux.desktop.niri.blurLayerNamespaces = [ "launcher" ];
+      };
     };
 
     linux.enabled =
@@ -139,7 +149,7 @@ args@{
             };
 
             colors = {
-              background = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.main.backgrounds.primary.html}ee";
+              background = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.main.backgrounds.primary.html}${self.settings.backgroundTransparency}";
               text = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.strong.html}ff";
               match = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.main.foregrounds.primary.html}80";
               selection = lib.mkForce "${lib.removePrefix "#" config.nx.preferences.theme.colors.terminal.normalBackgrounds.selection.html}33";
