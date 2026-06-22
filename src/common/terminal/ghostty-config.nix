@@ -131,7 +131,7 @@ args@{
               content = content.replace("float mod = .007;", "float mod = .005;")
               content = content.replace(
                   "easedProgress * lineLength));",
-                  "easedProgress * (0.003 + lineLength * 0.015)));"
+                  "easedProgress * (0.002 + lineLength * 0.01)));"
               )
 
               with open(os.environ["out"], "w") as f:
