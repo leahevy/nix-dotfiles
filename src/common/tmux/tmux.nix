@@ -61,16 +61,16 @@ args@{
             windows = [
               { "󱆃 Home" = "cd ~ && clear && ${interactiveShellCommand "true"}"; }
             ]
-            ++ lib.optionals devMode [
+            ++ lib.optionals (!vimEnabled && devMode) [
               { "󱆃 Core" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "true"}"; }
               { "󱆃 Config" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "true"}"; }
             ]
             ++ lib.optionals (vimEnabled && devMode) [
-              { "󱇧 Vim (Core)" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vim"}"; }
-              { "󱇧 Vim (Config)" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "vim"}"; }
+              { "󱇧 Core" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vim"}"; }
+              { "󱇧 Config" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "vim"}"; }
             ]
             ++ lib.optionals (claudeEnabled && devMode) [
-              { "󱙺 Claude" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "claude"}"; }
+              { "󱙺 Claude" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "claude"}"; }
             ]
             ++ lib.optionals (codexEnabled && devMode) [
               { "󱙺 Codex" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "codex"}"; }
