@@ -182,7 +182,9 @@ args@{
             groupedByGroup = lib.groupBy (bind: bind.group) parsedBinds;
             sortedGroups = lib.mapAttrsToList (group: bindings: {
               inherit group;
-              bindings = builtins.sort (a: b: a.key < b.key) bindings;
+              bindings = builtins.sort (
+                a: b: if a.desc != b.desc then a.desc < b.desc else a.key < b.key
+              ) bindings;
             }) groupedByGroup;
             sortedGroupsByName = builtins.sort (a: b: a.group < b.group) sortedGroups;
             flattenedBinds = lib.concatMap (group: group.bindings) sortedGroupsByName;

@@ -3202,11 +3202,11 @@ args@{
         nx.linux.desktop-modules.nwg-wrapper.extraKeybindings = [
           {
             key = "Mod+Tab";
-            title = "Apps:Window switcher next";
+            title = "Switcher:Window switcher next";
           }
           {
             key = "Mod+Shift+Tab";
-            title = "Apps:Window switcher prev";
+            title = "Switcher:Window switcher prev";
           }
         ];
       };
