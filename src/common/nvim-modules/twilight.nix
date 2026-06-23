@@ -143,6 +143,7 @@ args@{
     ];
     exclude = [
       "env"
+      "yaml"
       "sh"
       "text"
       "undotree"
