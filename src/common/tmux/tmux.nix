@@ -54,6 +54,8 @@ args@{
           ];
           serverMode = lib.elem (helpers.resolveFromHostOrUser config [ "deploymentMode" ] "managed") [
             "server"
+          ];
+          managedMode = lib.elem (helpers.resolveFromHostOrUser config [ "deploymentMode" ] "managed") [
             "managed"
           ];
           vimEnabled = config.nx.common.nvim.nixvim.enable;
@@ -69,6 +71,9 @@ args@{
               { "󱆃 Config" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "true"}"; }
               { "󱆃 Core" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "true"}"; }
             ]
+            ++ lib.optionals serverMode [
+              { "󱆃 Config" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "true"}"; }
+            ]
             ++ lib.optionals (vimEnabled && devMode) [
               { "󱇧 Config" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "vim"}"; }
               { "󱇧 Core" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vim"}"; }
@@ -82,7 +87,7 @@ args@{
             ++ lib.optionals (vibeEnabled && devMode) [
               { "󱙺 Vibe" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vibe"}"; }
             ]
-            ++ lib.optionals serverMode [
+            ++ lib.optionals (serverMode || managedMode) [
               { " Htop" = "cd ~ && clear && ${interactiveShellCommand "htop"}"; }
             ]
             ++ self.settings.additionalMainConfigWindows;
