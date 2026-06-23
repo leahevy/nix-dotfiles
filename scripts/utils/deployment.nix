@@ -12,7 +12,7 @@
 }:
 {
   name = "nx";
-  version = "0.0.1";
+  version = "26.05";
 
   groups = [
     {

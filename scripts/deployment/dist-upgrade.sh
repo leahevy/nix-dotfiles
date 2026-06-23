@@ -39,6 +39,9 @@ OLD_VERSION=$(sed -n 's/.*current-release = "\([0-9][0-9]\.[0-9][0-9]\)".*/\1/p'
 echo -e "Updating version references in ${WHITE}nxcore/flake.nix${RESET}..."
 sed -i "s/[0-9][0-9]\.[0-9][0-9]/$NIXOS_VERSION/g" "$NXCORE_DIR/flake.nix"
 
+echo -e "Updating version in ${WHITE}nxcore/scripts/utils/deployment.nix${RESET}..."
+sed -i "s/  version = \"[0-9][0-9]\.[0-9][0-9]\"/  version = \"$NIXOS_VERSION\"/" "$NXCORE_DIR/scripts/utils/deployment.nix"
+
 echo -e "Updating current-release in ${WHITE}nxcore/variables.nix${RESET}..."
 sed -i "s/current-release = \"[0-9][0-9]\.[0-9][0-9]\"/current-release = \"$NIXOS_VERSION\"/g" "$NXCORE_DIR/variables.nix"
 
