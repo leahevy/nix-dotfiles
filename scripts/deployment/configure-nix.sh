@@ -65,6 +65,7 @@ DESIRED_NIX_CONF_KEYS=(
 	"max-substitution-jobs:3"
 	"connect-timeout:60"
 	"stalled-download-timeout:120"
+	"download-speed:3051"
 	"http2:false"
 	"keep-outputs:true"
 	"keep-derivations:true"

@@ -120,6 +120,7 @@ in
           max-substitution-jobs = variables.maxSubstitutionJobs;
           connect-timeout = variables.connectTimeout;
           stalled-download-timeout = variables.stalledDownloadTimeout;
+          download-speed = variables.downloadSpeedMbits * 1000000 / 8 / 1024;
           http2 = false;
           keep-outputs = true;
           keep-derivations = true;
