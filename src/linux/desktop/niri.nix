@@ -2286,7 +2286,7 @@ args@{
                       }
                       binds {
                           Mod+Tab { next-window scope="output"; }
-                          Mod+Ctrl+Tab { previous-window scope="output"; }
+                          Mod+Shift+Tab { previous-window scope="output"; }
                       }
                   }
                 ''
@@ -2944,7 +2944,7 @@ args@{
                   };
                 };
               in
-              (lib.filterAttrs (k: _: k != "Mod+Tab" && k != "Mod+Ctrl+Tab") nopBindings) // actualBindings;
+              (lib.filterAttrs (k: _: k != "Mod+Tab" && k != "Mod+Shift+Tab") nopBindings) // actualBindings;
 
             animations = {
               slowdown = 2.5;
@@ -3127,11 +3127,11 @@ args@{
           {
             assertion =
               !(lib.hasAttrByPath [
-                "Mod+Ctrl+Tab"
+                "Mod+Shift+Tab"
                 "hotkey-overlay"
                 "title"
               ] config.programs.niri.settings.binds);
-            message = "Mod+Ctrl+Tab is reserved for the built-in window switcher. Remove the custom binding!";
+            message = "Mod+Shift+Tab is reserved for the built-in window switcher. Remove the custom binding!";
           }
           {
             assertion =
@@ -3205,7 +3205,7 @@ args@{
             title = "Switcher:Window switcher next";
           }
           {
-            key = "Mod+Ctrl+Tab";
+            key = "Mod+Shift+Tab";
             title = "Switcher:Window switcher prev";
           }
         ];
