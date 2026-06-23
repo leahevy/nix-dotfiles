@@ -142,6 +142,7 @@ args@{
       "syntax"
     ];
     exclude = [
+      "env"
       "sh"
       "text"
       "undotree"
