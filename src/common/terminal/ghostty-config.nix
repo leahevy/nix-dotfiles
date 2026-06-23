@@ -92,6 +92,8 @@ args@{
         theme = config.nx.preferences.theme;
         trailHex = lib.removePrefix "#" theme.colors.terminal.foregrounds.primary.html;
         accentHex = lib.removePrefix "#" theme.colors.terminal.foregrounds.bright.html;
+        easedProgressFactor =
+          if self.isLinux then "0.0035 + lineLength * 0.004" else "0.0079 + lineLength * 0.006";
         blazeLightShader =
           pkgs.runCommand "cursor_blaze_light.glsl"
             {
@@ -126,12 +128,12 @@ args@{
               content = content.replace("saturate(TRAIL_COLOR, 1.5)", "saturate(TRAIL_COLOR, 1.0)")
               content = content.replace(
                   "sdfCurrentCursor + .002, 0.004",
-                  "sdfCurrentCursor + .0015, 0.0015"
+                  "sdfCurrentCursor + 0.0515, 0.0315"
               )
               content = content.replace("float mod = .007;", "float mod = .003;")
               content = content.replace(
                   "easedProgress * lineLength));",
-                  "easedProgress * (0.0015 + lineLength * 0.003)));"
+                  "easedProgress * (${easedProgressFactor})));"
               )
 
               with open(os.environ["out"], "w") as f:
