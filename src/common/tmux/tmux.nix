@@ -52,6 +52,10 @@ args@{
             "develop"
             "local"
           ];
+          serverMode = lib.elem (helpers.resolveFromHostOrUser config [ "deploymentMode" ] "managed") [
+            "server"
+            "managed"
+          ];
           vimEnabled = config.nx.common.nvim.nixvim.enable;
           claudeEnabled = config.nx.common.dev.claude.enable;
           codexEnabled = config.nx.common.dev.codex.enable;
@@ -77,6 +81,9 @@ args@{
             ]
             ++ lib.optionals (vibeEnabled && devMode) [
               { "󱙺 Vibe" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vibe"}"; }
+            ]
+            ++ lib.optionals serverMode [
+              { " Htop" = "cd ~ && clear && ${interactiveShellCommand "htop"}"; }
             ]
             ++ self.settings.additionalMainConfigWindows;
           };
