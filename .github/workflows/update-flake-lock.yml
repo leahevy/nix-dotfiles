@@ -316,6 +316,7 @@ jobs:
                     all_commits_full=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
 
                     regular_commits_full=$(echo "$all_commits_full" | grep -vE '^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]|^- [Bb]ackport |- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release|Staging|Release)[- ][0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]|^- (staging-next|release)-[0-9]{2}\.[0-9]{2}' || true)
+                    regular_commits_full=$(printf '%s\n' "$regular_commits_full" | awk '{key=$0; sub(/ \(\[[0-9a-f]+\]\([^)]*\)\)$/,"",key); lines[NR]=$0; keys[NR]=key; last[key]=NR; total=NR} END{for(i=1;i<=total;i++) if(last[keys[i]]==i) print lines[i]}')
 
                     backport_count=$(printf '%s\n' "$all_commits_full" | grep -cE '^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]|^- [Bb]ackport ' || true)
                     staging_count=$(printf '%s\n' "$all_commits_full" | grep -cE '^- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release|Staging|Release)[- ][0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]|^- (staging-next|release)-[0-9]{2}\.[0-9]{2}' || true)
