@@ -26,7 +26,7 @@
 
   allowedUnfreePackages = [ ];
 
-  releaseTransitionInsecurePackages = [
+  temporarilyAllowedInsecurePackages = [
     "electron-39.8.10"
   ];
 

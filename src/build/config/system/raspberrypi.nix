@@ -33,7 +33,7 @@
     })
   ];
   nixpkgs.config.allowUnfreePredicate = unfreePredicate;
-  nixpkgs.config.permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
+  nixpkgs.config.permittedInsecurePackages = variables.temporarilyAllowedInsecurePackages or [ ];
 
   boot.loader.raspberry-pi.bootloader = "kernel";
 

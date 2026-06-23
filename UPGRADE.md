@@ -17,7 +17,7 @@
     - [ ] 5b. Third-party inputs (review diffs for breaking changes): **mac-app-util**, **nixpkgs-mac-app-util**, **nix-plist-manager**
     - [ ] 5c. Rolling-tag inputs (bump the tag in `flake.nix` after checking the upstream source for the current tag): **nixos-raspberrypi**
 - [ ] 6. Consider removing packages specified as unstable in both `variables.nix` files
-    - [ ] 6a. Clear `releaseTransitionInsecurePackages` in `variables.nix` (packages only listed there because nixpkgs EOL'd them mid-release cycle; the new release should ship non-EOL replacements)
+    - [ ] 6a. Clear temporarilyAllowedInsecurePackages` in `variables.nix` (packages only listed there because nixpkgs EOL'd them mid-release cycle; the new release should ship non-EOL replacements)
 - [ ] 7. Fix evaluation warnings until configuration builds without warnings (use `NIX_ABORT_ON_WARN=true` with build command to find warning sources)
 - [ ] 8. Final guard: eval succeeds and `nx build --diff` to see the changes
 - [ ] 9. Commit everything with `nx commit`

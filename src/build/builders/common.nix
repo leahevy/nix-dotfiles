@@ -119,7 +119,7 @@ let
         inherit system overlays;
         config = {
           allowUnfreePredicate = unfreePredicate;
-          permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
+          permittedInsecurePackages = variables.temporarilyAllowedInsecurePackages or [ ];
         };
       };
 
@@ -141,7 +141,7 @@ let
         inherit system;
         config = {
           allowUnfreePredicate = unfreePredicate;
-          permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
+          permittedInsecurePackages = variables.temporarilyAllowedInsecurePackages or [ ];
         };
       };
 
@@ -209,7 +209,7 @@ let
           overlays = allOverlays;
           config = {
             allowUnfreePredicate = unfreePredicate;
-            permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
+            permittedInsecurePackages = variables.temporarilyAllowedInsecurePackages or [ ];
           };
         };
 
