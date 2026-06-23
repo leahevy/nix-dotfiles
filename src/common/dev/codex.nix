@@ -21,7 +21,7 @@ args@{
     };
     defaultModel = lib.mkOption {
       type = lib.types.str;
-      default = "gpt-5.4";
+      default = "gpt-5.5";
       description = "Default model to use for Codex.";
     };
     defaultApprovalPolicy = lib.mkOption {
