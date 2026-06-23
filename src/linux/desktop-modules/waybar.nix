@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -118,7 +117,7 @@ args@{
           enable = true;
           systemd = {
             enable = true;
-            target = "graphical-session.target";
+            targets = [ "graphical-session.target" ];
           };
           settings = {
             mainBar = {

@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -226,6 +225,7 @@ args@{
           '';
         in
         {
+          appIds = [ "org.qutebrowser.${appName}" ];
           homeFiles = {
             "${defs.binDir}/${appName}-webapp" = {
               executable = true;

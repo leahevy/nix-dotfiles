@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -126,8 +125,27 @@ args@{
 
     loadBuildMultiplier = lib.mkOption {
       type = lib.types.float;
-      default = 2.5;
+      default = 2.75;
       description = "Multiplier applied to the load threshold during and shortly after detected nix builds.";
+    };
+
+    loadBuildBoardMultiplier = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          pi5 = lib.mkOption {
+            type = lib.types.float;
+            default = 1.6;
+            description = "Additional build-mode load multiplier for Raspberry Pi 5.";
+          };
+          set = lib.mkOption {
+            type = lib.types.nullOr lib.types.float;
+            default = null;
+            description = "Overrides all board detection when non-null.";
+          };
+        };
+      };
+      default = { };
+      description = "Per-board additional multiplier applied on top of loadBuildMultiplier during nix builds.";
     };
 
     loadBuildGraceSeconds = lib.mkOption {
@@ -579,6 +597,18 @@ args@{
       default = { };
       description = "Additional literal strings to replace in health check output, as an attrset of literal to replacement label.";
     };
+
+    ignoredSystemServices = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "System service units excluded from the system services health check failure. Failed units in this list are shown as info only and do not fail the check.";
+    };
+
+    ignoredUserServices = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "User service units excluded from the user services health check failure. Failed units in this list are shown as info only and do not fail the check.";
+    };
   };
 
   module = {
@@ -732,6 +762,7 @@ args@{
         fanElevatedRPM,
         loadMaxPerCore,
         loadBuildMultiplier,
+        loadBuildBoardMultiplier,
         loadBuildGraceSeconds,
         loadHighLoadGraceSeconds,
         loadHighCpuExemptCommands,
@@ -779,6 +810,8 @@ args@{
         additionalSecretWipeValuePatterns,
         additionalSecretWipeValueRegexes,
         additionalSecretReplacements,
+        ignoredSystemServices,
+        ignoredUserServices,
         ...
       }:
       let
@@ -793,6 +826,14 @@ args@{
             fanElevatedRPM.x86_64
           else
             null;
+        effectiveBoardBuildMultiplier =
+          if loadBuildBoardMultiplier.set != null then
+            loadBuildBoardMultiplier.set
+          else if board == "pi5" then
+            loadBuildBoardMultiplier.pi5
+          else
+            1.0;
+        effectiveBuildMultiplier = loadBuildMultiplier * effectiveBoardBuildMultiplier;
         mainUser = self.host.mainUser.username;
         mainUserUid = toString config.users.users.${self.host.mainUser.username}.uid;
         deploymentMode = config.nx.global.deploymentMode;
@@ -823,6 +864,9 @@ args@{
         hasServiceChecks = servicesHealthChecks != { };
         hasTimedChecks = timedHealthChecks != { };
         hasOneshotChecks = oneshotHealthChecks != { };
+
+        allIgnoredSystemServices =
+          ignoredSystemServices ++ lib.mapAttrsToList (_k: v: v.trigger.service) servicesHealthChecks;
 
         regularEndpointName = "${hostname}-${healthName}";
         dailyEndpointName = "${hostname}-${dailyName}";
@@ -1145,7 +1189,7 @@ args@{
             _nproc=$(${pkgs.coreutils}/bin/nproc 2>/dev/null || echo 1)
             ${pkgs.gawk}/bin/awk \
               -v max=${toString loadMaxPerCore} \
-              -v build_multiplier=${toString loadBuildMultiplier} \
+              -v build_multiplier=${toString effectiveBuildMultiplier} \
               -v high_multiplier=${toString highLoadMultiplier} \
               -v nproc="$_nproc" \
               -v build_mode="$_build_mode" \
@@ -1456,21 +1500,53 @@ args@{
         allRegularChecks = {
           "+00 - Process snapshot" = topSnapshotExpr;
           "+10 - Server is up" = "true";
-          "+40 - System services health" = ''
+          "!40 - System services health" = ''
             _failed=$(${pkgs.systemd}/bin/systemctl --failed --plain --no-legend --no-pager 2>/dev/null \
               | ${pkgs.gawk}/bin/awk 'NF>0{print $1}')
-            if [[ -n "$_failed" ]]; then
-              printf '%s\n' "$_failed" >&3
+            if [[ -z "$_failed" ]]; then
+              exit 0
+            fi
+            _real_failed=0
+            while IFS= read -r _svc; do
+              [[ -z "$_svc" ]] && continue
+              _is_ignored=0
+              ${lib.concatMapStringsSep "\n" (svc: ''
+                [[ "$_svc" == ${lib.escapeShellArg svc} ]] && _is_ignored=1
+              '') allIgnoredSystemServices}
+              if [[ $_is_ignored -eq 1 ]]; then
+                printf '%s [failure ignored]\n' "$_svc" >&3
+              else
+                printf '%s\n' "$_svc" >&3
+                _real_failed=$((_real_failed + 1))
+              fi
+            done <<< "$_failed"
+            if [[ $_real_failed -gt 0 ]]; then
               exit 1
             fi
           '';
-          "+40 - User services health" = ''
+          "!40 - User services health" = ''
             ${pkgs.systemd}/bin/systemctl is-active --quiet "user@${mainUserUid}.service" 2>/dev/null || exit 0
             _failed=$(${pkgs.systemd}/bin/systemctl --user --failed --plain --no-legend --no-pager \
               --machine=${mainUser}@.host 2>/dev/null \
               | ${pkgs.gawk}/bin/awk 'NF>0{print $1}')
-            if [[ -n "$_failed" ]]; then
-              printf '%s\n' "$_failed" >&3
+            if [[ -z "$_failed" ]]; then
+              exit 0
+            fi
+            _real_failed=0
+            while IFS= read -r _svc; do
+              [[ -z "$_svc" ]] && continue
+              _is_ignored=0
+              ${lib.concatMapStringsSep "\n" (svc: ''
+                [[ "$_svc" == ${lib.escapeShellArg svc} ]] && _is_ignored=1
+              '') ignoredUserServices}
+              if [[ $_is_ignored -eq 1 ]]; then
+                printf '%s [failure ignored]\n' "$_svc" >&3
+              else
+                printf '%s\n' "$_svc" >&3
+                _real_failed=$((_real_failed + 1))
+              fi
+            done <<< "$_failed"
+            if [[ $_real_failed -gt 0 ]]; then
               exit 1
             fi
           '';
@@ -1648,11 +1724,10 @@ args@{
           fi
 
           if [[ "$_kernel_lines" -gt 200 ]]; then
-            printf '[kernel log: warning+, %d lines today (filtered)]\n' "$_kernel_lines" >&3
             ${pkgs.systemd}/bin/journalctl -k --since "$_since" -p warning..emerg --no-pager \
               | ${kernelLogProcessScript} \
               | ${secretCensorScript} > "$KERNEL_LOG_FILTERED"
-            printf '[kernel log tail]\n' >&3
+            printf '[kernel log tail | %d lines today]\n' "$_kernel_lines" >&3
             ${pkgs.coreutils}/bin/tail -n 100 "$KERNEL_LOG_ALL" \
               | ${secretCensorScript} >&3
             printf '\n[kernel log warnings]\n' >&3

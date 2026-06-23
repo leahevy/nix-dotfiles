@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -28,7 +27,7 @@ args@{
         options = {
           applications = {
             systemSettings = {
-              controlCenter = {
+              menuBar = {
                 accessibilityShortcuts = {
                   showInMenuBar = false;
                   showInControlCenter = true;

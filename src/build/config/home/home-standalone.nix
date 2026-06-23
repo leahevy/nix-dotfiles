@@ -1,7 +1,8 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
+  allOverlays,
+  unfreePredicate,
   inputs,
   host,
   user,
@@ -185,6 +186,11 @@ in
     };
 
     nh.enable = true;
+  };
+
+  nixpkgs = {
+    config.allowUnfreePredicate = unfreePredicate;
+    overlays = allOverlays;
   };
 
   nix = {

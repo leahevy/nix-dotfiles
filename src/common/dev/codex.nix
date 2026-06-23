@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -232,13 +231,18 @@ args@{
             );
 
           fake-ssh = pkgs.writeShellScriptBin "ssh" "exit 1";
-          codex-wrapped = pkgs.writeShellScriptBin "codex" ''
-            export PATH=${fake-ssh}/bin:$PATH
-            export GIT_CONFIG_COUNT=1
-            export GIT_CONFIG_KEY_0=url.https://github.com/.insteadOf
-            export GIT_CONFIG_VALUE_0=git@github.com:
-            exec ${pkgs.codex}/bin/codex "$@"
-          '';
+          codex-wrapped = pkgs.symlinkJoin {
+            name = "codex-${pkgs.codex.version}";
+            paths = [ pkgs.codex ];
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            postBuild = ''
+              wrapProgram $out/bin/codex \
+                --prefix PATH : ${fake-ssh}/bin \
+                --set GIT_CONFIG_COUNT 1 \
+                --set GIT_CONFIG_KEY_0 "url.https://github.com/.insteadOf" \
+                --set GIT_CONFIG_VALUE_0 "git@github.com:"
+            '';
+          };
 
           codex-package =
             if githubEnforceSSH && config.nx.linux.security.yubikey.enable then codex-wrapped else pkgs.codex;
@@ -302,97 +306,87 @@ args@{
             name: text: pkgs.writeText "codex-skill-${name}-SKILL.md" text
           ) codexSkillContents;
 
-          codexRulesFiles =
-            lib.mapAttrs' (name: text: {
-              name = ".codex/rules/${name}.rules";
-              value = { inherit text; };
-            }) additionalRules
-            // {
-              ".codex/rules/ask.rules".text = askRulesStar;
-            };
-
-          codexSettings = {
-            model = defaultModel;
-            model_reasoning_effort = defaultReasoningEffort;
-            personality = defaultPersonality;
-
-            mcp_servers = config.nx.common.dev.agents.mcpServers;
-
-            analytics.enabled = false;
-            feedback.enabled = false;
-
-            approval_policy = defaultApprovalPolicy;
-            approvals_reviewer = "user";
-            allow_login_shell = false;
-
-            default_permissions = "hardened";
-
-            features = {
-              skills = true;
-              skill_mcp_dependency_install = false;
-            };
-
-            permissions.hardened.extends = ":workspace";
-            permissions.hardened.filesystem = {
-              glob_scan_max_depth = 8;
-              ":root" = "deny";
-              ":minimal" = "read";
-              "/nix/store" = "read";
-              "${self.user.home}/.agents/skills" = "read";
-
-              ":workspace_roots" = {
-                "." = "write";
-                "**/.env*" = "deny";
-                "**/*.pem" = "deny";
-                "**/*.key" = "deny";
-                "**/id_rsa" = "deny";
-                "**/*secret*" = "deny";
-              };
-            };
-
-            permissions.hardened.network = {
-              enabled = false;
-            };
-
-            notice = {
-              model_migrations = {
-                "gpt-5.2" = "gpt-5.4";
-                "gpt-5.4" = "gpt-5.5";
-              };
-            };
-
-            projects =
-              lib.recursiveUpdate
-                (builtins.listToAttrs (
-                  (map (path: {
-                    name = path;
-                    value = {
-                      trust_level = "trusted";
-                    };
-                  }) trustedProjects)
-                  ++ (map (path: {
-                    name = path;
-                    value = {
-                      trust_level = "untrusted";
-                    };
-                  }) untrustedProjects)
-                ))
-                {
-                  "${self.user.home}" = {
-                    trust_level = "untrusted";
-                  };
-                };
-          };
-
-          codexConfigToml = (pkgs.formats.toml { }).generate "codex-config.toml" codexSettings;
         in
         {
           programs.codex = {
             enable = true;
             package = codex-package;
-            custom-instructions = lib.mkIf (
-              customInstructions != null && customInstructions != ""
-            ) customInstructions;
+            context = lib.mkIf (customInstructions != null && customInstructions != "") customInstructions;
+            enableMcpIntegration = true;
+            settings = {
+              model = defaultModel;
+              model_reasoning_effort = defaultReasoningEffort;
+              personality = defaultPersonality;
+
+              analytics.enabled = false;
+              feedback.enabled = false;
+
+              approval_policy = defaultApprovalPolicy;
+              approvals_reviewer = "user";
+              allow_login_shell = false;
+
+              default_permissions = "hardened";
+
+              features = {
+                skills = true;
+                skill_mcp_dependency_install = false;
+              };
+
+              permissions.hardened.extends = ":workspace";
+              permissions.hardened.filesystem = {
+                glob_scan_max_depth = 8;
+                ":root" = "deny";
+                ":minimal" = "read";
+                "/nix/store" = "read";
+                "${self.user.home}/.agents/skills" = "read";
+
+                ":workspace_roots" = {
+                  "." = "write";
+                  "**/.env*" = "deny";
+                  "**/*.pem" = "deny";
+                  "**/*.key" = "deny";
+                  "**/id_rsa" = "deny";
+                  "**/*secret*" = "deny";
+                };
+              };
+
+              permissions.hardened.network = {
+                enabled = false;
+              };
+
+              notice = {
+                model_migrations = {
+                  "gpt-5.2" = "gpt-5.4";
+                  "gpt-5.4" = "gpt-5.5";
+                };
+              };
+
+              projects =
+                lib.recursiveUpdate
+                  (builtins.listToAttrs (
+                    (map (path: {
+                      name = path;
+                      value = {
+                        trust_level = "trusted";
+                      };
+                    }) trustedProjects)
+                    ++ (map (path: {
+                      name = path;
+                      value = {
+                        trust_level = "untrusted";
+                      };
+                    }) untrustedProjects)
+                  ))
+                  {
+                    "${self.user.home}" = {
+                      trust_level = "untrusted";
+                    };
+                  };
+            };
+            rules = {
+              ask = askRulesStar;
+            }
+            // additionalRules;
           };
 
           home.activation.materializeCodexSkills = (self.hmLib config).dag.entryAfter [ "writeBoundary" ] ''
@@ -413,10 +407,6 @@ args@{
               '') codexSkillStoreFiles
             )}
           '';
-
-          home.file = codexRulesFiles // {
-            ".codex/config.toml".source = codexConfigToml;
-          };
 
           home.persistence."${self.persist}" = {
             directories = [ ".codex" ];

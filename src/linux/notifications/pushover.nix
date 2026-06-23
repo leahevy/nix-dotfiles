@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -161,6 +160,12 @@ args@{
       default = true;
       description = "Install pushover-mail as the system sendmail at /run/wrappers/bin/sendmail.";
     };
+
+    enableE2EEncryption = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Encrypt messages end-to-end using AES-256-CBC with a 64-char hex key stored in the pushover-e2e-key config SOPS secret.";
+    };
   };
 
   module =
@@ -180,6 +185,9 @@ args@{
 
       pushoverSendScript =
         config:
+        let
+          enableE2E = config.nx.linux.notifications.pushover.enableE2EEncryption;
+        in
         pkgs.writeShellScriptBin "pushover-send" ''
           set -euo pipefail
 
@@ -334,7 +342,24 @@ args@{
               fi
           fi
 
-          TEMP_DIR=$(${pkgs.coreutils}/bin/mktemp -d)
+          ${lib.optionalString enableE2E ''
+            if [[ $EUID -eq 0 ]]; then
+                E2E_KEY_FILE="/run/secrets/pushover-e2e-key"
+            else
+                E2E_KEY_FILE="/run/pushover-e2e-key-${self.host.mainUser.username}"
+                if [[ ! -r "$E2E_KEY_FILE" ]]; then
+                    echo "Error: Pushover e2e key not accessible for user." >&2
+                    exit 1
+                fi
+            fi
+
+            E2E_KEY=$(${pkgs.coreutils}/bin/tr -d '[:space:]' < "$E2E_KEY_FILE")
+            if [[ ! "$E2E_KEY" =~ ^[0-9A-Fa-f]{64}$ ]]; then
+                echo "Error: Pushover e2e key must be exactly 64 hexadecimal characters." >&2
+                exit 1
+            fi
+
+          ''}TEMP_DIR=$(${pkgs.coreutils}/bin/mktemp -d)
           TEMP_CONFIG="$TEMP_DIR/curl-config"
 
           trap "${pkgs.coreutils}/bin/rm -rf '$TEMP_DIR'" EXIT
@@ -342,7 +367,44 @@ args@{
           ${pkgs.coreutils}/bin/touch "$TEMP_CONFIG"
           ${pkgs.coreutils}/bin/chmod 600 "$TEMP_CONFIG"
 
-          escape_for_curl() {
+          ${lib.optionalString enableE2E ''
+            encrypt_field() {
+                printf '%s' "$1" | ${
+                  pkgs.writers.writePython3Bin "pushover-encrypt"
+                    {
+                      libraries = [ pkgs.python3Packages.cryptography ];
+                    }
+                    ''
+                      import sys
+                      import gzip
+                      import os
+                      import hmac
+                      import hashlib
+                      import base64
+
+                      from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+                      from cryptography.hazmat.primitives import padding
+
+                      key_hex = open(sys.argv[1]).read().strip()
+                      key = bytes.fromhex(key_hex)
+                      plaintext = sys.stdin.buffer.read()
+
+                      compressed = gzip.compress(plaintext, compresslevel=9)
+                      iv = os.urandom(16)
+
+                      cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
+                      encryptor = cipher.encryptor()
+                      padder = padding.PKCS7(128).padder()
+                      padded = padder.update(compressed) + padder.finalize()
+                      ct = encryptor.update(padded) + encryptor.finalize()
+
+                      mac = hmac.digest(key, iv + ct, hashlib.sha256)
+                      sys.stdout.write(base64.b64encode(iv + ct + mac).decode())
+                    ''
+                }/bin/pushover-encrypt "$E2E_KEY_FILE"
+            }
+
+          ''}escape_for_curl() {
               printf '%s' "$1" | ${pkgs.gnused}/bin/sed 's/\\/\\\\/g; s/"/\\"/g'
           }
 
@@ -372,16 +434,22 @@ args@{
           TEMP_MESSAGE="$TEMP_DIR/message-content"
           printf '%s' "$ESCAPED_MESSAGE" > "$TEMP_MESSAGE"
 
-          cat > "$TEMP_CONFIG" <<EOF
+          ${lib.optionalString enableE2E ''
+            ENC_TITLE=$(encrypt_field "$FORMATTED_TITLE [${self.host.hostname}]")
+            ENC_MESSAGE=$(encrypt_field "$(${pkgs.coreutils}/bin/cat "$TEMP_MESSAGE")")
+
+          ''}cat > "$TEMP_CONFIG" <<EOF
           form = "token=$(${pkgs.coreutils}/bin/cat "$TOKEN_FILE")"
           form = "user=$(${pkgs.coreutils}/bin/cat "$USER_FILE")"
-          form = "title=$ESCAPED_TITLE"
-          form = "message=<$TEMP_MESSAGE"
+          ${if enableE2E then "form = \"title=$ENC_TITLE\"" else "form = \"title=$ESCAPED_TITLE\""}
+          ${if enableE2E then "form = \"message=$ENC_MESSAGE\"" else "form = \"message=<$TEMP_MESSAGE\""}
           form = "priority=$PRIORITY"
           form = "html=1"
           form = "timestamp=$(${pkgs.coreutils}/bin/date +%s)"
           form = "sound=$SOUND"
-          EOF
+          ${lib.optionalString enableE2E ''
+            form = "encrypted=1"
+          ''}EOF
 
           if [[ -n "$TTL" && "$PRIORITY" != "2" ]]; then
               echo "form = \"ttl=$TTL\"" >> "$TEMP_CONFIG"
@@ -392,16 +460,32 @@ args@{
               echo "form = \"expire=10800\"" >> "$TEMP_CONFIG"
           fi
 
-          if [[ -n "$URL" ]]; then
-              ESCAPED_URL=$(escape_for_curl "$URL")
-              echo "form = \"url=$ESCAPED_URL\"" >> "$TEMP_CONFIG"
+          ${
+            if enableE2E then
+              ''
+                if [[ -n "$URL" ]]; then
+                    ENC_URL=$(encrypt_field "$URL")
+                    echo "form = \"url=$ENC_URL\"" >> "$TEMP_CONFIG"
 
-              if [[ -n "$URL_TITLE" ]]; then
-                  ESCAPED_URL_TITLE=$(escape_for_curl "$URL_TITLE")
-                  echo "form = \"url_title=$ESCAPED_URL_TITLE\"" >> "$TEMP_CONFIG"
-              fi
-          fi
+                    if [[ -n "$URL_TITLE" ]]; then
+                        ENC_URL_TITLE=$(encrypt_field "$URL_TITLE")
+                        echo "form = \"url_title=$ENC_URL_TITLE\"" >> "$TEMP_CONFIG"
+                    fi
+                fi
+              ''
+            else
+              ''
+                if [[ -n "$URL" ]]; then
+                    ESCAPED_URL=$(escape_for_curl "$URL")
+                    echo "form = \"url=$ESCAPED_URL\"" >> "$TEMP_CONFIG"
 
+                    if [[ -n "$URL_TITLE" ]]; then
+                        ESCAPED_URL_TITLE=$(escape_for_curl "$URL_TITLE")
+                        echo "form = \"url_title=$ESCAPED_URL_TITLE\"" >> "$TEMP_CONFIG"
+                    fi
+                fi
+              ''
+          }
           for arg in "''${EXTRA_ARGS[@]}"; do
               ESCAPED_ARG=$(escape_for_curl "$arg")
               echo "form = \"$ESCAPED_ARG\"" >> "$TEMP_CONFIG"
@@ -787,8 +871,23 @@ args@{
           pushoverMailScript config config.nx.linux.notifications.pushover.script;
       };
 
+      linux.home =
+        { enableE2EEncryption, ... }:
+        {
+          home.packages = lib.optionals (!enableE2EEncryption) [
+            (pkgs.writeShellScriptBin "pushover-create-e2e-key" ''
+              ${pkgs.openssl}/bin/openssl rand -hex 32
+            '')
+          ];
+        };
+
       linux.system =
-        { config, enableSendmail, ... }:
+        {
+          config,
+          enableSendmail,
+          enableE2EEncryption,
+          ...
+        }:
         let
           hostname = self.host.hostname;
           mainUser = config.users.users.${self.host.mainUser.username};
@@ -847,6 +946,23 @@ args@{
             owner = "root";
             group = mainUserGroup;
             path = "/run/pushover-token-${self.host.mainUser.username}";
+          };
+
+          sops.secrets."pushover-e2e-key" = lib.mkIf enableE2EEncryption {
+            format = "binary";
+            sopsFile = self.config.secretsPath "pushover-e2e-key";
+            mode = "0400";
+            owner = "root";
+            group = "root";
+          };
+
+          sops.secrets."pushover-e2e-key-${self.host.mainUser.username}" = lib.mkIf enableE2EEncryption {
+            format = "binary";
+            sopsFile = self.config.secretsPath "pushover-e2e-key";
+            mode = "0440";
+            owner = "root";
+            group = mainUserGroup;
+            path = "/run/pushover-e2e-key-${self.host.mainUser.username}";
           };
 
           environment.systemPackages = [

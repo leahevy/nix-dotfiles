@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -60,7 +59,7 @@ args@{
         ++ (with pkgs; [
           proton-authenticator
         ])
-        ++ (with pkgs-unstable; [
+        ++ (with pkgs; [
           proton-pass-cli
         ]);
 

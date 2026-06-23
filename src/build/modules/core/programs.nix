@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -46,7 +45,7 @@ args@{
           shfmt
           shellcheck
           nix-output-monitor
-          nixfmt-rfc-style
+          nixfmt
           nixfmt-tree
           nix-search
           nix-prefetch-github

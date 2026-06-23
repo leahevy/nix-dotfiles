@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -27,8 +26,18 @@ args@{
         plugins.project-nvim = {
           enable = true;
           enableTelescope = true;
+          package = pkgs.vimPlugins.project-nvim.overrideAttrs (old: {
+            postPatch = (old.postPatch or "") + ''
+              substituteInPlace lua/project/util/history.lua \
+                --replace \
+                "Defering call to \`%s.write_history()\`'):format(MODSTR)" \
+                "Deferring call to \`write_history()\`'):format(MODSTR)"
+            '';
+          });
           settings = {
-            use_lsp = true;
+            lsp = {
+              enabled = true;
+            };
             patterns = [
               ".git"
               ".hg"

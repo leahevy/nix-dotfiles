@@ -173,7 +173,7 @@ EOF
 	if [[ -n "$DETECTED_VERSION" ]]; then
 		STATE_VERSION_VALUE="\"$DETECTED_VERSION\""
 	else
-		STATE_VERSION_VALUE="\"25.11\""
+		STATE_VERSION_VALUE="\"26.05\""
 	fi
 
 	echo -e "Creating profile directory: ${WHITE}$PROFILE_DIR${RESET}"
@@ -333,7 +333,6 @@ EOF
       system = args@{
         lib,
         pkgs,
-        pkgs-unstable,
         funcs,
         helpers,
         defs,

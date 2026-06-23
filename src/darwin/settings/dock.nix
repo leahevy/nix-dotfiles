@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -42,14 +41,14 @@ args@{
             systemSettings = {
               desktopAndDock = {
                 dock = {
-                  positionOnScreen = self.settings.dockPosition;
+                  dockPositionOnScreen = self.settings.dockPosition;
                   showSuggestedAndRecentAppsInDock = false;
                   size = self.settings.dockSize;
                   showIndicatorsForOpenApplications = true;
                   animateOpeningApplications = self.settings.animate;
-                  minimizeWindowsUsing = self.settings.minimizeEffect;
+                  minimizedWindowAnimation = self.settings.minimizeEffect;
                   minimizeWindowsIntoApplicationIcon = false;
-                  doubleClickAWindowsTitleBarTo = self.settings.onTitleClick;
+                  windowTitleBarDoubleClickAction = self.settings.onTitleClick;
                   automaticallyHideAndShowTheDock = {
                     enabled = self.settings.autoHideDock;
                     delay = self.settings.hideDockDelay;

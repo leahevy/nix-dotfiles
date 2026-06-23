@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -313,7 +312,6 @@ let
       name = "kwallet";
       additionalPackages = [
         kde.kwalletmanager
-        pkgs.kwalletcli
       ];
       dirsToPersist = [ ".local/share/kwalletd" ];
       filesToPersist = [ ".config/kwalletrc" ];
@@ -384,7 +382,13 @@ let
       journalPatternsToIgnore = [
         {
           tag = "okular";
-          string = "Couldn't write \".*\\.config/okularrc\" \\. Disk full\\?";
+          string = "Couldn't write to config: \".*\\.config/okularrc\"";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "okular";
+          string = "Couldn't write \".*\\.config/okularrc\"";
           user = true;
           unitless = true;
         }

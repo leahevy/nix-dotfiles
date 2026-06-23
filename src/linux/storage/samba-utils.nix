@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -22,7 +21,7 @@ args@{
     enabled =
       config:
       let
-        cifsUpcall = helpers.packageFile args pkgs.cifs-utils "sbin/cifs.upcall";
+        cifsUpcall = helpers.packageFile args pkgs.cifs-utils.bin "sbin/cifs.upcall";
       in
       {
         nx.linux.system.request-key.rules = [
@@ -34,6 +33,7 @@ args@{
     linux.system = config: {
       environment.systemPackages = [
         pkgs.cifs-utils
+        pkgs.cifs-utils.bin
         pkgs.samba
       ];
     };

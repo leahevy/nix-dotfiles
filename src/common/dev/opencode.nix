@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -116,61 +115,61 @@ args@{
 
         mergedAgents = sharedAgents.agents // agents;
 
-        opencodeSkillFiles = lib.mapAttrs' (name: value: {
-          name = ".config/opencode/skills/${name}/SKILL.md";
-          value = {
-            text =
-              let
-                payload =
-                  if lib.isString value then
-                    {
-                      description = "Custom skill ${name}.";
-                      text = value;
-                    }
-                  else
-                    {
-                      description = value.description or "Custom skill ${name}.";
-                      text = value.text;
-                    };
-              in
-              ''
-                ---
-                name: ${builtins.toJSON name}
-                description: ${builtins.toJSON payload.description}
-                ---
+        opencode-wrapped = pkgs.symlinkJoin {
+          name = "opencode-${pkgs.opencode.version}";
+          paths = [ pkgs.opencode ];
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          postBuild = ''
+            wrapProgram $out/bin/opencode \
+              --set OPENCODE_DISABLE_CHANNEL_DB 1
+          '';
+        };
 
-                ${payload.text}
-              '';
-          };
-        }) mergedSkills;
-
-        opencodeAgentFiles = lib.mapAttrs' (name: value: {
-          name = ".config/opencode/agents/${name}.md";
-          value = {
-            text = ''
-              # ${name}
-
-              ${value.text}
-            '';
-          };
-        }) mergedAgents;
       in
       {
         programs.opencode = {
           enable = true;
+          package = opencode-wrapped;
           enableMcpIntegration = true;
+          settings.autoupdate = false;
           settings.permission.skill."*" = lib.mkDefault "allow";
+          context = mergedContext;
+          skills = lib.mapAttrs (
+            name: value:
+            let
+              payload =
+                if lib.isString value then
+                  {
+                    description = "Custom skill ${name}.";
+                    text = value;
+                  }
+                else
+                  {
+                    description = value.description or "Custom skill ${name}.";
+                    text = value.text;
+                  };
+            in
+            ''
+              ---
+              name: ${builtins.toJSON name}
+              description: ${builtins.toJSON payload.description}
+              ---
+
+              ${payload.text}
+            ''
+          ) mergedSkills;
+          agents = lib.mapAttrs (name: value: ''
+            # ${name}
+
+            ${value.text}
+          '') mergedAgents;
         };
 
-        home.file =
-          opencodeSkillFiles
-          // opencodeAgentFiles
-          // {
-            ".config/opencode/AGENTS.md".text = mergedContext;
-          };
-
         home.persistence."${self.persist}" = {
-          directories = [ ".config/opencode" ];
+          directories = [
+            ".config/opencode"
+            ".local/share/opencode"
+          ];
         };
       };
   };

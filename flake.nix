@@ -86,13 +86,14 @@
     };
 
     niri-flake = {
-      url = "github:leahevy/niri-flake";
+      url = "github:leahevy/niri-flake/nx-patches";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
       inputs.nixpkgs-stable.follows = "nixpkgs";
     };
 
     nixos-hardware = {
       url = "github:leahevy/nixos-hardware/master";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     nirimation = {
@@ -110,15 +111,15 @@
     # -----------------------------------------------------------------------------
 
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/nixos-25.11";
+      url = "github:NixOS/nixpkgs/nixos-26.05";
     };
 
     nixpkgs-nix = {
-      url = "github:NixOS/nixpkgs/nixos-25.11";
+      url = "github:NixOS/nixpkgs/nixos-26.05";
     };
 
     nixpkgs-darwin = {
-      url = "github:NixOS/nixpkgs/nixpkgs-25.11-darwin";
+      url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     };
 
     nixpkgs-unstable = {
@@ -130,28 +131,26 @@
     # -----------------------------------------------------------------------------
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     stylix = {
-      url = "github:nix-community/stylix/release-25.11";
+      url = "github:nix-community/stylix/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-parts.follows = "flake-parts";
       inputs.systems.follows = "nix-systems";
     };
 
     nixvim = {
-      url = "github:nix-community/nixvim/nixos-25.11";
+      url = "github:nix-community/nixvim/nixos-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-parts.follows = "flake-parts";
       inputs.systems.follows = "nix-systems";
-      inputs.nuschtosSearch.inputs.nixpkgs.follows = "nixpkgs";
-      inputs.nuschtosSearch.inputs.flake-utils.follows = "flake-utils";
     };
 
     nix-darwin = {
-      url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
+      url = "github:nix-darwin/nix-darwin/nix-darwin-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -178,15 +177,19 @@
 
     mac-app-util = {
       url = "github:hraban/mac-app-util";
-      inputs.nixpkgs.follows = "nixpkgs-darwin";
+      inputs.nixpkgs.follows = "nixpkgs-mac-app-util";
       inputs.systems.follows = "nix-systems-darwin";
       inputs.flake-utils.follows = "flake-utils";
       inputs.flake-compat.follows = "flake-compat";
       inputs.treefmt-nix.follows = "treefmt-nix";
-      inputs.cl-nix-lite.inputs.nixpkgs.follows = "nixpkgs-darwin";
+      inputs.cl-nix-lite.inputs.nixpkgs.follows = "nixpkgs-mac-app-util";
       inputs.cl-nix-lite.inputs.treefmt-nix.follows = "treefmt-nix";
       inputs.cl-nix-lite.inputs.flake-parts.follows = "flake-parts";
       inputs.cl-nix-lite.inputs.systems.follows = "nix-systems";
+    };
+
+    nixpkgs-mac-app-util = {
+      url = "github:NixOS/nixpkgs/af51545ec9a44eadf3fe3547610a5cdd882bc34e";
     };
 
     nix-plist-manager = {

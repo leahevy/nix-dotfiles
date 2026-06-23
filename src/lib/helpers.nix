@@ -288,11 +288,33 @@ rec {
     else
       throw "Unknown input '${input}'. Available inputs: ${builtins.toString (builtins.attrNames additionalInputs)}";
 
+  dynamicLocalDevelopmentInputs =
+    let
+      configAbs = if additionalInputs ? config then toString additionalInputs.config else null;
+      isLocal = configAbs != null && !(lib.hasPrefix "/nix/store/" configAbs);
+      configRel = defs.localDevelopmentInputs.config or null;
+      mkEntry =
+        name:
+        if isLocal && configRel != null && additionalInputs ? ${name} then
+          let
+            inputAbs = toString additionalInputs.${name};
+            suffix = builtins.substring (builtins.stringLength configAbs) (-1) inputAbs;
+          in
+          {
+            ${name} = configRel + suffix;
+          }
+        else
+          { };
+    in
+    (mkEntry "profile") // (mkEntry "userProfile");
+
+  allLocalDevelopmentInputs = defs.localDevelopmentInputs // dynamicLocalDevelopmentInputs;
+
   # Check if input is local development input for live editing.
   # Only valid when called from within the module evaluation context (funcs.nix / moduleFuncs.nix),
   # not on the global helpers instance.
   # Usage: isLocalDevelopmentInput $INPUTPATH $INPUT
-  isLocalDevelopmentInput = inputPath: input: defs.localDevelopmentInputs ? ${input};
+  isLocalDevelopmentInput = inputPath: input: allLocalDevelopmentInputs ? ${input};
 
   # Get local filesystem source path for development input.
   # Only valid when called from within the module evaluation context (funcs.nix / moduleFuncs.nix),
@@ -300,8 +322,8 @@ rec {
   # Usage: getLocalSourcePath $INPUT
   getLocalSourcePath =
     input:
-    if defs.localDevelopmentInputs ? ${input} then
-      defs.localDevelopmentInputs.${input}
+    if allLocalDevelopmentInputs ? ${input} then
+      allLocalDevelopmentInputs.${input}
     else
       throw "Input '${input}' is not a local development input and has no source path";
 
@@ -839,7 +861,7 @@ rec {
   usePackageByVersionCheck =
     args: pkgName: predicate:
     let
-      unstablePkgs = args.pkgs-unstable or { };
+      unstablePkgs = (args.pkgs or { }).unstable or { };
 
       stablePkg = args.pkgs.${pkgName} or null;
       unstablePkg = unstablePkgs.${pkgName} or null;
@@ -1117,12 +1139,11 @@ rec {
     let
       parts = lib.splitString "." release;
       year = lib.toInt (builtins.elemAt parts 0);
-      month = lib.toInt (builtins.elemAt parts 1);
-      nextYear = if month == 11 then year + 1 else year;
-      nextMonth = if month == 11 then 5 else 11;
-      pad = n: if n < 10 then "0${toString n}" else toString n;
+      month = builtins.elemAt parts 1;
+      nextYear = if month == "11" then year + 1 else year;
+      nextMonth = if month == "11" then "05" else "11";
     in
-    "${toString nextYear}.${pad nextMonth}";
+    "${toString nextYear}.${nextMonth}";
 
   isModulesOnlyInput = inputName: builtins.elem inputName defs.modulesOnlyInputs;
 

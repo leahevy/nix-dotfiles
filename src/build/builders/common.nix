@@ -18,12 +18,15 @@
 
 let
   makeFuncs =
-    profilePath:
+    profilePath: userProfilePath:
     import (additionalInputs.lib + "/funcs.nix") {
       inherit lib defs;
-      additionalInputs = additionalInputs // {
-        profile = profilePath;
-      };
+      additionalInputs =
+        additionalInputs
+        // {
+          profile = profilePath;
+        }
+        // (if userProfilePath != null then { userProfile = userProfilePath; } else { });
     };
 
   mkProfileSelf =
@@ -196,6 +199,7 @@ let
         (final: prev: unstableOverrides)
         nixImplOverlay
         nixToolsOverlay
+        (final: prev: { unstable = pkgs-unstable; })
       ];
 
       buildPkgs =
@@ -270,7 +274,6 @@ let
   buildSpecialArgs =
     {
       pkgs,
-      pkgs-unstable,
       host ? { },
       users ? { },
       user ? { },
@@ -281,7 +284,6 @@ let
       homeStandaloneUsers ? { },
     }:
     {
-      inherit pkgs-unstable;
       inherit inputs;
       inherit variables;
       inherit funcs;
@@ -492,7 +494,9 @@ in
       localHelpers = helpers // {
         isHostArchitecture = arch == buildArch;
       };
-      funcs = makeFuncs (config + "/profiles/nixos/${profileName}");
+      funcs = makeFuncs (config + "/profiles/nixos/${profileName}") (
+        config + "/profiles/home-integrated/${mainUserProfileName}"
+      );
       hostConfigPath = config + "/profiles/nixos/${profileName}/${profileName}.nix";
 
       system = arch;
@@ -517,7 +521,7 @@ in
         };
       };
       profileOverlays = funcs.extractOverlaysFromModule {
-        module = preEval.config.host.module or { };
+        module = preEval.config.host.profile or { };
         inherit system variables;
       };
 
@@ -717,8 +721,6 @@ in
         inherit
           lib
           pkgs
-          pkgs-unstable
-          inputs
           variables
           defs
           funcs
@@ -729,6 +731,9 @@ in
           homeIntegratedUsers
           homeStandaloneUsers
           ;
+        inputs = inputs // {
+          userProfile = config + "/profiles/home-integrated/${mainUserProfileName}";
+        };
         helpers = localHelpers;
         host = resolvedHost;
         user = mainUser;
@@ -776,7 +781,6 @@ in
         inherit
           system
           pkgs
-          pkgs-unstable
           lib
           ;
         host = hostConfig.host;
@@ -789,7 +793,6 @@ in
         specialArgs = buildSpecialArgs {
           inherit
             pkgs
-            pkgs-unstable
             ;
           configInputs = config.configInputs or { };
           host = hostConfig.host;
@@ -803,7 +806,6 @@ in
           inherit
             lib
             pkgs
-            pkgs-unstable
             allOverlays
             unfreePredicate
             inputs
@@ -845,7 +847,9 @@ in
       localHelpers = helpers // {
         isHostArchitecture = arch == buildArch;
       };
-      funcs = makeFuncs (config + "/profiles/home-standalone/${profileName}");
+      funcs = makeFuncs (config + "/profiles/home-standalone/${profileName}") (
+        config + "/profiles/home-standalone/${profileName}"
+      );
       userConfigPath = config + "/profiles/home-standalone/${profileName}/${profileName}.nix";
 
       system = arch;
@@ -871,7 +875,7 @@ in
         };
       };
       profileOverlays = funcs.extractOverlaysFromModule {
-        module = preEval.config.user.module or { };
+        module = preEval.config.user.profile or { };
         inherit system variables;
       };
 
@@ -895,6 +899,8 @@ in
         })
         pkgs
         pkgs-unstable
+        allOverlays
+        unfreePredicate
         ;
 
       inherit (evalAllProfiles { inherit pkgs pkgs-unstable; })
@@ -936,7 +942,6 @@ in
         inherit
           system
           pkgs
-          pkgs-unstable
           lib
           ;
         user = finalUserConfig;
@@ -944,7 +949,6 @@ in
         specialArgs = buildSpecialArgs {
           inherit
             pkgs
-            pkgs-unstable
             ;
           configInputs = config.configInputs or { };
           user = finalUserConfig;
@@ -957,12 +961,15 @@ in
           inherit
             lib
             pkgs
-            pkgs-unstable
-            inputs
+            allOverlays
+            unfreePredicate
             funcs
             defs
             variables
             ;
+          inputs = inputs // {
+            userProfile = config + "/profiles/home-standalone/${profileName}";
+          };
           helpers = localHelpers;
           user = finalUserConfig;
           host = { };

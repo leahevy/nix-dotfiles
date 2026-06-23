@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -17,7 +16,6 @@ args@{
   settings = {
     name = "Pihole";
     webapp = "pihole";
-    iconPath = "${helpers.packageFile args pkgs.pihole-web.src "img/logo.svg"}";
     categories = [
       "Network"
       "System"
@@ -75,10 +73,41 @@ args@{
   ];
 
   module = {
+    linux.enabled =
+      config:
+      let
+        buildFn = config.nx.linux.desktop-modules.web-app.buildWebApp;
+        piholeCfg = config.nx.linux.web-apps.pihole;
+        mainSettings = {
+          webapp = "pihole";
+          subdomain = piholeCfg.subdomain;
+          domain = piholeCfg.domain;
+          protocol = "https";
+          args = piholeCfg.args;
+        };
+        additionalSettings = lib.mapAttrsToList (name: pCfg: {
+          webapp = "pihole-${name}";
+          subdomain = pCfg.subdomain;
+          domain = pCfg.domain;
+          protocol = "https";
+          args = piholeCfg.args;
+        }) piholeCfg.additionalPiholes;
+      in
+      lib.mkIf (buildFn != null) {
+        nx.linux.desktop.niri.autoTiler.ignoredAppIds = lib.concatMap (s: (buildFn s).appIds) (
+          [ mainSettings ] ++ additionalSettings
+        );
+      };
+
     home =
       config:
       let
-        mainSettings = lib.filterAttrs (name: value: name != "additionalPiholes") self.settings;
+        iconPath = "${helpers.packageFile args config.nx.linux.desktop-modules.web-app.dashboardIcons
+          "svg/pi-hole.svg"
+        }";
+        mainSettings = (lib.filterAttrs (name: value: name != "additionalPiholes") self.settings) // {
+          inherit iconPath;
+        };
 
         allSettings = [
           mainSettings

@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   inputs,
   host,
   users,
@@ -121,6 +120,7 @@ in
           max-substitution-jobs = variables.maxSubstitutionJobs;
           connect-timeout = variables.connectTimeout;
           stalled-download-timeout = variables.stalledDownloadTimeout;
+          http2 = false;
           keep-outputs = true;
           keep-derivations = true;
           allow-import-from-derivation = false;

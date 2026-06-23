@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -257,7 +256,7 @@ args@{
               useUnstable = if builtins.isString fontConfig then false else (fontConfig.useUnstable or false);
               packageName = lib.head (lib.splitString "/" fontPath);
               packageParts = lib.splitString "." packageName;
-              pkgSet = if useUnstable then pkgs-unstable else pkgs;
+              pkgSet = if useUnstable then pkgs.unstable else pkgs;
             in
             if lib.length packageParts > 1 then
               lib.getAttrFromPath packageParts pkgSet
@@ -398,12 +397,29 @@ args@{
         in
         {
           home.packages = shared.fontPackages;
-          stylix = shared.stylixAttrs // {
+          stylix = lib.recursiveUpdate shared.stylixAttrs {
             targets = {
               kde.enable = false;
               gnome.enable = false;
             };
           };
+        };
+
+      home =
+        config:
+        let
+          theme = config.nx.preferences.theme;
+          fg = theme.colors.main.foregrounds.strong.html;
+        in
+        {
+          stylix.targets.gtk.extraCss = ''
+            @define-color accent_fg_color ${fg};
+            @define-color destructive_fg_color ${fg};
+            @define-color success_fg_color ${fg};
+            @define-color warning_fg_color ${fg};
+            @define-color error_fg_color ${fg};
+            button { color: ${fg}; background-color: @window_bg_color; }
+          '';
         };
 
       darwin.home =

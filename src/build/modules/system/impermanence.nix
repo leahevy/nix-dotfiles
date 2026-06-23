@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -562,7 +561,7 @@ in
           neededForBoot = true;
         };
 
-        boot.initrd.systemd.enable = lib.mkDefault false;
+        boot.initrd.systemd.enable = lib.mkDefault true;
 
         boot.initrd.postDeviceCommands = lib.mkIf (!config.boot.initrd.systemd.enable) (
           lib.mkAfter rollbackScript

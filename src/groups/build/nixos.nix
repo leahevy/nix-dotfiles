@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -40,6 +39,7 @@ args@{
       desktop = [ "desktop" ];
       programs = [ "programs" ];
       system = [
+        "tmpfiles"
         "kernel-fixes"
       ]
       ++ (if self.host.hardening or true then [ "hardening" ] else [ ])

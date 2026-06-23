@@ -347,9 +347,11 @@ parse_common_deployment_args() {
 
 	local _branch_config _branch_core
 	_branch_config="$(git branch --show-current)"
+	[[ -z "$_branch_config" ]] && _branch_config="(detached @ $(git rev-parse --short HEAD 2>/dev/null || echo "?"))"
 	_branch_core=""
 	if [[ -n "${NXCORE_DIR:-}" ]] && [[ -d "$NXCORE_DIR/.git" ]]; then
 		_branch_core="$(cd "$NXCORE_DIR" && git branch --show-current)"
+		[[ -z "$_branch_core" ]] && _branch_core="(detached @ $(git -C "$NXCORE_DIR" rev-parse --short HEAD 2>/dev/null || echo "?"))"
 	fi
 	if [[ "$_branch_config" != "main" || (-n "$_branch_core" && "$_branch_core" != "main") ]]; then
 		echo -e "${CYAN}Active branches:${RESET}"
@@ -406,7 +408,7 @@ parse_build_deployment_args() {
 	else
 		EXTRA_ARGS=()
 	fi
-	TIMEOUT=14400
+	TIMEOUT=43200
 	DRY_RUN=""
 	BUILD_DIFF=false
 	BUILD_KEEP=false
@@ -417,12 +419,17 @@ parse_build_deployment_args() {
 	BUILD_FORCE_NIXOS=false
 	BUILD_FORCE_STANDALONE=false
 	SHOW_DERIVATION=false
+	BUILD_RETRY=false
+	BUILD_MAX_RETRIES=10
+	BUILD_FAIL_EARLY=false
 
 	local _branch_config _branch_core
 	_branch_config="$(git branch --show-current)"
+	[[ -z "$_branch_config" ]] && _branch_config="(detached @ $(git rev-parse --short HEAD 2>/dev/null || echo "?"))"
 	_branch_core=""
 	if [[ -n "${NXCORE_DIR:-}" ]] && [[ -d "$NXCORE_DIR/.git" ]]; then
 		_branch_core="$(cd "$NXCORE_DIR" && git branch --show-current)"
+		[[ -z "$_branch_core" ]] && _branch_core="(detached @ $(git -C "$NXCORE_DIR" rev-parse --short HEAD 2>/dev/null || echo "?"))"
 	fi
 	if [[ "$_branch_config" != "main" || (-n "$_branch_core" && "$_branch_core" != "main") ]]; then
 		echo -e "${CYAN}Active branches:${RESET}"
@@ -440,7 +447,7 @@ parse_build_deployment_args() {
 			shift
 			;;
 		--timeout)
-			TIMEOUT="${2:-14400}"
+			TIMEOUT="${2:-43200}"
 			shift 2
 			;;
 		--dry-run)
@@ -499,6 +506,52 @@ parse_build_deployment_args() {
 			BUILD_FORCE_STANDALONE=true
 			shift
 			;;
+		--retry)
+			BUILD_RETRY=true
+			shift
+			;;
+		--max-retries)
+			[[ $# -lt 2 ]] && {
+				echo -e "${RED}Error: --max-retries requires a count${RESET}" >&2
+				exit 1
+			}
+			[[ ! "$2" =~ ^[0-9]+$ ]] && {
+				echo -e "${RED}Error: --max-retries requires a positive integer${RESET}" >&2
+				exit 1
+			}
+			BUILD_MAX_RETRIES="$2"
+			shift 2
+			;;
+		--fallback)
+			EXTRA_ARGS+=("--fallback")
+			shift
+			;;
+		--repair)
+			EXTRA_ARGS+=("--repair")
+			shift
+			;;
+		--fail-early)
+			BUILD_FAIL_EARLY=true
+			shift
+			;;
+		--option)
+			[[ $# -lt 2 ]] && {
+				echo -e "${RED}Error: --option requires key=value${RESET}" >&2
+				exit 1
+			}
+			[[ "$2" != *=* ]] && {
+				echo -e "${RED}Error: --option argument must be in key=value format${RESET}" >&2
+				exit 1
+			}
+			_opt_key="${2%%=*}"
+			_opt_val="${2#*=}"
+			[[ -z "$_opt_key" || -z "$_opt_val" ]] && {
+				echo -e "${RED}Error: --option key=value requires non-empty key and value${RESET}" >&2
+				exit 1
+			}
+			EXTRA_ARGS+=("--option" "$_opt_key" "$_opt_val")
+			shift 2
+			;;
 		-*)
 			echo -e "${RED}Unknown option ${WHITE}${1:-}${RESET}"
 			exit 1
@@ -509,6 +562,10 @@ parse_build_deployment_args() {
 			;;
 		esac
 	done
+
+	if [[ "$BUILD_FAIL_EARLY" != "true" ]]; then
+		EXTRA_ARGS+=("--keep-going")
+	fi
 
 	[[ "$BUILD_FORCE_NIXOS" == "true" && "$BUILD_FORCE_STANDALONE" == "true" ]] && {
 		echo -e "${RED}Error: --nixos and --standalone cannot be used together${RESET}" >&2
@@ -535,6 +592,7 @@ parse_build_deployment_args() {
 
 	export EXTRA_ARGS TIMEOUT DRY_RUN BUILD_DIFF BUILD_KEEP SKIP_VERIFICATION RAW_LOG SHOW_DERIVATION
 	export BUILD_OVERRIDE_PROFILE BUILD_OVERRIDE_ARCH BUILD_FORCE_NIXOS BUILD_FORCE_STANDALONE BUILD_HAS_OVERRIDE
+	export BUILD_RETRY BUILD_MAX_RETRIES
 }
 
 ensure_nixos_only() {

@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -193,7 +192,7 @@ args@{
           in
           {
             enable = true;
-            systemdTarget = "graphical-session.target";
+            systemdTargets = [ "graphical-session.target" ];
             timeouts = [
               {
                 timeout = self.settings.baseTimeoutSeconds;
@@ -205,16 +204,10 @@ args@{
                 resumeCommand = self.settings.turnOnMonitorsCommand;
               }
             ];
-            events = [
-              {
-                event = "before-sleep";
-                command = wrapperCommand;
-              }
-              {
-                event = "lock";
-                command = wrapperCommand;
-              }
-            ];
+            events = {
+              before-sleep = wrapperCommand;
+              lock = wrapperCommand;
+            };
           };
 
         systemd.user.services.nx-lock-on-login = lib.mkIf self.settings.auto-lock-on-login {

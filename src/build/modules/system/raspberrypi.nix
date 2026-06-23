@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -16,6 +15,11 @@ args@{
 
   module = {
     linux.system = config: {
+      nix.settings.max-jobs = 1;
+      nix.settings.cores = 2;
+
+      systemd.services.nix-daemon.serviceConfig.CPUQuota = "80%";
+
       boot.kernelParams = [
         "nvme_core.default_ps_max_latency_us=0"
         "pcie_aspm=off"
@@ -102,7 +106,7 @@ args@{
             _hex=$(printf '%s' "$_out" | ${pkgs.gnused}/bin/sed 's/throttled=//')
             if [[ "$_hex" =~ ^0x[0-9A-Fa-f]+$ ]]; then
               _dec=$(( _hex ))
-              if [[ $(( _dec & 0xF000F )) -ne 0 ]]; then
+              if [[ $(( _dec & 0xF )) -ne 0 ]]; then
                 printf '%s\n' "$_hex" >&3
               fi
               if [[ $(( _dec & 0xF )) -ne 0 ]]; then

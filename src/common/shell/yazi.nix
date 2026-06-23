@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -69,6 +68,8 @@ args@{
           enableBashIntegration = true;
           enableFishIntegration = true;
           enableZshIntegration = true;
+
+          shellWrapperName = "y";
 
           settings = lib.recursiveUpdate self.settings.baseSettings self.settings.additionalSettings;
         };

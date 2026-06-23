@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -29,6 +28,8 @@ args@{
       "sound"
       "spotlight"
       "control-center"
+      # "date-and-time"
+      "privacy"
     ];
   };
 }

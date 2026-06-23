@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -43,7 +42,7 @@ let
         exit 1
       fi
 
-      API_KEY=$(${pkgs.gnugrep}/bin/grep '^POCKET_ID_API_KEY=' "$ENV_FILE" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+      API_KEY=$(${pkgs.gnugrep}/bin/grep '^STATIC_API_KEY=' "$ENV_FILE" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
       if [[ ! "$API_KEY" =~ ^[a-zA-Z0-9]{32}$ ]]; then
         printf 'Pocket-ID API key not configured or invalid\n' >&2
         exit 1
@@ -149,7 +148,6 @@ in
 
         accentColor = config.nx.preferences.theme.colors.blocks.primary.foreground.html;
 
-        secretKeyPath = config.sops.secrets."pocket-id-secret-key".path;
         apiKeyPath = if bootstrapMode then "" else config.sops.secrets."pocket-id-api-key".path;
 
         postLogoutRedirectUrl =
@@ -185,9 +183,9 @@ in
           CURL="${pkgs.curl}/bin/curl"
           DECLARED=${lib.escapeShellArg declaredJson}
 
-          API_KEY="''${POCKET_ID_API_KEY:-}"
+          API_KEY="''${STATIC_API_KEY:-}"
           if [[ ! "$API_KEY" =~ ^[a-zA-Z0-9]{32}$ ]]; then
-            printf "POCKET_ID_API_KEY absent or not a valid 32-char alphanumeric key${
+            printf "STATIC_API_KEY absent or not a valid key${
               if bootstrapMode then
                 ", skipping client sync"
               else
@@ -327,15 +325,7 @@ in
           }
         ];
 
-        sops.secrets = {
-          "pocket-id-secret-key" = {
-            format = "binary";
-            sopsFile = self.profile.secretsPath "pocket-id-secret-key";
-            owner = "root";
-            mode = "0400";
-          };
-        }
-        // lib.optionalAttrs (!bootstrapMode) {
+        sops.secrets = lib.optionalAttrs (!bootstrapMode) {
           "pocket-id-api-key" = {
             format = "binary";
             sopsFile = self.profile.secretsPath "pocket-id-api-key";
@@ -353,10 +343,9 @@ in
           before = [ "pocket-id.service" ];
           wantedBy = [ "pocket-id.service" ];
           partOf = [ "pocket-id.service" ];
-          restartTriggers = [
-            config.sops.secrets."pocket-id-secret-key".sopsFile
-          ]
-          ++ lib.optional (!bootstrapMode) config.sops.secrets."pocket-id-api-key".sopsFile;
+          restartTriggers = lib.optionals (!bootstrapMode) [
+            config.sops.secrets."pocket-id-api-key".sopsFile
+          ];
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
@@ -367,14 +356,18 @@ in
                 umask 077
                 ${pkgs.coreutils}/bin/rm -f /run/pocket-id-env/env
                 ${pkgs.coreutils}/bin/touch /run/pocket-id-env/env
+                if [ ! -f /var/lib/pocket-id/encryption-key ]; then
+                  ${pkgs.openssl}/bin/openssl rand -base64 32 > /var/lib/pocket-id/encryption-key
+                  ${pkgs.coreutils}/bin/chmod 600 /var/lib/pocket-id/encryption-key
+                fi
                 {
-                  printf 'SECRET_KEY='
-                  ${pkgs.coreutils}/bin/tr -d '\n' < ${lib.escapeShellArg secretKeyPath}
+                  printf 'ENCRYPTION_KEY='
+                  ${pkgs.coreutils}/bin/tr -d '\n' < /var/lib/pocket-id/encryption-key
                   printf '\n'
                 } >> /run/pocket-id-env/env
                 ${lib.optionalString (!bootstrapMode) ''
                   {
-                    printf 'POCKET_ID_API_KEY='
+                    printf 'STATIC_API_KEY='
                     ${pkgs.coreutils}/bin/tr -d '\n' < ${lib.escapeShellArg apiKeyPath}
                     printf '\n'
                   } >> /run/pocket-id-env/env
@@ -418,10 +411,9 @@ in
         systemd.services.pocket-id = {
           after = [ "nx-pocket-id-env.service" ];
           bindsTo = [ "nx-pocket-id-env.service" ];
-          restartTriggers = [
-            config.sops.secrets."pocket-id-secret-key".sopsFile
-          ]
-          ++ lib.optional (!bootstrapMode) config.sops.secrets."pocket-id-api-key".sopsFile;
+          restartTriggers = lib.optionals (!bootstrapMode) [
+            config.sops.secrets."pocket-id-api-key".sopsFile
+          ];
         };
 
         environment.persistence."${self.persist}" = {
@@ -570,7 +562,7 @@ in
           ];
           nx.linux.server.healthchecks.regularHealthChecks = {
             "R+50 - Pocket-ID API" = ''
-              _pid_api_key=$(${pkgs.gnugrep}/bin/grep '^POCKET_ID_API_KEY=' /run/pocket-id-env/env 2>/dev/null | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+              _pid_api_key=$(${pkgs.gnugrep}/bin/grep '^STATIC_API_KEY=' /run/pocket-id-env/env 2>/dev/null | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
               if [[ ! "$_pid_api_key" =~ ^[a-zA-Z0-9]{32}$ ]]; then
                 printf 'Pocket-ID API key not configured, skipping API check\n' >&3
                 exit 0

@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -31,7 +30,7 @@ args@{
               desktopAndDock = {
                 widgets = {
                   useIphoneWidgets = false;
-                  widgetStyle = "Automatic";
+                  dimWidgetsOnDesktop = "Automatically";
                   showWidgets = {
                     inStageManager = true;
                     onDesktop = false;

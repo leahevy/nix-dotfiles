@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -17,7 +16,6 @@ args@{
   settings = {
     name = "Immich";
     webapp = "immich";
-    iconPath = "${helpers.packageFile args pkgs.immich.src "design/immich-logo.svg"}";
     categories = [
       "Photography"
       "Graphics"
@@ -54,10 +52,33 @@ args@{
   ];
 
   module = {
-    linux.home = config: {
-      home.file = (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings).homeFiles;
-      xdg.desktopEntries =
-        (config.nx.linux.desktop-modules.web-app.buildWebApp self.settings).desktopEntries;
-    };
+    linux.enabled =
+      config:
+      lib.mkIf (config.nx.linux.desktop-modules.web-app.buildWebApp != null) {
+        nx.linux.desktop.niri.autoTiler.ignoredAppIds =
+          (config.nx.linux.desktop-modules.web-app.buildWebApp {
+            webapp = "immich";
+            subdomain = config.nx.linux.web-apps.immich.subdomain;
+            domain = config.nx.linux.web-apps.immich.domain;
+            protocol = "https";
+            args = config.nx.linux.web-apps.immich.args;
+          }).appIds;
+      };
+
+    linux.home =
+      config:
+      let
+        iconPath = "${helpers.packageFile args config.nx.linux.desktop-modules.web-app.dashboardIcons
+          "svg/immich.svg"
+        }";
+        webAppSettings = self.settings // {
+          inherit iconPath;
+        };
+      in
+      {
+        home.file = (config.nx.linux.desktop-modules.web-app.buildWebApp webAppSettings).homeFiles;
+        xdg.desktopEntries =
+          (config.nx.linux.desktop-modules.web-app.buildWebApp webAppSettings).desktopEntries;
+      };
   };
 }

@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -53,27 +52,43 @@ args@{
             "develop"
             "local"
           ];
+          serverMode = lib.elem (helpers.resolveFromHostOrUser config [ "deploymentMode" ] "managed") [
+            "server"
+          ];
+          managedMode = lib.elem (helpers.resolveFromHostOrUser config [ "deploymentMode" ] "managed") [
+            "managed"
+          ];
           vimEnabled = config.nx.common.nvim.nixvim.enable;
           claudeEnabled = config.nx.common.dev.claude.enable;
           codexEnabled = config.nx.common.dev.codex.enable;
+          vibeEnabled = config.nx.common.dev."vibe".enable;
 
           main = {
             windows = [
               { "󱆃 Home" = "cd ~ && clear && ${interactiveShellCommand "true"}"; }
             ]
-            ++ lib.optionals devMode [
+            ++ lib.optionals (!vimEnabled && devMode) [
+              { "󱆃 Config" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "true"}"; }
               { "󱆃 Core" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "true"}"; }
+            ]
+            ++ lib.optionals serverMode [
               { "󱆃 Config" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "true"}"; }
             ]
             ++ lib.optionals (vimEnabled && devMode) [
-              { "󱇧 Vim (Core)" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vim"}"; }
-              { "󱇧 Vim (Config)" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "vim"}"; }
+              { "󱇧 Config" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "vim"}"; }
+              { "󱇧 Core" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vim"}"; }
             ]
             ++ lib.optionals (claudeEnabled && devMode) [
-              { "󱙺 Claude" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "claude"}"; }
+              { "󱙺 Claude" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "claude"}"; }
             ]
             ++ lib.optionals (codexEnabled && devMode) [
               { "󱙺 Codex" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "codex"}"; }
+            ]
+            ++ lib.optionals (vibeEnabled && devMode) [
+              { "󱙺 Vibe" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vibe"}"; }
+            ]
+            ++ lib.optionals (serverMode || managedMode) [
+              { " Htop" = "cd ~ && clear && ${interactiveShellCommand "htop"}"; }
             ]
             ++ self.settings.additionalMainConfigWindows;
           };

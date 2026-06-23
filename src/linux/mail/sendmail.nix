@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -39,7 +38,7 @@ args@{
     linux.system = config: {
       sops.secrets."smtp-password" = {
         format = "binary";
-        sopsFile = self.config.secretsPath "smtp-password";
+        sopsFile = self.profile.secretsPath "smtp-password";
         mode = "0400";
         owner = "root";
         group = "root";

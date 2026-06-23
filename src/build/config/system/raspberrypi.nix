@@ -8,15 +8,30 @@
 }:
 { config, lib, ... }:
 {
-  imports = with inputs.nixos-raspberrypi.nixosModules; [
-    raspberry-pi-5.base
-    raspberry-pi-5.page-size-16k
-    raspberry-pi-5.display-vc4
-    raspberry-pi-5.bluetooth
-    trusted-nix-caches
-  ];
+  imports =
+    with inputs.nixos-raspberrypi.nixosModules;
+    [
+      raspberry-pi-5.base
+      raspberry-pi-5.page-size-16k
+      raspberry-pi-5.display-vc4
+      raspberry-pi-5.bluetooth
+      trusted-nix-caches
+    ]
+    ++ lib.optionals (host.settings.system.desktop == null) [
+      inputs.nixos-raspberrypi.lib.inject-overlays-global
+    ];
 
-  nixpkgs.overlays = allOverlays;
+  nixpkgs.overlays = allOverlays ++ [
+    (final: prev: {
+      pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+        (_: pprev: {
+          cryptography = pprev.cryptography.overrideAttrs (_: {
+            dontUsePytestCheck = true;
+          });
+        })
+      ];
+    })
+  ];
   nixpkgs.config.allowUnfreePredicate = unfreePredicate;
   nixpkgs.config.permittedInsecurePackages = variables.releaseTransitionInsecurePackages or [ ];
 

@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -62,6 +61,10 @@ args@{
           enable = true;
 
           interactiveShellInit = ''
+            function __disown_bg_on_exit --on-event fish_exit
+              builtin disown 2>/dev/null
+            end
+
             set -gx __SHELL_BOOTSTRAPPED 1
 
             set -g fish_color_normal ${

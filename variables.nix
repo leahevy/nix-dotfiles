@@ -5,8 +5,8 @@
   latestLinuxOverride = null; # e.g. "linux_6_16";
   ltsLinuxOverride = null; # e.g. "linux_6_12";
 
-  current-release = "25.11";
-  state-version = "25.11";
+  current-release = "26.05";
+  state-version = "26.05";
 
   experimental-features = [
     "nix-command"
@@ -27,7 +27,6 @@
   allowedUnfreePackages = [ ];
 
   releaseTransitionInsecurePackages = [
-    "docker-28.5.2"
     "electron-39.8.10"
   ];
 
@@ -42,7 +41,7 @@
     "codex"
     "claude-code"
   ];
-  unstableLinuxPackages = [ "protonmail-desktop" ];
+  unstableLinuxPackages = [ ];
   unstableDarwinPackages = [ ];
 
   nx.config = {

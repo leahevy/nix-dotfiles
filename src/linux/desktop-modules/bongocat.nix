@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -27,8 +26,9 @@ args@{
         null;
     package = pkgs.wayland-bongocat;
     xOffset = -280;
-    yOffset = 30;
-    catSize = 75;
+    yOffset = 45;
+    catSize = 120;
+    overlayHeight = 130;
   };
 
   module =
@@ -99,7 +99,7 @@ args@{
 
             cat_height=${builtins.toString self.settings.catSize}
 
-            overlay_height=90
+            overlay_height=${builtins.toString self.settings.overlayHeight}
             overlay_opacity=0
             overlay_position=bottom
             layer=bottom

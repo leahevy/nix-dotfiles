@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -80,6 +79,13 @@ args@{
         config:
         let
           gpuOverheadBytes = builtins.floor (self.settings.gpuOverheadGB * 1073741824);
+          cudaVersion = pkgs.cudaPackages.cuda_cudart.version or "0";
+          effectiveCudaArches =
+            if lib.versionAtLeast cudaVersion "13" then
+              builtins.filter (a: !builtins.elem a [ "sm_61" ]) self.variables.cudaArchitectures
+            else
+              self.variables.cudaArchitectures;
+          useNvidiaCuda = self.linux.isModuleEnabled "graphics.nvidia-setup" && effectiveCudaArches != [ ];
         in
         {
           services.ollama = {
@@ -90,12 +96,12 @@ args@{
                   if !self.settings.allowGPU then
                     false
                   else if self.isLinux then
-                    if self.linux.isModuleEnabled "graphics.nvidia-setup" then "cuda" else "vulkan"
+                    if useNvidiaCuda then "cuda" else "vulkan"
                   else
                     null;
               }
-              // lib.optionalAttrs (self.variables.cudaArchitectures != [ ]) {
-                cudaArches = self.variables.cudaArchitectures;
+              // lib.optionalAttrs (effectiveCudaArches != [ ]) {
+                cudaArches = effectiveCudaArches;
               }
             );
             host = ollamaHost;

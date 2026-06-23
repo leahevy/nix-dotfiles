@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -54,7 +53,7 @@ args@{
 
       sops.secrets.yubikey-u2f-keys = lib.mkIf self.settings.enableU2fAuth {
         format = "binary";
-        sopsFile = self.config.secretsPath "yubikey-u2f-keys";
+        sopsFile = self.profile.secretsPath "yubikey-u2f-keys";
         mode = "0644";
       };
 

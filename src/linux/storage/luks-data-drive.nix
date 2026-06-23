@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -89,7 +88,7 @@ args@{
     linux.system = config: {
       sops.secrets."${self.settings.keyfileSecretName}" = {
         format = "binary";
-        sopsFile = self.config.secretsPath "${self.settings.keyfileSecretName}";
+        sopsFile = self.profile.secretsPath "${self.settings.keyfileSecretName}";
         mode = "0400";
         owner = "root";
         group = "root";

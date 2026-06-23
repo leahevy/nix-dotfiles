@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -21,7 +20,6 @@ args@{
     {
       lib,
       pkgs,
-      pkgs-unstable,
       funcs,
       helpers,
       defs,
@@ -38,7 +36,7 @@ args@{
             desktopPreference = self.user.settings.desktopPreference;
           in
           if desktopPreference == "kde" then
-            "kwalletcli -f Passwords -e ${service}-${accountKey}"
+            "kwallet-query kdewallet -r ${service}-${accountKey} -f Passwords"
           else
             "secret-tool lookup service ${service}-${accountKey}"
         else
@@ -87,7 +85,7 @@ args@{
                 local tmpfile=$(mktemp)
                 chmod 600 "$tmpfile"
                 echo "$password" > "$tmpfile"
-                if kwalletcli -f "Passwords" -e "$service-$account" -P < "$tmpfile"; then
+                if kwallet-query kdewallet -w "$service-$account" -f Passwords < "$tmpfile"; then
                   rm -f "$tmpfile"
                   return 0
                 else
@@ -98,7 +96,7 @@ args@{
               CHECK_CMD() {
                 local service="$1"
                 local account="$2"
-                kwalletcli -f "Passwords" -e "$service-$account" >/dev/null 2>&1
+                kwallet-query kdewallet -r "$service-$account" -f Passwords >/dev/null 2>&1
               }
             else
               KEYRING_TYPE="gnome-keyring"
@@ -212,7 +210,7 @@ args@{
               CHECK_CMD() {
                 local service="$1"
                 local account="$2"
-                kwalletcli -f "Passwords" -e "$service-$account" >/dev/null 2>&1
+                kwallet-query kdewallet -r "$service-$account" -f Passwords >/dev/null 2>&1
               }
             else
               CHECK_CMD() {

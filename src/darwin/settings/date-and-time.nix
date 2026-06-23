@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -14,6 +13,8 @@ args@{
   group = "settings";
   input = "darwin";
 
+  broken = true;
+
   submodules = {
     darwin = {
       settings = {
@@ -21,8 +22,6 @@ args@{
       };
     };
   };
-
-  error = "Broken as nix-plist-manager tries to call 'defaults' without absolute path for general.* settings";
 
   settings = {
     use24HourTime = false;

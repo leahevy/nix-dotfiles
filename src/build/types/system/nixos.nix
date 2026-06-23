@@ -204,6 +204,11 @@ with lib;
             default = null;
             description = "Board type for SBC and embedded system configuration";
           };
+          gpuArchitecture = mkOption {
+            type = types.nullOr (types.enum [ "pascal" ]);
+            default = null;
+            description = "GPU microarchitecture, used to select legacy driver branches when required.";
+          };
         };
       };
       default = { };

@@ -34,6 +34,8 @@ echo
 
 check_git_worktrees_clean
 
+OLD_VERSION=$(sed -n 's/.*current-release = "\([0-9][0-9]\.[0-9][0-9]\)".*/\1/p' "$NXCORE_DIR/variables.nix" | head -1)
+
 echo -e "Updating version references in ${WHITE}nxcore/flake.nix${RESET}..."
 sed -i "s/[0-9][0-9]\.[0-9][0-9]/$NIXOS_VERSION/g" "$NXCORE_DIR/flake.nix"
 
@@ -65,16 +67,16 @@ fi
 echo
 echo -e "Migrating packages from unstable to stable in ${WHITE}nxcore/src${RESET}..."
 
-find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/with pkgs-unstable/with pkgs/g' {} \;
-find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/pkgs-unstable\./pkgs\./g' {} \;
-find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/self\.pkgs-unstable/self\.pkgs/g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/with pkgs\.unstable/with pkgs/g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/pkgs\.unstable\./pkgs\./g' {} \;
+find "$NXCORE_DIR/src" -name "*.nix" -type f ! -path "*/build/builders/*" -exec sed -i 's/\bunstable\.\([a-zA-Z_][a-zA-Z0-9_-]*\)/\1/g' {} \;
 
 if [[ -d "$CONFIG_DIR/.git" ]]; then
 	echo -e "Migrating packages from unstable to stable in ${WHITE}nxconfig/modules${RESET}..."
 
-	(cd "$CONFIG_DIR" && find modules -name "*.nix" -type f -exec sed -i 's/with pkgs-unstable/with pkgs/g' {} \; 2>/dev/null || true)
-	(cd "$CONFIG_DIR" && find modules -name "*.nix" -type f -exec sed -i 's/pkgs-unstable\./pkgs\./g' {} \; 2>/dev/null || true)
-	(cd "$CONFIG_DIR" && find modules -name "*.nix" -type f -exec sed -i 's/self\.pkgs-unstable/self\.pkgs/g' {} \; 2>/dev/null || true)
+	(cd "$CONFIG_DIR" && find modules profiles -name "*.nix" -type f -exec sed -i 's/with pkgs\.unstable/with pkgs/g' {} \; 2>/dev/null || true)
+	(cd "$CONFIG_DIR" && find modules profiles -name "*.nix" -type f -exec sed -i 's/pkgs\.unstable\./pkgs\./g' {} \; 2>/dev/null || true)
+	(cd "$CONFIG_DIR" && find modules profiles -name "*.nix" -type f -exec sed -i 's/\bunstable\.\([a-zA-Z_][a-zA-Z0-9_-]*\)/\1/g' {} \; 2>/dev/null || true)
 fi
 
 echo
@@ -98,10 +100,8 @@ echo -e "Created marker files with hash: ${WHITE}$core_flake_hash${RESET}"
 echo
 echo -e "${GREEN}NixOS version bump to $NIXOS_VERSION completed successfully!${RESET}"
 
-TASK_DIR="$CONFIG_DIR/current-tasks"
-if [[ ! -d "$TASK_DIR" ]]; then
-	TASK_DIR="$CONFIG_DIR"
-fi
-sed "1s/next release/$NIXOS_VERSION/" "$NXCORE_DIR/UPGRADE.md" >"$TASK_DIR/upgrade-nixos-$NIXOS_VERSION.md"
+TASK_DIR="$NXCORE_DIR/current-tasks"
+mkdir -p "$TASK_DIR"
+sed "1s/next release/$NIXOS_VERSION/;s/<TARGET_VERSION>/$NIXOS_VERSION/g;s/<OLD_VERSION>/$OLD_VERSION/g" "$NXCORE_DIR/UPGRADE.md" >"$TASK_DIR/upgrade-nixos-$NIXOS_VERSION.md"
 echo
 echo -e "${YELLOW}Upgrade checklist written to ${WHITE}$TASK_DIR/upgrade-nixos-$NIXOS_VERSION.md${RESET}"

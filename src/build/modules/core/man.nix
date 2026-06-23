@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -15,10 +14,27 @@ args@{
   input = "build";
 
   module = {
-    home = config: {
+    standalone = config: {
       programs.man = {
         generateCaches = self.user.settings.generateManCaches;
       };
     };
+
+    integrated = config: {
+      programs.man = {
+        generateCaches = false;
+      };
+    };
+
+    linux.system =
+      config:
+      lib.mkIf self.user.settings.generateManCaches {
+        documentation.man.cache.enable = true;
+        documentation.man.cache.generateAtRuntime = true;
+
+        environment.persistence."${self.persist}" = {
+          directories = [ "/var/cache/man" ];
+        };
+      };
   };
 }

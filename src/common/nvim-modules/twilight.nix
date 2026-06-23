@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -143,7 +142,9 @@ args@{
       "syntax"
     ];
     exclude = [
+      "env"
       "sh"
+      "text"
       "undotree"
       "diff"
       "markdown"

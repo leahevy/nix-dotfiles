@@ -83,7 +83,7 @@
         description = "Test build configuration without deploying";
         group = "switch";
         options = {
-          timeout = optionWithDefault "Set timeout in seconds" "seconds" "int" "14400";
+          timeout = optionWithDefault "Set timeout in seconds" "seconds" "int" "43200";
           dry-run = option "Test build without actual building";
           offline = option "Build without network access";
           diff = option "Compare built config with current active system";
@@ -97,6 +97,12 @@
           standalone = option "Force standalone mode";
           arch = optionWithEnum "Use specific architecture" "architecture" architectures;
           keep = option "Keep built derivation as a persistent GC root in ~/.local/state/nx/build-outputs";
+          retry = option "Automatically retry on failure after a short delay";
+          max-retries = optionWithDefault "Maximum number of retry attempts" "count" "int" "10";
+          fallback = option "Fall back to building from source if a substituter fails";
+          repair = option "Re-download and rebuild corrupted store paths";
+          fail-early = option "Stop on first build failure instead of continuing with independent derivations";
+          option = optionRepeatable "Pass a raw nix option (key=value)" "key=value" "string";
         };
       };
 
@@ -159,6 +165,7 @@
         group = "switch";
         options = {
           check-only = option "Run checks only without making changes";
+          upgrade = option "Upgrade Nix to the latest version (Darwin only)";
         };
       };
 

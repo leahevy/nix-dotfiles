@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -1183,11 +1182,12 @@ in
       };
 
     linux.home = config: {
+      programs.firefox.configPath = "${config.xdg.configHome}/mozilla/firefox";
+
       home.sessionVariables.MOZ_ENABLE_WAYLAND = "1";
 
       home.persistence."${self.persist}" = {
         directories = [
-          ".mozilla"
           ".config/mozilla"
           ".local/share/mozilla"
           ".cache/mozilla/firefox"
@@ -1488,6 +1488,10 @@ in
 
     darwin.enabled = config: {
       nx.homebrew.casks = [ "firefox" ];
+    };
+
+    ifEnabled.linux.desktop.niri.enabled = config: {
+      nx.linux.desktop.niri.autoTiler.ignoredAppIds = [ "firefox" ];
     };
 
     ifEnabled.linux.desktop.niri.home =

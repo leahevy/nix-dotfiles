@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -33,6 +32,7 @@ args@{
     suppressDiagnostics = {
       nixd = [
         "sema-unused-def-lambda"
+        "sema-primop-removed-prefix"
       ];
     };
   };
@@ -100,7 +100,7 @@ args@{
               };
 
               nixfmt = {
-                command = lib.getExe pkgs.nixfmt-rfc-style;
+                command = lib.getExe pkgs.nixfmt;
               };
             };
           };

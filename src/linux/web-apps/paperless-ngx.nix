@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -39,11 +38,44 @@ in
   };
 
   module = {
+    linux.enabled =
+      config:
+      let
+        buildFn = config.nx.linux.desktop-modules.web-app.buildWebApp;
+        fromAutoHosts = lib.mapAttrsToList (
+          profileName: hostCfg:
+          let
+            val = hostCfg.remote.exposedServices.paperless-ngx;
+            subdomain = if val == true then "paperless-ngx" else val;
+            domain = hostCfg.remote.baseDomain or (hostCfg.remote.address or null);
+          in
+          {
+            label = hostCfg.hostname or profileName;
+            inherit subdomain domain;
+          }
+        ) autoHosts;
+        fromAddlHosts = lib.mapAttrsToList (name: host: {
+          label = name;
+          inherit (host) subdomain domain;
+        }) config.nx.linux.web-apps.paperless-ngx.additionalHosts;
+        allHosts = fromAutoHosts ++ fromAddlHosts;
+        multiple = lib.length allHosts > 1;
+        allSettings = lib.imap0 (i: host: {
+          webapp = if multiple then "paperless-ngx-${toString i}" else "paperless-ngx";
+          inherit (host) subdomain domain;
+          protocol = "https";
+          args = "/dashboard";
+        }) allHosts;
+      in
+      lib.mkIf (buildFn != null && allHosts != [ ]) {
+        nx.linux.desktop.niri.autoTiler.ignoredAppIds = lib.concatMap (s: (buildFn s).appIds) allSettings;
+      };
+
     linux.home =
       { config, additionalHosts, ... }:
       let
-        iconPath = "${helpers.packageFile args pkgs.paperless-ngx.src
-          "src/paperless/static/paperless/img/logo-dark.png"
+        iconPath = "${helpers.packageFile args config.nx.linux.desktop-modules.web-app.dashboardIcons
+          "svg/paperless-ngx.svg"
         }";
 
         fromAutoHosts = lib.mapAttrsToList (

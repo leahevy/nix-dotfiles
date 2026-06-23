@@ -30,6 +30,7 @@ rec {
   moduleInputsToScan = coreInputs ++ [
     "config"
     "profile"
+    "userProfile"
   ];
 
   modulesOnlyInputs = lib.lists.remove "build" coreInputs;

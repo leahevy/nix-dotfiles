@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -30,6 +29,7 @@ args@{
             systemSettings = {
               spotlight = {
                 helpAppleImproveSearch = false;
+                resultsFromClipboard = false;
               };
             };
           };

@@ -111,8 +111,8 @@ rec {
     # Send a user notification, preferring nx-user-notify (logger) when enabled, else raw notify-send (osascript -e 'display notification...' on Darwin)
     # Usage: self.notifyUser { title = "..."; body = "..."; icon = "dialog-information"; urgency = "normal"; }
     # urgency: "low" | "normal" | "critical"
-    # validation: optional { config } — if given, validates the icon name exists in the icon cache; skipped for absolute paths
-    # autoFormat: default true — detects $VAR / ${VAR} in body and uses jq at runtime for safe JSON encoding; set false to disable
+    # validation: optional { config } - if given, validates the icon name exists in the icon cache; skipped for absolute paths
+    # autoFormat: default true - detects $VAR / ${VAR} in body and uses jq at runtime for safe JSON encoding; set false to disable
     notifyUser =
       self:
       {

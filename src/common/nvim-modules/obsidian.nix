@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -130,8 +129,17 @@ args@{
                   insert_tag = "<C-l>";
                 };
               };
+              legacy_commands = false;
+              checkbox = {
+                order = [
+                  " "
+                  "x"
+                ];
+              };
               ui = {
                 enable = self.settings.enableUI;
+              }
+              // lib.optionalAttrs self.settings.enableUI {
                 checkboxes = {
                   " " = {
                     char = "󰄱";
@@ -241,7 +249,7 @@ args@{
             {
               mode = "n";
               key = "<leader>ww";
-              action = "<cmd>ObsidianQuickSwitch<cr>";
+              action = "<cmd>Obsidian quickswitch<cr>";
               options = {
                 desc = "Wiki index";
                 silent = true;
@@ -250,7 +258,7 @@ args@{
             {
               mode = "n";
               key = "<leader>wi";
-              action = "<cmd>ObsidianDailies -365<cr>";
+              action = "<cmd>Obsidian dailies -365<cr>";
               options = {
                 desc = "Diary index";
                 silent = true;
@@ -259,7 +267,7 @@ args@{
             {
               mode = "n";
               key = "<leader>wW";
-              action = "<cmd>vsplit | ObsidianQuickSwitch<cr>";
+              action = "<cmd>vsplit | Obsidian quickswitch<cr>";
               options = {
                 desc = "Wiki index (split right)";
                 silent = true;
@@ -298,7 +306,7 @@ args@{
             {
               mode = "n";
               key = "<leader>w<leader>";
-              action = "<cmd>ObsidianSearch<cr>";
+              action = "<cmd>Obsidian search<cr>";
               options = {
                 desc = "Search wiki";
                 silent = true;
@@ -315,7 +323,7 @@ args@{
                     local today_file = vault_path .. "/diary/" .. today .. ".md"
                     local file_exists_before = vim.fn.filereadable(today_file) == 1
                   ''}
-                  vim.cmd("ObsidianToday")
+                  vim.cmd("Obsidian today")
                   ${lib.optionalString (self.settings.diaryTemplate != null) ''
                     if not file_exists_before then
                       vim.defer_fn(function()
@@ -342,7 +350,7 @@ args@{
             {
               mode = "n";
               key = "<leader>wdy";
-              action = "<cmd>ObsidianYesterday<cr>";
+              action = "<cmd>Obsidian yesterday<cr>";
               options = {
                 desc = "Make yesterday diary note";
                 silent = true;
@@ -351,7 +359,7 @@ args@{
             {
               mode = "n";
               key = "<leader>wdt";
-              action = "<cmd>vsplit | ObsidianToday<cr>";
+              action = "<cmd>vsplit | Obsidian today<cr>";
               options = {
                 desc = "Make today diary note (split right)";
                 silent = true;
@@ -360,7 +368,7 @@ args@{
             {
               mode = "n";
               key = "<leader>wdm";
-              action = "<cmd>ObsidianTomorrow<cr>";
+              action = "<cmd>Obsidian tomorrow<cr>";
               options = {
                 desc = "Make tomorrow diary note";
                 silent = true;
@@ -389,7 +397,7 @@ args@{
             {
               mode = "n";
               key = "<leader>wT";
-              action = "<cmd>ObsidianTags<cr>";
+              action = "<cmd>Obsidian tags<cr>";
               options = {
                 desc = "Browse tags";
                 silent = true;
@@ -431,9 +439,9 @@ args@{
               callback.__raw = ''
                 function()
                   if _G.is_obsidian_vault_file() then
-                    vim.keymap.set("n", "<leader>wr", "<cmd>ObsidianRename<cr>", { desc = "Rename note", buffer = true })
-                    vim.keymap.set("n", "<leader>wn", "<cmd>ObsidianNew<cr>", { desc = "Go to note", buffer = true })
-                    vim.keymap.set("n", "<leader>wc", "<cmd>ObsidianToggleCheckbox<cr>", { desc = "Toggle checkbox", buffer = true })
+                    vim.keymap.set("n", "<leader>wr", "<cmd>Obsidian rename<cr>", { desc = "Rename note", buffer = true })
+                    vim.keymap.set("n", "<leader>wn", "<cmd>Obsidian new<cr>", { desc = "Go to note", buffer = true })
+                    vim.keymap.set("n", "<leader>wc", "<cmd>Obsidian togglecheckbox<cr>", { desc = "Toggle checkbox", buffer = true })
                     vim.keymap.set("n", "<CR>", function()
                       return require("obsidian.commands.follow_link")({})
                     end, { desc = "Follow link", buffer = true })
@@ -473,7 +481,7 @@ args@{
                           _G.obsidian_dates_needing_template = _G.obsidian_dates_needing_template or {}
                           _G.obsidian_dates_needing_template[filename] = true
                         ''}
-                        vim.cmd("ObsidianToday")
+                        vim.cmd("Obsidian today")
                       end
                     end
                   end

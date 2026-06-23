@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -69,7 +68,7 @@ args@{
           protonup-ng
           protontricks
           winetricks
-          (if withWayland then wineWowPackages.waylandFull else wineWowPackages.stable)
+          (if withWayland then wineWow64Packages.waylandFull else wineWow64Packages.stable)
         ];
 
         home.sessionVariables = {
@@ -165,7 +164,7 @@ args@{
         ++ (with pkgs; [
           mangohud
           winetricks
-          (if withWayland then wineWowPackages.waylandFull else wineWowPackages.stable)
+          (if withWayland then wineWow64Packages.waylandFull else wineWow64Packages.stable)
         ]);
 
         environment.sessionVariables = {

@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -378,12 +377,25 @@ args@{
           /bin/launchctl kickstart -k gui/$(id -u)/com.koekeishiya.skhd
         '';
 
+        runHomebrew = command: ''
+          env \
+            HOME="$HOME" \
+            HOMEBREW_REQUIRE_TAP_TRUST=1 \
+            GIT_CONFIG_GLOBAL=/dev/null \
+            GIT_CONFIG_SYSTEM=/dev/null \
+            /opt/homebrew/bin/brew ${command}
+        '';
+
+        mkBrewTapTrust = tap: runHomebrew "trust '${tap}'";
+
         sketchybar-restart = pkgs.writeShellScript "sketchybar-restart" ''
-          /opt/homebrew/bin/brew services restart sketchybar
+          ${mkBrewTapTrust "FelixKratz/formulae"}
+          ${runHomebrew "services restart sketchybar"}
         '';
 
         borders-restart = pkgs.writeShellScript "borders-restart" ''
-          /opt/homebrew/bin/brew services restart borders
+          ${mkBrewTapTrust "FelixKratz/formulae"}
+          ${runHomebrew "services restart borders"}
         '';
 
         yabai-desktop-restart = pkgs.writeShellScript "yabai-desktop-restart" ''

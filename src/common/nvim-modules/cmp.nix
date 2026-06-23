@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -13,6 +12,11 @@ args@{
 
   group = "nvim-modules";
   input = "common";
+
+  unfree = [
+    "cmp-spell"
+    "cmp-emoji"
+  ];
 
   settings = {
     baseSourcesToEnable = [

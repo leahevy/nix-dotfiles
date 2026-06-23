@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -32,7 +31,7 @@ args@{
           // {
             "cryptomator-${name}-pass" = {
               format = "binary";
-              sopsFile = self.config.secretsPath "cryptomator-${name}-pass";
+              sopsFile = self.userProfile.secretsPath "cryptomator-${name}-pass";
               mode = "0400";
             };
           }
@@ -106,7 +105,7 @@ args@{
 
                   ${pkgs.coreutils}/bin/mkdir -p "${mountPath}"
 
-                  ${pkgs-unstable.cryptomator-cli}/bin/cryptomator-cli unlock \
+                  ${pkgs.cryptomator-cli}/bin/cryptomator-cli unlock \
                     --password:file="${passwordPath}" \
                     --mounter=org.cryptomator.frontend.fuse.mount.LinuxFuseMountProvider \
                     --mountPoint="${mountPath}" \
@@ -124,7 +123,7 @@ args@{
       in
       lib.mkIf hasVaults {
         home.packages = [
-          pkgs-unstable.cryptomator-cli
+          pkgs.cryptomator-cli
           pkgs.fuse3
         ];
 

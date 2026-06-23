@@ -1,7 +1,6 @@
 {
   lib,
   pkgs,
-  pkgs-unstable,
   variables,
   helpers,
   defs,
@@ -46,7 +45,7 @@
       modules = { };
     };
 
-    stateVersion = "25.11";
+    stateVersion = "26.05";
 
     sopsPublicKey = "age12345...";
 
@@ -103,7 +102,7 @@
     # };
 
     module = {
-      # Overlays — applied unconditionally BEFORE pkgs is created. Cannot reference pkgs.
+      # Overlays - applied unconditionally BEFORE pkgs is created. Cannot reference pkgs.
       # Each value is a list of (final: prev: { }) functions.
       # overlays = [ (final: prev: { ... }) ];
 

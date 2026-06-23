@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -759,6 +758,7 @@ args@{
                 type = pushoverType;
                 url = hcUrl;
                 urlTitle = hcUrlTitle;
+                shellVars = true;
               }
             )}
             echo "${message}" ${if level == "err" then ">&2" else ""}

@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -18,10 +17,22 @@ args@{
     buildWebApp = lib.mkOption {
       type = lib.types.nullOr (lib.types.functionTo lib.types.attrs);
       default = null;
-      description = ''
-        Function to build a web app. Takes webAppSettings, returns { homeFiles, desktopEntries }.
-        Set by the active backend (qutebrowser or chromium).
-      '';
+      description = "Function to build a web app, returning { homeFiles, desktopEntries, appIds }. Set by the active backend.";
+    };
+    dashboardIcons = lib.mkOption {
+      type = lib.types.package;
+      description = "The homarr-labs/dashboard-icons source derivation for use in web-app icon paths.";
+    };
+  };
+
+  module = {
+    init = config: {
+      nx.linux.desktop-modules.web-app.dashboardIcons = pkgs.fetchFromGitHub {
+        owner = "homarr-labs";
+        repo = "dashboard-icons";
+        rev = "f222c55843b888a82e9f2fe2697365841cbe6025";
+        hash = "sha256-VOWQh8ZadsqNInoXcRKYuXfWn5MK0qJpuYEWgM7Pny8=";
+      };
     };
   };
 

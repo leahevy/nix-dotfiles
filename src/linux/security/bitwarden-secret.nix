@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -58,7 +57,7 @@ args@{
       {
         sops.secrets."bitwarden-api-token" = {
           format = "binary";
-          sopsFile = self.config.secretsPath "bitwarden-api-token";
+          sopsFile = self.profile.secretsPath "bitwarden-api-token";
           mode = "0400";
           owner = "root";
           group = "root";

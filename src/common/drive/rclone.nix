@@ -1,7 +1,6 @@
 args@{
   lib,
   pkgs,
-  pkgs-unstable,
   funcs,
   helpers,
   defs,
@@ -63,12 +62,12 @@ args@{
           // {
             "rclone-${name}-user" = {
               format = "binary";
-              sopsFile = self.config.secretsPath "rclone-${name}-user";
+              sopsFile = self.userProfile.secretsPath "rclone-${name}-user";
               mode = "0400";
             };
             "rclone-${name}-pass" = {
               format = "binary";
-              sopsFile = self.config.secretsPath "rclone-${name}-pass";
+              sopsFile = self.userProfile.secretsPath "rclone-${name}-pass";
               mode = "0400";
             };
           }
