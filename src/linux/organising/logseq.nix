@@ -16,23 +16,22 @@ args@{
   module = {
     linux.overlays = [
       (final: prev: {
-        logseq =
-          let
-            orig = prev.logseq;
-          in
-          final.runCommand orig.name
-            {
-              inherit (orig) meta;
-              nativeBuildInputs = [ final.jq ];
-            }
-            ''
-              cp -r ${orig}/. $out
-              chmod -R u+w $out
-              pkgJson=$out/share/logseq/resources/app/package.json
-              jq '. + {"desktopName": "Logseq"}' "$pkgJson" > "$pkgJson.tmp"
-              mv "$pkgJson.tmp" "$pkgJson"
-              sed -i "s|${orig}/share/logseq/resources/app|$out/share/logseq/resources/app|" $out/bin/logseq
-            '';
+        logseq = final.symlinkJoin {
+          name = prev.logseq.name;
+          paths = [ prev.logseq ];
+          nativeBuildInputs = [ final.jq ];
+          postBuild = ''
+            rm $out/share/logseq/resources/app/package.json
+            jq '. + {"desktopName": "Logseq"}' \
+              ${prev.logseq}/share/logseq/resources/app/package.json \
+              > $out/share/logseq/resources/app/package.json
+
+            rm $out/bin/logseq
+            sed "s|${prev.logseq}/share/logseq/resources/app|$out/share/logseq/resources/app|" \
+              ${prev.logseq}/bin/logseq > $out/bin/logseq
+            chmod +x $out/bin/logseq
+          '';
+        };
       })
     ];
 
