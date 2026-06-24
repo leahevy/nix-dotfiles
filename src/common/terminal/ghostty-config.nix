@@ -203,7 +203,7 @@ args@{
             {
               matches = [ { app-id = "com.mitchellh.ghostty"; } ];
               default-column-width = {
-                proportion = 0.33;
+                proportion = 0.25;
               };
             }
           ];
