@@ -997,6 +997,21 @@ args@{
                   return windows
 
 
+              def physical_tiling_windows_for_workspace(windows_by_id, workspace_id):
+                  result = []
+                  for window in windows_by_id.values():
+                      if window.get("workspace_id") != workspace_id:
+                          continue
+                      if window.get("is_floating"):
+                          continue
+                      if is_fullscreen_window(window):
+                          continue
+                      if layout_position(window) is None:
+                          continue
+                      result.append(window)
+                  return result
+
+
               def columns_for_windows(windows):
                   columns = {}
                   for window in windows:
@@ -1147,6 +1162,15 @@ args@{
                       return True
 
                   if len(workspace_windows) <= 1:
+                      physical = physical_tiling_windows_for_workspace(windows_by_id, workspace_id)
+                      if len(physical) > 1:
+                          log.info(
+                              "marking window %d (app-id=%s) handled, %d physical non-floating window(s) present, skipping solo",
+                              wid, app_id, len(physical),
+                          )
+                          handled.add(wid)
+                          pending.discard(wid)
+                          return True
                       log.info(
                           "marking window %d (app-id=%s) handled as solo window on workspace %s",
                           wid, app_id, workspace_id,
@@ -1682,6 +1706,33 @@ args@{
                                               solo_resized[solo_wid] = _orig_col_px
                                           handled.add(solo_wid)
                                           pending.discard(solo_wid)
+                          elif bootstrapped and closing_window is not None and not closing_window.get("is_floating") and layout_position(closing_window) is not None:
+                              closing_workspace_id = closing_window.get("workspace_id")
+                              if closing_workspace_id is not None and config["soloWindowBehavior"] != "nothing":
+                                  remaining_tiling = tiling_windows_for_workspace(
+                                      config, workspaces_by_id, windows_by_id, closing_workspace_id,
+                                  )
+                                  remaining_physical = physical_tiling_windows_for_workspace(
+                                      windows_by_id, closing_workspace_id,
+                                  )
+                                  if len(remaining_tiling) == 1 and len(remaining_physical) == 1:
+                                      solo_wid = remaining_tiling[0]["id"]
+                                      solo_app_id = remaining_tiling[0].get("app_id", "")
+                                      log.info(
+                                          "applying solo behavior to window %d (app-id=%s) after ignored window %d closed",
+                                          solo_wid, solo_app_id, wid,
+                                      )
+                                      if config["soloWindowBehavior"] == "resize":
+                                          _layout = (windows_by_id.get(solo_wid) or {}).get("layout") or {}
+                                          _ws = _layout.get("window_size")
+                                          _orig_col_px = int(_ws[0]) if _ws else None
+                                      apply_solo_behavior(config, solo_wid, solo_app_id)
+                                      if config["soloWindowBehavior"] == "maximize":
+                                          solo_maximized.add(solo_wid)
+                                      elif config["soloWindowBehavior"] == "resize":
+                                          solo_resized[solo_wid] = _orig_col_px
+                                      handled.add(solo_wid)
+                                      pending.discard(solo_wid)
 
                       if not bootstrapped and saw_workspaces and saw_windows:
                           handled = set(windows_by_id.keys())
