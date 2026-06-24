@@ -5,6 +5,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "check"
 
 NEXT_RELEASE=false
+PACKAGES=()
 
 while [[ $# -gt 0 ]]; do
 	case "${1:-}" in
@@ -17,8 +18,8 @@ while [[ $# -gt 0 ]]; do
 		exit 1
 		;;
 	*)
-		echo -e "${RED}Unknown argument ${WHITE}${1:-}${RESET}" >&2
-		exit 1
+		PACKAGES+=("${1}")
+		shift
 		;;
 	esac
 done
@@ -32,12 +33,12 @@ if [[ "$NEXT_RELEASE" == "true" ]]; then
 		echo -e "${YELLOW}Make sure the build/core/packages module is enabled.${RESET}" >&2
 		exit 1
 	fi
-	exec "$HYDRA_CHECK_NEXT"
+	exec "$HYDRA_CHECK_NEXT" "${PACKAGES[@]+"${PACKAGES[@]}"}"
 else
 	if [[ ! -x "$HYDRA_CHECK_CURRENT" ]]; then
 		echo -e "${RED}Error: ${WHITE}$HYDRA_CHECK_CURRENT${RED} not found!${RESET}" >&2
 		echo -e "${YELLOW}Make sure the build/core/packages module is enabled.${RESET}" >&2
 		exit 1
 	fi
-	exec "$HYDRA_CHECK_CURRENT"
+	exec "$HYDRA_CHECK_CURRENT" "${PACKAGES[@]+"${PACKAGES[@]}"}"
 fi

@@ -233,6 +233,11 @@
         options = {
           next-release = option "Check against the next NixOS release instead of current";
         };
+        arguments = [
+          (argVariadic "packages" "Package name(s) to check instead of checking all installed packages"
+            "string"
+          )
+        ];
       };
 
       config = {

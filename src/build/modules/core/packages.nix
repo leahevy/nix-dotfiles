@@ -85,11 +85,15 @@ in
           name: release:
           let
             channel = if self.isDarwin then "nixpkgs-${release}-darwin" else "nixos-${release}";
-            pnameFilter =
+            nixpkgsLock = toString (self.inputs.nixpkgs.lastModified or 0);
+            tsExpr = ''(.value[0].timestamp // "" | if . == "" then 0 else fromdateiso8601 end)'';
+            pnameExtract =
               if self.isDarwin then
-                ''to_entries[] | select(.value[0].success != true) | .key | rtrimstr(".\($arch)")''
+                ''.key | rtrimstr(".\($arch)")''
               else
-                ''to_entries[] | select(.value[0].success != true) | .key | sub("^[^.]+\\."; "") | rtrimstr(".\($arch)")'';
+                ''.key | sub("^[^.]+\\."; "") | rtrimstr(".\($arch)")'';
+            failedFilter = "to_entries[] | select(.value[0].success != true) | select(${tsExpr} >= $lock) | ${pnameExtract}";
+            pendingFilter = "to_entries[] | select(.value[0].success != true) | select(${tsExpr} < $lock) | ${pnameExtract}";
           in
           pkgs.writeShellApplication {
             inherit name;
@@ -108,6 +112,7 @@ in
 
               CHANNEL="${channel}"
               ARCH="${archStr}"
+              NIXPKGS_LOCK="${nixpkgsLock}"
 
               SYSTEM_PKGS=()
               if [[ -f /etc/nx/system-packages.json ]]; then
@@ -123,7 +128,11 @@ in
                 done < <(jq -r '.[] | select(.unfree != true) | .pname' "${config.xdg.dataHome}/nx/home-packages.json")
               fi
 
-              ALL_PACKAGES=("''${SYSTEM_PKGS[@]+"''${SYSTEM_PKGS[@]}"}" "''${HOME_PKGS[@]+"''${HOME_PKGS[@]}"}" "$@")
+              if [[ $# -gt 0 ]]; then
+                ALL_PACKAGES=("$@")
+              else
+                ALL_PACKAGES=("''${SYSTEM_PKGS[@]+"''${SYSTEM_PKGS[@]}"}" "''${HOME_PKGS[@]+"''${HOME_PKGS[@]}"}")
+              fi
 
               if [[ ''${#ALL_PACKAGES[@]} -eq 0 ]]; then
                 echo "''${YELLOW}No packages configured to check.''${RESET}"
@@ -156,9 +165,14 @@ in
               OUTPUT=$(cat "''${MERGED_FILE}")
               TOTAL=$(echo "''${OUTPUT}" | jq 'keys | length')
               SUCCEEDED=$(echo "''${OUTPUT}" | jq '[to_entries[] | select(.value[0].success == true)] | length')
-              FAILED=$(echo "''${OUTPUT}" | jq '[to_entries[] | select(.value[0].success != true)] | length')
+              FAILED=$(echo "''${OUTPUT}" | jq --argjson lock "''${NIXPKGS_LOCK}" '[to_entries[] | select(.value[0].success != true) | select(${tsExpr} >= $lock)] | length')
+              PENDING=$(echo "''${OUTPUT}" | jq --argjson lock "''${NIXPKGS_LOCK}" '[to_entries[] | select(.value[0].success != true) | select(${tsExpr} < $lock)] | length')
 
-              echo "''${WHITE}Results: ''${GREEN}''${SUCCEEDED}/''${TOTAL}''${WHITE} succeeded, ''${RED}''${FAILED}''${WHITE} failed''${RESET}"
+              if [[ "''${PENDING}" -gt 0 ]]; then
+                echo "''${WHITE}Results: ''${GREEN}''${SUCCEEDED}/''${TOTAL}''${WHITE} succeeded, ''${RED}''${FAILED}''${WHITE} failed, ''${YELLOW}''${PENDING}''${WHITE} status unknown''${RESET}"
+              else
+                echo "''${WHITE}Results: ''${GREEN}''${SUCCEEDED}/''${TOTAL}''${WHITE} succeeded, ''${RED}''${FAILED}''${WHITE} failed''${RESET}"
+              fi
 
               if [[ "''${FAILED}" -gt 0 ]]; then
                 echo
@@ -174,10 +188,29 @@ in
                   else
                     CURRENT_LINE="''${CURRENT_LINE} ''${pkg_name}"
                   fi
-                done < <(echo "''${OUTPUT}" | jq -r --arg arch "''${ARCH}" '${pnameFilter}' | sort -f)
+                done < <(echo "''${OUTPUT}" | jq -r --argjson lock "''${NIXPKGS_LOCK}" --arg arch "''${ARCH}" '${failedFilter}' | sort -f)
                 [[ -n "''${CURRENT_LINE}" ]] && echo "  ''${WHITE}''${CURRENT_LINE}''${RESET}"
                 echo
                 echo "''${WHITE}Run ''${GRAY}\"hydra-check --channel ''${CHANNEL} <package>\"''${WHITE} to find out more details about a failed package!''${RESET}"
+              fi
+
+              if [[ "''${PENDING}" -gt 0 ]]; then
+                echo
+                echo "''${YELLOW}Status unknown (last Hydra build predates nixpkgs lock):''${RESET}"
+                CURRENT_LETTER=""
+                CURRENT_LINE=""
+                while IFS= read -r pkg_name; do
+                  FIRST_UPPER=$(echo "''${pkg_name:0:1}" | tr '[:lower:]' '[:upper:]')
+                  if [[ "''${FIRST_UPPER}" != "''${CURRENT_LETTER}" ]]; then
+                    [[ -n "''${CURRENT_LINE}" ]] && echo "  ''${GRAY}''${CURRENT_LINE}''${RESET}"
+                    CURRENT_LINE="''${pkg_name}"
+                    CURRENT_LETTER="''${FIRST_UPPER}"
+                  else
+                    CURRENT_LINE="''${CURRENT_LINE} ''${pkg_name}"
+                  fi
+                done < <(echo "''${OUTPUT}" | jq -r --argjson lock "''${NIXPKGS_LOCK}" --arg arch "''${ARCH}" '${pendingFilter}' | sort -f)
+                [[ -n "''${CURRENT_LINE}" ]] && echo "  ''${GRAY}''${CURRENT_LINE}''${RESET}"
+                echo
               fi
             '';
           };
