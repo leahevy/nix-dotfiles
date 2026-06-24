@@ -16,22 +16,39 @@ args@{
   module = {
     linux.overlays = [
       (final: prev: {
-        logseq = final.symlinkJoin {
-          name = prev.logseq.name;
-          paths = [ prev.logseq ];
-          nativeBuildInputs = [ final.jq ];
-          postBuild = ''
-            rm $out/share/logseq/resources/app/package.json
-            jq '. + {"desktopName": "Logseq"}' \
-              ${prev.logseq}/share/logseq/resources/app/package.json \
-              > $out/share/logseq/resources/app/package.json
+        logseq =
+          let
+            base =
+              if prev.logseq.version == "0.10.15" then
+                (import
+                  (builtins.fetchTarball {
+                    url = "https://github.com/NixOS/nixpkgs/archive/a0374025a863d007d98e3297f6aa46cc3141c2f0.tar.gz";
+                    sha256 = "sha256-9mUW6gNwoN2SWc/l0fW4svPNOulXLl8ijqKyeSOGgJE=";
+                  })
+                  {
+                    system = prev.stdenv.hostPlatform.system;
+                    config.permittedInsecurePackages = [ "electron-39.8.10" ];
+                  }
+                ).logseq
+              else
+                prev.logseq;
+          in
+          final.symlinkJoin {
+            name = base.name;
+            paths = [ base ];
+            nativeBuildInputs = [ final.jq ];
+            postBuild = ''
+              rm $out/share/logseq/resources/app/package.json
+              jq '. + {"desktopName": "Logseq"}' \
+                ${base}/share/logseq/resources/app/package.json \
+                > $out/share/logseq/resources/app/package.json
 
-            rm $out/bin/logseq
-            sed "s|${prev.logseq}/share/logseq/resources/app|$out/share/logseq/resources/app|" \
-              ${prev.logseq}/bin/logseq > $out/bin/logseq
-            chmod +x $out/bin/logseq
-          '';
-        };
+              rm $out/bin/logseq
+              sed "s|${base}/share/logseq/resources/app|$out/share/logseq/resources/app|" \
+                ${base}/bin/logseq > $out/bin/logseq
+              chmod +x $out/bin/logseq
+            '';
+          };
       })
     ];
 
