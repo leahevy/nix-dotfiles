@@ -1085,11 +1085,13 @@ rec {
               [ "${prefix}.${path}hotfixes must be an attrset" ]
             else
               let
-                invalidKeys = builtins.filter (k: !isValidRelease k) (builtins.attrNames attrset.hotfixes);
+                invalidKeys = builtins.filter (k: k != "default" && !isValidRelease k) (
+                  builtins.attrNames attrset.hotfixes
+                );
                 keyErrors =
                   if invalidKeys != [ ] then
                     [
-                      "${prefix}.${path}hotfixes has invalid release keys: ${builtins.concatStringsSep ", " invalidKeys}. Keys must be XX.YY where XX >= 25 and YY is 05 or 11"
+                      "${prefix}.${path}hotfixes has invalid release keys: ${builtins.concatStringsSep ", " invalidKeys}. Keys must be XX.YY where XX >= 25 and YY is 05 or 11, or \"default\""
                     ]
                   else
                     [ ];
@@ -2237,7 +2239,12 @@ rec {
           v = variables."current-release" or null;
         in
         if v == null then throw "variables.\"current-release\" must be set!" else v;
-      collectHotfixOverlays = attrset: (attrset.hotfixes or { }).${currentRelease} or [ ];
+      collectHotfixOverlays =
+        attrset:
+        let
+          hotfixes = attrset.hotfixes or { };
+        in
+        if hotfixes ? ${currentRelease} then hotfixes.${currentRelease} else hotfixes.default or [ ];
     in
     (module.overlays or [ ])
     ++ collectHotfixOverlays module

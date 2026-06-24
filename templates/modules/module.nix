@@ -121,10 +121,12 @@ args@{
     # Before pkgs creation, no pkgs access
     # overlays = [ (final: prev: { ... }) ];
     # hotfixes."XX.YY" = [ (final: prev: { ... }) ];  # XX >= 25, YY = 05 or 11; applied only when variables.currentRelease matches
+    # hotfixes.default = [ (final: prev: { ... }) ];  # applied only when no versioned hotfix key matches
 
     # linux = {
     #   overlays = [ (final: prev: { ... }) ];
     #   hotfixes."XX.YY" = [ (final: prev: { ... }) ];
+    #   hotfixes.default = [ (final: prev: { ... }) ];
     #   init = config: { };
     #   enabled = config: { };
     #   disabled = config: { };
@@ -138,6 +140,7 @@ args@{
     # x86_64 = {
     #   overlays = [ (final: prev: { ... }) ];
     #   hotfixes."XX.YY" = [ (final: prev: { ... }) ];
+    #   hotfixes.default = [ (final: prev: { ... }) ];
     #   init = config: { };
     #   enabled = config: { };
     #   disabled = config: { };
