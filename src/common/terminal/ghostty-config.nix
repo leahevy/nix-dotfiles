@@ -93,7 +93,7 @@ args@{
         trailHex = lib.removePrefix "#" theme.colors.terminal.foregrounds.primary.html;
         accentHex = lib.removePrefix "#" theme.colors.terminal.foregrounds.bright.html;
         easedProgressFactor =
-          if self.isLinux then "0.0035 + lineLength * 0.004" else "0.0079 + lineLength * 0.006";
+          if self.isLinux then "0.0030 + lineLength * 0.0035" else "0.0079 + lineLength * 0.006";
         blazeLightShader =
           pkgs.runCommand "cursor_blaze_light.glsl"
             {
