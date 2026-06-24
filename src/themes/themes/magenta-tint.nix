@@ -9,7 +9,7 @@ args@{
 }:
 let
   themeData = {
-    name = "magenta";
+    name = "magenta-tint";
     variant = "dark";
     tint = "magenta";
     fonts = {
@@ -429,87 +429,87 @@ let
             term = 8;
           };
           cyan = {
-            html = "#23A9BC";
+            html = "#EE88FF";
             name = "cyan";
             term = 6;
           };
           cyanBright = {
-            html = "#23C7D6";
+            html = "#FF68F0";
             name = "bright-cyan";
             term = 14;
           };
           cyanDark = {
-            html = "#23758F";
+            html = "#B530EE";
             name = "cyan";
             term = 6;
           };
           green = {
-            html = "#599E66";
+            html = "#E188FF";
             name = "green";
             term = 2;
           };
           greenBright = {
-            html = "#74D574";
+            html = "#FF00D5";
             name = "bright-green";
             term = 10;
           };
           greenDark = {
-            html = "#3E7556";
+            html = "#B422B4";
             name = "green";
             term = 2;
           };
           yellow = {
-            html = "#EFC782";
+            html = "#FF67D4";
             name = "yellow";
             term = 3;
           };
           yellowDark = {
-            html = "#D1AF70";
+            html = "#DA50B8";
             name = "yellow";
             term = 3;
           };
           magenta = {
-            html = "#C63FC5";
+            html = "#C840C8";
             name = "magenta";
             term = 5;
           };
           magentaLight = {
-            html = "#E168E0";
+            html = "#E880E8";
             name = "bright-magenta";
             term = 13;
           };
           magentaDark = {
-            html = "#8F248F";
+            html = "#652A65";
             name = "magenta";
             term = 5;
           };
           purple = {
-            html = "#8F4DEE";
+            html = "#BB40BB";
             name = "magenta";
             term = 5;
           };
           pink = {
-            html = "#EF3FAA";
+            html = "#FF60F0";
             name = "bright-magenta";
             term = 13;
           };
           orange = {
-            html = "#EF7530";
+            html = "#C040C0";
             name = "yellow";
             term = 3;
           };
           red = {
-            html = "#E13158";
+            html = "#FF20D5";
             name = "red";
             term = 1;
           };
           redBright = {
-            html = "#EF5A74";
+            html = "#FF30EE";
             name = "bright-red";
             term = 9;
           };
           blue = {
-            html = "#5975FC";
+            html = "#FF40FF";
             name = "blue";
             term = 4;
           };
@@ -519,7 +519,7 @@ let
   };
 in
 {
-  name = "magenta";
+  name = "magenta-tint";
 
   group = "themes";
   input = "themes";

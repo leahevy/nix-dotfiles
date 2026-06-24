@@ -207,8 +207,8 @@ args@{
                   colors.green = "${theme.colors.terminal.colors.green.html}"
                   colors.bright_green = "${theme.colors.terminal.colors.greenBright.html}"
                   colors.dark_green = "${theme.colors.terminal.colors.greenDark.html}"
-                  colors.red = "${theme.colors.terminal.colors.green.html}"
-                  colors.bright_red = "${theme.colors.terminal.colors.greenBright.html}"
+                  colors.red = "${theme.colors.terminal.colors.red.html}"
+                  colors.bright_red = "${theme.colors.terminal.colors.redBright.html}"
                   colors.git = {
                     add = "${theme.colors.semantic.success.html}",
                     change = "${theme.colors.semantic.warning.html}",

@@ -9,9 +9,9 @@ args@{
 }:
 let
   themeData = {
-    name = "magenta";
+    name = "blue-tint";
     variant = "dark";
-    tint = "magenta";
+    tint = "blue";
     fonts = {
       serif = {
         path = "dejavu_fonts/DejaVu Serif";
@@ -52,36 +52,36 @@ let
             term = 0;
           };
           tertiary = {
-            html = "#3a0f5e";
+            html = "#112a6e";
             name = "bright-black";
             term = 59;
           };
           themed = {
-            html = "#2a0b2a";
-            name = "magenta";
-            term = 53;
+            html = "#0b1138";
+            name = "blue";
+            term = 18;
           };
         };
         foregrounds = {
           subtle = {
-            html = "#7d687d";
+            html = "#68717d";
             name = "bright-black";
             term = 8;
           };
           secondary = {
-            html = "#a680a6";
-            name = "magenta";
-            term = 139;
+            html = "#8090a6";
+            name = "blue";
+            term = 103;
           };
           primary = {
-            html = "#ef59d5";
-            name = "magenta";
-            term = 170;
+            html = "#59a6ef";
+            name = "blue";
+            term = 75;
           };
           emphasized = {
-            html = "#ffcbf4";
-            name = "bright-magenta";
-            term = 219;
+            html = "#cbd5ff";
+            name = "bright-blue";
+            term = 189;
           };
           strong = {
             html = "#eeeeee";
@@ -149,9 +149,9 @@ let
           term = 203;
         };
         info = {
-          html = "#FF5FC8";
-          name = "magenta";
-          term = 205;
+          html = "#5FA5FF";
+          name = "blue";
+          term = 75;
         };
         hint = {
           html = "#11c0ff";
@@ -159,29 +159,29 @@ let
           term = 18;
         };
         comment = {
-          html = "#663056";
-          name = "magenta";
-          term = 53;
+          html = "#304066";
+          name = "blue";
+          term = 24;
         };
         modified = {
-          html = "#E880C8";
-          name = "magenta";
-          term = 176;
+          html = "#80B0E8";
+          name = "blue";
+          term = 110;
         };
         added = {
-          html = "#FF00D5";
-          name = "bright-magenta";
-          term = 199;
+          html = "#0088FF";
+          name = "blue";
+          term = 33;
         };
         removed = {
-          html = "#FF44EE";
-          name = "magenta";
-          term = 207;
+          html = "#44AAFF";
+          name = "blue";
+          term = 75;
         };
         selected = {
-          html = "#7B3A65";
-          name = "magenta";
-          term = 96;
+          html = "#3A457B";
+          name = "blue";
+          term = 60;
         };
         inactive = {
           html = "#3b4261";
@@ -204,9 +204,9 @@ let
           term = 203;
         };
         infoDarker = {
-          html = "#8c1570";
-          name = "magenta";
-          term = 90;
+          html = "#155a8c";
+          name = "blue";
+          term = 75;
         };
         hintDarker = {
           html = "#2244aa";
@@ -214,29 +214,29 @@ let
           term = 18;
         };
         commentDarker = {
-          html = "#1a0012";
-          name = "magenta";
-          term = 53;
+          html = "#000f1a";
+          name = "blue";
+          term = 24;
         };
         modifiedDarker = {
-          html = "#7d2d54";
-          name = "magenta";
-          term = 90;
+          html = "#2d4d7d";
+          name = "blue";
+          term = 110;
         };
         addedDarker = {
-          html = "#88104a";
-          name = "bright-magenta";
-          term = 90;
+          html = "#104a88";
+          name = "blue";
+          term = 33;
         };
         removedDarker = {
-          html = "#990555";
-          name = "magenta";
-          term = 90;
+          html = "#055599";
+          name = "blue";
+          term = 75;
         };
         selectedDarker = {
-          html = "#2c051f";
-          name = "magenta";
-          term = 53;
+          html = "#05122c";
+          name = "blue";
+          term = 60;
         };
         inactiveDarker = {
           html = "#050a30";
@@ -246,24 +246,24 @@ let
       };
       separators = {
         light = {
-          html = "#a68ca6";
+          html = "#8c97a6";
           name = "bright-black";
-          term = 139;
+          term = 103;
         };
         normal = {
-          html = "#7d687d";
+          html = "#68717d";
           name = "bright-black";
-          term = 96;
+          term = 60;
         };
         dark = {
-          html = "#684168";
+          html = "#414b68";
           name = "bright-black";
-          term = 96;
+          term = 60;
         };
         veryDark = {
-          html = "#342a34";
+          html = "#273134";
           name = "bright-black";
-          term = 236;
+          term = 59;
         };
         ultraDark = {
           html = "#211722";
@@ -274,38 +274,38 @@ let
       blocks = {
         primary = {
           background = {
-            html = "#4d1a44";
-            name = "magenta";
-            term = 53;
+            html = "#1a2655";
+            name = "blue";
+            term = 18;
           };
           foreground = {
-            html = "#ef59d5";
-            name = "magenta";
-            term = 170;
+            html = "#59a6ef";
+            name = "blue";
+            term = 75;
           };
         };
         selection = {
           background = {
-            html = "#1a4d33";
-            name = "green";
-            term = 22;
+            html = "#4d331a";
+            name = "yellow";
+            term = 58;
           };
           foreground = {
-            html = "#37f499";
-            name = "green";
-            term = 46;
+            html = "#ef9959";
+            name = "yellow";
+            term = 209;
           };
         };
         accent = {
           background = {
-            html = "#4d1a44";
-            name = "magenta";
-            term = 53;
+            html = "#1a2655";
+            name = "blue";
+            term = 18;
           };
           foreground = {
-            html = "#ef59d5";
-            name = "magenta";
-            term = 170;
+            html = "#59a6ef";
+            name = "blue";
+            term = 75;
           };
         };
         highlight = {
@@ -392,9 +392,9 @@ let
             term = 0;
           };
           selection = {
-            html = "#7B3A65";
-            name = "magenta";
-            term = 5;
+            html = "#3A457B";
+            name = "blue";
+            term = 4;
           };
         };
         transparencyBackgrounds = normalBackgrounds // {
@@ -402,19 +402,19 @@ let
         };
         foregrounds = {
           primary = {
-            html = "#FF88FF";
-            name = "bright-magenta";
-            term = 13;
+            html = "#88AAFF";
+            name = "bright-blue";
+            term = 12;
           };
           secondary = {
-            html = "#E8B8E8";
-            name = "magenta";
-            term = 5;
+            html = "#B8C8E8";
+            name = "bright-blue";
+            term = 12;
           };
           bright = {
-            html = "#C060C0";
-            name = "magenta";
-            term = 5;
+            html = "#6090C0";
+            name = "blue";
+            term = 4;
           };
           dim = {
             html = "#3b4261";
@@ -429,87 +429,87 @@ let
             term = 8;
           };
           cyan = {
-            html = "#23A9BC";
+            html = "#88AAEE";
             name = "cyan";
             term = 6;
           };
           cyanBright = {
-            html = "#23C7D6";
+            html = "#5FA5FF";
             name = "bright-cyan";
             term = 14;
           };
           cyanDark = {
-            html = "#23758F";
+            html = "#3088EE";
             name = "cyan";
             term = 6;
           };
           green = {
-            html = "#599E66";
+            html = "#2088FF";
             name = "green";
             term = 2;
           };
           greenBright = {
-            html = "#74D574";
+            html = "#0055FF";
             name = "bright-green";
             term = 10;
           };
           greenDark = {
-            html = "#3E7556";
+            html = "#226CB4";
             name = "green";
             term = 2;
           };
           yellow = {
-            html = "#EFC782";
+            html = "#67A0FF";
             name = "yellow";
             term = 3;
           };
           yellowDark = {
-            html = "#D1AF70";
+            html = "#5080DA";
             name = "yellow";
             term = 3;
           };
           magenta = {
-            html = "#C63FC5";
+            html = "#40A0C8";
             name = "magenta";
             term = 5;
           };
           magentaLight = {
-            html = "#E168E0";
+            html = "#80B0E8";
             name = "bright-magenta";
             term = 13;
           };
           magentaDark = {
-            html = "#8F248F";
+            html = "#2A3065";
             name = "magenta";
             term = 5;
           };
           purple = {
-            html = "#8F4DEE";
+            html = "#4077BB";
             name = "magenta";
             term = 5;
           };
           pink = {
-            html = "#EF3FAA";
+            html = "#6073FF";
             name = "bright-magenta";
             term = 13;
           };
           orange = {
-            html = "#EF7530";
+            html = "#4088C0";
             name = "yellow";
             term = 3;
           };
           red = {
-            html = "#E13158";
+            html = "#2088FF";
             name = "red";
             term = 1;
           };
           redBright = {
-            html = "#EF5A74";
+            html = "#3050FF";
             name = "bright-red";
             term = 9;
           };
           blue = {
-            html = "#5975FC";
+            html = "#4090FF";
             name = "blue";
             term = 4;
           };
@@ -519,7 +519,7 @@ let
   };
 in
 {
-  name = "magenta";
+  name = "blue-tint";
 
   group = "themes";
   input = "themes";
