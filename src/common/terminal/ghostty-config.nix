@@ -49,6 +49,9 @@ args@{
       nx.preferences.desktop.programs.terminal = {
         name = "ghostty";
         package = null;
+        execFlag = [ "-e" ];
+        classFlag = class: [ "--class=${class}" ];
+        directoryFlag = path: [ "--working-directory=${path}" ];
         openCommand = [ "ghostty" ];
         openDirectoryCommand = path: [
           "ghostty"
@@ -78,6 +81,14 @@ args@{
           "ghostty"
           "--class=${class}"
           "-e"
+          cmd
+        ];
+        openShellCommandWithClass = class: cmd: [
+          "ghostty"
+          "--class=${class}"
+          "-e"
+          "sh"
+          "-c"
           cmd
         ];
         desktopFile = "com.mitchellh.ghostty.desktop";

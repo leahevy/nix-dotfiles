@@ -56,15 +56,16 @@ let
       openShellCommand ? null,
       openWithClass ? null,
       openRunWithClass ? null,
+      openShellCommandWithClass ? null,
       additionalPackages ? [ ],
       desktopFile ? null,
       dirsToPersist ? [ ],
       filesToPersist ? [ ],
       journalPatternsToIgnore ? [ ],
       journalPatternsToHighlight ? [ ],
-      execFlag ? "-e",
-      directoryFlag ? "--working-directory=",
-      classFlag ? "--class=",
+      execFlag ? null,
+      directoryFlag ? null,
+      classFlag ? null,
     }:
     let
       nameParts = lib.splitString "." name;
@@ -74,6 +75,10 @@ let
     {
       inherit
         name
+        package
+        execFlag
+        classFlag
+        directoryFlag
         additionalPackages
         desktopFile
         dirsToPersist
@@ -81,62 +86,51 @@ let
         journalPatternsToIgnore
         journalPatternsToHighlight
         ;
-      package = package;
       openCommand = finalOpenCommand;
       openDirectoryCommand =
         if openDirectoryCommand != null then
           openDirectoryCommand
         else
-          (path: [
-            finalName
-            "${directoryFlag}${path}"
-          ]);
+          (path: finalOpenCommand ++ directoryFlag path);
       openRunCommand =
-        if openRunCommand != null then
-          openRunCommand
-        else
-          (cmd: [
-            finalName
-            execFlag
-            cmd
-          ]);
-      openRunPrefix =
-        if openRunPrefix != null then
-          openRunPrefix
-        else
-          [
-            finalName
-            execFlag
-          ];
+        if openRunCommand != null then openRunCommand else (cmd: finalOpenCommand ++ execFlag ++ [ cmd ]);
+      openRunPrefix = if openRunPrefix != null then openRunPrefix else finalOpenCommand ++ execFlag;
       openShellCommand =
         if openShellCommand != null then
           openShellCommand
         else
-          (cmd: [
-            finalName
-            execFlag
-            "sh"
-            "-c"
-            cmd
-          ]);
+          (
+            cmd:
+            finalOpenCommand
+            ++ execFlag
+            ++ [
+              "sh"
+              "-c"
+              cmd
+            ]
+          );
       openWithClass =
-        if openWithClass != null then
-          openWithClass
-        else
-          (class: [
-            finalName
-            "${classFlag}${class}"
-          ]);
+        if openWithClass != null then openWithClass else (class: finalOpenCommand ++ classFlag class);
       openRunWithClass =
         if openRunWithClass != null then
           openRunWithClass
         else
-          (class: cmd: [
-            finalName
-            "${classFlag}${class}"
-            execFlag
-            cmd
-          ]);
+          (class: cmd: finalOpenCommand ++ classFlag class ++ execFlag ++ [ cmd ]);
+      openShellCommandWithClass =
+        if openShellCommandWithClass != null then
+          openShellCommandWithClass
+        else
+          (
+            class: cmd:
+            finalOpenCommand
+            ++ classFlag class
+            ++ execFlag
+            ++ [
+              "sh"
+              "-c"
+              cmd
+            ]
+          );
     };
 
   mkKdeProgram =
@@ -184,15 +178,26 @@ let
       openShellCommand ? null,
       openWithClass ? null,
       openRunWithClass ? null,
+      openShellCommandWithClass ? null,
       additionalPackages ? [ ],
       desktopFile ? null,
       dirsToPersist ? [ ],
       filesToPersist ? [ ],
       journalPatternsToIgnore ? [ ],
       journalPatternsToHighlight ? [ ],
-      execFlag ? "-e",
-      directoryFlag ? "--workdir ",
-      classFlag ? "--class ",
+      execFlag ? [ "-e" ],
+      directoryFlag ? (
+        path: [
+          "--workdir"
+          path
+        ]
+      ),
+      classFlag ? (
+        class: [
+          "-name"
+          class
+        ]
+      ),
     }:
     let
       nameParts = lib.splitString "." name;
@@ -210,6 +215,7 @@ let
         openShellCommand
         openWithClass
         openRunWithClass
+        openShellCommandWithClass
         additionalPackages
         dirsToPersist
         filesToPersist
@@ -268,15 +274,16 @@ let
       openShellCommand ? null,
       openWithClass ? null,
       openRunWithClass ? null,
+      openShellCommandWithClass ? null,
       additionalPackages ? [ ],
       desktopFile ? null,
       dirsToPersist ? [ ],
       filesToPersist ? [ ],
       journalPatternsToIgnore ? [ ],
       journalPatternsToHighlight ? [ ],
-      execFlag ? "--",
-      directoryFlag ? "--working-directory=",
-      classFlag ? "--class=",
+      execFlag ? [ "--" ],
+      directoryFlag ? (path: [ "--working-directory=${path}" ]),
+      classFlag ? (class: [ "--class=${class}" ]),
     }:
     let
       nameParts = lib.splitString "." name;
@@ -294,6 +301,7 @@ let
         openShellCommand
         openWithClass
         openRunWithClass
+        openShellCommandWithClass
         additionalPackages
         dirsToPersist
         filesToPersist

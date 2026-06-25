@@ -30,6 +30,12 @@ args@{
       nx.preferences.desktop.programs.terminal = {
         name = lib.mkForce "Ghostty";
         commandIsAbsolute = lib.mkForce true;
+        execFlag = lib.mkForce [ "-e" ];
+        classFlag = lib.mkForce (class: [ ]);
+        directoryFlag = lib.mkForce (path: [
+          "--args"
+          "--working-directory=${path}"
+        ]);
         openCommand = lib.mkForce [
           "open"
           "-nWa"
@@ -79,6 +85,18 @@ args@{
             "Ghostty"
             "--args"
             "-e"
+            cmd
+          ]
+        );
+        openShellCommandWithClass = lib.mkForce (
+          class: cmd: [
+            "open"
+            "-nWa"
+            "Ghostty"
+            "--args"
+            "-e"
+            "sh"
+            "-c"
             cmd
           ]
         );

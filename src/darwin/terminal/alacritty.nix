@@ -30,6 +30,12 @@ args@{
       nx.preferences.desktop.programs.additionalTerminal = {
         name = lib.mkForce "Alacritty";
         commandIsAbsolute = lib.mkForce true;
+        execFlag = lib.mkForce [ "-e" ];
+        classFlag = lib.mkForce (class: [ ]);
+        directoryFlag = lib.mkForce (path: [
+          "--args"
+          "--working-directory=${path}"
+        ]);
         openCommand = lib.mkForce [
           "open"
           "-nWa"
@@ -79,6 +85,18 @@ args@{
             "Alacritty"
             "--args"
             "-e"
+            cmd
+          ]
+        );
+        openShellCommandWithClass = lib.mkForce (
+          class: cmd: [
+            "open"
+            "-nWa"
+            "Alacritty"
+            "--args"
+            "-e"
+            "sh"
+            "-c"
             cmd
           ]
         );

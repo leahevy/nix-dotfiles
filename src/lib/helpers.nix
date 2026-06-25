@@ -1029,6 +1029,24 @@ rec {
     else
       [ ];
 
+  # Runs a command with class and double-quoted cmd argument for shell variable expansion
+  # Usage: runWithClassAndQuotedCmd config class "command with $var"
+  runWithClassAndQuotedCmd =
+    config: class: cmd:
+    let
+      terminal = config.nx.preferences.desktop.programs.terminal;
+      baseList =
+        (runWithAbsolutePath config terminal terminal.openWithClass class)
+        ++ terminal.execFlag
+        ++ [
+          "sh"
+          "-c"
+        ];
+      escapedPrefix = lib.escapeShellArgs baseList;
+      escapedCmd = builtins.replaceStrings [ "\"" ] [ "\\\"" ] cmd;
+    in
+    escapedPrefix + " \"" + escapedCmd + "\"";
+
   icons = {
     # Checks that the icon name is registered in config.nx.lib.icons and returns it.
     # When no icons are declared or no desktop is configured, returns name without validation.

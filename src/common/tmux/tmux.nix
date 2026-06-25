@@ -130,17 +130,28 @@ args@{
           )
         );
 
+      tmuxSessionClass = "org.nx.tmux-session";
+
     in
     {
       linux = {
         enabled = config: {
           nx.linux.desktop.niri.scratchpadCommand = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") "tx";
+          nx.linux.desktop.niri.autoTiler.ignoredAppIds =
+            lib.mkIf (self.linux.isModuleEnabled "desktop.niri")
+              [
+                tmuxSessionClass
+              ];
+          nx.linux.desktop.niri.blurAppIdsNoXray = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
+            tmuxSessionClass
+          ];
         };
 
         home =
           config:
           let
             programsConfig = config.nx.preferences.desktop.programs;
+            terminal = programsConfig.terminal;
             appLauncher = programsConfig.appLauncher;
             hasAppLauncher = appLauncher != null;
             isNiriEnabled = self.linux.isModuleEnabled "desktop.niri";
@@ -152,18 +163,15 @@ args@{
           lib.mkMerge [
             (lib.mkIf hasAppLauncher (
               let
-                additionalTerminal = programsConfig.additionalTerminal;
                 appLauncherDmenu =
                   opts:
                   lib.escapeShellArgs (helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts);
-                terminalShellCmd =
-                  cmd:
+                tmuxSessionShellWithClass = class: cmd: helpers.runWithClassAndQuotedCmd config class cmd;
+                tmuxSessionShellCmd =
+                  class: cmd:
                   lib.escapeShellArgs (
-                    helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openShellCommand cmd
+                    helpers.runWithAbsolutePath config terminal (terminal.openShellCommandWithClass class) cmd
                   );
-                terminalOpenPrefix = lib.escapeShellArgs (
-                  helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openRunPrefix [ ]
-                );
               in
               {
                 home.file."${defs.binDir}/tmux-session-manager" = {
@@ -220,16 +228,16 @@ args@{
                       fi
 
                       if [[ "$selection" == "+ New session" ]]; then
-                        exec ${terminalShellCmd "${pkgs.tmux}/bin/tmux new-session"}
+                        exec ${tmuxSessionShellCmd tmuxSessionClass "${pkgs.tmux}/bin/tmux new-session"}
                       ${lib.concatStringsSep "" (
                         map (name: ''
                           elif [[ "$selection" == "○ ${name} (start)" ]]; then
-                            exec ${terminalShellCmd "${tmuxinatorPackage}/bin/tmuxinator start ${name}"}
+                            exec ${tmuxSessionShellCmd tmuxSessionClass "${tmuxinatorPackage}/bin/tmuxinator start ${name}"}
                         '') sessionNames
                       )}
                       elif [[ "$selection" =~ ^●\ (.+)\ \(running\)$ ]]; then
                         session_name="''${BASH_REMATCH[1]}"
-                        exec ${terminalOpenPrefix} ${pkgs.tmux}/bin/tmux attach-session -t "$session_name"
+                        exec ${tmuxSessionShellWithClass tmuxSessionClass "${pkgs.tmux}/bin/tmux attach-session -t \"\$session_name\""}
                       fi
                     ''}
                   '';

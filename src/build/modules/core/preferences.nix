@@ -147,6 +147,26 @@ let
         default = null;
         description = "Function: class -> cmd -> [args] to run a program with a window class";
       };
+      openShellCommandWithClass = lib.mkOption {
+        type = lib.types.nullOr commandFn2Type;
+        default = null;
+        description = "Function: class -> cmd -> [args] to run a shell command with a window class";
+      };
+      execFlag = lib.mkOption {
+        type = lib.types.nullOr (lib.types.listOf lib.types.str);
+        default = null;
+        description = "Flag for executing a command (e.g., [ \"-e\" ])";
+      };
+      classFlag = lib.mkOption {
+        type = lib.types.nullOr commandFnType;
+        default = null;
+        description = "Function: class -> [args] for setting window class";
+      };
+      directoryFlag = lib.mkOption {
+        type = lib.types.nullOr commandFnType;
+        default = null;
+        description = "Function: path -> [args] for setting working directory";
+      };
       additionalPackages = lib.mkOption {
         type = lib.types.listOf lib.types.package;
         default = [ ];
