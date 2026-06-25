@@ -490,6 +490,9 @@ let
         '':has(> [role="presentation" i])''
         '':has(> [role="img" i])''
         '':has(> i[class*="icon" i])''
+        ''[data-cds="Icon" i]''
+        '':is([data-cds="Icon" i] *)''
+        '':has(> [data-cds="Icon" i])''
       ];
 
       monoForceElements = [
@@ -505,6 +508,7 @@ let
         '':has([role="presentation" i])''
         '':has([role="img" i])''
         '':has(i[class*="icon" i])''
+        '':has([data-cds="Icon" i])''
       ];
 
       revertSelectors = [
@@ -518,6 +522,7 @@ let
         ''[type="checkbox"] *''
         ''[class*="hero" i]''
         ''[class*="hero" i] *''
+        ''[data-cds="Icon" i] *''
       ];
 
       mkNotChain = lib.concatMapStrings (s: ":not(${s})");
