@@ -29,6 +29,8 @@ jobs:
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
           PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
           TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           set -euo pipefail
           STATUS="New PR"
@@ -65,10 +67,30 @@ jobs:
             TTL="129600"
           fi
 
+          MESSAGE="<b>Repository:</b> ${{ github.repository }}<br><b>Branch:</b> ${{ github.ref_name }}<br><b>Pull Request Title:</b> ${TITLE}"
+
+          if [ "$HEAD_REF" == "update-flake-inputs" ] && [ "${{ github.event.action }}" != "closed" ]; then
+            if printf '%s' "$PR_BODY" | grep -q '<!-- nx-reboot-system -->' || printf '%s' "$PR_BODY" | grep -q '<!-- nx-reboot-desktop -->'; then
+              PRIORITY="1"
+              SOUND="gamelan"
+              TTL="604800"
+              CIRCLE_COLOR="🟡"
+              STATUS="$STATUS (Manual Review Required)"
+              MESSAGE="$MESSAGE<br><br>⚠️ <b>Reboot Required</b> - Auto-merge disabled"
+            elif printf '%s' "$PR_BODY" | grep -q '<!-- nx-commits-truncated -->'; then
+              PRIORITY="1"
+              SOUND="gamelan"
+              TTL="604800"
+              CIRCLE_COLOR="🟡"
+              STATUS="$STATUS (Manual Review Required)"
+              MESSAGE="$MESSAGE<br><br>⚠️ <b>Commits truncated (&gt;250)</b> - Cannot verify reboot requirements - Auto-merge disabled"
+            fi
+          fi
+
           curl -fsS -m 20 --retry 10 -o /dev/null \
             --form-string "token=${PUSHOVER_TOKEN}" \
             --form-string "user=${PUSHOVER_USER}" \
-            --form-string "message=<b>Repository:</b> ${{ github.repository }}<br><b>Branch:</b> ${{ github.ref_name }}<br><b>Pull Request Title:</b> ${TITLE}" \
+            --form-string "message=$MESSAGE" \
             --form-string "title=${CIRCLE_COLOR} $STATUS for ${{ github.repository }}: ${TITLE}" \
             --form-string "priority=${PRIORITY}" \
             --form-string "sound=${SOUND}" \
