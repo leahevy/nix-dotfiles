@@ -1,12 +1,20 @@
 name: Update Flake.lock
 on:
   schedule:
-    - cron: '0 12 * * *'
+    - cron: '0 12 1-28 * *'
   workflow_dispatch:
+
+concurrency:
+  group: update-flake-lock
+  cancel-in-progress: false
 
 jobs:
   update-flake-lock:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -22,34 +30,201 @@ jobs:
           echo "NIXPKGS_INPUTS=$(IFS=,; echo "${NIXPKGS_INPUTS[*]}")" >> $GITHUB_ENV
           echo "TRUNCATE_INPUTS=$(IFS=,; echo "${TRUNCATE_INPUTS[*]}")" >> $GITHUB_ENV
           echo "UPDATE_AUTO_MERGE_ENABLED=$UPDATE_AUTO_MERGE_ENABLED" >> $GITHUB_ENV
-          echo "UPDATE_MERGE_DAYS=$(IFS=,; echo "${UPDATE_MERGE_DAYS[*]}")" >> $GITHUB_ENV
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v22
+      - name: Validate auto-merge token
+        if: env.UPDATE_AUTO_MERGE_ENABLED == 'true'
+        env:
+          REPO_PR_TOKEN: ${{ secrets.REPO_PR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${REPO_PR_TOKEN:-}" ]; then
+            echo "::error::UPDATE_AUTO_MERGE_ENABLED is true but the REPO_PR_TOKEN secret is not set!"
+            exit 1
+          fi
 
-      - name: Extract commit hashes before update
+      - name: Guard - auto-merge not yet supported
+        if: env.UPDATE_AUTO_MERGE_ENABLED == 'true'
+        run: |
+          echo "::error::Auto-merge is not yet supported. It requires signed commits (sign-commits: true), which only work with a GitHub App token."
+          exit 1
+
+      - name: Determine cycle mode and check existing PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
-          get_lockfile_node() {
-            nix flake metadata --json . | jq -r --arg input "$1" '.locks.nodes.root.inputs[$input]'
+          api_get() {
+            curl --retry 5 --retry-all-errors --retry-delay 2 --retry-connrefused \
+              --connect-timeout 10 -m 60 -fsS \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$1"
           }
+
+          day=$((10#$(date +%d)))
+
+          CYCLE_MODE=update
+          IS_FIRST_MERGE_DAY=false
+
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            CYCLE_MODE=update
+          elif [ "$day" -ge 1 ] && [ "$day" -le 7 ]; then
+            CYCLE_MODE=update
+          elif [ "$day" -ge 8 ] && [ "$day" -le 14 ]; then
+            CYCLE_MODE=merge
+            if [ "$day" -eq 8 ]; then IS_FIRST_MERGE_DAY=true; fi
+          elif [ "$day" -ge 15 ] && [ "$day" -le 21 ]; then
+            CYCLE_MODE=update
+          elif [ "$day" -ge 22 ] && [ "$day" -le 28 ]; then
+            CYCLE_MODE=merge
+            if [ "$day" -eq 22 ]; then IS_FIRST_MERGE_DAY=true; fi
+          fi
+
+          echo "CYCLE_MODE=$CYCLE_MODE" >> $GITHUB_ENV
+          echo "IS_FIRST_MERGE_DAY=$IS_FIRST_MERGE_DAY" >> $GITHUB_ENV
+
+          if [ "$day" -ge 8 ] && [ "$day" -le 14 ]; then
+            MERGE_CYCLE_ID="$(date +%Y%m)A"
+          elif [ "$day" -ge 22 ] && [ "$day" -le 28 ]; then
+            MERGE_CYCLE_ID="$(date +%Y%m)B"
+          else
+            MERGE_CYCLE_ID=""
+          fi
+          echo "MERGE_CYCLE_ID=$MERGE_CYCLE_ID" >> $GITHUB_ENV
+
+          if pulls_json=$(api_get "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:update-flake-inputs&state=open"); then
+            PR_FETCH_OK=true
+          else
+            PR_FETCH_OK=false
+            pulls_json=""
+          fi
+          existing_pr=$(printf '%s' "$pulls_json" | jq -c 'if type == "array" then (.[0] // empty) else empty end' 2>/dev/null || true)
+
+          if [ -n "$existing_pr" ] && [ "$existing_pr" != "null" ]; then
+            PR_EXISTS=true
+            PR_NUMBER=$(printf '%s' "$existing_pr" | jq -r '.number')
+            PR_DRAFT=$(printf '%s' "$existing_pr" | jq -r '.draft')
+
+            PR_CONFLICTED=false
+            if [ "$CYCLE_MODE" == "merge" ]; then
+              mergeable=null
+              delay=3
+              for attempt in $(seq 1 6); do
+                pr_detail=$(api_get "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER") || pr_detail=""
+                mergeable=$(printf '%s' "$pr_detail" | jq -r '.mergeable // "null"' 2>/dev/null || echo null)
+                [ "$mergeable" != "null" ] && break
+                [ "$attempt" -eq 6 ] && break
+                sleep "$delay"
+                delay=$((delay * 2))
+              done
+              if [ "$mergeable" == "false" ]; then PR_CONFLICTED=true; fi
+            fi
+
+            pr_body=$(printf '%s' "$existing_pr" | jq -r '.body // ""')
+            if printf '%s' "$pr_body" | grep -q '<!-- nx-reboot-system -->'; then
+              PR_REQUIRES_SYSTEM_REBOOT=true
+            elif ! printf '%s' "$pr_body" | grep -q '<!-- nx-reboot-desktop -->' && printf '%s' "$pr_body" | grep -qE "Reboot Required|Manual Merge Required \(Preserved\)"; then
+              PR_REQUIRES_SYSTEM_REBOOT=true
+            else
+              PR_REQUIRES_SYSTEM_REBOOT=false
+            fi
+            if printf '%s' "$pr_body" | grep -q '<!-- nx-reboot-desktop -->'; then PR_REQUIRES_DESKTOP_REBOOT=true; else PR_REQUIRES_DESKTOP_REBOOT=false; fi
+            if [ "$PR_REQUIRES_SYSTEM_REBOOT" = "true" ] || [ "$PR_REQUIRES_DESKTOP_REBOOT" = "true" ]; then PR_REQUIRES_REBOOT=true; else PR_REQUIRES_REBOOT=false; fi
+            if printf '%s' "$pr_body" | grep -q '<!-- nx-commits-truncated -->'; then PR_COMMITS_TRUNCATED=true; elif printf '%s' "$pr_body" | grep -q "Manual Merge Required (Truncation)"; then PR_COMMITS_TRUNCATED=true; else PR_COMMITS_TRUNCATED=false; fi
+            auto_merge=$(printf '%s' "$existing_pr" | jq -r '.auto_merge')
+            if [ "$auto_merge" != "null" ] && [ -n "$auto_merge" ]; then PR_AUTO_MERGE_ENABLED=true; else PR_AUTO_MERGE_ENABLED=false; fi
+            if printf '%s' "$existing_pr" | jq -e '.labels[]? | select(.name == "flake-merge-notified")' > /dev/null; then PR_MERGE_NOTIFIED=true; else PR_MERGE_NOTIFIED=false; fi
+            if printf '%s' "$existing_pr" | jq -e '.labels[]? | select(.name == "flake-automerge-stuck")' > /dev/null; then PR_AUTOMERGE_STUCK_NOTIFIED=true; else PR_AUTOMERGE_STUCK_NOTIFIED=false; fi
+
+            PR_CHECKS_FAILED=false
+            if [ "$CYCLE_MODE" == "merge" ] && [ "$PR_AUTO_MERGE_ENABLED" == "true" ]; then
+              head_sha=$(printf '%s' "$existing_pr" | jq -r '.head.sha')
+              checkruns_json=$(api_get "https://api.github.com/repos/${{ github.repository }}/commits/$head_sha/check-runs") || checkruns_json=""
+              status_json=$(api_get "https://api.github.com/repos/${{ github.repository }}/commits/$head_sha/status") || status_json=""
+              failed_checks=$(printf '%s' "$checkruns_json" | jq -r '[.check_runs[]? | select(.conclusion=="failure" or .conclusion=="timed_out" or .conclusion=="cancelled" or .conclusion=="action_required" or .conclusion=="stale")] | length' 2>/dev/null || echo 0)
+              failed_status=$(printf '%s' "$status_json" | jq -r 'if .state=="failure" or .state=="error" then 1 else 0 end' 2>/dev/null || echo 0)
+              if [ "${failed_checks:-0}" -gt 0 ] || [ "${failed_status:-0}" -gt 0 ]; then PR_CHECKS_FAILED=true; fi
+            fi
+          else
+            PR_EXISTS=false
+            PR_NUMBER=""
+            PR_DRAFT=false
+            PR_CONFLICTED=false
+            PR_REQUIRES_REBOOT=false
+            PR_REQUIRES_SYSTEM_REBOOT=false
+            PR_REQUIRES_DESKTOP_REBOOT=false
+            PR_COMMITS_TRUNCATED=false
+            PR_AUTO_MERGE_ENABLED=false
+            PR_MERGE_NOTIFIED=false
+            PR_AUTOMERGE_STUCK_NOTIFIED=false
+            PR_CHECKS_FAILED=false
+          fi
+
+          echo "PR_EXISTS=$PR_EXISTS" >> $GITHUB_ENV
+          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          echo "PR_DRAFT=$PR_DRAFT" >> $GITHUB_ENV
+          echo "PR_CONFLICTED=$PR_CONFLICTED" >> $GITHUB_ENV
+          echo "PR_REQUIRES_REBOOT=$PR_REQUIRES_REBOOT" >> $GITHUB_ENV
+          echo "PR_REQUIRES_SYSTEM_REBOOT=$PR_REQUIRES_SYSTEM_REBOOT" >> $GITHUB_ENV
+          echo "PR_REQUIRES_DESKTOP_REBOOT=$PR_REQUIRES_DESKTOP_REBOOT" >> $GITHUB_ENV
+          echo "PR_COMMITS_TRUNCATED=$PR_COMMITS_TRUNCATED" >> $GITHUB_ENV
+          echo "PR_AUTO_MERGE_ENABLED=$PR_AUTO_MERGE_ENABLED" >> $GITHUB_ENV
+          echo "PR_MERGE_NOTIFIED=$PR_MERGE_NOTIFIED" >> $GITHUB_ENV
+          echo "PR_AUTOMERGE_STUCK_NOTIFIED=$PR_AUTOMERGE_STUCK_NOTIFIED" >> $GITHUB_ENV
+          echo "PR_CHECKS_FAILED=$PR_CHECKS_FAILED" >> $GITHUB_ENV
+          echo "PR_FETCH_OK=$PR_FETCH_OK" >> $GITHUB_ENV
+
+          IS_UPDATE_RUN=false
+          if [ "$CYCLE_MODE" == "update" ]; then
+            IS_UPDATE_RUN=true
+          fi
+          echo "IS_UPDATE_RUN=$IS_UPDATE_RUN" >> $GITHUB_ENV
+
+          echo "Cycle: $CYCLE_MODE, PR exists: $PR_EXISTS, PR conflicted: $PR_CONFLICTED, IS_UPDATE_RUN: $IS_UPDATE_RUN"
+
+      - name: Guard - existing PR state required for update
+        if: env.IS_UPDATE_RUN == 'true' && env.PR_FETCH_OK != 'true'
+        run: |
+          echo "::error::Could not fetch existing PR state from the GitHub API. Aborting this update run to avoid overwriting preserved reboot and merge markers on the open PR. The next scheduled run will retry!"
+          exit 1
+
+      - name: Update week - Reset merge reminder
+        if: env.CYCLE_MODE == 'update' && env.PR_EXISTS == 'true'
+        run: |
+          set -euo pipefail
+          gh pr edit "${{ env.PR_NUMBER }}" --remove-label flake-merge-notified > /dev/null 2>&1 || true
+          gh pr edit "${{ env.PR_NUMBER }}" --remove-label flake-automerge-stuck > /dev/null 2>&1 || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Nix
+        if: env.IS_UPDATE_RUN == 'true'
+        uses: DeterminateSystems/nix-installer-action@v22
+
+      - name: Extract commit hashes before update
+        if: env.IS_UPDATE_RUN == 'true'
+        run: |
+          set -euo pipefail
+
+          metadata=$(nix flake metadata --json .)
 
           IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
 
-          declare -A old_commits
           for input in "${inputs[@]}"; do
             input=$(echo "$input" | xargs)
             input_var=$(echo "$input" | tr '-' '_')
-            node=$(get_lockfile_node "$input")
+            node=$(printf '%s' "$metadata" | jq -r --arg input "$input" '.locks.nodes.root.inputs[$input]')
             if [ "$node" != "null" ]; then
-              old_commit=$(nix flake metadata --json . | jq -r --arg node "$node" '.locks.nodes[$node].locked.rev')
+              old_commit=$(printf '%s' "$metadata" | jq -r --arg node "$node" '.locks.nodes[$node].locked.rev')
               echo "OLD_COMMIT_$input_var=$old_commit" >> $GITHUB_ENV
               echo "Input $input: current commit $old_commit"
             fi
           done
 
       - name: Update flake inputs
+        if: env.IS_UPDATE_RUN == 'true'
         run: |
           set -euo pipefail
 
@@ -63,8 +238,9 @@ jobs:
             echo "Updating input: $input"
             nix flake update "$input"
 
-            node=$(nix flake metadata --json . | jq -r --arg input "$input" '.locks.nodes.root.inputs[$input]')
-            new_commit=$(nix flake metadata --json . | jq -r --arg node "$node" '.locks.nodes[$node].locked.rev')
+            metadata=$(nix flake metadata --json .)
+            node=$(printf '%s' "$metadata" | jq -r --arg input "$input" '.locks.nodes.root.inputs[$input]')
+            new_commit=$(printf '%s' "$metadata" | jq -r --arg node "$node" '.locks.nodes[$node].locked.rev')
 
             old_commit_var="OLD_COMMIT_$input_var"
             old_commit="${!old_commit_var:-}"
@@ -81,6 +257,7 @@ jobs:
           echo "UPDATED_INPUTS=$updated_inputs" >> $GITHUB_ENV
 
       - name: Check for changes
+        if: env.IS_UPDATE_RUN == 'true'
         id: changes
         run: |
           set -euo pipefail
@@ -90,37 +267,17 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check existing PR for manual merge requirement
-        id: existing-pr
-        run: |
-          set -euo pipefail
-
-          existing_pr=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:update-flake-inputs&state=open" \
-            | jq -r '.[0] // empty')
-
-          if [ -n "$existing_pr" ] && [ "$existing_pr" != "null" ]; then
-            pr_body=$(echo "$existing_pr" | jq -r '.body // ""')
-
-            if echo "$pr_body" | grep -q "Reboot Required"; then
-              echo "existing_requires_reboot=true" >> $GITHUB_OUTPUT
-              echo "Existing PR already requires manual merge - preserving state"
-            else
-              echo "existing_requires_reboot=false" >> $GITHUB_OUTPUT
-              echo "Existing PR does not require manual merge"
-            fi
-          else
-            echo "existing_requires_reboot=false" >> $GITHUB_OUTPUT
-            echo "No existing PR found"
-          fi
-
       - name: Generate commit lists
-        if: steps.changes.outputs.changed == 'true'
+        if: env.IS_UPDATE_RUN == 'true' && steps.changes.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+
+          metadata=$(nix flake metadata --json .)
 
           get_lockfile_node() {
-            nix flake metadata --json . | jq -r --arg input "$1" '.locks.nodes.root.inputs[$input]'
+            printf '%s' "$metadata" | jq -r --arg input "$1" '.locks.nodes.root.inputs[$input]'
           }
 
           get_repo() {
@@ -224,7 +381,7 @@ jobs:
             repo=$(get_repo "$node")
 
             if [ "$node" != "null" ] && [ -n "$repo" ]; then
-              new_commit=$(nix flake metadata --json . | jq -r --arg node "$node" '.locks.nodes[$node].locked.rev')
+              new_commit=$(printf '%s' "$metadata" | jq -r --arg node "$node" '.locks.nodes[$node].locked.rev')
               old_commit_var="OLD_COMMIT_$input_var"
               old_commit="${!old_commit_var:-}"
 
@@ -233,7 +390,7 @@ jobs:
               if [ "$old_commit" != "$new_commit" ] && [ -n "$old_commit" ]; then
                 echo "Fetching commits for $input from $repo..."
 
-                commits_json=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit")
+                commits_json=$(curl --retry 5 --retry-all-errors --retry-delay 2 --retry-connrefused --connect-timeout 10 -m 60 -fsS -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit") || commits_json=""
 
                 if echo "$commits_json" | jq -e '.commits' > /dev/null 2>&1; then
 
@@ -409,7 +566,12 @@ jobs:
                     fi
                   fi
                 else
-                  echo "Failed to fetch commits for $input, skipping commit list"
+                  echo "WARNING: Could not fetch commit comparison for $input - treating as manual merge required"
+                  if ! echo ",$EXCLUDE_FROM_REBOOT_CHECK," | grep -q ",$input,"; then
+                    commits_truncated="true"
+                  else
+                    echo "Input $input is excluded from reboot checks - fetch failure ignored for auto-merge decision"
+                  fi
                 fi
               fi
             fi
@@ -430,154 +592,160 @@ jobs:
           echo "DESKTOP_REBOOT_PACKAGES=$desktop_reboot_packages" >> $GITHUB_ENV
           echo "COMMITS_TRUNCATED=$commits_truncated" >> $GITHUB_ENV
 
+          cl_delim="NXCOMMITLISTS$(openssl rand -hex 16)"
           {
-            echo "COMMIT_LISTS<<EOF"
+            echo "COMMIT_LISTS<<${cl_delim}"
             echo "$commit_lists"
-            echo "EOF"
+            echo "${cl_delim}"
           } >> $GITHUB_ENV
 
+          rc_delim="NXREBOOTCOMMITS$(openssl rand -hex 16)"
           {
-            echo "REBOOT_COMMITS<<EOF"
+            echo "REBOOT_COMMITS<<${rc_delim}"
             echo "$reboot_commits"
-            echo "EOF"
+            echo "${rc_delim}"
           } >> $GITHUB_ENV
 
-          if [ "$requires_reboot" = "true" ] || [ "$requires_desktop_reboot" = "true" ]; then
+          if [ "$requires_reboot" = "true" ] || [ "$requires_desktop_reboot" = "true" ] || [ "${PR_REQUIRES_REBOOT:-false}" = "true" ]; then
             core_flake_hash=$(sha256sum flake.lock | cut -d' ' -f1)
             mkdir -p .core-state
-            if [ "$requires_reboot" = "true" ]; then
+            if [ "$requires_reboot" = "true" ] || [ "${PR_REQUIRES_SYSTEM_REBOOT:-false}" = "true" ]; then
               echo "Creating system reboot marker file for auto-upgrade detection"
               echo "$core_flake_hash" > .core-state/reboot-required
             fi
-            if [ "$requires_desktop_reboot" = "true" ]; then
+            if [ "$requires_desktop_reboot" = "true" ] || [ "${PR_REQUIRES_DESKTOP_REBOOT:-false}" = "true" ]; then
               echo "Creating desktop reboot marker file for auto-upgrade detection"
               echo "$core_flake_hash" > .core-state/desktop-reboot-required
             fi
           fi
 
-      - name: Check if merge day
-        id: check-day
+      - name: Build PR body
+        if: env.IS_UPDATE_RUN == 'true' && steps.changes.outputs.changed == 'true'
         run: |
           set -euo pipefail
-          current_day=$(date +%u)
-          if [[ "$UPDATE_AUTO_MERGE_ENABLED" == "true" ]] && echo ",$UPDATE_MERGE_DAYS," | grep -q ",$current_day,"; then
-            echo "its_mergeday=true" >> $GITHUB_OUTPUT
-          else
-            echo "its_mergeday=false" >> $GITHUB_OUTPUT
+          pr_tmpfile=$(mktemp)
+
+          cat >> "$pr_tmpfile" <<'NX_PR_STATIC'
+          ## Automated update of flake inputs.
+          ${{ (env.REQUIRES_REBOOT == 'true' || env.PR_REQUIRES_SYSTEM_REBOOT == 'true') && '<!-- nx-reboot-system -->' || '' }}
+          ${{ (env.REQUIRES_DESKTOP_REBOOT == 'true' || env.PR_REQUIRES_DESKTOP_REBOOT == 'true') && '<!-- nx-reboot-desktop -->' || '' }}
+          ${{ (env.COMMITS_TRUNCATED == 'true' || env.PR_COMMITS_TRUNCATED == 'true') && '<!-- nx-commits-truncated -->' || '' }}
+
+          ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> [!WARNING]' || '' }}
+          ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> ⚠️ **Reboot Required** ⚠️' || '' }}
+          ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> This update requires a reboot!' || '' }}
+
+          ${{ env.PR_REQUIRES_REBOOT == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> [!WARNING]' || '' }}
+          ${{ env.PR_REQUIRES_REBOOT == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> ⚠️ **Manual Merge Required (Preserved)** ⚠️' || '' }}
+          ${{ env.PR_REQUIRES_REBOOT == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> Previous update required reboot - state preserved across updates' || '' }}
+
+          ${{ (env.COMMITS_TRUNCATED == 'true' || env.PR_COMMITS_TRUNCATED == 'true') && env.ANY_REBOOT_REQUIRED != 'true' && env.PR_REQUIRES_REBOOT != 'true' && '> [!WARNING]' || '' }}
+          ${{ (env.COMMITS_TRUNCATED == 'true' || env.PR_COMMITS_TRUNCATED == 'true') && env.ANY_REBOOT_REQUIRED != 'true' && env.PR_REQUIRES_REBOOT != 'true' && '> ⚠️ **Manual Merge Required (Truncation)** ⚠️' || '' }}
+          ${{ (env.COMMITS_TRUNCATED == 'true' || env.PR_COMMITS_TRUNCATED == 'true') && env.ANY_REBOOT_REQUIRED != 'true' && env.PR_REQUIRES_REBOOT != 'true' && '> Too many commits (>250) - cannot verify all commits for reboot requirements' || '' }}
+
+          NX_PR_STATIC
+
+          if [ "$ANY_REBOOT_REQUIRED" = "true" ]; then
+            {
+              echo ''
+              echo '### 🔄 Reboot-triggering commits'
+              printf '%s\n' "$REBOOT_COMMITS"
+              echo '---'
+            } >> "$pr_tmpfile"
           fi
 
+          {
+            echo ''
+            echo '### 📦 Updated inputs:'
+            echo "- $UPDATED_INPUTS"
+            printf '%s\n' "$COMMIT_LISTS"
+            echo ''
+            echo 'Generated automatically by GitHub Actions'
+          } >> "$pr_tmpfile"
+
+          LC_ALL=C awk -v max=64000 '{a=length($0)+1; if(t+a>max){print ""; print "_(truncated to fit the GitHub size limit)_"; exit} print; t+=a}' \
+            "$pr_tmpfile" > "${pr_tmpfile}.out"
+          mv "${pr_tmpfile}.out" "$pr_tmpfile"
+
+          env_delim="NXPRBODY$(openssl rand -hex 16)"
+          {
+            echo "PR_BODY<<${env_delim}"
+            cat "$pr_tmpfile"
+            echo "${env_delim}"
+          } >> "$GITHUB_ENV"
+          rm -f "$pr_tmpfile"
+
       - name: Create Pull Request
-        if: steps.changes.outputs.changed == 'true'
+        if: env.IS_UPDATE_RUN == 'true' && steps.changes.outputs.changed == 'true'
         id: cpr
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ env.UPDATE_AUTO_MERGE_ENABLED == 'true' && secrets.REPO_PR_TOKEN || secrets.GITHUB_TOKEN }}
           commit-message: "Update flake inputs: ${{ env.UPDATED_INPUTS }}"
           title: "Update flake inputs: ${{ env.UPDATED_INPUTS }}"
-          body: |
-            ## Automated update of flake inputs.
-
-            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && env.COMMITS_TRUNCATED != 'true' && '> [!NOTE]' || '' }}
-            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && env.COMMITS_TRUNCATED != 'true' && '> ✅ **This pull request will be automatically merged**' || '' }}
-            ${{ steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && env.COMMITS_TRUNCATED != 'true' && '> No reboot detected - auto-merge enabled' || '' }}
-
-            ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> [!WARNING]' || '' }}
-            ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> ⚠️ **Reboot Required** ⚠️' || '' }}
-            ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> This update requires a reboot!' || '' }}
-
-            ${{ steps.existing-pr.outputs.existing_requires_reboot == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> [!WARNING]' || '' }}
-            ${{ steps.existing-pr.outputs.existing_requires_reboot == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> ⚠️ **Manual Merge Required (Preserved)** ⚠️' || '' }}
-            ${{ steps.existing-pr.outputs.existing_requires_reboot == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && '> Previous update required reboot - state preserved across updates' || '' }}
-
-            ${{ env.COMMITS_TRUNCATED == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && '> [!WARNING]' || '' }}
-            ${{ env.COMMITS_TRUNCATED == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && '> ⚠️ **Manual Merge Required (Truncation)** ⚠️' || '' }}
-            ${{ env.COMMITS_TRUNCATED == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && '> Too many commits (>250) - cannot verify all commits for reboot requirements' || '' }}
-
-            ${{ env.ANY_REBOOT_REQUIRED == 'true' && '### 🔄 Reboot-triggering commits' || '' }}
-            ${{ env.ANY_REBOOT_REQUIRED == 'true' && env.REBOOT_COMMITS || '' }}
-            ${{ env.ANY_REBOOT_REQUIRED == 'true' && '---' || '' }}
-
-            ### 📦 Updated inputs:
-            - ${{ env.UPDATED_INPUTS }}
-            ${{ env.COMMIT_LISTS }}
-
-            Generated automatically by GitHub Actions
+          body: ${{ env.PR_BODY }}
           branch: update-flake-inputs
           delete-branch: true
           sign-commits: true
+          draft: ${{ github.event_name != 'workflow_dispatch' && 'always-true' || 'false' }}
 
-      - name: Notify PR Created or Updated via Pushover
-        if: steps.changes.outputs.changed == 'true' && (steps.cpr.outputs.pull-request-operation == 'created' || steps.cpr.outputs.pull-request-operation == 'updated')
+      - name: Workflow dispatch - Mark PR ready
+        if: github.event_name == 'workflow_dispatch' && (steps.cpr.outputs.pull-request-number != '' || env.PR_EXISTS == 'true')
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          pr_number="${{ steps.cpr.outputs.pull-request-number || env.PR_NUMBER }}"
+          if [ -n "$pr_number" ]; then
+            gh pr ready "$pr_number" || true
+          fi
+
+      - name: Merge week - Un-draft PR
+        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true'
+        run: |
+          set -euo pipefail
+          if [ "${{ env.PR_DRAFT }}" == "true" ]; then
+            echo "Un-drafting PR #${{ env.PR_NUMBER }}"
+            gh pr ready "${{ env.PR_NUMBER }}" || true
+          else
+            echo "PR #${{ env.PR_NUMBER }} is already ready for review"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge week - Enable auto-merge
+        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.UPDATE_AUTO_MERGE_ENABLED == 'true' && env.PR_REQUIRES_REBOOT != 'true' && env.PR_COMMITS_TRUNCATED != 'true' && env.PR_AUTO_MERGE_ENABLED != 'true' && env.PR_CONFLICTED != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_PR_TOKEN || secrets.GITHUB_TOKEN }}
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
           PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
         run: |
           set -euo pipefail
-          if [ "${{ steps.cpr.outputs.pull-request-operation }}" == "updated" ]; then
-            PR_LABEL="PR Updated"
-          else
-            PR_LABEL="New PR"
-          fi
 
-          if [ "${{ env.ANY_REBOOT_REQUIRED }}" == "true" ]; then
-            PRIORITY="1"
-            SOUND="gamelan"
-            TTL="604800"
-            CIRCLE_COLOR="🟡"
-            STATUS="$PR_LABEL (Manual Review Required)"
-            EXTRA_MESSAGE="⚠️ <b>Reboot Required</b> - Auto-merge disabled"
-          elif [ "${{ env.COMMITS_TRUNCATED }}" == "true" ]; then
-            PRIORITY="1"
-            SOUND="gamelan"
-            TTL="604800"
-            CIRCLE_COLOR="🟡"
-            STATUS="$PR_LABEL (Manual Review Required)"
-            EXTRA_MESSAGE="⚠️ <b>Commits truncated (&gt;250)</b> - Cannot verify reboot requirements - Auto-merge disabled"
-          elif [ "${{ steps.check-day.outputs.its_mergeday }}" == "true" ]; then
-            PRIORITY="0"
-            SOUND="pianobar"
-            TTL="129600"
-            CIRCLE_COLOR="🟢"
-            STATUS="$PR_LABEL (Auto-merge Enabled)"
-            EXTRA_MESSAGE="✅ <b>Auto-merge enabled</b> - Will merge automatically"
-          else
-            PRIORITY="0"
-            SOUND="vibrate"
-            TTL="129600"
-            CIRCLE_COLOR="🔵"
-            STATUS="$PR_LABEL"
-            EXTRA_MESSAGE=""
-          fi
+          notify_automerge_enabled() {
+            PR_URL="https://github.com/${{ github.repository }}/pull/${{ env.PR_NUMBER }}"
+            curl -fsS -m 20 --retry 10 -o /dev/null \
+              --form-string "token=${PUSHOVER_TOKEN}" \
+              --form-string "user=${PUSHOVER_USER}" \
+              --form-string "message=<b>Repository:</b> ${{ github.repository }}<br><b>PR #${{ env.PR_NUMBER }}</b> auto-merge enabled<br><br>✅ Will merge automatically once checks pass" \
+              --form-string "title=🟢 Auto-merge Enabled for ${{ github.repository }}" \
+              --form-string "priority=0" \
+              --form-string "sound=pianobar" \
+              --form-string "ttl=129600" \
+              --form-string "html=1" \
+              --form-string "url=$PR_URL" \
+              --form-string "url_title=View Pull Request" \
+              https://api.pushover.net/1/messages.json || true
+          }
 
-          MESSAGE="<b>Repository:</b> ${{ github.repository }}<br><b>Branch:</b> update-flake-inputs<br><b>Pull Request Title:</b> Update flake inputs: ${{ env.UPDATED_INPUTS }}"
-          if [ -n "$EXTRA_MESSAGE" ]; then
-            MESSAGE="$MESSAGE<br><br>$EXTRA_MESSAGE"
-          fi
-
-          curl -fsS -m 20 --retry 10 -o /dev/null \
-            --form-string "token=${PUSHOVER_TOKEN}" \
-            --form-string "user=${PUSHOVER_USER}" \
-            --form-string "message=$MESSAGE" \
-            --form-string "title=${CIRCLE_COLOR} $STATUS for ${{ github.repository }}: Update flake inputs: ${{ env.UPDATED_INPUTS }}" \
-            --form-string "priority=${PRIORITY}" \
-            --form-string "sound=${SOUND}" \
-            --form-string "ttl=${TTL}" \
-            --form-string "html=1" \
-            --form-string "url=${{ steps.cpr.outputs.pull-request-url }}" \
-            --form-string "url_title=View Pull Request" \
-            https://api.pushover.net/1/messages.json
-
-      - name: Enable auto-merge
-        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && env.ANY_REBOOT_REQUIRED != 'true' && steps.existing-pr.outputs.existing_requires_reboot != 'true' && env.COMMITS_TRUNCATED != 'true'
-        run: |
-          set -euo pipefail
-          echo "Enabling auto-merge for PR #${{ steps.cpr.outputs.pull-request-number }}"
+          echo "Enabling auto-merge for PR #${{ env.PR_NUMBER }}"
           sleep 10
 
           for attempt in {1..10}; do
             echo "Attempt $attempt/10: Enabling auto-merge..."
-            if gh pr merge --auto --squash ${{ steps.cpr.outputs.pull-request-number }}; then
+            if gh pr merge --auto --squash "${{ env.PR_NUMBER }}"; then
               echo "Auto-merge enabled successfully on attempt $attempt"
+              notify_automerge_enabled
               exit 0
             else
               echo "Auto-merge failed on attempt $attempt"
@@ -589,18 +757,131 @@ jobs:
               sleep $sleep_time
             fi
           done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Skip auto-merge due to reboot-requiring packages
-        if: steps.changes.outputs.changed == 'true' && steps.check-day.outputs.its_mergeday == 'true' && (env.ANY_REBOOT_REQUIRED == 'true' || steps.existing-pr.outputs.existing_requires_reboot == 'true' || env.COMMITS_TRUNCATED == 'true')
+      - name: Merge week - Send merge reminder
+        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && (env.UPDATE_AUTO_MERGE_ENABLED != 'true' || env.PR_REQUIRES_REBOOT == 'true' || env.PR_COMMITS_TRUNCATED == 'true' || env.PR_CONFLICTED == 'true') && (env.PR_MERGE_NOTIFIED != 'true' || env.IS_FIRST_MERGE_DAY == 'true')
+        env:
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ "${{ env.ANY_REBOOT_REQUIRED }}" == "true" ]; then
-            echo "Auto-merge skipped: Update requires reboot (System: ${{ env.REBOOT_PACKAGES }} Desktop: ${{ env.DESKTOP_REBOOT_PACKAGES }})"
+          set -euo pipefail
+
+          if [ "${{ env.IS_FIRST_MERGE_DAY }}" == "true" ]; then
+            gh pr edit "${{ env.PR_NUMBER }}" --remove-label flake-merge-notified > /dev/null 2>&1 || true
           fi
-          if [ "${{ steps.existing-pr.outputs.existing_requires_reboot }}" == "true" ]; then
-            echo "Auto-merge skipped: Existing PR already required manual merge - state preserved"
+
+          if [ "${{ env.PR_CONFLICTED }}" == "true" ]; then
+            PRIORITY="1"
+            SOUND="gamelan"
+            TTL="604800"
+            CIRCLE_COLOR="🔴"
+            STATUS="Merge Window Open (Conflict)"
+            EXTRA_MESSAGE="⚠️ <b>Merge conflict</b> - Resolve manually before merging"
+          elif [ "${{ env.PR_REQUIRES_REBOOT }}" == "true" ]; then
+            PRIORITY="1"
+            SOUND="gamelan"
+            TTL="604800"
+            CIRCLE_COLOR="🟡"
+            STATUS="Merge Window Open (Reboot Required)"
+            EXTRA_MESSAGE="⚠️ <b>Reboot Required</b> - Merge manually and reboot after"
+          elif [ "${{ env.PR_COMMITS_TRUNCATED }}" == "true" ]; then
+            PRIORITY="1"
+            SOUND="gamelan"
+            TTL="604800"
+            CIRCLE_COLOR="🟡"
+            STATUS="Merge Window Open (Review Required)"
+            EXTRA_MESSAGE="⚠️ <b>Commits truncated</b> - Cannot verify reboot requirements, review manually"
+          else
+            PRIORITY="0"
+            SOUND="pianobar"
+            TTL="604800"
+            CIRCLE_COLOR="🟢"
+            STATUS="Merge Window Open"
+            EXTRA_MESSAGE="✅ Flake update ready to merge"
           fi
-          if [ "${{ env.COMMITS_TRUNCATED }}" == "true" ]; then
-            echo "Auto-merge skipped: GitHub API returned truncated commits (>250) - cannot verify all commits for reboot requirements"
+
+          PR_URL="https://github.com/${{ github.repository }}/pull/${{ env.PR_NUMBER }}"
+          MESSAGE="<b>Repository:</b> ${{ github.repository }}<br><b>PR #${{ env.PR_NUMBER }}</b> is ready to merge<br><br>$EXTRA_MESSAGE"
+
+          curl -fsS -m 20 --retry 10 -o /dev/null \
+            --form-string "token=${PUSHOVER_TOKEN}" \
+            --form-string "user=${PUSHOVER_USER}" \
+            --form-string "message=$MESSAGE" \
+            --form-string "title=${CIRCLE_COLOR} $STATUS for ${{ github.repository }}" \
+            --form-string "priority=${PRIORITY}" \
+            --form-string "sound=${SOUND}" \
+            --form-string "ttl=${TTL}" \
+            --form-string "html=1" \
+            --form-string "url=$PR_URL" \
+            --form-string "url_title=View Pull Request" \
+            https://api.pushover.net/1/messages.json || true
+
+          gh label create flake-merge-notified --color BFD4F2 --description "Flake merge reminder delivered" --force > /dev/null 2>&1 || true
+          gh pr edit "${{ env.PR_NUMBER }}" --add-label flake-merge-notified || true
+
+      - name: Merge week - Auto-merge stuck reminder
+        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.UPDATE_AUTO_MERGE_ENABLED == 'true' && env.PR_AUTO_MERGE_ENABLED == 'true' && env.PR_CHECKS_FAILED == 'true' && env.PR_REQUIRES_REBOOT != 'true' && env.PR_COMMITS_TRUNCATED != 'true' && env.PR_CONFLICTED != 'true' && (env.PR_AUTOMERGE_STUCK_NOTIFIED != 'true' || env.IS_FIRST_MERGE_DAY == 'true')
+        env:
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ "${{ env.IS_FIRST_MERGE_DAY }}" == "true" ]; then
+            gh pr edit "${{ env.PR_NUMBER }}" --remove-label flake-automerge-stuck > /dev/null 2>&1 || true
           fi
+
+          PR_URL="https://github.com/${{ github.repository }}/pull/${{ env.PR_NUMBER }}"
+          MESSAGE="<b>Repository:</b> ${{ github.repository }}<br><b>PR #${{ env.PR_NUMBER }}</b> has auto-merge enabled but is still open<br><br>⚠️ <b>A required check is failing</b> - review the PR manually"
+
+          curl -fsS -m 20 --retry 10 -o /dev/null \
+            --form-string "token=${PUSHOVER_TOKEN}" \
+            --form-string "user=${PUSHOVER_USER}" \
+            --form-string "message=$MESSAGE" \
+            --form-string "title=🟠 Auto-merge Stuck for ${{ github.repository }}" \
+            --form-string "priority=1" \
+            --form-string "sound=gamelan" \
+            --form-string "ttl=604800" \
+            --form-string "html=1" \
+            --form-string "url=$PR_URL" \
+            --form-string "url_title=View Pull Request" \
+            https://api.pushover.net/1/messages.json || true
+
+          gh label create flake-automerge-stuck --color D93F0B --description "Auto-merge enabled but PR still open" --force > /dev/null 2>&1 || true
+          gh pr edit "${{ env.PR_NUMBER }}" --add-label flake-automerge-stuck || true
+
+      - name: Merge week - First-run dedup cache
+        id: mergewindow-cache
+        if: env.CYCLE_MODE == 'merge'
+        uses: actions/cache@v4
+        with:
+          path: .mergewindow-marker
+          key: merge-window-${{ env.MERGE_CYCLE_ID }}
+
+      - name: Merge week - No pending update notification
+        if: env.CYCLE_MODE == 'merge' && env.PR_FETCH_OK == 'true' && env.PR_EXISTS != 'true' && steps.mergewindow-cache.outputs.cache-hit != 'true'
+        env:
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+        run: |
+          set -euo pipefail
+
+          curl -fsS -m 20 --retry 10 -o /dev/null \
+            --form-string "token=${PUSHOVER_TOKEN}" \
+            --form-string "user=${PUSHOVER_USER}" \
+            --form-string "message=No flake update is pending for ${{ github.repository }} this cycle." \
+            --form-string "title=⚪ No Pending Update for ${{ github.repository }}" \
+            --form-string "priority=-1" \
+            --form-string "sound=none" \
+            --form-string "ttl=86400" \
+            --form-string "html=1" \
+            https://api.pushover.net/1/messages.json || true
+
+      - name: Merge week - Record first-run marker
+        if: env.CYCLE_MODE == 'merge' && env.PR_FETCH_OK == 'true' && steps.mergewindow-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p .mergewindow-marker
+          date > .mergewindow-marker/handled

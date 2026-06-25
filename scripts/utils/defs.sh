@@ -164,4 +164,3 @@ export MODULES_ONLY_INPUTS=(
 )
 
 export UPDATE_AUTO_MERGE_ENABLED=false
-export UPDATE_MERGE_DAYS=(1 2 3 4 5 6 7) # 1=Monday, 7=Sunday

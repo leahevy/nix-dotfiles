@@ -11,10 +11,24 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]'
     steps:
+      - name: Determine active PR token
+        id: token
+        env:
+          REPO_PR_TOKEN: ${{ secrets.REPO_PR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "${REPO_PR_TOKEN:-}" ]; then
+            echo "is_pat=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_pat=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Notify PR Status via Pushover
+        if: ${{ !(steps.token.outputs.is_pat == 'true' && github.event.pull_request.head.ref == 'update-flake-inputs' && (github.event.action == 'opened' || github.event.action == 'edited')) }}
         env:
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
           PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+          TITLE: ${{ github.event.pull_request.title }}
         run: |
           set -euo pipefail
           STATUS="New PR"
@@ -54,8 +68,8 @@ jobs:
           curl -fsS -m 20 --retry 10 -o /dev/null \
             --form-string "token=${PUSHOVER_TOKEN}" \
             --form-string "user=${PUSHOVER_USER}" \
-            --form-string "message=<b>Repository:</b> ${{ github.repository }}<br><b>Branch:</b> ${{ github.ref_name }}<br><b>Pull Request Title:</b> ${{ github.event.pull_request.title }}" \
-            --form-string "title=${CIRCLE_COLOR} $STATUS for ${{ github.repository }}: ${{ github.event.pull_request.title }}" \
+            --form-string "message=<b>Repository:</b> ${{ github.repository }}<br><b>Branch:</b> ${{ github.ref_name }}<br><b>Pull Request Title:</b> ${TITLE}" \
+            --form-string "title=${CIRCLE_COLOR} $STATUS for ${{ github.repository }}: ${TITLE}" \
             --form-string "priority=${PRIORITY}" \
             --form-string "sound=${SOUND}" \
             --form-string "ttl=${TTL}" \
@@ -66,9 +80,11 @@ jobs:
 
       - name: Trigger nxconfig bump on manual merge
         if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'update-flake-inputs'
+        env:
+          NXCONFIG_PAT: ${{ secrets.NXCONFIG_PAT }}
         run: |
           curl -fsS -X POST \
-            -H "Authorization: token ${{ secrets.NXCONFIG_PAT }}" \
+            -H "Authorization: token ${NXCONFIG_PAT}" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository_owner }}/nx-personal-config/dispatches" \
             -d '{"event_type":"nxcore-merged"}'
