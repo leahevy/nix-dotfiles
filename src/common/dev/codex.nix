@@ -193,6 +193,8 @@ args@{
           baseSkills = { };
         in
         {
+          nx.common.dev.agents.enabledAgents = [ "codex" ];
+
           nx.common.dev.codex.instructions = lib.mkOrder 200 baseInstructions;
 
           nx.common.dev.codex.skills = lib.mkOrder 200 baseSkills;

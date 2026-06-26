@@ -59,9 +59,7 @@ args@{
             "managed"
           ];
           vimEnabled = config.nx.common.nvim.nixvim.enable;
-          claudeEnabled = config.nx.common.dev.claude.enable;
-          codexEnabled = config.nx.common.dev.codex.enable;
-          vibeEnabled = config.nx.common.dev."vibe".enable;
+          anyAgentEnabled = config.nx.common.dev.agents.enabledAgents != [ ];
 
           main = {
             windows = [
@@ -78,14 +76,8 @@ args@{
               { "󱇧 Config" = "cd ~/.config/nx/nxconfig/ && clear && ${interactiveShellCommand "vim"}"; }
               { "󱇧 Core" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vim"}"; }
             ]
-            ++ lib.optionals (claudeEnabled && devMode) [
-              { "󱙺 Claude" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "claude"}"; }
-            ]
-            ++ lib.optionals (codexEnabled && devMode) [
-              { "󱙺 Codex" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "codex"}"; }
-            ]
-            ++ lib.optionals (vibeEnabled && devMode) [
-              { "󱙺 Vibe" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "vibe"}"; }
+            ++ lib.optionals (anyAgentEnabled && devMode) [
+              { "󱙺 Agent" = "cd ~/.config/nx/nxcore/ && clear && ${interactiveShellCommand "agent"}"; }
             ]
             ++ lib.optionals (serverMode || managedMode) [
               { " Htop" = "cd ~ && clear && ${interactiveShellCommand "htop"}"; }

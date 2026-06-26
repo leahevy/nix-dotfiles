@@ -90,6 +90,10 @@ args@{
       })
     ];
 
+    enabled = config: {
+      nx.common.dev.agents.enabledAgents = [ "vibe" ];
+    };
+
     home =
       {
         config,

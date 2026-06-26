@@ -103,6 +103,8 @@ args@{
         baseAgents = { };
       in
       {
+        nx.common.dev.agents.enabledAgents = [ "claude" ];
+
         nx.common.dev.claude.instructions = lib.mkOrder 200 baseInstructions;
 
         nx.common.dev.claude.skills = lib.mkOrder 200 baseSkills;

@@ -87,6 +87,8 @@ args@{
         baseAgents = { };
       in
       {
+        nx.common.dev.agents.enabledAgents = [ "opencode" ];
+
         nx.common.dev.opencode.instructions = lib.mkOrder 200 baseInstructions;
 
         nx.common.dev.opencode.skills = lib.mkOrder 200 baseSkills;

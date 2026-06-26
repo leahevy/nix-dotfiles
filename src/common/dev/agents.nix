@@ -54,6 +54,12 @@ args@{
       description = "Shared MCP server configurations for agent tools.";
     };
 
+    enabledAgents = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Agent CLI names contributed by enabled agent modules.";
+    };
+
     agents = lib.mkOption {
       type = lib.types.attrsOf (
         lib.types.submodule {
@@ -306,13 +312,55 @@ args@{
       {
         config,
         mcpServers,
+        enabledAgents,
         ...
       }:
+      let
+        headerTitle = "Agent Hub";
+        titleLen = builtins.stringLength headerTitle;
+        styleWidth = titleLen + 4;
+        headerWidth = styleWidth + 2;
+        maxItemLen = lib.foldl' (acc: n: lib.max acc (builtins.stringLength n)) 0 enabledAgents;
+        menuWidth = lib.max (builtins.stringLength "Select agent:") (3 + maxItemLen);
+        menuOffset = (headerWidth - menuWidth) / 2;
+        agentScript = pkgs.writeShellScriptBin "agent" ''
+          while true; do
+            clear
+            COLS=$(tput cols 2>/dev/null || echo 80)
+            ROWS=$(tput lines 2>/dev/null || echo 24)
+            LEFT=$(( (COLS - ${toString headerWidth}) / 2 ))
+            TOP=$(( (ROWS - 10) / 2 ))
+            [ "$LEFT" -lt 0 ] && LEFT=0
+            [ "$TOP" -lt 0 ] && TOP=0
+            printf '%*s' "$TOP" "" | tr ' ' '\n'
+            ${pkgs.gum}/bin/gum style \
+              --foreground="212" \
+              --border="rounded" \
+              --border-foreground="99" \
+              --align="center" \
+              --width=${toString styleWidth} \
+              --padding="0 2" \
+              --margin="0 0 0 $LEFT" \
+              "${headerTitle}"
+            printf '\n'
+            choice=$(${pkgs.gum}/bin/gum choose \
+              --header="Select agent:" \
+              --cursor="-> " \
+              --height=6 \
+              --padding="0 0 0 $(( LEFT + ${toString menuOffset} ))" \
+              --select-if-one \
+              ${lib.concatStringsSep " " (map (n: "\"${n}\"") enabledAgents)})
+            [ -z "$choice" ] && exit 0
+            "$choice"
+          done
+        '';
+      in
       {
         programs.mcp = {
           enable = true;
           servers = mcpServers;
         };
+        home.packages = lib.optional (enabledAgents != [ ]) agentScript;
       };
   };
 }
