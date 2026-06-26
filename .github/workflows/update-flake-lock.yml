@@ -855,7 +855,7 @@ jobs:
       - name: Merge week - First-run dedup cache
         id: mergewindow-cache
         if: env.CYCLE_MODE == 'merge'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .mergewindow-marker
           key: merge-window-${{ env.MERGE_CYCLE_ID }}
