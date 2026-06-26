@@ -21,7 +21,9 @@ args@{
 
     monitoring = "-a -o on -S on -W 2,MIN,MAX";
     minTemperature = 45;
-    maxTemperature = 55;
+    maxTemperature = null;
+    maxTemperatureDefault = 55;
+    maxTemperatureRaspberryPi = 60;
 
     testNotifications = false;
     pushoverNotifications = true;
@@ -165,10 +167,18 @@ args@{
           echo "SMART ''${FAILURE_TYPE}: ''${DEVICE} - ''${MESSAGE}" >&2
         '';
 
+        resolvedMaxTemperature =
+          if self.settings.maxTemperature != null then
+            self.settings.maxTemperature
+          else if (self.host.hardware.board or null) == "pi5" then
+            self.settings.maxTemperatureRaspberryPi
+          else
+            self.settings.maxTemperatureDefault;
+
         resolvedMonitoring =
           builtins.replaceStrings
             [ "MIN" "MAX" ]
-            [ (toString self.settings.minTemperature) (toString self.settings.maxTemperature) ]
+            [ (toString self.settings.minTemperature) (toString resolvedMaxTemperature) ]
             self.settings.monitoring;
         baseOptions = "${resolvedMonitoring} -m root";
         testOptions = if self.settings.testNotifications then " -M test" else "";
