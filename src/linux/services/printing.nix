@@ -89,6 +89,16 @@ args@{
           string = "\\[Job [0-9]+\\] ppdFilterLoadPPD: Last filter could not get determined, page logging by the PDF filter turned off\\.";
         }
         {
+          service = "cups.service";
+          tag = "cupsd";
+          string = "\\[Job [0-9]+\\] No suitable destination host found by cups-browsed, retrying later";
+        }
+        {
+          service = "cups.service";
+          tag = "cupsd";
+          string = "\\[Job [0-9]+\\] Backend implicitclass returned status 7 \\(retry job immediately\\)";
+        }
+        {
           string = "^cups\\.socket$";
           service = "ensure-printers.service";
           tag = "systemctl";
