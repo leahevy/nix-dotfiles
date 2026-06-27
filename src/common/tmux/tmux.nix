@@ -59,7 +59,8 @@ args@{
             "managed"
           ];
           vimEnabled = config.nx.common.nvim.nixvim.enable;
-          anyAgentEnabled = config.nx.common.dev.agents.enabledAgents != [ ];
+          anyAgentEnabled =
+            config.nx.common.dev.agents.enable && config.nx.common.dev.agents.enabledAgents != [ ];
 
           main = {
             windows = [
