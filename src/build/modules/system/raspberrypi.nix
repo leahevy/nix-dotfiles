@@ -20,6 +20,8 @@ args@{
 
       systemd.services.nix-daemon.serviceConfig.CPUQuota = "80%";
 
+      powerManagement.cpuFreqGovernor = "performance";
+
       boot.kernelParams = [
         "nvme_core.default_ps_max_latency_us=0"
         "pcie_aspm=off"
