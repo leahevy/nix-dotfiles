@@ -81,6 +81,36 @@ args@{
             MulticastDNS=no
           '';
         };
+
+        systemd.services.network-watchdog-ethernet =
+          lib.mkIf (host.settings.networking.useNetworkManager && host.ethernetDeviceName != null)
+            {
+              description = "Recover Ethernet connection if NetworkManager loses its IP";
+              serviceConfig = {
+                Type = "oneshot";
+                ExecStart = pkgs.writeShellScript "network-watchdog-ethernet" ''
+                  _carrier=$(${pkgs.coreutils}/bin/cat /sys/class/net/${host.ethernetDeviceName}/carrier 2>/dev/null || echo 0)
+                  if [[ "$_carrier" != "1" ]]; then
+                    exit 0
+                  fi
+                  if ${pkgs.iproute2}/bin/ip -o addr show ${host.ethernetDeviceName} scope global | ${pkgs.gnugrep}/bin/grep -q 'inet '; then
+                    exit 0
+                  fi
+                  ${pkgs.networkmanager}/bin/nmcli connection up Ethernet
+                '';
+              };
+            };
+
+        systemd.timers.network-watchdog-ethernet =
+          lib.mkIf (host.settings.networking.useNetworkManager && host.ethernetDeviceName != null)
+            {
+              wantedBy = [ "timers.target" ];
+              timerConfig = {
+                OnBootSec = "3min";
+                OnUnitInactiveSec = "2min";
+                RandomizedDelaySec = 15;
+              };
+            };
       };
   };
 }
