@@ -49,10 +49,12 @@ args@{
                         interface-name = ifSet host.ethernetDeviceName "";
                         uuid = helpers.generateUUID "ethernet-${host.ethernetDeviceName}";
                         autoconnect = true;
+                        autoconnect-retries = 0;
                       };
 
                       ipv4 = {
                         method = "auto";
+                        dhcp-timeout = 30;
                       };
 
                       ipv6 = {
