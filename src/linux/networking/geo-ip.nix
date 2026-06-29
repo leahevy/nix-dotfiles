@@ -215,6 +215,10 @@ in
             kernel = true;
           }
           {
+            string = "geo-ip-drop: .*PROTO=TCP.*ACK PSH FIN URGP=0";
+            kernel = true;
+          }
+          {
             string = "geo-ip-drop: .*PROTO=TCP.*ACK URGP=0";
             kernel = true;
           }
