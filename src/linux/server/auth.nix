@@ -488,6 +488,24 @@ in
                 config.nx.linux.server.auth.oidcProviderSystemdService != null
               ) config.nx.linux.server.auth.oidcProviderSystemdService;
               bindsTo = [ "nx-oauth2-proxy-env.service" ];
+              serviceConfig.ExecStartPre = lib.mkIf (config.nx.linux.server.auth.oidcDiscoveryUrl != null) (
+                toString (
+                  pkgs.writeShellScript "nx-oauth2-proxy-wait-oidc" ''
+                    _elapsed=0
+                    _sleep=1
+                    while ! ${pkgs.curl}/bin/curl -sf --max-time 5 \
+                        ${lib.escapeShellArg config.nx.linux.server.auth.oidcDiscoveryUrl} >/dev/null 2>&1; do
+                      if [[ $_elapsed -ge 120 ]]; then
+                        printf 'OIDC provider not ready after %ss\n' "$_elapsed" >&2
+                        exit 1
+                      fi
+                      ${pkgs.coreutils}/bin/sleep "$_sleep"
+                      _elapsed=$((_elapsed + _sleep))
+                      [[ $_sleep -lt 10 ]] && _sleep=$((_sleep + 1))
+                    done
+                  ''
+                )
+              );
             };
 
             systemd.services.nginx.restartTriggers = [
