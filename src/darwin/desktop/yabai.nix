@@ -145,12 +145,12 @@ args@{
   module = {
     darwin.enabled = config: {
       nx.homebrew.taps = [
-        "koekeishiya/formulae"
+        "asmvik/formulae"
         "FelixKratz/formulae"
       ];
       nx.homebrew.brews = [
-        "yabai"
-        "skhd"
+        "asmvik/formulae/yabai"
+        "asmvik/formulae/skhd"
         {
           name = "borders";
           restartOnChanged = true;
