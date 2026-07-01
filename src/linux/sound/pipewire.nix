@@ -166,6 +166,12 @@ args@{
           user = true;
           unitless = true;
         }
+        {
+          tag = "pipewire";
+          string = "mod\\.client-node: detected old client version [0-9]+";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 

@@ -55,6 +55,21 @@ args@{
       };
     };
 
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          tag = "steam";
+          string = "pressure-vessel-wrap\\[[0-9]+\\]: Internal error: _srt_architecture_read_elf: assertion.*failed";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "systemd-coredump";
+          string = "Process [0-9]+ \\(wine\\) of user [0-9]+ dumped core\\.";
+        }
+      ];
+    };
+
     standalone =
       config:
       let
