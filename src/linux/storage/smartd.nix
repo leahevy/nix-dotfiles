@@ -24,7 +24,7 @@ args@{
     minTemperature = 45;
     maxTemperature = null;
     maxTemperatureDefault = 55;
-    maxTemperatureRaspberryPi = 63;
+    maxTemperatureRaspberryPi = 66;
 
     testNotifications = false;
     pushoverNotifications = true;
