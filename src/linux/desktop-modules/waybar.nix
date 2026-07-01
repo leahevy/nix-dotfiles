@@ -505,6 +505,7 @@ args@{
                 padding: 10px 4px 10px 4px;
                 margin: 0 0px;
                 background-color: ${background};
+                color: ${config.nx.preferences.theme.colors.main.foregrounds.subtle.html};
                 border-radius: 0px;
                 transition: all 0.3s ease;
               }
@@ -522,7 +523,7 @@ args@{
               }
 
               #workspaces button.active, #workspaces button.focused, #workspaces button:hover {
-                color: ${config.nx.preferences.theme.colors.main.foregrounds.strong.html};
+                color: ${config.nx.preferences.theme.colors.main.foregrounds.primary.html};
               }
 
               #workspaces button.urgent label {
