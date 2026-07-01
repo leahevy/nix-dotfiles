@@ -842,6 +842,7 @@ args@{
         dirtyMarkerPath = "${stateDir}/pending-clean-shutdown";
         crashMarkerPath = "${stateDir}/unclean-shutdown-detected";
         crashRecoveryDatePath = "${stateDir}/monthly-crash-recovery-last-date";
+        monthlyLastRunPath = "${stateDir}/monthly-last-run";
 
         effectiveRegular =
           if enableRegularHealthCheck != null then
@@ -2938,12 +2939,30 @@ args@{
               User = "root";
               TimeoutStartSec = monthlyServiceTimeoutSec;
               SuccessExitStatus = 1;
-              ExecStart = makeTimerScript {
-                endpointName = monthlyEndpointName;
-                checks = allMonthlyChecks;
-                networkTimeoutSec = 900;
-                allowRetry = false;
-              };
+              ExecStart =
+                let
+                  monthlyScript = makeTimerScript {
+                    endpointName = monthlyEndpointName;
+                    checks = allMonthlyChecks;
+                    networkTimeoutSec = 900;
+                    allowRetry = false;
+                  };
+                in
+                pkgs.writeShellScript "nx-hc-monthly-guarded" ''
+                  set -euo pipefail
+                  _now=$(${pkgs.coreutils}/bin/date +%s)
+                  if [[ -f ${lib.escapeShellArg monthlyLastRunPath} ]]; then
+                    _last=$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg monthlyLastRunPath} 2>/dev/null || echo 0)
+                    if [[ "$_last" =~ ^[0-9]+$ ]] && [[ $((_now - _last)) -lt 604800 ]]; then
+                      echo "Monthly health check skipped: last run was $((_now - _last))s ago, limit is 604800s"
+                      exit 0
+                    fi
+                  fi
+                  _monthly_exit=0
+                  ${monthlyScript} || _monthly_exit=$?
+                  ${pkgs.coreutils}/bin/date +%s > ${lib.escapeShellArg monthlyLastRunPath} || true
+                  exit $_monthly_exit
+                '';
             }
             // (mkLogFilterAttrs builtinLogFilter.monthly);
           };
