@@ -505,22 +505,22 @@ args@{
               exit 0
           fi
 
-          for attempt in {1..5}; do
+          for attempt in {1..10}; do
               if ${pkgs.curl}/bin/curl -fsS -m 30 --connect-timeout 10 -o /dev/null --config "$TEMP_CONFIG" ${(self.options config).pushoverAPIEndpoint}; then
                   exit 0
               else
                   exit_code=$?
-                  if [[ $attempt -lt 5 ]]; then
-                      sleep_time=$((attempt * 2))
-                      echo "Pushover API call failed (attempt $attempt/5), retrying in $sleep_time seconds..." >&2
+                  if [[ $attempt -lt 10 ]]; then
+                      sleep_time=$(( (1 << attempt) < 60 ? (1 << attempt) : 60 ))
+                      echo "Pushover API call failed (attempt $attempt/10), retrying in $sleep_time seconds..." >&2
                       ${pkgs.coreutils}/bin/sleep $sleep_time
                   else
-                      echo "Pushover API call failed after 5 attempts" >&2
+                      echo "Pushover API call failed after 10 attempts" >&2
                       ${
                         self.notifyUser {
                           inherit pkgs;
                           title = "Pushover Notification Failed";
-                          body = "Pushover API call failed after 5 attempts. Please check your internet connection and try again!\\n\\n<b>Title</b>: <u>$TITLE</u>\\n<b>Message</b>: <u>$MESSAGE</u>";
+                          body = "Pushover API call failed after 10 attempts. Please check your internet connection and try again!\\n\\n<b>Title</b>: <u>$TITLE</u>\\n<b>Message</b>: <u>$MESSAGE</u>";
                           icon = "dialog-error";
                           urgency = "critical";
                           validation = { inherit config; };

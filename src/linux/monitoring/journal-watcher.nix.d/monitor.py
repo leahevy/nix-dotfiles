@@ -842,7 +842,7 @@ def process_message(
                     for s in pushover_cmd
                 ]
                 try:
-                    result = subprocess.run(pushover_cmd, check=False, timeout=30)
+                    result = subprocess.run(pushover_cmd, check=False, timeout=450)
                     if result.returncode == 0:
                         stats.pushover += 1
                     else:
