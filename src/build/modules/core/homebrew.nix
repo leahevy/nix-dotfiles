@@ -245,7 +245,7 @@ in
               echo
               echo -e "''${WHITE}Setting up tap trust...''${RESET}"
               export HOMEBREW_REQUIRE_TAP_TRUST=1
-              rm -f "/tmp/.homebrew/trust.json"
+              rm -rf /tmp/.homebrew
               ${lib.concatMapStrings (tap: ''
                 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust '${tap}'
               '') cfg.taps}
@@ -254,15 +254,17 @@ in
                 let
                   name = if builtins.isString entry then entry else entry.name;
                 in
-                lib.optionalString (lib.hasInfix "/" name) ''
-                  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust --formula '${name}'
-                ''
+                lib.optionalString (lib.hasInfix "/" name && !(builtins.any (tap: lib.hasPrefix tap name) cfg.taps))
+                  ''
+                    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust --formula '${name}'
+                  ''
               ) cfg.brews}
               ${lib.concatMapStrings (
                 cask:
-                lib.optionalString (lib.hasInfix "/" cask) ''
-                  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust --cask '${cask}'
-                ''
+                lib.optionalString (lib.hasInfix "/" cask && !(builtins.any (tap: lib.hasPrefix tap cask) cfg.taps))
+                  ''
+                    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust --cask '${cask}'
+                  ''
               ) cfg.casks}
 
               echo
@@ -320,6 +322,16 @@ in
                     ''
                 ) cfg.notes
               )}
+            '';
+            executable = true;
+          };
+
+          "${defs.binDir}/brew" = {
+            text = ''
+              #!/usr/bin/env bash
+              set -euo pipefail
+              export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp
+              exec "''${HOMEBREW_PREFIX:-/opt/homebrew}/bin/brew" "$@"
             '';
             executable = true;
           };
