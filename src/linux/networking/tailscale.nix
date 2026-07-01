@@ -28,6 +28,16 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          service = "systemd-resolved.service";
+          tag = "systemd-resolved";
+          string = "Using degraded feature set UDP instead of UDP\\+EDNS0 for DNS server 100\\.100\\.100\\.100\\.";
+        }
+      ];
+    };
+
     system =
       config:
       let
