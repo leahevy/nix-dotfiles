@@ -179,6 +179,7 @@ args@{
         ++ (with pkgs; [
           mangohud
           winetricks
+          prelink
           (if withWayland then wineWow64Packages.waylandFull else wineWow64Packages.stable)
         ]);
 
