@@ -1561,7 +1561,7 @@ rec {
     ) fns;
 
   importModule =
-    args: moduleSpec: allProcessedModules: buildContext: exportsPerInput:
+    args: moduleSpec: allProcessedModules: buildContext: exportsPerInput: deploymentMode:
     let
       modulePath =
         helpers.buildModuleFilePath moduleSpec.input moduleSpec.inputName moduleSpec.group
@@ -1603,13 +1603,15 @@ rec {
       architecture = resolveArchitecture args;
 
       applicableFns = selectApplicableModuleFns {
-        inherit module buildContext architecture;
+        inherit
+          module
+          buildContext
+          architecture
+          deploymentMode
+          ;
         isVirtual = args.isVirtual or false;
         isTestingVM = args.isTestingVM or false;
         isProductionVM = args.isProductionVM or false;
-        deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
-          "deploymentMode"
-        ] "develop";
         prefix = "module";
         sourceModule = toString modulePath;
         moduleNxPath = [
@@ -1640,8 +1642,11 @@ rec {
           lib.mapAttrs (moduleName: moduleExports: { exports = moduleExports; }) groupMods
         ) inputGroups
       ) (buildAllModuleExports args allProcessedModules);
+      deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
+        "deploymentMode"
+      ] "develop";
       moduleResults = map (
-        spec: importModule args spec allProcessedModules buildContext exportsPerInput
+        spec: importModule args spec allProcessedModules buildContext exportsPerInput deploymentMode
       ) moduleSpecs;
     in
     {
@@ -2609,6 +2614,9 @@ rec {
     let
       architecture = resolveArchitecture args;
       processedModules = args.processedModules or { };
+      deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
+        "deploymentMode"
+      ] "develop";
 
       isModuleDisabled =
         spec:
@@ -2669,13 +2677,10 @@ rec {
                   builtins.filter (f: f.type == fnType) (
                     selectApplicableModuleFns (
                       {
-                        inherit module architecture;
+                        inherit module architecture deploymentMode;
                         isVirtual = args.isVirtual or false;
                         isTestingVM = args.isTestingVM or false;
                         isProductionVM = args.isProductionVM or false;
-                        deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
-                          "deploymentMode"
-                        ] "develop";
                         prefix = "module";
                         buildContext = "system";
                         sourceModule = toString spec.modulePath;
