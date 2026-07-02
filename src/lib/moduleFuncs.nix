@@ -10,68 +10,33 @@ let
 in
 let
   nixdPath = base: sub: if lib.hasSuffix "/" base then "${base}${sub}" else "${base}.nix.d/${sub}";
+
+  resolveArchitecture =
+    self:
+    if self ? user && self.user ? architecture then
+      self.user.architecture
+    else if self ? host && self.host ? architecture then
+      self.host.architecture
+    else
+      throw "No architecture found in self context";
 in
 rec {
   commonFuncs = {
     # Check if current module architecture is Linux
     # Usage: isLinux $SELF
-    isLinux =
-      self:
-      let
-        architecture =
-          if self ? user && self.user ? architecture then
-            self.user.architecture
-          else if self ? host && self.host ? architecture then
-            self.host.architecture
-          else
-            throw "No architecture found in self context";
-      in
-      helpers.isLinuxArch architecture;
+    isLinux = self: helpers.isLinuxArch (resolveArchitecture self);
 
     # Check if current module architecture is Darwin/macOS
     # Usage: isDarwin $SELF
-    isDarwin =
-      self:
-      let
-        architecture =
-          if self ? user && self.user ? architecture then
-            self.user.architecture
-          else if self ? host && self.host ? architecture then
-            self.host.architecture
-          else
-            throw "No architecture found in self context";
-      in
-      helpers.isDarwinArch architecture;
+    isDarwin = self: helpers.isDarwinArch (resolveArchitecture self);
 
     # Check if current module architecture is x86_64
     # Usage: isX86_64 $SELF
-    isX86_64 =
-      self:
-      let
-        architecture =
-          if self ? user && self.user ? architecture then
-            self.user.architecture
-          else if self ? host && self.host ? architecture then
-            self.host.architecture
-          else
-            throw "No architecture found in self context";
-      in
-      helpers.isX86_64Arch architecture;
+    isX86_64 = self: helpers.isX86_64Arch (resolveArchitecture self);
 
     # Check if current module architecture is AArch64 (ARM64)
     # Usage: isAARCH64 $SELF
-    isAARCH64 =
-      self:
-      let
-        architecture =
-          if self ? user && self.user ? architecture then
-            self.user.architecture
-          else if self ? host && self.host ? architecture then
-            self.host.architecture
-          else
-            throw "No architecture found in self context";
-      in
-      helpers.isAARCH64Arch architecture;
+    isAARCH64 = self: helpers.isAARCH64Arch (resolveArchitecture self);
 
     isVirtual = self: self.isVirtual or false;
 
