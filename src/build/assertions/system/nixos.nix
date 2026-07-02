@@ -54,15 +54,7 @@ in
     "hostname"
     "mainUser"
   ]
-  ++ (
-    let
-      systemModuleAssertions = funcs.collectModuleAssertions args processedModules;
-      evaluateModuleAssertions = funcs.evaluateModuleAssertions args {
-        processedModules = processedModules;
-      };
-    in
-    map evaluateModuleAssertions systemModuleAssertions
-  )
+  ++ (funcs.collectAndEvaluateModuleAssertions args processedModules)
   ++ (helpers.validateSystemdReferences {
     inherit host;
     config = config;

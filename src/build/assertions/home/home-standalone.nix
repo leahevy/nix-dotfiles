@@ -17,15 +17,7 @@ args@{
       message = "Standalone Home Manager profiles only support deploymentMode local or develop!";
     }
   ]
-  ++ (
-    let
-      homeModuleAssertions = funcs.collectModuleAssertions args processedModules;
-      evaluateModuleAssertions = funcs.evaluateModuleAssertions args {
-        processedModules = processedModules;
-      };
-    in
-    map evaluateModuleAssertions homeModuleAssertions
-  )
+  ++ (funcs.collectAndEvaluateModuleAssertions args processedModules)
   ++ [
     {
       assertion = user.settings.desktop == null || user.settings.terminal != null;

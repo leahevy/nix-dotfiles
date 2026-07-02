@@ -1804,94 +1804,53 @@ rec {
       }) specialisations;
     };
 
-  collectModuleAssertions =
+  collectAndEvaluateModuleAssertions =
     args: processedModules:
-    let
-      collectFromModules =
-        modules:
-        lib.flatten (
+    lib.flatten (
+      lib.mapAttrsToList (
+        inputName: inputGroups:
+        lib.mapAttrsToList (
+          groupName: groupModules:
           lib.mapAttrsToList (
-            inputName: inputGroups:
-            lib.mapAttrsToList (
-              groupName: groupModules:
-              lib.mapAttrsToList (
-                moduleName: moduleSettings:
-                let
-                  moduleSpec = {
-                    input = args.inputs.${inputName};
-                    inputName = inputName;
-                    group = groupName;
-                    name = moduleName;
-                    settings = moduleSettings;
-                  };
-                  modulePath =
-                    helpers.buildModuleFilePath moduleSpec.input moduleSpec.inputName moduleSpec.group
-                      moduleSpec.name;
-                  moduleResult = import modulePath {
-                    lib = args.lib;
-                    pkgs = args.pkgs;
-                    funcs = args.funcs;
-                    helpers = args.helpers;
-                    defs = args.defs;
-                    self = { };
-                  };
-                in
-                map (
-                  assertion:
-                  assertion
-                  // {
-                    moduleSpec = moduleSpec;
-                    modulePath = modulePath;
-                  }
-                ) (moduleResult.assertions or [ ])
-              ) groupModules
-            ) inputGroups
-          ) modules
-        );
-    in
-    collectFromModules processedModules;
+            moduleName: moduleSettings:
+            let
+              input = args.inputs.${inputName};
+              modulePath = helpers.buildModuleFilePath input inputName groupName moduleName;
 
-  evaluateModuleAssertions =
-    args: moduleContext: assertion:
-    let
-      fullModuleContext = mkModuleContext args {
-        user =
-          if args ? user then
-            args.user
-          else if args ? host && args.host ? mainUser then
-            args.host.mainUser
-          else
-            null;
-        moduleBasePath =
-          helpers.buildModuleDir assertion.moduleSpec.inputName assertion.moduleSpec.group
-            assertion.moduleSpec.name;
-        moduleInput = assertion.moduleSpec.input;
-        moduleInputName = assertion.moduleSpec.inputName;
-        settings = assertion.moduleSpec.settings;
-        processedModules = moduleContext.processedModules or { };
-      };
+              moduleContext = mkModuleContext args {
+                user =
+                  if args ? user then
+                    args.user
+                  else if args ? host && args.host ? mainUser then
+                    args.host.mainUser
+                  else
+                    null;
+                moduleBasePath = helpers.buildModuleDir inputName groupName moduleName;
+                moduleInput = input;
+                moduleInputName = inputName;
+                settings = moduleSettings;
+                processedModules = processedModules;
+              };
 
-      enhancedContext = injectModuleFuncs fullModuleContext;
+              enhancedContext = injectModuleFuncs moduleContext;
 
-      consolidatedArgs = {
-        lib = args.lib;
-        pkgs = args.pkgs;
-        funcs = args.funcs;
-        helpers = args.helpers;
-        defs = args.defs;
-        self = enhancedContext;
-      };
-
-      moduleResult = import assertion.modulePath consolidatedArgs;
-      moduleAssertions = moduleResult.assertions or [ ];
-      targetAssertion = builtins.head (
-        builtins.filter (a: a.message == assertion.message) moduleAssertions
-      );
-    in
-    {
-      assertion = targetAssertion.assertion;
-      message = "Module ${assertion.moduleSpec.inputName}.${assertion.moduleSpec.group}.${assertion.moduleSpec.name} assertion failed: ${targetAssertion.message}";
-    };
+              moduleResult = import modulePath {
+                lib = args.lib;
+                pkgs = args.pkgs;
+                funcs = args.funcs;
+                helpers = args.helpers;
+                defs = args.defs;
+                self = enhancedContext;
+              };
+            in
+            map (a: {
+              assertion = a.assertion;
+              message = "Module ${inputName}.${groupName}.${moduleName} assertion failed: ${a.message}";
+            }) (moduleResult.assertions or [ ])
+          ) groupModules
+        ) inputGroups
+      ) processedModules
+    );
 
   normalizeListsToAttrsets =
     modules:
@@ -2178,6 +2137,14 @@ rec {
     else
       [ ];
 
+  allModuleSpecsByInput = lib.genAttrs helpers.allModuleInputsToScan (
+    inputName:
+    if additionalInputs ? ${inputName} then
+      builtins.filter (x: x != null) (scanAllModulesForInput inputName additionalInputs.${inputName})
+    else
+      [ ]
+  );
+
   extractOverlaysFromModule =
     {
       module,
@@ -2245,26 +2212,19 @@ rec {
 
       scanInput =
         inputName:
-        if additionalInputs ? ${inputName} then
+        lib.concatMap (
+          spec:
           let
-            input = additionalInputs.${inputName};
-            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input);
+            moduleResult = builtins.tryEval (import spec.modulePath minimalArgs);
           in
-          lib.concatMap (
-            spec:
-            let
-              moduleResult = builtins.tryEval (import spec.modulePath minimalArgs);
-            in
-            if moduleResult.success then
-              extractOverlaysFromModule {
-                module = moduleResult.value.module or { };
-                inherit system variables;
-              }
-            else
-              [ ]
-          ) moduleSpecs
-        else
-          [ ];
+          if moduleResult.success then
+            extractOverlaysFromModule {
+              module = moduleResult.value.module or { };
+              inherit system variables;
+            }
+          else
+            [ ]
+        ) allModuleSpecsByInput.${inputName};
     in
     lib.concatMap scanInput helpers.allModuleInputsToScan;
 
@@ -2296,55 +2256,48 @@ rec {
 
       scanInput =
         inputName:
-        if additionalInputs ? ${inputName} then
+        map (
+          spec:
           let
-            input = additionalInputs.${inputName};
-            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input);
+            moduleResult = builtins.tryEval (import spec.modulePath minimalArgs);
           in
-          map (
-            spec:
-            let
-              moduleResult = builtins.tryEval (import spec.modulePath minimalArgs);
-            in
-            if moduleResult.success then
-              {
-                inherit (spec)
-                  inputName
-                  groupName
-                  moduleName
-                  modulePath
-                  ;
-                options = moduleResult.value.options or { };
-                rawOptions = moduleResult.value.rawOptions or { };
-                settings = moduleResult.value.settings or { };
-                description = moduleResult.value.description or "";
-                unfree = moduleResult.value.unfree or [ ];
-                exports =
-                  if moduleResult.value ? exports && builtins.isFunction moduleResult.value.exports then
-                    moduleResult.value.exports
-                  else
-                    null;
-                conditionResult = evaluateModuleCondition moduleResult.value minimalSelf { enabled = false; };
-              }
-            else
-              {
-                inherit (spec)
-                  inputName
-                  groupName
-                  moduleName
-                  modulePath
-                  ;
-                options = { };
-                rawOptions = { };
-                settings = { };
-                description = "";
-                unfree = [ ];
-                exports = null;
-                conditionResult = null;
-              }
-          ) moduleSpecs
-        else
-          [ ];
+          if moduleResult.success then
+            {
+              inherit (spec)
+                inputName
+                groupName
+                moduleName
+                modulePath
+                ;
+              options = moduleResult.value.options or { };
+              rawOptions = moduleResult.value.rawOptions or { };
+              settings = moduleResult.value.settings or { };
+              description = moduleResult.value.description or "";
+              unfree = moduleResult.value.unfree or [ ];
+              exports =
+                if moduleResult.value ? exports && builtins.isFunction moduleResult.value.exports then
+                  moduleResult.value.exports
+                else
+                  null;
+              conditionResult = evaluateModuleCondition moduleResult.value minimalSelf { enabled = false; };
+            }
+          else
+            {
+              inherit (spec)
+                inputName
+                groupName
+                moduleName
+                modulePath
+                ;
+              options = { };
+              rawOptions = { };
+              settings = { };
+              description = "";
+              unfree = [ ];
+              exports = null;
+              conditionResult = null;
+            }
+        ) allModuleSpecsByInput.${inputName};
 
       allModuleData = lib.flatten (map scanInput helpers.allModuleInputsToScan);
     in
@@ -2413,27 +2366,22 @@ rec {
 
       scanInput =
         inputName:
-        if additionalInputs ? ${inputName} then
-          let
-            input = additionalInputs.${inputName};
-            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input);
-            enabledSpecs = builtins.filter isModuleEnabled moduleSpecs;
-          in
-          lib.flatten (
-            map (
-              spec:
-              let
-                moduleResult = builtins.tryEval (import spec.modulePath minimalArgs);
-                condResult = builtins.tryEval (
-                  evaluateModuleCondition moduleResult.value minimalSelf { enabled = true; }
-                );
-                conditionFailed = condResult.success && condResult.value == false;
-              in
-              if moduleResult.success && !conditionFailed then moduleResult.value.unfree or [ ] else [ ]
-            ) enabledSpecs
-          )
-        else
-          [ ];
+        let
+          enabledSpecs = builtins.filter isModuleEnabled allModuleSpecsByInput.${inputName};
+        in
+        lib.flatten (
+          map (
+            spec:
+            let
+              moduleResult = builtins.tryEval (import spec.modulePath minimalArgs);
+              condResult = builtins.tryEval (
+                evaluateModuleCondition moduleResult.value minimalSelf { enabled = true; }
+              );
+              conditionFailed = condResult.success && condResult.value == false;
+            in
+            if moduleResult.success && !conditionFailed then moduleResult.value.unfree or [ ] else [ ]
+          ) enabledSpecs
+        );
     in
     lib.unique (lib.flatten (map scanInput helpers.allModuleInputsToScan));
 
@@ -2509,79 +2457,68 @@ rec {
       ) inputGroups
     ) processedModules;
 
+  mergePerModuleAttrs =
+    perModule: moduleData:
+    lib.foldl' lib.recursiveUpdate { } (
+      map (m: {
+        ${m.inputName}.${m.groupName}.${m.moduleName} = perModule m;
+      }) moduleData
+    );
+
   generateOptionsModules =
     allModuleData:
     let
-      moduleOptionsModules = map (
+      moduleOptions =
         m:
-        if m.options != { } then
-          {
-            options.nx.${m.inputName}.${m.groupName}.${m.moduleName} = lib.mapAttrs (
-              name: spec: if spec._type or null == "option" then spec else lib.mkOption spec
-            ) m.options;
-          }
-        else
-          { }
-      ) allModuleData;
-
-      rawOptionsModules = map (m: if m.rawOptions != { } then { options = m.rawOptions; } else { }) (
-        builtins.filter (m: m.rawOptions != { }) allModuleData
-      );
-
-      settingsOptionsModules = map (
-        m:
-        if m.settings != { } && m.options == { } && m.rawOptions == { } then
-          {
-            options.nx.${m.inputName}.${m.groupName}.${m.moduleName} = lib.mapAttrs (
-              name: defaultValue:
-              lib.mkOption {
-                type = lib.types.anything;
-                default = defaultValue;
-              }
-            ) m.settings;
-          }
-        else
-          { }
-      ) allModuleData;
-
-      enableOptionsModules = map (m: {
-        options.nx.${m.inputName}.${m.groupName}.${m.moduleName}.enable = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-        };
-      }) allModuleData;
-
-      metaOptionsModules = map (m: {
-        options.nx.${m.inputName}.${m.groupName}.${m.moduleName}.meta = lib.mkOption {
-          type = lib.types.submodule {
-            options = {
-              description = lib.mkOption {
-                type = lib.types.str;
-                default = "";
-              };
-              input = lib.mkOption {
-                type = lib.types.str;
-                default = "";
-              };
-              group = lib.mkOption {
-                type = lib.types.str;
-                default = "";
-              };
-              name = lib.mkOption {
-                type = lib.types.str;
-                default = "";
+        lib.optionalAttrs (m.options != { }) (
+          lib.mapAttrs (
+            name: spec: if spec._type or null == "option" then spec else lib.mkOption spec
+          ) m.options
+        )
+        // lib.optionalAttrs (m.settings != { } && m.options == { } && m.rawOptions == { }) (
+          lib.mapAttrs (
+            name: defaultValue:
+            lib.mkOption {
+              type = lib.types.anything;
+              default = defaultValue;
+            }
+          ) m.settings
+        )
+        // {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+          };
+          meta = lib.mkOption {
+            type = lib.types.submodule {
+              options = {
+                description = lib.mkOption {
+                  type = lib.types.str;
+                  default = "";
+                };
+                input = lib.mkOption {
+                  type = lib.types.str;
+                  default = "";
+                };
+                group = lib.mkOption {
+                  type = lib.types.str;
+                  default = "";
+                };
+                name = lib.mkOption {
+                  type = lib.types.str;
+                  default = "";
+                };
               };
             };
+            default = { };
           };
-          default = { };
         };
-      }) allModuleData;
+
+      rawOptionsModules = map (m: { options = m.rawOptions; }) (
+        builtins.filter (m: m.rawOptions != { }) allModuleData
+      );
     in
-    (builtins.filter (m: m != { }) moduleOptionsModules)
-    ++ rawOptionsModules
-    ++ (builtins.filter (m: m != { }) settingsOptionsModules)
-    ++ enableOptionsModules
-    ++ metaOptionsModules;
+    [ { options.nx = mergePerModuleAttrs moduleOptions allModuleData; } ] ++ rawOptionsModules;
 
   generateSettingsValueModules =
     allModuleData: processedModules:
@@ -2589,97 +2526,80 @@ rec {
       settingsOnlyModules = builtins.filter (
         m: m.settings != { } && m.options == { } && m.rawOptions == { }
       ) allModuleData;
+
+      moduleValues =
+        m:
+        removeAttrs (processedModules.${m.inputName}.${m.groupName}.${m.moduleName} or { }
+        ) systemManagedAttrs;
     in
-    map (
-      m:
-      let
-        mergedSettings = processedModules.${m.inputName}.${m.groupName}.${m.moduleName} or { };
-        filteredSettings = removeAttrs mergedSettings systemManagedAttrs;
-      in
-      { config, ... }:
-      {
-        config.nx.${m.inputName}.${m.groupName}.${m.moduleName} = filteredSettings;
-      }
-    ) settingsOnlyModules;
+    [ { config.nx = mergePerModuleAttrs moduleValues settingsOnlyModules; } ];
 
   generateOptionsValueModules =
     allModuleData: processedModules:
     let
       optionsOnlyModules = builtins.filter (m: m.options != { } && m.settings == { }) allModuleData;
+
+      moduleValues =
+        m:
+        lib.mapAttrs (name: value: value) (
+          removeAttrs (processedModules.${m.inputName}.${m.groupName}.${m.moduleName} or { }
+          ) systemManagedAttrs
+        );
     in
-    map (
-      m:
-      let
-        mergedSettings = processedModules.${m.inputName}.${m.groupName}.${m.moduleName} or { };
-        filteredSettings = removeAttrs mergedSettings systemManagedAttrs;
-      in
-      { config, ... }:
-      {
-        config.nx.${m.inputName}.${m.groupName}.${m.moduleName} = lib.mapAttrs (
-          name: value: value
-        ) filteredSettings;
-      }
-    ) optionsOnlyModules;
+    [ { config.nx = mergePerModuleAttrs moduleValues optionsOnlyModules; } ];
 
   generateEnableValueModules =
     allModuleData: processedModules:
-    map (
-      m:
-      let
-        isEnabled =
+    let
+      moduleValues = m: {
+        enable =
           processedModules ? ${m.inputName}
           && processedModules.${m.inputName} ? ${m.groupName}
           && processedModules.${m.inputName}.${m.groupName} ? ${m.moduleName};
-      in
-      { config, ... }:
-      {
-        config.nx.${m.inputName}.${m.groupName}.${m.moduleName}.enable = isEnabled;
-      }
-    ) allModuleData;
+      };
+    in
+    [ { config.nx = mergePerModuleAttrs moduleValues allModuleData; } ];
 
   generateUnfreeValueModules =
     allModuleData: processedModules:
-    lib.flatten (
-      map (
-        m:
-        let
-          isEnabled =
-            processedModules ? ${m.inputName}
-            && processedModules.${m.inputName} ? ${m.groupName}
-            && processedModules.${m.inputName}.${m.groupName} ? ${m.moduleName};
-          unfreeList = m.unfree or [ ];
-        in
-        lib.optional (isEnabled && unfreeList != [ ]) (
-          { config, ... }:
-          {
-            config.nx.unfree = unfreeList;
-          }
-        )
-      ) allModuleData
-    );
+    let
+      unfreePackages = lib.flatten (
+        map (
+          m:
+          let
+            isEnabled =
+              processedModules ? ${m.inputName}
+              && processedModules.${m.inputName} ? ${m.groupName}
+              && processedModules.${m.inputName}.${m.groupName} ? ${m.moduleName};
+          in
+          if isEnabled then m.unfree or [ ] else [ ]
+        ) allModuleData
+      );
+    in
+    lib.optional (unfreePackages != [ ]) { config.nx.unfree = unfreePackages; };
 
   generateMetaValueModules =
     allModuleData:
-    map (
-      m:
-      let
-        autoDescription = lib.strings.concatStrings [
-          (lib.strings.toUpper (lib.strings.substring 0 1 m.moduleName))
-          (lib.strings.substring 1 (-1) m.moduleName)
-          " Configuration"
-        ];
-        finalDescription = if m.description != "" then m.description else autoDescription;
-      in
-      { config, ... }:
-      {
-        config.nx.${m.inputName}.${m.groupName}.${m.moduleName}.meta = {
-          description = finalDescription;
-          input = m.inputName;
-          group = m.groupName;
-          name = m.moduleName;
+    let
+      moduleValues =
+        m:
+        let
+          autoDescription = lib.strings.concatStrings [
+            (lib.strings.toUpper (lib.strings.substring 0 1 m.moduleName))
+            (lib.strings.substring 1 (-1) m.moduleName)
+            " Configuration"
+          ];
+        in
+        {
+          meta = {
+            description = if m.description != "" then m.description else autoDescription;
+            input = m.inputName;
+            group = m.groupName;
+            name = m.moduleName;
+          };
         };
-      }
-    ) allModuleData;
+    in
+    [ { config.nx = mergePerModuleAttrs moduleValues allModuleData; } ];
 
   importAllModuleFnsOfType =
     fnType: args:
@@ -2700,73 +2620,69 @@ rec {
 
       scanInput =
         inputName:
-        if additionalInputs ? ${inputName} then
-          let
-            input = additionalInputs.${inputName};
-            allSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input);
-            moduleSpecs = if fnType == "disabled" then builtins.filter isModuleDisabled allSpecs else allSpecs;
-          in
-          lib.flatten (
-            map (
-              spec:
-              let
-                moduleDir = helpers.buildModuleDir spec.inputName spec.groupName spec.moduleName;
+        let
+          allSpecs = allModuleSpecsByInput.${inputName};
+          moduleSpecs = if fnType == "disabled" then builtins.filter isModuleDisabled allSpecs else allSpecs;
+        in
+        lib.flatten (
+          map (
+            spec:
+            let
+              moduleDir = helpers.buildModuleDir spec.inputName spec.groupName spec.moduleName;
 
-                moduleContext = mkModuleContext args {
-                  moduleBasePath = moduleDir;
-                  moduleInput = spec.input;
-                  moduleInputName = spec.inputName;
-                  processedModules = processedModules;
-                };
+              moduleContext = mkModuleContext args {
+                moduleBasePath = moduleDir;
+                moduleInput = spec.input;
+                moduleInputName = spec.inputName;
+                processedModules = processedModules;
+              };
 
-                enhancedModuleContext = injectModuleFuncs moduleContext;
+              enhancedModuleContext = injectModuleFuncs moduleContext;
 
-                moduleSelf =
-                  if fnType == "init" then
-                    enhancedModuleContext
-                    // {
-                      options = config: config.nx.${spec.inputName}.${spec.groupName}.${spec.moduleName} or { };
+              moduleSelf =
+                if fnType == "init" then
+                  enhancedModuleContext
+                  // {
+                    options = config: config.nx.${spec.inputName}.${spec.groupName}.${spec.moduleName} or { };
+                  }
+                else
+                  enhancedModuleContext;
+
+              consolidatedArgs = {
+                lib = args.lib;
+                pkgs = args.pkgs;
+                funcs = args.funcs;
+                helpers = args.helpers;
+                defs = args.defs;
+                self = moduleSelf;
+              };
+
+              moduleResult = builtins.tryEval (import spec.modulePath consolidatedArgs);
+
+              module = if moduleResult.success then moduleResult.value.module or { } else { };
+
+              wrapFn = fn: { config, ... }: fn config;
+
+              matchingFns = map (f: wrapFn f.fn) (
+                builtins.filter (f: f.type == fnType) (
+                  selectApplicableModuleFns (
+                    {
+                      inherit module architecture deploymentMode;
+                      isVirtual = args.isVirtual or false;
+                      isTestingVM = args.isTestingVM or false;
+                      isProductionVM = args.isProductionVM or false;
+                      prefix = "module";
+                      buildContext = "system";
+                      sourceModule = toString spec.modulePath;
                     }
-                  else
-                    enhancedModuleContext;
-
-                consolidatedArgs = {
-                  lib = args.lib;
-                  pkgs = args.pkgs;
-                  funcs = args.funcs;
-                  helpers = args.helpers;
-                  defs = args.defs;
-                  self = moduleSelf;
-                };
-
-                moduleResult = builtins.tryEval (import spec.modulePath consolidatedArgs);
-
-                module = if moduleResult.success then moduleResult.value.module or { } else { };
-
-                wrapFn = fn: { config, ... }: fn config;
-
-                matchingFns = map (f: wrapFn f.fn) (
-                  builtins.filter (f: f.type == fnType) (
-                    selectApplicableModuleFns (
-                      {
-                        inherit module architecture deploymentMode;
-                        isVirtual = args.isVirtual or false;
-                        isTestingVM = args.isTestingVM or false;
-                        isProductionVM = args.isProductionVM or false;
-                        prefix = "module";
-                        buildContext = "system";
-                        sourceModule = toString spec.modulePath;
-                      }
-                      // (if fnType == "init" then { includeInit = true; } else { includeDisabled = true; })
-                    )
+                    // (if fnType == "init" then { includeInit = true; } else { includeDisabled = true; })
                   )
-                );
-              in
-              matchingFns
-            ) moduleSpecs
-          )
-        else
-          [ ];
+                )
+              );
+            in
+            matchingFns
+          ) moduleSpecs
+        );
     in
     lib.flatten (map scanInput helpers.allModuleInputsToScan);
 

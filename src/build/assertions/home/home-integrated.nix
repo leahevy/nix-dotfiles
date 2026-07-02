@@ -17,15 +17,7 @@ args@{
       message = "user.home-manager must be true for the main user!";
     }
   ]
-  ++ (
-    let
-      homeModuleAssertions = funcs.collectModuleAssertions args processedModules;
-      evaluateModuleAssertions = funcs.evaluateModuleAssertions args {
-        processedModules = processedModules;
-      };
-    in
-    map evaluateModuleAssertions homeModuleAssertions
-  )
+  ++ (funcs.collectAndEvaluateModuleAssertions args processedModules)
   ++ [
     {
       assertion = host.settings.system.desktop == null || user.settings.terminal != null;
