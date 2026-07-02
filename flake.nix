@@ -325,9 +325,6 @@
             host-files
             standalone-user-files
             integrated-user-files
-            nixosArchitectures
-            darwinArchitectures
-            allArchitectures
             ;
         };
 
@@ -389,7 +386,6 @@
             helpers
             defs
             funcs
-            common
             nixosArchitectures
             ;
         };

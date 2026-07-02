@@ -7,7 +7,6 @@
   helpers,
   defs,
   funcs,
-  common,
   nixosArchitectures,
 }:
 let

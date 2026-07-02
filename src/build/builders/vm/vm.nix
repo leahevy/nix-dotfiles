@@ -15,6 +15,7 @@
 let
   inherit (common)
     processHostProfile
+    forEachProfileAndArch
     ;
 
   buildVmConfiguration =
@@ -226,20 +227,5 @@ let
     };
 in
 {
-  buildVmConfigurations = builtins.listToAttrs (
-    lib.flatten (
-      map (
-        profileName:
-        (map (arch: buildVmConfiguration { inherit profileName arch; }) nixosArchitectures)
-        ++ (lib.flatten (
-          map (
-            arch:
-            map (buildArch: buildVmConfiguration { inherit profileName arch buildArch; }) (
-              lib.filter (b: b != arch) nixosArchitectures
-            )
-          ) nixosArchitectures
-        ))
-      ) host-files
-    )
-  );
+  buildVmConfigurations = forEachProfileAndArch nixosArchitectures host-files buildVmConfiguration;
 }

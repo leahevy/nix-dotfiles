@@ -15,6 +15,7 @@
 let
   inherit (common)
     processStandaloneUserProfile
+    forEachProfileAndArch
     ;
 
   buildHomeConfiguration =
@@ -88,21 +89,8 @@ let
 in
 
 {
-  buildHomeConfigurations = builtins.listToAttrs (
-    lib.flatten (
-      map (
-        profileName:
-        (map (arch: buildHomeConfiguration { inherit profileName arch; }) allArchitectures)
-        ++ (lib.flatten (
-          map (
-            arch:
-            map (buildArch: buildHomeConfiguration { inherit profileName arch buildArch; }) (
-              lib.filter (b: b != arch) allArchitectures
-            )
-          ) allArchitectures
-        ))
-      ) standalone-user-files
-    )
-  );
+  buildHomeConfigurations =
+    forEachProfileAndArch allArchitectures standalone-user-files
+      buildHomeConfiguration;
 
 }

@@ -15,6 +15,7 @@
 let
   inherit (common)
     processHostProfile
+    forEachProfileAndArch
     ;
 
   homeIntegrated = import (build + "/builders/home/home-integrated.nix") {
@@ -115,21 +116,8 @@ let
     };
 in
 {
-  buildNixOSConfigurations = builtins.listToAttrs (
-    lib.flatten (
-      map (
-        profileName:
-        (map (arch: buildNixOSConfiguration { inherit profileName arch; }) nixosArchitectures)
-        ++ (lib.flatten (
-          map (
-            arch:
-            map (buildArch: buildNixOSConfiguration { inherit profileName arch buildArch; }) (
-              lib.filter (b: b != arch) nixosArchitectures
-            )
-          ) nixosArchitectures
-        ))
-      ) host-files
-    )
-  );
+  buildNixOSConfigurations =
+    forEachProfileAndArch nixosArchitectures host-files
+      buildNixOSConfiguration;
 
 }

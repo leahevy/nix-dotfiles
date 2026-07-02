@@ -11,9 +11,6 @@
   host-files,
   standalone-user-files,
   integrated-user-files,
-  nixosArchitectures,
-  darwinArchitectures,
-  allArchitectures,
 }:
 
 let
@@ -90,6 +87,84 @@ let
       ];
       inherit specialArgs;
     };
+
+  optionPathsFor =
+    profileType:
+    {
+      nixos = [
+        (build + "/types/shared/all.nix")
+        (build + "/types/shared/main.nix")
+        (build + "/types/system/nixos.nix")
+      ];
+      home-integrated = [
+        (build + "/types/shared/all.nix")
+        (build + "/types/shared/user.nix")
+        (build + "/types/home/home-integrated.nix")
+      ];
+      home-standalone = [
+        (build + "/types/shared/all.nix")
+        (build + "/types/shared/user.nix")
+        (build + "/types/shared/main.nix")
+        (build + "/types/home/home-standalone.nix")
+      ];
+    }
+    .${profileType};
+
+  evalProfile =
+    {
+      profileType,
+      profileName,
+      pkgs,
+      pkgs-unstable,
+      extraSelfContext ? { },
+    }:
+    evalConfigModule {
+      optionPaths = optionPathsFor profileType;
+      configPath = config + "/profiles/${profileType}/${profileName}/${profileName}.nix";
+      specialArgs = {
+        inherit
+          lib
+          variables
+          helpers
+          defs
+          pkgs
+          pkgs-unstable
+          ;
+        self = mkProfileSelf profileType profileName extraSelfContext;
+      };
+    };
+
+  evalProfilesOfType =
+    {
+      profileType,
+      files,
+      attr,
+    }:
+    {
+      pkgs,
+      pkgs-unstable,
+    }:
+    builtins.listToAttrs (
+      map (
+        profileName:
+        let
+          r = evalProfile {
+            inherit
+              profileType
+              profileName
+              pkgs
+              pkgs-unstable
+              ;
+          };
+        in
+        {
+          name = profileName;
+          value = r.config.${attr} // {
+            inherit profileName;
+          };
+        }
+      ) files
+    );
 
   setupPackages =
     {
@@ -273,12 +348,11 @@ let
 
   buildSpecialArgs =
     {
-      pkgs,
       host ? { },
       users ? { },
       user ? { },
       configInputs ? { },
-      helpers ? helpers,
+      helpers,
       nixOSHosts ? { },
       homeIntegratedUsers ? { },
       homeStandaloneUsers ? { },
@@ -298,123 +372,23 @@ let
     // lib.optionalAttrs (users != { }) { inherit users; }
     // lib.optionalAttrs (user != { }) { inherit user; };
 
-  evalNixOSHosts =
-    {
-      pkgs,
-      pkgs-unstable,
-    }:
-    builtins.listToAttrs (
-      map (
-        profileName:
-        let
-          hostConfigPath = config + "/profiles/nixos/${profileName}/${profileName}.nix";
-          r = evalConfigModule {
-            optionPaths = [
-              (build + "/types/shared/all.nix")
-              (build + "/types/shared/main.nix")
-              (build + "/types/system/nixos.nix")
-            ];
-            configPath = hostConfigPath;
-            specialArgs = {
-              inherit
-                lib
-                variables
-                helpers
-                defs
-                pkgs
-                pkgs-unstable
-                ;
-              self = mkProfileSelf "nixos" profileName { };
-            };
-          };
-        in
-        {
-          name = profileName;
-          value = r.config.host // {
-            inherit profileName;
-          };
-        }
-      ) host-files
-    );
+  evalNixOSHosts = evalProfilesOfType {
+    profileType = "nixos";
+    files = host-files;
+    attr = "host";
+  };
 
-  evalHomeIntegratedUsers =
-    {
-      pkgs,
-      pkgs-unstable,
-    }:
-    builtins.listToAttrs (
-      map (
-        profileName:
-        let
-          userConfigPath = config + "/profiles/home-integrated/${profileName}/${profileName}.nix";
-          r = evalConfigModule {
-            optionPaths = [
-              (build + "/types/shared/all.nix")
-              (build + "/types/shared/user.nix")
-              (build + "/types/home/home-integrated.nix")
-            ];
-            configPath = userConfigPath;
-            specialArgs = {
-              inherit
-                lib
-                variables
-                helpers
-                defs
-                pkgs
-                pkgs-unstable
-                ;
-              self = mkProfileSelf "home-integrated" profileName { };
-            };
-          };
-        in
-        {
-          name = profileName;
-          value = r.config.user // {
-            inherit profileName;
-          };
-        }
-      ) integrated-user-files
-    );
+  evalHomeIntegratedUsers = evalProfilesOfType {
+    profileType = "home-integrated";
+    files = integrated-user-files;
+    attr = "user";
+  };
 
-  evalHomeStandaloneUsers =
-    {
-      pkgs,
-      pkgs-unstable,
-    }:
-    builtins.listToAttrs (
-      map (
-        profileName:
-        let
-          userConfigPath = config + "/profiles/home-standalone/${profileName}/${profileName}.nix";
-          r = evalConfigModule {
-            optionPaths = [
-              (build + "/types/shared/all.nix")
-              (build + "/types/shared/user.nix")
-              (build + "/types/shared/main.nix")
-              (build + "/types/home/home-standalone.nix")
-            ];
-            configPath = userConfigPath;
-            specialArgs = {
-              inherit
-                lib
-                variables
-                helpers
-                defs
-                pkgs
-                pkgs-unstable
-                ;
-              self = mkProfileSelf "home-standalone" profileName { };
-            };
-          };
-        in
-        {
-          name = profileName;
-          value = r.config.user // {
-            inherit profileName;
-          };
-        }
-      ) standalone-user-files
-    );
+  evalHomeStandaloneUsers = evalProfilesOfType {
+    profileType = "home-standalone";
+    files = standalone-user-files;
+    attr = "user";
+  };
 
   evalAllProfiles =
     {
@@ -447,38 +421,21 @@ let
 in
 
 {
-  inherit
-    evalConfigModule
-    setupPackages
-    buildSpecialArgs
-    getHardwareModule
-    getDiskoModule
-    ;
-
-  generateNixOSProfiles =
-    profileNames:
-    lib.flatten (
-      map (
-        profileName:
-        map (arch: {
-          name = "${profileName}--${arch}";
-          profileName = profileName;
-          architecture = arch;
-        }) nixosArchitectures
-      ) profileNames
-    );
-
-  generateHomeStandaloneProfiles =
-    profileNames:
-    lib.flatten (
-      map (
-        profileName:
-        map (arch: {
-          name = "${profileName}--${arch}";
-          profileName = profileName;
-          architecture = arch;
-        }) allArchitectures
-      ) profileNames
+  forEachProfileAndArch =
+    architectures: profileNames: f:
+    builtins.listToAttrs (
+      lib.flatten (
+        map (
+          profileName:
+          (map (arch: f { inherit profileName arch; }) architectures)
+          ++ (lib.flatten (
+            map (
+              arch:
+              map (buildArch: f { inherit profileName arch buildArch; }) (lib.filter (b: b != arch) architectures)
+            ) architectures
+          ))
+        ) profileNames
+      )
     );
 
   processHostProfile =
@@ -497,28 +454,14 @@ in
       funcs = makeFuncs (config + "/profiles/nixos/${profileName}") (
         config + "/profiles/home-integrated/${mainUserProfileName}"
       );
-      hostConfigPath = config + "/profiles/nixos/${profileName}/${profileName}.nix";
 
       system = arch;
 
-      preEval = evalConfigModule {
-        optionPaths = [
-          (build + "/types/shared/all.nix")
-          (build + "/types/shared/main.nix")
-          (build + "/types/system/nixos.nix")
-        ];
-        configPath = hostConfigPath;
-        specialArgs = {
-          inherit
-            lib
-            variables
-            helpers
-            defs
-            ;
-          pkgs = { };
-          pkgs-unstable = { };
-          self = mkProfileSelf "nixos" profileName { };
-        };
+      preEval = evalProfile {
+        profileType = "nixos";
+        inherit profileName;
+        pkgs = { };
+        pkgs-unstable = { };
       };
       profileOverlays = funcs.extractOverlaysFromModule {
         module = preEval.config.host.profile or { };
@@ -532,24 +475,11 @@ in
       mainUserPreEval =
         if builtins.isString mainUserProfileName && builtins.pathExists mainUserConfigPath then
           let
-            evalResult = builtins.tryEval (evalConfigModule {
-              optionPaths = [
-                (build + "/types/shared/all.nix")
-                (build + "/types/shared/user.nix")
-                (build + "/types/home/home-integrated.nix")
-              ];
-              configPath = mainUserConfigPath;
-              specialArgs = {
-                inherit
-                  lib
-                  variables
-                  helpers
-                  defs
-                  ;
-                pkgs = { };
-                pkgs-unstable = { };
-                self = mkProfileSelf "home-integrated" mainUserProfileName { };
-              };
+            evalResult = builtins.tryEval (evalProfile {
+              profileType = "home-integrated";
+              profileName = mainUserProfileName;
+              pkgs = { };
+              pkgs-unstable = { };
             });
           in
           if evalResult.success then evalResult.value else null
@@ -605,25 +535,11 @@ in
         unfreePredicate
         ;
 
-      hostEval = evalConfigModule {
-        optionPaths = [
-          (build + "/types/shared/all.nix")
-          (build + "/types/shared/main.nix")
-          (build + "/types/system/nixos.nix")
-        ];
-        configPath = hostConfigPath;
-        specialArgs = {
-          inherit
-            lib
-            variables
-            helpers
-            defs
-            pkgs
-            pkgs-unstable
-            ;
-          self = mkProfileSelf "nixos" profileName {
-            inherit nixOSHosts homeIntegratedUsers homeStandaloneUsers;
-          };
+      hostEval = evalProfile {
+        profileType = "nixos";
+        inherit profileName pkgs pkgs-unstable;
+        extraSelfContext = {
+          inherit nixOSHosts homeIntegratedUsers homeStandaloneUsers;
         };
       };
 
@@ -636,27 +552,12 @@ in
       evalIntegratedUser =
         userProfileName:
         let
-          userConfigPath = config + "/profiles/home-integrated/${userProfileName}/${userProfileName}.nix";
-
-          userEval = evalConfigModule {
-            optionPaths = [
-              (build + "/types/shared/all.nix")
-              (build + "/types/shared/user.nix")
-              (build + "/types/home/home-integrated.nix")
-            ];
-            configPath = userConfigPath;
-            specialArgs = {
-              inherit
-                lib
-                variables
-                helpers
-                defs
-                pkgs
-                pkgs-unstable
-                ;
-              self = mkProfileSelf "home-integrated" userProfileName {
-                inherit nixOSHosts homeIntegratedUsers homeStandaloneUsers;
-              };
+          userEval = evalProfile {
+            profileType = "home-integrated";
+            profileName = userProfileName;
+            inherit pkgs pkgs-unstable;
+            extraSelfContext = {
+              inherit nixOSHosts homeIntegratedUsers homeStandaloneUsers;
             };
           };
         in
@@ -791,9 +692,6 @@ in
         inherit homeIntegratedUsers;
         inherit homeStandaloneUsers;
         specialArgs = buildSpecialArgs {
-          inherit
-            pkgs
-            ;
           configInputs = config.configInputs or { };
           host = hostConfig.host;
           users = hostConfig.users;
@@ -850,29 +748,14 @@ in
       funcs = makeFuncs (config + "/profiles/home-standalone/${profileName}") (
         config + "/profiles/home-standalone/${profileName}"
       );
-      userConfigPath = config + "/profiles/home-standalone/${profileName}/${profileName}.nix";
 
       system = arch;
 
-      preEval = evalConfigModule {
-        optionPaths = [
-          (build + "/types/shared/all.nix")
-          (build + "/types/shared/user.nix")
-          (build + "/types/shared/main.nix")
-          (build + "/types/home/home-standalone.nix")
-        ];
-        configPath = userConfigPath;
-        specialArgs = {
-          inherit
-            lib
-            variables
-            helpers
-            defs
-            ;
-          pkgs = { };
-          pkgs-unstable = { };
-          self = mkProfileSelf "home-standalone" profileName { };
-        };
+      preEval = evalProfile {
+        profileType = "home-standalone";
+        inherit profileName;
+        pkgs = { };
+        pkgs-unstable = { };
       };
       profileOverlays = funcs.extractOverlaysFromModule {
         module = preEval.config.user.profile or { };
@@ -909,26 +792,11 @@ in
         homeStandaloneUsers
         ;
 
-      userEval = evalConfigModule {
-        optionPaths = [
-          (build + "/types/shared/all.nix")
-          (build + "/types/shared/user.nix")
-          (build + "/types/shared/main.nix")
-          (build + "/types/home/home-standalone.nix")
-        ];
-        configPath = userConfigPath;
-        specialArgs = {
-          inherit
-            lib
-            variables
-            helpers
-            defs
-            pkgs
-            pkgs-unstable
-            ;
-          self = mkProfileSelf "home-standalone" profileName {
-            inherit nixOSHosts homeIntegratedUsers homeStandaloneUsers;
-          };
+      userEval = evalProfile {
+        profileType = "home-standalone";
+        inherit profileName pkgs pkgs-unstable;
+        extraSelfContext = {
+          inherit nixOSHosts homeIntegratedUsers homeStandaloneUsers;
         };
       };
 
@@ -947,9 +815,6 @@ in
         user = finalUserConfig;
         configInputs = config.configInputs or { };
         specialArgs = buildSpecialArgs {
-          inherit
-            pkgs
-            ;
           configInputs = config.configInputs or { };
           user = finalUserConfig;
           helpers = localHelpers;
