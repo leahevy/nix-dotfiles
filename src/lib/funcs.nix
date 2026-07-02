@@ -141,6 +141,38 @@ let
       homeIntegratedUsers = args.homeIntegratedUsers or { };
       homeStandaloneUsers = args.homeStandaloneUsers or { };
     };
+
+  filterFalseValues =
+    modules:
+    lib.mapAttrs (
+      inputName: inputGroups:
+      lib.mapAttrs (
+        groupName: groupModules:
+        lib.filterAttrs (
+          moduleName: moduleSettings:
+          if
+            builtins.isAttrs moduleSettings && moduleSettings ? enable && !builtins.isBool moduleSettings.enable
+          then
+            throw "${inputName}.${groupName}.${moduleName}: 'enable' in import attrset must be a bool!"
+          else
+            moduleSettings != false
+            && !(builtins.isAttrs moduleSettings && (moduleSettings.enable or true) == false)
+        ) groupModules
+      ) inputGroups
+    ) modules;
+
+  normalizeModules =
+    modules:
+    lib.mapAttrs (
+      inputName: inputGroups:
+      lib.mapAttrs (
+        groupName: groupModules:
+        lib.mapAttrs (
+          moduleName: moduleSettings:
+          if moduleSettings == true then { } else builtins.removeAttrs moduleSettings [ "enable" ]
+        ) groupModules
+      ) inputGroups
+    ) modules;
 in
 rec {
   inherit moduleFuncs;
@@ -1900,32 +1932,7 @@ rec {
             else
               import modulePath consolidatedArgs;
         in
-        let
-          rawSubmodules = normalizeListsToAttrsets (moduleResult.submodules or { });
-          filterAndNormalizeSubmodules =
-            submodules:
-            lib.mapAttrs (
-              inputName: inputGroups:
-              lib.mapAttrs (
-                groupName: groupModules:
-                lib.mapAttrs
-                  (
-                    moduleName: moduleValue:
-                    if moduleValue == true then { } else builtins.removeAttrs moduleValue [ "enable" ]
-                  )
-                  (
-                    lib.filterAttrs (
-                      moduleName: moduleValue:
-                      if builtins.isAttrs moduleValue && moduleValue ? enable && !builtins.isBool moduleValue.enable then
-                        throw "${inputName}.${groupName}.${moduleName}: 'enable' in import attrset must be a bool!"
-                      else
-                        moduleValue != false && !(builtins.isAttrs moduleValue && (moduleValue.enable or true) == false)
-                    ) groupModules
-                  )
-              ) inputGroups
-            ) submodules;
-        in
-        filterAndNormalizeSubmodules rawSubmodules
+        normalizeModules (filterFalseValues (normalizeListsToAttrsets (moduleResult.submodules or { })))
       ) moduleSpecs;
     in
     lib.foldl lib.recursiveUpdate { } moduleResults;
@@ -2017,38 +2024,6 @@ rec {
   collectAllModulesWithSettings =
     args: initialModules: buildModules:
     let
-      filterFalseValues =
-        modules:
-        lib.mapAttrs (
-          inputName: inputGroups:
-          lib.mapAttrs (
-            groupName: groupModules:
-            lib.filterAttrs (
-              moduleName: moduleSettings:
-              if
-                builtins.isAttrs moduleSettings && moduleSettings ? enable && !builtins.isBool moduleSettings.enable
-              then
-                throw "${inputName}.${groupName}.${moduleName}: 'enable' in import attrset must be a bool!"
-              else
-                moduleSettings != false
-                && !(builtins.isAttrs moduleSettings && (moduleSettings.enable or true) == false)
-            ) groupModules
-          ) inputGroups
-        ) modules;
-
-      normalizeModules =
-        modules:
-        lib.mapAttrs (
-          inputName: inputGroups:
-          lib.mapAttrs (
-            groupName: groupModules:
-            lib.mapAttrs (
-              moduleName: moduleSettings:
-              if moduleSettings == true then { } else builtins.removeAttrs moduleSettings [ "enable" ]
-            ) groupModules
-          ) inputGroups
-        ) modules;
-
       applyDefaultsToModules =
         modules:
         lib.mapAttrs (
