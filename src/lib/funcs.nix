@@ -245,95 +245,76 @@ rec {
       enabled ? false,
     }:
     let
-      evalSpecial =
-        sc:
+      evalConditionWith =
+        c: onList: onBool:
         let
-          raw = moduleResult.${sc.attr} or null;
-          isList = sc ? allowedValues;
+          raw = moduleResult.${c.attr} or null;
+          isList = c ? allowedValues;
         in
         if raw == null then
           null
         else if isList then
           if !builtins.isList raw then
-            throw "Module ${moduleResult.name or "unknown"}: '${sc.attr}' must be a list, got ${builtins.typeOf raw}!"
+            throw "Module ${moduleResult.name or "unknown"}: '${c.attr}' must be a list, got ${builtins.typeOf raw}!"
           else if raw == [ ] then
             null
           else
             let
-              typeErrors =
-                if sc ? datatype then builtins.filter (v: builtins.typeOf v != sc.datatype) raw else [ ];
-              invalid = builtins.filter (v: !(builtins.elem v sc.allowedValues)) raw;
-              result =
-                if typeErrors != [ ] then
-                  throw "Module ${moduleResult.name or "unknown"}: '${sc.attr}' elements must be of type ${sc.datatype}, got: [${builtins.concatStringsSep ", " (map builtins.toJSON typeErrors)}]!"
-                else if invalid != [ ] then
-                  throw "Module ${moduleResult.name or "unknown"}: '${sc.attr}' contains invalid values: [${builtins.concatStringsSep ", " (map builtins.toJSON invalid)}]. Allowed: [${builtins.concatStringsSep ", " sc.allowedValues}]!"
-                else
-                  sc.fn raw self;
+              typeErrors = if c ? datatype then builtins.filter (v: builtins.typeOf v != c.datatype) raw else [ ];
+              invalid = builtins.filter (v: !(builtins.elem v c.allowedValues)) raw;
             in
-            if result == null then
-              null
+            if typeErrors != [ ] then
+              throw "Module ${moduleResult.name or "unknown"}: '${c.attr}' elements must be of type ${c.datatype}, got: [${builtins.concatStringsSep ", " (map builtins.toJSON typeErrors)}]!"
+            else if invalid != [ ] then
+              throw "Module ${moduleResult.name or "unknown"}: '${c.attr}' contains invalid values: [${builtins.concatStringsSep ", " (map builtins.toJSON invalid)}]. Allowed: [${builtins.concatStringsSep ", " c.allowedValues}]!"
             else
-              {
-                label = sc.attr;
-                inherit result;
-              }
+              onList raw
         else if raw == false then
           null
         else if raw != true then
-          throw "Module ${moduleResult.name or "unknown"}: '${sc.attr}' must be true or false, got ${builtins.typeOf raw} (value: ${builtins.toJSON raw})!"
+          throw "Module ${moduleResult.name or "unknown"}: '${c.attr}' must be true or false, got ${builtins.typeOf raw} (value: ${builtins.toJSON raw})!"
         else
-          let
-            result = sc.fn self;
-          in
-          if result == null then
-            null
-          else
-            {
-              label = sc.attr;
-              inherit result;
-            };
+          onBool;
+
+      mkResultEntry =
+        attr: result:
+        if result == null then
+          null
+        else
+          {
+            label = attr;
+            inherit result;
+          };
+
+      evalSpecial =
+        sc:
+        evalConditionWith sc (raw: mkResultEntry sc.attr (sc.fn raw self)) (
+          mkResultEntry sc.attr (sc.fn self)
+        );
 
       specialEntries = builtins.filter (e: e != null) (map evalSpecial specialConditions);
 
       evalRequire =
         rc:
-        let
-          raw = moduleResult.${rc.attr} or null;
-          isList = rc ? allowedValues;
-        in
-        if raw == null then
-          null
-        else if isList then
-          if !builtins.isList raw then
-            throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' must be a list, got ${builtins.typeOf raw}!"
-          else if raw == [ ] then
-            null
-          else
+        evalConditionWith rc
+          (
+            raw:
             let
-              typeErrors =
-                if rc ? datatype then builtins.filter (v: builtins.typeOf v != rc.datatype) raw else [ ];
-              invalid = builtins.filter (v: !(builtins.elem v rc.allowedValues)) raw;
               current = rc.getValue self;
             in
-            if typeErrors != [ ] then
-              throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' elements must be of type ${rc.datatype}, got: [${builtins.concatStringsSep ", " (map builtins.toJSON typeErrors)}]!"
-            else if invalid != [ ] then
-              throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' contains invalid values: [${builtins.concatStringsSep ", " (map builtins.toJSON invalid)}]. Allowed: [${builtins.concatStringsSep ", " rc.allowedValues}]!"
-            else if enabled && !(builtins.elem current raw) then
+            if enabled && !(builtins.elem current raw) then
               throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' requires [${builtins.concatStringsSep ", " raw}] but current ${rc.label} is '${current}'!"
             else
               null
-        else if raw == false then
-          null
-        else if raw != true then
-          throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' must be true or false, got ${builtins.typeOf raw} (value: ${builtins.toJSON raw})!"
-        else if rc.fn self then
-          null
-        else if enabled then
-          throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' requires ${rc.errLabel} but this condition is not met!"
-        else
-          null;
+          )
+          (
+            if rc.fn self then
+              null
+            else if enabled then
+              throw "Module ${moduleResult.name or "unknown"}: '${rc.attr}' requires ${rc.errLabel} but this condition is not met!"
+            else
+              null
+          );
 
       requireCheck = builtins.length (builtins.filter (e: e != null) (map evalRequire requireConditions));
 
