@@ -2517,49 +2517,58 @@ rec {
     let
       moduleOptions =
         m:
-        lib.optionalAttrs (m.options != { }) (
-          lib.mapAttrs (
-            name: spec: if spec._type or null == "option" then spec else lib.mkOption spec
-          ) m.options
-        )
-        // lib.optionalAttrs (m.settings != { } && m.options == { } && m.rawOptions == { }) (
-          lib.mapAttrs (
-            name: defaultValue:
-            lib.mkOption {
-              type = lib.types.anything;
-              default = defaultValue;
-            }
-          ) m.settings
-        )
-        // {
-          enable = lib.mkOption {
-            type = lib.types.bool;
-            default = false;
-          };
-          meta = lib.mkOption {
-            type = lib.types.submodule {
-              options = {
-                description = lib.mkOption {
-                  type = lib.types.str;
-                  default = "";
-                };
-                input = lib.mkOption {
-                  type = lib.types.str;
-                  default = "";
-                };
-                group = lib.mkOption {
-                  type = lib.types.str;
-                  default = "";
-                };
-                name = lib.mkOption {
-                  type = lib.types.str;
-                  default = "";
+        let
+          reserved = builtins.filter (n: m.options ? ${n} || m.settings ? ${n}) [
+            "enable"
+            "meta"
+          ];
+        in
+        if reserved != [ ] then
+          throw "Module ${m.inputName}.${m.groupName}.${m.moduleName}: '${builtins.head reserved}' is a reserved name and cannot be used in settings or options. It is auto-injected by the build system!"
+        else
+          lib.optionalAttrs (m.options != { }) (
+            lib.mapAttrs (
+              name: spec: if spec._type or null == "option" then spec else lib.mkOption spec
+            ) m.options
+          )
+          // lib.optionalAttrs (m.settings != { } && m.options == { } && m.rawOptions == { }) (
+            lib.mapAttrs (
+              name: defaultValue:
+              lib.mkOption {
+                type = lib.types.anything;
+                default = defaultValue;
+              }
+            ) m.settings
+          )
+          // {
+            enable = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+            };
+            meta = lib.mkOption {
+              type = lib.types.submodule {
+                options = {
+                  description = lib.mkOption {
+                    type = lib.types.str;
+                    default = "";
+                  };
+                  input = lib.mkOption {
+                    type = lib.types.str;
+                    default = "";
+                  };
+                  group = lib.mkOption {
+                    type = lib.types.str;
+                    default = "";
+                  };
+                  name = lib.mkOption {
+                    type = lib.types.str;
+                    default = "";
+                  };
                 };
               };
+              default = { };
             };
-            default = { };
           };
-        };
 
       rawOptionsModules = map (m: { options = m.rawOptions; }) (
         builtins.filter (m: m.rawOptions != { }) allModuleData

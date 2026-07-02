@@ -55,16 +55,13 @@
   mkHomeManagerUserModules =
     { buildArgs, users }:
     builtins.attrValues (
-      builtins.mapAttrs (
-        username: user:
-        lib.mkIf (user.home-manager or false) {
-          home-manager.users.${username} = import (build + "/config/home/home-integrated.nix") (
-            buildArgs
-            // {
-              user = user;
-            }
-          );
-        }
-      ) (lib.filterAttrs (_: user: user.home-manager or false) users)
+      builtins.mapAttrs (username: user: {
+        home-manager.users.${username} = import (build + "/config/home/home-integrated.nix") (
+          buildArgs
+          // {
+            user = user;
+          }
+        );
+      }) (lib.filterAttrs (_: user: user.home-manager or false) users)
     );
 }

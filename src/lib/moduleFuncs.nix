@@ -31,7 +31,7 @@ let
     if disallowSymlinks then
       throw "Symlinks are globally forbidden (variables.disallowSymlinks = true) (module: ${moduleBasePath})!"
     else if builtins.elem inputName defs.coreInputs then
-      throw "Symlinks are not allowed in core input '${inputName}' (module: ${moduleBasePath})."
+      throw "Symlinks are not allowed in core input '${inputName}' (module: ${moduleBasePath})!"
     else if deploymentMode == "managed" then
       throw "Symlinks are not allowed in managed deployment mode (module: ${moduleBasePath})!"
     else
