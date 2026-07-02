@@ -97,6 +97,10 @@ args@{
               "You would otherwise ask a free-form question the user would answer with a one-word reply"
               "You did a review and we need to make decisions for fixing individual issues one by one"
             ]
+            [
+              "Remote / Mobile Sessions"
+              "When the user says they are remote or mobile (or using a phone or tablet), show every change verbatim in the chat - as an inline diff or as the full updated content - before issuing the actual Edit/Write/Bash tool call. This lets the user review and approve the changes without needing to inspect the tool call details."
+            ]
           ];
         };
         baseSkills = { };
