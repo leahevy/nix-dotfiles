@@ -18,6 +18,15 @@ let
     forEachProfileAndArch
     ;
 
+  fragments = import (build + "/builders/fragments.nix") {
+    inherit
+      lib
+      inputs
+      build
+      variables
+      ;
+  };
+
   buildVmConfiguration =
     {
       profileName,
@@ -99,13 +108,7 @@ let
           inputs.stylix.nixosModules.stylix
           inputs.nixvim.nixosModules.nixvim
         ]
-        ++ lib.optionals isNiriDesktop [
-          inputs.niri-flake.nixosModules.niri
-          {
-            programs.niri.package = lib.mkDefault pkgs.niri;
-            niri-flake.cache.enable = false;
-          }
-        ]
+        ++ lib.optionals isNiriDesktop (fragments.mkNiriDesktopModules pkgs)
         ++ [
           {
             assertions = [
@@ -117,47 +120,26 @@ let
           }
         ]
         ++ [
-          {
-            options.environment.persistence = lib.mkOption {
-              type = lib.types.attrs;
-              default = { };
-              description = "Persistence configuration (dummy for VM builds)";
-            };
-            config = { };
-          }
-          (lib.mkIf (variables."nix-implementation" == "lix") {
-            nix.package = lib.mkForce pkgs.lix;
+          (fragments.mkPersistenceDummy {
+            path = "environment.persistence";
+            description = "Persistence configuration (dummy for VM builds)";
           })
+          (fragments.mkLixModule pkgs)
           inputs.home-manager.nixosModules.home-manager
           {
-            home-manager.sharedModules = [
-              inputs.sops-nix.homeManagerModules.sops
-              inputs.nixvim.homeModules.nixvim
-              inputs.nix-index-database.homeModules.default
-              (lib.mkIf (variables."nix-implementation" == "lix") {
-                nix.package = lib.mkForce pkgs.lix;
-              })
-              {
-                options.home.persistence = lib.mkOption {
-                  type = lib.types.attrs;
-                  default = { };
-                  description = "Persistence configuration (dummy for VM builds)";
-                };
-                config = { };
-              }
-            ]
-            ++ lib.optionals (!isNiriDesktop) [
-              {
-                options.programs.niri = lib.mkOption {
-                  type = lib.types.attrs;
-                  default = { };
-                };
-              }
-            ];
-            home-manager.useGlobalPkgs = false;
-            home-manager.useUserPackages = true;
-            home-manager.backupFileExtension = variables.home-manager-backup-extension;
-            home-manager.extraSpecialArgs = specialArgs;
+            home-manager = {
+              sharedModules =
+                fragments.homeManagerBaseSharedModules
+                ++ [
+                  (fragments.mkLixModule pkgs)
+                  (fragments.mkPersistenceDummy {
+                    path = "home.persistence";
+                    description = "Persistence configuration (dummy for VM builds)";
+                  })
+                ]
+                ++ lib.optionals (!isNiriDesktop) [ fragments.niriOptionsStub ];
+            }
+            // fragments.mkHomeManagerSettings specialArgs;
           }
           {
             virtualisation.vmVariant = {
@@ -210,19 +192,10 @@ let
             };
           }
         ]
-        ++ (builtins.attrValues (
-          builtins.mapAttrs (
-            username: user:
-            lib.mkIf (user.home-manager or false) {
-              home-manager.users.${username} = import (build + "/config/home/home-integrated.nix") (
-                buildArgs
-                // {
-                  user = user;
-                }
-              );
-            }
-          ) (lib.filterAttrs (_: user: user.home-manager or false) hostConfig.users)
-        ));
+        ++ fragments.mkHomeManagerUserModules {
+          inherit buildArgs;
+          users = hostConfig.users;
+        };
       };
     };
 in

@@ -18,6 +18,15 @@ let
     forEachProfileAndArch
     ;
 
+  fragments = import (build + "/builders/fragments.nix") {
+    inherit
+      lib
+      inputs
+      build
+      variables
+      ;
+  };
+
   buildHomeConfiguration =
     {
       profileName,
@@ -43,9 +52,7 @@ let
         inherit pkgs;
         modules = [
           (import (build + "/config/home/home-standalone.nix") buildArgs)
-          (lib.mkIf (variables."nix-implementation" == "lix") {
-            nix.package = lib.mkForce pkgs.lix;
-          })
+          (fragments.mkLixModule pkgs)
           inputs.sops-nix.homeManagerModules.sops
           inputs.stylix.homeModules.stylix
           inputs.nixvim.homeModules.nixvim
@@ -59,30 +66,25 @@ let
           }
         ])
         ++ (lib.optionals (helpers.isDarwinArch arch || !isNiriDesktop) [
-          {
-            options.programs.niri = lib.mkOption {
-              type = lib.types.attrs;
-              default = { };
-            };
-            config.lib.niri.actions.spawn = _: null;
-            config.lib.niri.actions.spawn-sh = _: null;
-          }
+          (
+            fragments.niriOptionsStub
+            // {
+              config.lib.niri.actions.spawn = _: null;
+              config.lib.niri.actions.spawn-sh = _: null;
+            }
+          )
         ])
         ++ [
-          {
-            options.home.persistence = lib.mkOption {
-              type = lib.types.attrs;
-              default = { };
-              description = "Persistence configuration (stub for standalone Home Manager)";
-            };
-            config = { };
-          }
+          (fragments.mkPersistenceDummy {
+            path = "home.persistence";
+            description = "Persistence configuration (stub for standalone Home Manager)";
+          })
         ]
         ++ extraUserModule
-        ++ (if helpers.isDarwinArch arch then [ inputs.mac-app-util.homeManagerModules.default ] else [ ])
-        ++ (
-          if helpers.isDarwinArch arch then [ inputs.nix-plist-manager.homeManagerModules.default ] else [ ]
-        );
+        ++ lib.optionals (helpers.isDarwinArch arch) [
+          inputs.mac-app-util.homeManagerModules.default
+          inputs.nix-plist-manager.homeManagerModules.default
+        ];
       };
     };
 

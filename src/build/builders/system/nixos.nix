@@ -27,6 +27,15 @@ let
       ;
   };
 
+  fragments = import (build + "/builders/fragments.nix") {
+    inherit
+      lib
+      inputs
+      build
+      variables
+      ;
+  };
+
   buildNixOSConfiguration =
     {
       profileName,
@@ -54,35 +63,21 @@ let
         inputs.stylix.nixosModules.stylix
         inputs.nixvim.nixosModules.nixvim
       ]
-      ++ lib.optionals isNiriDesktop [
-        inputs.niri-flake.nixosModules.niri
-        {
-          programs.niri.package = lib.mkDefault pkgs.niri;
-          niri-flake.cache.enable = false;
-        }
-      ]
+      ++ lib.optionals isNiriDesktop (fragments.mkNiriDesktopModules pkgs)
       ++ (
         if hostConfig.host.impermanence or false then
           [ inputs.impermanence.nixosModules.impermanence ]
         else
           [
-            {
-              options.environment.persistence = lib.mkOption {
-                type = lib.types.attrs;
-                default = { };
-                description = "Persistence configuration (dummy for non-impermanent systems)";
-              };
-              config = { };
-            }
+            (fragments.mkPersistenceDummy {
+              path = "environment.persistence";
+              description = "Persistence configuration (dummy for non-impermanent systems)";
+            })
           ]
       )
       ++ hardwareModule
       ++ diskoModule
-      ++ [
-        (lib.mkIf (variables."nix-implementation" == "lix") {
-          nix.package = lib.mkForce pkgs.lix;
-        })
-      ]
+      ++ [ (fragments.mkLixModule pkgs) ]
       ++ (homeIntegrated.mkHomeIntegratedModules {
         inherit
           pkgs

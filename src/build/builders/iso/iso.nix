@@ -38,6 +38,11 @@ let
       '';
     };
 
+  mkIsoSpecialArgs = pkgs: {
+    inherit inputs variables helpers;
+    nx-repositories = mkNxRepositories pkgs;
+  };
+
   buildIsoConfiguration =
     { arch }:
     let
@@ -51,10 +56,7 @@ let
       name = arch;
       value = inputs.nixpkgs.lib.nixosSystem {
         inherit system pkgs;
-        specialArgs = {
-          inherit inputs variables helpers;
-          nx-repositories = mkNxRepositories pkgs;
-        };
+        specialArgs = mkIsoSpecialArgs pkgs;
         modules = [
           (inputs.build + "/config/iso/live-iso.nix")
           inputs.disko.nixosModules.disko
@@ -74,10 +76,7 @@ let
       name = "pi5";
       value = inputs.nixos-raspberrypi.lib.nixosInstaller {
         trustCaches = false;
-        specialArgs = {
-          inherit inputs variables helpers;
-          nx-repositories = mkNxRepositories pkgs;
-        };
+        specialArgs = mkIsoSpecialArgs pkgs;
         modules = with inputs.nixos-raspberrypi.nixosModules; [
           raspberry-pi-5.base
           (inputs.build + "/config/iso/live-pi.nix")

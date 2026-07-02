@@ -607,10 +607,9 @@ in
         desktop = resolvedHost.settings.system.desktop;
       };
 
-      effectiveIsTestingVM = isTestingVM;
       effectiveIsProductionVM =
-        if effectiveIsTestingVM then false else isProductionVM || (resolvedHost.isVM or false);
-      effectiveIsVirtual = effectiveIsTestingVM || effectiveIsProductionVM;
+        if isTestingVM then false else isProductionVM || (resolvedHost.isVM or false);
+      effectiveIsVirtual = isTestingVM || effectiveIsProductionVM;
 
       inherit (evalAllProfiles { inherit pkgs pkgs-unstable; })
         nixOSHosts
@@ -625,13 +624,13 @@ in
           variables
           defs
           funcs
-          effectiveIsTestingVM
           effectiveIsProductionVM
           effectiveIsVirtual
           nixOSHosts
           homeIntegratedUsers
           homeStandaloneUsers
           ;
+        effectiveIsTestingVM = isTestingVM;
         inputs = inputs // {
           userProfile = config + "/profiles/home-integrated/${mainUserProfileName}";
         };
@@ -642,7 +641,7 @@ in
         configInputs = config.configInputs or { };
       };
       unifiedArgsWithVmState = unifiedArgs // {
-        isTestingVM = effectiveIsTestingVM;
+        inherit isTestingVM;
         isProductionVM = effectiveIsProductionVM;
         isVirtual = effectiveIsVirtual;
       };
@@ -720,7 +719,7 @@ in
           processedModules = processedModules;
           configInputs = config.configInputs or { };
           isVirtual = effectiveIsVirtual;
-          isTestingVM = effectiveIsTestingVM;
+          inherit isTestingVM;
           isProductionVM = effectiveIsProductionVM;
         };
         diskoModule = getDiskoModule { inherit profileName; };
