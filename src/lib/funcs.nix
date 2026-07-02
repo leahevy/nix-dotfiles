@@ -2047,7 +2047,7 @@ rec {
         ) modules;
 
       collectRound =
-        processedModules: currentModules: subResults: dirty: iteration:
+        processedModules: currentModules: subResults: defaultsCache: dirty: iteration:
         let
           dirtySpecs = processModules (restrictToDirty currentModules dirty);
           newResults = builtins.listToAttrs (
@@ -2066,7 +2066,30 @@ rec {
             if args.preEvalMode or false then
               collectedSubmodules
             else
-              applyDefaultsToModules collectedSubmodules;
+              lib.mapAttrs (
+                inputName: inputGroups:
+                lib.mapAttrs (
+                  groupName: groupModules:
+                  lib.mapAttrs (
+                    moduleName: moduleSettings:
+                    if contributionTargets ? "${inputName}.${groupName}.${moduleName}" then
+                      mergeModuleDefaults lib helpers args inputName groupName moduleName moduleSettings
+                    else
+                      defaultsCache."${inputName}.${groupName}.${moduleName}"
+                  ) groupModules
+                ) inputGroups
+              ) collectedSubmodules;
+
+          nextDefaultsCache = lib.concatMapAttrs (
+            inputName: inputGroups:
+            lib.concatMapAttrs (
+              groupName: groupModules:
+              lib.mapAttrs' (moduleName: value: {
+                name = "${inputName}.${groupName}.${moduleName}";
+                inherit value;
+              }) groupModules
+            ) inputGroups
+          ) collectedSubmodulesWithDefaults;
 
           contextFilteredSubmodules =
             if args.preEvalMode or false then
@@ -2093,7 +2116,7 @@ rec {
         in
         if hasNewModules then
           if iteration < 15 then
-            collectRound currentModules nextModules allSubResults nextDirty (iteration + 1)
+            collectRound currentModules nextModules allSubResults nextDefaultsCache nextDirty (iteration + 1)
           else
             throw "Recursion depth exceeded for collecting modules! Reached ${toString iteration} iterations."
         else
@@ -2101,7 +2124,7 @@ rec {
     in
     let
       finalModules =
-        collectRound { } normalizedInitialModules { } (flattenModules normalizedInitialModules)
+        collectRound { } normalizedInitialModules { } { } (flattenModules normalizedInitialModules)
           0;
       finalModulesWithDefaults =
         if args.preEvalMode or false then
