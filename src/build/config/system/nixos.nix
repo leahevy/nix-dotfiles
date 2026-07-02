@@ -15,79 +15,39 @@ args@{
 let
   allModules = processedModules;
 
-  moduleSpecs = funcs.processModules allModules;
   systemArgs = args // {
     user = host.mainUser;
     processedModules = allModules;
   };
-  moduleResults = funcs.importModules systemArgs moduleSpecs allModules "system";
 
-  extraModules = moduleResults.modules;
-
-  allModuleData = funcs.collectAllModuleData systemArgs;
-  optionsModules = funcs.generateOptionsModules allModuleData;
-  settingsValueModules = funcs.generateSettingsValueModules allModuleData allModules;
-  optionsValueModules = funcs.generateOptionsValueModules allModuleData allModules;
-  enableValueModules = funcs.generateEnableValueModules allModuleData allModules;
-  unfreeValueModules = funcs.generateUnfreeValueModules allModuleData allModules;
-  metaValueModules = funcs.generateMetaValueModules allModuleData;
-
-  initModules = funcs.importAllModuleInits systemArgs;
-  disabledModules = funcs.importAllModuleDisableds systemArgs;
-
-  specialisationConfigs = builtins.mapAttrs (specName: specModules: {
-    configuration = {
-      imports =
-        (funcs.importModules systemArgs (funcs.processModules specModules) allModules "system").modules;
-    };
-  }) host.specialisations;
-
-  hostProfileModule = funcs.processProfileModule {
-    profile = host;
-    profileType = "nixos";
-    profileName = host.profileName;
+  contextModules = funcs.buildContextModules {
     args = systemArgs;
     processedModules = allModules;
     buildContext = "system";
+    profiles = [
+      {
+        profile = host;
+        profileType = "nixos";
+        profileName = host.profileName;
+      }
+      {
+        profile = host.mainUser;
+        profileType = "home-integrated";
+        profileName = host.mainUser.profileName;
+      }
+    ];
+    specialisations = host.specialisations;
+    assertionModules = [
+      (import ../../assertions/system/nixos.nix (systemArgs // { processedModules = allModules; }))
+    ];
   };
-
-  userProfileModule = funcs.processProfileModule {
-    profile = host.mainUser;
-    profileType = "home-integrated";
-    profileName = host.mainUser.profileName;
-    args = systemArgs;
-    processedModules = allModules;
-    buildContext = "system";
-  };
-
-  profileInitModules = hostProfileModule.initModules ++ userProfileModule.initModules;
-  profileContextModules = hostProfileModule.contextModules ++ userProfileModule.contextModules;
-
-  profileOptionsModules =
-    funcs.mkProfileOptionsModule host.profileName (host.options or { })
-    ++ funcs.mkProfileOptionsModule host.mainUser.profileName (host.mainUser.options or { });
 in
 { config, options, ... }:
 {
-  imports =
-    optionsModules
-    ++ profileOptionsModules
-    ++ settingsValueModules
-    ++ optionsValueModules
-    ++ enableValueModules
-    ++ unfreeValueModules
-    ++ metaValueModules
-    ++ initModules
-    ++ disabledModules
-    ++ profileInitModules
-    ++ extraModules
-    ++ profileContextModules
-    ++ [
-      (import ../../assertions/system/nixos.nix (systemArgs // { processedModules = allModules; }))
-    ];
+  imports = contextModules.imports;
 
   config = {
-    specialisation = specialisationConfigs;
+    specialisation = contextModules.specialisationConfigs;
 
     environment = {
       systemPackages = host.additionalPackages or [ ];

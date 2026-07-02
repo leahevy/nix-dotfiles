@@ -20,48 +20,30 @@ let
     lib.recursiveUpdate buildModules extraContextModules
   );
 
-  moduleSpecs = funcs.processModules allModules;
-  moduleResults = funcs.importModules args moduleSpecs allModules "home-standalone";
-
-  extraModules = moduleResults.modules;
-
-  allModuleData = funcs.collectAllModuleData args;
-  optionsModules = funcs.generateOptionsModules allModuleData;
-  settingsValueModules = funcs.generateSettingsValueModules allModuleData allModules;
-  optionsValueModules = funcs.generateOptionsValueModules allModuleData allModules;
-  enableValueModules = funcs.generateEnableValueModules allModuleData allModules;
-  unfreeValueModules = funcs.generateUnfreeValueModules allModuleData allModules;
-  metaValueModules = funcs.generateMetaValueModules allModuleData;
-
-  initModules = funcs.importAllModuleInits (args // { processedModules = allModules; });
-  disabledModules = funcs.importAllModuleDisableds (args // { processedModules = allModules; });
-
-  specialisationConfigs = builtins.mapAttrs (specName: specModules: {
-    configuration = {
-      imports =
-        (funcs.importModules args (funcs.processModules specModules) allModules "home-standalone").modules;
-    };
-  }) (user.specialisations or { });
-
   extraUserModule =
     if (user.extraModulePath or null) != null && builtins.pathExists user.extraModulePath then
       [ (import user.extraModulePath args) ]
     else
       [ ];
 
-  userProfileModule = funcs.processProfileModule {
-    profile = user;
-    profileType = "home-standalone";
-    profileName = user.profileName;
+  contextModules = funcs.buildContextModules {
     args = args;
     processedModules = allModules;
     buildContext = "home-standalone";
+    profiles = [
+      {
+        profile = user;
+        profileType = "home-standalone";
+        profileName = user.profileName;
+      }
+    ];
+    specialisations = user.specialisations or { };
+    extraUserModule = extraUserModule;
+    assertionModules = [
+      (import ../../assertions/home/home-standalone.nix (args // { processedModules = allModules; }))
+      (import ../../assertions/home/shared.nix (args // { processedModules = allModules; }))
+    ];
   };
-
-  profileInitModules = userProfileModule.initModules;
-  profileContextModules = userProfileModule.contextModules;
-
-  profileOptionsModules = funcs.mkProfileOptionsModule user.profileName (user.options or { });
 
   mkNxDef =
     extraCommands:
@@ -81,26 +63,9 @@ let
   nxDef = mkNxDef config.nx.commandline;
 in
 {
-  imports =
-    optionsModules
-    ++ profileOptionsModules
-    ++ settingsValueModules
-    ++ optionsValueModules
-    ++ enableValueModules
-    ++ unfreeValueModules
-    ++ metaValueModules
-    ++ initModules
-    ++ disabledModules
-    ++ profileInitModules
-    ++ extraModules
-    ++ extraUserModule
-    ++ profileContextModules
-    ++ [
-      (import ../../assertions/home/home-standalone.nix (args // { processedModules = allModules; }))
-      (import ../../assertions/home/shared.nix (args // { processedModules = allModules; }))
-    ];
+  imports = contextModules.imports;
 
-  specialisation = specialisationConfigs;
+  specialisation = contextModules.specialisationConfigs;
 
   home = {
     username = user.username;

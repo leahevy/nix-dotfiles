@@ -1632,7 +1632,7 @@ rec {
     };
 
   importModules =
-    args: moduleSpecs: allProcessedModules: buildContext:
+    args: moduleSpecs: allProcessedModules: buildContext: allModuleData:
     let
       exportsPerInput = lib.mapAttrs (
         inputName: inputGroups:
@@ -1640,7 +1640,7 @@ rec {
           groupName: groupMods:
           lib.mapAttrs (moduleName: moduleExports: { exports = moduleExports; }) groupMods
         ) inputGroups
-      ) (buildAllModuleExports args allProcessedModules);
+      ) (buildAllModuleExports args allProcessedModules allModuleData);
       deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
         "deploymentMode"
       ] "develop";
@@ -1728,6 +1728,81 @@ rec {
       throw "profile '${id}': options must not contain nx.INPUT.* keys (${lib.concatStringsSep ", " forbidden})!"
     else
       lib.optional (opts != { }) { config.nx = opts; };
+
+  buildContextModules =
+    {
+      args,
+      processedModules,
+      buildContext,
+      profiles,
+      specialisations,
+      extraUserModule ? [ ],
+      assertionModules,
+    }:
+    let
+      sweepArgs = args // {
+        processedModules = processedModules;
+      };
+
+      moduleSpecs = processModules processedModules;
+      allModuleData = collectAllModuleData args;
+      moduleResults = importModules args moduleSpecs processedModules buildContext allModuleData;
+      extraModules = moduleResults.modules;
+
+      optionsModules = generateOptionsModules allModuleData;
+      settingsValueModules = generateSettingsValueModules allModuleData processedModules;
+      optionsValueModules = generateOptionsValueModules allModuleData processedModules;
+      enableValueModules = generateEnableValueModules allModuleData processedModules;
+      unfreeValueModules = generateUnfreeValueModules allModuleData processedModules;
+      metaValueModules = generateMetaValueModules allModuleData;
+
+      initModules = importAllModuleInits sweepArgs;
+      disabledModules = importAllModuleDisableds sweepArgs;
+
+      profileModules = map (
+        p:
+        processProfileModule {
+          profile = p.profile;
+          profileType = p.profileType;
+          profileName = p.profileName;
+          args = args;
+          processedModules = processedModules;
+          buildContext = buildContext;
+        }
+      ) profiles;
+
+      profileInitModules = lib.concatMap (m: m.initModules) profileModules;
+      profileContextModules = lib.concatMap (m: m.contextModules) profileModules;
+
+      profileOptionsModules = lib.concatMap (
+        p: mkProfileOptionsModule p.profileName (p.profile.options or { })
+      ) profiles;
+    in
+    {
+      imports =
+        optionsModules
+        ++ profileOptionsModules
+        ++ settingsValueModules
+        ++ optionsValueModules
+        ++ enableValueModules
+        ++ unfreeValueModules
+        ++ metaValueModules
+        ++ initModules
+        ++ disabledModules
+        ++ profileInitModules
+        ++ extraModules
+        ++ extraUserModule
+        ++ profileContextModules
+        ++ assertionModules;
+
+      specialisationConfigs = builtins.mapAttrs (specName: specModules: {
+        configuration = {
+          imports =
+            (importModules args (processModules specModules) processedModules buildContext allModuleData)
+            .modules;
+        };
+      }) specialisations;
+    };
 
   collectModuleAssertions =
     args: processedModules:
@@ -2376,10 +2451,8 @@ rec {
     ) { } contextEnabled;
 
   buildAllModuleExports =
-    args: processedModules:
+    args: processedModules: allModuleData:
     let
-      allModuleData = collectAllModuleData args;
-
       exportsIndex = lib.foldl (
         acc: m:
         if m.exports != null then
