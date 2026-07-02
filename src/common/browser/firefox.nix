@@ -522,6 +522,7 @@ let
         ''[type="checkbox"] *''
         ''[class*="hero" i]''
         ''[class*="hero" i] *''
+        ''[data-cds="Icon" i]''
         ''[data-cds="Icon" i] *''
       ];
 
