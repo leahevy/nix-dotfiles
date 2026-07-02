@@ -45,22 +45,20 @@ let
     ];
   };
 
-  mkNxDef =
-    extraCommands:
-    import (inputs.lib + "/cmds.nix") {
-      inherit lib extraCommands;
-      architectures = import inputs.nix-systems;
-      rootPath = defs.rootPath;
-      scope = "standalone";
-      system = if pkgs.stdenv.isDarwin then "darwin" else "linux";
-      mode = user.deploymentMode or "develop";
-    };
-
-  nxCliEnabled = (user.deploymentMode or "develop") != "managed";
+  nxCli = import ./nx-cli.nix {
+    inherit
+      lib
+      pkgs
+      defs
+      inputs
+      ;
+    scope = "standalone";
+    deploymentMode = user.deploymentMode or "develop";
+  };
 in
 { config, options, ... }:
 let
-  nxDef = mkNxDef config.nx.commandline;
+  nxDef = nxCli.mkNxDef config.nx.commandline;
 in
 {
   imports = contextModules.imports;
@@ -71,74 +69,11 @@ in
     username = user.username;
 
     packages =
-      (user.additionalPackages or [ ])
-      ++ lib.optionals nxCliEnabled [
-        (pkgs.stdenv.mkDerivation {
-          name = "nx";
-          src = builtins.path {
-            path = defs.rootPath;
-            name = "nx-source";
-            filter =
-              path: type:
-              let
-                baseName = builtins.baseNameOf path;
-              in
-              baseName == "nx"
-              || baseName == "scripts"
-              || lib.hasPrefix (toString defs.rootPath + "/scripts/") (toString path);
-          };
-          dontAuditTmpdir = true;
-          installPhase = ''
-                      mkdir -p $out/bin $out/share/nx/scripts/utils
-                      cp -r scripts $out/share/nx/
-                      cp nx $out/share/nx/
-                      chmod +x $out/share/nx/scripts/utils/nx-help-formatter.py
+      (user.additionalPackages or [ ]) ++ lib.optionals nxCli.nxCliEnabled (nxCli.packages nxDef);
 
-                      find $out/share/nx/scripts -type f -exec sh -c '
-                        if head -1 "$1" 2>/dev/null | grep -q "^#!/usr/bin/env bash"; then
-                          chmod +w "$1"
-                          sed -i "1s|#!/usr/bin/env bash|#!${pkgs.bash}/bin/bash|" "$1"
-                          chmod -w "$1"
-                        fi
-                      ' _ {} \;
+    file = lib.optionalAttrs nxCli.nxCliEnabled (nxCli.mkCompletionFiles nxDef config);
 
-                      if head -1 $out/share/nx/nx 2>/dev/null | grep -q "^#!/usr/bin/env bash"; then
-                        chmod +w $out/share/nx/nx
-                        sed -i "1s|#!/usr/bin/env bash|#!${pkgs.bash}/bin/bash|" $out/share/nx/nx
-                        chmod -w $out/share/nx/nx
-                      fi
-
-                      cat > $out/bin/nx << EOF
-            #!${pkgs.bash}/bin/bash
-            export ACTUAL_PWD="\$PWD"
-            export NX_INSTALL_PATH="$out/share/nx"
-            cd $out/share/nx
-            exec $out/share/nx/nx "\$@"
-            EOF
-                      chmod +x $out/bin/nx
-
-                      cp ${pkgs.writeText "nx-spec.json" nxDef.json} $out/share/nx/nx-spec.json
-          '';
-        })
-        pkgs.jq
-      ];
-
-    file = lib.optionalAttrs nxCliEnabled (
-      lib.optionalAttrs (config.programs.fish.enable or false) {
-        ".config/fish/completions/nx.fish".text = nxDef.fish;
-      }
-      // lib.optionalAttrs (config.programs.bash.enable or false) {
-        ".local/share/bash-completion/completions/nx".text = nxDef.bash;
-      }
-      // lib.optionalAttrs (config.programs.zsh.enable or false) {
-        ".local/share/zsh/site-functions/_nx".text = nxDef.zsh;
-      }
-    );
-
-    sessionVariables = lib.optionalAttrs nxCliEnabled {
-      NXCORE_DIR = "$HOME/.config/nx/nxcore";
-      NXCONFIG_DIR = "$HOME/.config/nx/nxconfig";
-    };
+    sessionVariables = lib.optionalAttrs nxCli.nxCliEnabled nxCli.sessionVariables;
 
     homeDirectory = user.home;
 
