@@ -1756,8 +1756,9 @@ rec {
       unfreeValueModules = generateUnfreeValueModules allModuleData processedModules;
       metaValueModules = generateMetaValueModules allModuleData;
 
-      initModules = importAllModuleInits sweepArgs;
-      disabledModules = importAllModuleDisableds sweepArgs;
+      moduleFnSweep = importAllModuleFns sweepArgs;
+      initModules = moduleFnSweep.initModules;
+      disabledModules = moduleFnSweep.disabledModules;
 
       profileModules = map (
         p:
@@ -2647,8 +2648,8 @@ rec {
     in
     [ { config.nx = mergePerModuleAttrs moduleValues allModuleData; } ];
 
-  importAllModuleFnsOfType =
-    fnType: args:
+  importAllModuleFns =
+    args:
     let
       architecture = resolveArchitecture args;
       processedModules = args.processedModules or { };
@@ -2666,50 +2667,42 @@ rec {
 
       scanInput =
         inputName:
-        let
-          allSpecs = allModuleSpecsByInput.${inputName};
-          moduleSpecs = if fnType == "disabled" then builtins.filter isModuleDisabled allSpecs else allSpecs;
-        in
-        lib.flatten (
-          map (
-            spec:
-            let
-              moduleDir = helpers.buildModuleDir spec.inputName spec.groupName spec.moduleName;
+        map (
+          spec:
+          let
+            moduleDir = helpers.buildModuleDir spec.inputName spec.groupName spec.moduleName;
 
-              moduleContext = mkModuleContext args {
-                moduleBasePath = moduleDir;
-                moduleInput = spec.input;
-                moduleInputName = spec.inputName;
-                processedModules = processedModules;
-              };
+            moduleContext = mkModuleContext args {
+              moduleBasePath = moduleDir;
+              moduleInput = spec.input;
+              moduleInputName = spec.inputName;
+              processedModules = processedModules;
+            };
 
-              enhancedModuleContext = injectModuleFuncs moduleContext;
+            enhancedModuleContext = injectModuleFuncs moduleContext;
 
-              moduleSelf =
-                if fnType == "init" then
-                  enhancedModuleContext
-                  // {
-                    options = config: config.nx.${spec.inputName}.${spec.groupName}.${spec.moduleName} or { };
-                  }
-                else
-                  enhancedModuleContext;
+            contextWithOptions = enhancedModuleContext // {
+              options = config: config.nx.${spec.inputName}.${spec.groupName}.${spec.moduleName} or { };
+            };
 
-              consolidatedArgs = {
-                lib = args.lib;
-                pkgs = args.pkgs;
-                funcs = args.funcs;
-                helpers = args.helpers;
-                defs = args.defs;
-                self = moduleSelf;
-              };
+            consolidatedArgs = {
+              lib = args.lib;
+              pkgs = args.pkgs;
+              funcs = args.funcs;
+              helpers = args.helpers;
+              defs = args.defs;
+              self = contextWithOptions;
+            };
 
-              moduleResult = builtins.tryEval (import spec.modulePath consolidatedArgs);
+            moduleResult = builtins.tryEval (import spec.modulePath consolidatedArgs);
 
-              module = if moduleResult.success then moduleResult.value.module or { } else { };
+            module = if moduleResult.success then moduleResult.value.module or { } else { };
 
-              wrapFn = fn: { config, ... }: fn config;
+            wrapFn = fn: { config, ... }: fn config;
 
-              matchingFns = map (f: wrapFn f.fn) (
+            selectFnsOfType =
+              fnType: includeFlags:
+              map (f: wrapFn f.fn) (
                 builtins.filter (f: f.type == fnType) (
                   selectApplicableModuleFns (
                     {
@@ -2721,18 +2714,22 @@ rec {
                       buildContext = "system";
                       sourceModule = toString spec.modulePath;
                     }
-                    // (if fnType == "init" then { includeInit = true; } else { includeDisabled = true; })
+                    // includeFlags
                   )
                 )
               );
-            in
-            matchingFns
-          ) moduleSpecs
-        );
+          in
+          {
+            initFns = selectFnsOfType "init" { includeInit = true; };
+            disabledFns =
+              if isModuleDisabled spec then selectFnsOfType "disabled" { includeDisabled = true; } else [ ];
+          }
+        ) allModuleSpecsByInput.${inputName};
+
+      allResults = lib.flatten (map scanInput helpers.allModuleInputsToScan);
     in
-    lib.flatten (map scanInput helpers.allModuleInputsToScan);
-
-  importAllModuleInits = importAllModuleFnsOfType "init";
-
-  importAllModuleDisableds = importAllModuleFnsOfType "disabled";
+    {
+      initModules = lib.flatten (map (r: r.initFns) allResults);
+      disabledModules = lib.flatten (map (r: r.disabledFns) allResults);
+    };
 }
