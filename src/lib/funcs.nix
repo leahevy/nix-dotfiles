@@ -12,15 +12,6 @@ let
     inherit lib defs additionalInputs;
   };
 
-  buildModulePath =
-    {
-      input,
-      inputName,
-      group,
-      name,
-    }:
-    helpers.buildModuleFilePath input inputName group name;
-
   systemManagedAttrs = [
     "nx_conditionForce"
   ];
@@ -1572,22 +1563,10 @@ rec {
   importModule =
     args: moduleSpec: allProcessedModules: buildContext: exportsPerInput:
     let
-      modulePath = buildModulePath {
-        input = moduleSpec.input;
-        inputName = moduleSpec.inputName;
-        group = moduleSpec.group;
-        name = moduleSpec.name;
-      };
+      modulePath =
+        helpers.buildModuleFilePath moduleSpec.input moduleSpec.inputName moduleSpec.group
+          moduleSpec.name;
       moduleDir = helpers.buildModuleDir moduleSpec.inputName moduleSpec.group moduleSpec.name;
-
-      basicModuleResult = import modulePath {
-        lib = args.lib;
-        pkgs = args.pkgs;
-        funcs = args.funcs;
-        helpers = args.helpers;
-        defs = args.defs;
-        self = { };
-      };
 
       moduleContext = mkModuleContext args {
         includeHostsTrio = true;
@@ -1766,12 +1745,9 @@ rec {
                     name = moduleName;
                     settings = moduleSettings;
                   };
-                  modulePath = buildModulePath {
-                    input = moduleSpec.input;
-                    inputName = moduleSpec.inputName;
-                    group = moduleSpec.group;
-                    name = moduleSpec.name;
-                  };
+                  modulePath =
+                    helpers.buildModuleFilePath moduleSpec.input moduleSpec.inputName moduleSpec.group
+                      moduleSpec.name;
                   moduleResult = import modulePath {
                     lib = args.lib;
                     pkgs = args.pkgs;
@@ -1862,12 +1838,9 @@ rec {
       moduleResults = map (
         moduleSpec:
         let
-          modulePath = buildModulePath {
-            input = moduleSpec.input;
-            inputName = moduleSpec.inputName;
-            group = moduleSpec.group;
-            name = moduleSpec.name;
-          };
+          modulePath =
+            helpers.buildModuleFilePath moduleSpec.input moduleSpec.inputName moduleSpec.group
+              moduleSpec.name;
           moduleDir = helpers.buildModuleDir moduleSpec.inputName moduleSpec.group moduleSpec.name;
 
           moduleContext = mkModuleContext args {
