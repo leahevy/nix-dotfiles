@@ -1595,7 +1595,7 @@ rec {
 
       moduleResult = validateModule (import modulePath consolidatedArgs) modulePath {
         inputName = moduleSpec.inputName;
-        architecture = resolveArchitecture args;
+        inherit architecture;
       };
 
       module = validateInnerModule "module" modulePath (moduleResult.module or { });

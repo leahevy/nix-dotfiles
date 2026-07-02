@@ -53,11 +53,9 @@ let
         modules = [
           (import (build + "/config/home/home-standalone.nix") buildArgs)
           (fragments.mkLixModule pkgs)
-          inputs.sops-nix.homeManagerModules.sops
-          inputs.stylix.homeModules.stylix
-          inputs.nixvim.homeModules.nixvim
-          inputs.nix-index-database.homeModules.default
         ]
+        ++ fragments.homeManagerBaseSharedModules
+        ++ [ inputs.stylix.homeModules.stylix ]
         ++ (lib.optionals (helpers.isLinuxArch arch && isNiriDesktop) [
           inputs.niri-flake.homeModules.niri
           inputs.niri-flake.homeModules.stylix
