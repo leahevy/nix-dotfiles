@@ -2704,77 +2704,8 @@ rec {
       }
     ) allModuleData;
 
-  importAllModuleInits =
-    args:
-    let
-      architecture = resolveArchitecture args;
-
-      scanInput =
-        inputName:
-        if additionalInputs ? ${inputName} then
-          let
-            input = additionalInputs.${inputName};
-            moduleSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input);
-          in
-          lib.flatten (
-            map (
-              spec:
-              let
-                moduleDir = helpers.buildModuleDir spec.inputName spec.groupName spec.moduleName;
-
-                moduleContext = mkModuleContext args {
-                  moduleBasePath = moduleDir;
-                  moduleInput = spec.input;
-                  moduleInputName = spec.inputName;
-                };
-
-                enhancedModuleContext = injectModuleFuncs moduleContext;
-
-                contextWithOptions = enhancedModuleContext // {
-                  options = config: config.nx.${spec.inputName}.${spec.groupName}.${spec.moduleName} or { };
-                };
-
-                consolidatedArgs = {
-                  lib = args.lib;
-                  pkgs = args.pkgs;
-                  funcs = args.funcs;
-                  helpers = args.helpers;
-                  defs = args.defs;
-                  self = contextWithOptions;
-                };
-
-                moduleResult = builtins.tryEval (import spec.modulePath consolidatedArgs);
-
-                module = if moduleResult.success then moduleResult.value.module or { } else { };
-
-                wrapInit = initFn: { config, ... }: initFn config;
-
-                initFns = map (f: wrapInit f.fn) (
-                  builtins.filter (f: f.type == "init") (selectApplicableModuleFns {
-                    inherit module architecture;
-                    isVirtual = args.isVirtual or false;
-                    isTestingVM = args.isTestingVM or false;
-                    isProductionVM = args.isProductionVM or false;
-                    deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
-                      "deploymentMode"
-                    ] "develop";
-                    prefix = "module";
-                    buildContext = "system";
-                    includeInit = true;
-                    sourceModule = toString spec.modulePath;
-                  })
-                );
-              in
-              initFns
-            ) moduleSpecs
-          )
-        else
-          [ ];
-    in
-    lib.flatten (map scanInput helpers.allModuleInputsToScan);
-
-  importAllModuleDisableds =
-    args:
+  importAllModuleFnsOfType =
+    fnType: args:
     let
       architecture = resolveArchitecture args;
       processedModules = args.processedModules or { };
@@ -2793,7 +2724,7 @@ rec {
           let
             input = additionalInputs.${inputName};
             allSpecs = builtins.filter (x: x != null) (scanAllModulesForInput inputName input);
-            disabledSpecs = builtins.filter isModuleDisabled allSpecs;
+            moduleSpecs = if fnType == "disabled" then builtins.filter isModuleDisabled allSpecs else allSpecs;
           in
           lib.flatten (
             map (
@@ -2810,42 +2741,59 @@ rec {
 
                 enhancedModuleContext = injectModuleFuncs moduleContext;
 
+                moduleSelf =
+                  if fnType == "init" then
+                    enhancedModuleContext
+                    // {
+                      options = config: config.nx.${spec.inputName}.${spec.groupName}.${spec.moduleName} or { };
+                    }
+                  else
+                    enhancedModuleContext;
+
                 consolidatedArgs = {
                   lib = args.lib;
                   pkgs = args.pkgs;
                   funcs = args.funcs;
                   helpers = args.helpers;
                   defs = args.defs;
-                  self = enhancedModuleContext;
+                  self = moduleSelf;
                 };
 
                 moduleResult = builtins.tryEval (import spec.modulePath consolidatedArgs);
 
                 module = if moduleResult.success then moduleResult.value.module or { } else { };
 
-                wrapDisabled = disabledFn: { config, ... }: disabledFn config;
+                wrapFn = fn: { config, ... }: fn config;
 
-                disabledFns = map (f: wrapDisabled f.fn) (
-                  builtins.filter (f: f.type == "disabled") (selectApplicableModuleFns {
-                    inherit module architecture;
-                    isVirtual = args.isVirtual or false;
-                    isTestingVM = args.isTestingVM or false;
-                    isProductionVM = args.isProductionVM or false;
-                    deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
-                      "deploymentMode"
-                    ] "develop";
-                    prefix = "module";
-                    buildContext = "system";
-                    includeDisabled = true;
-                    sourceModule = toString spec.modulePath;
-                  })
+                matchingFns = map (f: wrapFn f.fn) (
+                  builtins.filter (f: f.type == fnType) (
+                    selectApplicableModuleFns (
+                      {
+                        inherit module architecture;
+                        isVirtual = args.isVirtual or false;
+                        isTestingVM = args.isTestingVM or false;
+                        isProductionVM = args.isProductionVM or false;
+                        deploymentMode = helpers.resolveFromHostOrUser (args // { _nx_self = true; }) [
+                          "deploymentMode"
+                        ] "develop";
+                        prefix = "module";
+                        buildContext = "system";
+                        sourceModule = toString spec.modulePath;
+                      }
+                      // (if fnType == "init" then { includeInit = true; } else { includeDisabled = true; })
+                    )
+                  )
                 );
               in
-              disabledFns
-            ) disabledSpecs
+              matchingFns
+            ) moduleSpecs
           )
         else
           [ ];
     in
     lib.flatten (map scanInput helpers.allModuleInputsToScan);
+
+  importAllModuleInits = importAllModuleFnsOfType "init";
+
+  importAllModuleDisableds = importAllModuleFnsOfType "disabled";
 }
