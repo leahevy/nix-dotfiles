@@ -100,6 +100,47 @@ let
     in
     if match == null then throw "moduleLayers: no layer named '${name}'!" else match;
   keysOfLayerByName = name: (layerByName name).keys;
+
+  mkModuleContext =
+    args:
+    {
+      moduleBasePath,
+      moduleInput,
+      moduleInputName,
+      settings ? { },
+      includeSettings ? true,
+      processedModules ? args.processedModules or { },
+      includeHostsTrio ? false,
+      inputs ? args.inputs,
+      variables ? args.variables,
+      configInputs ? args.configInputs or { },
+      host ? args.host or { },
+      user ? args.user or null,
+      users ? args.users or { },
+    }:
+    {
+      inherit
+        inputs
+        variables
+        configInputs
+        moduleBasePath
+        moduleInput
+        moduleInputName
+        host
+        user
+        users
+        processedModules
+        ;
+      isTestingVM = args.isTestingVM or false;
+      isProductionVM = args.isProductionVM or false;
+      isVirtual = args.isVirtual or false;
+    }
+    // lib.optionalAttrs includeSettings { inherit settings; }
+    // lib.optionalAttrs includeHostsTrio {
+      nixOSHosts = args.nixOSHosts or { };
+      homeIntegratedUsers = args.homeIntegratedUsers or { };
+      homeStandaloneUsers = args.homeStandaloneUsers or { };
+    };
 in
 rec {
   inherit moduleFuncs;
@@ -623,24 +664,13 @@ rec {
       let
         moduleDir = helpers.buildModuleDir inputName groupName moduleName;
 
-        moduleContext = {
-          inputs = args.inputs;
-          variables = args.variables;
-          configInputs = args.configInputs or { };
-          nixOSHosts = args.nixOSHosts or { };
-          homeIntegratedUsers = args.homeIntegratedUsers or { };
-          homeStandaloneUsers = args.homeStandaloneUsers or { };
+        moduleContext = mkModuleContext args {
+          includeHostsTrio = true;
           moduleBasePath = moduleDir;
           moduleInput = helpers.resolveInputFromInput inputName;
           moduleInputName = inputName;
-          settings = { };
           host = args.host;
           user = args.user or (if args ? host && args.host ? mainUser then args.host.mainUser else null);
-          users = args.users or { };
-          processedModules = args.processedModules or { };
-          isTestingVM = args.isTestingVM or false;
-          isProductionVM = args.isProductionVM or false;
-          isVirtual = args.isVirtual or false;
         };
 
         enhancedModuleContext = injectModuleFuncs moduleContext;
@@ -1575,24 +1605,13 @@ rec {
         self = { };
       };
 
-      moduleContext = {
-        inputs = args.inputs;
-        host = args.host or { };
-        user = args.user or null;
-        users = args.users or { };
-        variables = args.variables;
-        configInputs = args.configInputs or { };
-        nixOSHosts = args.nixOSHosts or { };
-        homeIntegratedUsers = args.homeIntegratedUsers or { };
-        homeStandaloneUsers = args.homeStandaloneUsers or { };
+      moduleContext = mkModuleContext args {
+        includeHostsTrio = true;
         moduleBasePath = moduleDir;
         moduleInput = moduleSpec.input;
         moduleInputName = moduleSpec.inputName;
         settings = moduleSpec.settings or { };
         processedModules = allProcessedModules;
-        isTestingVM = args.isTestingVM or false;
-        isProductionVM = args.isProductionVM or false;
-        isVirtual = args.isVirtual or false;
       };
 
       enhancedModuleContext = injectModuleFuncs moduleContext;
@@ -1682,23 +1701,13 @@ rec {
       );
       architecture = resolveArchitecture args;
 
-      moduleContext = {
-        inputs = args.inputs;
-        variables = args.variables;
-        configInputs = args.configInputs or { };
-        nixOSHosts = args.nixOSHosts or { };
-        homeIntegratedUsers = args.homeIntegratedUsers or { };
-        homeStandaloneUsers = args.homeStandaloneUsers or { };
+      moduleContext = mkModuleContext args {
+        includeHostsTrio = true;
+        includeSettings = false;
         moduleBasePath = "profiles/${profileType}/${profileName}/";
         moduleInput = args.configInputs.config or args.inputs.config;
         moduleInputName = "config";
-        host = args.host or { };
-        user = args.user or null;
-        users = args.users or { };
         processedModules = processedModules;
-        isTestingVM = args.isTestingVM or false;
-        isProductionVM = args.isProductionVM or false;
-        isVirtual = args.isVirtual or false;
       };
 
       enhancedContext = injectModuleFuncs moduleContext;
@@ -1806,9 +1815,7 @@ rec {
   evaluateModuleAssertions =
     args: moduleContext: assertion:
     let
-      fullModuleContext = {
-        inputs = args.inputs;
-        host = args.host or { };
+      fullModuleContext = mkModuleContext args {
         user =
           if args ? user then
             args.user
@@ -1816,9 +1823,6 @@ rec {
             args.host.mainUser
           else
             null;
-        users = args.users or { };
-        variables = args.variables;
-        configInputs = args.configInputs or { };
         moduleBasePath =
           helpers.buildModuleDir assertion.moduleSpec.inputName assertion.moduleSpec.group
             assertion.moduleSpec.name;
@@ -1826,9 +1830,6 @@ rec {
         moduleInputName = assertion.moduleSpec.inputName;
         settings = assertion.moduleSpec.settings;
         processedModules = moduleContext.processedModules or { };
-        isTestingVM = args.isTestingVM or false;
-        isProductionVM = args.isProductionVM or false;
-        isVirtual = args.isVirtual or false;
       };
 
       enhancedContext = injectModuleFuncs fullModuleContext;
@@ -1885,7 +1886,7 @@ rec {
           };
           moduleDir = helpers.buildModuleDir moduleSpec.inputName moduleSpec.group moduleSpec.name;
 
-          moduleContext = {
+          moduleContext = mkModuleContext args {
             inputs = args.inputs or args.self.inputs;
             variables = args.variables or args.self.variables;
             configInputs = args.configInputs or args.self.configInputs or { };
@@ -1896,10 +1897,6 @@ rec {
             host = args.host or args.self.host or { };
             user = args.user or args.self.user or null;
             users = args.users or args.self.users or { };
-            processedModules = args.processedModules or { };
-            isTestingVM = args.isTestingVM or false;
-            isProductionVM = args.isProductionVM or false;
-            isVirtual = args.isVirtual or false;
           };
 
           enhancedModuleContext = injectModuleFuncs moduleContext;
@@ -2503,24 +2500,13 @@ rec {
         else
           let
             moduleDir = helpers.buildModuleDir inputName groupName moduleName;
-            targetContext = {
-              inputs = args.inputs;
-              variables = args.variables;
-              configInputs = args.configInputs or { };
-              nixOSHosts = args.nixOSHosts or { };
-              homeIntegratedUsers = args.homeIntegratedUsers or { };
-              homeStandaloneUsers = args.homeStandaloneUsers or { };
+            targetContext = mkModuleContext args {
+              includeHostsTrio = true;
               moduleBasePath = moduleDir;
               moduleInput = helpers.resolveInputFromInput inputName;
               moduleInputName = inputName;
               settings = moduleSettings;
-              host = args.host or { };
-              user = args.user or null;
-              users = args.users or { };
               processedModules = processedModules;
-              isTestingVM = args.isTestingVM or false;
-              isProductionVM = args.isProductionVM or false;
-              isVirtual = args.isVirtual or false;
             };
             targetSelf = injectModuleFuncs targetContext;
             exportsCallArgs = {
@@ -2736,21 +2722,10 @@ rec {
               let
                 moduleDir = helpers.buildModuleDir spec.inputName spec.groupName spec.moduleName;
 
-                moduleContext = {
-                  inputs = args.inputs;
-                  variables = args.variables;
-                  configInputs = args.configInputs or { };
+                moduleContext = mkModuleContext args {
                   moduleBasePath = moduleDir;
                   moduleInput = spec.input;
                   moduleInputName = spec.inputName;
-                  settings = { };
-                  host = args.host or { };
-                  users = args.users or { };
-                  user = args.user or null;
-                  processedModules = args.processedModules or { };
-                  isTestingVM = args.isTestingVM or false;
-                  isProductionVM = args.isProductionVM or false;
-                  isVirtual = args.isVirtual or false;
                 };
 
                 enhancedModuleContext = injectModuleFuncs moduleContext;
@@ -2826,21 +2801,11 @@ rec {
               let
                 moduleDir = helpers.buildModuleDir spec.inputName spec.groupName spec.moduleName;
 
-                moduleContext = {
-                  inputs = args.inputs;
-                  variables = args.variables;
-                  configInputs = args.configInputs or { };
+                moduleContext = mkModuleContext args {
                   moduleBasePath = moduleDir;
                   moduleInput = spec.input;
                   moduleInputName = spec.inputName;
-                  settings = { };
-                  host = args.host or { };
-                  users = args.users or { };
-                  user = args.user or null;
                   processedModules = processedModules;
-                  isTestingVM = args.isTestingVM or false;
-                  isProductionVM = args.isProductionVM or false;
-                  isVirtual = args.isVirtual or false;
                 };
 
                 enhancedModuleContext = injectModuleFuncs moduleContext;
