@@ -596,39 +596,10 @@ rec {
 
         getCleanPath =
           _:
-          let
-            pathStr = toString filePath;
-            parts = lib.splitString "/" pathStr;
-            inputName = moduleContext.inputName or "";
-          in
-          if helpers.isModulesOnlyInput inputName then
-            let
-              inputPath = toString (helpers.resolveInputFromInput inputName);
-              relative = lib.removePrefix (inputPath + "/") pathStr;
-              relParts = lib.splitString "/" relative;
-            in
-            if builtins.length relParts >= 2 then
-              let
-                group = builtins.elemAt relParts 0;
-                module = lib.removeSuffix ".nix" (lib.last relParts);
-              in
-              "${group}.${module}"
-            else
-              lib.removeSuffix ".nix" (builtins.baseNameOf pathStr)
+          if pathComponents != null then
+            "${pathComponents.group}.${pathComponents.module}"
           else
-            let
-              moduleIndex = lib.findFirst (i: builtins.elemAt parts i == "modules") null (
-                lib.range 0 (builtins.length parts - 1)
-              );
-            in
-            if moduleIndex != null && moduleIndex + 2 < builtins.length parts then
-              let
-                group = builtins.elemAt parts (moduleIndex + 1);
-                module = lib.removeSuffix ".nix" (builtins.elemAt parts (moduleIndex + 2));
-              in
-              "${group}.${module}"
-            else
-              lib.removeSuffix ".nix" (builtins.baseNameOf pathStr);
+            lib.removeSuffix ".nix" (builtins.baseNameOf (toString filePath));
       in
       if moduleError != null then
         throw "${getCleanPath null}: ${moduleError}"
