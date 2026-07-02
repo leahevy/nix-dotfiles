@@ -1522,19 +1522,16 @@ rec {
       ];
       normalizeStyle =
         fn:
-        if moduleNxPath != null && builtins.functionArgs fn != { } then
-          let
-            moduleArgNames = builtins.filter (a: a != "config") (builtins.attrNames (builtins.functionArgs fn));
-          in
-          c:
-          fn (
-            {
-              config = c;
-            }
-            // lib.genAttrs moduleArgNames (name: (lib.attrByPath ([ "nx" ] ++ moduleNxPath) { } c).${name})
-          )
-        else
-          fn;
+        let
+          moduleArgNames = builtins.filter (a: a != "config") (builtins.attrNames (builtins.functionArgs fn));
+        in
+        c:
+        fn (
+          {
+            config = c;
+          }
+          // lib.genAttrs moduleArgNames (name: (lib.attrByPath ([ "nx" ] ++ moduleNxPath) { } c).${name})
+        );
     in
     map (
       {
@@ -1542,16 +1539,18 @@ rec {
         type,
         wrap ? null,
       }:
-      { config, ... }:
       let
         isNewStyle = moduleNxPath != null && builtins.functionArgs fn != { };
         normalizedFn =
           if builtins.elem type contextSpecific then
-            normalizeStyle fn
+            if isNewStyle then normalizeStyle fn else fn
           else if isNewStyle then
             throw "Module ${moduleIdentifier}: the { config, opt, ... } signature is disallowed for ${prefix}.${type}. Use ${prefix}.${type} = config: { ... } and access options via config.nx directly."
           else
             fn;
+      in
+      { config, ... }:
+      let
         result = (if wrap != null then wrap normalizedFn else normalizedFn) config;
       in
       if (result ? nx) && (builtins.elem type contextSpecific) then
