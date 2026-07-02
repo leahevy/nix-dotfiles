@@ -1872,52 +1872,50 @@ rec {
 
   collectSubModules =
     args: moduleSpecs:
+    lib.foldl lib.recursiveUpdate { } (map (collectSubModulesForSpec args) moduleSpecs);
+
+  collectSubModulesForSpec =
+    args: moduleSpec:
     let
-      moduleResults = map (
-        moduleSpec:
-        let
-          modulePath =
-            helpers.buildModuleFilePath moduleSpec.input moduleSpec.inputName moduleSpec.group
-              moduleSpec.name;
-          moduleDir = helpers.buildModuleDir moduleSpec.inputName moduleSpec.group moduleSpec.name;
+      modulePath =
+        helpers.buildModuleFilePath moduleSpec.input moduleSpec.inputName moduleSpec.group
+          moduleSpec.name;
+      moduleDir = helpers.buildModuleDir moduleSpec.inputName moduleSpec.group moduleSpec.name;
 
-          moduleContext = mkModuleContext args {
-            inputs = args.inputs or args.self.inputs;
-            variables = args.variables or args.self.variables;
-            configInputs = args.configInputs or args.self.configInputs or { };
-            moduleBasePath = moduleDir;
-            moduleInput = moduleSpec.input;
-            moduleInputName = moduleSpec.inputName;
-            settings = moduleSpec.settings or { };
-            host = args.host or args.self.host or { };
-            user = args.user or args.self.user or null;
-            users = args.users or args.self.users or { };
-          };
+      moduleContext = mkModuleContext args {
+        inputs = args.inputs or args.self.inputs;
+        variables = args.variables or args.self.variables;
+        configInputs = args.configInputs or args.self.configInputs or { };
+        moduleBasePath = moduleDir;
+        moduleInput = moduleSpec.input;
+        moduleInputName = moduleSpec.inputName;
+        settings = moduleSpec.settings or { };
+        host = args.host or args.self.host or { };
+        user = args.user or args.self.user or null;
+        users = args.users or args.self.users or { };
+      };
 
-          enhancedModuleContext = injectModuleFuncs moduleContext;
+      enhancedModuleContext = injectModuleFuncs moduleContext;
 
-          consolidatedArgs = {
-            lib = args.lib;
-            pkgs = args.pkgs;
-            funcs = args.funcs;
-            helpers = args.helpers;
-            defs = args.defs;
-            self = enhancedModuleContext;
-          };
+      consolidatedArgs = {
+        lib = args.lib;
+        pkgs = args.pkgs;
+        funcs = args.funcs;
+        helpers = args.helpers;
+        defs = args.defs;
+        self = enhancedModuleContext;
+      };
 
-          moduleResult =
-            if args.preEvalMode or false then
-              let
-                r = builtins.tryEval (import modulePath consolidatedArgs);
-              in
-              if r.success then r.value else { }
-            else
-              import modulePath consolidatedArgs;
-        in
-        normalizeModules (filterFalseValues (normalizeListsToAttrsets (moduleResult.submodules or { })))
-      ) moduleSpecs;
+      moduleResult =
+        if args.preEvalMode or false then
+          let
+            r = builtins.tryEval (import modulePath consolidatedArgs);
+          in
+          if r.success then r.value else { }
+        else
+          import modulePath consolidatedArgs;
     in
-    lib.foldl lib.recursiveUpdate { } moduleResults;
+    normalizeModules (filterFalseValues (normalizeListsToAttrsets (moduleResult.submodules or { })));
 
   mergeModuleValue =
     a: b:
@@ -2023,18 +2021,52 @@ rec {
       filteredInitialModules = filterFalseValues normalizedListSyntax;
       normalizedInitialModules = normalizeModules filteredInitialModules;
 
+      moduleSpecPath = spec: "${spec.inputName}.${spec.group}.${spec.name}";
+
+      flattenModules =
+        modules:
+        lib.concatMapAttrs (
+          inputName: inputGroups:
+          lib.concatMapAttrs (
+            groupName: groupModules:
+            lib.mapAttrs' (moduleName: _: {
+              name = "${inputName}.${groupName}.${moduleName}";
+              value = true;
+            }) groupModules
+          ) inputGroups
+        ) modules;
+
+      restrictToDirty =
+        modules: dirty:
+        lib.mapAttrs (
+          inputName: inputGroups:
+          lib.mapAttrs (
+            groupName: groupModules:
+            lib.filterAttrs (moduleName: _: dirty ? "${inputName}.${groupName}.${moduleName}") groupModules
+          ) inputGroups
+        ) modules;
+
       collectRound =
-        processedModules: currentModules: iteration:
+        processedModules: currentModules: subResults: dirty: iteration:
         let
-          moduleSpecs = processModules currentModules;
-          collectedSubmodules = collectSubModules args moduleSpecs;
-          filteredSubmodules = filterFalseValues collectedSubmodules;
-          normalizedSubmodules = normalizeModules filteredSubmodules;
+          dirtySpecs = processModules (restrictToDirty currentModules dirty);
+          newResults = builtins.listToAttrs (
+            map (spec: {
+              name = moduleSpecPath spec;
+              value = collectSubModulesForSpec args spec;
+            }) dirtySpecs
+          );
+          allSubResults = subResults // newResults;
+
+          collectedSubmodules = lib.foldl lib.recursiveUpdate { } (
+            map (spec: allSubResults.${moduleSpecPath spec}) (processModules currentModules)
+          );
+
           collectedSubmodulesWithDefaults =
             if args.preEvalMode or false then
-              normalizedSubmodules
+              collectedSubmodules
             else
-              applyDefaultsToModules normalizedSubmodules;
+              applyDefaultsToModules collectedSubmodules;
 
           contextFilteredSubmodules =
             if args.preEvalMode or false then
@@ -2049,37 +2081,28 @@ rec {
 
           nextModules = mergeModulesWithPrecedence contextFilteredSubmodules currentModules;
 
-          hasNewModules =
-            let
-              flattenModules =
-                modules:
-                lib.concatMapAttrs (
-                  inputName: inputGroups:
-                  lib.concatMapAttrs (
-                    groupName: groupModules:
-                    lib.mapAttrs' (moduleName: _: {
-                      name = "${inputName}.${groupName}.${moduleName}";
-                      value = true;
-                    }) groupModules
-                  ) inputGroups
-                ) modules;
+          currentFlat = flattenModules currentModules;
+          processedFlat = flattenModules processedModules;
+          hasNewModules = removeAttrs currentFlat (builtins.attrNames processedFlat) != { };
 
-              currentFlat = flattenModules currentModules;
-              processedFlat = flattenModules processedModules;
-              newModulesFlat = removeAttrs currentFlat (builtins.attrNames processedFlat);
-            in
-            newModulesFlat != { };
+          brandNewModules = removeAttrs (flattenModules nextModules) (builtins.attrNames currentFlat);
+          contributionTargets = lib.foldl (acc: contrib: acc // flattenModules contrib) { } (
+            builtins.attrValues newResults
+          );
+          nextDirty = brandNewModules // contributionTargets;
         in
         if hasNewModules then
           if iteration < 15 then
-            collectRound currentModules nextModules (iteration + 1)
+            collectRound currentModules nextModules allSubResults nextDirty (iteration + 1)
           else
             throw "Recursion depth exceeded for collecting modules! Reached ${toString iteration} iterations."
         else
           nextModules;
     in
     let
-      finalModules = collectRound { } normalizedInitialModules 0;
+      finalModules =
+        collectRound { } normalizedInitialModules { } (flattenModules normalizedInitialModules)
+          0;
       finalModulesWithDefaults =
         if args.preEvalMode or false then
           finalModules
