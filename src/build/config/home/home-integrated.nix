@@ -92,6 +92,7 @@ in
 
   nixpkgs = {
     config.allowUnfreePredicate = unfreePredicate;
+    config.permittedInsecurePackages = variables.temporarilyAllowedInsecurePackages or [ ];
     overlays = allOverlays;
   };
 
