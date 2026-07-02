@@ -19,6 +19,23 @@ let
       self.host.architecture
     else
       throw "No architecture found in self context";
+
+  symlinkGuard =
+    {
+      disallowSymlinks,
+      inputName,
+      deploymentMode,
+      moduleBasePath,
+    }:
+    result:
+    if disallowSymlinks then
+      throw "Symlinks are globally forbidden (variables.disallowSymlinks = true) (module: ${moduleBasePath})!"
+    else if builtins.elem inputName defs.coreInputs then
+      throw "Symlinks are not allowed in core input '${inputName}' (module: ${moduleBasePath})."
+    else if deploymentMode == "managed" then
+      throw "Symlinks are not allowed in managed deployment mode (module: ${moduleBasePath})!"
+    else
+      result;
 in
 rec {
   commonFuncs = {
@@ -56,22 +73,24 @@ rec {
     # Usage: symlinkFromInput $SELF $CONFIG $INPUT $SUBPATH
     symlinkFromInput =
       self: config: input: subpath:
-      if self.variables.disallowSymlinks or false then
-        throw "Symlinks are globally forbidden (variables.disallowSymlinks = true) (module: ${self.moduleBasePath})!"
-      else if builtins.elem self.moduleInputName defs.coreInputs then
-        throw "Symlinks are not allowed in core input '${self.moduleInputName}' (module: ${self.moduleBasePath})."
-      else if (self.host.deploymentMode or "develop") == "managed" then
-        throw "Symlinks are not allowed in managed deployment mode (module: ${self.moduleBasePath})!"
-      else
-        let
-          inputPath = helpers.resolveInputFromInput input;
-        in
-        if helpers.isLocalDevelopmentInput inputPath input then
-          helpers.symlinkToHomeDirPath config (
-            helpers.getLocalSourcePath input + "/" + self.moduleBasePath + "/" + subpath
-          )
-        else
-          helpers.symlink config (inputPath + "/" + self.moduleBasePath + "/" + subpath);
+      symlinkGuard
+        {
+          disallowSymlinks = self.variables.disallowSymlinks or false;
+          inputName = self.moduleInputName;
+          deploymentMode = self.host.deploymentMode or "develop";
+          moduleBasePath = self.moduleBasePath;
+        }
+        (
+          let
+            inputPath = helpers.resolveInputFromInput input;
+          in
+          if helpers.isLocalDevelopmentInput inputPath input then
+            helpers.symlinkToHomeDirPath config (
+              helpers.getLocalSourcePath input + "/" + self.moduleBasePath + "/" + subpath
+            )
+          else
+            helpers.symlink config (inputPath + "/" + self.moduleBasePath + "/" + subpath)
+        );
 
     # Send a user notification, preferring nx-user-notify (logger) when enabled, else raw notify-send (osascript -e 'display notification...' on Darwin)
     # Usage: self.notifyUser { title = "..."; body = "..."; icon = "dialog-information"; urgency = "normal"; }
@@ -339,113 +358,50 @@ rec {
 
   # Generate file access functions for specific input and module path
   # Usage: generateFileFunctions $INPUTNAME $MODULEBASEPATH $DEPLOYMENTMODE
-  generateFileFunctions = inputName: moduleBasePath: deploymentMode: variables: {
-    rootPath = subPath: additionalInputs.${inputName} + "/" + subPath;
+  generateFileFunctions =
+    inputName: moduleBasePath: deploymentMode: variables:
+    let
+      moduleRelativePath =
+        subPath: if moduleBasePath != null then nixdPath moduleBasePath subPath else "files/${subPath}";
 
-    file =
-      subPath:
-      let
-        relativePath =
-          if moduleBasePath != null then nixdPath moduleBasePath subPath else "files/${subPath}";
-        fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
-      in
-      if builtins.pathExists fullPath then
-        if lib.hasSuffix ".nix" subPath then
-          fullPath
+      secretRelativePath =
+        subPath:
+        if moduleBasePath != null then
+          nixdPath moduleBasePath "secrets/${subPath}"
         else
-          builtins.path {
-            path = fullPath;
-            name = builtins.baseNameOf subPath;
-          }
-      else
-        throw "File not found: ${inputName}/${relativePath}";
+          "secrets/${subPath}";
 
-    secret =
-      subPath:
-      let
-        relativePath =
-          if moduleBasePath != null then
-            nixdPath moduleBasePath "secrets/${subPath}"
-          else
-            "secrets/${subPath}";
-        fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
-      in
-      if builtins.pathExists fullPath then
-        if lib.hasSuffix ".nix" subPath then
-          fullPath
-        else
-          builtins.path {
-            path = fullPath;
-            name = builtins.baseNameOf subPath;
-          }
-      else
-        throw "Secret file not found: ${inputName}/${relativePath}";
-
-    filesPath =
-      subPath:
-      let
-        fullPath = helpers.getInputFilePath additionalInputs.${inputName} ("files/" + subPath);
-      in
-      if builtins.pathExists fullPath then
-        if lib.hasSuffix ".nix" subPath then
-          fullPath
-        else
-          builtins.path {
-            path = fullPath;
-            name = builtins.baseNameOf subPath;
-          }
-      else
-        throw "Root file not found: ${inputName}/files/${subPath}";
-
-    secretsPath =
-      subPath:
-      let
-        fullPath = helpers.getInputFilePath additionalInputs.${inputName} ("secrets/" + subPath);
-      in
-      if builtins.pathExists fullPath then
-        if lib.hasSuffix ".nix" subPath then
-          fullPath
-        else
-          builtins.path {
-            path = fullPath;
-            name = builtins.baseNameOf subPath;
-          }
-      else
-        throw "Root secret not found: ${inputName}/secrets/${subPath}";
-
-    fileRel =
-      subPath:
-      let
-        fullPath = helpers.getInputFilePath additionalInputs.${inputName} ("files/" + subPath);
-      in
-      if builtins.pathExists fullPath then
-        helpers.getInputFilePathRel inputName ("files/" + subPath)
-      else
-        throw "File not found: ${inputName}/files/${subPath}";
-
-    secretRel =
-      subPath:
-      let
-        fullPath = helpers.getInputFilePath additionalInputs.${inputName} ("secrets/" + subPath);
-      in
-      if builtins.pathExists fullPath then
-        helpers.getInputFilePathRel inputName ("secrets/" + subPath)
-      else
-        throw "Secret file not found: ${inputName}/secrets/${subPath}";
-
-    # Create symlink to file in this module's input; not allowed in core inputs
-    symlinkFile =
-      config: subPath:
-      if variables.disallowSymlinks or false then
-        throw "Symlinks are globally forbidden (variables.disallowSymlinks = true) (module: ${moduleBasePath})!"
-      else if builtins.elem inputName defs.coreInputs then
-        throw "Symlinks are not allowed in core input '${inputName}' (module: ${moduleBasePath})."
-      else if deploymentMode == "managed" then
-        throw "Symlinks are not allowed in managed deployment mode (module: ${moduleBasePath})!"
-      else
+      resolveFile =
+        relativePath: subPath: notFoundPrefix:
         let
-          relativePath =
-            if moduleBasePath != null then nixdPath moduleBasePath subPath else "files/${subPath}";
+          fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
+        in
+        if builtins.pathExists fullPath then
+          if lib.hasSuffix ".nix" subPath then
+            fullPath
+          else
+            builtins.path {
+              path = fullPath;
+              name = builtins.baseNameOf subPath;
+            }
+        else
+          throw "${notFoundPrefix}: ${inputName}/${relativePath}";
+
+      resolveFileRel =
+        relativePath: notFoundPrefix:
+        if builtins.pathExists (helpers.getInputFilePath additionalInputs.${inputName} relativePath) then
+          helpers.getInputFilePathRel inputName relativePath
+        else
+          throw "${notFoundPrefix}: ${inputName}/${relativePath}";
+
+      guard = symlinkGuard {
+        disallowSymlinks = variables.disallowSymlinks or false;
+        inherit inputName deploymentMode moduleBasePath;
+      };
+
+      symlinkTo =
+        config: relativePath: notFoundPrefix:
+        let
           fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
         in
         if builtins.pathExists fullPath then
@@ -454,34 +410,31 @@ rec {
           else
             helpers.symlink config (additionalInputs.${inputName} + "/" + relativePath)
         else
-          throw "File not found: ${inputName}/${relativePath}";
+          throw "${notFoundPrefix}: ${inputName}/${relativePath}";
+    in
+    {
+      rootPath = subPath: additionalInputs.${inputName} + "/" + subPath;
 
-    # Create symlink to secret file in this module's input; not allowed in core inputs
-    symlinkSecret =
-      config: subPath:
-      if variables.disallowSymlinks or false then
-        throw "Symlinks are globally forbidden (variables.disallowSymlinks = true) (module: ${moduleBasePath})!"
-      else if builtins.elem inputName defs.coreInputs then
-        throw "Symlinks are not allowed in core input '${inputName}' (module: ${moduleBasePath})."
-      else if deploymentMode == "managed" then
-        throw "Symlinks are not allowed in managed deployment mode (module: ${moduleBasePath})!"
-      else
-        let
-          relativePath =
-            if moduleBasePath != null then
-              nixdPath moduleBasePath "secrets/${subPath}"
-            else
-              "secrets/${subPath}";
-          fullPath = helpers.getInputFilePath additionalInputs.${inputName} relativePath;
-        in
-        if builtins.pathExists fullPath then
-          if helpers.isLocalDevelopmentInput null inputName then
-            helpers.symlinkToHomeDirPath config (helpers.getLocalSourcePath inputName + "/" + relativePath)
-          else
-            helpers.symlink config (additionalInputs.${inputName} + "/" + relativePath)
-        else
-          throw "Secret file not found: ${inputName}/${relativePath}";
-  };
+      file = subPath: resolveFile (moduleRelativePath subPath) subPath "File not found";
+
+      secret = subPath: resolveFile (secretRelativePath subPath) subPath "Secret file not found";
+
+      filesPath = subPath: resolveFile ("files/" + subPath) subPath "Root file not found";
+
+      secretsPath = subPath: resolveFile ("secrets/" + subPath) subPath "Root secret not found";
+
+      fileRel = subPath: resolveFileRel ("files/" + subPath) "File not found";
+
+      secretRel = subPath: resolveFileRel ("secrets/" + subPath) "Secret file not found";
+
+      # Create symlink to file in this module's input; not allowed in core inputs
+      symlinkFile =
+        config: subPath: guard (symlinkTo config (moduleRelativePath subPath) "File not found");
+
+      # Create symlink to secret file in this module's input; not allowed in core inputs
+      symlinkSecret =
+        config: subPath: guard (symlinkTo config (secretRelativePath subPath) "Secret file not found");
+    };
 
   # Generate module query functions for specific input and namespace
   # Usage: generateModuleFunctions $INPUTNAME $REQUESTEDNAMESPACE $MODULECONTEXT
