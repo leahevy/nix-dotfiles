@@ -364,6 +364,10 @@ jobs:
           done
           DESKTOP_REBOOT_PATTERNS="${DESKTOP_REBOOT_PATTERNS%|}"
 
+          BACKPORT_FILTER='^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]|^- [Bb]ackport '
+          STAGING_FILTER='^- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release|Staging|Release)[- ][0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]|^- (staging-next|release)-[0-9]{2}\.[0-9]{2}'
+          COMMIT_FILTER_PATTERN="$BACKPORT_FILTER|$STAGING_FILTER"
+
           IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
 
           commit_lists=""
@@ -390,187 +394,242 @@ jobs:
               if [ "$old_commit" != "$new_commit" ] && [ -n "$old_commit" ]; then
                 echo "Fetching commits for $input from $repo..."
 
-                commits_json=$(curl --retry 5 --retry-all-errors --retry-delay 2 --retry-connrefused --connect-timeout 10 -m 60 -fsS -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit") || commits_json=""
+                truncate_this_input="false"
+                if echo ",$TRUNCATE_INPUTS," | grep -q ",$input,"; then
+                  truncate_this_input="true"
+                fi
 
-                if echo "$commits_json" | jq -e '.commits' > /dev/null 2>&1; then
+                if [ "$truncate_this_input" = "true" ]; then
+                  compare_json=$(curl --retry 5 --retry-all-errors --retry-delay 2 --retry-connrefused --connect-timeout 10 -m 60 -fsS -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit") || compare_json=""
+                  total_commits=$(printf '%s' "$compare_json" | jq -r '.total_commits // 0')
+                  commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($total_commits commits, details omitted)"
+                else
+                  raw_pages=""
+                  meaningful_count=0
+                  page=1
+                  max_pages=30
+                  while [ "$page" -le "$max_pages" ]; do
+                    page_json=$(curl --retry 5 --retry-all-errors --retry-delay 2 --retry-connrefused --connect-timeout 10 -m 60 -fsS -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$repo/commits?sha=$new_commit&per_page=100&page=$page") || { raw_pages=""; break; }
 
-                  total_commits=$(echo "$commits_json" | jq -r '.total_commits // 0')
-                  returned_commits=$(echo "$commits_json" | jq -r '.commits | length')
+                    page_count=$(printf '%s' "$page_json" | jq 'length' 2>/dev/null || echo 0)
+                    if [ "$page_count" -eq 0 ]; then
+                      break
+                    fi
 
-                  if [ "$total_commits" -gt "$returned_commits" ]; then
-                    echo "WARNING: GitHub API truncation detected for $input: $total_commits total commits but only $returned_commits returned"
+                    raw_pages="$raw_pages$page_json"$'\n'
+
+                    boundary_hit="false"
+                    if printf '%s' "$page_json" | jq -e --arg stop "$old_commit" 'any(.[]; .sha == $stop)' > /dev/null 2>&1; then
+                      boundary_hit="true"
+                    fi
+
+                    page_meaningful=$(printf '%s' "$page_json" | jq -r --arg stop "$old_commit" '(map(.sha) | index($stop)) as $idx | (if $idx != null then .[:$idx] else . end) | .[] | "- \(.commit.message | split("\n")[0])"' 2>/dev/null | grep -vcE "$COMMIT_FILTER_PATTERN" || true)
+                    meaningful_count=$((meaningful_count + page_meaningful))
+
+                    if [ "$boundary_hit" = "true" ]; then
+                      break
+                    fi
+
+                    if [ "$page_count" -lt 100 ]; then
+                      break
+                    fi
+
+                    if [ "$meaningful_count" -ge 1000 ]; then
+                      break
+                    fi
+
+                    page=$((page + 1))
+                  done
+
+                  if [ -n "$raw_pages" ]; then
+                    fetch_result=$(printf '%s' "$raw_pages" | jq -s --arg stop "$old_commit" '
+                      flatten(1) |
+                      . as $all |
+                      ($all | map(.sha) | index($stop)) as $idx |
+                      {
+                        commits: ((if $idx != null then $all[:$idx] else $all end) | reverse),
+                        found_boundary: ($idx != null)
+                      }
+                    ' 2>/dev/null) || fetch_result=""
+
+                    if [ -n "$fetch_result" ]; then
+                      found_boundary=$(printf '%s' "$fetch_result" | jq -r '.found_boundary')
+                      commits_json=$(printf '%s' "$fetch_result" | jq '{commits: .commits}')
+
+                      if [ "$found_boundary" != "true" ]; then
+                        echo "WARNING: Boundary commit $old_commit not found in paginated results for $input - treating as truncated"
+                        if ! echo ",$EXCLUDE_FROM_REBOOT_CHECK," | grep -q ",$input,"; then
+                          commits_truncated="true"
+                        else
+                          echo "Input $input is excluded from reboot checks - boundary miss ignored for auto-merge decision"
+                        fi
+                      fi
+
+                      if ! echo ",$EXCLUDE_FROM_REBOOT_CHECK," | grep -q ",$input,"; then
+                        should_check_reboot_normal="false"
+                        should_check_reboot_nix="false"
+                        if echo ",$REBOOT_NORMAL_CHECK_INPUTS," | grep -q ",$input,"; then
+                          should_check_reboot_normal="true"
+                        fi
+                        if echo ",$REBOOT_NIX_CHECK_INPUTS," | grep -q ",$input,"; then
+                          should_check_reboot_nix="true"
+                        fi
+
+                        if [ "$should_check_reboot_normal" = "true" ]; then
+                          if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_NORMAL_PATTERNS" > /dev/null 2>&1; then
+                            requires_reboot="true"
+                            found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$REBOOT_NORMAL_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                            if [ -n "$found_packages" ]; then
+                              reboot_packages="$reboot_packages$found_packages, "
+                            fi
+
+                            input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_NORMAL_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                            if [ -n "$input_reboot_commits" ]; then
+                              reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
+                            fi
+                          fi
+                        fi
+
+                        if [ "$should_check_reboot_nix" = "true" ]; then
+                          if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_NIX_PATTERNS" > /dev/null 2>&1; then
+                            requires_reboot="true"
+                            found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$REBOOT_NIX_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                            if [ -n "$found_packages" ]; then
+                              reboot_packages="$reboot_packages$found_packages, "
+                            fi
+
+                            input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_NIX_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                            if [ -n "$input_reboot_commits" ]; then
+                              reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
+                            fi
+                          fi
+                        fi
+
+                        if [ "$should_check_reboot_normal" = "true" ]; then
+                          if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$DESKTOP_REBOOT_PATTERNS" > /dev/null 2>&1; then
+                            requires_desktop_reboot="true"
+                            found_desktop_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$DESKTOP_REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                            if [ -n "$found_desktop_packages" ]; then
+                              desktop_reboot_packages="$desktop_reboot_packages$found_desktop_packages, "
+                            fi
+
+                            input_desktop_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$DESKTOP_REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                            if [ -n "$input_desktop_reboot_commits" ]; then
+                              reboot_commits="$reboot_commits"$'\n\n'"#### $input (Desktop)"$'\n'"$input_desktop_reboot_commits"
+                            fi
+                          fi
+                        fi
+                      fi
+
+                      all_commits_full=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+
+                      regular_commits_full=$(echo "$all_commits_full" | grep -vE "$COMMIT_FILTER_PATTERN" || true)
+                      regular_commits_full=$(printf '%s\n' "$regular_commits_full" | awk '{key=$0; sub(/ \(\[[0-9a-f]+\]\([^)]*\)\)$/,"",key); lines[NR]=$0; keys[NR]=key; last[key]=NR; total=NR} END{for(i=1;i<=total;i++) if(last[keys[i]]==i) print lines[i]}')
+
+                      backport_count=$(printf '%s\n' "$all_commits_full" | grep -cE "$BACKPORT_FILTER" || true)
+                      staging_count=$(printf '%s\n' "$all_commits_full" | grep -cE "$STAGING_FILTER" || true)
+
+                      if [ -n "$regular_commits_full" ]; then
+                        should_reduce_commit_subjects="false"
+                        if echo ",$NIXPKGS_INPUTS," | grep -q ",$input,"; then
+                          should_reduce_commit_subjects="true"
+                        fi
+
+                        if [ "$should_reduce_commit_subjects" = "true" ]; then
+                          package_names=$(printf '%s\n' "$regular_commits_full" | sed -E 's/^- //; s/ \\(\\[[^]]+\\]\\([^)]*\\)\\)$//' | cut -d: -f1 | sed -E 's/[[:space:]]+$//' | sort -fu)
+
+                          highlight_list=""
+                          other_list=""
+                          highlight_csv="${PACKAGES_TO_HIGHLIGHT:-}"
+                          highlight_norm=$(printf '%s\n' "$highlight_csv" | tr ',' '\n' | sed '/^$/d' | tr '[:upper:]' '[:lower:]' | sort -fu)
+                          other_updates_line=""
+
+                          while IFS= read -r pkg; do
+                            [ -z "$pkg" ] && continue
+
+                            pkg_norm=$(printf '%s' "$pkg" | tr '[:upper:]' '[:lower:]')
+                            if [ -n "$highlight_norm" ] && printf '%s\n' "$highlight_norm" | grep -qxF "$pkg_norm"; then
+                              if [ -z "$highlight_list" ]; then
+                                highlight_list="- $pkg"
+                              else
+                                highlight_list="$highlight_list"$'\n'"- $pkg"
+                              fi
+                            else
+                              if [ -z "$other_list" ]; then
+                                other_list="$pkg"
+                              else
+                                other_list="$other_list, $pkg"
+                              fi
+                            fi
+                          done <<< "$package_names"
+
+                          regular_commits=""
+                          if [ -n "$highlight_list" ]; then
+                            regular_commits="$highlight_list"
+                          fi
+                          if [ -n "$other_list" ]; then
+                            other_updates_line="<b>Other Updates</b>: $other_list"
+                          fi
+                        else
+                          regular_commits="$regular_commits_full"
+                        fi
+                        commit_count=$(echo "$regular_commits" | wc -l)
+                        if [ "$commit_count" -gt 500 ]; then
+                          commits_to_show=$(echo "$regular_commits" | head -500)
+                          commits_to_show="$commits_to_show"$'\n'"- ... and $(($commit_count - 500)) more commits"
+                        else
+                          commits_to_show="$regular_commits"
+                        fi
+
+                        if [ "$should_reduce_commit_subjects" = "true" ]; then
+                          filtered_total=$((backport_count + staging_count))
+                          if [ "$filtered_total" -gt 0 ]; then
+                            if [ -n "$commits_to_show" ]; then
+                              commits_to_show="$commits_to_show"$'\n\n'
+                            fi
+                            commits_to_show="$commits_to_show<b>Filtered</b>:"$'\n'
+                            if [ "$backport_count" -gt 0 ]; then
+                              commits_to_show="$commits_to_show- $backport_count backport commits filtered out"$'\n'
+                            fi
+                            if [ "$staging_count" -gt 0 ]; then
+                              commits_to_show="$commits_to_show- $staging_count staging/release merge commits filtered out"$'\n'
+                            fi
+                            commits_to_show=$(printf '%s' "$commits_to_show" | sed -E 's/\n$//')
+                          fi
+                          if [ -n "$other_updates_line" ]; then
+                            if [ -n "$commits_to_show" ]; then
+                              commits_to_show="$commits_to_show"$'\n\n'
+                            fi
+                            commits_to_show="$commits_to_show$other_updates_line"
+                          fi
+                        fi
+
+                        commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"$commits_to_show"
+
+                      else
+                        filtered_total=$((backport_count + staging_count))
+                        if [ "$filtered_total" -gt 0 ]; then
+                          commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($backport_count backport commits filtered out)"
+                          if [ "$staging_count" -gt 0 ]; then
+                            commit_lists="$commit_lists"$'\n'"- ($staging_count staging/release merge commits filtered out)"
+                          fi
+                        fi
+                      fi
+                    else
+                      echo "WARNING: Could not parse commits for $input - treating as manual merge required"
+                      if ! echo ",$EXCLUDE_FROM_REBOOT_CHECK," | grep -q ",$input,"; then
+                        commits_truncated="true"
+                      else
+                        echo "Input $input is excluded from reboot checks - parse failure ignored for auto-merge decision"
+                      fi
+                    fi
+                  else
+                    echo "WARNING: Could not fetch commits for $input - treating as manual merge required"
                     if ! echo ",$EXCLUDE_FROM_REBOOT_CHECK," | grep -q ",$input,"; then
                       commits_truncated="true"
                     else
-                      echo "Input $input is excluded from reboot checks - truncation ignored for auto-merge decision"
+                      echo "Input $input is excluded from reboot checks - fetch failure ignored for auto-merge decision"
                     fi
-                  fi
-
-                  truncate_this_input="false"
-                  if echo ",$TRUNCATE_INPUTS," | grep -q ",$input,"; then
-                    truncate_this_input="true"
-                  fi
-
-                  if ! echo ",$EXCLUDE_FROM_REBOOT_CHECK," | grep -q ",$input,"; then
-                    should_check_reboot_normal="false"
-                    should_check_reboot_nix="false"
-                    if echo ",$REBOOT_NORMAL_CHECK_INPUTS," | grep -q ",$input,"; then
-                      should_check_reboot_normal="true"
-                    fi
-                    if echo ",$REBOOT_NIX_CHECK_INPUTS," | grep -q ",$input,"; then
-                      should_check_reboot_nix="true"
-                    fi
-
-                    if [ "$should_check_reboot_normal" = "true" ]; then
-                      if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_NORMAL_PATTERNS" > /dev/null 2>&1; then
-                        requires_reboot="true"
-                        found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$REBOOT_NORMAL_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
-                        if [ -n "$found_packages" ]; then
-                          reboot_packages="$reboot_packages$found_packages, "
-                        fi
-
-                        input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_NORMAL_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
-                        if [ -n "$input_reboot_commits" ]; then
-                          reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
-                        fi
-                      fi
-                    fi
-
-                    if [ "$should_check_reboot_nix" = "true" ]; then
-                      if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_NIX_PATTERNS" > /dev/null 2>&1; then
-                        requires_reboot="true"
-                        found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$REBOOT_NIX_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
-                        if [ -n "$found_packages" ]; then
-                          reboot_packages="$reboot_packages$found_packages, "
-                        fi
-
-                        input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_NIX_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
-                        if [ -n "$input_reboot_commits" ]; then
-                          reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
-                        fi
-                      fi
-                    fi
-
-                    if [ "$should_check_reboot_normal" = "true" ]; then
-                      if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$DESKTOP_REBOOT_PATTERNS" > /dev/null 2>&1; then
-                        requires_desktop_reboot="true"
-                        found_desktop_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$DESKTOP_REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
-                        if [ -n "$found_desktop_packages" ]; then
-                          desktop_reboot_packages="$desktop_reboot_packages$found_desktop_packages, "
-                        fi
-
-                        input_desktop_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$DESKTOP_REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
-                        if [ -n "$input_desktop_reboot_commits" ]; then
-                          reboot_commits="$reboot_commits"$'\n\n'"#### $input (Desktop)"$'\n'"$input_desktop_reboot_commits"
-                        fi
-                      fi
-                    fi
-                  fi
-
-                  if [ "$truncate_this_input" = "true" ]; then
-                    commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($total_commits commits, details omitted)"
-                  else
-                    all_commits_full=$(echo "$commits_json" | jq -r '.commits[]? | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
-
-                    regular_commits_full=$(echo "$all_commits_full" | grep -vE '^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]|^- [Bb]ackport |- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release|Staging|Release)[- ][0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]|^- (staging-next|release)-[0-9]{2}\.[0-9]{2}' || true)
-                    regular_commits_full=$(printf '%s\n' "$regular_commits_full" | awk '{key=$0; sub(/ \(\[[0-9a-f]+\]\([^)]*\)\)$/,"",key); lines[NR]=$0; keys[NR]=key; last[key]=NR; total=NR} END{for(i=1;i<=total;i++) if(last[keys[i]]==i) print lines[i]}')
-
-                    backport_count=$(printf '%s\n' "$all_commits_full" | grep -cE '^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]|^- [Bb]ackport ' || true)
-                    staging_count=$(printf '%s\n' "$all_commits_full" | grep -cE '^- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release|Staging|Release)[- ][0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]|^- (staging-next|release)-[0-9]{2}\.[0-9]{2}' || true)
-
-                    if [ -n "$regular_commits_full" ]; then
-                      should_reduce_commit_subjects="false"
-                      if echo ",$NIXPKGS_INPUTS," | grep -q ",$input,"; then
-                        should_reduce_commit_subjects="true"
-                      fi
-
-                      if [ "$should_reduce_commit_subjects" = "true" ]; then
-                        package_names=$(printf '%s\n' "$regular_commits_full" | sed -E 's/^- //; s/ \\(\\[[^]]+\\]\\([^)]*\\)\\)$//' | cut -d: -f1 | sed -E 's/[[:space:]]+$//' | sort -fu)
-
-                        highlight_list=""
-                        other_list=""
-                        highlight_csv="${PACKAGES_TO_HIGHLIGHT:-}"
-                        highlight_norm=$(printf '%s\n' "$highlight_csv" | tr ',' '\n' | sed '/^$/d' | tr '[:upper:]' '[:lower:]' | sort -fu)
-                        other_updates_line=""
-
-                        while IFS= read -r pkg; do
-                          [ -z "$pkg" ] && continue
-
-                          pkg_norm=$(printf '%s' "$pkg" | tr '[:upper:]' '[:lower:]')
-                          if [ -n "$highlight_norm" ] && printf '%s\n' "$highlight_norm" | grep -qxF "$pkg_norm"; then
-                            if [ -z "$highlight_list" ]; then
-                              highlight_list="- $pkg"
-                            else
-                              highlight_list="$highlight_list"$'\n'"- $pkg"
-                            fi
-                          else
-                            if [ -z "$other_list" ]; then
-                              other_list="$pkg"
-                            else
-                              other_list="$other_list, $pkg"
-                            fi
-                          fi
-                        done <<< "$package_names"
-
-                        regular_commits=""
-                        if [ -n "$highlight_list" ]; then
-                          regular_commits="$highlight_list"
-                        fi
-                        if [ -n "$other_list" ]; then
-                          other_updates_line="<b>Other Updates</b>: $other_list"
-                        fi
-                      else
-                        regular_commits="$regular_commits_full"
-                      fi
-                      commit_count=$(echo "$regular_commits" | wc -l)
-                      if [ "$commit_count" -gt 500 ]; then
-                        commits_to_show=$(echo "$regular_commits" | head -500)
-                        commits_to_show="$commits_to_show"$'\n'"- ... and $(($commit_count - 500)) more commits"
-                      else
-                        commits_to_show="$regular_commits"
-                      fi
-
-                      if [ "$should_reduce_commit_subjects" = "true" ]; then
-                        filtered_total=$((backport_count + staging_count))
-                        if [ "$filtered_total" -gt 0 ]; then
-                          if [ -n "$commits_to_show" ]; then
-                            commits_to_show="$commits_to_show"$'\n\n'
-                          fi
-                          commits_to_show="$commits_to_show<b>Filtered</b>:"$'\n'
-                          if [ "$backport_count" -gt 0 ]; then
-                            commits_to_show="$commits_to_show- $backport_count backport commits filtered out"$'\n'
-                          fi
-                          if [ "$staging_count" -gt 0 ]; then
-                            commits_to_show="$commits_to_show- $staging_count staging/release merge commits filtered out"$'\n'
-                          fi
-                          commits_to_show=$(printf '%s' "$commits_to_show" | sed -E 's/\n$//')
-                        fi
-                        if [ -n "$other_updates_line" ]; then
-                          if [ -n "$commits_to_show" ]; then
-                            commits_to_show="$commits_to_show"$'\n\n'
-                          fi
-                          commits_to_show="$commits_to_show$other_updates_line"
-                        fi
-                      fi
-
-                      commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"$commits_to_show"
-
-                    else
-                      filtered_total=$((backport_count + staging_count))
-                      if [ "$filtered_total" -gt 0 ]; then
-                        commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($backport_count backport commits filtered out)"
-                        if [ "$staging_count" -gt 0 ]; then
-                          commit_lists="$commit_lists"$'\n'"- ($staging_count staging/release merge commits filtered out)"
-                        fi
-                      fi
-                    fi
-                  fi
-                else
-                  echo "WARNING: Could not fetch commit comparison for $input - treating as manual merge required"
-                  if ! echo ",$EXCLUDE_FROM_REBOOT_CHECK," | grep -q ",$input,"; then
-                    commits_truncated="true"
-                  else
-                    echo "Input $input is excluded from reboot checks - fetch failure ignored for auto-merge decision"
                   fi
                 fi
               fi
@@ -641,7 +700,7 @@ jobs:
 
           ${{ (env.COMMITS_TRUNCATED == 'true' || env.PR_COMMITS_TRUNCATED == 'true') && env.ANY_REBOOT_REQUIRED != 'true' && env.PR_REQUIRES_REBOOT != 'true' && '> [!WARNING]' || '' }}
           ${{ (env.COMMITS_TRUNCATED == 'true' || env.PR_COMMITS_TRUNCATED == 'true') && env.ANY_REBOOT_REQUIRED != 'true' && env.PR_REQUIRES_REBOOT != 'true' && '> ⚠️ **Manual Merge Required (Truncation)** ⚠️' || '' }}
-          ${{ (env.COMMITS_TRUNCATED == 'true' || env.PR_COMMITS_TRUNCATED == 'true') && env.ANY_REBOOT_REQUIRED != 'true' && env.PR_REQUIRES_REBOOT != 'true' && '> Too many commits (>250) - cannot verify all commits for reboot requirements' || '' }}
+          ${{ (env.COMMITS_TRUNCATED == 'true' || env.PR_COMMITS_TRUNCATED == 'true') && env.ANY_REBOOT_REQUIRED != 'true' && env.PR_REQUIRES_REBOOT != 'true' && '> Could not retrieve complete commit history - cannot verify all commits for reboot requirements' || '' }}
 
           NX_PR_STATIC
 
@@ -791,7 +850,7 @@ jobs:
             TTL="604800"
             CIRCLE_COLOR="🟡"
             STATUS="Merge Window Open (Review Required)"
-            EXTRA_MESSAGE="⚠️ <b>Commits truncated</b> - Cannot verify reboot requirements, review manually"
+            EXTRA_MESSAGE="⚠️ <b>Incomplete commit history</b> - Cannot verify reboot requirements, review manually"
           else
             PRIORITY="0"
             SOUND="pianobar"
