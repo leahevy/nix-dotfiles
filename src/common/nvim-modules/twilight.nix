@@ -143,6 +143,7 @@ args@{
     ];
     exclude = [
       "env"
+      "typst"
       "yaml"
       "sh"
       "text"
