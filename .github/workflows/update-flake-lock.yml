@@ -1,7 +1,7 @@
 name: Update Flake.lock
 on:
   schedule:
-    - cron: '0 12 * * *'
+    - cron: '0 12 * * 1-3,5-7'
   workflow_dispatch:
 
 concurrency:
@@ -63,32 +63,22 @@ jobs:
               "$1"
           }
 
-          day=$((10#$(date +%d)))
+          dow=$(date +%u)
 
-          CYCLE_MODE=update
           IS_FIRST_MERGE_DAY=false
 
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "$dow" -lt 5 ]; then
             CYCLE_MODE=update
-          elif [ "$day" -ge 1 ] && [ "$day" -le 7 ]; then
-            CYCLE_MODE=update
-          elif [ "$day" -ge 8 ] && [ "$day" -le 14 ]; then
+          else
             CYCLE_MODE=merge
-            if [ "$day" -eq 8 ]; then IS_FIRST_MERGE_DAY=true; fi
-          elif [ "$day" -ge 15 ] && [ "$day" -le 21 ]; then
-            CYCLE_MODE=update
-          elif [ "$day" -ge 22 ]; then
-            CYCLE_MODE=merge
-            if [ "$day" -eq 22 ]; then IS_FIRST_MERGE_DAY=true; fi
+            if [ "$dow" -eq 5 ]; then IS_FIRST_MERGE_DAY=true; fi
           fi
 
           echo "CYCLE_MODE=$CYCLE_MODE" >> $GITHUB_ENV
           echo "IS_FIRST_MERGE_DAY=$IS_FIRST_MERGE_DAY" >> $GITHUB_ENV
 
-          if [ "$day" -ge 8 ] && [ "$day" -le 14 ]; then
-            MERGE_CYCLE_ID="$(date +%Y%m)A"
-          elif [ "$day" -ge 22 ]; then
-            MERGE_CYCLE_ID="$(date +%Y%m)B"
+          if [ "$dow" -ge 5 ]; then
+            MERGE_CYCLE_ID="$(date +%GW%V)"
           else
             MERGE_CYCLE_ID=""
           fi
