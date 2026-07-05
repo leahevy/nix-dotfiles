@@ -439,7 +439,7 @@ in
               provider = "oidc";
               oidcIssuerUrl = config.nx.linux.server.auth.baseUrl;
               redirectURL = "https://${proxyDomain}/oauth2/callback";
-              scope = "openid email profile groups";
+              scope = "openid email profile groups offline_access";
               reverseProxy = true;
               trustedProxyIP = [
                 "127.0.0.1"
@@ -449,6 +449,8 @@ in
               email.domains = [ "*" ];
               cookie = {
                 domain = ".${domain}";
+                expire = "720h";
+                refresh = "55m";
                 secure = true;
                 httpOnly = true;
               };
