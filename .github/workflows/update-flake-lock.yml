@@ -178,7 +178,11 @@ jobs:
 
           IS_UPDATE_RUN=false
           if [ "$CYCLE_MODE" == "update" ]; then
-            IS_UPDATE_RUN=true
+            if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "$PR_EXISTS" != "true" ]; then
+              IS_UPDATE_RUN=true
+            else
+              echo "PR already exists (#$PR_NUMBER) - skipping flake update"
+            fi
           fi
           echo "IS_UPDATE_RUN=$IS_UPDATE_RUN" >> $GITHUB_ENV
 
