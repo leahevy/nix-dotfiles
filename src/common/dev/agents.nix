@@ -323,48 +323,54 @@ args@{
         maxItemLen = lib.foldl' (acc: n: lib.max acc (builtins.stringLength n)) 0 enabledAgents;
         menuWidth = lib.max (builtins.stringLength "Select agent:") (3 + maxItemLen);
         menuOffset = (headerWidth - menuWidth) / 2;
-        agentScript = pkgs.writeShellScriptBin "agent" ''
-          _tmpfile=$(mktemp)
-          trap "rm -f '$_tmpfile'" EXIT
+        agentScript =
+          if builtins.length enabledAgents == 1 then
+            pkgs.writeShellScriptBin "agent" ''
+              exec "${builtins.head enabledAgents}"
+            ''
+          else
+            pkgs.writeShellScriptBin "agent" ''
+              _tmpfile=$(mktemp)
+              trap "rm -f '$_tmpfile'" EXIT
 
-          while true; do
-            clear
-            COLS=$(${pkgs.ncurses}/bin/tput cols 2>/dev/null || echo 80)
-            ROWS=$(${pkgs.ncurses}/bin/tput lines 2>/dev/null || echo 24)
-            LEFT=$(( (COLS - ${toString headerWidth}) / 2 ))
-            TOP=$(( (ROWS - 10) / 2 ))
-            [ "$LEFT" -lt 0 ] && LEFT=0
-            [ "$TOP" -lt 0 ] && TOP=0
-            printf '%*s' "$TOP" "" | tr ' ' '\n'
-            ${pkgs.gum}/bin/gum style \
-              --foreground="212" \
-              --border="rounded" \
-              --border-foreground="99" \
-              --align="center" \
-              --width=${toString styleWidth} \
-              --padding="0 2" \
-              --margin="0 0 0 $LEFT" \
-              "${headerTitle}"
-            printf '\n'
-            _resized=0
-            ${pkgs.gum}/bin/gum choose \
-              --header="Select agent:" \
-              --cursor="-> " \
-              --height=6 \
-              --padding="0 0 0 $(( LEFT + ${toString menuOffset} ))" \
-              --select-if-one \
-              ${lib.concatStringsSep " " (map (n: "\"${n}\"") enabledAgents)} > "$_tmpfile" &
-            _gum_pid=$!
-            trap "_resized=1; kill $_gum_pid 2>/dev/null" SIGWINCH
-            wait $_gum_pid
-            trap - SIGWINCH
-            ${pkgs.ncurses}/bin/tput cnorm 2>/dev/null
-            choice=$(cat "$_tmpfile" 2>/dev/null)
-            [ $_resized -eq 1 ] && continue
-            [ -z "$choice" ] && exit 0
-            "$choice"
-          done
-        '';
+              while true; do
+                clear
+                COLS=$(${pkgs.ncurses}/bin/tput cols 2>/dev/null || echo 80)
+                ROWS=$(${pkgs.ncurses}/bin/tput lines 2>/dev/null || echo 24)
+                LEFT=$(( (COLS - ${toString headerWidth}) / 2 ))
+                TOP=$(( (ROWS - 10) / 2 ))
+                [ "$LEFT" -lt 0 ] && LEFT=0
+                [ "$TOP" -lt 0 ] && TOP=0
+                printf '%*s' "$TOP" "" | tr ' ' '\n'
+                ${pkgs.gum}/bin/gum style \
+                  --foreground="212" \
+                  --border="rounded" \
+                  --border-foreground="99" \
+                  --align="center" \
+                  --width=${toString styleWidth} \
+                  --padding="0 2" \
+                  --margin="0 0 0 $LEFT" \
+                  "${headerTitle}"
+                printf '\n'
+                _resized=0
+                ${pkgs.gum}/bin/gum choose \
+                  --header="Select agent:" \
+                  --cursor="-> " \
+                  --height=6 \
+                  --padding="0 0 0 $(( LEFT + ${toString menuOffset} ))" \
+                  --select-if-one \
+                  ${lib.concatStringsSep " " (map (n: "\"${n}\"") enabledAgents)} > "$_tmpfile" &
+                _gum_pid=$!
+                trap "_resized=1; kill $_gum_pid 2>/dev/null" SIGWINCH
+                wait $_gum_pid
+                trap - SIGWINCH
+                ${pkgs.ncurses}/bin/tput cnorm 2>/dev/null
+                choice=$(cat "$_tmpfile" 2>/dev/null)
+                [ $_resized -eq 1 ] && continue
+                [ -z "$choice" ] && exit 0
+                "$choice"
+              done
+            '';
       in
       {
         programs.mcp = {
