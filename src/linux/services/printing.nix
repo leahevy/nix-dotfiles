@@ -51,6 +51,11 @@ args@{
         { string = "CreateProfile failed: org\\.freedesktop\\.DBus\\.Error\\.ServiceUnknown"; }
         { string = "The printer .* does not support requests with attribute set"; }
         {
+          tag = "cupsd";
+          unitless = true;
+          string = "The printer .* does not support requests with attribute set";
+        }
+        {
           string = "Stopping 'cups\\.service', but its triggering units are still active";
           service = "ensure-printers.service";
           tag = "systemctl";
