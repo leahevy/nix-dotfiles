@@ -167,6 +167,7 @@ args@{
 
           .notification-content {
             border: 0;
+            background: transparent;
           }
 
           .widget-title > button {
@@ -199,6 +200,10 @@ args@{
             padding: 7px;
             border: 1px solid rgba(255, 255, 255, 0.15);
             color: #ffffff;
+          }
+
+          .widgets > .widget-notifications {
+            border: none;
           }
 
           .control-center-list-placeholder {
@@ -257,6 +262,14 @@ args@{
             border-radius: 0;
             border: 1px solid rgba(255, 255, 255, 0.15);
             margin: 8px;
+          }
+
+          .notification-content > box {
+            background: transparent;
+          }
+
+          .notification-default-action {
+            background: transparent;
           }
 
           .summary {
