@@ -888,6 +888,7 @@ in
           config = {
             common = {
               default = if isKDE then [ "kde" ] else [ "gtk" ];
+              "org.freedesktop.impl.portal.Settings" = "gtk";
               "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kde" ] else [ "gnome" ];
               "org.freedesktop.impl.portal.ScreenCast" = "gnome";
               "org.freedesktop.impl.portal.Location" = "gtk";
@@ -998,6 +999,7 @@ in
         config = {
           common = {
             default = if isKDE then [ "kde" ] else [ "gtk" ];
+            "org.freedesktop.impl.portal.Settings" = "gtk";
             "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kwallet" ] else [ "gnome-keyring" ];
             "org.freedesktop.impl.portal.ScreenCast" = "gnome";
             "org.freedesktop.impl.portal.Location" = "gtk";

@@ -273,6 +273,10 @@ args@{
       };
 
       systemd.user.services.swaync = {
+        Unit = {
+          Wants = [ "xdg-desktop-portal.service" ];
+          After = [ "xdg-desktop-portal.service" ];
+        };
         Service = {
           ExecStartPost = "${pkgs.bash}/bin/bash -c 'sleep 2 && ${pkgs.swaynotificationcenter}/bin/swaync-client -df'";
         };
