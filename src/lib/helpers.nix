@@ -621,6 +621,7 @@ rec {
           userUnits = [
             "graphical-session.target"
             "niri.service"
+            "xdg-desktop-portal.service"
           ];
 
           baseSystemUnits = [
@@ -653,7 +654,7 @@ rec {
 
           activeExcludes =
             (if isVM then excludeForVMUnits else [ ])
-            ++ lib.optionals (host == null || !host.settings.networking.useNetworkManager) [
+            ++ lib.optionals (!lib.isAttrs host || !host.settings.networking.useNetworkManager) [
               "resolvconf.service"
             ]
             ++ lib.optionals (!(config.boot.plymouth.enable or false)) [
