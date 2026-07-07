@@ -23,6 +23,18 @@ args@{
           unitless = true;
           tag = "swaync";
         }
+        {
+          string = "Allocation height too small\\. Tried to allocate .* needs at least .*\\.";
+          user = true;
+          unitless = true;
+          tag = "swaync";
+        }
+        {
+          string = "Trying to measure .* for height of .*, but it needs at least .*";
+          user = true;
+          unitless = true;
+          tag = "swaync";
+        }
       ];
     };
 
