@@ -31,6 +31,18 @@ args@{
           "kernel.unprivileged_bpf_disabled" = 1;
           "kernel.yama.ptrace_scope" = 1;
         };
+        headlessKernel =
+          lib.optionalAttrs
+            (helpers.isDeploymentMode self [
+              "server"
+              "managed"
+            ])
+            {
+              "dev.tty.ldisc_autoload" = 0;
+              "kernel.perf_event_paranoid" = 3;
+              "kernel.yama.ptrace_scope" = 2;
+              "net.core.bpf_jit_harden" = 2;
+            };
         hasResumeDevice =
           self.host.kernel.resumeDevice != null
           || helpers.getDiskoResumeDevices (config.disko.devices or { }) != [ ];
@@ -38,7 +50,10 @@ args@{
       in
       {
         boot.kernel.sysctl =
-          filesystem // kernel // lib.optionalAttrs hibernateActive { "kernel.kexec_load_disabled" = 1; };
+          filesystem
+          // kernel
+          // headlessKernel
+          // lib.optionalAttrs hibernateActive { "kernel.kexec_load_disabled" = 1; };
         security.protectKernelImage = lib.mkIf (!hibernateActive) true;
       };
   };
