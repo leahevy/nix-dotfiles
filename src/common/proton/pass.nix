@@ -20,52 +20,44 @@ args@{
 
   settings = {
     forceX11 = true;
-    isolateConfig = true;
+  };
+
+  submodules = lib.optionalAttrs self.isLinux {
+    linux = {
+      software = {
+        flatpak = true;
+      };
+    };
   };
 
   module = {
-    home =
-      config:
-      let
-        needsWrapper = self.isLinux && (self.settings.forceX11 || self.settings.isolateConfig);
-        wrapperArgs = lib.concatStringsSep " " (
-          lib.optional self.settings.forceX11 "--set XDG_SESSION_TYPE x11"
-          ++ lib.optional self.settings.isolateConfig ''--set XDG_CONFIG_HOME "${self.user.home}/.config/proton-pass"''
-        );
+    home = config: {
+      home.packages = with pkgs; [
+        proton-authenticator
+        proton-pass-cli
+      ];
+    };
 
-        protonPassWrapped =
-          if needsWrapper then
-            (pkgs.symlinkJoin {
-              name = "proton-pass-wrapped";
-              paths = [ pkgs.proton-pass ];
-              buildInputs = [ pkgs.makeWrapper ];
-              postBuild = ''
-                wrapProgram $out/bin/proton-pass ${wrapperArgs}
+    linux.home = config: {
+      services.flatpak.packages = [ "me.proton.Pass" ];
 
-                rm -f $out/share/applications/proton-pass.desktop
-                mkdir -p $out/share/applications
-                substitute ${pkgs.proton-pass}/share/applications/proton-pass.desktop \
-                  $out/share/applications/proton-pass.desktop \
-                  --replace-fail "Exec=proton-pass" "Exec=$out/bin/proton-pass"
-              '';
-            })
-          else
-            pkgs.proton-pass;
-      in
-      {
-        home.packages = [
-          protonPassWrapped
-        ]
-        ++ (with pkgs; [
-          proton-authenticator
-        ])
-        ++ (with pkgs; [
-          proton-pass-cli
-        ]);
-
-        home.persistence."${self.persist}" = lib.mkIf self.settings.isolateConfig {
-          directories = [ ".config/proton-pass" ];
-        };
+      services.flatpak.overrides."me.proton.Pass".Environment = {
+        ELECTRON_OZONE_PLATFORM_HINT = if self.settings.forceX11 then "x11" else "auto";
       };
+
+      home.file."${defs.binDir}/proton-pass" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          exec ${pkgs.flatpak}/bin/flatpak run me.proton.Pass "$@"
+        '';
+      };
+    };
+
+    darwin.home = config: {
+      home.packages = [
+        pkgs.proton-pass
+      ];
+    };
   };
 }
