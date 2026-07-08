@@ -43,3 +43,4 @@
 - [ ] 23. Delete the upgrade feature branches locally and on remote (run in both nxcore and nxconfig): `git branch -d upgrade-nixos-<TARGET_VERSION>` and `git push origin --delete upgrade-nixos-<TARGET_VERSION>`
 - [ ] 24. Push main branch: `nx push`
 - [ ] 25. Tag with `git tag -a nixos-<TARGET_VERSION> -m "NixOS <TARGET_VERSION>"` and push with `git push --tags`
+- [ ] 26. Create a new installer for <TARGET_VERSION> with `nx makeiso` and flash it to a USB drive
