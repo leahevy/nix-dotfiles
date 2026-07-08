@@ -20,6 +20,8 @@ args@{
         zsh = {
           enable = true;
 
+          dotDir = config.home.homeDirectory;
+
           initContent = lib.mkMerge [
             (lib.mkOrder 550 ''
               fpath=($HOME/.local/share/zsh/site-functions $fpath)
