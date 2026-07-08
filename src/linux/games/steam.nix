@@ -56,6 +56,12 @@ args@{
     };
 
     enabled = config: {
+      nx.common.browser.firefox.extensions.steam-database = {
+        addonId = "firefox-extension@steamdb.info";
+        slug = "steam-database";
+        allowedInPrivateWindows = false;
+      };
+
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
           tag = "steam";

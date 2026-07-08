@@ -219,16 +219,7 @@ let
         addonId = "addon@darkreader.org";
         slug = "darkreader";
       };
-    }
-    //
-      lib.optionalAttrs (config.nx.linux.games.steam.enable || config.nx.linux.flatpacks.steam.enable)
-        {
-          steam-database = {
-            addonId = "firefox-extension@steamdb.info";
-            slug = "steam-database";
-            allowedInPrivateWindows = false;
-          };
-        };
+    };
 
   mkExtensionUrl =
     ext:

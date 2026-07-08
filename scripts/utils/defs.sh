@@ -56,6 +56,7 @@ export AUTO_UPDATE_INPUTS=(
 	"stylix"
 	"nixvim"
 	"nix-darwin"
+	"nix-flatpak"
 	"sops-nix"
 	"disko"
 	"impermanence"

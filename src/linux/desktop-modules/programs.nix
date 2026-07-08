@@ -857,6 +857,9 @@ in
 
               <AppDir>/etc/profiles/per-user/${config.home.username}/share/applications</AppDir>
               <AppDir>/run/current-system/sw/share/applications</AppDir>
+              ${lib.optionalString config.nx.linux.software.flatpak.enable ''
+                <AppDir>${self.user.home}/.local/share/flatpak/exports/share/applications</AppDir>
+                <AppDir>/var/lib/flatpak/exports/share/applications</AppDir>''}
 
               <Include>
                 <All/>

@@ -51,6 +51,10 @@
     # Forked inputs (require manual sync with upstream)
     # -----------------------------------------------------------------------------
 
+    nix-flatpak = {
+      url = "github:leahevy/nix-flatpak/v0.7.0";
+    };
+
     sops-nix = {
       url = "github:leahevy/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";

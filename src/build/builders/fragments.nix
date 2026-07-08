@@ -43,6 +43,7 @@
     inputs.sops-nix.homeManagerModules.sops
     inputs.nixvim.homeModules.nixvim
     inputs.nix-index-database.homeModules.default
+    inputs.nix-flatpak.homeManagerModules.nix-flatpak
   ];
 
   mkHomeManagerSettings = specialArgs: {
