@@ -650,7 +650,14 @@ args@{
                       return None
 
 
-              def center_floating_window(wid, app_id, title):
+              def parse_px(value):
+                  if value is None:
+                      return None
+                  s = str(value).strip()
+                  return int(s) if s.isdigit() else None
+
+
+              def center_floating_window(wid, app_id, title, req_width=None, req_height=None):
                   windows = niri_json("windows")
                   if windows is None:
                       return
@@ -665,14 +672,15 @@ args@{
 
                   layout = window.get("layout") or {}
                   size = layout.get("tile_size") or layout.get("window_size")
-                  invalid_size = any([
-                      size is None,
-                      not isinstance(size, list),
-                      len(size) < 2 if isinstance(size, list) else True,
-                      size[0] is None if isinstance(size, list) and len(size) > 0 else True,
-                      size[1] is None if isinstance(size, list) and len(size) > 1 else True,
-                  ])
-                  if invalid_size:
+                  if not isinstance(size, list) or len(size) < 2:
+                      size = [None, None]
+                  else:
+                      size = list(size)
+                  if req_width is not None:
+                      size[0] = req_width
+                  if req_height is not None:
+                      size[1] = req_height
+                  if size[0] is None or size[1] is None:
                       log.warning("window %d has no usable size, skipping centering", wid)
                       return
 
@@ -767,7 +775,11 @@ args@{
                           "set-window-height", "--id", wid_s, a["height"],
                       )
                   if a.get("float") is True:
-                      center_floating_window(wid, app_id, title)
+                      center_floating_window(
+                          wid, app_id, title,
+                          parse_px(a.get("width")),
+                          parse_px(a.get("height")),
+                      )
                   if a.get("focus") is True:
                       niri_action(
                           app_id, title,
