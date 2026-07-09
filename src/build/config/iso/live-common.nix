@@ -165,7 +165,7 @@ in
   '';
 
   networking.networkmanager.enable = true;
-  networking.wireless.enable = false;
+  networking.wireless.enable = lib.mkForce false;
 
   networking.useDHCP = lib.mkDefault true;
 
