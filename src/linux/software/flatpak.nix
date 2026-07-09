@@ -23,7 +23,7 @@ args@{
 
   module = {
     enabled = config: {
-      nx.lib.icons = [ "system-software-update" ];
+      nx.lib.icons = [ "system-software-install" ];
     };
 
     ifEnabled.linux.desktop.niri.enabled = config: {
@@ -61,14 +61,14 @@ args@{
           LOCK_FILE="''${XDG_RUNTIME_DIR:-/tmp}/flatpak-update.lock"
           exec 9>"$LOCK_FILE"
           if ! ${pkgs.util-linux}/bin/flock -n 9; then
-            ${notify "An update is already running" "normal" "system-software-update"} || true
+            ${notify "An update is already running" "normal" "system-software-install"} || true
             exit 0
           fi
 
-          ${notify "Updating applications" "normal" "system-software-update"} || true
+          ${notify "Updating applications" "normal" "system-software-install"} || true
 
           if ${pkgs.systemd}/bin/systemctl --user start --wait flatpak-managed-install-timer.service; then
-            ${notify "Successfully updated applications" "normal" "system-software-update"} || true
+            ${notify "Successfully updated applications" "normal" "system-software-install"} || true
           else
             ${notify "Failed to update applications" "critical" "dialog-error"} || true
             exit 1
@@ -107,7 +107,7 @@ args@{
           name = "Flatpak Update";
           comment = "Update flatpak applications";
           exec = "${flatpakUpdateScript}";
-          icon = "system-software-update";
+          icon = "system-software-install";
           terminal = false;
           categories = [ "System" ];
         };
