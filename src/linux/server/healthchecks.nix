@@ -1589,7 +1589,7 @@ args@{
           '';
         }
         // {
-          "!30 - Network interfaces" = networkIfaceExpr;
+          "R!30 - Network interfaces" = networkIfaceExpr;
           "+30 - Timezone" = timezoneExpr;
           "R!30 - Remote IP" = remoteIpExpr;
         }
