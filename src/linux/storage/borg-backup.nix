@@ -532,7 +532,7 @@ args@{
                       "${self.notifyUser {
                         inherit pkgs;
                         title = "Backup Triggered";
-                        body = "Manual backup triggered - will start in 2 minutes";
+                        body = "Manual backup triggered - will start in 10 minutes";
                         icon = "archive";
                         urgency = "normal";
                         validation = { inherit config; };
