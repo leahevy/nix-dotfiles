@@ -41,6 +41,9 @@ args@{
       services = {
         dbus = true;
       };
+      desktop = {
+        polkit-agent = true;
+      };
     };
   };
 
