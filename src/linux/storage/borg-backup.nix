@@ -93,6 +93,9 @@ args@{
       config:
       let
         isHeadless = (self.host.settings.system.desktop or null) == null;
+        iconPath = "${helpers.packageFile args config.nx.linux.desktop.icons.dashboardIcons
+          "svg/borg.svg"
+        }";
         systemBorgConfig = self.getModuleConfig "storage.borg-backup";
         repoUrl = "ssh://${systemBorgConfig.repository.user}@${systemBorgConfig.repository.server}:${toString systemBorgConfig.repository.port}${systemBorgConfig.repository.path}";
         hostname = self.host.hostname;
@@ -507,23 +510,18 @@ args@{
 
               home.file."${defs.binDir}/borg-backup-trigger-manually" = {
                 text = ''
-                            #!/usr/bin/env bash
-                            set -euo pipefail
+                  #!/usr/bin/env bash
+                  set -euo pipefail
 
-                            if [[ $EUID -eq 0 ]]; then
-                              echo "Must be run as user!"
-                              exit 1
-                            fi
+                  if systemctl is-active --quiet borgbackup-job-system.service; then
+                    echo "Error: Backup is already running!"
+                    exit 1
+                  fi
 
-                            if systemctl is-active --quiet borgbackup-job-system.service; then
-                              echo "Error: Backup is already running!"
-                              exit 1
-                            fi
-
-                            echo "Starting backup manually..."
-                            sudo touch /tmp/nx-force-backup
-                            sudo systemctl start borgbackup-job-system.service
-                            echo "Success: Backup triggered manually"
+                  echo "Starting backup manually..."
+                  sudo touch /tmp/nx-force-backup
+                  sudo systemctl start borgbackup-job-system.service
+                  echo "Success: Backup triggered manually"
 
                   ${
                     if isHeadless then
@@ -533,13 +531,31 @@ args@{
                         inherit pkgs;
                         title = "Backup Triggered";
                         body = "Manual backup triggered - will start in 10 minutes";
-                        icon = "archive";
+                        icon = "drive-harddisk-system";
                         urgency = "normal";
                         validation = { inherit config; };
                       }}"
                   }
                 '';
                 executable = true;
+              };
+
+              home.file."${defs.binDir}/borg-backup-trigger-manually-gui" = {
+                text = ''
+                  #!/usr/bin/env bash
+                  set -euo pipefail
+                  exec pkexec ${self.binDir}/borg-backup-trigger-manually
+                '';
+                executable = true;
+              };
+
+              xdg.desktopEntries.borg-backup-trigger = {
+                name = "Borg-Backup: Run manually";
+                comment = "Manually trigger a Borg system backup";
+                exec = "${self.binDir}/borg-backup-trigger-manually-gui";
+                icon = iconPath;
+                terminal = false;
+                categories = [ "System" ];
               };
             }
           ]
