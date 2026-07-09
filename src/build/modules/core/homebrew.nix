@@ -248,7 +248,7 @@ in
               read -rsp "$(echo -e "''${WHITE}Password: ''${RESET}")" SUDO_PASSWORD
               echo
 
-              (while :; do printf '%s\n' "$SUDO_PASSWORD" > "$ASKPASS_DIR/fifo" || true; done) &
+              (while :; do printf '%s\n' "$SUDO_PASSWORD" > "$ASKPASS_DIR/fifo" || true; done) 2>/dev/null &
               FEEDER_PID=$!
               unset SUDO_PASSWORD
 
