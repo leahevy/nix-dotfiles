@@ -57,6 +57,9 @@ args@{
       config:
       let
         isHeadless = (self.host.settings.system.desktop or null) == null;
+        iconPath = "${helpers.packageFile args config.nx.linux.desktop.icons.dashboardIcons
+          "svg/nixos.svg"
+        }";
       in
       {
         home.file."${defs.binDir}/auto-upgrade-status" = {
@@ -113,11 +116,6 @@ args@{
             #!/usr/bin/env bash
             set -euo pipefail
 
-            if [[ $EUID -eq 0 ]]; then
-              echo "Must be run as user!"
-              exit 1
-            fi
-
             if [[ "$(systemctl show nx-auto-upgrade.service -p ActiveState --value)" != "inactive" ]]; then
               echo "Error: Auto-upgrade is already running!"
               exit 1
@@ -144,6 +142,24 @@ args@{
             }
           '';
           executable = true;
+        };
+
+        home.file."${defs.binDir}/auto-upgrade-trigger-manually-gui" = {
+          text = ''
+            #!/usr/bin/env bash
+            set -euo pipefail
+            exec pkexec ${self.binDir}/auto-upgrade-trigger-manually
+          '';
+          executable = true;
+        };
+
+        xdg.desktopEntries.auto-upgrade-trigger = {
+          name = "Auto-Upgrade: Run manually";
+          comment = "Manually trigger a NX auto-upgrade";
+          exec = "${self.binDir}/auto-upgrade-trigger-manually-gui";
+          icon = iconPath;
+          terminal = false;
+          categories = [ "System" ];
         };
 
         home.file."${defs.binDir}/auto-upgrade-logs" = {
