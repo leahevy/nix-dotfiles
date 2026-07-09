@@ -248,14 +248,14 @@ in
               read -rsp "$(echo -e "''${WHITE}Password: ''${RESET}")" SUDO_PASSWORD
               echo
 
-              (while :; do printf '%s\n' "$SUDO_PASSWORD" > "$ASKPASS_DIR/fifo" || true; done) 2>/dev/null &
-              FEEDER_PID=$!
-              unset SUDO_PASSWORD
-
-              if ! sudo -A -k -v; then
+              if ! printf '%s\n' "$SUDO_PASSWORD" | sudo -S -k -v 2>/dev/null; then
                 echo -e "''${RED}Invalid password!''${RESET}" >&2
                 exit 1
               fi
+
+              (while :; do printf '%s\n' "$SUDO_PASSWORD" > "$ASKPASS_DIR/fifo" || true; done) 2>/dev/null &
+              FEEDER_PID=$!
+              unset SUDO_PASSWORD
 
               echo
               echo -e "''${WHITE}Setting up tap trust...''${RESET}"
