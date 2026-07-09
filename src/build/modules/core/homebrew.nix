@@ -230,17 +230,32 @@ in
                 fi
               fi
 
-              sudo -v
-
-              (while true; do sudo -n -v; sleep 60; kill -0 "$$" || exit; done 2>/dev/null) &
-              SUDO_PID=$!
+              ASKPASS_DIR="$(mktemp -d)"
 
               cleanup() {
-                if [[ -n "''${SUDO_PID:-}" ]]; then
-                  kill "$SUDO_PID" 2>/dev/null || true
+                if [[ -n "''${FEEDER_PID:-}" ]]; then
+                  kill "$FEEDER_PID" 2>/dev/null || true
                 fi
+                rm -rf "$ASKPASS_DIR"
               }
               trap cleanup EXIT INT TERM
+
+              mkfifo -m 600 "$ASKPASS_DIR/fifo"
+              printf '#!/bin/bash\nexec cat "$(dirname "$0")/fifo"\n' > "$ASKPASS_DIR/askpass"
+              chmod 700 "$ASKPASS_DIR/askpass"
+              export SUDO_ASKPASS="$ASKPASS_DIR/askpass"
+
+              read -rsp "$(echo -e "''${WHITE}Password: ''${RESET}")" SUDO_PASSWORD
+              echo
+
+              (while :; do printf '%s\n' "$SUDO_PASSWORD" > "$ASKPASS_DIR/fifo" || true; done) &
+              FEEDER_PID=$!
+              unset SUDO_PASSWORD
+
+              if ! sudo -A -k -v; then
+                echo -e "''${RED}Invalid password!''${RESET}" >&2
+                exit 1
+              fi
 
               echo
               echo -e "''${WHITE}Setting up tap trust...''${RESET}"
