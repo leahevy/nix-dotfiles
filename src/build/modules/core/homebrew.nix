@@ -285,7 +285,7 @@ in
               echo
 
               echo -e "''${WHITE}Upgrading packages...''${RESET}"
-              GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp HOMEBREW_DOWNLOAD_CONCURRENCY=2 brew upgrade -g
+              GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp HOMEBREW_DOWNLOAD_CONCURRENCY=2 brew upgrade -g -y
               echo
 
               rm -f "$NEW_BREWFILE" || true
