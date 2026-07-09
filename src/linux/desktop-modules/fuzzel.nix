@@ -119,6 +119,7 @@ args@{
       config:
       let
         fuzzelPackage = config.nx.preferences.desktop.programs.appLauncher.package;
+        iconThemeName = lib.head (lib.tail (lib.splitString "/" config.nx.preferences.theme.icons.primary));
       in
       {
         programs.fuzzel = {
@@ -126,6 +127,7 @@ args@{
           package = fuzzelPackage;
           settings = {
             main = {
+              icon-theme = iconThemeName;
               terminal =
                 let
                   additionalTerminal = config.nx.preferences.desktop.programs.additionalTerminal;
