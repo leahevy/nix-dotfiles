@@ -27,12 +27,7 @@ args@{
 
   module = {
     init = config: {
-      nx.linux.desktop-modules.web-app.dashboardIcons = pkgs.fetchFromGitHub {
-        owner = "homarr-labs";
-        repo = "dashboard-icons";
-        rev = "f222c55843b888a82e9f2fe2697365841cbe6025";
-        hash = "sha256-VOWQh8ZadsqNInoXcRKYuXfWn5MK0qJpuYEWgM7Pny8=";
-      };
+      nx.linux.desktop-modules.web-app.dashboardIcons = config.nx.linux.desktop.icons.dashboardIcons;
     };
   };
 
