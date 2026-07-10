@@ -2047,7 +2047,7 @@ diff_packages() {
 	local old="$1" new="$2"
 	DIFF_OUTPUT="$(nvd --color=always --version-highlight=xmas diff "$old" "$new" 2>&1)"
 
-	if echo "$DIFF_OUTPUT" | grep -Eq 'Closure size: ([0-9]+) -> \1 \(([0-9]+) paths added, \2 paths removed, delta \+0,'; then
+	if echo "$DIFF_OUTPUT" | grep -Fq 'No version or selection state changes.' || echo "$DIFF_OUTPUT" | grep -Eq 'Closure size: ([0-9]+) -> \1 \(0 paths added, 0 paths removed, delta'; then
 		echo -e "${WHITE}Packages are identical.${RESET}"
 	else
 		echo "$DIFF_OUTPUT"
