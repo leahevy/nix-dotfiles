@@ -30,6 +30,12 @@ args@{
         }
         {
           tag = "AusweisApp";
+          string = "Connection error: QAbstractSocket::NetworkError \"Host unreachable\"";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "AusweisApp";
           string = "Connection could not be established after 5000 ms";
           user = true;
           unitless = true;
