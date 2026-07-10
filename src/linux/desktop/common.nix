@@ -360,7 +360,21 @@ args@{
           string = ".*: Unable to connect to [0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+:[0-9]+: Host is down";
           all = true;
         }
-      ];
+      ]
+      ++
+        lib.optional
+          (
+            !helpers.isDeploymentMode self [
+              "server"
+              "managed"
+            ]
+          )
+          {
+            tag = "pkexec";
+            string = "^${self.user.username}: Error executing command as another user: Not authorized";
+            user = true;
+            unitless = true;
+          };
     };
 
     linux.home = config: {
