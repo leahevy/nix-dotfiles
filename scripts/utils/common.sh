@@ -2046,8 +2046,19 @@ diff_store_paths() {
 diff_packages() {
 	local old="$1" new="$2"
 	DIFF_OUTPUT="$(nvd --color=always --version-highlight=xmas diff "$old" "$new" 2>&1)"
+	local plain_diff
+	plain_diff="$(echo "$DIFF_OUTPUT" | sed -E 's/\x1b\[[0-9;]*m//g')"
 
-	if echo "$DIFF_OUTPUT" | grep -Fq 'No version or selection state changes.' || echo "$DIFF_OUTPUT" | grep -Eq 'Closure size: ([0-9]+) -> \1 \(0 paths added, 0 paths removed, delta'; then
+	local version_line_count
+	version_line_count="$(echo "$plain_diff" | grep -cE '^\[..\]')"
+
+	if echo "$plain_diff" | grep -Fq 'No version or selection state changes.'; then
+		echo -e "${WHITE}Packages are identical.${RESET}"
+	elif echo "$plain_diff" | grep -Eq 'Closure size: ([0-9]+) -> \1 \(0 paths added, 0 paths removed, delta'; then
+		echo -e "${WHITE}Packages are identical.${RESET}"
+	elif [[ "$version_line_count" -eq 1 ]] &&
+		echo "$plain_diff" | grep -qE '^\[..\][[:space:]]+#[0-9]+[[:space:]]+(nixos-system-|home-manager-generation)' &&
+		echo "$plain_diff" | grep -Eq 'Closure size: ([0-9]+) -> \1 \(([0-9]+) paths added, \2 paths removed, delta \+0,'; then
 		echo -e "${WHITE}Packages are identical.${RESET}"
 	else
 		echo "$DIFF_OUTPUT"
