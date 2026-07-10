@@ -2046,8 +2046,10 @@ diff_store_paths() {
 diff_packages() {
 	local old="$1" new="$2"
 	DIFF_OUTPUT="$(nvd --color=always --version-highlight=xmas diff "$old" "$new" 2>&1)"
+	local esc
+	esc="$(printf '\033')"
 	local plain_diff
-	plain_diff="$(echo "$DIFF_OUTPUT" | sed -E 's/\x1b\[[0-9;]*m//g')"
+	plain_diff="$(echo "$DIFF_OUTPUT" | sed -E "s/${esc}\\[[0-9;]*m//g")"
 
 	local version_line_count
 	version_line_count="$(echo "$plain_diff" | grep -cE '^\[..\]')"
