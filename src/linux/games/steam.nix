@@ -58,6 +58,18 @@ args@{
     enabled = config: {
       nx.linux.desktop.niri.autoTiler.ignoredAppIds = [ "steam" ];
 
+      nx.linux.desktop.niri.lateWindowRules = [
+        {
+          match = {
+            regex = "^steam_app_\\d+$";
+            is-floating = true;
+          };
+          apply = {
+            workspace = "scratch";
+          };
+        }
+      ];
+
       nx.common.browser.firefox.extensions.steam-database = {
         addonId = "firefox-extension@steamdb.info";
         slug = "steam-database";

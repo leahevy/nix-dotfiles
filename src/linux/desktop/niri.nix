@@ -32,10 +32,21 @@ args@{
               app-id = lib.mkOption {
                 type = lib.types.nullOr lib.types.str;
                 default = null;
+                description = "Exact app-id to match, exactly one of app-id or regex must be set.";
+              };
+              regex = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Regex pattern matched against the app-id, exactly one of app-id or regex must be set.";
               };
               title = lib.mkOption {
                 type = lib.types.nullOr lib.types.str;
                 default = null;
+              };
+              is-floating = lib.mkOption {
+                type = lib.types.nullOr lib.types.bool;
+                default = null;
+                description = "When non-null, the window's floating state must match this value.";
               };
             };
             skipStaticRule = lib.mkOption {
@@ -556,6 +567,7 @@ args@{
             ''
               import json
               import logging
+              import re
               import subprocess
               import sys
               import time
@@ -603,15 +615,21 @@ args@{
                       return json.load(f)
 
 
-              def matches(rule, app_id, title):
+              def matches(rule, app_id, title, is_floating):
                   m = rule["match"]
                   mid = m.get("app-id")
+                  mregex = m.get("regex")
                   mtitle = m.get("title")
-                  if mid is None and mtitle is None:
+                  mfloating = m.get("is-floating")
+                  if mid is None and mregex is None and mtitle is None:
                       return False
                   if mid is not None and mid != app_id:
                       return False
+                  if mregex is not None and not re.search(mregex, app_id or ""):
+                      return False
                   if mtitle is not None and mtitle != title:
+                      return False
+                  if mfloating is not None and mfloating != is_floating:
                       return False
                   return True
 
@@ -799,8 +817,9 @@ args@{
                       wid = win["id"]
                       app_id = win.get("app_id", "")
                       title = win.get("title", "")
+                      is_floating = win.get("is_floating", False)
                       for rule in rules:
-                          if matches(rule, app_id, title):
+                          if matches(rule, app_id, title, is_floating):
                               handled.add(wid)
                               log.info(
                                   "marked existing window %d (app-id=%s title=%s)"
@@ -840,8 +859,9 @@ args@{
                               continue
                           app_id = win.get("app_id", "")
                           title = win.get("title", "")
+                          is_floating = win.get("is_floating", False)
                           for rule in rules:
-                              if matches(rule, app_id, title):
+                              if matches(rule, app_id, title, is_floating):
                                   apply_rule(rule, wid, app_id, title)
                                   handled.add(wid)
                                   break
@@ -3164,7 +3184,8 @@ args@{
                 m = rule.match;
                 a = rule.apply;
                 matchAttrs = lib.filterAttrs (_: v: v != null) {
-                  inherit (m) app-id title;
+                  app-id = if m.app-id != null then m.app-id else m.regex;
+                  inherit (m) title is-floating;
                 };
               in
               {
@@ -3178,6 +3199,14 @@ args@{
         };
 
         assertions = [
+          {
+            assertion = lib.all (
+              rule:
+              (rule.match.app-id != null || rule.match.regex != null || rule.match.title != null)
+              && !(rule.match.app-id != null && rule.match.regex != null)
+            ) lateRules;
+            message = "nx.linux.desktop.niri.lateWindowRules: each rule must set at least one of match.app-id, match.regex, or match.title, and match.app-id/match.regex are mutually exclusive!";
+          }
           {
             assertion =
               !(lib.hasAttrByPath [
