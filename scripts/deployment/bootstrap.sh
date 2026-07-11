@@ -76,8 +76,8 @@ nixos)
 
 	if [[ -z "$SCRIPT_NAME" ]]; then
 		echo -e "${CYAN}Available nixos bootstrap scripts:${RESET}"
-		echo -e "   ${WHITE}decrypt${RESET}                                        00-decrypt.sh"
-		echo -e "   ${WHITE}fetch-latest-config${RESET}                            10-fetch-latest-config.sh"
+		echo -e "   ${WHITE}decrypt${RESET}                                         00-decrypt.sh"
+		echo -e "   ${WHITE}fetch-latest-config${RESET}                             10-fetch-latest-config.sh"
 		echo -e "   ${WHITE}select-profile${RESET} <hostname>                       20-select-profile.sh"
 		echo -e "   ${WHITE}disk-format${RESET} [hostname]                          30-disk-format.sh"
 		echo -e "   ${WHITE}mount${RESET} [hostname]                                40-mount.sh"
