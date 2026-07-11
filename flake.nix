@@ -168,7 +168,7 @@
     # -----------------------------------------------------------------------------
 
     nixos-raspberrypi = {
-      url = "github:nvmd/nixos-raspberrypi/v1.20260517.0";
+      url = "github:nvmd/nixos-raspberrypi/v1.20260707.1";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-compat.follows = "flake-compat";
       inputs.nixos-images.inputs.nixos-stable.follows = "nixpkgs";
