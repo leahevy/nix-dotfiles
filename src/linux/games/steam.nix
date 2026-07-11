@@ -56,6 +56,8 @@ args@{
     };
 
     enabled = config: {
+      nx.linux.desktop.niri.autoTiler.ignoredAppIds = [ "steam" ];
+
       nx.common.browser.firefox.extensions.steam-database = {
         addonId = "firefox-extension@steamdb.info";
         slug = "steam-database";
