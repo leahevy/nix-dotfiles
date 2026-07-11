@@ -271,6 +271,8 @@ args@{
         "Ignoring SCSI command SYNCHRONIZE CACHE failure.*on /dev/[a-z]+"
       ];
       baseKernelStringsToIgnore = [
+        "hpet_acpi_add: no address or irqs in _CRS"
+        "r8169 [0-9a-f:.]+: can't disable ASPM; OS doesn't have ASPM control"
         "Failed to make /usr/ a mount point, ignoring"
         "Failed to get EXE, ignoring: No such process"
         "USB Audio.*cannot get freq"

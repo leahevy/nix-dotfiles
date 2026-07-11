@@ -18,12 +18,11 @@ args@{
       let
         host = self.host;
         ifSet = helpers.ifSet;
+        wifiEnabled = if self.isVirtual then false else ifSet host.settings.networking.wifi.enabled false;
       in
       {
         networking.hostName = host.hostname;
-        networking.wireless.enable = lib.mkForce (
-          if self.isVirtual then false else ifSet host.settings.networking.wifi.enabled false
-        );
+        networking.wireless.enable = lib.mkForce wifiEnabled;
         networking.useDHCP = lib.mkForce (!host.settings.networking.useNetworkManager);
         networking.nftables.enable = true;
         networking.search = lib.mkIf (self.host.homeserverDomain != null) [
@@ -34,6 +33,7 @@ args@{
           if host.settings.networking.useNetworkManager then
             {
               enable = true;
+              unmanaged = lib.optional (!wifiEnabled) "type:wifi";
               settings = {
                 main = {
                   no-auto-default = "*";

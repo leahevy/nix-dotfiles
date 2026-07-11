@@ -184,5 +184,14 @@ args@{
         };
       }
     ];
+
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          service = "systemd-networkd.service";
+          string = "Failed to open nftables netlink socket\\. IPMasquerade= and NFTSet= settings will not be applied\\. Ignoring: Protocol not supported";
+        }
+      ];
+    };
   };
 }
