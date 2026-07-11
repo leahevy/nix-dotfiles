@@ -15,7 +15,6 @@
       raspberry-pi-5.page-size-16k
       raspberry-pi-5.display-vc4
       raspberry-pi-5.bluetooth
-      inputs.nixos-raspberrypi.lib.inject-overlays
       trusted-nix-caches
     ]
     ++ lib.optionals (host.settings.system.desktop == null) [
