@@ -79,6 +79,10 @@ args@{
           tag = "systemd-coredump";
           string = "Process [0-9]+ \\(steam\\) of user [0-9]+ dumped core\\.";
         }
+        {
+          tag = "systemd-coredump";
+          string = "Process [0-9]+ \\(wine64-preloade\\) of user [0-9]+ dumped core\\.";
+        }
       ];
     };
 
