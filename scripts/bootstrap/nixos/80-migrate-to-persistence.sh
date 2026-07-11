@@ -138,6 +138,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		"/etc/sudoers"
 		"/etc/nx/config.json"
 		"/etc/nx/impermanence-rollback-script"
+		"/etc/nx/system-packages.json"
 	)
 
 	IGNORE_USER_FILES=()
