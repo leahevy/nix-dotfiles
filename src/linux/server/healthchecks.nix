@@ -1561,7 +1561,7 @@ args@{
         }
         // {
           "!26 - Disk IO" = ioRateExpr;
-          "+26 - IO wait" = iowaitExpr;
+          "R+26 - IO wait" = iowaitExpr;
           "!27 - Network traffic" = networkTrafficExpr;
           "+28 - Tmp entries" = ''
             _tmp_entries=$(${pkgs.coreutils}/bin/ls -1A /tmp 2>/dev/null | ${pkgs.coreutils}/bin/wc -l)
