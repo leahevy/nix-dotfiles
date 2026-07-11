@@ -4,6 +4,8 @@ on:
     - cron: '0 7 * 4-10 0,1,2,3,5,6'
     - cron: '0 8 * 11,12,1,2,3 0,1,2,3,5,6'
   workflow_dispatch:
+  pull_request:
+    types: [closed]
 
 concurrency:
   group: update-flake-lock
@@ -11,6 +13,7 @@ concurrency:
 
 jobs:
   update-flake-lock:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -935,6 +938,33 @@ jobs:
 
       - name: Merge week - Record first-run marker
         if: env.CYCLE_MODE == 'merge' && env.PR_FETCH_OK == 'true' && steps.mergewindow-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p .mergewindow-marker
+          date > .mergewindow-marker/handled
+
+  record-merge-window-cache:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'update-flake-inputs' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine merge cycle id
+        run: |
+          set -euo pipefail
+          echo "MERGE_CYCLE_ID=$(date +%GW%V)" >> $GITHUB_ENV
+
+      - name: Merge window cache
+        id: mergewindow-cache
+        uses: actions/cache@v6
+        with:
+          path: .mergewindow-marker
+          key: merge-window-${{ env.MERGE_CYCLE_ID }}
+
+      - name: Record merge marker
+        if: steps.mergewindow-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           mkdir -p .mergewindow-marker
