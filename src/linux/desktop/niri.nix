@@ -2905,7 +2905,7 @@ args@{
                   };
 
                   "Mod+Shift+S" = {
-                    action = spawn-sh "niri-workspace-action move-column-to-workspace scratch";
+                    action = spawn-sh "niri msg action move-column-to-workspace scratch --focus false";
                     hotkey-overlay.title = "Windows:Move to scratchpad";
                   };
 
