@@ -145,6 +145,7 @@ args@{
       "env"
       "typst"
       "yaml"
+      "conf"
       "sh"
       "text"
       "undotree"
