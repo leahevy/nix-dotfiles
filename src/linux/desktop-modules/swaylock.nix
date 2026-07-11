@@ -46,5 +46,17 @@ args@{
         else
           [ ];
     };
+
+    when = {
+      modules.linux.security.yubikey = {
+        enable = true;
+        enableU2fAuth = true;
+      };
+      do.linux.system = config: {
+        security.pam.services.swaylock.u2fAuth = true;
+        security.pam.services.swaylock.rules.auth.u2f.order =
+          config.security.pam.services.swaylock.rules.auth.unix.order + 10;
+      };
+    };
   };
 }
