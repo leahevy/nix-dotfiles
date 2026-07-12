@@ -228,9 +228,9 @@ args@{
         systemd.user.timers.mbsync = lib.mkIf self.settings.enableBackgroundSync {
           Unit.Description = "Mailbox synchronization timer";
           Timer = {
+            OnActiveSec = "2m";
             OnBootSec = "2m";
             OnUnitActiveSec = self.settings.syncInterval;
-            Persistent = true;
             Unit = "mbsync.service";
           };
           Install.WantedBy = [ "timers.target" ];

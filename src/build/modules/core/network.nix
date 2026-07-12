@@ -105,6 +105,7 @@ args@{
             {
               wantedBy = [ "timers.target" ];
               timerConfig = {
+                OnActiveSec = "3min";
                 OnBootSec = "3min";
                 OnUnitInactiveSec = "2min";
                 RandomizedDelaySec = 15;
