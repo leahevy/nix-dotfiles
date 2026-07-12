@@ -802,6 +802,15 @@ args@{
               }
               .h-5 {
                 height: 24px;
+              }
+              .information-widget-resource {
+                margin-right: 0.375rem;
+              }
+              .information-widget-resource .flex-col {
+                margin-left: 0.375rem;
+              }
+              .information-widget-resource .min-w-\[85px\] {
+                min-width: 64px;
               }''
             (lib.optionalString (fontSize != null) ''
               html {
