@@ -123,7 +123,7 @@ args@{
             in
             lib.mkIf hasLuks {
               boot.initrd.luks.devices =
-                lib.genAttrs (builtins.attrNames config.boot.initrd.luks.devices)
+                lib.genAttrs (helpers.getDiskoLuksDeviceNames (config.disko.devices or { }))
                   (name: {
                     crypttabExtraOpts = [ "x-systemd.device-timeout=0" ];
                   });

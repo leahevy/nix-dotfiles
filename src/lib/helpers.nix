@@ -1226,4 +1226,27 @@ rec {
       );
     in
     builtins.filter (d: d != null) (fromLvm ++ fromDiskPartitions);
+
+  getDiskoLuksDeviceNames =
+    diskoDevices:
+    let
+      disks = diskoDevices.disk or { };
+
+      fromDiskPartitions = lib.flatten (
+        lib.mapAttrsToList (
+          _diskName: disk:
+          let
+            partitions = disk.content.partitions or { };
+          in
+          lib.mapAttrsToList (
+            _partName: part:
+            if (part.content.type or "") == "luks" && (part.content.name or null) != null then
+              [ part.content.name ]
+            else
+              [ ]
+          ) partitions
+        ) disks
+      );
+    in
+    builtins.filter (n: n != null) fromDiskPartitions;
 }
