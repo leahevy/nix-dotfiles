@@ -133,6 +133,8 @@ args@{
                 }
               ];
 
+              boot.initrd.systemd.settings.Manager.DefaultDeviceTimeoutSec = "infinity";
+
               boot.initrd.network.enable = true;
 
               boot.initrd.systemd.network.networks."10-initrd-dhcp" = {
