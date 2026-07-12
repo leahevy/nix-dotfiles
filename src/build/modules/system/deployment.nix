@@ -122,6 +122,12 @@ args@{
                   '';
             in
             lib.mkIf hasLuks {
+              boot.initrd.luks.devices =
+                lib.genAttrs (builtins.attrNames config.boot.initrd.luks.devices)
+                  (name: {
+                    crypttabExtraOpts = [ "x-systemd.device-timeout=0" ];
+                  });
+
               assertions = [
                 {
                   assertion = hostKey != null;
