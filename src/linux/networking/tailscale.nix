@@ -106,7 +106,6 @@ args@{
           wantedBy = [ "timers.target" ];
           timerConfig = {
             OnActiveSec = "30s";
-            OnBootSec = "30s";
             OnUnitInactiveSec = "300s";
           };
         };

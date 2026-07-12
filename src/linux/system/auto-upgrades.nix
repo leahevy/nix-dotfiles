@@ -1430,7 +1430,6 @@ args@{
           description = "NX Auto-Upgrade Post-Reboot Notification Timer";
           timerConfig = {
             OnActiveSec = "1min";
-            OnBootSec = "1min";
             RemainAfterElapse = false;
           };
           wantedBy = [ "timers.target" ];

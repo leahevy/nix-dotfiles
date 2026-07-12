@@ -36,7 +36,7 @@ args@{
     healthInterval = lib.mkOption {
       type = lib.types.str;
       default = "60s";
-      description = "Interval between regular health check runs, passed to systemd OnActiveSec/OnBootSec/OnUnitInactiveSec.";
+      description = "Interval between regular health check runs, passed to systemd OnActiveSec/OnUnitInactiveSec.";
     };
 
     healthRandomDelaySec = lib.mkOption {
@@ -2703,7 +2703,6 @@ args@{
                 else
                   {
                     OnActiveSec = "5m";
-                    OnBootSec = "5m";
                     OnUnitInactiveSec = effectiveInterval;
                     RandomizedDelaySec = entry.randomDelaySec;
                   };
@@ -2891,7 +2890,6 @@ args@{
             wantedBy = [ "timers.target" ];
             timerConfig = {
               OnActiveSec = healthInterval;
-              OnBootSec = healthInterval;
               OnUnitInactiveSec = healthInterval;
               RandomizedDelaySec = healthRandomDelaySec;
             };
@@ -2990,10 +2988,7 @@ args@{
               "network-online.target"
               "nx-healthchecks-shutdown-state.service"
             ];
-            timerConfig = {
-              OnActiveSec = "5m";
-              OnBootSec = "5m";
-            };
+            timerConfig.OnActiveSec = "5m";
           };
 
           systemd.services.nx-healthchecks-builtin-boot-triggers = {

@@ -229,7 +229,6 @@ args@{
           Unit.Description = "Mailbox synchronization timer";
           Timer = {
             OnActiveSec = "2m";
-            OnBootSec = "2m";
             OnUnitActiveSec = self.settings.syncInterval;
             Unit = "mbsync.service";
           };
