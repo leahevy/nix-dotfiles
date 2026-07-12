@@ -29,6 +29,7 @@
                 settings = {
                   allowDiscards = false;
                   keyFile = null;
+                  crypttabExtraOpts = [ "x-systemd.device-timeout=0" ];
                 };
                 content = {
                   type = "lvm_pv";

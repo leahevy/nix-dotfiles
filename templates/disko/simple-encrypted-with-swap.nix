@@ -36,6 +36,7 @@
                 name = "cryptroot";
                 settings = {
                   allowDiscards = true;
+                  crypttabExtraOpts = [ "x-systemd.device-timeout=0" ];
                 };
                 content = {
                   type = "filesystem";
