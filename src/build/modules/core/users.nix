@@ -129,9 +129,13 @@ in
           )
       );
 
-      systemd.tmpfiles.rules = [
-        "Z /root 0750 root root - -"
-      ];
+      systemd.tmpfiles.settings."nx-root-home" = {
+        "/root".d = {
+          mode = "0750";
+          user = "root";
+          group = "root";
+        };
+      };
     };
   };
 }
