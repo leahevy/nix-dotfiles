@@ -786,7 +786,10 @@ args@{
                               connect_and_check ${lib.escapeShellArg normalEntryName} && break
                             elif probe_initrd; then
                               printf '${cRed}ssh-connect-${profileName}: initrd SSH available, connecting...${cReset}\n' >&2
-                              connect_and_check ${lib.escapeShellArg initrdEntryName} && break
+                              if connect_and_check ${lib.escapeShellArg initrdEntryName}; then
+                                printf '${cWhite}ssh-connect-${profileName}: initrd unlock session ended, waiting 5s for boot to continue...${cReset}\n' >&2
+                                sleep 5
+                              fi
                             else
                               printf '${cWhite}ssh-connect-${profileName}: no SSH server available, retrying in 3s...${cReset}\n' >&2
                               sleep 3
