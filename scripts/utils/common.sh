@@ -1522,11 +1522,19 @@ run_bump() {
 		commit_ref="HEAD"
 	fi
 
-	local commit_msg label
+	local commit_msg label branch_name old_label label_rest
 	commit_msg=$(git -C "$use_dir" log -1 --pretty=format:"%s" "$commit_ref" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9-]//g' | awk '{if(length($0)>25) print substr($0,1,24)"-"; else print $0}' | sed 's/--$/-/')
-	label="$(git -C "$use_dir" log -1 --pretty=format:"$(git -C "$use_dir" branch --show-current).%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
-	echo "$label" >"$CONFIG_DIR/.label"
-	echo -e "Generated label ${GREEN}$label${RESET}"
+	branch_name="$(git -C "$use_dir" branch --show-current)"
+	label="$(git -C "$use_dir" log -1 --pretty=format:"${branch_name}.%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' "$commit_ref" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
+
+	old_label="$(cat "$CONFIG_DIR/.label" 2>/dev/null || true)"
+	label_rest="${label#"${branch_name}".}"
+	if [[ "$label" != "$old_label" && "$old_label" == ?*".${label_rest}" && -z "$(git -C "$CONFIG_DIR" status --porcelain -- flake.lock .core-state)" ]]; then
+		echo -e "Keeping label ${GREEN}$old_label${RESET} (only the branch name would change)"
+	else
+		echo "$label" >"$CONFIG_DIR/.label"
+		echo -e "Generated label ${GREEN}$label${RESET}"
+	fi
 	echo
 
 	if [[ "$commit" == "true" ]] && ! git diff --quiet HEAD -- flake.lock .label; then
