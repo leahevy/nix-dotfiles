@@ -4,6 +4,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "pull"
 parse_git_args "$@"
+require_repos_on_same_branch
 
 if [[ "$ONLY_CONFIG" != true ]]; then
 	cd "$NXCORE_DIR"

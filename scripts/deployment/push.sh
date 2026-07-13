@@ -14,6 +14,7 @@ for arg in "$@"; do
 	fi
 done
 parse_git_args "${FILTERED_ARGS[@]+"${FILTERED_ARGS[@]}"}"
+require_repos_on_same_branch
 
 if [[ "$BUMP" == "true" && "$ONLY_CORE" == "true" ]]; then
 	echo -e "${RED}Error: Cannot use ${WHITE}--bump${RED} together with ${WHITE}--only-core${RESET}" >&2

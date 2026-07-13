@@ -943,6 +943,22 @@ parse_git_args() {
 	export ONLY_CORE ONLY_CONFIG EXTRA_ARGS
 }
 
+require_repos_on_same_branch() {
+	if [[ "${ONLY_CORE:-false}" == true ]] || [[ "${ONLY_CONFIG:-false}" == true ]]; then
+		return 0
+	fi
+	if [[ ! -d "$NXCORE_DIR/.git" ]] || [[ ! -d "$CONFIG_DIR/.git" ]]; then
+		return 0
+	fi
+	local core_branch config_branch
+	core_branch=$(git -C "$NXCORE_DIR" branch --show-current)
+	config_branch=$(git -C "$CONFIG_DIR" branch --show-current)
+	if [[ "$core_branch" != "$config_branch" ]]; then
+		echo -e "${RED}Error: Repositories are on different branches (core: '${core_branch}', config: '${config_branch}'). Both repositories must be on the same branch.${RESET}" >&2
+		exit 1
+	fi
+}
+
 get_latest_commit_timestamp() {
 	local repo_dir="$1"
 	if [[ -d "$repo_dir/.git" ]]; then

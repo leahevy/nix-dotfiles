@@ -4,6 +4,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "commit"
 parse_git_args "$@"
+require_repos_on_same_branch
 
 if [[ ${#EXTRA_ARGS[@]} -eq 0 ]]; then
 	echo -e "${RED}Commit message is missing: Usage: ${WHITE}<COMMIT_MESSAGE>${RESET}" >&2

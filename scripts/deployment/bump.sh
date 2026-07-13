@@ -32,6 +32,8 @@ if [[ "$PUSH" == "true" ]]; then
 	COMMIT=true
 fi
 
+require_repos_on_same_branch
+
 unpushed=$(git -C "$NXCORE_DIR" log origin/HEAD..HEAD --oneline 2>/dev/null || true)
 if [[ -n "$unpushed" ]]; then
 	echo -e "${YELLOW}Warning: nxcore has unpushed commits:${RESET}"

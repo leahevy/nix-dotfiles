@@ -47,14 +47,7 @@ check_repo_merge_safety() {
 	return 0
 }
 
-if [[ "$ONLY_CORE" != true ]] && [[ "$ONLY_CONFIG" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
-	CORE_BRANCH=$(git branch --show-current)
-	CONFIG_BRANCH=$(cd "$CONFIG_DIR" && git branch --show-current)
-	if [[ "$CORE_BRANCH" != "$CONFIG_BRANCH" ]]; then
-		echo -e "${RED}Error: Repositories are on different branches (core: '${CORE_BRANCH}', config: '${CONFIG_BRANCH}'). Both repositories must be on the same branch.${RESET}"
-		exit 1
-	fi
-fi
+require_repos_on_same_branch
 
 if [[ "$ONLY_CONFIG" != true ]]; then
 	if ! check_repo_merge_safety "." "core"; then
