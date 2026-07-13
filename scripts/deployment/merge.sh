@@ -68,17 +68,33 @@ if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
 	fi
 fi
 
+merge_branch_in_repo() {
+	local repo_path="$1"
+	local repo_name="$2"
+	local repo_label="$3"
+
+	pushd "$repo_path" >/dev/null
+
+	if git merge-base --is-ancestor HEAD "refs/heads/$BRANCH_TO_MERGE"; then
+		echo -e "${GREEN}Fast-forwarding to branch ${WHITE}$BRANCH_TO_MERGE${GREEN} in $repo_name repository ${WHITE}($repo_label)${RESET}..."
+		git merge --ff-only "$BRANCH_TO_MERGE"
+	else
+		echo -e "${GREEN}Merging branch ${WHITE}$BRANCH_TO_MERGE${GREEN} with a merge commit in $repo_name repository ${WHITE}($repo_label)${RESET}..."
+		git merge "$BRANCH_TO_MERGE"
+	fi
+
+	popd >/dev/null
+}
+
 if [[ "$ONLY_CONFIG" != true ]]; then
-	echo -e "${GREEN}Merging branch ${WHITE}$BRANCH_TO_MERGE${GREEN} in core repository ${WHITE}(.config/nx/nxcore)${RESET}..."
-	git merge "$BRANCH_TO_MERGE"
+	merge_branch_in_repo "." "core" ".config/nx/nxcore"
 fi
 
 if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
 	if [[ "$ONLY_CONFIG" != true ]]; then
 		echo
 	fi
-	echo -e "${GREEN}Merging branch ${WHITE}$BRANCH_TO_MERGE${GREEN} in config repository ${WHITE}(.config/nx/nxconfig)${RESET}..."
-	(cd "$CONFIG_DIR" && git merge "$BRANCH_TO_MERGE")
+	merge_branch_in_repo "$CONFIG_DIR" "config" ".config/nx/nxconfig"
 elif [[ "$ONLY_CORE" != true ]] && [[ "$ONLY_CONFIG" != true ]]; then
 	echo
 	echo -e "${YELLOW}Warning: Config directory does not exist or is no directory.${RESET}"
