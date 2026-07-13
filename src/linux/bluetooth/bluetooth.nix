@@ -19,6 +19,15 @@ args@{
   };
 
   module = {
+    disabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          string = "Bluetooth: hci[0-9]+: Failed to send firmware data \\(-38\\)";
+          kernel = true;
+        }
+      ];
+    };
+
     linux.system = config: {
       hardware.bluetooth = {
         enable = true;
