@@ -17,6 +17,17 @@ let
       pkceEnabled = true;
     }
   ];
+
+  normalizeProxyVhosts = map (
+    v:
+    if builtins.isString v then
+      {
+        vhost = v;
+        allowedGroups = [ "ldap-users" ];
+      }
+    else
+      v
+  );
 in
 {
   name = "auth";
@@ -96,9 +107,25 @@ in
     };
 
     proxyProtectedVhosts = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
+      type = lib.types.listOf (
+        lib.types.either lib.types.str (
+          lib.types.submodule {
+            options = {
+              vhost = lib.mkOption {
+                type = lib.types.str;
+                description = "Bare subdomain name under baseDomain or fully qualified domain name to protect.";
+              };
+              allowedGroups = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [ "ldap-users" ];
+                description = "LDAP groups allowed to access this vhost through the oauth2 proxy.";
+              };
+            };
+          }
+        )
+      );
       default = [ ];
-      description = "Virtual hosts to protect via oauth2-proxy, each either a bare subdomain name under baseDomain or a fully qualified domain name.";
+      description = "Virtual hosts to protect via oauth2-proxy, each a bare subdomain name under baseDomain, a fully qualified domain name, or an attrset with vhost and allowedGroups.";
     };
 
     clients = lib.mkOption {
@@ -293,13 +320,21 @@ in
 
     ifEnabled.linux.server.ldap = {
       linux.system = config: {
-        assertions = lib.concatMap (
-          entry:
-          lib.optional (entry.allowedUserGroup != null) {
-            assertion = builtins.elem entry.allowedUserGroup config.nx.linux.server.ldap.groups;
-            message = "linux.server.auth: client '${entry.name}' references LDAP group '${entry.allowedUserGroup}' which is not declared in linux.server.ldap.groups!";
-          }
-        ) (lib.attrValues config.nx.linux.server.auth.clients);
+        assertions =
+          lib.concatMap (
+            entry:
+            lib.optional (entry.allowedUserGroup != null) {
+              assertion = builtins.elem entry.allowedUserGroup config.nx.linux.server.ldap.groups;
+              message = "linux.server.auth: client '${entry.name}' references LDAP group '${entry.allowedUserGroup}' which is not declared in linux.server.ldap.groups!";
+            }
+          ) (lib.attrValues config.nx.linux.server.auth.clients)
+          ++ lib.concatMap (
+            v:
+            map (g: {
+              assertion = g == "ldap-users" || builtins.elem g config.nx.linux.server.ldap.groups;
+              message = "linux.server.auth: proxy-protected vhost '${v.vhost}' references LDAP group '${g}' which is not declared in linux.server.ldap.groups!";
+            }) v.allowedGroups
+          ) (normalizeProxyVhosts config.nx.linux.server.auth.proxyProtectedVhosts);
       };
     };
 
@@ -318,6 +353,8 @@ in
           exposedService = self.host.remote.exposedServices.proxy;
           exposedSubdomain = if builtins.isString exposedService then exposedService else oauthProxySubdomain;
           proxyDomain = "${exposedSubdomain}.${domain}";
+          normalizedProxyVhosts = lib.unique (normalizeProxyVhosts proxyProtectedVhosts);
+          proxyVhostNames = map (v: v.vhost) normalizedProxyVhosts;
           cookieSetupScript = pkgs.writeShellScript "nx-oauth2-proxy-cookie" ''
             set -euo pipefail
             if [ ! -f /var/lib/oauth2-proxy/cookie-secret ]; then
@@ -363,6 +400,10 @@ in
               {
                 assertion = exposedSubdomain == oauthProxySubdomain;
                 message = "linux.server.auth: oauthProxySubdomain '${oauthProxySubdomain}' does not match exposedServices.proxy subdomain '${exposedSubdomain}'!";
+              }
+              {
+                assertion = builtins.length (lib.unique proxyVhostNames) == builtins.length proxyVhostNames;
+                message = "linux.server.auth: the same vhost is listed in proxyProtectedVhosts with conflicting allowedGroups!";
               }
             ];
 
@@ -467,10 +508,12 @@ in
               virtualHosts = builtins.listToAttrs (
                 map (
                   v:
-                  lib.nameValuePair (if builtins.match ".*\\..*" v != null then v else "${v}.${domain}") {
-                    allowed_groups = [ "ldap-users" ];
-                  }
-                ) (lib.unique proxyProtectedVhosts)
+                  lib.nameValuePair
+                    (if builtins.match ".*\\..*" v.vhost != null then v.vhost else "${v.vhost}.${domain}")
+                    {
+                      allowed_groups = v.allowedGroups;
+                    }
+                ) normalizedProxyVhosts
               );
             };
 
