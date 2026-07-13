@@ -962,7 +962,7 @@ require_repos_on_same_branch() {
 get_latest_commit_timestamp() {
 	local repo_dir="$1"
 	if [[ -d "$repo_dir/.git" ]]; then
-		cd "$repo_dir" && git log -1 --pretty=format:"%ct" 2>/dev/null || echo "0"
+		cd "$repo_dir" && git log --no-merges -1 --pretty=format:"%ct" 2>/dev/null || echo "0"
 	else
 		echo "0"
 	fi
@@ -1496,7 +1496,7 @@ run_bump() {
 		local config_timestamp core_timestamp
 
 		config_timestamp=$(
-			git -C "$CONFIG_DIR" log --pretty=format:'%ct%x09%s' |
+			git -C "$CONFIG_DIR" log --no-merges --pretty=format:'%ct%x09%s' |
 				awk -F'\t' '$2 !~ /^Bump core at: / { print $1; exit }' || true
 		)
 
@@ -1511,9 +1511,11 @@ run_bump() {
 	local commit_ref="HEAD"
 	if [[ "$use_dir" == "$CONFIG_DIR" ]]; then
 		commit_ref=$(
-			git -C "$CONFIG_DIR" log --pretty=format:'%H%x09%s' |
+			git -C "$CONFIG_DIR" log --no-merges --pretty=format:'%H%x09%s' |
 				awk -F'\t' '$2 !~ /^Bump core at: / { print $1; exit }' || true
 		)
+	else
+		commit_ref=$(git -C "$use_dir" log --no-merges -1 --pretty=format:'%H' 2>/dev/null || true)
 	fi
 
 	if [[ "$commit_ref" == "" ]]; then

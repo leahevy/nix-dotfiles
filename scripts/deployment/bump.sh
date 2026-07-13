@@ -34,7 +34,8 @@ fi
 
 require_repos_on_same_branch
 
-unpushed=$(git -C "$NXCORE_DIR" log origin/HEAD..HEAD --oneline 2>/dev/null || true)
+core_upstream=$(git -C "$NXCORE_DIR" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "origin/HEAD")
+unpushed=$(git -C "$NXCORE_DIR" log "$core_upstream..HEAD" --oneline 2>/dev/null || true)
 if [[ -n "$unpushed" ]]; then
 	echo -e "${YELLOW}Warning: nxcore has unpushed commits:${RESET}"
 	echo
