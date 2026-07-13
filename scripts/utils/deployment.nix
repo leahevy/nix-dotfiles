@@ -455,6 +455,17 @@
         arguments = [ (arg "branch" "Branch to switch to" "gitBranch") ];
       };
 
+      merge = {
+        description = "Merge a branch into the current branch with safety checks";
+        group = "git";
+        modes = [
+          "local"
+          "develop"
+        ];
+        options = gitOptions;
+        arguments = [ (arg "branch" "Branch to merge" "gitBranch") ];
+      };
+
       makeiso = {
         description = "Build a NixOS live ISO or Raspberry Pi 5 SD card installer image";
         group = "configuration";
