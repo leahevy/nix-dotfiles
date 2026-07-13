@@ -284,7 +284,7 @@ args@{
                   "https://${gl.subdomain}.${domain}/" || true)
                 printf 'ui vhost status: %s\n' "$CODE" >&3
                 case "$CODE" in
-                  302|401|403) exit 0 ;;
+                  302|307|401|403) exit 0 ;;
                   *) exit 1 ;;
                 esac
               '';
