@@ -2,7 +2,7 @@
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
-deployment_script_setup "switch-branch"
+deployment_script_setup "switch"
 parse_git_args "$@"
 cd "$NXCORE_DIR"
 

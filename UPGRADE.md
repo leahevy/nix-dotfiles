@@ -7,7 +7,7 @@
 
 ## Upgrade Steps
 
-- [ ] 1. Run `nx switch-branch upgrade-nixos-<TARGET_VERSION>`
+- [ ] 1. Run `nx switch upgrade-nixos-<TARGET_VERSION>`
 - [ ] 2. Run `nx dist-upgrade <TARGET_VERSION>` (requires clean git repo)
 - [ ] 3. Read the release notes and apply any nxcore breaking-change fixes: https://nixos.org/manual/nixos/stable/release-notes#sec-release-<TARGET_VERSION>
 - [ ] 4. Baseline checkpoint: verify eval succeeds and `nx build --keep` passes - do not proceed until clean
@@ -37,7 +37,7 @@
 - [ ] 18. Search for `fetchFromGitHub` in the repository to check if any derivations did arrive in `nixpkgs`
     - [ ] 18a. Bump the pinned GeoIP commit in `src/linux/networking/geo-ip.nix`: first sync the fork at https://github.com/leahevy/country-ip-blocks with upstream (ipverse/country-ip-blocks), then pick a recent commit and get its hash with `nix flake prefetch "github:leahevy/country-ip-blocks/COMMIT" --json 2>/dev/null | grep '"hash"'`
 - [ ] 19. Push the feature branches: `nx push`
-- [ ] 20. Change back to the **main** branch: `nx switch-branch main`
+- [ ] 20. Change back to the **main** branch: `nx switch main`
 - [ ] 21. Tag main branch before the upgrade `git tag -a nixos-<TARGET_VERSION>-pre-upgrade -m "NixOS <OLD_VERSION> before upgrading to <TARGET_VERSION>"` and push with `git push --tags`
 - [ ] 22. Merge the feature branches into main
 - [ ] 23. Delete the upgrade feature branches locally and on remote (run in both nxcore and nxconfig): `git branch -d upgrade-nixos-<TARGET_VERSION>` and `git push origin --delete upgrade-nixos-<TARGET_VERSION>`

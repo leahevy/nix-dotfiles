@@ -444,7 +444,7 @@
         options = gitOptions;
       };
 
-      switch-branch = {
+      switch = {
         description = "Switch git branches with safety checks";
         group = "git";
         modes = [
