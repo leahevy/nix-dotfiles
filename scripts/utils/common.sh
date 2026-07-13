@@ -1570,13 +1570,13 @@ run_bump() {
 		git commit -m "Bump core at: $label"
 		echo -e "Committed ${WHITE}flake.lock${RESET} and ${WHITE}.label${RESET}"
 		echo
+	fi
 
-		if [[ "$push" == "true" ]]; then
-			echo -e "${CYAN}Pushing config ${YELLOW}(Authentication required)${CYAN}...${RESET}"
-			git push
-			echo -e "Pushed ${WHITE}config${RESET}"
-			echo
-		fi
+	if [[ "$push" == "true" ]]; then
+		echo -e "${CYAN}Pushing config ${YELLOW}(Authentication required)${CYAN}...${RESET}"
+		git push
+		echo -e "Pushed ${WHITE}config${RESET}"
+		echo
 	fi
 }
 

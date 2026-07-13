@@ -39,7 +39,7 @@ if [[ "$BUMP" == "true" ]]; then
 		echo
 	fi
 	echo -e "${CYAN}Pulling config repository before bump ${YELLOW}(Authentication required)${CYAN}...${RESET}"
-	(cd "$CONFIG_DIR" && git pull)
+	(cd "$CONFIG_DIR" && git pull --no-rebase)
 	echo
 	echo -e "${CYAN}Bumping nxconfig to pushed nxcore...${RESET}"
 	echo
