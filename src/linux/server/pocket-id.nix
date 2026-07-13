@@ -93,6 +93,18 @@ in
   };
 
   module = {
+    overlays = [
+      (final: prev: {
+        pocket-id = prev.pocket-id.overrideAttrs (old: {
+          postPatch = (old.postPatch or "") + ''
+            substituteInPlace internal/service/oidc_service.go \
+              --replace-fail "RefreshTokenDuration = 30 * 24 * time.Hour" \
+                             "RefreshTokenDuration = 90 * 24 * time.Hour"
+          '';
+        });
+      })
+    ];
+
     enabled =
       config:
       let

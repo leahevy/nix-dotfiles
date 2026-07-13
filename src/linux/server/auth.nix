@@ -490,7 +490,7 @@ in
               email.domains = [ "*" ];
               cookie = {
                 domain = ".${domain}";
-                expire = "720h";
+                expire = "2160h";
                 refresh = "55m";
                 secure = true;
                 httpOnly = true;
