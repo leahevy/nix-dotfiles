@@ -258,7 +258,7 @@ args@{
           nx.linux.server.healthchecks.requireServicesUp = [ "glances.service" ];
           nx.linux.server.healthchecks.regularHealthChecks = lib.mkIf gl.enableHealthCheck (
             {
-              "Glances - API responds" = ''
+              "Glances API responds" = ''
                 RESPONSE=$(${pkgs.curl}/bin/curl -fsS --connect-timeout 5 --max-time 10 \
                   "http://127.0.0.1:${toString gl.port}/api/4/status" 2>&1) || {
                   printf '%s\n' "$RESPONSE" >&3
@@ -266,7 +266,7 @@ args@{
                 }
                 printf '%s\n' "$RESPONSE" >&3
               '';
-              "Glances - API auth enforced" = ''
+              "Glances API auth enforced" = ''
                 CODE=$(${pkgs.curl}/bin/curl -s -o /dev/null -w '%{http_code}' \
                   --connect-timeout 5 --max-time 10 \
                   "https://${gl.apiSubdomain}.${domain}/api/4/status" || true)
@@ -278,7 +278,7 @@ args@{
               '';
             }
             // lib.optionalAttrs uiExposed {
-              "Glances - UI SSO enforced" = ''
+              "Glances UI SSO enforced" = ''
                 CODE=$(${pkgs.curl}/bin/curl -s -o /dev/null -w '%{http_code}' \
                   --connect-timeout 5 --max-time 10 \
                   "https://${gl.subdomain}.${domain}/" || true)
