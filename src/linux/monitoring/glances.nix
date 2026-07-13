@@ -65,6 +65,16 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          string = "warning: `\\.glances-wrappe' uses wireless extensions which will stop working for Wi-Fi 7 hardware; use nl80211";
+          tag = "kernel";
+          kernel = true;
+        }
+      ];
+    };
+
     linux.system =
       {
         config,
