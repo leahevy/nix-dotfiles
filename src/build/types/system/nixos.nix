@@ -614,6 +614,10 @@ with lib;
                     type = types.either types.str types.bool;
                     default = false;
                   };
+                  glances = mkOption {
+                    type = types.either types.str types.bool;
+                    default = false;
+                  };
                   searxng = mkOption {
                     type = types.either types.str types.bool;
                     default = false;
