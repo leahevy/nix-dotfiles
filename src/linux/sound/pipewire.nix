@@ -167,6 +167,12 @@ args@{
           unitless = true;
         }
         {
+          tag = "pipewire-pulse";
+          string = "mod\\.protocol-pulse: \\[PulseAudio Volume Control\\] timeout on stream 0x[0-9a-f]+ channel:[0-9]+";
+          user = true;
+          unitless = true;
+        }
+        {
           tag = "pipewire";
           string = "mod\\.client-node: detected old client version [0-9]+";
           user = true;

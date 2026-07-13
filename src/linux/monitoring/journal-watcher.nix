@@ -328,6 +328,7 @@ args@{
         "usb.*Device not responding to setup address"
         "usb.*unable to enumerate USB device"
         "uvcvideo.*UVC non compliance.*max payload transmission size.*exceeds.*ep max packet.*Using the max size"
+        "uvcvideo.*UVC non compliance: Reducing max payload transfer size \\([0-9]+\\) to fit endpoint limit \\([0-9]+\\)\\."
         "hub.*config failed, can't get hub status \\(err -[0-9]+\\)"
         "uvcvideo.*Failed to query \\([0-9]+\\) UVC probe control.*\\(exp\\. [0-9]+\\)\\."
         "uvcvideo.*Failed to initialize the device \\(-[0-9]+\\)\\."
