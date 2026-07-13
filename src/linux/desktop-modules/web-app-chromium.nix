@@ -21,9 +21,12 @@ args@{
     package = pkgs.ungoogled-chromium;
     program = "chromium";
     args = "--app=";
+    dataBaseDir = ".local/share/webapps";
+    cacheBaseDir = ".cache/webapps";
     persistenceDirs = [
       ".config/chromium"
       ".cache/chromium"
+      ".local/share/webapps"
     ];
     persistenceFiles = [
     ];
@@ -54,7 +57,11 @@ args@{
               #!/usr/bin/env bash
               set -euo pipefail
 
-              exec ${bin} ${chromiumArgs}"${webAppSettings.protocol}://${webAppSettings.subdomain}.${webAppSettings.domain}${webAppSettings.args}"
+              DATA_DIR="$HOME/${self.settings.dataBaseDir}/${webAppSettings.webapp}"
+              CACHE_DIR="$HOME/${self.settings.cacheBaseDir}/${webAppSettings.webapp}"
+              ${pkgs.coreutils}/bin/mkdir -p "$DATA_DIR" "$CACHE_DIR"
+
+              exec ${bin} --user-data-dir="$DATA_DIR" --disk-cache-dir="$CACHE_DIR" ${chromiumArgs}"${webAppSettings.protocol}://${webAppSettings.subdomain}.${webAppSettings.domain}${webAppSettings.args}"
             '';
           };
         };
