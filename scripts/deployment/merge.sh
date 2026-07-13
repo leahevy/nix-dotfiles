@@ -117,7 +117,11 @@ merge_branch_in_repo() {
 		git merge --ff-only "$BRANCH_TO_MERGE"
 	else
 		echo -e "${GREEN}Merging branch ${WHITE}$BRANCH_TO_MERGE${GREEN} with a merge commit in $repo_name repository ${WHITE}($repo_label)${RESET}..."
-		if ! git merge "$BRANCH_TO_MERGE"; then
+		if [[ "$repo_name" == "config" ]]; then
+			if ! git merge --no-edit "$BRANCH_TO_MERGE"; then
+				resolve_generated_conflicts "$repo_name"
+			fi
+		elif ! git merge "$BRANCH_TO_MERGE"; then
 			resolve_generated_conflicts "$repo_name"
 		fi
 	fi
