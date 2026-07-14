@@ -2084,8 +2084,8 @@ diff_packages() {
 		echo -e "${WHITE}Packages are identical.${RESET}"
 	elif echo "$plain_diff" | grep -Eq 'Closure size: ([0-9]+) -> \1 \(0 paths added, 0 paths removed, delta'; then
 		echo -e "${WHITE}Packages are identical.${RESET}"
-	elif [[ "$version_line_count" -eq 1 ]] &&
-		echo "$plain_diff" | grep -qE '^\[..\][[:space:]]+#[0-9]+[[:space:]]+(nixos-system-|home-manager-generation)' &&
+	elif [[ "$version_line_count" -ge 1 && "$version_line_count" -le 2 ]] &&
+		[[ "$(echo "$plain_diff" | grep -cE '^\[..\][[:space:]]+#[0-9]+[[:space:]]+(nixos-system-|home-manager-generation)')" -eq "$version_line_count" ]] &&
 		echo "$plain_diff" | grep -Eq 'Closure size: ([0-9]+) -> \1 \(([0-9]+) paths added, \2 paths removed, delta \+0,'; then
 		echo -e "${WHITE}Packages are identical.${RESET}"
 	else
