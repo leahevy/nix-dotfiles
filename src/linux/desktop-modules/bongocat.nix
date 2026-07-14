@@ -156,7 +156,9 @@ args@{
           home.file."${defs.binDir}/bongocat-restart" = {
             text = ''
               #!/usr/bin/env bash
-              systemctl --user restart nx-bongocat || true
+              if ! ${pkgs.systemd}/bin/systemctl --user is-active --quiet nx-bongocat; then
+                ${pkgs.systemd}/bin/systemctl --user restart nx-bongocat || true
+              fi
             '';
             executable = true;
           };

@@ -485,11 +485,11 @@ args@{
         home.file."${defs.binDir}/nwg-wrapper-restart" = {
           text = ''
             #!/usr/bin/env bash
-            systemctl --user restart nx-nwg-wrapper-1 || true
+            ${pkgs.systemd}/bin/systemctl --user restart nx-nwg-wrapper-1 || true
             ${
               if niriKeybindings then
                 ''
-                  systemctl --user restart nx-nwg-wrapper-2 || true
+                  ${pkgs.systemd}/bin/systemctl --user restart nx-nwg-wrapper-2 || true
                 ''
               else
                 ""
