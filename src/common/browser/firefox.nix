@@ -1284,6 +1284,12 @@ in
               user = true;
               unitless = true;
             }
+            {
+              tag = "firefox";
+              string = "Couldn't map window 0x[0-9a-f]+ as subsurface because its parent is not mapped\\.";
+              user = true;
+              unitless = true;
+            }
           ];
         }
       ];
