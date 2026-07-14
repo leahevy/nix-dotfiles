@@ -1431,17 +1431,6 @@ in
             generalRules = [
               "dbus-user.talk org.freedesktop.portal.Desktop"
               "env GIO_USE_PORTALS=1"
-              "noblacklist /dev/null"
-              "whitelist /dev/null"
-            ];
-            screenshareRules = [
-              "noblacklist /dev/dri"
-              "whitelist /dev/dri"
-            ];
-            cameraRules = [
-              "dbus-user.talk org.freedesktop.portal.Camera"
-              "noblacklist /dev/video*"
-              "whitelist /dev/video*"
             ];
             screensaverRules = [
               "dbus-user.talk org.freedesktop.ScreenSaver"
@@ -1459,18 +1448,12 @@ in
               map (e: "whitelist ${mountPoint}/${self.host.hostname}/${home}/${e.dir}") resolvedDirs
             )
             ++ generalRules
-            ++ screenshareRules
-            ++ cameraRules
             ++ screensaverRules
             ++ notificationRules
             ++ lib.optionals (helpers.resolveFromHostOrUser config [ "hardware" "gpu" ] null == "nvidia") [
               "private-etc egl"
-              "noblacklist /dev/nvidia*"
-              "whitelist /dev/nvidia*"
             ]
             ++ lib.optionals (config.nx.linux.security.yubikey.enable) [
-              "noblacklist /dev/hidraw*"
-              "whitelist /dev/hidraw*"
               "ignore noinput"
               "ignore nou2f"
             ]
