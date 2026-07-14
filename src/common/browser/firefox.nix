@@ -218,6 +218,13 @@ let
       dark-reader = {
         addonId = "addon@darkreader.org";
         slug = "darkreader";
+        settings = {
+          schemeVersion = 2;
+          syncSettings = false;
+          disabledFor = map (d: lib.toLower (lib.removeSuffix "/" d)) (
+            config.nx.common.browser.firefox.userContentExcludedDomains
+          );
+        };
       };
     };
 
@@ -541,7 +548,7 @@ let
     {
       browserUserContent,
       monospaceFont,
-      userContentCSSExcludedDomains,
+      userContentExcludedDomains,
     }:
     let
       cssData = browserUserContent.data + (firefoxSpecificCSS monospaceFont);
@@ -575,11 +582,11 @@ let
         "https?://${hostPattern}(?::[0-9]+)?(?:[/?#].*|$)";
 
       excludedDomainPattern =
-        if userContentCSSExcludedDomains == [ ] then
+        if userContentExcludedDomains == [ ] then
           null
         else
           cssStringEscapeRegex (
-            lib.concatStringsSep "|" (map mkExcludedDomainRegex userContentCSSExcludedDomains)
+            lib.concatStringsSep "|" (map mkExcludedDomainRegex userContentExcludedDomains)
           );
     in
     if excludedDomainPattern == null then
@@ -650,10 +657,10 @@ in
       type = lib.types.nullOr lib.types.str;
       default = null;
     };
-    userContentCSSExcludedDomains = lib.mkOption {
+    userContentExcludedDomains = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      description = "List of domains (e.g. 'example.com') where Firefox userContent CSS is disabled.";
+      description = "List of domains (e.g. 'example.com') where Firefox userContent CSS and Dark Reader are disabled.";
     };
     extensions = lib.mkOption {
       type = lib.types.attrsOf extensionType;
@@ -680,7 +687,7 @@ in
         enableFingerprintingProtection,
         monospaceFont,
         bottomToolbars,
-        userContentCSSExcludedDomains,
+        userContentExcludedDomains,
         ...
       }:
       let
@@ -1030,7 +1037,7 @@ in
           );
         userContentCSS = mkUserContentCSS {
           browserUserContent = config.nx.common.browser.browser.final.userContentCSS;
-          inherit monospaceFont userContentCSSExcludedDomains;
+          inherit monospaceFont userContentExcludedDomains;
         };
       in
       {
@@ -1069,10 +1076,10 @@ in
                   || helpers.isValidIPv4 stripped
                   || helpers.isValidIPv6 unbracketed
                   || isValidHostname;
-                message = "nx.common.browser.firefox.userContentCSSExcludedDomains: '${d}' is not a valid domain or IP address (no schemes, no regex chars, use plain hostnames or IPs)!";
+                message = "nx.common.browser.firefox.userContentExcludedDomains: '${d}' is not a valid domain or IP address (no schemes, no regex chars, use plain hostnames or IPs)!";
               }
             ]
-          ) userContentCSSExcludedDomains;
+          ) userContentExcludedDomains;
 
         programs.firefox.enable = true;
 
@@ -1446,7 +1453,7 @@ in
         extensions,
         defaultDownloadsName,
         monospaceFont,
-        userContentCSSExcludedDomains,
+        userContentExcludedDomains,
         ...
       }:
       let
@@ -1474,7 +1481,7 @@ in
                 cp "${
                   pkgs.writeText "browser-user-content.css" (mkUserContentCSS {
                     browserUserContent = userCSS;
-                    inherit monospaceFont userContentCSSExcludedDomains;
+                    inherit monospaceFont userContentExcludedDomains;
                   })
                 }" "$css_dir/userContent.css"
                fi
