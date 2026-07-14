@@ -28,6 +28,13 @@ args@{
           "create dns_resolver * * ${cifsUpcall} %k"
           "create cifs.spnego  * * ${cifsUpcall} %k"
         ];
+
+        nx.linux.monitoring.journal-watcher.ignorePatterns = [
+          {
+            string = "No dialect specified on mount\\. Default has changed to a more secure dialect";
+            kernel = true;
+          }
+        ];
       };
 
     linux.system = config: {
