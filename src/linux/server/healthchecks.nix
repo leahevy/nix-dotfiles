@@ -1342,7 +1342,7 @@ args@{
         cpuUsageExpr = ''
           _force_cpu=0
           if [[ -f "$TMPDIR_HC/top-data" ]] && \
-             ${pkgs.gawk}/bin/awk '$9+0 >= 1.0 {found=1; exit} END{exit !found}' "$TMPDIR_HC/top-data" 2>/dev/null; then
+             ${pkgs.gawk}/bin/awk '$9+0 >= 3.0 {found=1; exit} END{exit !found}' "$TMPDIR_HC/top-data" 2>/dev/null; then
             _force_cpu=1
           fi
           if [[ -f "$TMPDIR_HC/top-cpu-summary" ]]; then
@@ -1375,7 +1375,7 @@ args@{
             printf '%2d. %s %s\n' "$_n" "$_cpu" "$_cmd" >&3
           done < <(${pkgs.gawk}/bin/awk '
               { val=$9+0
-                if (val<1.0) exit
+                if (val<3.0) exit
                 if (val>5) { print; above++; next }
                 if (above+below<10) { print; below++; next }
                 exit }
