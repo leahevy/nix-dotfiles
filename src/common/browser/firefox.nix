@@ -223,6 +223,7 @@ let
           syncSettings = false;
           disabledFor = map (d: lib.toLower (lib.removeSuffix "/" d)) (
             config.nx.common.browser.firefox.userContentExcludedDomains
+            ++ config.nx.common.browser.firefox.userContentDarkReaderExcludedDomains
           );
         };
       };
@@ -660,7 +661,17 @@ in
     userContentExcludedDomains = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      description = "List of domains (e.g. 'example.com') where Firefox userContent CSS and Dark Reader are disabled.";
+      description = "List of domains (e.g. 'example.com') where both Firefox userContent CSS and Dark Reader are disabled.";
+    };
+    userContentCSSExcludedDomains = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "List of domains (e.g. 'example.com') where only Firefox userContent CSS is disabled.";
+    };
+    userContentDarkReaderExcludedDomains = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "List of domains (e.g. 'example.com') where only Dark Reader is disabled.";
     };
     extensions = lib.mkOption {
       type = lib.types.attrsOf extensionType;
@@ -688,6 +699,8 @@ in
         monospaceFont,
         bottomToolbars,
         userContentExcludedDomains,
+        userContentCSSExcludedDomains,
+        userContentDarkReaderExcludedDomains,
         ...
       }:
       let
@@ -1037,7 +1050,8 @@ in
           );
         userContentCSS = mkUserContentCSS {
           browserUserContent = config.nx.common.browser.browser.final.userContentCSS;
-          inherit monospaceFont userContentExcludedDomains;
+          inherit monospaceFont;
+          userContentExcludedDomains = userContentExcludedDomains ++ userContentCSSExcludedDomains;
         };
       in
       {
@@ -1056,30 +1070,61 @@ in
               (hasSha && hasId && hasFile) || (!hasSha && !hasId && !hasFile);
             message = "nx.common.browser.firefox: extension '${name}' requires sha256, fileId, and filename to all be set together or not at all!";
           }) allExtensions
-          ++ lib.concatMap (
-            d:
+          ++
+            lib.concatMap
+              (
+                d:
+                let
+                  stripped = lib.removeSuffix "/" d;
+                  unbracketed =
+                    if lib.hasPrefix "[" stripped && lib.hasSuffix "]" stripped then
+                      lib.removeSuffix "]" (lib.removePrefix "[" stripped)
+                    else
+                      stripped;
+                  isValidHostname =
+                    builtins.match "[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?" stripped != null
+                    && builtins.match ".*[a-zA-Z].*" stripped != null;
+                in
+                [
+                  {
+                    assertion =
+                      stripped == "localhost"
+                      || helpers.isValidIPv4 stripped
+                      || helpers.isValidIPv6 unbracketed
+                      || isValidHostname;
+                    message = "nx.common.browser.firefox userContent excluded domains: '${d}' is not a valid domain or IP address (no schemes, no regex chars, use plain hostnames or IPs)!";
+                  }
+                ]
+              )
+              (
+                userContentExcludedDomains ++ userContentCSSExcludedDomains ++ userContentDarkReaderExcludedDomains
+              )
+          ++ (
             let
-              stripped = lib.removeSuffix "/" d;
-              unbracketed =
-                if lib.hasPrefix "[" stripped && lib.hasSuffix "]" stripped then
-                  lib.removeSuffix "]" (lib.removePrefix "[" stripped)
-                else
-                  stripped;
-              isValidHostname =
-                builtins.match "[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?" stripped != null
-                && builtins.match ".*[a-zA-Z].*" stripped != null;
+              overlap =
+                lib.intersectLists userContentExcludedDomains userContentCSSExcludedDomains
+                ++ lib.intersectLists userContentExcludedDomains userContentDarkReaderExcludedDomains
+                ++ lib.intersectLists userContentCSSExcludedDomains userContentDarkReaderExcludedDomains;
             in
             [
               {
-                assertion =
-                  stripped == "localhost"
-                  || helpers.isValidIPv4 stripped
-                  || helpers.isValidIPv6 unbracketed
-                  || isValidHostname;
-                message = "nx.common.browser.firefox.userContentExcludedDomains: '${d}' is not a valid domain or IP address (no schemes, no regex chars, use plain hostnames or IPs)!";
+                assertion = overlap == [ ];
+                message = "nx.common.browser.firefox: domains must not appear in multiple userContent excluded domains lists (${lib.concatStringsSep ", " overlap})!";
               }
             ]
-          ) userContentExcludedDomains;
+          )
+          ++ [
+            {
+              assertion = userContentDarkReaderExcludedDomains == [ ] || darkMode;
+              message = "nx.common.browser.firefox.userContentDarkReaderExcludedDomains requires darkMode to be enabled!";
+            }
+            {
+              assertion =
+                userContentCSSExcludedDomains == [ ]
+                || config.nx.common.browser.browser.final.userContentCSS != null;
+              message = "nx.common.browser.firefox.userContentCSSExcludedDomains requires userContent CSS to be configured!";
+            }
+          ];
 
         programs.firefox.enable = true;
 
@@ -1454,6 +1499,7 @@ in
         defaultDownloadsName,
         monospaceFont,
         userContentExcludedDomains,
+        userContentCSSExcludedDomains,
         ...
       }:
       let
@@ -1481,7 +1527,8 @@ in
                 cp "${
                   pkgs.writeText "browser-user-content.css" (mkUserContentCSS {
                     browserUserContent = userCSS;
-                    inherit monospaceFont userContentExcludedDomains;
+                    inherit monospaceFont;
+                    userContentExcludedDomains = userContentExcludedDomains ++ userContentCSSExcludedDomains;
                   })
                 }" "$css_dir/userContent.css"
                fi
