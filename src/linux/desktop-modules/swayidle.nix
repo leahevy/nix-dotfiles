@@ -13,13 +13,47 @@ args@{
   group = "desktop-modules";
   input = "linux";
 
-  settings = {
-    package = pkgs.swaylock;
-    commandline = "swaylock --daemonize";
-    auto-lock-on-login = false;
-    baseTimeoutSeconds = 600;
-    turnOnMonitorsCommand = "true";
-    turnOffMonitorsCommand = "true";
+  options = {
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.swaylock;
+      description = "Screen locker package to use.";
+    };
+    commandline = lib.mkOption {
+      type = lib.types.str;
+      default = "swaylock --daemonize";
+      description = "Command line used to invoke the screen locker.";
+    };
+    autoLockOnLogin = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Whether to lock the session once on login.";
+    };
+    baseTimeoutSeconds = lib.mkOption {
+      type = lib.types.int;
+      default = 600;
+      description = "Idle seconds before the screen locks.";
+    };
+    turnOnMonitorsCommand = lib.mkOption {
+      type = lib.types.str;
+      default = "true";
+      description = "Command to turn monitors back on when resuming from the monitor off timeout.";
+    };
+    turnOffMonitorsCommand = lib.mkOption {
+      type = lib.types.str;
+      default = "true";
+      description = "Command to turn monitors off after twice the base idle timeout.";
+    };
+    scriptsOnLock = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Commands to run when the session locks or before sleep.";
+    };
+    scriptsOnUnlock = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Commands to run when the session unlocks or after resume.";
+    };
   };
 
   module = {
@@ -71,7 +105,18 @@ args@{
       };
 
     home =
-      config:
+      {
+        config,
+        package,
+        commandline,
+        autoLockOnLogin,
+        baseTimeoutSeconds,
+        turnOnMonitorsCommand,
+        turnOffMonitorsCommand,
+        scriptsOnLock,
+        scriptsOnUnlock,
+        ...
+      }:
       let
         theme = config.nx.preferences.theme;
 
@@ -91,18 +136,18 @@ args@{
         replaceColorPlaceholders =
           str:
           builtins.foldl' (
-            acc: placeholder: builtins.replaceStrings [ placeholder ] [ colorReplacements.${placeholder} ] acc
+            acc: placeholderColor:
+            builtins.replaceStrings [ placeholderColor ] [ colorReplacements.${placeholderColor} ] acc
           ) str (builtins.attrNames colorReplacements);
 
-        rawCommandline = self.settings.commandline;
-        commandline = replaceColorPlaceholders rawCommandline;
+        resolvedCommandline = replaceColorPlaceholders commandline;
 
-        unreplacedPlaceholders = builtins.match ".*<[A-Z_]+>.*" commandline;
+        unreplacedPlaceholders = builtins.match ".*<[A-Z_]+>.*" resolvedCommandline;
         commandlineValidated =
           if unreplacedPlaceholders != null then
-            throw "swayidle: commandline contains unreplaced placeholders: ${commandline}"
+            throw "swayidle: commandline contains unreplaced placeholders: ${resolvedCommandline}"
           else
-            commandline;
+            resolvedCommandline;
 
         wrapTimeoutCommand =
           command:
@@ -119,7 +164,7 @@ args@{
           [
             swayidle
           ]
-          ++ [ self.settings.package ];
+          ++ [ package ];
 
         home.file."${defs.binDir}/scripts/swaylock-wrapper-daemon" = {
           executable = true;
@@ -179,38 +224,48 @@ args@{
             echo "swaylock process disappeared, recording unlock time..."
             ${pkgs.coreutils}/bin/date +%s > "$UNLOCK_TIME_FILE"
             echo "Unlock detected, recorded timestamp: $(${pkgs.coreutils}/bin/cat "$UNLOCK_TIME_FILE")"
+            ${pkgs.systemd}/bin/loginctl unlock-session || true
           '';
         };
 
         services.swayidle =
           let
-            wrapperCommand = "${self.binDir}/scripts/swaylock-wrapper-daemon ${self.settings.package}/bin/${commandlineValidated}";
+            wrapperCommand = "${self.binDir}/scripts/swaylock-wrapper-daemon ${package}/bin/${commandlineValidated}";
             wrappedLockCommand = toString (wrapTimeoutCommand wrapperCommand);
             wrappedMonitorOffCommand = toString (
-              wrapTimeoutCommand (lib.concatStringsSep ";" [ self.settings.turnOffMonitorsCommand ])
+              wrapTimeoutCommand (lib.concatStringsSep ";" [ turnOffMonitorsCommand ])
             );
+            lockEventScript = pkgs.writeShellScript "swayidle-lock-event" ''
+              ${wrapperCommand}
+              ${lib.concatMapStringsSep "\n" (cmd: "${cmd} || true") scriptsOnLock}
+            '';
+            unlockEventScript = pkgs.writeShellScript "swayidle-unlock-event" ''
+              ${lib.concatMapStringsSep "\n" (cmd: "${cmd} || true") scriptsOnUnlock}
+            '';
           in
           {
             enable = true;
             systemdTargets = [ "graphical-session.target" ];
             timeouts = [
               {
-                timeout = self.settings.baseTimeoutSeconds;
+                timeout = baseTimeoutSeconds;
                 command = wrappedLockCommand;
               }
               {
-                timeout = self.settings.baseTimeoutSeconds * 2;
+                timeout = baseTimeoutSeconds * 2;
                 command = wrappedMonitorOffCommand;
-                resumeCommand = self.settings.turnOnMonitorsCommand;
+                resumeCommand = turnOnMonitorsCommand;
               }
             ];
             events = {
-              before-sleep = wrapperCommand;
-              lock = wrapperCommand;
+              before-sleep = toString lockEventScript;
+              lock = toString lockEventScript;
+              unlock = toString unlockEventScript;
+              after-resume = toString unlockEventScript;
             };
           };
 
-        systemd.user.services.nx-lock-on-login = lib.mkIf self.settings.auto-lock-on-login {
+        systemd.user.services.nx-lock-on-login = lib.mkIf autoLockOnLogin {
           Unit = {
             Description = "Lock screen once on login";
             After = [
