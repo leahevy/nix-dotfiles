@@ -323,6 +323,8 @@ args@{
         "usb.*usb_set_interface failed"
         "xhci_hcd.*Timeout while waiting for setup device command"
         "xhci_hcd.*Trying to add endpoint.*without dropping it"
+        "xhci_hcd.*ERROR Transfer event for disabled endpoint slot [0-9]+ ep [0-9]+"
+        "xhci_hcd 0000:[0-9a-f:.]+: @[0-9a-f]+ [0-9a-f]+ [0-9a-f]+ [0-9a-f]+ [0-9a-f]+"
         "usb.*device not accepting address.*error -[0-9]+"
         "usb.*WARN: invalid context state for evaluate context command"
         "usb.*Device not responding to setup address"
