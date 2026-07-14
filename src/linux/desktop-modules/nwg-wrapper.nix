@@ -482,21 +482,38 @@ args@{
           '';
         };
 
-        home.file."${defs.binDir}/nwg-wrapper-restart" = {
-          text = ''
-            #!/usr/bin/env bash
-            ${pkgs.systemd}/bin/systemctl --user restart nx-nwg-wrapper-1 || true
-            ${
-              if niriKeybindings then
-                ''
-                  ${pkgs.systemd}/bin/systemctl --user restart nx-nwg-wrapper-2 || true
-                ''
-              else
-                ""
-            }
-          '';
-          executable = true;
-        };
+        home.file."${defs.binDir}/nwg-wrapper-restart" =
+          let
+            restartCommands = ''
+              ${pkgs.systemd}/bin/systemctl --user restart nx-nwg-wrapper-1 || true
+              ${
+                if niriKeybindings then
+                  ''
+                    ${pkgs.systemd}/bin/systemctl --user restart nx-nwg-wrapper-2 || true
+                  ''
+                else
+                  ""
+              }
+            '';
+          in
+          {
+            text = ''
+              #!/usr/bin/env bash
+              ${
+                if config.nx.linux.desktop.niri.enable then
+                  ''
+                    EXPECTED_SURFACES=${if niriKeybindings then "2" else "1"}
+                    ACTIVE_SURFACES=$(${pkgs.niri}/bin/niri msg --json layers 2>/dev/null | ${pkgs.jq}/bin/jq '[.[] | select(.namespace == "gtk-layer-shell")] | length' 2>/dev/null || echo 0)
+                    if [[ "$ACTIVE_SURFACES" -lt "$EXPECTED_SURFACES" ]]; then
+                      ${restartCommands}
+                    fi
+                  ''
+                else
+                  restartCommands
+              }
+            '';
+            executable = true;
+          };
 
         systemd.user.services.nx-nwg-wrapper-1 = {
           Unit = {
