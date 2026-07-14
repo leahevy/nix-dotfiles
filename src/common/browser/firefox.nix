@@ -926,6 +926,13 @@ in
               }
             '';
 
+            movePermissionPromptsAboveNavbarCSS = ''
+              #notification-popup[side="top"],
+              #permission-popup[side="top"] {
+                margin-top: calc(-1 * var(--nx-nav-height) - 75vh) !important;
+              }
+            '';
+
             bottomToolbarsCss = ''
               :root {
                 --nx-nav-height: 42px;
@@ -1042,6 +1049,7 @@ in
             ])
             ++ (lib.optionals bottomToolbars [
               bottomToolbarsCss
+              movePermissionPromptsAboveNavbarCSS
             ])
             ++ [
               toolbarExtensionsForceHiddenCSS
