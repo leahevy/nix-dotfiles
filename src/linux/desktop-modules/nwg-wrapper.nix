@@ -68,6 +68,10 @@ args@{
         "nx-nwg-wrapper-2"
       ];
 
+      nx.linux.desktop-modules.swayidle.scriptsOnUnlock = [
+        "${self.binDir}/nwg-wrapper-restart"
+      ];
+
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
           service = "nx-nwg-wrapper-1.service";

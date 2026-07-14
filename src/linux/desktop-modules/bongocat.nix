@@ -76,6 +76,9 @@ args@{
           }
         ];
         nx.linux.desktop.common.graphicalSessionServices = lib.mkIf (devicePath != null) [ "nx-bongocat" ];
+        nx.linux.desktop-modules.swayidle.scriptsOnUnlock = lib.mkIf (devicePath != null) [
+          "${self.binDir}/bongocat-restart"
+        ];
       };
 
       home =
