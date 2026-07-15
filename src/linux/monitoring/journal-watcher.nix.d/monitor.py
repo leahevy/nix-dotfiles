@@ -25,6 +25,7 @@ class PatternMatch:
     channels: Optional[Dict[str, Any]] = None
     pattern_id: Optional[str] = None
     ignore_rate_limiting: bool = False
+    extract: Optional[re.Pattern] = None
 
 
 STATS_INTERVAL = 10 * 60
@@ -79,14 +80,174 @@ SERVICE_EXTRACT_RE = re.compile(
 
 
 def compute_pattern_hash(pat: Dict[str, Any]) -> str:
-    fields = ["service", "tag", "string", "user", "kernel", "unitless", "all"]
+    fields = ["service", "tag", "string", "user", "kernel", "unitless", "all", "active"]
     parts = []
     for field in fields:
         value = pat.get(field)
+        if field == "active" and value == "always":
+            continue
         if value:
             parts.append(f"{field}={value}")
     key = "|".join(parts) if parts else "empty"
     return sha256(key.encode()).hexdigest()[:16]
+
+
+REBUILD_START_RE = re.compile(r"^switching to system configuration (/nix/store/\S+)$")
+REBUILD_END_RE = re.compile(
+    r"^finished switching to system configuration (/nix/store/\S+)$"
+)
+REBUILD_FAILED_RE = re.compile(
+    r"^switching to system configuration (/nix/store/\S+) failed \(status \d+\)$"
+)
+
+
+class RebuildWindowTracker:
+    MAX_INTERVALS = 64
+
+    def __init__(self, timeout_seconds: int):
+        self.timeout_us = int(timeout_seconds) * 1_000_000
+        self.path: Optional[str] = None
+        self.opened_at_us = 0
+        self.intervals: List[Tuple[int, int]] = []
+        self._close_ts_us = 0
+
+    @staticmethod
+    def _entry_us(json_data: Dict[str, Any]) -> Optional[int]:
+        try:
+            return int(to_string(json_data.get("__REALTIME_TIMESTAMP")))
+        except (TypeError, ValueError):
+            return None
+
+    def _record_interval(self, start_us: int, end_us: int) -> None:
+        self.intervals.append((start_us, end_us))
+        if len(self.intervals) > self.MAX_INTERVALS:
+            self.intervals = self.intervals[-self.MAX_INTERVALS :]
+
+    def observe(self, json_data: Dict[str, Any]) -> bool:
+        ts = self._entry_us(json_data)
+        if ts is None:
+            ts = int(time.time() * 1_000_000)
+        if self.path is not None and ts - self.opened_at_us > self.timeout_us:
+            print(f"Rebuild window timed out: {self.path}", flush=True)
+            self._record_interval(
+                self.opened_at_us, self.opened_at_us + self.timeout_us
+            )
+            self.path = None
+        if to_string(json_data.get("SYSLOG_IDENTIFIER")) != "nixos":
+            return False
+        if to_string(json_data.get("_UID")) != "0":
+            return False
+        message = to_string(json_data.get("MESSAGE"))
+        m = REBUILD_START_RE.match(message)
+        if m:
+            if self.path is not None:
+                print(
+                    f"Rebuild window replaced by new start marker: {self.path}",
+                    flush=True,
+                )
+                self._record_interval(self.opened_at_us, ts)
+            self.path = m.group(1)
+            self.opened_at_us = ts
+            print(f"Rebuild window opened: {self.path}", flush=True)
+            return False
+        m = REBUILD_END_RE.match(message) or REBUILD_FAILED_RE.match(message)
+        if m and self.path is not None and m.group(1) == self.path:
+            self._close_ts_us = ts
+            return True
+        return False
+
+    def close(self) -> None:
+        if self.path is not None:
+            print(f"Rebuild window closed: {self.path}", flush=True)
+            self._record_interval(self.opened_at_us, self._close_ts_us)
+            self.path = None
+
+    def is_active_at(self, json_data: Dict[str, Any]) -> bool:
+        ts = self._entry_us(json_data)
+        if ts is None:
+            return self.path is not None
+        for lo, hi in self.intervals:
+            if lo <= ts <= hi:
+                return True
+        return self.path is not None and ts >= self.opened_at_us
+
+
+def cursor_timestamp_seconds(cfg: Dict[str, Any]) -> Optional[int]:
+    try:
+        cursor = Path(cfg["cursor_file"]).read_text().strip()
+    except OSError:
+        return None
+    if not cursor:
+        return None
+    cmd = [
+        cfg["journalctl_bin"],
+        "-q",
+        "--output=json",
+        "--cursor",
+        cursor,
+        "-n",
+        "1",
+    ]
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=60, check=False
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    if result.returncode != 0:
+        return None
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ts = int(json.loads(line).get("__REALTIME_TIMESTAMP"))
+            return ts // 1_000_000
+        except (json.JSONDecodeError, TypeError, ValueError):
+            continue
+    return None
+
+
+def restore_rebuild_window(cfg: Dict[str, Any], window: RebuildWindowTracker) -> None:
+    timeout = cfg.get("rebuild_window_timeout_seconds", 600)
+    since_s = int(time.time()) - timeout
+    cursor_ts = cursor_timestamp_seconds(cfg)
+    if cursor_ts is not None:
+        since_s = min(since_s, cursor_ts - timeout)
+    cmd = [
+        cfg["journalctl_bin"],
+        "-q",
+        "--output=json",
+        f"--since=@{since_s}",
+        "SYSLOG_IDENTIFIER=nixos",
+        "_UID=0",
+    ]
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=60, check=False
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        print(f"Rebuild window lookback failed: {e}", file=sys.stderr, flush=True)
+        return
+    if result.returncode != 0:
+        return
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            json_data = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if window.observe(json_data):
+            window.close()
+    if window.path is not None:
+        print(f"Rebuild window restored from lookback: {window.path}", flush=True)
+    if window.intervals:
+        print(
+            f"Rebuild window intervals restored from lookback: {len(window.intervals)}",
+            flush=True,
+        )
 
 
 class PatternMatcher:
@@ -210,11 +371,18 @@ class PatternMatcher:
                 for i, e in enumerate(entries):
                     parts.append(f"(?P<g{len(self.grouped)}_{i}>{e['string']})")
                     pattern_hash = None
+                    extract_re = None
                     pattern = e.get("pattern")
                     if e.get("pattern_type") == "highlight" and pattern is not None:
                         pattern_hash = compute_pattern_hash(pattern)
+                        if pattern.get("extract"):
+                            extract_re = re.compile(pattern["extract"])
                     labels.append(
-                        PatternMatch(mapping=e.get("mapping"), pattern_id=pattern_hash)
+                        PatternMatch(
+                            mapping=e.get("mapping"),
+                            pattern_id=pattern_hash,
+                            extract=extract_re,
+                        )
                     )
                 string_re = re.compile("|".join(parts))
             else:
@@ -244,6 +412,8 @@ class PatternMatcher:
         if pat.get("pattern_type") == "highlight":
             compiled["pattern_hash"] = compute_pattern_hash(pat)
             compiled["ignore_rate_limiting"] = pat.get("ignoreRateLimiting", False)
+            if pat.get("extract"):
+                compiled["extract"] = re.compile(pat["extract"])
         if pat.get("service"):
             compiled["service"] = re.compile(re.escape(pat["service"]))
         if pat.get("tag"):
@@ -387,6 +557,7 @@ class PatternMatcher:
                     channels=pat.get("channels"),
                     pattern_id=pat.get("pattern_hash"),
                     ignore_rate_limiting=pat.get("ignore_rate_limiting", False),
+                    extract=pat.get("extract"),
                 )
 
         return None
@@ -398,6 +569,47 @@ class PatternMatcher:
         self, unit: str, tag: str, message: str, transport: str
     ) -> Optional[PatternMatch]:
         return self._match_impl(unit, tag, message, transport)
+
+
+class ActivePatternMatcher:
+    def __init__(self, patterns: List[Dict[str, Any]], main_user_uid: int):
+        always: List[Dict[str, Any]] = []
+        during: List[Dict[str, Any]] = []
+        outside: List[Dict[str, Any]] = []
+        for pat in patterns:
+            active = pat.get("active") or "always"
+            if active == "never":
+                continue
+            elif active == "duringRebuild":
+                during.append(pat)
+            elif active == "outsideRebuild":
+                outside.append(pat)
+            else:
+                always.append(pat)
+        self.always = PatternMatcher(always, main_user_uid)
+        self.during_rebuild = PatternMatcher(during, main_user_uid) if during else None
+        self.outside_rebuild = (
+            PatternMatcher(outside, main_user_uid) if outside else None
+        )
+
+    def match_highlight(
+        self, unit: str, tag: str, message: str, transport: str, rebuild_active: bool
+    ) -> Optional[PatternMatch]:
+        result = self.always.match_highlight(unit, tag, message, transport)
+        if result is not None:
+            return result
+        sub = self.during_rebuild if rebuild_active else self.outside_rebuild
+        if sub is not None:
+            return sub.match_highlight(unit, tag, message, transport)
+        return None
+
+    def matches(
+        self, unit: str, tag: str, message: str, transport: str, rebuild_active: bool
+    ) -> bool:
+        return (
+            self.match_highlight(unit, tag, message, transport, rebuild_active)
+            is not None
+        )
 
 
 def tag_to_title(tag: str) -> str:
@@ -604,8 +816,9 @@ def build_message_context(
 
 def filter_message(
     json_data: Dict[str, Any],
-    ignore_matcher: PatternMatcher,
-    highlight_matcher: PatternMatcher,
+    ignore_matcher: ActivePatternMatcher,
+    highlight_matcher: ActivePatternMatcher,
+    rebuild_active: bool,
 ) -> Tuple[bool, bool, Optional[PatternMatch]]:
     unit = to_string(json_data.get("_SYSTEMD_UNIT"))
     tag = to_string(json_data.get("SYSLOG_IDENTIFIER"))
@@ -613,8 +826,10 @@ def filter_message(
     transport = to_string(json_data.get("_TRANSPORT"))
     priority = int(to_string(json_data.get("PRIORITY", "6"), "6"))
 
-    ignored = ignore_matcher.matches(unit, tag, message, transport)
-    highlight_info = highlight_matcher.match_highlight(unit, tag, message, transport)
+    ignored = ignore_matcher.matches(unit, tag, message, transport, rebuild_active)
+    highlight_info = highlight_matcher.match_highlight(
+        unit, tag, message, transport, rebuild_active
+    )
     highlighted = highlight_info is not None
 
     if highlighted:
@@ -797,8 +1012,23 @@ def process_message(
         )
 
         if effective_mapping.get("message") is not None:
-            message_text_pushover = effective_mapping["message"]
-            message_text_user = effective_mapping["message"]
+            override_text = effective_mapping["message"]
+            extract_re = highlight_info.extract if highlight_info else None
+            if extract_re is not None:
+                ex = extract_re.search(message) if message else None
+                if ex:
+                    groups = {
+                        k: v if v is not None else "" for k, v in ex.groupdict().items()
+                    }
+                    try:
+                        override_text = override_text.format(**groups)
+                    except (KeyError, IndexError, ValueError):
+                        override_text = None
+                else:
+                    override_text = None
+            if override_text is not None:
+                message_text_pushover = override_text
+                message_text_user = override_text
 
         hl_channels = {}
         if highlighted and highlight_info and highlight_info.channels:
@@ -887,8 +1117,14 @@ def main():
 
     setup_directories(cfg)
 
-    ignore_matcher = PatternMatcher(cfg["ignore_patterns"], cfg["main_user_uid"])
-    highlight_matcher = PatternMatcher(cfg["highlight_patterns"], cfg["main_user_uid"])
+    ignore_matcher = ActivePatternMatcher(cfg["ignore_patterns"], cfg["main_user_uid"])
+    highlight_matcher = ActivePatternMatcher(
+        cfg["highlight_patterns"], cfg["main_user_uid"]
+    )
+    rebuild_window = RebuildWindowTracker(
+        cfg.get("rebuild_window_timeout_seconds", 600)
+    )
+    restore_rebuild_window(cfg, rebuild_window)
     stats = Stats()
 
     cmd = [
@@ -916,15 +1152,19 @@ def main():
         print(" ".join(parts), flush=True)
     try:
         with subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
+            cmd, stdout=subprocess.PIPE, stderr=None, text=True, bufsize=1
         ) as proc:
             for line in proc.stdout:
                 line = line.strip()
                 if line:
                     try:
                         json_data = json.loads(line)
+                        close_rebuild_window = rebuild_window.observe(json_data)
                         ignored, highlighted, highlight_info = filter_message(
-                            json_data, ignore_matcher, highlight_matcher
+                            json_data,
+                            ignore_matcher,
+                            highlight_matcher,
+                            rebuild_window.is_active_at(json_data),
                         )
                         stats.total += 1
                         if ignored:
@@ -944,6 +1184,8 @@ def main():
                             process_message(
                                 cfg, json_data, highlighted, highlight_info, stats
                             )
+                        if close_rebuild_window:
+                            rebuild_window.close()
                         stats.maybe_log(cfg)
                     except json.JSONDecodeError:
                         continue

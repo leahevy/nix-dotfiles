@@ -55,7 +55,7 @@ args@{
           message = lib.mkOption {
             type = lib.types.nullOr lib.types.str;
             default = null;
-            description = "Override the notification message body.";
+            description = "Override the notification message body, with {name} placeholders when the pattern defines an extract regex.";
           };
           priority = lib.mkOption {
             type = lib.types.nullOr (
@@ -111,6 +111,16 @@ args@{
               default = false;
               description = "Match messages in all scopes. Expanded to four patterns: plain, kernel, user, and unitless. Mutually exclusive with kernel, user, and unitless.";
             };
+            active = lib.mkOption {
+              type = lib.types.enum [
+                "always"
+                "never"
+                "duringRebuild"
+                "outsideRebuild"
+              ];
+              default = "always";
+              description = "Controls whether the pattern applies always, never, only during a system rebuild window, or only outside one.";
+            };
           }
           // lib.optionalAttrs withHighlightFields {
             mapping = lib.mkOption {
@@ -142,6 +152,11 @@ args@{
               type = lib.types.bool;
               default = false;
               description = "Ignore message dedup rate limiting for this highlight pattern.";
+            };
+            extract = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Optional regex with named groups run against the matched message to fill {name} placeholders in the mapping message, falling back to the raw message when it does not match.";
             };
           };
         };
@@ -190,6 +205,10 @@ args@{
         type = lib.types.int;
         default = 15;
       };
+      rebuildWindowTimeoutSeconds = lib.mkOption {
+        type = lib.types.int;
+        default = 600;
+      };
     };
 
   module =
@@ -222,6 +241,7 @@ args@{
           string = "switching to system configuration";
           all = true;
           ignoreRateLimiting = true;
+          extract = "(?P<state>finished switching|switching) to system configuration /nix/store/[a-z0-9]+-nixos-system-(?P<generation>\\S+?)(?P<failed> failed \\(status [0-9]+\\))?$";
           channels = {
             pushover =
               if
@@ -238,6 +258,7 @@ args@{
             label = "NixOS";
             title = "System Switch";
             icon = "applications-science";
+            message = "{state} to {generation}{failed}";
           };
         }
       ];
@@ -564,6 +585,12 @@ args@{
                   assertion = !(a && ul);
                   message = "journal-watcher ${label}: all=true and unitless=true are mutually exclusive: { ${desc} }";
                 }
+                {
+                  assertion =
+                    (pat.extract or null) == null
+                    || ((pat.mapping or null) != null && (pat.mapping.message or null) != null);
+                  message = "journal-watcher ${label}: extract requires mapping.message to be set: { ${desc} }";
+                }
               ]
             ) patterns;
 
@@ -725,6 +752,7 @@ args@{
               rate_limit_per_hour_unknown = opts.pushoverRateLimitUnknown;
               highlight_rate_limit_per_hour = opts.highlightRateLimit;
               message_rate_limit_minutes = opts.sameMessageRateLimitMinutes;
+              rebuild_window_timeout_seconds = opts.rebuildWindowTimeoutSeconds;
               user_notify_enabled = self.isModuleEnabled "notifications.user-notify";
               pushover_enabled = self.isModuleEnabled "notifications.pushover" && pushover.script != null;
               debug_enabled = opts.debug;
