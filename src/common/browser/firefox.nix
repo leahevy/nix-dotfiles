@@ -215,18 +215,60 @@ let
       };
     }
     // lib.optionalAttrs darkMode {
-      dark-reader = {
-        addonId = "addon@darkreader.org";
-        slug = "darkreader";
-        settings = {
-          schemeVersion = 2;
-          syncSettings = false;
-          disabledFor = map (d: lib.toLower (lib.removeSuffix "/" d)) (
-            config.nx.common.browser.firefox.userContentExcludedDomains
-            ++ config.nx.common.browser.firefox.userContentDarkReaderExcludedDomains
-          );
+      dark-reader =
+        let
+          firefoxCfg = config.nx.common.browser.firefox;
+        in
+        {
+          addonId = "addon@darkreader.org";
+          slug = "darkreader";
+          settings = {
+            schemeVersion = 2;
+            enabled = true;
+            enabledByDefault = true;
+            syncSettings = false;
+            fetchNews = false;
+            enableForPDF = false;
+            detectDarkTheme = false;
+            automation = {
+              enabled = false;
+              mode = "";
+              behavior = "OnOff";
+            };
+            theme = {
+              mode = 1;
+              brightness = 100;
+              contrast = 100;
+              grayscale = 0;
+              sepia = 0;
+              useFont = false;
+              fontFamily = if self.isDarwin then "Helvetica Neue" else "Open Sans";
+              textStroke = 0;
+              engine = "dynamicTheme";
+              stylesheet = "";
+              darkSchemeBackgroundColor = "#000000";
+              darkSchemeTextColor = "#e8e6e3";
+              lightSchemeBackgroundColor = "#dcdad7";
+              lightSchemeTextColor = "#181a1b";
+              scrollbarColor = "";
+              selectionColor = "auto";
+              styleSystemControls = false;
+              lightColorScheme = "Default";
+              darkColorScheme = "Default";
+              immediateModify = false;
+            };
+            disabledFor =
+              let
+                normalized = map (d: lib.toLower (lib.removeSuffix "/" d)) (
+                  firefoxCfg.userContentExcludedDomains ++ firefoxCfg.userContentDarkReaderExcludedDomains
+                );
+                isPlainDomain =
+                  d:
+                  d != "localhost" && !(lib.hasPrefix "[" d) && !(helpers.isValidIPv4 d) && !(helpers.isValidIPv6 d);
+              in
+              normalized ++ map (d: "*.${d}") (lib.filter isPlainDomain normalized);
+          };
         };
-      };
     };
 
   mkExtensionUrl =
