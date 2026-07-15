@@ -468,6 +468,72 @@ with lib;
         description = "SSH daemon settings";
       };
 
+      security = {
+        auditd = mkOption {
+          type = types.submodule {
+            options = {
+              enable = mkOption {
+                type = types.bool;
+                default = true;
+                description = "Whether to enable the auditd baseline module";
+              };
+              locked = mkOption {
+                type = types.bool;
+                default = true;
+                description = "Whether to lock the audit rules against runtime changes until reboot";
+              };
+              fileWatches = mkOption {
+                type = types.attrsOf types.str;
+                default = { };
+                description = "Additional audit file watches given as an attrset mapping rule keys to absolute paths or paths relative to the main user home";
+              };
+              dirWatches = mkOption {
+                type = types.attrsOf types.str;
+                default = { };
+                description = "Additional audit watches for attribute changes of directories, given as an attrset mapping rule keys to absolute paths or paths relative to the main user home.";
+              };
+              extraRules = mkOption {
+                type = types.listOf types.str;
+                default = [ ];
+                description = "Raw audit rule lines appended after the baseline rules";
+              };
+              accessDeniedRules = mkOption {
+                type = types.bool;
+                default = false;
+                description = "Whether to audit failed file opens of regular users";
+              };
+              backlogLimit = mkOption {
+                type = types.int;
+                default = 8192;
+                description = "Maximum number of outstanding audit buffers in the kernel";
+              };
+              maxLogFileMB = mkOption {
+                type = types.int;
+                default = 50;
+                description = "Maximum size of a single audit log file in megabytes";
+              };
+              numLogs = mkOption {
+                type = types.int;
+                default = 5;
+                description = "Number of rotated audit log files to keep";
+              };
+              excludeMessageTypes = mkOption {
+                type = types.listOf types.str;
+                default = [ "BPF" ];
+                description = "Audit message types to drop at the source via exclude rules.";
+              };
+              queueDepth = mkOption {
+                type = types.int;
+                default = 65536;
+                description = "Auditd dispatcher queue depth.";
+              };
+            };
+          };
+          default = { };
+          description = "Auditd baseline settings";
+        };
+      };
+
     };
 
     hardening = mkOption {

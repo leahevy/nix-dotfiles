@@ -21,6 +21,7 @@ args@{
         common.style = lib.optionals (self.host.settings.system.desktop != null) [ "stylix" ];
         linux = {
           memory = [ "zram" ];
+          security = lib.optionals self.host.settings.security.auditd.enable [ "auditd" ];
           storage = lib.optionals self.isPhysical [ "smartd" ];
           system = [
             "gc"
