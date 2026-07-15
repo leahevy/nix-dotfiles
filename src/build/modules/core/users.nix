@@ -135,6 +135,13 @@ in
           user = "root";
           group = "root";
         };
+      }
+      // lib.optionalAttrs (self.host.impermanence or false) {
+        "${self.persist}/root".d = {
+          mode = "0750";
+          user = "root";
+          group = "root";
+        };
       };
     };
   };
