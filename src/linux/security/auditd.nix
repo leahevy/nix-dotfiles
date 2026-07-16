@@ -8,13 +8,39 @@ args@{
   ...
 }:
 let
-  baselineWatches = { };
+  baselineFileWatches = { };
 
   baselineDirWatches = {
     dir_root = "/root";
   };
 
-  resolveWatchPath = path: if lib.hasPrefix "/" path then path else "${self.user.home}/${path}";
+  baselineDirContentWatches = {
+    persist_systemd_system = "/etc/systemd/system";
+    persist_systemd_user = "/etc/systemd/user";
+    persist_pam = "/etc/pam.d";
+    persist_xdg_autostart = "/etc/xdg/autostart";
+    persist_autostart = ".config/autostart";
+    persist_user_units = ".config/systemd/user";
+    persist_user_units_share = ".local/share/systemd/user";
+    persist_user_bin = ".local/bin";
+    persist_environment_d = ".config/environment.d";
+    persist_applications = ".local/share/applications";
+  };
+
+  baselineTreeWatches = { };
+
+  baselineExtraRules = [ ];
+
+  baselineExcludeMessageTypes = [ "BPF" ];
+
+  watchAlways = path: lib.hasPrefix "!" path;
+
+  resolveWatchPath =
+    path:
+    let
+      p = lib.removePrefix "!" path;
+    in
+    if lib.hasPrefix "/" p then p else "${self.user.home}/${p}";
 in
 {
   name = "auditd";
@@ -32,12 +58,37 @@ in
     fileWatches = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Audit file watches injected by other modules as an attrset mapping rule keys to paths.";
+      description = "Audit file watches injected by other modules as an attrset mapping rule keys to paths, where a leading ! marks the watch as always notifying.";
     };
     dirWatches = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Audit dir watches injected by other modules as an attrset mapping rule keys to paths.";
+      description = "Audit dir watches injected by other modules as an attrset mapping rule keys to paths, where a leading ! marks the watch as always notifying.";
+    };
+    dirContentWatches = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Audit watches for direct children of directories injected by other modules as an attrset mapping rule keys to paths, where a leading ! marks the watch as always notifying.";
+    };
+    treeWatches = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Recursive audit watches for directory trees injected by other modules as an attrset mapping rule keys to paths, where a leading ! marks the watch as always notifying.";
+    };
+    excludeMessageTypes = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Audit message types injected by other modules to drop at the source via exclude rules.";
+    };
+    resolvedDirContentWatches = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Merged and resolved dir content watch paths set by the auditd module itself for consumption by other modules.";
+    };
+    resolvedTreeWatches = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Merged and resolved tree watch paths set by the auditd module itself for consumption by other modules.";
     };
   };
 
@@ -45,24 +96,17 @@ in
     enabled =
       config:
       let
-        hostWatches =
-          if self ? host then
-            lib.mapAttrs (key: path: resolveWatchPath path) self.host.settings.security.auditd.fileWatches
-          else
-            { };
-        hostDirWatches =
-          if self ? host then
-            lib.mapAttrs (key: path: resolveWatchPath path) self.host.settings.security.auditd.dirWatches
-          else
-            { };
+        hostWatches = if self ? host then self.host.settings.security.auditd.fileWatches else { };
+        hostDirWatches = if self ? host then self.host.settings.security.auditd.dirWatches else { };
         hostExtraRules = if self ? host then self.host.settings.security.auditd.extraRules else [ ];
         injectedExtraRules = config.nx.linux.security.auditd.extraRules;
-        injectedWatches = lib.mapAttrs (
-          key: path: resolveWatchPath path
-        ) config.nx.linux.security.auditd.fileWatches;
-        injectedDirWatches = lib.mapAttrs (
-          key: path: resolveWatchPath path
-        ) config.nx.linux.security.auditd.dirWatches;
+        injectedWatches = config.nx.linux.security.auditd.fileWatches;
+        injectedDirWatches = config.nx.linux.security.auditd.dirWatches;
+        hostDirContentWatches =
+          if self ? host then self.host.settings.security.auditd.dirContentWatches else { };
+        hostTreeWatches = if self ? host then self.host.settings.security.auditd.treeWatches else { };
+        injectedDirContentWatches = config.nx.linux.security.auditd.dirContentWatches;
+        injectedTreeWatches = config.nx.linux.security.auditd.treeWatches;
         parseWatchRule =
           rule:
           builtins.match "^-w[[:space:]]+([^[:space:]]+).*[[:space:]]-k[[:space:]]+([a-zA-Z0-9_-]+)[[:space:]]*$" rule;
@@ -73,51 +117,106 @@ in
               m = parseWatchRule rule;
             in
             if m == null then [ ] else [ (lib.nameValuePair (lib.elemAt m 1) (lib.elemAt m 0)) ]
-          ) (hostExtraRules ++ injectedExtraRules)
+          ) (baselineExtraRules ++ hostExtraRules ++ injectedExtraRules)
         );
-        watchPathByKey = baselineWatches // hostWatches // injectedWatches // extraRuleWatches;
-        watchTitle =
-          key:
-          if lib.hasPrefix "id_" key then
-            "Identity File Changed"
-          else if lib.hasPrefix "sshkey_" key then
-            "SSH Host Key Changed"
+        watchPathByKey = baselineFileWatches // hostWatches // injectedWatches // extraRuleWatches;
+        mergedDirWatches = baselineDirWatches // hostDirWatches // injectedDirWatches;
+        mergedDirContentWatches =
+          baselineDirContentWatches // hostDirContentWatches // injectedDirContentWatches;
+        mergedTreeWatches = baselineTreeWatches // hostTreeWatches // injectedTreeWatches;
+        fallbackExcludedKeys = lib.unique (
+          lib.attrNames watchPathByKey
+          ++ lib.attrNames mergedDirWatches
+          ++ lib.attrNames mergedDirContentWatches
+          ++ lib.attrNames mergedTreeWatches
+          ++ [
+            "modules"
+            "access_denied"
+          ]
+        );
+        watchActive = rawPath: if watchAlways rawPath then "always" else "outsideRebuild";
+        contentWatchString =
+          key: rawPath:
+          if watchAlways rawPath then
+            "type=SYSCALL .*key=\"${key}\""
           else
-            "Watched File Changed";
-        watchActive = key: if lib.hasPrefix "sshkey_" key then "always" else "outsideRebuild";
-        watchPatterns = lib.mapAttrsToList (key: path: {
+            "type=SYSCALL (?!.*SYSCALL=(bind|unlink))"
+            + (lib.optionalString (!lib.hasPrefix "/etc" (resolveWatchPath rawPath)) "(?!.*AUID=\"unset\")")
+            + ".*key=\"${key}\"";
+        watchPatterns = lib.mapAttrsToList (key: rawPath: {
           service = "auditd.service";
           tag = "audisp-syslog";
           string = "type=SYSCALL .*key=\"${key}\"";
-          active = watchActive key;
+          active = watchActive rawPath;
           extract = "AUID=\"(?P<user>[^\"]*)\"";
           mapping = {
             label = "Audit";
-            title = watchTitle key;
+            title = "Watched File Changed";
             icon = "dialog-warning";
             priority = "warn";
-            message = "{user} changed ${path}";
+            message = "{user} changed ${resolveWatchPath rawPath}";
           };
         }) watchPathByKey;
-        dirWatchPatterns = lib.mapAttrsToList (key: path: {
+        dirWatchPatterns = lib.mapAttrsToList (key: rawPath: {
           service = "auditd.service";
           tag = "audisp-syslog";
           string = "type=SYSCALL .*key=\"${key}\"";
-          active = "outsideRebuild";
+          active = watchActive rawPath;
           extract = "AUID=\"(?P<user>[^\"]*)\"";
           mapping = {
             label = "Audit";
             title = "Directory Attributes Changed";
             icon = "dialog-warning";
             priority = "warn";
-            message = "{user} changed attributes of ${path}";
+            message = "{user} changed attributes of ${resolveWatchPath rawPath}";
           };
-        }) (baselineDirWatches // hostDirWatches // injectedDirWatches);
+        }) mergedDirWatches;
+        dirContentWatchPatterns = lib.mapAttrsToList (key: rawPath: {
+          service = "auditd.service";
+          tag = "audisp-syslog";
+          string = contentWatchString key rawPath;
+          active = watchActive rawPath;
+          extract = "AUID=\"(?P<user>[^\"]*)\"";
+          mapping = {
+            label = "Audit";
+            title =
+              if lib.hasPrefix "persist_" key then
+                "Persistence Location Changed"
+              else
+                "Directory Content Changed";
+            icon = "dialog-warning";
+            priority = "warn";
+            message = "{user} changed contents of ${resolveWatchPath rawPath}";
+          };
+        }) mergedDirContentWatches;
+        treeWatchPatterns = lib.mapAttrsToList (key: rawPath: {
+          service = "auditd.service";
+          tag = "audisp-syslog";
+          string = contentWatchString key rawPath;
+          active = watchActive rawPath;
+          extract = "AUID=\"(?P<user>[^\"]*)\"";
+          mapping = {
+            label = "Audit";
+            title = "Directory Tree Changed";
+            icon = "dialog-warning";
+            priority = "warn";
+            message = "{user} changed a file under ${resolveWatchPath rawPath}";
+          };
+        }) mergedTreeWatches;
       in
       {
+        nx.linux.security.auditd.resolvedDirContentWatches = lib.mapAttrs (
+          key: resolveWatchPath
+        ) mergedDirContentWatches;
+        nx.linux.security.auditd.resolvedTreeWatches = lib.mapAttrs (
+          key: resolveWatchPath
+        ) mergedTreeWatches;
+
         nx.linux.monitoring.journal-watcher.highlightPatterns =
           watchPatterns
           ++ dirWatchPatterns
+          ++ dirContentWatchPatterns
+          ++ treeWatchPatterns
           ++ [
             {
               service = "nx-audit-rules-pending.service";
@@ -145,7 +244,7 @@ in
             {
               service = "auditd.service";
               tag = "audisp-syslog";
-              string = "type=SYSCALL .*key=\"(?!id_|sshkey_|modules\"|access_denied\")[a-zA-Z0-9_-]+\"";
+              string = "type=SYSCALL .*key=\"(?!(?:${lib.concatStringsSep "|" fallbackExcludedKeys})\")[a-zA-Z0-9_-]+\"";
               active = "outsideRebuild";
               extract = "key=\"(?P<key>[a-zA-Z0-9_-]+)\".*AUID=\"(?P<user>[^\"]*)\"";
               mapping = {
@@ -172,14 +271,19 @@ in
         extraRules,
         fileWatches,
         dirWatches,
+        dirContentWatches,
+        treeWatches,
+        excludeMessageTypes,
         ...
       }:
       let
         auditdHost = self.host.settings.security.auditd;
 
         reservedKeys =
-          lib.attrNames baselineWatches
+          lib.attrNames baselineFileWatches
           ++ lib.attrNames baselineDirWatches
+          ++ lib.attrNames baselineDirContentWatches
+          ++ lib.attrNames baselineTreeWatches
           ++ [
             "modules"
             "access_denied"
@@ -198,9 +302,13 @@ in
           key: path:
           "-a always,exit -F arch=b64 -S ${dirWatchSyscalls} -F path=${path} -F filetype=dir -F auid!=${auidUnset} -k ${key}";
 
+        renderTreeWatch = key: path: "-a always,exit -F dir=${path} -F perm=wa -k ${key}";
+
         baselineRules =
-          lib.mapAttrsToList renderWatch baselineWatches
-          ++ lib.mapAttrsToList renderDirWatch baselineDirWatches
+          lib.mapAttrsToList (key: path: renderWatch key (resolveWatchPath path)) baselineFileWatches
+          ++ lib.mapAttrsToList (key: path: renderDirWatch key (resolveWatchPath path)) baselineDirWatches
+          ++ lib.mapAttrsToList (key: path: renderWatch key (resolveWatchPath path)) baselineDirContentWatches
+          ++ lib.mapAttrsToList (key: path: renderTreeWatch key (resolveWatchPath path)) baselineTreeWatches
           ++ [
             "-a always,exit -F arch=b64 -S init_module,finit_module,delete_module -F auid!=${auidUnset} -k modules"
           ];
@@ -216,6 +324,18 @@ in
         injectedDirWatchRules = lib.mapAttrsToList (
           key: path: renderDirWatch key (resolveWatchPath path)
         ) dirWatches;
+        dirContentWatchRules = lib.mapAttrsToList (
+          key: path: renderWatch key (resolveWatchPath path)
+        ) auditdHost.dirContentWatches;
+        treeWatchRules = lib.mapAttrsToList (
+          key: path: renderTreeWatch key (resolveWatchPath path)
+        ) auditdHost.treeWatches;
+        injectedDirContentWatchRules = lib.mapAttrsToList (
+          key: path: renderWatch key (resolveWatchPath path)
+        ) dirContentWatches;
+        injectedTreeWatchRules = lib.mapAttrsToList (
+          key: path: renderTreeWatch key (resolveWatchPath path)
+        ) treeWatches;
 
         openSyscalls = if self.isAARCH64 then "openat" else "open,openat";
         accessDeniedRulesList = lib.optionals auditdHost.accessDeniedRules [
@@ -225,18 +345,27 @@ in
 
         keyValid = key: builtins.match "[a-zA-Z0-9_-]+" key != null && builtins.stringLength key <= 31;
 
-        excludeRules = map (t: "-a always,exclude -F msgtype=${t}") auditdHost.excludeMessageTypes;
+        watchPathNonEmpty = path: lib.removePrefix "!" path != "";
+
+        excludeRules = map (t: "-a always,exclude -F msgtype=${t}") (
+          lib.unique (baselineExcludeMessageTypes ++ auditdHost.excludeMessageTypes ++ excludeMessageTypes)
+        );
 
         finalAuditRules = [
-          "-c"
+          "-i"
         ]
         ++ excludeRules
         ++ baselineRules
         ++ fileWatchRules
         ++ dirWatchRules
+        ++ dirContentWatchRules
+        ++ treeWatchRules
         ++ injectedWatchRules
         ++ injectedDirWatchRules
+        ++ injectedDirContentWatchRules
+        ++ injectedTreeWatchRules
         ++ accessDeniedRulesList
+        ++ baselineExtraRules
         ++ auditdHost.extraRules
         ++ extraRules;
 
@@ -253,7 +382,7 @@ in
             message = "auditd fileWatches key '${key}' collides with a reserved baseline key!";
           }) auditdHost.fileWatches
           ++ lib.mapAttrsToList (key: path: {
-            assertion = path != "";
+            assertion = watchPathNonEmpty path;
             message = "auditd fileWatches path for key '${key}' must not be empty!";
           }) auditdHost.fileWatches
           ++ lib.mapAttrsToList (key: path: {
@@ -269,9 +398,47 @@ in
             message = "auditd dirWatches key '${key}' is also defined in fileWatches!";
           }) auditdHost.dirWatches
           ++ lib.mapAttrsToList (key: path: {
-            assertion = path != "";
+            assertion = watchPathNonEmpty path;
             message = "auditd dirWatches path for key '${key}' must not be empty!";
           }) auditdHost.dirWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = keyValid key;
+            message = "auditd dirContentWatches key '${key}' must match [a-zA-Z0-9_-]+ and be at most 31 characters long!";
+          }) auditdHost.dirContentWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = !(lib.elem key reservedKeys);
+            message = "auditd dirContentWatches key '${key}' collides with a reserved baseline key!";
+          }) auditdHost.dirContentWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion =
+              !(lib.elem key (lib.attrNames auditdHost.fileWatches ++ lib.attrNames auditdHost.dirWatches));
+            message = "auditd dirContentWatches key '${key}' is also defined in fileWatches or dirWatches!";
+          }) auditdHost.dirContentWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = watchPathNonEmpty path;
+            message = "auditd dirContentWatches path for key '${key}' must not be empty!";
+          }) auditdHost.dirContentWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = keyValid key;
+            message = "auditd treeWatches key '${key}' must match [a-zA-Z0-9_-]+ and be at most 31 characters long!";
+          }) auditdHost.treeWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = !(lib.elem key reservedKeys);
+            message = "auditd treeWatches key '${key}' collides with a reserved baseline key!";
+          }) auditdHost.treeWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion =
+              !(lib.elem key (
+                lib.attrNames auditdHost.fileWatches
+                ++ lib.attrNames auditdHost.dirWatches
+                ++ lib.attrNames auditdHost.dirContentWatches
+              ));
+            message = "auditd treeWatches key '${key}' is also defined in fileWatches, dirWatches or dirContentWatches!";
+          }) auditdHost.treeWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = watchPathNonEmpty path;
+            message = "auditd treeWatches path for key '${key}' must not be empty!";
+          }) auditdHost.treeWatches
           ++ lib.mapAttrsToList (key: path: {
             assertion = keyValid key;
             message = "auditd injected fileWatches key '${key}' must match [a-zA-Z0-9_-]+ and be at most 31 characters long!";
@@ -284,9 +451,48 @@ in
             message = "auditd injected fileWatches key '${key}' collides with a reserved or host-defined key!";
           }) fileWatches
           ++ lib.mapAttrsToList (key: path: {
-            assertion = path != "";
+            assertion = watchPathNonEmpty path;
             message = "auditd injected fileWatches path for key '${key}' must not be empty!";
-          }) fileWatches;
+          }) fileWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = keyValid key;
+            message = "auditd injected dirContentWatches key '${key}' must match [a-zA-Z0-9_-]+ and be at most 31 characters long!";
+          }) dirContentWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion =
+              !(lib.elem key (
+                reservedKeys
+                ++ lib.attrNames auditdHost.fileWatches
+                ++ lib.attrNames auditdHost.dirWatches
+                ++ lib.attrNames auditdHost.dirContentWatches
+                ++ lib.attrNames auditdHost.treeWatches
+              ));
+            message = "auditd injected dirContentWatches key '${key}' collides with a reserved or host-defined key!";
+          }) dirContentWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = watchPathNonEmpty path;
+            message = "auditd injected dirContentWatches path for key '${key}' must not be empty!";
+          }) dirContentWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = keyValid key;
+            message = "auditd injected treeWatches key '${key}' must match [a-zA-Z0-9_-]+ and be at most 31 characters long!";
+          }) treeWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion =
+              !(lib.elem key (
+                reservedKeys
+                ++ lib.attrNames auditdHost.fileWatches
+                ++ lib.attrNames auditdHost.dirWatches
+                ++ lib.attrNames auditdHost.dirContentWatches
+                ++ lib.attrNames auditdHost.treeWatches
+                ++ lib.attrNames dirContentWatches
+              ));
+            message = "auditd injected treeWatches key '${key}' collides with a reserved, host-defined or injected key!";
+          }) treeWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = watchPathNonEmpty path;
+            message = "auditd injected treeWatches path for key '${key}' must not be empty!";
+          }) treeWatches;
 
         security.audit = {
           enable = if auditdHost.locked then "lock" else true;
@@ -311,9 +517,10 @@ in
           '';
         };
 
-        systemd.services.audit-rules-nixos = lib.mkIf auditdHost.locked {
-          restartIfChanged = false;
-          serviceConfig.ExecStopPost = lib.mkForce [ ];
+        systemd.services.audit-rules-nixos = {
+          after = [ "local-fs.target" ];
+          restartIfChanged = lib.mkIf auditdHost.locked false;
+          serviceConfig.ExecStopPost = lib.mkIf auditdHost.locked (lib.mkForce [ ]);
         };
 
         security.auditd = {
