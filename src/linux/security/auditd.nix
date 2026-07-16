@@ -287,6 +287,12 @@ in
             "access_denied"
           ];
 
+        hostWatchKeys =
+          lib.attrNames auditdHost.fileWatches
+          ++ lib.attrNames auditdHost.dirWatches
+          ++ lib.attrNames auditdHost.dirContentWatches
+          ++ lib.attrNames auditdHost.treeWatches;
+
         renderWatch = key: path: "-w ${path} -p wa -k ${key}";
 
         auidUnset = "4294967295";
@@ -442,10 +448,7 @@ in
             message = "auditd injected fileWatches key '${key}' must match [a-zA-Z0-9_-]+ and be at most 31 characters long!";
           }) fileWatches
           ++ lib.mapAttrsToList (key: path: {
-            assertion =
-              !(lib.elem key (
-                reservedKeys ++ lib.attrNames auditdHost.fileWatches ++ lib.attrNames auditdHost.dirWatches
-              ));
+            assertion = !(lib.elem key (reservedKeys ++ hostWatchKeys));
             message = "auditd injected fileWatches key '${key}' collides with a reserved or host-defined key!";
           }) fileWatches
           ++ lib.mapAttrsToList (key: path: {
@@ -454,18 +457,26 @@ in
           }) fileWatches
           ++ lib.mapAttrsToList (key: path: {
             assertion = keyValid key;
+            message = "auditd injected dirWatches key '${key}' must match [a-zA-Z0-9_-]+ and be at most 31 characters long!";
+          }) dirWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = !(lib.elem key (reservedKeys ++ hostWatchKeys ++ lib.attrNames fileWatches));
+            message = "auditd injected dirWatches key '${key}' collides with a reserved, host-defined or injected key!";
+          }) dirWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = watchPathNonEmpty path;
+            message = "auditd injected dirWatches path for key '${key}' must not be empty!";
+          }) dirWatches
+          ++ lib.mapAttrsToList (key: path: {
+            assertion = keyValid key;
             message = "auditd injected dirContentWatches key '${key}' must match [a-zA-Z0-9_-]+ and be at most 31 characters long!";
           }) dirContentWatches
           ++ lib.mapAttrsToList (key: path: {
             assertion =
               !(lib.elem key (
-                reservedKeys
-                ++ lib.attrNames auditdHost.fileWatches
-                ++ lib.attrNames auditdHost.dirWatches
-                ++ lib.attrNames auditdHost.dirContentWatches
-                ++ lib.attrNames auditdHost.treeWatches
+                reservedKeys ++ hostWatchKeys ++ lib.attrNames fileWatches ++ lib.attrNames dirWatches
               ));
-            message = "auditd injected dirContentWatches key '${key}' collides with a reserved or host-defined key!";
+            message = "auditd injected dirContentWatches key '${key}' collides with a reserved, host-defined or injected key!";
           }) dirContentWatches
           ++ lib.mapAttrsToList (key: path: {
             assertion = watchPathNonEmpty path;
@@ -479,10 +490,9 @@ in
             assertion =
               !(lib.elem key (
                 reservedKeys
-                ++ lib.attrNames auditdHost.fileWatches
-                ++ lib.attrNames auditdHost.dirWatches
-                ++ lib.attrNames auditdHost.dirContentWatches
-                ++ lib.attrNames auditdHost.treeWatches
+                ++ hostWatchKeys
+                ++ lib.attrNames fileWatches
+                ++ lib.attrNames dirWatches
                 ++ lib.attrNames dirContentWatches
               ));
             message = "auditd injected treeWatches key '${key}' collides with a reserved, host-defined or injected key!";
