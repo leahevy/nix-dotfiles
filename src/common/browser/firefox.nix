@@ -1294,6 +1294,15 @@ in
       };
     };
 
+    ifEnabled.linux.security.auditd = {
+      enabled = config: {
+        nx.linux.security.auditd.dirContentWatches = {
+          persist_firefox_nmh = ".config/mozilla/native-messaging-hosts";
+          persist_firefox_nmh_home = ".mozilla/native-messaging-hosts";
+        };
+      };
+    };
+
     linux.enabled =
       config:
       lib.mkMerge [

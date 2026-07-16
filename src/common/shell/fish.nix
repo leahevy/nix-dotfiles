@@ -36,6 +36,12 @@ args@{
       };
     };
 
+    ifEnabled.linux.security.auditd = {
+      enabled = config: {
+        nx.linux.security.auditd.dirContentWatches.persist_fish_confd = ".config/fish/conf.d";
+      };
+    };
+
     home = config: {
       home.packages =
         with pkgs;
