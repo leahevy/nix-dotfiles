@@ -209,7 +209,7 @@ def cursor_timestamp_seconds(cfg: Dict[str, Any]) -> Optional[int]:
 
 
 def restore_rebuild_window(cfg: Dict[str, Any], window: RebuildWindowTracker) -> None:
-    timeout = cfg.get("rebuild_window_timeout_seconds", 600)
+    timeout = cfg.get("rebuild_window_timeout_seconds", 180)
     since_s = int(time.time()) - timeout
     cursor_ts = cursor_timestamp_seconds(cfg)
     if cursor_ts is not None:
@@ -1122,7 +1122,7 @@ def main():
         cfg["highlight_patterns"], cfg["main_user_uid"]
     )
     rebuild_window = RebuildWindowTracker(
-        cfg.get("rebuild_window_timeout_seconds", 600)
+        cfg.get("rebuild_window_timeout_seconds", 180)
     )
     restore_rebuild_window(cfg, rebuild_window)
     stats = Stats()

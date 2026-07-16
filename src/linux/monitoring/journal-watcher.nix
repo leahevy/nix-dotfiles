@@ -207,7 +207,7 @@ args@{
       };
       rebuildWindowTimeoutSeconds = lib.mkOption {
         type = lib.types.int;
-        default = 600;
+        default = 180;
       };
     };
 
