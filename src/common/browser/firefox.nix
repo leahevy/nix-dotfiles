@@ -241,8 +241,8 @@ let
               contrast = 100;
               grayscale = 0;
               sepia = 0;
-              useFont = false;
-              fontFamily = if self.isDarwin then "Helvetica Neue" else "Open Sans";
+              useFont = true;
+              fontFamily = "monospace";
               textStroke = 0;
               engine = "dynamicTheme";
               stylesheet = "";
