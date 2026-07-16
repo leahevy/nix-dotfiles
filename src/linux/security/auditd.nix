@@ -134,6 +134,7 @@ in
             "access_denied"
           ]
         );
+        fallbackExcludedKeyPattern = lib.concatMapStringsSep "|" (key: "${key}\"") fallbackExcludedKeys;
         watchActive = rawPath: if watchAlways rawPath then "always" else "outsideRebuild";
         contentWatchString =
           key: rawPath:
@@ -244,7 +245,7 @@ in
             {
               service = "auditd.service";
               tag = "audisp-syslog";
-              string = "type=SYSCALL .*key=\"(?!(?:${lib.concatStringsSep "|" fallbackExcludedKeys})\")[a-zA-Z0-9_-]+\"";
+              string = "type=SYSCALL .*key=\"(?!(?:${fallbackExcludedKeyPattern}))[a-zA-Z0-9_-]+\"";
               active = "outsideRebuild";
               extract = "key=\"(?P<key>[a-zA-Z0-9_-]+)\".*AUID=\"(?P<user>[^\"]*)\"";
               mapping = {
