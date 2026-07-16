@@ -19,11 +19,8 @@ let
     persist_systemd_user = "/etc/systemd/user";
     persist_pam = "/etc/pam.d";
     persist_xdg_autostart = "/etc/xdg/autostart";
-    persist_autostart = ".config/autostart";
     persist_user_units = ".config/systemd/user";
     persist_user_units_share = ".local/share/systemd/user";
-    persist_user_bin = ".local/bin";
-    persist_environment_d = ".config/environment.d";
     persist_applications = ".local/share/applications";
   };
 
