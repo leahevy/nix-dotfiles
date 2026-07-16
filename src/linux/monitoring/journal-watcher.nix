@@ -837,12 +837,13 @@ args@{
                 with open(path) as f:
                   patterns = json.load(f)
                 for pat in patterns:
-                  s = pat.get("string")
-                  if s is not None:
-                    try:
-                      re.compile(s)
-                    except re.error as e:
-                      errors.append(f"  [{label}] {fmt_pat(pat)}: {e}")
+                  for field in ("string", "extract"):
+                    s = pat.get(field)
+                    if s is not None:
+                      try:
+                        re.compile(s)
+                      except re.error as e:
+                        errors.append(f"  [{label}] {field}: {fmt_pat(pat)}: {e}")
               if errors:
                 print("journal-watcher: invalid regex patterns:", file=sys.stderr)
                 for e in errors:
