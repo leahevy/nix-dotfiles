@@ -863,6 +863,25 @@ def send_user_notify(
     )
 
 
+def resolve_mapped_message(
+    mapping_message: Optional[str],
+    extract_re: Optional[re.Pattern],
+    message: str,
+) -> Optional[str]:
+    if mapping_message is None:
+        return None
+    if extract_re is not None:
+        ex = extract_re.search(message) if message else None
+        if not ex:
+            return None
+        groups = {k: v if v is not None else "" for k, v in ex.groupdict().items()}
+        try:
+            return mapping_message.format(**groups)
+        except (KeyError, IndexError, ValueError):
+            return None
+    return mapping_message
+
+
 def process_message(
     cfg: Dict[str, Any],
     json_data: Dict[str, Any],
@@ -888,12 +907,31 @@ def process_message(
 
         cleanup_old_rate_limits(cfg)
 
+        effective_mapping: Dict[str, Any] = {}
+        tag_mapping = cfg.get("tag_mappings", {}).get(tag)
+        if tag_mapping:
+            effective_mapping.update(
+                {k: v for k, v in tag_mapping.items() if v is not None}
+            )
+        if highlight_info and highlight_info.mapping:
+            effective_mapping.update(
+                {k: v for k, v in highlight_info.mapping.items() if v is not None}
+            )
+        mapped_message = resolve_mapped_message(
+            effective_mapping.get("message"),
+            highlight_info.extract if highlight_info else None,
+            message,
+        )
+        dedup_message = mapped_message if mapped_message is not None else message
+
         skip_msg_rate_limit = (
             highlighted
             and highlight_info is not None
             and highlight_info.ignore_rate_limiting
         )
-        if not skip_msg_rate_limit and not check_message_rate_limit(cfg, unit, message):
+        if not skip_msg_rate_limit and not check_message_rate_limit(
+            cfg, unit, dedup_message
+        ):
             print(
                 f"{ts_prefix}Ignore notification <rate limited> ({tag}/{unit}): {message}",
                 flush=True,
@@ -927,17 +965,6 @@ def process_message(
 
         generic_tags = {"system", cfg.get("main_user_username", "")}
         display_tag = tag if tag and tag not in generic_tags else None
-
-        effective_mapping: Dict[str, Any] = {}
-        tag_mapping = cfg.get("tag_mappings", {}).get(tag)
-        if tag_mapping:
-            effective_mapping.update(
-                {k: v for k, v in tag_mapping.items() if v is not None}
-            )
-        if highlight_info and highlight_info.mapping:
-            effective_mapping.update(
-                {k: v for k, v in highlight_info.mapping.items() if v is not None}
-            )
 
         if effective_mapping.get("priority"):
             notify_type = effective_mapping["priority"]
@@ -1011,24 +1038,9 @@ def process_message(
             else message
         )
 
-        if effective_mapping.get("message") is not None:
-            override_text = effective_mapping["message"]
-            extract_re = highlight_info.extract if highlight_info else None
-            if extract_re is not None:
-                ex = extract_re.search(message) if message else None
-                if ex:
-                    groups = {
-                        k: v if v is not None else "" for k, v in ex.groupdict().items()
-                    }
-                    try:
-                        override_text = override_text.format(**groups)
-                    except (KeyError, IndexError, ValueError):
-                        override_text = None
-                else:
-                    override_text = None
-            if override_text is not None:
-                message_text_pushover = override_text
-                message_text_user = override_text
+        if mapped_message is not None:
+            message_text_pushover = mapped_message
+            message_text_user = mapped_message
 
         hl_channels = {}
         if highlighted and highlight_info and highlight_info.channels:
