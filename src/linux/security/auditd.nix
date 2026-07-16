@@ -58,22 +58,22 @@ in
     fileWatches = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Audit file watches injected by other modules as an attrset mapping rule keys to paths, where a leading ! marks the watch as always notifying.";
+      description = "Audit file watches injected by other modules.";
     };
     dirWatches = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Audit dir watches injected by other modules as an attrset mapping rule keys to paths, where a leading ! marks the watch as always notifying.";
+      description = "Audit directory attribute watches injected by other modules.";
     };
     dirContentWatches = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Audit watches for direct children of directories injected by other modules as an attrset mapping rule keys to paths, where a leading ! marks the watch as always notifying.";
+      description = "Audit directory content watches injected by other modules.";
     };
     treeWatches = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Recursive audit watches for directory trees injected by other modules as an attrset mapping rule keys to paths, where a leading ! marks the watch as always notifying.";
+      description = "Recursive audit tree watches injected by other modules.";
     };
     excludeMessageTypes = lib.mkOption {
       type = lib.types.listOf lib.types.str;

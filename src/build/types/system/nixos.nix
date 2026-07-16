@@ -485,22 +485,22 @@ with lib;
               fileWatches = mkOption {
                 type = types.attrsOf types.str;
                 default = { };
-                description = "Additional audit file watches given as an attrset mapping rule keys to absolute paths or paths relative to the main user home, where a leading ! marks the watch as always notifying";
+                description = "Additional audit file watches keyed by audit rule name";
               };
               dirWatches = mkOption {
                 type = types.attrsOf types.str;
                 default = { };
-                description = "Additional audit watches for attribute changes of directories, given as an attrset mapping rule keys to absolute paths or paths relative to the main user home, where a leading ! marks the watch as always notifying";
+                description = "Additional audit watches for directory attribute changes";
               };
               dirContentWatches = mkOption {
                 type = types.attrsOf types.str;
                 default = { };
-                description = "Additional audit watches for changes to directories and their direct children, given as an attrset mapping rule keys to absolute paths or paths relative to the main user home, where a leading ! marks the watch as always notifying";
+                description = "Additional audit watches for direct directory contents";
               };
               treeWatches = mkOption {
                 type = types.attrsOf types.str;
                 default = { };
-                description = "Additional recursive audit watches for whole directory trees, given as an attrset mapping rule keys to absolute paths or paths relative to the main user home, where a leading ! marks the watch as always notifying";
+                description = "Additional recursive audit watches for directory trees";
               };
               extraRules = mkOption {
                 type = types.listOf types.str;
@@ -530,7 +530,7 @@ with lib;
               excludeMessageTypes = mkOption {
                 type = types.listOf types.str;
                 default = [ ];
-                description = "Audit message types to drop at the source via exclude rules, in addition to the builtin baseline";
+                description = "Additional audit message types to drop at the source";
               };
               queueDepth = mkOption {
                 type = types.int;
