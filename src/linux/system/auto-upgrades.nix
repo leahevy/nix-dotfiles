@@ -44,6 +44,7 @@ args@{
         { string = "nx-auto-upgrade.service"; }
         { string = "nx-auto-upgrade-delayed.service"; }
         { string = "nx-auto-upgrade-notify.service"; }
+        { string = "nx-auto-upgrade-pending-checker.service"; }
         { string = "NX Auto-Upgrade"; }
         {
           tag = "systemd-inhibit";
@@ -456,6 +457,22 @@ args@{
               ${pkgs.coreutils}/bin/chown root:root /var/lib/nx-auto-upgrade/last-reboot
               ${pkgs.coreutils}/bin/chmod 600 /var/lib/nx-auto-upgrade/last-reboot
               ${pkgs.coreutils}/bin/echo "$(${pkgs.coreutils}/bin/date +%s)|$(${pkgs.coreutils}/bin/date '+%Y-%m-%d %H:%M:%S')|auto-upgrade-reboot|${rebootType}" > /var/lib/nx-auto-upgrade/last-reboot
+            '';
+
+        pendingUpgradeMarkerFile = "/var/lib/nx-auto-upgrade/pending-upgrade";
+
+        createPendingUpgradeMarkerScript =
+          if effectiveDryRun then
+            ''${pkgs.coreutils}/bin/echo "Would create pending upgrade marker: ${pendingUpgradeMarkerFile}"''
+          else
+            ''
+              ${pkgs.coreutils}/bin/mkdir -p /var/lib/nx-auto-upgrade
+              ${pkgs.coreutils}/bin/echo "$(($(${pkgs.coreutils}/bin/date +%s) + ${
+                toString (self.settings.preNotificationTimeMinutes * 60)
+              }))" > ${pendingUpgradeMarkerFile}.tmp
+              ${pkgs.coreutils}/bin/chown root:root ${pendingUpgradeMarkerFile}.tmp
+              ${pkgs.coreutils}/bin/chmod 600 ${pendingUpgradeMarkerFile}.tmp
+              ${pkgs.coreutils}/bin/mv ${pendingUpgradeMarkerFile}.tmp ${pendingUpgradeMarkerFile}
             '';
 
         checkBorgRunningScript = ''
@@ -1192,6 +1209,8 @@ args@{
             ${borgMonitoringLoopScript}
             monitor_borg_backup
 
+            ${createPendingUpgradeMarkerScript}
+
             ${logScript "info" "NOTICE: Auto-upgrade starting in ${builtins.toString self.settings.preNotificationTimeMinutes} minutes!"}
           '';
         };
@@ -1273,6 +1292,8 @@ args@{
               }
               trap cleanup EXIT TERM
 
+              ${pkgs.coreutils}/bin/rm -f ${pendingUpgradeMarkerFile}
+
               ${checkDailyStartScript}
               check_daily_start
 
@@ -1335,6 +1356,56 @@ args@{
             }";
             ExecStart = "${pkgs.systemd}/bin/systemctl start nx-auto-upgrade.service";
           };
+        };
+
+        systemd.services.nx-auto-upgrade-pending-checker = {
+          description = "NX Auto-Upgrade Pending Upgrade Checker";
+
+          serviceConfig = {
+            Type = "oneshot";
+            User = "root";
+          };
+
+          script = ''
+            if [[ ! -f "${pendingUpgradeMarkerFile}" ]]; then
+              exit 0
+            fi
+
+            target=$(${pkgs.coreutils}/bin/tr -d '[:space:]' < "${pendingUpgradeMarkerFile}")
+            if [[ ! "$target" =~ ^[0-9]+$ ]]; then
+              ${pkgs.coreutils}/bin/rm -f "${pendingUpgradeMarkerFile}"
+              exit 0
+            fi
+
+            now=$(${pkgs.coreutils}/bin/date +%s)
+            if [[ "$now" -lt "$target" ]]; then
+              exit 0
+            fi
+
+            if [[ "$(${pkgs.systemd}/bin/systemctl show nx-auto-upgrade-delayed.service -p ActiveState --value)" == "activating" ]]; then
+              ${pkgs.coreutils}/bin/echo "Delayed auto-upgrade service is currently running, deferring to it"
+              exit 0
+            fi
+
+            if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
+              ${pkgs.coreutils}/bin/echo "Borg backup is currently running, retrying pending upgrade on next timer run"
+              exit 0
+            fi
+
+            ${pkgs.coreutils}/bin/rm -f "${pendingUpgradeMarkerFile}"
+            ${logScript "info" "INFO: Pending upgrade marker found past its start time, starting auto-upgrade now"}
+            ${pkgs.systemd}/bin/systemctl start --no-block nx-auto-upgrade.service
+          '';
+          after = [ "multi-user.target" ];
+        };
+
+        systemd.timers.nx-auto-upgrade-pending-checker = {
+          description = "NX Auto-Upgrade Pending Upgrade Checker Timer";
+          timerConfig = {
+            OnActiveSec = "5min";
+            OnCalendar = "*:0/10";
+          };
+          wantedBy = [ "timers.target" ];
         };
 
         systemd.services.nx-auto-upgrade-reboot-checker = lib.mkIf self.settings.allowReboot {
