@@ -27,6 +27,15 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          service = "udisks2.service";
+          string = "Error opening /sys/devices/.*/block/[a-z]+/uevent while triggering uevent: No such file or directory";
+        }
+      ];
+    };
+
     linux.home = config: {
       services.udiskie = {
         enable = true;
