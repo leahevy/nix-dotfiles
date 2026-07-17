@@ -1865,7 +1865,7 @@ args@{
           if (self.options config).inactiveColor != null then
             (self.options config).inactiveColor
           else
-            theme.colors.main.backgrounds.secondary.html;
+            theme.colors.main.backgrounds.themed.html;
 
         deploymentLockCheck = {
           condition = ''[[ -d "/tmp/.nx-deployment-lock" ]]'';
