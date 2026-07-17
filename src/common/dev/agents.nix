@@ -136,6 +136,9 @@ args@{
         disableTestData = config.nx.common.dev.agents.disableTestData;
         difftasticEnabled =
           (config.programs.difftastic.enable or false) && (config.programs.difftastic.git.enable or false);
+        ghInstalled = lib.any (p: (p.pname or p.name or "") == "gh") (
+          (config.home.packages or [ ]) ++ (config.environment.systemPackages or [ ])
+        );
 
         baseInstructions = {
           "10 - Work Style" = [
@@ -161,7 +164,6 @@ args@{
             "Do not do a broad repository sweep unless it's required; ask first if it will be large or token-heavy."
           ];
           "70 - Git" =
-
             lib.optionals difftasticEnabled [
               "Never run `git diff` without `--no-ext-diff`."
             ]
@@ -173,6 +175,9 @@ args@{
                 "If the repo is the current one, replace `{{REPO_ROOT}}` with `\"$(git rev-parse --show-toplevel)\"`. If you need a different repo, use its root path explicitly."
               ]
             ];
+          "71 - GitHub" = lib.optionals (!ghInstalled) [
+            "The GitHub CLI(`gh`) is not installed. To query GitHub use the API directly via `curl`."
+          ];
         };
 
         prePushReviewSkill =
