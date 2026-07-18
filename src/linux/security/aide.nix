@@ -172,6 +172,17 @@ let
 
   checkCoreScript = config: mkCheckCoreScript { dbDir = config.nx.linux.security.aide.dbDir; };
 
+  hcCheckScript =
+    config:
+    pkgs.writeShellScript "nx-aide-hc-check" ''
+      _out=$(${checkCoreScript config} 2>&1)
+      _st=$?
+      if [ "$_st" -ne 0 ]; then
+        printf '%s\n' "$_out" >&3
+      fi
+      exit "$_st"
+    '';
+
   mkInitScript =
     { dbDir, hcEnabled }:
     pkgs.writeShellScriptBin "aide-init" ''
@@ -491,7 +502,7 @@ in
           uuid = config.nx.linux.security.aide.healthchecksUUID;
         };
         nx.linux.server.healthchecks.oneshotHealthChecks."aide-check" = {
-          checks."+50 - AIDE integrity" = "${checkCoreScript config}";
+          checks."+50 - AIDE integrity" = "${hcCheckScript config}";
         };
       };
 
