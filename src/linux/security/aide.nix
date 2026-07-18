@@ -872,8 +872,6 @@ in
         contentHashedCriticalFiles = [
           "/etc/passwd"
           "/etc/group"
-          "/etc/subuid"
-          "/etc/subgid"
           "/etc/sudoers"
           "/etc/hostname"
           "/etc/machine-id"
@@ -885,6 +883,8 @@ in
 
         permsCriticalFiles = [
           "/etc/shadow"
+          "/etc/subuid"
+          "/etc/subgid"
         ];
 
         serverPermsChecks = [
