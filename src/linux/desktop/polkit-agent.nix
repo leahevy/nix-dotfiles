@@ -23,6 +23,12 @@ args@{
           user = true;
           unitless = true;
         }
+        {
+          tag = "polkit-mate-authentication-agent-1";
+          string = "Error enumerating temporary authorizations: GDBus\\.Error:org\\.freedesktop\\.PolicyKit1\\.Error\\.Failed: Passed session and the session the caller is in differs\\. They must be equal for now\\.";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 
