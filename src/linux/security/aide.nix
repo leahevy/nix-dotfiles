@@ -169,7 +169,7 @@ let
       exit "$link_status"
     '';
 
-  checkCoreScript = mkCheckCoreScript { dbDir = self.settings.dbDir or defaultDbDir; };
+  checkCoreScript = config: mkCheckCoreScript { dbDir = config.nx.linux.security.aide.dbDir; };
 
   mkInitScript =
     { dbDir, hcEnabled }:
@@ -194,7 +194,7 @@ let
     '';
 
   mkCheckScript =
-    { hcEnabled }:
+    { config, hcEnabled }:
     pkgs.writeShellScriptBin "aide-check" (
       if hcEnabled then
         ''
@@ -212,7 +212,7 @@ let
         ''
           set -uo pipefail
           ${rootGuard "aide-check"}
-          exec ${checkCoreScript}
+          exec ${checkCoreScript config}
         ''
     );
 
@@ -470,9 +470,8 @@ in
     };
 
     ifEnabled.linux.security.auditd.enabled = config: {
-      nx.linux.security.auditd.dirContentWatches.aide_db = "!${
-        self.settings.dbDir or defaultDbDir
-      }/active";
+      nx.linux.security.auditd.dirContentWatches.aide_db =
+        "!${config.nx.linux.security.aide.dbDir}/active";
       nx.linux.security.auditd.dirContentWatches.aide_state = stateDir;
       nx.linux.security.auditd.dirContentWatches.aide_config = "!${builtins.dirOf confPath}";
     };
@@ -488,7 +487,7 @@ in
           uuid = config.nx.linux.security.aide.healthchecksUUID;
         };
         nx.linux.server.healthchecks.oneshotHealthChecks."aide-check" = {
-          checks."+50 - AIDE integrity" = "${checkCoreScript}";
+          checks."+50 - AIDE integrity" = "${checkCoreScript config}";
         };
       };
 
@@ -505,7 +504,7 @@ in
         config:
         lib.mkIf (!config.nx.linux.security.aide.testingMode) {
           systemd.services.nx-auto-upgrade.serviceConfig = {
-            ExecStartPre = lib.mkBefore [ "+${checkCoreScript}" ];
+            ExecStartPre = lib.mkBefore [ "+${checkCoreScript config}" ];
             ExecStartPost = [
               "+${pkgs.coreutils}/bin/touch ${postBootMarker}"
               "+${
@@ -1090,7 +1089,7 @@ in
         environment.systemPackages = [
           pkgs.aide
           (mkInitScript { inherit dbDir hcEnabled; })
-          (mkCheckScript { inherit hcEnabled; })
+          (mkCheckScript { inherit config hcEnabled; })
           commitBin
         ];
 
@@ -1100,7 +1099,7 @@ in
           serviceConfig = {
             Type = "oneshot";
             TimeoutStartSec = checkTimeoutSec;
-            ExecStart = checkCoreScript;
+            ExecStart = checkCoreScript config;
           }
           // lib.optionalAttrs (!hcEnabled) {
             SuccessExitStatus = [
@@ -1130,7 +1129,7 @@ in
           serviceConfig = {
             Type = "oneshot";
             TimeoutStartSec = checkTimeoutSec;
-            ExecStart = checkCoreScript;
+            ExecStart = checkCoreScript config;
             SuccessExitStatus = [
               1
               2
