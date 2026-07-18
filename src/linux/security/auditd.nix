@@ -32,6 +32,8 @@ let
 
   watchAlways = path: lib.hasPrefix "!" path;
 
+  auidUnset = "4294967295";
+
   resolveWatchPath =
     path:
     let
@@ -133,6 +135,15 @@ in
         );
         fallbackExcludedKeyPattern = lib.concatMapStringsSep "|" (key: "${key}\"") fallbackExcludedKeys;
         watchActive = rawPath: if watchAlways rawPath then "always" else "outsideRebuild";
+        userExtract = "auid=(?P<user>[0-9]+)";
+        keyUserExtract = "auid=(?P<user>[0-9]+).*key=\"(?P<key>[a-zA-Z0-9_-]+)\"";
+        uidNameMap =
+          (lib.mapAttrs' (name: u: lib.nameValuePair (toString u.uid) name) (
+            lib.filterAttrs (_name: u: u.uid != null && (u.uid >= 1000 || u.uid == 0)) config.users.users
+          ))
+          // {
+            ${auidUnset} = "unset";
+          };
         contentWatchString =
           key: rawPath:
           if watchAlways rawPath then
@@ -146,7 +157,9 @@ in
           tag = "audisp-syslog";
           string = "type=SYSCALL .*key=\"${key}\"";
           active = watchActive rawPath;
-          extract = "AUID=\"(?P<user>[^\"]*)\"";
+          hasPriority = !watchAlways rawPath;
+          extract = userExtract;
+          replacements.user = uidNameMap;
           mapping = {
             label = "Audit";
             title = "Watched File Changed";
@@ -160,7 +173,9 @@ in
           tag = "audisp-syslog";
           string = "type=SYSCALL .*key=\"${key}\"";
           active = watchActive rawPath;
-          extract = "AUID=\"(?P<user>[^\"]*)\"";
+          hasPriority = !watchAlways rawPath;
+          extract = userExtract;
+          replacements.user = uidNameMap;
           mapping = {
             label = "Audit";
             title = "Directory Attributes Changed";
@@ -174,7 +189,9 @@ in
           tag = "audisp-syslog";
           string = contentWatchString key rawPath;
           active = watchActive rawPath;
-          extract = "AUID=\"(?P<user>[^\"]*)\"";
+          hasPriority = !watchAlways rawPath;
+          extract = userExtract;
+          replacements.user = uidNameMap;
           mapping = {
             label = "Audit";
             title =
@@ -192,7 +209,9 @@ in
           tag = "audisp-syslog";
           string = contentWatchString key rawPath;
           active = watchActive rawPath;
-          extract = "AUID=\"(?P<user>[^\"]*)\"";
+          hasPriority = !watchAlways rawPath;
+          extract = userExtract;
+          replacements.user = uidNameMap;
           mapping = {
             label = "Audit";
             title = "Directory Tree Changed";
@@ -244,7 +263,8 @@ in
               tag = "audisp-syslog";
               string = "type=SYSCALL .*key=\"(?!(?:${fallbackExcludedKeyPattern}))[a-zA-Z0-9_-]+\"";
               active = "outsideRebuild";
-              extract = "key=\"(?P<key>[a-zA-Z0-9_-]+)\".*AUID=\"(?P<user>[^\"]*)\"";
+              extract = keyUserExtract;
+              replacements.user = uidNameMap;
               mapping = {
                 label = "Audit";
                 title = "Watched File Changed";
@@ -294,8 +314,6 @@ in
           ++ lib.attrNames auditdHost.treeWatches;
 
         renderWatch = key: path: "-w ${path} -p wa -k ${key}";
-
-        auidUnset = "4294967295";
 
         dirWatchSyscalls =
           if self.isAARCH64 then
