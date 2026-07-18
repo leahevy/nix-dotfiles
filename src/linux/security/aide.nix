@@ -123,8 +123,8 @@ let
       if [ ! -f ${dbDir}/aide.db ]; then
         echo "AIDE database missing, initializing baseline"
         ${aideBin} --init --config ${confPath} || true
-        if [ -f ${dbDir}/aide.db.new ]; then
-          ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/aide.db
+        if [ -f ${dbDir}/staging/aide.db.new ]; then
+          ${pkgs.coreutils}/bin/mv ${dbDir}/staging/aide.db.new ${dbDir}/aide.db
           echo "AIDE database initialized at ${dbDir}/aide.db"
           exit "$link_status"
         fi
@@ -185,7 +185,7 @@ let
         fi
       fi
       ${aideBin} --init --config ${confPath}
-      ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/aide.db
+      ${pkgs.coreutils}/bin/mv ${dbDir}/staging/aide.db.new ${dbDir}/aide.db
       echo "AIDE database initialized at ${dbDir}/aide.db"
       ${lib.optionalString hcEnabled ''
         ${pkgs.systemd}/bin/systemctl start --no-block ${oneshotUnit}
@@ -244,11 +244,11 @@ let
             ${pkgs.coreutils}/bin/chgrp "$(${pkgs.coreutils}/bin/id -gn ${self.user.username})" "$logfile" 2>/dev/null || true
             ${pkgs.coreutils}/bin/chmod 0640 "$logfile" 2>/dev/null || true
           fi
-          if [ ! -f ${dbDir}/aide.db.new ]; then
+          if [ ! -f ${dbDir}/staging/aide.db.new ]; then
             echo "AIDE database initialization failed!" >&2
             exit 1
           fi
-          ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/aide.db
+          ${pkgs.coreutils}/bin/mv ${dbDir}/staging/aide.db.new ${dbDir}/aide.db
           echo "AIDE database initialized at ${dbDir}/aide.db"
           ${lib.optionalString hcEnabled ''
             ${pkgs.systemd}/bin/systemctl start --no-block ${oneshotUnit}
@@ -266,16 +266,16 @@ let
           echo "AIDE update failed with status $status!" >&2
           exit "$status"
         fi
-        if [ ! -f ${dbDir}/aide.db.new ]; then
-          echo "AIDE update did not produce ${dbDir}/aide.db.new!" >&2
+        if [ ! -f ${dbDir}/staging/aide.db.new ]; then
+          echo "AIDE update did not produce ${dbDir}/staging/aide.db.new!" >&2
           exit 1
         fi
         if [ "$force" != "1" ] && [ "$status" != "0" ]; then
-          ${pkgs.coreutils}/bin/rm -f ${dbDir}/aide.db.new
+          ${pkgs.coreutils}/bin/rm -f ${dbDir}/staging/aide.db.new
           echo "AIDE detected changes, database not updated. Review the changes above, then run aide-commit --force to accept them!" >&2
           exit "$status"
         fi
-        ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/aide.db
+        ${pkgs.coreutils}/bin/mv ${dbDir}/staging/aide.db.new ${dbDir}/aide.db
         echo "AIDE database updated at ${dbDir}/aide.db"
         ${lib.optionalString hcEnabled ''
           ${pkgs.systemd}/bin/systemctl start --no-block ${oneshotUnit}
@@ -981,7 +981,7 @@ in
 
         aideConf = ''
           database_in=file:${dbDir}/aide.db
-          database_out=file:${dbDir}/aide.db.new
+          database_out=file:${dbDir}/staging/aide.db.new
           gzip_dbout=yes
 
           NORMAL = p+i+n+u+g+sha256+ftype
@@ -1172,6 +1172,11 @@ in
 
         systemd.tmpfiles.settings."nx-aide" = {
           "${dbDir}".d = {
+            mode = "0700";
+            user = "root";
+            group = "root";
+          };
+          "${dbDir}/staging".d = {
             mode = "0700";
             user = "root";
             group = "root";
