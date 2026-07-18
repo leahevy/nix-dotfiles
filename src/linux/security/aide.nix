@@ -120,12 +120,12 @@ let
         echo "AIDE integrity check skipped, pending post boot commit"
         exit "$link_status"
       fi
-      if [ ! -f ${dbDir}/aide.db ]; then
+      if [ ! -f ${dbDir}/active/aide.db ]; then
         echo "AIDE database missing, initializing baseline"
         ${aideBin} --init --config ${confPath} || true
-        if [ -f ${dbDir}/staging/aide.db.new ]; then
-          ${pkgs.coreutils}/bin/mv ${dbDir}/staging/aide.db.new ${dbDir}/aide.db
-          echo "AIDE database initialized at ${dbDir}/aide.db"
+        if [ -f ${dbDir}/aide.db.new ]; then
+          ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
+          echo "AIDE database initialized at ${dbDir}/active/aide.db"
           exit "$link_status"
         fi
         echo "AIDE integrity check FAILED: Database initialization failed"
@@ -176,8 +176,8 @@ let
     pkgs.writeShellScriptBin "aide-init" ''
       set -euo pipefail
       ${rootGuard "aide-init"}
-      if [ -f ${dbDir}/aide.db ]; then
-        printf '%s' "AIDE database ${dbDir}/aide.db already exists, reinitialize the baseline? [y/N] "
+      if [ -f ${dbDir}/active/aide.db ]; then
+        printf '%s' "AIDE database ${dbDir}/active/aide.db already exists, reinitialize the baseline? [y/N] "
         IFS= read -r _answer || _answer=""
         if [ "$_answer" != "y" ]; then
           echo "Keeping the existing database"
@@ -185,8 +185,8 @@ let
         fi
       fi
       ${aideBin} --init --config ${confPath}
-      ${pkgs.coreutils}/bin/mv ${dbDir}/staging/aide.db.new ${dbDir}/aide.db
-      echo "AIDE database initialized at ${dbDir}/aide.db"
+      ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
+      echo "AIDE database initialized at ${dbDir}/active/aide.db"
       ${lib.optionalString hcEnabled ''
         ${pkgs.systemd}/bin/systemctl start --no-block ${oneshotUnit}
         echo "Verification check with healthchecks ping started in the background"
@@ -236,7 +236,7 @@ let
         fi
         _raw=$(${pkgs.coreutils}/bin/mktemp)
         trap '${pkgs.coreutils}/bin/rm -f "$_raw"' EXIT
-        if [ ! -f ${dbDir}/aide.db ]; then
+        if [ ! -f ${dbDir}/active/aide.db ]; then
           echo "AIDE database missing, initializing baseline"
           ${aideBin} --init --config ${confPath} > "$_raw" 2>&1 || true
           ${fstatFilterScript} "$_raw" | ${pkgs.coreutils}/bin/tee "$logfile" || true
@@ -244,12 +244,12 @@ let
             ${pkgs.coreutils}/bin/chgrp "$(${pkgs.coreutils}/bin/id -gn ${self.user.username})" "$logfile" 2>/dev/null || true
             ${pkgs.coreutils}/bin/chmod 0640 "$logfile" 2>/dev/null || true
           fi
-          if [ ! -f ${dbDir}/staging/aide.db.new ]; then
+          if [ ! -f ${dbDir}/aide.db.new ]; then
             echo "AIDE database initialization failed!" >&2
             exit 1
           fi
-          ${pkgs.coreutils}/bin/mv ${dbDir}/staging/aide.db.new ${dbDir}/aide.db
-          echo "AIDE database initialized at ${dbDir}/aide.db"
+          ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
+          echo "AIDE database initialized at ${dbDir}/active/aide.db"
           ${lib.optionalString hcEnabled ''
             ${pkgs.systemd}/bin/systemctl start --no-block ${oneshotUnit}
           ''}
@@ -266,17 +266,17 @@ let
           echo "AIDE update failed with status $status!" >&2
           exit "$status"
         fi
-        if [ ! -f ${dbDir}/staging/aide.db.new ]; then
-          echo "AIDE update did not produce ${dbDir}/staging/aide.db.new!" >&2
+        if [ ! -f ${dbDir}/aide.db.new ]; then
+          echo "AIDE update did not produce ${dbDir}/aide.db.new!" >&2
           exit 1
         fi
         if [ "$force" != "1" ] && [ "$status" != "0" ]; then
-          ${pkgs.coreutils}/bin/rm -f ${dbDir}/staging/aide.db.new
+          ${pkgs.coreutils}/bin/rm -f ${dbDir}/aide.db.new
           echo "AIDE detected changes, database not updated. Review the changes above, then run aide-commit --force to accept them!" >&2
           exit "$status"
         fi
-        ${pkgs.coreutils}/bin/mv ${dbDir}/staging/aide.db.new ${dbDir}/aide.db
-        echo "AIDE database updated at ${dbDir}/aide.db"
+        ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
+        echo "AIDE database updated at ${dbDir}/active/aide.db"
         ${lib.optionalString hcEnabled ''
           ${pkgs.systemd}/bin/systemctl start --no-block ${oneshotUnit}
           echo "Success ping check started in the background"
@@ -470,7 +470,9 @@ in
     };
 
     ifEnabled.linux.security.auditd.enabled = config: {
-      nx.linux.security.auditd.dirContentWatches.aide_db = "!${self.settings.dbDir or defaultDbDir}";
+      nx.linux.security.auditd.dirContentWatches.aide_db = "!${
+        self.settings.dbDir or defaultDbDir
+      }/active";
       nx.linux.security.auditd.dirContentWatches.aide_state = stateDir;
       nx.linux.security.auditd.dirContentWatches.aide_config = "!${builtins.dirOf confPath}";
     };
@@ -980,8 +982,8 @@ in
         );
 
         aideConf = ''
-          database_in=file:${dbDir}/aide.db
-          database_out=file:${dbDir}/staging/aide.db.new
+          database_in=file:${dbDir}/active/aide.db
+          database_out=file:${dbDir}/aide.db.new
           gzip_dbout=yes
 
           NORMAL = p+i+n+u+g+sha256+ftype
@@ -1176,7 +1178,7 @@ in
             user = "root";
             group = "root";
           };
-          "${dbDir}/staging".d = {
+          "${dbDir}/active".d = {
             mode = "0700";
             user = "root";
             group = "root";
