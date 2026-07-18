@@ -503,98 +503,15 @@ let
     }
     // extraPolicies;
 
-  firefoxSpecificCSS =
-    monospaceFont:
-    let
-      skipOnHtml = [
-        '':has(body[data-theme*="fluent" i])''
-        ''[data-theme*="fluent" i]''
-      ];
-
-      monoExclusions = [
-        "i"
-        ''[class*="icon" i]''
-        ''[class~="ic" i]''
-        ''[class*="fa-" i]''
-        ''[class*="material-symbols" i]''
-        ''[role="presentation" i]''
-        ''[role="img" i]''
-        "[data-icon-name]"
-        ''[type="checkbox"]''
-        ''[class*="hero" i]''
-        '':is([class*="hero" i] *)''
-        '':is([type="checkbox"] *)''
-        ":is([data-icon-name] *)"
-        '':is([role="presentation" i] *)''
-        '':is([role="img" i] *)''
-        ":has(> [data-icon-name])"
-        '':has(> [role="presentation" i])''
-        '':has(> [role="img" i])''
-        '':has(> i[class*="icon" i])''
-        ''[data-cds="Icon" i]''
-        '':is([data-cds="Icon" i] *)''
-        '':has(> [data-cds="Icon" i])''
-      ];
-
-      monoForceElements = [
-        "input"
-        "textarea"
-        "select"
-      ];
-
-      monoButtonExclusions = [
-        ''[class*="hero" i]''
-        ''[class*="icon" i]''
-        ":has([data-icon-name])"
-        '':has([role="presentation" i])''
-        '':has([role="img" i])''
-        '':has(i[class*="icon" i])''
-        '':has([data-cds="Icon" i])''
-      ];
-
-      revertSelectors = [
-        ''[class*="icon" i] *''
-        ''[class~="ic" i] *''
-        ''[class*="fa-" i] *''
-        ''[class*="material-symbols" i] *''
-        ''[role="presentation" i] *''
-        ''[role="img" i] *''
-        "[data-icon-name] *"
-        ''[type="checkbox"] *''
-        ''[class*="hero" i]''
-        ''[class*="hero" i] *''
-        ''[data-cds="Icon" i]''
-        ''[data-cds="Icon" i] *''
-      ];
-
-      mkNotChain = lib.concatMapStrings (s: ":not(${s})");
-      rulePrefix = ":where(html${mkNotChain skipOnHtml})";
-      prefixAll = sels: lib.concatMapStringsSep ",\n" (s: "${rulePrefix} ${s}") sels;
-      joinAll = lib.concatStringsSep ",\n";
-
-      monoSelectors = [
-        ":where(${mkNotChain monoExclusions})"
-      ]
-      ++ monoForceElements
-      ++ [ "button${mkNotChain monoButtonExclusions}" ];
-    in
-    lib.optionalString monospaceFont ''
-      ${prefixAll monoSelectors} {
-        font-family: monospace !important;
-      }
-      ${joinAll revertSelectors} {
-        font-family: revert !important;
-      }
-    '';
+  firefoxSpecificCSS = "";
 
   mkUserContentCSS =
     {
       browserUserContent,
-      monospaceFont,
       userContentExcludedDomains,
     }:
     let
-      cssData = browserUserContent.data + (firefoxSpecificCSS monospaceFont);
+      cssData = browserUserContent.data + firefoxSpecificCSS;
       cssStringEscapeRegex = regex: lib.replaceStrings [ "\\" "\"" ] [ "\\\\" "\\\"" ] regex;
 
       stripIPv6Brackets =
@@ -705,11 +622,6 @@ in
       default = [ ];
       description = "List of domains (e.g. 'example.com') where both Firefox userContent CSS and Dark Reader are disabled.";
     };
-    userContentCSSExcludedDomains = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "List of domains (e.g. 'example.com') where only Firefox userContent CSS is disabled.";
-    };
     userContentDarkReaderExcludedDomains = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -741,7 +653,6 @@ in
         monospaceFont,
         bottomToolbars,
         userContentExcludedDomains,
-        userContentCSSExcludedDomains,
         userContentDarkReaderExcludedDomains,
         ...
       }:
@@ -1100,8 +1011,7 @@ in
           );
         userContentCSS = mkUserContentCSS {
           browserUserContent = config.nx.common.browser.browser.final.userContentCSS;
-          inherit monospaceFont;
-          userContentExcludedDomains = userContentExcludedDomains ++ userContentCSSExcludedDomains;
+          inherit userContentExcludedDomains;
         };
       in
       {
@@ -1120,41 +1030,33 @@ in
               (hasSha && hasId && hasFile) || (!hasSha && !hasId && !hasFile);
             message = "nx.common.browser.firefox: extension '${name}' requires sha256, fileId, and filename to all be set together or not at all!";
           }) allExtensions
-          ++
-            lib.concatMap
-              (
-                d:
-                let
-                  stripped = lib.removeSuffix "/" d;
-                  unbracketed =
-                    if lib.hasPrefix "[" stripped && lib.hasSuffix "]" stripped then
-                      lib.removeSuffix "]" (lib.removePrefix "[" stripped)
-                    else
-                      stripped;
-                  isValidHostname =
-                    builtins.match "[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?" stripped != null
-                    && builtins.match ".*[a-zA-Z].*" stripped != null;
-                in
-                [
-                  {
-                    assertion =
-                      stripped == "localhost"
-                      || helpers.isValidIPv4 stripped
-                      || helpers.isValidIPv6 unbracketed
-                      || isValidHostname;
-                    message = "nx.common.browser.firefox userContent excluded domains: '${d}' is not a valid domain or IP address (no schemes, no regex chars, use plain hostnames or IPs)!";
-                  }
-                ]
-              )
-              (
-                userContentExcludedDomains ++ userContentCSSExcludedDomains ++ userContentDarkReaderExcludedDomains
-              )
+          ++ lib.concatMap (
+            d:
+            let
+              stripped = lib.removeSuffix "/" d;
+              unbracketed =
+                if lib.hasPrefix "[" stripped && lib.hasSuffix "]" stripped then
+                  lib.removeSuffix "]" (lib.removePrefix "[" stripped)
+                else
+                  stripped;
+              isValidHostname =
+                builtins.match "[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?" stripped != null
+                && builtins.match ".*[a-zA-Z].*" stripped != null;
+            in
+            [
+              {
+                assertion =
+                  stripped == "localhost"
+                  || helpers.isValidIPv4 stripped
+                  || helpers.isValidIPv6 unbracketed
+                  || isValidHostname;
+                message = "nx.common.browser.firefox userContent excluded domains: '${d}' is not a valid domain or IP address (no schemes, no regex chars, use plain hostnames or IPs)!";
+              }
+            ]
+          ) (userContentExcludedDomains ++ userContentDarkReaderExcludedDomains)
           ++ (
             let
-              overlap =
-                lib.intersectLists userContentExcludedDomains userContentCSSExcludedDomains
-                ++ lib.intersectLists userContentExcludedDomains userContentDarkReaderExcludedDomains
-                ++ lib.intersectLists userContentCSSExcludedDomains userContentDarkReaderExcludedDomains;
+              overlap = lib.intersectLists userContentExcludedDomains userContentDarkReaderExcludedDomains;
             in
             [
               {
@@ -1167,12 +1069,6 @@ in
             {
               assertion = userContentDarkReaderExcludedDomains == [ ] || darkMode;
               message = "nx.common.browser.firefox.userContentDarkReaderExcludedDomains requires darkMode to be enabled!";
-            }
-            {
-              assertion =
-                userContentCSSExcludedDomains == [ ]
-                || config.nx.common.browser.browser.final.userContentCSS != null;
-              message = "nx.common.browser.firefox.userContentCSSExcludedDomains requires userContent CSS to be configured!";
             }
           ];
 
@@ -1547,7 +1443,6 @@ in
         defaultDownloadsName,
         monospaceFont,
         userContentExcludedDomains,
-        userContentCSSExcludedDomains,
         ...
       }:
       let
@@ -1575,8 +1470,7 @@ in
                 cp "${
                   pkgs.writeText "browser-user-content.css" (mkUserContentCSS {
                     browserUserContent = userCSS;
-                    inherit monospaceFont;
-                    userContentExcludedDomains = userContentExcludedDomains ++ userContentCSSExcludedDomains;
+                    inherit userContentExcludedDomains;
                   })
                 }" "$css_dir/userContent.css"
                fi
