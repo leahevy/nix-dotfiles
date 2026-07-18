@@ -19,7 +19,8 @@ let
   postBootMarker = "${stateDir}/pending-post-boot-commit";
   logDir = "/var/log/aide";
   dedupStateFile = "${logDir}/last-failure-state";
-  lockFile = "${stateDir}/aide.lock";
+  lockDir = "/run/nx-aide";
+  lockFile = "${lockDir}/aide.lock";
   lockWaitSec = 600;
 
   acquireLock =
@@ -1236,6 +1237,11 @@ in
         };
 
         systemd.tmpfiles.settings."nx-aide" = {
+          "${lockDir}".d = {
+            mode = "0700";
+            user = "root";
+            group = "root";
+          };
           "${dbDir}".d = {
             mode = "0700";
             user = "root";
