@@ -1149,7 +1149,7 @@ in
             Persistent = true;
           }
           // lib.optionalAttrs isHeadless {
-            OnActiveSec = 120;
+            OnActiveSec = 1000;
           };
         };
 
