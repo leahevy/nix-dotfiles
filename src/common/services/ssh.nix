@@ -910,6 +910,12 @@ args@{
           ))
         ];
 
+        home.persistence."${self.persist}" = {
+          directories = [
+            ".ssh"
+          ];
+        };
+
         programs.ssh = {
           enable = true;
           enableDefaultConfig = false;

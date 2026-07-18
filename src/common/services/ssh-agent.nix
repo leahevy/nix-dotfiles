@@ -13,6 +13,10 @@ args@{
   group = "services";
   input = "common";
 
+  submodules = {
+    common.services.ssh = true;
+  };
+
   module = {
     enabled = config: {
       nx.packages.extra = [ pkgs.openssh ];
@@ -25,12 +29,6 @@ args@{
 
       home.sessionVariables = lib.mkIf self.isLinux {
         SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/ssh-agent";
-      };
-
-      home.persistence."${self.persist}" = {
-        directories = [
-          ".ssh"
-        ];
       };
     };
   };
