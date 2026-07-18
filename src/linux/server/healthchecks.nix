@@ -2145,6 +2145,7 @@ args@{
               fi
             }
             trap _hc_emergency_cleanup EXIT
+            trap '_hc_ping_sent=1; exit 143' TERM INT HUP
             export TMPDIR_HC
             REPORT_FILE="$TMPDIR_HC/report"
             DETAIL_FILE="$TMPDIR_HC/detail"
@@ -2202,6 +2203,7 @@ args@{
             set -euo pipefail
             TMPDIR_HC=$(${pkgs.coreutils}/bin/mktemp -d)
             trap "${pkgs.coreutils}/bin/rm -rf '$TMPDIR_HC'" EXIT
+            trap 'exit 143' TERM INT HUP
             REPORT_FILE="$TMPDIR_HC/report"
             FAILED=0
             ${curlWithRetry {
@@ -2435,6 +2437,7 @@ args@{
             set -euo pipefail
             TMPDIR_HC=$(${pkgs.coreutils}/bin/mktemp -d)
             trap "${pkgs.coreutils}/bin/rm -rf '$TMPDIR_HC'" EXIT
+            trap 'exit 143' TERM INT HUP
             REPORT_FILE="$TMPDIR_HC/report"
             DETAIL_FILE="$TMPDIR_HC/detail"
             FAILED=0
