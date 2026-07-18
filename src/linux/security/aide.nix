@@ -470,11 +470,13 @@ in
         "dialog-warning"
       ];
       nx.linux.monitoring.journal-watcher.highlightPatterns =
-        lib.mkIf (!config.nx.linux.security.aide.testingMode)
-          [
-            (failHighlightPattern "nx-aide-check.service" "AIDE Check Failed" "{reason}")
-            (failHighlightPattern "nx-aide-check-boot.service" "AIDE Boot Check" "{reason}")
-          ];
+        let
+          hcEnabled = config.nx.linux.server.healthchecks.enable;
+        in
+        lib.mkIf (!config.nx.linux.security.aide.testingMode && !hcEnabled) [
+          (failHighlightPattern "nx-aide-check.service" "AIDE Check Failed" "{reason}")
+          (failHighlightPattern "nx-aide-check-boot.service" "AIDE Boot Check" "{reason}")
+        ];
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
           tag = "systemd-inhibit";
