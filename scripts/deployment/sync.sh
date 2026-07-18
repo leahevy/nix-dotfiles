@@ -67,3 +67,5 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
 		fi
 	fi
 fi
+
+prompt_aide_commit

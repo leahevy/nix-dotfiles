@@ -163,6 +163,9 @@ get_nx_default() {
 	"deploymentMode")
 		echo "develop"
 		;;
+	"aideEnabled")
+		echo "false"
+		;;
 	"vmsDir")
 		echo "$HOME/.cache/nx/vms"
 		;;
@@ -200,6 +203,72 @@ expand_home_path() {
 		return 0
 	fi
 	echo "$p"
+}
+
+print_aide_commit_reminder() {
+	local aide_command="$1"
+	local timing="$2"
+	[[ "${NX_CONFIG_LOADED:-0}" != "1" ]] && load_nx_config
+	if [[ "${AIDE_ENABLED:-false}" == "true" ]]; then
+		echo
+		echo -e "${RED} > AIDE is enabled - ${timing} run ${GREEN}${aide_command}${RED} to update the integrity database${RESET}"
+	fi
+}
+
+prompt_aide_commit() {
+	[[ "${NX_CONFIG_LOADED:-0}" != "1" ]] && load_nx_config
+	if [[ "${AIDE_ENABLED:-false}" != "true" ]]; then
+		return 0
+	fi
+	if [[ ! -t 0 ]]; then
+		echo
+		echo -e "${RED} > AIDE is enabled - review the changes and run ${GREEN}aide-commit${RED} to update the integrity database${RESET}"
+		return 0
+	fi
+	echo
+	printf "%b" "${YELLOW}AIDE is enabled - run ${GREEN}aide-commit${YELLOW} now to update the integrity database? [Y/n] ${RESET}"
+	local answer=""
+	IFS= read -r answer || answer=""
+	case "$answer" in
+	n | N | no | NO | No)
+		echo -e "${RED} > Skipped - run ${GREEN}aide-commit${RED} later to update the integrity database${RESET}"
+		;;
+	*)
+		local rc=0
+		local output=""
+		output=$(sudo aide-commit 2>&1) || rc=$?
+		output=$(printf '%s\n' "$output" | awk '
+			{ lines[NR] = $0 }
+			/^The attributes of the \(uncompressed\) database\(s\):$/ { last = NR - 1; done = 1; exit }
+			END {
+				if (!done) last = NR
+				while (last > 0 && (lines[last] ~ /^-+$/ || lines[last] ~ /^[[:space:]]*$/)) last--
+				for (i = 1; i <= last; i++) print lines[i]
+			}
+		')
+		if [[ "$rc" -ge 1 && "$rc" -le 7 ]]; then
+			printf '%s\n' "$output"
+			echo
+			printf "%b" "${YELLOW}AIDE detected changes and did not update the database - review them above, then re-run with ${GREEN}aide-commit --force${YELLOW} to accept them? [Y/n] ${RESET}"
+			local force_answer=""
+			IFS= read -r force_answer || force_answer=""
+			case "$force_answer" in
+			n | N | no | NO | No)
+				echo -e "${RED} > Skipped - run ${GREEN}sudo aide-commit --force${RED} later to accept the changes${RESET}"
+				;;
+			*)
+				sudo aide-commit --force
+				;;
+			esac
+		elif [[ "$rc" -ne 0 ]]; then
+			printf '%s\n' "$output"
+			echo -e "${RED} > aide-commit failed with status ${rc}${RESET}"
+		else
+			echo
+			printf "%b" "${GREEN}AIDE database was updated!${RESET}"
+		fi
+		;;
+	esac
 }
 
 has_nx_command() {
@@ -1399,8 +1468,9 @@ load_nx_config() {
 	ENABLED_COMMANDS_JSON=$(echo "${config_json:-{\}}" | jq -c '.enabledCommands // []' 2>/dev/null || echo "[]")
 	NX_VMS_DIR="$(expand_home_path "$(get_config_value "vmsDir" "$config_json")")"
 	NX_CURRENT_RELEASE=$(get_config_value "currentRelease" "$config_json")
+	AIDE_ENABLED=$(get_config_value "aideEnabled" "$config_json")
 
-	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE ENABLED_COMMANDS_JSON NX_VMS_DIR NX_CURRENT_RELEASE
+	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE ENABLED_COMMANDS_JSON NX_VMS_DIR NX_CURRENT_RELEASE AIDE_ENABLED
 }
 
 check_brew_activity() {
