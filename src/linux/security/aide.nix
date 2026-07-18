@@ -124,6 +124,7 @@ let
         echo "AIDE database missing, initializing baseline"
         ${aideBin} --init --config ${confPath} || true
         if [ -f ${dbDir}/aide.db.new ]; then
+          ${pkgs.coreutils}/bin/mkdir -p -m 0700 ${dbDir}/active
           ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
           echo "AIDE database initialized at ${dbDir}/active/aide.db"
           exit "$link_status"
@@ -185,6 +186,7 @@ let
         fi
       fi
       ${aideBin} --init --config ${confPath}
+      ${pkgs.coreutils}/bin/mkdir -p -m 0700 ${dbDir}/active
       ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
       echo "AIDE database initialized at ${dbDir}/active/aide.db"
       ${lib.optionalString hcEnabled ''
@@ -248,6 +250,7 @@ let
             echo "AIDE database initialization failed!" >&2
             exit 1
           fi
+          ${pkgs.coreutils}/bin/mkdir -p -m 0700 ${dbDir}/active
           ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
           echo "AIDE database initialized at ${dbDir}/active/aide.db"
           ${lib.optionalString hcEnabled ''
@@ -275,6 +278,7 @@ let
           echo "AIDE detected changes, database not updated. Review the changes above, then run aide-commit --force to accept them!" >&2
           exit "$status"
         fi
+        ${pkgs.coreutils}/bin/mkdir -p -m 0700 ${dbDir}/active
         ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
         echo "AIDE database updated at ${dbDir}/active/aide.db"
         ${lib.optionalString hcEnabled ''
