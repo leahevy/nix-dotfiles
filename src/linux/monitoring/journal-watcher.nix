@@ -158,6 +158,16 @@ args@{
               default = null;
               description = "Optional regex with named groups run against the matched message to fill {name} placeholders in the mapping message, falling back to the raw message when it does not match.";
             };
+            hasPriority = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Whether this highlight overrides a matching ignore pattern. Set false to let an explicit ignore pattern suppress this highlight.";
+            };
+            replacements = lib.mkOption {
+              type = lib.types.attrsOf (lib.types.attrsOf lib.types.str);
+              default = { };
+              description = "Per extracted group literal value replacements applied before the message template is filled.";
+            };
           };
         };
     in

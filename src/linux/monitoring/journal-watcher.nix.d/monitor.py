@@ -26,6 +26,8 @@ class PatternMatch:
     pattern_id: Optional[str] = None
     ignore_rate_limiting: bool = False
     extract: Optional[re.Pattern] = None
+    has_priority: bool = True
+    replacements: Optional[Dict[str, Any]] = None
 
 
 STATS_INTERVAL = 10 * 60
@@ -382,6 +384,16 @@ class PatternMatcher:
                             mapping=e.get("mapping"),
                             pattern_id=pattern_hash,
                             extract=extract_re,
+                            has_priority=(
+                                pattern.get("hasPriority", True)
+                                if pattern is not None
+                                else True
+                            ),
+                            replacements=(
+                                pattern.get("replacements")
+                                if pattern is not None
+                                else None
+                            ),
                         )
                     )
                 string_re = re.compile("|".join(parts))
@@ -412,6 +424,8 @@ class PatternMatcher:
         if pat.get("pattern_type") == "highlight":
             compiled["pattern_hash"] = compute_pattern_hash(pat)
             compiled["ignore_rate_limiting"] = pat.get("ignoreRateLimiting", False)
+            compiled["has_priority"] = pat.get("hasPriority", True)
+            compiled["replacements"] = pat.get("replacements")
             if pat.get("extract"):
                 compiled["extract"] = re.compile(pat["extract"])
         if pat.get("service"):
@@ -558,6 +572,8 @@ class PatternMatcher:
                     pattern_id=pat.get("pattern_hash"),
                     ignore_rate_limiting=pat.get("ignore_rate_limiting", False),
                     extract=pat.get("extract"),
+                    has_priority=pat.get("has_priority", True),
+                    replacements=pat.get("replacements"),
                 )
 
         return None
@@ -833,7 +849,11 @@ def filter_message(
     highlighted = highlight_info is not None
 
     if highlighted:
-        ignored = False
+        if highlight_info.has_priority or not ignored:
+            ignored = False
+        else:
+            highlighted = False
+            highlight_info = None
 
     if not ignored and priority > 4 and not highlighted:
         ignored = True
@@ -867,6 +887,7 @@ def resolve_mapped_message(
     mapping_message: Optional[str],
     extract_re: Optional[re.Pattern],
     message: str,
+    replacements: Optional[Dict[str, Any]] = None,
 ) -> Optional[str]:
     if mapping_message is None:
         return None
@@ -875,6 +896,10 @@ def resolve_mapped_message(
         if not ex:
             return None
         groups = {k: v if v is not None else "" for k, v in ex.groupdict().items()}
+        if replacements:
+            for group_name, table in replacements.items():
+                if group_name in groups and groups[group_name] in table:
+                    groups[group_name] = table[groups[group_name]]
         try:
             return mapping_message.format(**groups)
         except (KeyError, IndexError, ValueError):
@@ -921,6 +946,7 @@ def process_message(
             effective_mapping.get("message"),
             highlight_info.extract if highlight_info else None,
             message,
+            highlight_info.replacements if highlight_info else None,
         )
         dedup_message = mapped_message if mapped_message is not None else message
 
