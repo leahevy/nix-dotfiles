@@ -14,6 +14,11 @@ args@{
 
   rawOptions = {
     nx.global = {
+      aideEnabled = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether AIDE integrity checking is enabled on this machine";
+      };
       vmsDir = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
@@ -106,12 +111,7 @@ args@{
     };
 
     system = config: {
-      environment.etc."nx/config.json" = {
-        text = builtins.toJSON config.nx.global;
-        mode = "0444";
-        user = "root";
-        group = "root";
-      };
+      environment.etc."nx/config.json".text = builtins.toJSON config.nx.global;
     };
   };
 }
