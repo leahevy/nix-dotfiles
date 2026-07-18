@@ -2148,6 +2148,7 @@ args@{
             export TMPDIR_HC
             REPORT_FILE="$TMPDIR_HC/report"
             DETAIL_FILE="$TMPDIR_HC/detail"
+            : > "$DETAIL_FILE"
             FAILED=0
             TOTAL=0
             SILENT=0
