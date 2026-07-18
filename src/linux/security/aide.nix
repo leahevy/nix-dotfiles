@@ -289,9 +289,14 @@ let
           echo "AIDE detected changes, database not updated. Review the changes above, then run aide-commit --force to accept them!" >&2
           exit "$status"
         fi
-        ${pkgs.coreutils}/bin/mkdir -p -m 0700 ${dbDir}/active
-        ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
-        echo "AIDE database updated at ${dbDir}/active/aide.db"
+        if [ "$status" = "0" ]; then
+          ${pkgs.coreutils}/bin/rm -f ${dbDir}/aide.db.new
+          echo "AIDE found no differences, database left unchanged"
+        else
+          ${pkgs.coreutils}/bin/mkdir -p -m 0700 ${dbDir}/active
+          ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
+          echo "AIDE database updated at ${dbDir}/active/aide.db"
+        fi
         ${lib.optionalString hcEnabled ''
           ${pkgs.systemd}/bin/systemctl start --no-block ${oneshotUnit}
           echo "Success ping check started in the background"
