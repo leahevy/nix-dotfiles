@@ -19,6 +19,21 @@ let
   postBootMarker = "${stateDir}/pending-post-boot-commit";
   logDir = "/var/log/aide";
   dedupStateFile = "${logDir}/last-failure-state";
+  lockFile = "${stateDir}/aide.lock";
+  lockWaitSec = 600;
+
+  acquireLock =
+    {
+      failMessage,
+      exitCode ? 1,
+    }:
+    ''
+      exec {aide_lock_fd}>${lockFile}
+      if ! ${pkgs.util-linux}/bin/flock -w ${toString lockWaitSec} "$aide_lock_fd"; then
+        ${failMessage}
+        exit ${toString exitCode}
+      fi
+    '';
 
   resolvePath = path: if lib.hasPrefix "/" path then path else "${self.user.home}/${path}";
 
@@ -84,6 +99,10 @@ let
     { dbDir }:
     pkgs.writeShellScript "nx-aide-check-core" ''
       set -uo pipefail
+      ${acquireLock {
+        failMessage = ''echo "AIDE integrity check FAILED: Could not acquire AIDE lock for check within ${toString lockWaitSec} seconds"'';
+        exitCode = 9;
+      }}
       dedup="''${NX_AIDE_DEDUP:-0}"
       tmpdir=$(${pkgs.coreutils}/bin/mktemp -d)
       trap '${pkgs.coreutils}/bin/rm -rf "$tmpdir"' EXIT
@@ -196,6 +215,9 @@ let
           exit 1
         fi
       fi
+      ${acquireLock {
+        failMessage = ''echo "AIDE integrity check FAILED: Could not acquire AIDE lock for init within ${toString lockWaitSec} seconds" >&2'';
+      }}
       ${aideBin} --init --config ${confPath}
       ${pkgs.coreutils}/bin/mkdir -p -m 0700 ${dbDir}/active
       ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
@@ -239,6 +261,9 @@ let
       + "exec ${pkgs.systemd}/bin/systemd-inhibit --who=\"aide-commit\" --what=\"idle:sleep:shutdown\" --why=\"AIDE database update in progress\" "
       + pkgs.writeShellScript "aide-commit-main" ''
         set -euo pipefail
+        ${acquireLock {
+          failMessage = ''echo "AIDE integrity check FAILED: Could not acquire AIDE lock for commit within ${toString lockWaitSec} seconds" >&2'';
+        }}
         force=0
         if [ "''${1:-}" = "--force" ]; then
           force=1
