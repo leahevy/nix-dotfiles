@@ -64,9 +64,9 @@ fi
 
 if [[ "${SHOW_DERIVATION:-false}" == "true" ]]; then
 	if [[ "$context" == "nixos" ]]; then
-		timeout "${TIMEOUT}s" nix derivation show ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]:-}" | jq
+		timeout "${TIMEOUT}s" nix derivation show ".#nixosConfigurations.$PROFILE.config.system.build.toplevel" "${EXTRA_ARGS[@]}" | jq
 	else
-		GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nix derivation show ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]:-}" | jq
+		GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nix derivation show ".#homeConfigurations.$PROFILE.activationPackage" "${EXTRA_ARGS[@]}" | jq
 	fi
 	exit 0
 fi
@@ -85,11 +85,11 @@ _retry_attempt=0
 _build_ok=false
 while true; do
 	if [[ "$context" == "nixos" ]]; then
-		if timeout "${TIMEOUT}s" nh os build -H "$PROFILE" "${nh_common_args[@]:-}" "${log_format_args[@]:-}" -- "${EXTRA_ARGS[@]:-}"; then
+		if timeout "${TIMEOUT}s" nh os build -H "$PROFILE" "${nh_common_args[@]}" "${log_format_args[@]}" . -- "${EXTRA_ARGS[@]}"; then
 			_build_ok=true
 		fi
 	else
-		if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nh home build -c "$PROFILE" "${nh_common_args[@]:-}" "${log_format_args[@]:-}" -- "${EXTRA_ARGS[@]:-}"; then
+		if GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null timeout "${TIMEOUT}s" nh home build -c "$PROFILE" "${nh_common_args[@]}" "${log_format_args[@]}" . -- "${EXTRA_ARGS[@]}"; then
 			_build_ok=true
 		fi
 	fi
