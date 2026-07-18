@@ -258,7 +258,7 @@ let
             ${pkgs.coreutils}/bin/chmod 0640 "$logfile" 2>/dev/null || true
           fi
           if [ ! -f ${dbDir}/aide.db.new ]; then
-            echo "AIDE database initialization failed!" >&2
+            echo "AIDE integrity check FAILED: Database initialization failed" >&2
             exit 1
           fi
           ${pkgs.coreutils}/bin/mkdir -p -m 0700 ${dbDir}/active
@@ -277,16 +277,16 @@ let
           ${pkgs.coreutils}/bin/chmod 0640 "$logfile" 2>/dev/null || true
         fi
         if [ "$status" -gt 7 ]; then
-          echo "AIDE update failed with status $status!" >&2
+          echo "AIDE integrity check FAILED: Update failed with status $status" >&2
           exit "$status"
         fi
         if [ ! -f ${dbDir}/aide.db.new ]; then
-          echo "AIDE update did not produce ${dbDir}/aide.db.new!" >&2
+          echo "AIDE integrity check FAILED: Update did not produce a new database" >&2
           exit 1
         fi
         if [ "$force" != "1" ] && [ "$status" != "0" ]; then
           ${pkgs.coreutils}/bin/rm -f ${dbDir}/aide.db.new
-          echo "AIDE detected changes, database not updated. Review the changes above, then run aide-commit --force to accept them!" >&2
+          echo "AIDE integrity check FAILED: Changes detected, database not updated, run aide-commit --force to accept them" >&2
           exit "$status"
         fi
         if [ "$status" = "0" ]; then
@@ -479,6 +479,9 @@ in
         )
         ++ lib.optional (!testingMode) (
           failHighlightPattern "nx-aide-check-boot.service" "AIDE Boot Check" "{reason}"
+        )
+        ++ lib.optional (!testingMode) (
+          failHighlightPattern "nx-aide-post-boot-commit.service" "AIDE Post-Boot Commit Failed" "{reason}"
         );
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
