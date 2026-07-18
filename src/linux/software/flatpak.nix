@@ -24,6 +24,15 @@ args@{
   module = {
     enabled = config: {
       nx.lib.icons = [ "system-software-install" ];
+
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          string = "libostree HTTP error from remote flathub for <https://dl\\.flathub\\.org/repo/objects/[0-9a-f]+/[0-9a-f]+\\.filez>: Timeout was reached";
+          tag = "flatpak";
+          user = true;
+          unitless = true;
+        }
+      ];
     };
 
     ifEnabled.linux.desktop.niri.enabled = config: {
