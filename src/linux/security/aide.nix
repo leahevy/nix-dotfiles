@@ -834,6 +834,7 @@ in
           "/root/.bash_history"
           "/root/.zsh_history"
           "/root/.nix-defexpr"
+          "/root/.config/procps"
         ];
 
         rootEntrySelections = [
