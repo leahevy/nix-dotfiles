@@ -39,6 +39,10 @@ args@{
       nx.packages.extra = [ pkgs.postgresql ];
     };
 
+    ifEnabled.linux.security.aide.enabled = config: {
+      nx.linux.security.aide.directoryChecks = [ config.services.postgresql.dataDir ];
+    };
+
     linux.home = config: {
       home.shellAliases.psql = "sudo -u postgres psql";
     };

@@ -169,6 +169,7 @@ in
     ifEnabled.linux.security.aide = {
       enabled = config: {
         nx.linux.security.aide.fileChecks = [ "/var/lib/oauth2-proxy/cookie-secret" ];
+        nx.linux.security.aide.directoryChecks = [ "/var/lib/oauth2-proxy" ];
       };
     };
 

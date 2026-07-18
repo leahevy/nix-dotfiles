@@ -80,6 +80,10 @@ args@{
         nx.linux.security.aide.skipPaths = map (
           share: if share.path != null then share.path else "/var/lib/samba-shared/${share.name}"
         ) config.nx.linux.server.samba.shares;
+        nx.linux.security.aide.directoryChecks = [
+          "/var/lib/samba"
+          "/var/lib/samba-shared"
+        ];
       };
     };
 

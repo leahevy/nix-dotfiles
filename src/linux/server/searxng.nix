@@ -104,6 +104,7 @@ args@{
     ifEnabled.linux.security.aide = {
       enabled = config: {
         nx.linux.security.aide.fileChecks = [ "/var/lib/searx/secret_key" ];
+        nx.linux.security.aide.directoryChecks = [ "/var/lib/searx" ];
       };
     };
 

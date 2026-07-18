@@ -286,6 +286,12 @@ args@{
           nx.packages.extra = [ pkgs.openldap ];
         };
 
+      ifEnabled.linux.security.aide.enabled = config: {
+        nx.linux.security.aide.directoryChecks = map (
+          u: "${config.nx.linux.server.ldap.homeBase}/${u.username}"
+        ) config.nx.linux.server.ldap.users;
+      };
+
       linux.system =
         {
           config,

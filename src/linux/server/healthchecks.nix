@@ -661,6 +661,10 @@ args@{
       nx.linux.server.healthchecks.checkCertExpiry = lib.mkDefault true;
     };
 
+    ifEnabled.linux.security.aide.enabled = config: {
+      nx.linux.security.aide.directoryChecks = [ "/var/lib/nx-healthchecks" ];
+    };
+
     ifEnabled.linux.server.dashboard.enabled =
       config:
       let

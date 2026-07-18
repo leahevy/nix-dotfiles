@@ -96,6 +96,7 @@ in
     ifEnabled.linux.security.aide = {
       enabled = config: {
         nx.linux.security.aide.fileChecks = [ "/var/lib/pocket-id/encryption-key" ];
+        nx.linux.security.aide.directoryChecks = [ "/var/lib/pocket-id" ];
       };
     };
 
