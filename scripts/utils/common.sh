@@ -218,15 +218,59 @@ print_aide_commit_reminder() {
 	fi
 }
 
+prompt_aide_pre_boot_check() {
+	[[ "${NX_CONFIG_LOADED:-0}" != "1" ]] && load_nx_config
+	if [[ "${AIDE_ENABLED:-false}" != "true" ]] || [[ ! -t 0 ]]; then
+		return 0
+	fi
+	echo
+	printf "%b" "${YELLOW}Run AIDE check first? [Y/n] ${RESET}"
+	local answer=""
+	IFS= read -r answer || answer=""
+	case "$answer" in
+	n | N | no | NO | No)
+		return 0
+		;;
+	esac
+	local rc=0
+	sudo aide-check || rc=$?
+	if [[ "$rc" -eq 0 ]]; then
+		echo -e "${GREEN} > Clean${RESET}"
+		return 0
+	fi
+	echo
+	printf "%b" "${RED}AIDE check failed - continue anyway? [y/N] ${RESET}"
+	local cont=""
+	IFS= read -r cont || cont=""
+	case "$cont" in
+	y | Y | yes | YES | Yes) ;;
+	*)
+		echo -e "${RED} > Aborted${RESET}"
+		exit 1
+		;;
+	esac
+}
+
 mark_aide_post_boot_commit() {
 	[[ "${NX_CONFIG_LOADED:-0}" != "1" ]] && load_nx_config
-	if [[ -n "${AIDE_POST_BOOT_MARKER:-}" ]]; then
-		sudo touch "$AIDE_POST_BOOT_MARKER"
-		echo
-		echo -e "${GREEN} > AIDE is enabled - the integrity database will be updated automatically once the system has fully rebooted${RESET}"
-	else
+	if [[ -z "${AIDE_POST_BOOT_MARKER:-}" ]]; then
 		print_aide_commit_reminder "aide-commit --force" "after the reboot"
+		return 0
 	fi
+	if [[ -t 0 ]]; then
+		echo
+		printf "%b" "${YELLOW}Mark for auto-commit after reboot? [Y/n] ${RESET}"
+		local answer=""
+		IFS= read -r answer || answer=""
+		case "$answer" in
+		n | N | no | NO | No)
+			echo -e "${RED} > Skipped${RESET}"
+			return 0
+			;;
+		esac
+	fi
+	sudo touch "$AIDE_POST_BOOT_MARKER"
+	echo -e "${GREEN} > Marked${RESET}"
 }
 
 prompt_aide_commit() {

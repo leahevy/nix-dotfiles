@@ -12,6 +12,8 @@ check_git_worktrees_clean
 verify_commits
 check_deployment_conflicts "boot"
 
+prompt_aide_pre_boot_check
+
 PROFILE="$(retrieve_active_profile)"
 
 if nh os boot --show-activation-logs -H "$PROFILE" . -- "${EXTRA_ARGS[@]:-}"; then
