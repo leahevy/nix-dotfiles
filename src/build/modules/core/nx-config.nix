@@ -19,6 +19,11 @@ args@{
         default = false;
         description = "Whether AIDE integrity checking is enabled on this machine";
       };
+      aidePostBootMarker = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Path to the AIDE post-boot commit marker file, null when AIDE post-boot commit is not available";
+      };
       vmsDir = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;

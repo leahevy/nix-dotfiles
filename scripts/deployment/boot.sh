@@ -21,4 +21,4 @@ else
 	exit 1
 fi
 
-print_aide_commit_reminder "aide-commit --force" "after the reboot"
+mark_aide_post_boot_commit

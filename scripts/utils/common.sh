@@ -166,6 +166,9 @@ get_nx_default() {
 	"aideEnabled")
 		echo "false"
 		;;
+	"aidePostBootMarker")
+		echo ""
+		;;
 	"vmsDir")
 		echo "$HOME/.cache/nx/vms"
 		;;
@@ -212,6 +215,17 @@ print_aide_commit_reminder() {
 	if [[ "${AIDE_ENABLED:-false}" == "true" ]]; then
 		echo
 		echo -e "${RED} > AIDE is enabled - ${timing} run ${GREEN}${aide_command}${RED} to update the integrity database${RESET}"
+	fi
+}
+
+mark_aide_post_boot_commit() {
+	[[ "${NX_CONFIG_LOADED:-0}" != "1" ]] && load_nx_config
+	if [[ -n "${AIDE_POST_BOOT_MARKER:-}" ]]; then
+		sudo touch "$AIDE_POST_BOOT_MARKER"
+		echo
+		echo -e "${GREEN} > AIDE is enabled - the integrity database will be updated automatically once the system has fully rebooted${RESET}"
+	else
+		print_aide_commit_reminder "aide-commit --force" "after the reboot"
 	fi
 }
 
@@ -1469,8 +1483,9 @@ load_nx_config() {
 	NX_VMS_DIR="$(expand_home_path "$(get_config_value "vmsDir" "$config_json")")"
 	NX_CURRENT_RELEASE=$(get_config_value "currentRelease" "$config_json")
 	AIDE_ENABLED=$(get_config_value "aideEnabled" "$config_json")
+	AIDE_POST_BOOT_MARKER=$(get_config_value "aidePostBootMarker" "$config_json")
 
-	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE ENABLED_COMMANDS_JSON NX_VMS_DIR NX_CURRENT_RELEASE AIDE_ENABLED
+	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE ENABLED_COMMANDS_JSON NX_VMS_DIR NX_CURRENT_RELEASE AIDE_ENABLED AIDE_POST_BOOT_MARKER
 }
 
 check_brew_activity() {

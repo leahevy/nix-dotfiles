@@ -489,6 +489,8 @@ in
   module = {
     enabled = config: {
       nx.global.aideEnabled = true;
+      nx.global.aidePostBootMarker =
+        if !config.nx.linux.security.aide.testingMode then postBootMarker else null;
       nx.lib.icons = [
         "checkmark"
         "dialog-error"
@@ -1177,7 +1179,7 @@ in
             Persistent = true;
           }
           // lib.optionalAttrs isHeadless {
-            OnActiveSec = 1000;
+            OnActiveSec = 120;
           };
         };
 
@@ -1207,26 +1209,22 @@ in
           };
         };
 
-        systemd.services.nx-aide-post-boot-commit =
-          lib.mkIf (!testingMode && config.nx.linux.system.auto-upgrades.enable)
-            {
-              description = "AIDE database commit after an upgrade reboot";
-              serviceConfig = {
-                Type = "oneshot";
-                TimeoutStartSec = checkTimeoutSec;
-                ExecStart = mkPostBootCommitScript commitBin;
-              };
-            };
+        systemd.services.nx-aide-post-boot-commit = lib.mkIf (!testingMode) {
+          description = "AIDE database commit after a pending reboot";
+          serviceConfig = {
+            Type = "oneshot";
+            TimeoutStartSec = checkTimeoutSec;
+            ExecStart = mkPostBootCommitScript commitBin;
+          };
+        };
 
-        systemd.timers.nx-aide-post-boot-commit =
-          lib.mkIf (!testingMode && config.nx.linux.system.auto-upgrades.enable)
-            {
-              description = "AIDE database commit timer after an upgrade reboot";
-              wantedBy = [ "timers.target" ];
-              timerConfig = {
-                OnActiveSec = 600;
-              };
-            };
+        systemd.timers.nx-aide-post-boot-commit = lib.mkIf (!testingMode) {
+          description = "AIDE database commit timer after a pending reboot";
+          wantedBy = [ "timers.target" ];
+          timerConfig = {
+            OnActiveSec = 90;
+          };
+        };
 
         systemd.tmpfiles.settings."nx-aide" = {
           "${dbDir}".d = {
