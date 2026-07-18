@@ -28,6 +28,12 @@ args@{
       ];
     };
 
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.directoryWatches = [ "/var/lib/bluetooth" ];
+      };
+    };
+
     linux.system = config: {
       hardware.bluetooth = {
         enable = true;

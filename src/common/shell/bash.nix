@@ -14,6 +14,12 @@ args@{
   input = "common";
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.excludePaths = [ ".bash_history" ];
+      };
+    };
+
     home = config: {
       programs = {
         nix-index.enableBashIntegration = true;

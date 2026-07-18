@@ -14,6 +14,12 @@ args@{
   input = "common";
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.excludePaths = [ ".zsh_history" ];
+      };
+    };
+
     home = config: {
       programs = {
         nix-index.enableZshIntegration = true;

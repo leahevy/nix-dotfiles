@@ -62,5 +62,14 @@ args@{
         nx.linux.server.healthchecks.requireServicesUp = [ "docker.service" ];
       };
     };
+
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.skipPaths = [
+          "/opt/containerd"
+          self.settings.dataPath
+        ];
+      };
+    };
   };
 }

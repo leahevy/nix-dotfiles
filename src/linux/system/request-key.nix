@@ -31,5 +31,11 @@ args@{
           argument = "${pkgs.keyutils}/bin/request-key";
         };
       };
+
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.linkTargets."/sbin/request-key" = "";
+      };
+    };
   };
 }

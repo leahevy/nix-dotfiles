@@ -290,6 +290,12 @@ in
         };
     };
 
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.skipPaths = [ config.nx.linux.server.syncthing.dataDir ];
+      };
+    };
+
     ifEnabled.linux.server.dashboard = {
       enabled =
         config:

@@ -13,6 +13,14 @@ args@{
   input = "build";
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.fileChecks = lib.optional (
+          self ? host && self.host.settings.networking.useNetworkManager && !self.host.impermanence
+        ) "/var/lib/NetworkManager/secret_key";
+      };
+    };
+
     system =
       config:
       let

@@ -93,6 +93,12 @@ in
   };
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.fileChecks = [ "/var/lib/pocket-id/encryption-key" ];
+      };
+    };
+
     overlays = [
       (final: prev: {
         pocket-id = prev.pocket-id.overrideAttrs (old: {

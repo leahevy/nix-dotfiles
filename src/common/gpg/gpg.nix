@@ -53,6 +53,17 @@ in
   };
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.linkTargets = {
+          ".gnupg/common.conf" = "";
+          ".gnupg/gpg.conf" = "";
+          ".gnupg/gpg-agent.conf" = "";
+          ".gnupg/scdaemon.conf" = "";
+        };
+      };
+    };
+
     home = config: {
       services = {
         gpg-agent = {

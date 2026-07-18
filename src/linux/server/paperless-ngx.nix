@@ -103,6 +103,14 @@ args@{
   };
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.skipPaths = [
+          config.nx.linux.server.paperless-ngx.paperlessDataBasePath
+        ];
+      };
+    };
+
     linux.system =
       {
         config,

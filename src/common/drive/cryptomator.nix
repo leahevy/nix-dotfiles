@@ -18,6 +18,14 @@ args@{
   };
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.skipPaths = lib.mapAttrsToList (
+          _name: vault: vault.mountPath
+        ) self.settings.vaults;
+      };
+    };
+
     home =
       config:
       let

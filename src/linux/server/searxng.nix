@@ -101,6 +101,12 @@ args@{
   };
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.fileChecks = [ "/var/lib/searx/secret_key" ];
+      };
+    };
+
     enabled = config: {
       nx.packages.extra = [ pkgs.searxng ];
     };

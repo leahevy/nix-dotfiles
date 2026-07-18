@@ -89,6 +89,12 @@ args@{
         ];
       };
 
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.skipPaths = [ "/root/.config/borg" ];
+      };
+    };
+
     home =
       config:
       let

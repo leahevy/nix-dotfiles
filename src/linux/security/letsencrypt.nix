@@ -23,6 +23,13 @@ args@{
   };
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.directoryChecks = [ "/var/lib/acme" ];
+        nx.linux.security.aide.directoryChecksRegex = [ "/var/lib/acme/[^/]+" ];
+      };
+    };
+
     system =
       config:
       let

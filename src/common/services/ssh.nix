@@ -72,6 +72,15 @@ args@{
       nx.packages.extra = [ pkgs.openssh ];
     };
 
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.linkTargets.".ssh/config" = "";
+        nx.linux.security.aide.fileChecks = [
+          ".ssh/${config.nx.common.services.ssh.defaultKnownHostsName}"
+        ];
+      };
+    };
+
     home =
       {
         config,

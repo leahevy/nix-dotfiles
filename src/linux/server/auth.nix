@@ -166,6 +166,12 @@ in
   };
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.fileChecks = [ "/var/lib/oauth2-proxy/cookie-secret" ];
+      };
+    };
+
     hotfixes."25.11" = [
       (final: prev: {
         oauth2-proxy = final.buildGoModule rec {

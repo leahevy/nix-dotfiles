@@ -42,6 +42,17 @@ args@{
       };
     };
 
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.excludePaths = [
+          ".local/share/fish/fish_history"
+          ".config/fish/fish_variables"
+          "/root/.local/share/fish/fish_history"
+          "/root/.config/fish/fish_variables"
+        ];
+      };
+    };
+
     home = config: {
       home.packages =
         with pkgs;

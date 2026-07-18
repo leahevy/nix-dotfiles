@@ -13,6 +13,15 @@ args@{
   input = "build";
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled = config: {
+        nx.linux.security.aide.fileChecks = [
+          "/etc/sops/age/keys.txt"
+          ".config/sops/age/keys.txt"
+        ];
+      };
+    };
+
     home = config: {
       sops = {
         defaultSopsFile =

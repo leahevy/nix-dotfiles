@@ -50,6 +50,17 @@ args@{
   ];
 
   module = {
+    ifEnabled.linux.security.aide = {
+      enabled =
+        config:
+        lib.mkIf (self ? host) {
+          nx.linux.security.aide.skipPaths = [
+            "${self.settings.mountpoint}/${self.host.hostname}${self.host.mainUser.home}"
+          ];
+          nx.linux.security.aide.contentDirectoryWatches = [ self.settings.mountpoint ];
+        };
+    };
+
     linux.home = config: {
       systemd.user.services.nx-luks-data-drive-ready = {
         Unit = {
