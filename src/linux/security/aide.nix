@@ -73,6 +73,14 @@ let
     fi
   '';
 
+  clearStaleMarker = ''
+    ${markerOlderThanBoot}
+    if [ "$marker_pending" = "1" ]; then
+      ${pkgs.coreutils}/bin/rm -f ${postBootMarker}
+      echo "Stale AIDE post-boot marker cleared"
+    fi
+  '';
+
   fstatFilterScript = pkgs.writeShellScript "nx-aide-fstat-filter" ''
     set -uo pipefail
     _src="$1"
@@ -292,6 +300,7 @@ let
           ${lib.optionalString hcEnabled ''
             ${pkgs.systemd}/bin/systemctl start --no-block ${oneshotUnit}
           ''}
+          ${clearStaleMarker}
           exit 0
         fi
         status=0
@@ -322,6 +331,7 @@ let
           ${pkgs.coreutils}/bin/mv ${dbDir}/aide.db.new ${dbDir}/active/aide.db
           echo "AIDE database updated at ${dbDir}/active/aide.db"
         fi
+        ${clearStaleMarker}
         ${lib.optionalString hcEnabled ''
           ${pkgs.systemd}/bin/systemctl start --no-block ${oneshotUnit}
           echo "Success ping check started in the background"
@@ -339,7 +349,6 @@ let
         exit 0
       fi
       ${commitBin}/bin/aide-commit --force
-      ${pkgs.coreutils}/bin/rm -f ${postBootMarker}
     '';
 in
 {
