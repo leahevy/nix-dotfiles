@@ -57,22 +57,22 @@ in
     fileWatches = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Audit file watches injected by other modules.";
+      description = "Audit -w watches for individual files injected by other modules.";
     };
     dirWatches = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Audit directory attribute watches injected by other modules.";
+      description = "Attribute-only watches on a single directory inode matching chmod and chown without recursion.";
     };
     dirContentWatches = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Audit directory content watches injected by other modules.";
+      description = "Audit -w watches on a directory that recurse into its whole subtree.";
     };
     treeWatches = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Recursive audit tree watches injected by other modules.";
+      description = "Recursive -F dir= subtree watches, the modern audit form preferred over the legacy -w watches.";
     };
     excludeMessageTypes = lib.mkOption {
       type = lib.types.listOf lib.types.str;
