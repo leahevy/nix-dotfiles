@@ -1320,7 +1320,8 @@ args@{
           _hc_snap_start=$(${pkgs.coreutils}/bin/date +%s)
           ${pkgs.gawk}/bin/awk '$3 !~ /^loop|^dm-|^ram/ {rs+=$6; ws+=$10} END{print rs, ws}' /proc/diskstats > "$TMPDIR_HC/diskstats-before" 2>/dev/null || true
           ${pkgs.gawk}/bin/awk 'NR>2 && $1 != "lo:" {rx+=$2; tx+=$10} END{print rx, tx}' /proc/net/dev > "$TMPDIR_HC/netdev-before" 2>/dev/null || true
-          ${pkgs.procps}/bin/top -c -w 512 -bn2 -d10 2>/dev/null \
+          ${pkgs.coreutils}/bin/mkdir -p "$TMPDIR_HC/home"
+          HOME="$TMPDIR_HC/home" XDG_CONFIG_HOME="$TMPDIR_HC/home" ${pkgs.procps}/bin/top -c -w 512 -bn2 -d10 2>/dev/null \
             | ${pkgs.gawk}/bin/awk -v cpu_out="$TMPDIR_HC/top-cpu-summary" '
                 /^top/{b++; next}
                 b<2{next}
