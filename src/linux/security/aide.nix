@@ -1142,6 +1142,9 @@ in
             OnCalendar = effectiveSchedule;
             RandomizedDelaySec = randomDelaySec;
             Persistent = true;
+          }
+          // lib.optionalAttrs isHeadless {
+            OnActiveSec = 120;
           };
         };
 
