@@ -91,7 +91,11 @@ args@{
 
     ifEnabled.linux.security.aide = {
       enabled = config: {
-        nx.linux.security.aide.skipPaths = [ "/root/.config/borg" ];
+        nx.linux.security.aide.skipPaths = [
+          "/root/.config/borg"
+          (self.persistPath ".snapshots")
+        ]
+        ++ lib.optional self.settings.withData "${self.settings.dataPath}/.snapshots";
       };
     };
 
