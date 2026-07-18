@@ -320,7 +320,7 @@ in
     };
     serverSchedule = lib.mkOption {
       type = lib.types.str;
-      default = "*-*-* 03:30:00";
+      default = "*-*-* *:00:00";
       description = "OnCalendar schedule for server and managed deployment modes.";
     };
     desktopSchedule = lib.mkOption {
