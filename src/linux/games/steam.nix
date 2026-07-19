@@ -66,6 +66,7 @@ args@{
           };
           apply = {
             workspace = "scratch";
+            float = false;
           };
         }
       ];
