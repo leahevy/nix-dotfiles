@@ -538,7 +538,7 @@ in
       nx.linux.security.auditd.dirContentWatches.aide_db =
         "!${config.nx.linux.security.aide.dbDir}/active";
       nx.linux.security.auditd.dirContentWatches.aide_state = stateDir;
-      nx.linux.security.auditd.dirContentWatches.aide_config = "!${builtins.dirOf confPath}";
+      nx.linux.security.auditd.dirContentWatches.aide_config = "${builtins.dirOf confPath}";
     };
 
     ifEnabled.linux.server.healthchecks.enabled =
