@@ -760,7 +760,7 @@ args@{
                   )
 
 
-              def apply_rule(rule, wid, app_id, title):
+              def apply_rule(rule, wid, app_id, title, is_floating):
                   a = rule["apply"]
                   m = rule["match"]
                   log.info(
@@ -773,6 +773,11 @@ args@{
                       niri_action(
                           app_id, title,
                           "move-window-to-floating", "--id", wid_s,
+                      )
+                  elif a.get("float") is False and is_floating:
+                      niri_action(
+                          app_id, title,
+                          "toggle-window-floating", "--id", wid_s,
                       )
                   if a.get("workspace"):
                       niri_action(
@@ -862,7 +867,7 @@ args@{
                           is_floating = win.get("is_floating", False)
                           for rule in rules:
                               if matches(rule, app_id, title, is_floating):
-                                  apply_rule(rule, wid, app_id, title)
+                                  apply_rule(rule, wid, app_id, title, is_floating)
                                   handled.add(wid)
                                   break
 
