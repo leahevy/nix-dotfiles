@@ -15,11 +15,25 @@ args@{
 
   disableOnVirtual = true;
 
-  settings = {
-    baseIdsToIgnore = [
-      "1050" # Yubikeys
-    ];
-    additionalIdsToIgnore = [ ];
+  options = {
+    deviceIdsToIgnore = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Device ids excluded from the default keyd keyboard match.";
+    };
+    enableDevices = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          kensingtonExpertMouse = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Remap the Kensington Expert Wireless mouse side button to Super.";
+          };
+        };
+      };
+      default = { };
+      description = "Per device opt-in toggles for extra keyd keyboard entries.";
+    };
   };
 
   module = {
@@ -38,79 +52,93 @@ args@{
     };
 
     system =
-      config:
+      {
+        config,
+        deviceIdsToIgnore,
+        enableDevices,
+        ...
+      }:
       let
-        allIdsToIgnore = self.settings.baseIdsToIgnore ++ self.settings.additionalIdsToIgnore;
-        ignoreIds = map (id: "-${id}") allIdsToIgnore;
+        ignoreIds = map (id: "-${id}") deviceIdsToIgnore;
         keyboardIds = [ "*" ] ++ ignoreIds;
       in
       {
-        services.keyd = {
-          enable = true;
+        services.keyd =
+          lib.recursiveUpdate
+            {
+              enable = true;
 
-          keyboards.default = {
-            ids = keyboardIds;
-            settings = {
-              main = {
-                capslock = "overload(control, esc)";
-                rightalt = "layer(diacritics)";
+              keyboards.default = {
+                ids = keyboardIds;
+                settings = {
+                  main = {
+                    capslock = "overload(control, esc)";
+                    rightalt = "layer(diacritics)";
+                  };
+
+                  meta = {
+                    c = "C-c";
+                    v = "C-v";
+                    x = "C-x";
+                  };
+
+                  alt = {
+                    esc = "`";
+                  };
+
+                  shift = {
+                    esc = "~";
+                  };
+                };
+
+                extraConfig = ''
+                  [diacritics]
+                  s = macro(C-S-u 00df enter)
+                  u = oneshot(umlauts)
+                  i = oneshot(umlauts_direct)
+                  shift = layer(diacritics_shift)
+
+                  [umlauts]
+                  a = macro(C-S-u 00e4 enter)
+                  o = macro(C-S-u 00f6 enter)
+                  u = macro(C-S-u 00fc enter)
+                  e = macro(C-S-u 20ac enter)
+                  - = macro(C-S-u 2014 enter)
+                  shift = layer(umlauts_upper)
+
+                  [umlauts_upper]
+                  a = macro(C-S-u 00c4 enter)
+                  o = macro(C-S-u 00d6 enter)
+                  u = macro(C-S-u 00dc enter)
+                  - = macro(C-S-u 2013 enter)
+
+                  [umlauts_direct]
+                  a = ä
+                  o = ö
+                  u = ü
+                  e = €
+                  - = —
+                  shift = layer(umlauts_direct_upper)
+
+                  [umlauts_direct_upper]
+                  a = Ä
+                  o = Ö
+                  u = Ü
+                  - = –
+
+                  [diacritics_shift]
+                  s = ß
+                '';
               };
-
-              meta = {
-                c = "C-c";
-                v = "C-v";
-                x = "C-x";
-              };
-
-              alt = {
-                esc = "`";
-              };
-
-              shift = {
-                esc = "~";
-              };
-            };
-
-            extraConfig = ''
-              [diacritics]
-              s = macro(C-S-u 00df enter)
-              u = oneshot(umlauts)
-              i = oneshot(umlauts_direct)
-              shift = layer(diacritics_shift)
-
-              [umlauts]
-              a = macro(C-S-u 00e4 enter)
-              o = macro(C-S-u 00f6 enter)
-              u = macro(C-S-u 00fc enter)
-              e = macro(C-S-u 20ac enter)
-              - = macro(C-S-u 2014 enter)
-              shift = layer(umlauts_upper)
-
-              [umlauts_upper]
-              a = macro(C-S-u 00c4 enter)
-              o = macro(C-S-u 00d6 enter)
-              u = macro(C-S-u 00dc enter)
-              - = macro(C-S-u 2013 enter)
-
-              [umlauts_direct]
-              a = ä
-              o = ö
-              u = ü
-              e = €
-              - = —
-              shift = layer(umlauts_direct_upper)
-
-              [umlauts_direct_upper]
-              a = Ä
-              o = Ö
-              u = Ü
-              - = –
-
-              [diacritics_shift]
-              s = ß
-            '';
-          };
-        };
+            }
+            (
+              lib.optionalAttrs enableDevices.kensingtonExpertMouse {
+                keyboards.kensingtonExpertMouse = {
+                  ids = [ "m:047d:8018:b91d4c8c" ];
+                  settings.main.mouse1 = "leftmeta";
+                };
+              }
+            );
 
         systemd.services.keyd = {
           unitConfig = {

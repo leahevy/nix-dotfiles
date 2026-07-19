@@ -24,6 +24,10 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.linux.desktop-modules.keyd.deviceIdsToIgnore = [ "1050" ];
+    };
+
     linux.system = config: {
       services.pcscd.enable = true;
       hardware.gpgSmartcards.enable = true;
