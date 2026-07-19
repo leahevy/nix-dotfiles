@@ -2805,12 +2805,12 @@ args@{
                   };
 
                   "Mod+WheelScrollDown" = {
-                    action = focus-column-left;
+                    action = spawn-sh "niri msg action focus-column-left && niri msg action center-column";
                     cooldown-ms = 150;
                   };
 
                   "Mod+WheelScrollUp" = {
-                    action = focus-column-right;
+                    action = spawn-sh "niri msg action focus-column-right && niri msg action center-column";
                     cooldown-ms = 150;
                   };
 
