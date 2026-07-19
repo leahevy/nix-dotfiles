@@ -47,6 +47,7 @@ let
 
   renderTap = tap: "tap '${tap}'";
   renderCask = cask: "cask '${cask}'";
+  tapOwnerOf = name: lib.concatStringsSep "/" (lib.take 2 (lib.splitString "/" name));
 in
 {
   name = "homebrew";
@@ -141,6 +142,18 @@ in
           [ headerLine ] ++ map renderTap cfg.taps ++ map renderBrew cfg.brews ++ map renderCask cfg.casks
         );
         brewfile = pkgs.writeText "Brewfile" brewfileContent;
+
+        untrustedEntryTaps = lib.unique (
+          map tapOwnerOf (
+            builtins.filter (
+              name: lib.hasInfix "/" name && !(builtins.any (tap: lib.hasPrefix tap name) cfg.taps)
+            ) (map (entry: if builtins.isString entry then entry else entry.name) cfg.brews ++ cfg.casks)
+          )
+        );
+        trustTaps = lib.unique (cfg.taps ++ untrustedEntryTaps);
+        trustBrewfile = pkgs.writeText "Brewfile.trust" (
+          lib.concatStringsSep "\n" (map renderTap trustTaps)
+        );
       in
       lib.mkIf hasContent {
         assertions = [
@@ -258,8 +271,17 @@ in
               unset SUDO_PASSWORD
 
               echo
+              echo -e "''${WHITE}Updating Homebrew...''${RESET}"
+              GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew update --quiet
+              echo
+
+              ${lib.optionalString (trustTaps != [ ]) ''
+                echo -e "''${WHITE}Tapping repositories...''${RESET}"
+                GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew bundle --file="${trustBrewfile}" --quiet
+                echo
+              ''}
+
               echo -e "''${WHITE}Setting up tap trust...''${RESET}"
-              export HOMEBREW_REQUIRE_TAP_TRUST=1
               rm -rf /tmp/.homebrew
               ${lib.concatMapStrings (tap: ''
                 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust '${tap}'
@@ -281,10 +303,7 @@ in
                     GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust --cask '${cask}'
                   ''
               ) cfg.casks}
-
-              echo
-              echo -e "''${WHITE}Updating Homebrew...''${RESET}"
-              GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew update --quiet
+              export HOMEBREW_REQUIRE_TAP_TRUST=1
               echo
 
               echo -e "''${WHITE}Installing packages from Brewfile...''${RESET}"
