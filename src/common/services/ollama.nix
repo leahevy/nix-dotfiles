@@ -147,7 +147,7 @@ args@{
             echo "Checking internet connectivity..."
 
             while true; do
-              if ${pkgs.curl}/bin/curl -sf --connect-timeout 5 "https://registry.ollama.ai" > /dev/null 2>&1; then
+              if ${pkgs.curl}/bin/curl -s --connect-timeout 5 "https://registry.ollama.ai" > /dev/null 2>&1; then
                 echo "Internet connection available."
                 break
               fi
