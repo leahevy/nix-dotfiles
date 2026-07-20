@@ -334,6 +334,7 @@
         description = "Run git log command";
         group = "git";
         modes = [
+          "server"
           "local"
           "develop"
         ];
@@ -344,6 +345,7 @@
         description = "Run git show HEAD command";
         group = "git";
         modes = [
+          "server"
           "local"
           "develop"
         ];
@@ -374,6 +376,7 @@
         description = "Run git status command";
         group = "git";
         modes = [
+          "server"
           "local"
           "develop"
         ];
@@ -448,6 +451,7 @@
         description = "Switch git branches with safety checks";
         group = "git";
         modes = [
+          "server"
           "local"
           "develop"
         ];
