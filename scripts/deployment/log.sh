@@ -5,8 +5,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "log"
 parse_git_args "$@"
 
-cd "$NXCORE_DIR"
 if [[ "$ONLY_CONFIG" != true ]]; then
+	cd "$NXCORE_DIR"
 	echo -e "${GREEN}Logs of core repository ${WHITE}(.config/nx/nxcore)${RESET}..."
 	if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
 		git log HEAD~5..HEAD "${EXTRA_ARGS[@]}"

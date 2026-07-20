@@ -4,7 +4,6 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../utils/common.sh"
 deployment_script_setup "switch"
 parse_git_args "$@"
-cd "$NXCORE_DIR"
 
 BRANCH_TO_SWITCH=""
 for arg in "${EXTRA_ARGS[@]}"; do
@@ -83,7 +82,7 @@ switch_branch_in_repo() {
 require_repos_on_same_branch
 
 if [[ "$ONLY_CONFIG" != true ]]; then
-	if ! check_repo_safety "." "main"; then
+	if ! check_repo_safety "$NXCORE_DIR" "main"; then
 		exit 1
 	fi
 fi
@@ -95,7 +94,7 @@ if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
 fi
 
 if [[ "$ONLY_CONFIG" != true ]]; then
-	switch_branch_in_repo "." "main"
+	switch_branch_in_repo "$NXCORE_DIR" "main"
 fi
 
 if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then

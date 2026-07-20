@@ -9,8 +9,8 @@ if command -v difft &>/dev/null; then
 	EXTRA_ARGS+=("--ext-diff")
 fi
 
-cd "$NXCORE_DIR"
 if [[ "$ONLY_CONFIG" != true ]]; then
+	cd "$NXCORE_DIR"
 	echo -e "${GREEN}HEAD of core repository ${WHITE}(.config/nx/nxcore)${RESET}..."
 	if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
 		git show HEAD "${EXTRA_ARGS[@]}"
