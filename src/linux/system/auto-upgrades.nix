@@ -32,9 +32,6 @@ args@{
     borgMonitoringTimeoutMinutes = 180;
     borgCheckIntervalMinutes = 15;
     healthcheckUUID = null;
-    requiredBranch = "main";
-    requiredBranchNxcore = null;
-    requiredBranchNxconfig = null;
   };
 
   module = {
@@ -235,16 +232,8 @@ args@{
         nxconfigDir = "${self.host.mainUser.home}/.config/nx/nxconfig";
         isDevelopMode = self.host.deploymentMode == "develop";
         effectiveDryRun = self.settings.dryRun || isDevelopMode;
-        effectiveBranchNxcore =
-          if self.settings.requiredBranchNxcore != null then
-            self.settings.requiredBranchNxcore
-          else
-            self.settings.requiredBranch;
-        effectiveBranchNxconfig =
-          if self.settings.requiredBranchNxconfig != null then
-            self.settings.requiredBranchNxconfig
-          else
-            self.settings.requiredBranch;
+        effectiveBranchNxcore = self.host.branch;
+        effectiveBranchNxconfig = self.host.branch;
         hasLuks = (config.boot.initrd.luks.devices or { }) != { };
 
         profileName = "${self.host.hostname}--${self.host.architecture}";

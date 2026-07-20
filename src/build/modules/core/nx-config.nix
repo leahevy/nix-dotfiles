@@ -55,6 +55,11 @@ args@{
         ];
         description = "Deployment mode for this machine";
       };
+      branch = lib.mkOption {
+        type = lib.types.str;
+        default = "main";
+        description = "Git branch this machine is configured for";
+      };
       currentRelease = lib.mkOption {
         type = lib.types.str;
         description = "Current NixOS release channel version";
@@ -99,6 +104,7 @@ args@{
       nx.global = self.variables.nx.config // {
         currentRelease = self.variables."current-release";
         deploymentMode = helpers.resolveFromHostOrUser config [ "deploymentMode" ] "develop";
+        branch = helpers.resolveFromHostOrUser config [ "branch" ] "main";
         enabledCommands = builtins.attrNames config.nx.commandline;
         vmsDir = helpers.resolveFromHost config [ "settings" "system" "vmsDataPath" ] null;
         kernel = {

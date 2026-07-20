@@ -10,6 +10,12 @@ with lib;
       description = "The Nix state version";
     };
 
+    branch = mkOption {
+      type = types.str;
+      default = "main";
+      description = "Git branch this profile expects nxcore and nxconfig to be checked out on";
+    };
+
     location = mkOption {
       type = types.submodule {
         options = {

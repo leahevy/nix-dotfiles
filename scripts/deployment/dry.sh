@@ -7,6 +7,9 @@ deployment_script_setup "dry"
 parse_common_deployment_args "$@"
 ensure_nixos_only "dry"
 confirm_server_manual_deploy "dry run"
+verify_checked_out_branch "$NXCORE_DIR"
+verify_checked_out_branch "$CONFIG_DIR"
+require_repos_on_same_branch
 check_deployment_conflicts "dry"
 
 PROFILE="$(retrieve_active_profile)"

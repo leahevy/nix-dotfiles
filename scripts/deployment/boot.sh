@@ -7,6 +7,9 @@ deployment_script_setup "boot"
 parse_common_deployment_args "$@"
 ensure_nixos_only "boot"
 confirm_server_manual_deploy "boot"
+verify_checked_out_branch "$NXCORE_DIR"
+verify_checked_out_branch "$CONFIG_DIR"
+require_repos_on_same_branch
 
 check_git_worktrees_clean
 verify_commits

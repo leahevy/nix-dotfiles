@@ -163,6 +163,9 @@ get_nx_default() {
 	"deploymentMode")
 		echo "develop"
 		;;
+	"branch")
+		echo "main"
+		;;
 	"aideEnabled")
 		echo "false"
 		;;
@@ -1086,6 +1089,33 @@ require_repos_on_same_branch() {
 	fi
 }
 
+verify_checked_out_branch() {
+	local repo_dir="$1"
+
+	[[ -z "$repo_dir" || ! -d "$repo_dir/.git" ]] && return 0
+	[[ "${NX_CONFIG_LOADED:-0}" != "1" ]] && load_nx_config
+
+	local expected_branch="${NX_BRANCH:-main}"
+	local current_branch
+	current_branch=$(git -C "$repo_dir" branch --show-current)
+
+	if [[ -z "$current_branch" || "$current_branch" == "$expected_branch" ]]; then
+		return 0
+	fi
+
+	echo -e "${YELLOW}Warning: This system is configured for branch ${WHITE}${expected_branch}${YELLOW}, but ${WHITE}${repo_dir}${YELLOW} has branch ${WHITE}${current_branch}${YELLOW} checked out.${RESET}" >&2
+	echo -en "${WHITE}Do you really want to continue? ${RESET}[y/N]: " >&2
+	read -r -n 1 response
+	echo >&2
+	case "$response" in
+	[yY]) return 0 ;;
+	*)
+		echo -e "${RED}Aborted${RESET}" >&2
+		exit 1
+		;;
+	esac
+}
+
 get_latest_commit_timestamp() {
 	local repo_dir="$1"
 	if [[ -d "$repo_dir/.git" ]]; then
@@ -1523,13 +1553,14 @@ load_nx_config() {
 	COMMIT_VERIFICATION_NXCORE=$(get_config_value "security.commitVerification.nxcore" "$config_json")
 	COMMIT_VERIFICATION_NXCONFIG=$(get_config_value "security.commitVerification.nxconfig" "$config_json")
 	NX_DEPLOYMENT_MODE=$(get_config_value "deploymentMode" "$config_json")
+	NX_BRANCH=$(get_config_value "branch" "$config_json")
 	ENABLED_COMMANDS_JSON=$(echo "${config_json:-{\}}" | jq -c '.enabledCommands // []' 2>/dev/null || echo "[]")
 	NX_VMS_DIR="$(expand_home_path "$(get_config_value "vmsDir" "$config_json")")"
 	NX_CURRENT_RELEASE=$(get_config_value "currentRelease" "$config_json")
 	AIDE_ENABLED=$(get_config_value "aideEnabled" "$config_json")
 	AIDE_POST_BOOT_MARKER=$(get_config_value "aidePostBootMarker" "$config_json")
 
-	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE ENABLED_COMMANDS_JSON NX_VMS_DIR NX_CURRENT_RELEASE AIDE_ENABLED AIDE_POST_BOOT_MARKER
+	export NX_CONFIG_LOADED COMMIT_VERIFICATION_NXCORE COMMIT_VERIFICATION_NXCONFIG NX_DEPLOYMENT_MODE NX_BRANCH ENABLED_COMMANDS_JSON NX_VMS_DIR NX_CURRENT_RELEASE AIDE_ENABLED AIDE_POST_BOOT_MARKER
 }
 
 check_brew_activity() {

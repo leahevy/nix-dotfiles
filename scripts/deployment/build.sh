@@ -8,6 +8,9 @@ PROFILE="$(retrieve_active_profile)"
 
 parse_build_deployment_args "$@"
 confirm_server_manual_deploy "build"
+verify_checked_out_branch "$NXCORE_DIR"
+verify_checked_out_branch "$CONFIG_DIR"
+require_repos_on_same_branch
 verify_commits
 check_deployment_conflicts "build"
 
