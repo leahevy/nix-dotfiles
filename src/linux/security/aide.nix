@@ -536,7 +536,11 @@ in
 
     ifEnabled.linux.security.auditd.enabled = config: {
       nx.linux.security.auditd.dirContentWatches.aide_db =
-        "!${config.nx.linux.security.aide.dbDir}/active";
+        (lib.optionalString (helpers.isDeploymentMode self [
+          "server"
+          "managed"
+        ]) "!")
+        + "${config.nx.linux.security.aide.dbDir}/active";
       nx.linux.security.auditd.dirContentWatches.aide_state = stateDir;
       nx.linux.security.auditd.dirContentWatches.aide_config = "${builtins.dirOf confPath}";
     };
