@@ -126,6 +126,9 @@ export PACKAGES_TO_HIGHLIGHT=(
 	borgbackup
 	smartmontools
 	obsidian
+	gotenberg
+	nh-unwrapped
+	opencode
 )
 
 export NIXPKGS_INPUTS=(
