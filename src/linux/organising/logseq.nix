@@ -7,6 +7,14 @@ args@{
   self,
   ...
 }:
+let
+  pinnedElectronVersion = "0.10.15";
+
+  pinnedNixpkgsSource = builtins.fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs/archive/a0374025a863d007d98e3297f6aa46cc3141c2f0.tar.gz";
+    sha256 = "sha256-9mUW6gNwoN2SWc/l0fW4svPNOulXLl8ijqKyeSOGgJE=";
+  };
+in
 {
   name = "logseq";
 
@@ -14,22 +22,32 @@ args@{
   input = "linux";
 
   module = {
+    enabled =
+      config:
+      lib.mkIf
+        (
+          self.inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.logseq.version
+          == pinnedElectronVersion
+        )
+        {
+          nx.flakeInputs.extra = [
+            {
+              name = "logseq-electron-pin";
+              source = pinnedNixpkgsSource;
+            }
+          ];
+        };
+
     linux.overlays = [
       (final: prev: {
         logseq =
           let
             base =
-              if prev.logseq.version == "0.10.15" then
-                (import
-                  (builtins.fetchTarball {
-                    url = "https://github.com/NixOS/nixpkgs/archive/a0374025a863d007d98e3297f6aa46cc3141c2f0.tar.gz";
-                    sha256 = "sha256-9mUW6gNwoN2SWc/l0fW4svPNOulXLl8ijqKyeSOGgJE=";
-                  })
-                  {
-                    system = prev.stdenv.hostPlatform.system;
-                    config.permittedInsecurePackages = [ "electron-39.8.10" ];
-                  }
-                ).logseq
+              if prev.logseq.version == pinnedElectronVersion then
+                (import pinnedNixpkgsSource {
+                  system = prev.stdenv.hostPlatform.system;
+                  config.permittedInsecurePackages = [ "electron-39.8.10" ];
+                }).logseq
               else
                 prev.logseq;
           in
