@@ -106,12 +106,15 @@ REBUILD_FAILED_RE = re.compile(
 class RebuildWindowTracker:
     MAX_INTERVALS = 64
 
-    def __init__(self, timeout_seconds: int):
+    def __init__(self, timeout_seconds: int, grace_seconds: int = 0):
         self.timeout_us = int(timeout_seconds) * 1_000_000
+        self.grace_us = int(grace_seconds) * 1_000_000
         self.path: Optional[str] = None
         self.opened_at_us = 0
         self.intervals: List[Tuple[int, int]] = []
         self._close_ts_us = 0
+        self.grace_until_us: Optional[int] = None
+        self._grace_path: Optional[str] = None
 
     @staticmethod
     def _entry_us(json_data: Dict[str, Any]) -> Optional[int]:
@@ -125,15 +128,32 @@ class RebuildWindowTracker:
         if len(self.intervals) > self.MAX_INTERVALS:
             self.intervals = self.intervals[-self.MAX_INTERVALS :]
 
-    def observe(self, json_data: Dict[str, Any]) -> bool:
+    def _start_grace(self, path: str, close_ts_us: int, replay: bool) -> None:
+        if replay or self.grace_us <= 0:
+            return
+        self.grace_until_us = close_ts_us + self.grace_us
+        self._grace_path = path
+        print(
+            f"Grace period started: {path} ({self.grace_us // 1_000_000}s)",
+            flush=True,
+        )
+
+    def _expire_grace(self, ts: int) -> None:
+        if self.grace_until_us is not None and ts > self.grace_until_us:
+            print(f"Grace period closed: {self._grace_path}", flush=True)
+            self.grace_until_us = None
+            self._grace_path = None
+
+    def observe(self, json_data: Dict[str, Any], replay: bool = False) -> bool:
         ts = self._entry_us(json_data)
         if ts is None:
             ts = int(time.time() * 1_000_000)
+        self._expire_grace(ts)
         if self.path is not None and ts - self.opened_at_us > self.timeout_us:
             print(f"Rebuild window timed out: {self.path}", flush=True)
-            self._record_interval(
-                self.opened_at_us, self.opened_at_us + self.timeout_us
-            )
+            close_ts = self.opened_at_us + self.timeout_us
+            self._record_interval(self.opened_at_us, close_ts)
+            self._start_grace(self.path, close_ts, replay)
             self.path = None
         if to_string(json_data.get("SYSLOG_IDENTIFIER")) != "nixos":
             return False
@@ -142,6 +162,13 @@ class RebuildWindowTracker:
         message = to_string(json_data.get("MESSAGE"))
         m = REBUILD_START_RE.match(message)
         if m:
+            if self.grace_until_us is not None:
+                print(
+                    f"Grace period discarded, new window opened: {self._grace_path}",
+                    flush=True,
+                )
+                self.grace_until_us = None
+                self._grace_path = None
             if self.path is not None:
                 print(
                     f"Rebuild window replaced by new start marker: {self.path}",
@@ -158,20 +185,23 @@ class RebuildWindowTracker:
             return True
         return False
 
-    def close(self) -> None:
+    def close(self, replay: bool = False) -> None:
         if self.path is not None:
             print(f"Rebuild window closed: {self.path}", flush=True)
             self._record_interval(self.opened_at_us, self._close_ts_us)
+            self._start_grace(self.path, self._close_ts_us, replay)
             self.path = None
 
     def is_active_at(self, json_data: Dict[str, Any]) -> bool:
         ts = self._entry_us(json_data)
         if ts is None:
-            return self.path is not None
+            return self.path is not None or self.grace_until_us is not None
         for lo, hi in self.intervals:
             if lo <= ts <= hi:
                 return True
-        return self.path is not None and ts >= self.opened_at_us
+        if self.path is not None and ts >= self.opened_at_us:
+            return True
+        return self.grace_until_us is not None and ts <= self.grace_until_us
 
 
 def cursor_timestamp_seconds(cfg: Dict[str, Any]) -> Optional[int]:
@@ -241,8 +271,8 @@ def restore_rebuild_window(cfg: Dict[str, Any], window: RebuildWindowTracker) ->
             json_data = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if window.observe(json_data):
-            window.close()
+        if window.observe(json_data, replay=True):
+            window.close(replay=True)
     if window.path is not None:
         print(f"Rebuild window restored from lookback: {window.path}", flush=True)
     if window.intervals:
@@ -1160,7 +1190,8 @@ def main():
         cfg["highlight_patterns"], cfg["main_user_uid"]
     )
     rebuild_window = RebuildWindowTracker(
-        cfg.get("rebuild_window_timeout_seconds", 180)
+        cfg.get("rebuild_window_timeout_seconds", 180),
+        cfg.get("rebuild_window_grace_seconds", 0),
     )
     restore_rebuild_window(cfg, rebuild_window)
     stats = Stats()

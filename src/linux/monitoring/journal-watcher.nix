@@ -219,6 +219,10 @@ args@{
         type = lib.types.int;
         default = 180;
       };
+      rebuildWindowGraceSeconds = lib.mkOption {
+        type = lib.types.int;
+        default = 60;
+      };
     };
 
   module =
@@ -763,6 +767,7 @@ args@{
               highlight_rate_limit_per_hour = opts.highlightRateLimit;
               message_rate_limit_minutes = opts.sameMessageRateLimitMinutes;
               rebuild_window_timeout_seconds = opts.rebuildWindowTimeoutSeconds;
+              rebuild_window_grace_seconds = opts.rebuildWindowGraceSeconds;
               user_notify_enabled = self.isModuleEnabled "notifications.user-notify";
               pushover_enabled = self.isModuleEnabled "notifications.pushover" && pushover.script != null;
               debug_enabled = opts.debug;
