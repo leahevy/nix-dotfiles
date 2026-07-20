@@ -200,7 +200,7 @@ args@{
         splitKeybindings =
           let
             totalCount = builtins.length keybindingsList;
-            halfCount = totalCount / 2;
+            halfCount = (totalCount + 1) / 2;
             firstHalf = lib.take halfCount keybindingsList;
             secondHalf = lib.drop halfCount keybindingsList;
           in
