@@ -1806,13 +1806,6 @@ args@{
         programsConfig = config.nx.preferences.desktop.programs;
         terminal = programsConfig.terminal;
         additionalTerminal = programsConfig.additionalTerminal;
-        terminalWindowClass =
-          if terminal.desktopFile != null then lib.removeSuffix ".desktop" terminal.desktopFile else null;
-        effectiveAppIdMapping =
-          (self.options config).appIdMapping
-          // lib.optionalAttrs (terminalWindowClass != null) {
-            "org.nx.scratchpad" = terminalWindowClass;
-          };
         scratchpadRunWithClass =
           class: cmd:
           lib.escapeShellArgs (
@@ -1841,11 +1834,6 @@ args@{
           opts:
           lib.concatStringsSep " " (
             helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts
-          );
-        appLauncherDmenuIndex =
-          opts:
-          lib.escapeShellArgs (
-            helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuIndexCommand opts
           );
         requiredApps =
           let
