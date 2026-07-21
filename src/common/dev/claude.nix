@@ -120,6 +120,7 @@ args@{
               "A decision has clear trade-offs that benefit from side-by-side comparison"
               "You would otherwise ask a free-form question the user would answer with a one-word reply"
               "You did a review and we need to make decisions for fixing individual issues one by one"
+              "Even with many choices to present, still use this tool: split them across multiple questions rather than skipping it, since each question accepts at most 4 options and a single call accepts at most 4 questions"
             ]
             [
               "Remote / Mobile Sessions"
