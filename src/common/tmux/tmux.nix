@@ -109,7 +109,6 @@ args@{
               let
                 remoteAddress = hostCfg.remote.address or null;
                 hostname = hostCfg.hostname or profileName;
-                connectScript = "${self.binDir}/ssh-connect-${profileName}";
               in
               if remoteAddress == null || remoteAddress == "" || hostname == currentHostname then
                 { }
