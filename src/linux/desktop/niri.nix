@@ -3150,7 +3150,7 @@ args@{
               {
                 matches = [ { app-id = "org.nx.scratchpad"; } ];
                 default-column-width = {
-                  proportion = 0.5;
+                  proportion = 0.67;
                 };
                 default-window-height = {
                   proportion = 0.9;
