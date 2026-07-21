@@ -123,7 +123,7 @@ args@{
               home_symbol = "󰋞 ~";
               read_only_style = "bold fg:${config.nx.preferences.theme.colors.semantic.warning.html}";
               read_only = "  ";
-              format = "[](fg:${config.nx.preferences.theme.colors.terminal.normalBackgrounds.primary.html} bg:${primaryBlock.background.html})[$path](bold fg:${primaryBlock.foreground.html} bg:${primaryBlock.background.html})[](fg:${primaryBlock.background.html})[$read_only]($read_only_style)";
+              format = "[](fg:${primaryBlock.background.html} inverted)[$path](bold fg:${primaryBlock.foreground.html} bg:${primaryBlock.background.html})[](fg:${primaryBlock.background.html})[$read_only]($read_only_style)";
               style = "";
               truncate_to_repo = true;
               use_os_path_sep = false;
