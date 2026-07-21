@@ -96,6 +96,66 @@ args@{
       default = true;
       description = "Enable agent push notifications.";
     };
+
+    alwaysThinkingEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable extended thinking by default.";
+    };
+
+    fileCheckpointingEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable file-state checkpoints for /rewind.";
+    };
+
+    disableWorkflows = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Disable dynamic workflows.";
+    };
+
+    enableArtifact = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable the Artifact tool.";
+    };
+
+    editorMode = lib.mkOption {
+      type = lib.types.str;
+      default = "normal";
+      description = "Input editor mode.";
+    };
+
+    askUserQuestionTimeout = lib.mkOption {
+      type = lib.types.str;
+      default = "never";
+      description = "Auto-continue timeout for AskUserQuestion prompts.";
+    };
+
+    spinnerTipsEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Show tips in the spinner.";
+    };
+
+    awaySummaryEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Show a recap when returning to a session.";
+    };
+
+    autoScrollEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Automatically scroll to the latest output.";
+    };
+
+    remoteControlAtStartup = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable Remote Control for all sessions at startup.";
+    };
   };
 
   submodules = {
@@ -150,6 +210,16 @@ args@{
         model,
         effortLevel,
         notifyEnabled,
+        alwaysThinkingEnabled,
+        fileCheckpointingEnabled,
+        disableWorkflows,
+        enableArtifact,
+        editorMode,
+        askUserQuestionTimeout,
+        spinnerTipsEnabled,
+        awaySummaryEnabled,
+        autoScrollEnabled,
+        remoteControlAtStartup,
         ...
       }:
       let
@@ -366,6 +436,16 @@ args@{
             autoCompactEnabled = autoCompact;
             inherit model effortLevel;
             agentPushNotifEnabled = notifyEnabled;
+            outputStyle = "default";
+            inherit
+              alwaysThinkingEnabled
+              fileCheckpointingEnabled
+              disableWorkflows
+              enableArtifact
+              ;
+            inherit editorMode askUserQuestionTimeout;
+            inherit spinnerTipsEnabled awaySummaryEnabled autoScrollEnabled;
+            inherit remoteControlAtStartup;
           };
           skills = lib.mapAttrs (
             name: value:
