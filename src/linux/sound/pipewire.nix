@@ -181,6 +181,15 @@ args@{
       ];
     };
 
+    ifEnabled.common.browser.firefox.enabled = config: {
+      nx.common.browser.firefox.lockedPreferences = {
+        "media.webrtc.camera.allow-pipewire" = {
+          Value = true;
+          Status = "locked";
+        };
+      };
+    };
+
     home =
       config:
       let
