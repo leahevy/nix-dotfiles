@@ -31,6 +31,7 @@ if [ "${#case_scripts[@]}" -eq 0 ]; then
 fi
 
 export TE_DUMMY_AGE_PUBLIC_KEY="age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+export TE_FIXED_EVAL_TIMESTAMP="0"
 
 TE_WORKROOT=$(mktemp -d)
 trap 'rm -rf "$TE_WORKROOT"' EXIT

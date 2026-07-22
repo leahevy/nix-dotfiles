@@ -6,6 +6,7 @@ set -euo pipefail
 : "${TE_CASE_NAME:?TE_CASE_NAME must be set by run-all-test-evals.sh}"
 : "${TE_RESULTS_TSV:?TE_RESULTS_TSV must be set by run-all-test-evals.sh}"
 : "${TE_DUMMY_AGE_PUBLIC_KEY:?TE_DUMMY_AGE_PUBLIC_KEY must be set by run-all-test-evals.sh}"
+: "${TE_FIXED_EVAL_TIMESTAMP:?TE_FIXED_EVAL_TIMESTAMP must be set by run-all-test-evals.sh}"
 
 te_setup() {
 	TE_WORKDIR=$(mktemp -d)
@@ -68,6 +69,22 @@ te_secrets() {
 	done
 }
 
+te_git_commit_config() {
+	local repo="$TE_WORKDIR/config"
+	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null \
+		git -C "$repo" -c init.defaultBranch=main init -q
+	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null \
+		git -C "$repo" add -A -f
+	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null \
+		GIT_AUTHOR_DATE="@$TE_FIXED_EVAL_TIMESTAMP +0000" \
+		GIT_COMMITTER_DATE="@$TE_FIXED_EVAL_TIMESTAMP +0000" \
+		git -C "$repo" \
+		-c user.name="nx-test-eval" \
+		-c user.email="nx-test-eval@example.com" \
+		-c commit.gpgsign=false \
+		commit -q -m "test eval snapshot"
+}
+
 te_eval() {
 	local kind="$1"
 	local target="$2"
@@ -83,11 +100,13 @@ te_eval() {
 		;;
 	esac
 
+	te_git_commit_config
+
 	echo "Evaluating $attr..."
 	local drv
 	drv=$(nix eval --raw --no-write-lock-file \
-		--override-input core "path:$TE_CORE_DIR" \
-		"path:$TE_WORKDIR/config#$attr")
+		--override-input core "git+file://$TE_CORE_DIR" \
+		"git+file://$TE_WORKDIR/config#$attr")
 	echo "$drv"
 	printf '%s\tOK\t%s\n' "$TE_CASE_NAME" "$drv" >>"$TE_RESULTS_TSV"
 }
