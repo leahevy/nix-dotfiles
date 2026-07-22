@@ -79,7 +79,11 @@ RESULTS_MD="${TEST_EVAL_RESULTS_MD:-$TE_WORKROOT/results.md}"
 	else
 		echo '> [!CAUTION]'
 		echo '> **Test Build Failed**'
-		echo "> Only $ok/$total test profiles evaluated successfully with the updated inputs!"
+		if [ "$ok" -eq 0 ]; then
+			echo "> All $total test profiles failed to evaluate with the updated inputs!"
+		else
+			echo "> Only $ok/$total test profiles evaluated successfully with the updated inputs!"
+		fi
 		echo ''
 		echo '| Test case | Result |'
 		echo '| --- | --- |'
