@@ -107,6 +107,12 @@ te_eval() {
 	drv=$(nix eval --raw --no-write-lock-file \
 		--override-input core "git+file://$TE_CORE_DIR" \
 		"git+file://$TE_WORKDIR/config#$attr")
+
+	if [[ ! "$drv" =~ ^/nix/store/.*\.drv$ ]]; then
+		echo "te_eval: evaluation of $attr did not produce a store derivation path (got: '$drv')" >&2
+		return 1
+	fi
+
 	echo "$drv"
 	printf '%s\tOK\t%s\n' "$TE_CASE_NAME" "$drv" >>"$TE_RESULTS_TSV"
 }
