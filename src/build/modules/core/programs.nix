@@ -37,6 +37,7 @@ args@{
       home = {
         packages = with pkgs; [
           jq
+          yq
           openssl
           tree
           git

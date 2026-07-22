@@ -72,6 +72,7 @@ rec {
   packages = nxDef: [
     (package nxDef)
     pkgs.jq
+    pkgs.yq
   ];
 
   mkCompletionFiles =

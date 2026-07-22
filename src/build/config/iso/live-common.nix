@@ -189,6 +189,7 @@ in
     wget
     tree
     jq
+    yq
     sops
     age
     gnupg
