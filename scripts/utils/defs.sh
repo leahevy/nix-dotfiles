@@ -168,3 +168,6 @@ export MODULES_ONLY_INPUTS=(
 )
 
 export UPDATE_AUTO_MERGE_ENABLED=false
+
+export TEST_EVAL_ENABLED=true
+export TEST_EVAL_TEMPLATE_REPO_URL="https://github.com/leahevy/nix-dotfiles-config-template.git"

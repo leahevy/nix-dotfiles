@@ -1,6 +1,13 @@
 /result
 **/profiles/nixos/**/*.nix
+**/profiles/home-standalone/**/*.nix
+**/profiles/home-integrated/**/*.nix
 !/templates/profiles/nixos/**/*.nix
+!/templates/profiles/home-standalone/**/*.nix
+!/templates/profiles/home-integrated/**/*.nix
+!/.github/test-config/profiles/nixos/**/*.nix
+!/.github/test-config/profiles/home-standalone/**/*.nix
+!/.github/test-config/profiles/home-integrated/**/*.nix
 /file.txt
 /PATCH.txt
 

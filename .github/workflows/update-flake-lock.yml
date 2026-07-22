@@ -34,6 +34,7 @@ jobs:
           echo "NIXPKGS_INPUTS=$(IFS=,; echo "${NIXPKGS_INPUTS[*]}")" >> $GITHUB_ENV
           echo "TRUNCATE_INPUTS=$(IFS=,; echo "${TRUNCATE_INPUTS[*]}")" >> $GITHUB_ENV
           echo "UPDATE_AUTO_MERGE_ENABLED=$UPDATE_AUTO_MERGE_ENABLED" >> $GITHUB_ENV
+          echo "TEST_EVAL_ENABLED=$TEST_EVAL_ENABLED" >> $GITHUB_ENV
 
       - name: Validate auto-merge token
         if: env.UPDATE_AUTO_MERGE_ENABLED == 'true'
@@ -127,6 +128,7 @@ jobs:
             if printf '%s' "$pr_body" | grep -q '<!-- nx-reboot-desktop -->'; then PR_REQUIRES_DESKTOP_REBOOT=true; else PR_REQUIRES_DESKTOP_REBOOT=false; fi
             if [ "$PR_REQUIRES_SYSTEM_REBOOT" = "true" ] || [ "$PR_REQUIRES_DESKTOP_REBOOT" = "true" ]; then PR_REQUIRES_REBOOT=true; else PR_REQUIRES_REBOOT=false; fi
             if printf '%s' "$pr_body" | grep -q '<!-- nx-commits-truncated -->'; then PR_COMMITS_TRUNCATED=true; elif printf '%s' "$pr_body" | grep -q "Manual Merge Required (Truncation)"; then PR_COMMITS_TRUNCATED=true; else PR_COMMITS_TRUNCATED=false; fi
+            if printf '%s' "$pr_body" | grep -q '<!-- nx-eval-failed -->'; then PR_EVAL_FAILED=true; else PR_EVAL_FAILED=false; fi
             auto_merge=$(printf '%s' "$existing_pr" | jq -r '.auto_merge')
             if [ "$auto_merge" != "null" ] && [ -n "$auto_merge" ]; then PR_AUTO_MERGE_ENABLED=true; else PR_AUTO_MERGE_ENABLED=false; fi
             if printf '%s' "$existing_pr" | jq -e '.labels[]? | select(.name == "flake-merge-notified")' > /dev/null; then PR_MERGE_NOTIFIED=true; else PR_MERGE_NOTIFIED=false; fi
@@ -150,6 +152,7 @@ jobs:
             PR_REQUIRES_SYSTEM_REBOOT=false
             PR_REQUIRES_DESKTOP_REBOOT=false
             PR_COMMITS_TRUNCATED=false
+            PR_EVAL_FAILED=false
             PR_AUTO_MERGE_ENABLED=false
             PR_MERGE_NOTIFIED=false
             PR_AUTOMERGE_STUCK_NOTIFIED=false
@@ -164,21 +167,31 @@ jobs:
           echo "PR_REQUIRES_SYSTEM_REBOOT=$PR_REQUIRES_SYSTEM_REBOOT" >> $GITHUB_ENV
           echo "PR_REQUIRES_DESKTOP_REBOOT=$PR_REQUIRES_DESKTOP_REBOOT" >> $GITHUB_ENV
           echo "PR_COMMITS_TRUNCATED=$PR_COMMITS_TRUNCATED" >> $GITHUB_ENV
+          echo "PR_EVAL_FAILED=$PR_EVAL_FAILED" >> $GITHUB_ENV
           echo "PR_AUTO_MERGE_ENABLED=$PR_AUTO_MERGE_ENABLED" >> $GITHUB_ENV
           echo "PR_MERGE_NOTIFIED=$PR_MERGE_NOTIFIED" >> $GITHUB_ENV
           echo "PR_AUTOMERGE_STUCK_NOTIFIED=$PR_AUTOMERGE_STUCK_NOTIFIED" >> $GITHUB_ENV
           echo "PR_CHECKS_FAILED=$PR_CHECKS_FAILED" >> $GITHUB_ENV
           echo "PR_FETCH_OK=$PR_FETCH_OK" >> $GITHUB_ENV
 
+          RE_EVAL_ONLY=false
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "$PR_EXISTS" == "true" ] && [ "$PR_EVAL_FAILED" == "true" ] && [ "$TEST_EVAL_ENABLED" == "true" ]; then
+            RE_EVAL_ONLY=true
+          fi
+
           IS_UPDATE_RUN=false
-          if [ "$CYCLE_MODE" == "update" ]; then
+          if [ "$CYCLE_MODE" == "update" ] && [ "$RE_EVAL_ONLY" != "true" ]; then
             if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "$PR_EXISTS" != "true" ]; then
               IS_UPDATE_RUN=true
             else
               echo "PR already exists (#$PR_NUMBER) - skipping flake update"
             fi
           fi
+          if [ "$RE_EVAL_ONLY" == "true" ]; then
+            echo "Existing PR #$PR_NUMBER has failed evaluations - re-evaluating current core against the pinned lock without regenerating inputs"
+          fi
           echo "IS_UPDATE_RUN=$IS_UPDATE_RUN" >> $GITHUB_ENV
+          echo "RE_EVAL_ONLY=$RE_EVAL_ONLY" >> $GITHUB_ENV
 
           echo "Cycle: $CYCLE_MODE, PR exists: $PR_EXISTS, PR conflicted: $PR_CONFLICTED, IS_UPDATE_RUN: $IS_UPDATE_RUN"
 
@@ -198,7 +211,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Nix
-        if: env.IS_UPDATE_RUN == 'true'
+        if: env.IS_UPDATE_RUN == 'true' || env.RE_EVAL_ONLY == 'true' || (env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.PR_EVAL_FAILED == 'true' && env.TEST_EVAL_ENABLED == 'true')
         uses: DeterminateSystems/nix-installer-action@v22
 
       - name: Extract commit hashes before update
@@ -263,6 +276,41 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Test evaluation of testing profiles
+        id: testeval
+        if: env.IS_UPDATE_RUN == 'true' && steps.changes.outputs.changed == 'true' && env.TEST_EVAL_ENABLED == 'true'
+        continue-on-error: true
+        timeout-minutes: 90
+        env:
+          TEST_EVAL_RESULTS_MD: ${{ runner.temp }}/test-eval-results.md
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/run-all-test-evals.sh .github/scripts/test-evals.d/*.sh
+          .github/scripts/run-all-test-evals.sh
+
+      - name: Record test evaluation result
+        if: env.IS_UPDATE_RUN == 'true' && steps.changes.outputs.changed == 'true' && env.TEST_EVAL_ENABLED == 'true'
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.testeval.outcome }}" == "success" ]; then
+            echo "EVAL_FAILED=false" >> $GITHUB_ENV
+          else
+            echo "EVAL_FAILED=true" >> $GITHUB_ENV
+          fi
+          results_file="${{ runner.temp }}/test-eval-results.md"
+          if [ ! -f "$results_file" ] && [ "${{ steps.testeval.outcome }}" != "success" ]; then
+            {
+              echo '<!-- nx-eval-results-start -->'
+              echo '> [!CAUTION]'
+              echo '> **Test Build Failed**'
+              echo '> The test evaluation runner failed before producing results!'
+              echo '<!-- nx-eval-results-end -->'
+            } > "$results_file"
+          fi
+          if [ -f "$results_file" ]; then
+            echo "EVAL_RESULTS_FILE=$results_file" >> $GITHUB_ENV
           fi
 
       - name: Generate commit lists
@@ -687,7 +735,16 @@ jobs:
           ${{ (env.REQUIRES_REBOOT == 'true' || env.PR_REQUIRES_SYSTEM_REBOOT == 'true') && '<!-- nx-reboot-system -->' || '' }}
           ${{ (env.REQUIRES_DESKTOP_REBOOT == 'true' || env.PR_REQUIRES_DESKTOP_REBOOT == 'true') && '<!-- nx-reboot-desktop -->' || '' }}
           ${{ (env.COMMITS_TRUNCATED == 'true' || env.PR_COMMITS_TRUNCATED == 'true') && '<!-- nx-commits-truncated -->' || '' }}
+          ${{ env.EVAL_FAILED == 'true' && '<!-- nx-eval-failed -->' || '' }}
 
+          NX_PR_STATIC
+
+          if [ -n "${EVAL_RESULTS_FILE:-}" ] && [ -f "${EVAL_RESULTS_FILE:-}" ]; then
+            cat "$EVAL_RESULTS_FILE" >> "$pr_tmpfile"
+            echo '' >> "$pr_tmpfile"
+          fi
+
+          cat >> "$pr_tmpfile" <<'NX_PR_STATIC'
           ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> [!WARNING]' || '' }}
           ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> ⚠️ **Reboot Required** ⚠️' || '' }}
           ${{ env.ANY_REBOOT_REQUIRED == 'true' && '> This update requires a reboot!' || '' }}
@@ -744,10 +801,63 @@ jobs:
           branch: update-flake-inputs
           delete-branch: true
           sign-commits: true
-          draft: ${{ github.event_name != 'workflow_dispatch' && 'always-true' || 'false' }}
+          draft: ${{ (github.event_name != 'workflow_dispatch' || env.EVAL_FAILED == 'true') && 'always-true' || 'false' }}
+
+      - name: Re-run test evaluation on current core
+        if: (env.RE_EVAL_ONLY == 'true') || (env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.PR_EVAL_FAILED == 'true' && env.TEST_EVAL_ENABLED == 'true')
+        continue-on-error: true
+        timeout-minutes: 90
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          workdir=$(mktemp -d)
+          git fetch origin update-flake-inputs
+          git checkout FETCH_HEAD -- flake.lock
+
+          eval_ok=true
+          chmod +x .github/scripts/run-all-test-evals.sh .github/scripts/test-evals.d/*.sh
+          if ! TEST_EVAL_RESULTS_MD="$workdir/results.md" .github/scripts/run-all-test-evals.sh; then
+            eval_ok=false
+          fi
+
+          if [ -f "$workdir/results.md" ]; then
+            gh pr view "${{ env.PR_NUMBER }}" --json body -q .body > "$workdir/body.txt"
+            awk -v mdfile="$workdir/results.md" '
+              /<!-- nx-eval-results-start -->/ {
+                skip = 1
+                found = 1
+                while ((getline line < mdfile) > 0) print line
+                close(mdfile)
+                next
+              }
+              /<!-- nx-eval-results-end -->/ { skip = 0; next }
+              !skip { print }
+              END {
+                if (!found) {
+                  print ""
+                  while ((getline line < mdfile) > 0) print line
+                  close(mdfile)
+                }
+              }
+            ' "$workdir/body.txt" > "$workdir/new-body.txt"
+            if [ "$eval_ok" == "true" ]; then
+              grep -vF '<!-- nx-eval-failed -->' "$workdir/new-body.txt" > "$workdir/new-body-clean.txt" || true
+              mv "$workdir/new-body-clean.txt" "$workdir/new-body.txt"
+            fi
+            gh pr edit "${{ env.PR_NUMBER }}" --body-file "$workdir/new-body.txt"
+          fi
+
+          if [ "$eval_ok" == "true" ]; then
+            echo "Evaluation succeeds now - failure marker cleared from PR body"
+            echo "PR_EVAL_FAILED=false" >> $GITHUB_ENV
+          else
+            echo "Evaluation still failing - keeping failure marker"
+          fi
 
       - name: Workflow dispatch - Mark PR ready
-        if: github.event_name == 'workflow_dispatch' && (steps.cpr.outputs.pull-request-number != '' || env.PR_EXISTS == 'true')
+        if: github.event_name == 'workflow_dispatch' && env.EVAL_FAILED != 'true' && !(env.RE_EVAL_ONLY == 'true' && env.PR_EVAL_FAILED == 'true') && (steps.cpr.outputs.pull-request-number != '' || env.PR_EXISTS == 'true')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -758,7 +868,7 @@ jobs:
           fi
 
       - name: Merge week - Un-draft PR
-        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true'
+        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.PR_EVAL_FAILED != 'true'
         run: |
           set -euo pipefail
           if [ "${{ env.PR_DRAFT }}" == "true" ]; then
@@ -771,7 +881,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Merge week - Enable auto-merge
-        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.UPDATE_AUTO_MERGE_ENABLED == 'true' && env.PR_REQUIRES_REBOOT != 'true' && env.PR_COMMITS_TRUNCATED != 'true' && env.PR_AUTO_MERGE_ENABLED != 'true' && env.PR_CONFLICTED != 'true'
+        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.UPDATE_AUTO_MERGE_ENABLED == 'true' && env.PR_REQUIRES_REBOOT != 'true' && env.PR_COMMITS_TRUNCATED != 'true' && env.PR_EVAL_FAILED != 'true' && env.PR_AUTO_MERGE_ENABLED != 'true' && env.PR_CONFLICTED != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_PR_TOKEN || secrets.GITHUB_TOKEN }}
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
@@ -816,7 +926,7 @@ jobs:
           done
 
       - name: Merge week - Send merge reminder
-        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && (env.UPDATE_AUTO_MERGE_ENABLED != 'true' || env.PR_REQUIRES_REBOOT == 'true' || env.PR_COMMITS_TRUNCATED == 'true' || env.PR_CONFLICTED == 'true') && (env.PR_MERGE_NOTIFIED != 'true' || env.IS_FIRST_MERGE_DAY == 'true')
+        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && (env.UPDATE_AUTO_MERGE_ENABLED != 'true' || env.PR_REQUIRES_REBOOT == 'true' || env.PR_COMMITS_TRUNCATED == 'true' || env.PR_EVAL_FAILED == 'true' || env.PR_CONFLICTED == 'true') && (env.PR_MERGE_NOTIFIED != 'true' || env.IS_FIRST_MERGE_DAY == 'true')
         env:
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
           PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
@@ -835,6 +945,13 @@ jobs:
             CIRCLE_COLOR="🔴"
             STATUS="Merge Window Open (Conflict)"
             EXTRA_MESSAGE="⚠️ <b>Merge conflict</b> - Resolve manually before merging"
+          elif [ "${{ env.PR_EVAL_FAILED }}" == "true" ]; then
+            PRIORITY="1"
+            SOUND="gamelan"
+            TTL="604800"
+            CIRCLE_COLOR="🔴"
+            STATUS="Merge Window Open (Test Build Failed)"
+            EXTRA_MESSAGE="❌ <b>Test build failed</b> - Testing profile evaluation failed, PR kept as draft"
           elif [ "${{ env.PR_REQUIRES_REBOOT }}" == "true" ]; then
             PRIORITY="1"
             SOUND="gamelan"
@@ -878,7 +995,7 @@ jobs:
           gh pr edit "${{ env.PR_NUMBER }}" --add-label flake-merge-notified || true
 
       - name: Merge week - Auto-merge stuck reminder
-        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.UPDATE_AUTO_MERGE_ENABLED == 'true' && env.PR_AUTO_MERGE_ENABLED == 'true' && env.PR_CHECKS_FAILED == 'true' && env.PR_REQUIRES_REBOOT != 'true' && env.PR_COMMITS_TRUNCATED != 'true' && env.PR_CONFLICTED != 'true' && (env.PR_AUTOMERGE_STUCK_NOTIFIED != 'true' || env.IS_FIRST_MERGE_DAY == 'true')
+        if: env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.UPDATE_AUTO_MERGE_ENABLED == 'true' && env.PR_AUTO_MERGE_ENABLED == 'true' && env.PR_CHECKS_FAILED == 'true' && env.PR_REQUIRES_REBOOT != 'true' && env.PR_COMMITS_TRUNCATED != 'true' && env.PR_EVAL_FAILED != 'true' && env.PR_CONFLICTED != 'true' && (env.PR_AUTOMERGE_STUCK_NOTIFIED != 'true' || env.IS_FIRST_MERGE_DAY == 'true')
         env:
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
           PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}

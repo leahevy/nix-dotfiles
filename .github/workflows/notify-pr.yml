@@ -70,7 +70,14 @@ jobs:
           MESSAGE="<b>Repository:</b> ${{ github.repository }}<br><b>Branch:</b> ${{ github.ref_name }}<br><b>Pull Request Title:</b> ${TITLE}"
 
           if [ "$HEAD_REF" == "update-flake-inputs" ] && [ "${{ github.event.action }}" != "closed" ]; then
-            if printf '%s' "$PR_BODY" | grep -q '<!-- nx-reboot-system -->' || printf '%s' "$PR_BODY" | grep -q '<!-- nx-reboot-desktop -->'; then
+            if printf '%s' "$PR_BODY" | grep -q '<!-- nx-eval-failed -->'; then
+              PRIORITY="1"
+              SOUND="gamelan"
+              TTL="604800"
+              CIRCLE_COLOR="🔴"
+              STATUS="$STATUS (Test Build Failed)"
+              MESSAGE="$MESSAGE<br><br>❌ <b>Test build failed</b> - Testing profile evaluation failed - Auto-merge disabled"
+            elif printf '%s' "$PR_BODY" | grep -q '<!-- nx-reboot-system -->' || printf '%s' "$PR_BODY" | grep -q '<!-- nx-reboot-desktop -->'; then
               PRIORITY="1"
               SOUND="gamelan"
               TTL="604800"
