@@ -274,8 +274,6 @@ EOF
     };
 
     modules = {
-      core = { };
-
       groups = {
         base = [
           "nixos"
@@ -329,7 +327,7 @@ EOF
 
     extraSettings = { };
 
-    module = {
+    profile = {
       system = args@{
         lib,
         pkgs,

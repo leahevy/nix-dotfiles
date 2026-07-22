@@ -101,7 +101,7 @@
     #   homebrew.casks = [ "firefox" ];
     # };
 
-    module = {
+    profile = {
       # Overlays - applied unconditionally BEFORE pkgs is created. Cannot reference pkgs.
       # Each value is a list of (final: prev: { }) functions.
       # overlays = [ (final: prev: { ... }) ];

@@ -15,8 +15,6 @@
 
     email = null;
 
-    sopsPublicKey = "age12345...";
-
     gpg = null;
 
     additionalPackages = [ ];
@@ -35,7 +33,7 @@
       extraGroups = [ ];
       systemdSessionAtBoot = true;
       isSystemUser = false;
-      shell = "zsh";
+      loginShell = "zsh";
     };
 
     settings = {
@@ -50,7 +48,7 @@
     #   homebrew.casks = [ "firefox" ];
     # };
 
-    module = {
+    profile = {
       # Runs for ALL modules (even disabled) in BOTH contexts.
       # Only set config.nx.* options here.
       # init = args@{ lib, self, ... }: context@{ config, options, ... }: { };
