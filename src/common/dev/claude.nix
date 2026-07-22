@@ -382,11 +382,11 @@ args@{
           esac
 
           ctx_fg="$GRY"; ctx_bg="$GRY_D"
-          [ -n "$ctx_pct" ] && [ "$ctx_pct" -gt 20 ] && { ctx_fg="$RED"; ctx_bg="$RED_D"; }
+          [ -n "$ctx_pct" ] && [ "$ctx_pct" -gt 75 ] && { ctx_fg="$RED"; ctx_bg="$RED_D"; }
           five_h_fg="$GRY"; five_h_bg="$GRY_D"
           [ -n "$five_h" ] && [ "$five_h" -gt 50 ] && { five_h_fg="$MAG"; five_h_bg="$MAG_D"; }
           week_fg="$GRY"; week_bg="$GRY_D"
-          [ -n "$week" ] && [ "$week" -gt 35 ] && { week_fg="$ORA"; week_bg="$ORA_D"; }
+          [ -n "$week" ] && [ "$week" -gt 75 ] && { week_fg="$ORA"; week_bg="$ORA_D"; }
 
           segment "$YEL" "$YEL_D" "$disp_dir"
           [ -n "$branch" ] && segment "$LBL" "$LBL_D" "$branch"
