@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/../test-eval-lib.sh"
+
+te_setup
+te_secrets global yaml global-secrets.yaml user-secrets.yaml standalone-secrets.yaml
+te_secrets standalone:testdarwin binary bitwarden-api-token
+te_eval home "testdarwin--aarch64-darwin"
