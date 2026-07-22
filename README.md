@@ -58,6 +58,17 @@ My personal NixOS, macOS, and Home-Manager configuration using a dual-repository
 
         userPasswordHash: <Password hash used for the mainUser user on a NixOS host>
 
+### Minimum profile requirements
+
+The bare minimum a NixOS profile with an integrated user needs to evaluate:
+
+- Host profile: `hostname`, `mainUser` (name of an existing home-integrated profile), `stateVersion`, a valid age public key in `sopsPublicKey`, and a `disk.nix` disko layout.
+- `secrets/global-secrets.yaml` containing `github_token`
+- `secrets/user-secrets.yaml` containing `userPasswordHash`
+- `secrets/host-secrets.yaml` (default sops file for the system context).
+- Standalone home-manager profiles use `secrets/standalone-secrets.yaml` as default sops file instead.
+- Every referenced sops file must be encrypted for the profile's `sopsPublicKey`
+
 ## ISO Build Requirements
 
 For building live ISOs, `configRepoURL` must be set in `~/.config/nx/nxconfig/variables.nix`.
