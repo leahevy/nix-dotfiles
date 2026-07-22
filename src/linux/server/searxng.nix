@@ -383,7 +383,12 @@ args@{
             if builtins.isString dashboardExposedService then
               dashboardExposedService
             else if config.nx.linux.server.dashboard.hostAtNginxSubdomain then
-              config.nx.linux.server.nginx.subdomain
+              (
+                if config.nx.linux.server.nginx.subdomain != null then
+                  config.nx.linux.server.nginx.subdomain
+                else
+                  self.host.hostname
+              )
             else
               config.nx.linux.server.dashboard.subdomain;
           allowedCorsOrigins = lib.unique (
