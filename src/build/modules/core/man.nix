@@ -14,9 +14,15 @@ args@{
   input = "build";
 
   module = {
-    standalone = config: {
+    linux.standalone = config: {
       programs.man = {
         generateCaches = self.user.settings.generateManCaches;
+      };
+    };
+
+    darwin.standalone = config: {
+      programs.man = {
+        generateCaches = lib.mkForce false;
       };
     };
 
