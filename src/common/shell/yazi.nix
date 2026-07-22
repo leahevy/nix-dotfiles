@@ -50,11 +50,6 @@ args@{
     home =
       config:
       let
-        desktopSetting =
-          if self ? host && self.host ? settings && self.host.settings ? system then
-            self.host.settings.system.desktop or null
-          else
-            self.user.settings.desktop or null;
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;
         terminalRunWithClass =
           class: cmd:
@@ -82,7 +77,7 @@ args@{
           executable = true;
         };
 
-        home.file."${defs.binDir}/nx-yazi-term" = lib.mkIf (desktopSetting != null) {
+        home.file."${defs.binDir}/nx-yazi-term" = lib.mkIf (helpers.hasDesktop self) {
           text = ''
             #!/usr/bin/env bash
             exec ${terminalRunWithClass "org.nx.yazi" "nx-yazi"}

@@ -16,7 +16,7 @@ args@{
     enabled =
       config:
       let
-        isHeadless = (self.host.settings.system.desktop or null) == null;
+        isHeadless = !(helpers.hasDesktop self);
       in
       {
         nx.linux.monitoring.journal-watcher.ignorePatterns =

@@ -90,6 +90,15 @@ rec {
     else
       default;
 
+  # Whether a desktop environment is configured on the host or the standalone user.
+  # Accepts either a config or a self object (detected via _nx_self = true).
+  # Usage: hasDesktop config
+  # Usage: hasDesktop self
+  hasDesktop =
+    configOrSelf:
+    resolveFromHost configOrSelf [ "settings" "system" "desktop" ] null != null
+    || resolveFromUser configOrSelf [ "settings" "desktop" ] null != null;
+
   # Validate an email address (RFC 5321 subset sufficient for config validation)
   # Usage: isValidEmail $email
   isValidEmail =

@@ -838,11 +838,7 @@ in
       standalone =
         config:
         let
-          hasDesktop =
-            (self ? user)
-            && (self.user ? settings)
-            && (self.user.settings ? desktop)
-            && self.user.settings.desktop != null;
+          hasDesktop = helpers.hasDesktop self;
         in
         lib.mkIf hasDesktop {
           home.packages = [
@@ -858,7 +854,7 @@ in
       system =
         config:
         let
-          hasDesktop = (self ? host) && (self.host.settings.system.desktop or null) != null;
+          hasDesktop = helpers.hasDesktop self;
         in
         lib.mkIf hasDesktop {
           environment.systemPackages = [ config.nx.lib.iconResolveScript ];

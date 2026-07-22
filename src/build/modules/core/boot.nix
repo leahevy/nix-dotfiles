@@ -38,7 +38,7 @@ in
         usesLuks = (config.boot.initrd.luks.devices or { }) != { };
         usesLvm = (diskoDevices.lvm_vg or { }) != { };
         usesSystemdInitrd = config.boot.initrd.systemd.enable;
-        hasDesktop = (config.nx.profile.host.settings.system.desktop or null) != null;
+        hasDesktop = helpers.hasDesktop config;
         isVM = config.nx.profile.isVirtual;
         kernel = host.kernel;
       in

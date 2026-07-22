@@ -157,11 +157,6 @@ args@{
     home =
       config:
       let
-        desktopSetting =
-          if self ? host && self.host ? settings && self.host.settings ? system then
-            self.host.settings.system.desktop or null
-          else
-            self.user.settings.desktop or null;
         theme = config.nx.preferences.theme;
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;
         terminalRunPrefix = lib.escapeShellArgs (
@@ -1345,7 +1340,7 @@ args@{
           '';
         };
 
-        home.file."${defs.binDir}/nvim-desktop" = lib.mkIf (self.isLinux && desktopSetting != null) {
+        home.file."${defs.binDir}/nvim-desktop" = lib.mkIf (self.isLinux && helpers.hasDesktop self) {
           executable = true;
           text = ''
             #!/usr/bin/env bash
@@ -1368,7 +1363,7 @@ args@{
           ];
         };
 
-        xdg.desktopEntries = lib.optionalAttrs (self.isLinux && desktopSetting != null) {
+        xdg.desktopEntries = lib.optionalAttrs (self.isLinux && helpers.hasDesktop self) {
           "nvim" = {
             name = "Neovim wrapper";
             noDisplay = true;

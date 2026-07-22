@@ -50,7 +50,7 @@ args@{
           executable = true;
         };
 
-        home.file."${defs.binDir}/nstv-term" = {
+        home.file."${defs.binDir}/nstv-term" = lib.mkIf (helpers.hasDesktop self) {
           text = ''
             #!/usr/bin/env bash
             exec ${terminalRunWithClass "org.nx.nix-search-tv" "nstv"}

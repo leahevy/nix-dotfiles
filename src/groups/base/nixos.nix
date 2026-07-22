@@ -18,7 +18,7 @@ args@{
   submodules =
     if self ? isLinux && self.isLinux then
       {
-        common.style = lib.optionals (self.host.settings.system.desktop != null) [ "stylix" ];
+        common.style = lib.optionals (helpers.hasDesktop self) [ "stylix" ];
         linux = {
           memory = [ "zram" ];
           security = lib.optionals self.host.settings.security.auditd.enable [ "auditd" ];
@@ -33,7 +33,7 @@ args@{
           ];
           networking = [ "firewall" ];
         }
-        // lib.optionalAttrs (self.host.settings.system.desktop != null) {
+        // lib.optionalAttrs (helpers.hasDesktop self) {
           boot = [ "plymouth" ];
         };
       }

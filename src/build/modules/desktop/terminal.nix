@@ -16,15 +16,7 @@ args@{
     let
       isLinux = self ? isLinux && self.isLinux;
       terminal = self.user.settings.terminal;
-      hasHost = self ? host && self.host != null && self.host ? settings;
-      hasUser = self ? user && self.user != null && self.user ? settings;
-      hasDesktop =
-        if hasHost then
-          self.host.settings.system.desktop != null
-        else if hasUser && self.user ? settings && self.user.settings ? desktop then
-          self.user.settings.desktop != null
-        else
-          false;
+      hasDesktop = helpers.hasDesktop self;
     in
     (
       if isLinux && hasDesktop && terminal == "ghostty" then
