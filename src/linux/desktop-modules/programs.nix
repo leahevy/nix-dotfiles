@@ -494,9 +494,12 @@ let
     };
   };
 
-  desktopPreference = self.user.settings.desktopPreference or "gnome";
+  desktopPreference = helpers.getDesktopPreference self;
   isKDE = desktopPreference == "kde";
   isGnome = desktopPreference == "gnome";
+  isPlasmaDesktop = helpers.getDesktop self == "kde";
+  isGnomeDesktop = helpers.getDesktop self == "gnome";
+  isFullDesktop = isPlasmaDesktop || isGnomeDesktop;
 
   selectedPrograms =
     (
@@ -890,11 +893,30 @@ in
           ]);
           config = {
             common = {
-              default = if isKDE then [ "kde" ] else [ "gtk" ];
-              "org.freedesktop.impl.portal.Settings" = "gtk";
-              "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kde" ] else [ "gnome" ];
-              "org.freedesktop.impl.portal.ScreenCast" = "gnome";
+              default =
+                if isPlasmaDesktop then
+                  [ "kde" ]
+                else if isGnomeDesktop then
+                  [ "gnome" ]
+                else if isKDE then
+                  [ "kde" ]
+                else
+                  [ "gtk" ];
+              "org.freedesktop.impl.portal.Secret" =
+                if isPlasmaDesktop then
+                  [ "kde" ]
+                else if isGnomeDesktop then
+                  [ "gnome" ]
+                else if isKDE then
+                  [ "kde" ]
+                else
+                  [ "gnome" ];
               "org.freedesktop.impl.portal.Location" = "gtk";
+            }
+            // lib.optionalAttrs (!isFullDesktop) {
+              "org.freedesktop.impl.portal.Access" = "gtk";
+              "org.freedesktop.impl.portal.Settings" = "gtk";
+              "org.freedesktop.impl.portal.ScreenCast" = "gnome";
               "org.freedesktop.impl.portal.FileChooser" = "gtk";
             };
           };
@@ -1001,11 +1023,30 @@ in
           ];
         config = {
           common = {
-            default = if isKDE then [ "kde" ] else [ "gtk" ];
-            "org.freedesktop.impl.portal.Settings" = "gtk";
-            "org.freedesktop.impl.portal.Secret" = if isKDE then [ "kwallet" ] else [ "gnome-keyring" ];
-            "org.freedesktop.impl.portal.ScreenCast" = "gnome";
+            default =
+              if isPlasmaDesktop then
+                [ "kde" ]
+              else if isGnomeDesktop then
+                [ "gnome" ]
+              else if isKDE then
+                [ "kde" ]
+              else
+                [ "gtk" ];
+            "org.freedesktop.impl.portal.Secret" =
+              if isPlasmaDesktop then
+                [ "kwallet" ]
+              else if isGnomeDesktop then
+                [ "gnome-keyring" ]
+              else if isKDE then
+                [ "kwallet" ]
+              else
+                [ "gnome-keyring" ];
             "org.freedesktop.impl.portal.Location" = "gtk";
+          }
+          // lib.optionalAttrs (!isFullDesktop) {
+            "org.freedesktop.impl.portal.Access" = "gtk";
+            "org.freedesktop.impl.portal.Settings" = "gtk";
+            "org.freedesktop.impl.portal.ScreenCast" = "gnome";
             "org.freedesktop.impl.portal.FileChooser" = "gtk";
           };
         };

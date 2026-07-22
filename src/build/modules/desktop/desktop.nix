@@ -8,7 +8,7 @@ args@{
   ...
 }:
 let
-  desktopSetting = self.host.settings.system.desktop or self.user.settings.desktop or null;
+  desktopSetting = helpers.getDesktop self;
   isLinux = self ? isLinux && self.isLinux;
   isDarwin = self ? isDarwin && self.isDarwin;
 in

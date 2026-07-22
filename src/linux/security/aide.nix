@@ -622,7 +622,7 @@ in
     linux.integrated =
       config:
       let
-        isHeadless = (self.host.settings.system.desktop or null) == null;
+        isHeadless = helpers.isHeadless self;
         iconPath = "${helpers.packageFile args config.nx.linux.desktop.icons.dashboardIcons
           "svg/security-onion.svg"
         }";
@@ -791,7 +791,7 @@ in
           "server"
           "managed"
         ];
-        isHeadless = (self.host.settings.system.desktop or null) == null;
+        isHeadless = helpers.isHeadless self;
         userGroup = config.users.users.${self.user.username}.group;
 
         effectiveFullRuleset = if fullRuleset != null then fullRuleset else serverMode;

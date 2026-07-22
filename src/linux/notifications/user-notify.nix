@@ -30,7 +30,7 @@ args@{
     home =
       config:
       let
-        isHeadless = (self.host.settings.system.desktop or null) == null;
+        isHeadless = helpers.isHeadless self;
 
         iconResolveScript = config.nx.lib.iconResolveScript;
 

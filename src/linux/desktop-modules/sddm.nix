@@ -28,8 +28,8 @@ args@{
     system =
       config:
       let
-        isGnome = self.user.settings.desktopPreference == "gnome";
-        isKDE = self.user.settings.desktopPreference == "kde";
+        isGnome = helpers.getDesktopPreference self == "gnome";
+        isKDE = helpers.getDesktopPreference self == "kde";
         uwsmSession = pkgs.runCommand "uwsm-session" { } ''
                   mkdir -p $out/share/wayland-sessions
                   cat > $out/share/wayland-sessions/uwsm-session.desktop << 'EOF'

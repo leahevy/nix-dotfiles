@@ -33,7 +33,7 @@ args@{
           "security find-generic-password -s ${service}-${accountKey} -w"
         else if self.isLinux then
           let
-            desktopPreference = self.user.settings.desktopPreference;
+            desktopPreference = helpers.getDesktopPreference self;
           in
           if desktopPreference == "kde" then
             "kwallet-query kdewallet -r ${service}-${accountKey} -f Passwords"
@@ -47,7 +47,7 @@ args@{
     home =
       config:
       let
-        desktopPreference = self.user.settings.desktopPreference;
+        desktopPreference = helpers.getDesktopPreference self;
         isKDE = desktopPreference == "kde";
 
         accountsConfig =

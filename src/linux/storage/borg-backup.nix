@@ -102,7 +102,7 @@ args@{
     home =
       config:
       let
-        isHeadless = (self.host.settings.system.desktop or null) == null;
+        isHeadless = helpers.isHeadless self;
         iconPath = "${helpers.packageFile args config.nx.linux.desktop.icons.dashboardIcons
           "svg/borg.svg"
         }";

@@ -28,8 +28,8 @@ args@{
     home =
       config:
       let
-        isKDE = self.user.settings.desktopPreference == "kde";
-        isGnome = self.user.settings.desktopPreference == "gnome";
+        isKDE = helpers.getDesktopPreference self == "kde";
+        isGnome = helpers.getDesktopPreference self == "gnome";
       in
       {
         sops.secrets.${self.settings.passwordSopsFile} = {

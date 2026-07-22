@@ -99,6 +99,44 @@ rec {
     resolveFromHost configOrSelf [ "settings" "system" "desktop" ] null != null
     || resolveFromUser configOrSelf [ "settings" "desktop" ] null != null;
 
+  # Whether no desktop environment is configured (headless / server).
+  # Usage: isHeadless config / isHeadless self
+  isHeadless = configOrSelf: !(hasDesktop configOrSelf);
+
+  # Resolve the configured desktop environment (host system desktop takes precedence,
+  # then the standalone user desktop). Returns null when none is set.
+  # Usage: getDesktop config / getDesktop self
+  getDesktop =
+    configOrSelf:
+    let
+      hostDesktop = resolveFromHost configOrSelf [ "settings" "system" "desktop" ] null;
+    in
+    if hostDesktop != null then
+      hostDesktop
+    else
+      resolveFromUser configOrSelf [ "settings" "desktop" ] null;
+
+  # Resolve the effective desktop tooling preference. A full desktop (gnome or kde) forces its
+  # own tooling so apps and portals match the running session, other desktops fall back to the
+  # profile's desktopPreference.
+  # Usage: getDesktopPreference config / getDesktopPreference self
+  getDesktopPreference =
+    configOrSelf:
+    let
+      desktop = getDesktop configOrSelf;
+    in
+    if desktop == "gnome" || desktop == "kde" then
+      desktop
+    else
+      resolveFromUser configOrSelf [ "settings" "desktopPreference" ] "kde";
+
+  # Like getDesktopPreference but returns the given fallback when there is no desktop at all
+  # (headless / server), instead of a desktop tooling preference.
+  # Usage: getDesktopPreferenceWithFallback config "none" / getDesktopPreferenceWithFallback self "none"
+  getDesktopPreferenceWithFallback =
+    configOrSelf: fallback:
+    if hasDesktop configOrSelf then getDesktopPreference configOrSelf else fallback;
+
   # Validate an email address (RFC 5321 subset sufficient for config validation)
   # Usage: isValidEmail $email
   isValidEmail =

@@ -34,8 +34,8 @@ args@{
     system =
       config:
       let
-        isGnome = self.user.settings.desktopPreference == "gnome";
-        isKDE = self.user.settings.desktopPreference == "kde";
+        isGnome = helpers.getDesktopPreference self == "gnome";
+        isKDE = helpers.getDesktopPreference self == "kde";
         sessionCommand = "${pkgs.systemd}/bin/systemd-cat -t uwsm_start ${pkgs.uwsm}/bin/uwsm start ${self.settings.package}/bin/${self.settings.cmdline}";
         initialSession = {
           command = sessionCommand;

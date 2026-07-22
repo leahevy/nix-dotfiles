@@ -58,7 +58,7 @@ args@{
     system =
       config:
       let
-        hasDesktop = self.host.settings.system.desktop != null;
+        hasDesktop = helpers.hasDesktop self;
         desktopLibs = if hasDesktop then self.settings.desktopLibraries else [ ];
       in
       {

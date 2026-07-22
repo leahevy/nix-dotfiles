@@ -21,7 +21,7 @@ args@{
     home =
       config:
       let
-        desktopPreference = self.user.settings.desktopPreference;
+        desktopPreference = helpers.getDesktopPreference self;
         isKDE = desktopPreference == "kde";
         isGnome = desktopPreference == "gnome";
       in

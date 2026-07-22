@@ -54,7 +54,7 @@ args@{
     home =
       config:
       let
-        isHeadless = (self.host.settings.system.desktop or null) == null;
+        isHeadless = helpers.isHeadless self;
         iconPath = "${helpers.packageFile args config.nx.linux.desktop.icons.dashboardIcons
           "svg/nixos.svg"
         }";
@@ -829,7 +829,7 @@ args@{
 
         checkForceRebootScript =
           let
-            hasDesktopCheck = (self.host.settings.system.desktop or null) != null;
+            hasDesktopCheck = helpers.hasDesktop self;
           in
           ''
             FORCE_REBOOT=false
