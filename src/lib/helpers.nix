@@ -540,7 +540,6 @@ rec {
       config,
       architecture,
       context,
-      isVM ? false,
       host ? false,
       osConfig ? { },
     }:
@@ -645,7 +644,7 @@ rec {
             "sleep.target"
           ];
 
-          excludeForVMUnits = [
+          gdmWeakReferenceUnits = [
             "acpid.service"
             "autovt@tty1.service"
             "rc-local.service"
@@ -653,7 +652,7 @@ rec {
           ];
 
           activeExcludes =
-            (if isVM then excludeForVMUnits else [ ])
+            (if config.services.displayManager.gdm.enable or false then gdmWeakReferenceUnits else [ ])
             ++ lib.optionals (!lib.isAttrs host || !host.settings.networking.useNetworkManager) [
               "resolvconf.service"
             ]
