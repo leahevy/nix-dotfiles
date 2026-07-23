@@ -62,7 +62,7 @@ My personal NixOS, macOS, and Home-Manager configuration using a dual-repository
 
 The bare minimum a NixOS profile with an integrated user needs to evaluate:
 
-- Host profile: `hostname`, `mainUser` (name of an existing home-integrated profile), `stateVersion`, a valid age public key in `sopsPublicKey`, and a `disk.nix` disko layout.
+- Host profile: **hostname**, **mainUser** (name of an existing home-integrated profile), **stateVersion**, a valid age public key in **sopsPublicKey**, and a **disk.nix** disko layout.
 - `secrets/global-secrets.yaml` containing `github_token`
 - `secrets/user-secrets.yaml` containing `userPasswordHash`
 - `secrets/host-secrets.yaml` (default sops file for the system context).
