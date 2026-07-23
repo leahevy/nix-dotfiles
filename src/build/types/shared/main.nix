@@ -20,13 +20,13 @@ with lib;
       type = types.submodule {
         options = {
           latitude = mkOption {
-            type = types.nullOr types.float;
-            default = null;
+            type = types.float;
+            default = 0.0;
             description = "Latitude of the profile's geo-location";
           };
           longitude = mkOption {
-            type = types.nullOr types.float;
-            default = null;
+            type = types.float;
+            default = 0.0;
             description = "Longitude of profiles's geo-location";
           };
           altitude = mkOption {

@@ -23,11 +23,6 @@
       main = "Virtual-1";
     };
 
-    location = {
-      latitude = 0.0;
-      longitude = 0.0;
-    };
-
     modules = { };
 
     settings = {
