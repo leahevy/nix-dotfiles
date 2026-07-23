@@ -76,7 +76,7 @@ RESULTS_MD="${TEST_EVAL_RESULTS_MD:-$TE_WORKROOT/results.md}"
 {
 	echo '<!-- nx-eval-results-start -->'
 	if [ "$failed" -eq 0 ]; then
-		echo "**Test evaluations: $ok/$total profiles evaluated successfully.** [OK]"
+		echo "✅ **Test evaluations: $ok/$total profiles evaluated successfully.**"
 	else
 		echo '> [!CAUTION]'
 		echo '> **Test Build Failed**'
