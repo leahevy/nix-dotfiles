@@ -145,12 +145,16 @@ args@{
             command,
             purpose,
             pname ? command,
-            attr ? pname,
+            attr ? null,
           }:
-          if isProgramInstalled pname then
+          let
+            pnames = if lib.isList pname then pname else [ pname ];
+            attrName = if attr != null then attr else builtins.head pnames;
+          in
+          if lib.any isProgramInstalled pnames then
             programInstalledLine command purpose
           else
-            "`${command}` is not installed. For ${purpose}, run it on demand via `nix shell nixpkgs#${attr} -c ${command} ...`.";
+            "`${command}` is not installed. For ${purpose}, run it on demand via `nix shell nixpkgs#${attrName} -c ${command} ...`.";
         mkProgramCustom =
           {
             command,
@@ -195,6 +199,9 @@ args@{
                 "If the repo is the current one, replace `{{REPO_ROOT}}` with `\"$(git rev-parse --show-toplevel)\"`. If you need a different repo, use its root path explicitly."
               ]
             ];
+          "71 - Shell" = [
+            "`cp`, `mv`, `ln`, and `rm` carry interactive `-i`/`-I` alias guards that hang when run directly; bypass with `command` (e.g. `command cp`). Shebang scripts are unaffected."
+          ];
           "72 - Available Programs" = [
             (mkProgram {
               command = "jq";
@@ -233,6 +240,42 @@ args@{
               pname = "pandoc-cli";
               attr = "pandoc";
               purpose = "converting between document formats";
+            })
+            (mkProgram {
+              command = "treefmt";
+              pname = [
+                "nixfmt-tree"
+                "treefmt"
+              ];
+              purpose = "formatting code in a repository that has a treefmt config (e.g. `.treefmt.toml`)";
+            })
+            (mkProgram {
+              command = "shellcheck";
+              pname = "ShellCheck";
+              attr = "shellcheck";
+              purpose = "linting shell scripts";
+            })
+            (mkProgram {
+              command = "shfmt";
+              purpose = "formatting and parsing shell scripts";
+            })
+            (mkProgram {
+              command = "jd";
+              pname = "jd-diff-patch";
+              attr = "jd-diff-patch";
+              purpose = "structured JSON diff and patch";
+            })
+            (mkProgram {
+              command = "tree";
+              purpose = "viewing directory structure";
+            })
+            (mkProgram {
+              command = "just";
+              purpose = "running project tasks in a repository that has a justfile";
+            })
+            (mkProgram {
+              command = "pre-commit";
+              purpose = "running hooks in a repository that has a .pre-commit-config.yaml";
             })
             (mkProgramCustom {
               command = "gh";
