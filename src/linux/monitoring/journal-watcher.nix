@@ -348,6 +348,7 @@ args@{
         "^\\*+\\s*If you see this message and you are not debugging.*\\s*\\*+$"
         "^\\*+\\s*the kernel, report this immediately to your vendor.*\\s*\\*+$"
         "buffer_io_error: [0-9]+ callbacks suppressed"
+        "show_signal_msg: [0-9]+ callbacks suppressed"
         "FAT-fs \\([a-z0-9]+\\): unable to read boot sector to mark fs as dirty"
         "hrtimer: interrupt took [0-9]+ ns"
         "usb .*device descriptor read/([0-9]+|all), error -[0-9]+"
