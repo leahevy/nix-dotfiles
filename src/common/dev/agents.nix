@@ -136,9 +136,29 @@ args@{
         disableTestData = config.nx.common.dev.agents.disableTestData;
         difftasticEnabled =
           (config.programs.difftastic.enable or false) && (config.programs.difftastic.git.enable or false);
-        ghInstalled = lib.any (p: (p.pname or p.name or "") == "gh") (
-          (config.home.packages or [ ]) ++ (config.environment.systemPackages or [ ])
-        );
+
+        installedPackages = (config.home.packages or [ ]) ++ (config.environment.systemPackages or [ ]);
+        isProgramInstalled = pname: lib.any (p: (p.pname or p.name or "") == pname) installedPackages;
+        programInstalledLine = command: purpose: "For ${purpose}, use the installed `${command}`.";
+        mkProgram =
+          {
+            command,
+            purpose,
+            pname ? command,
+            attr ? pname,
+          }:
+          if isProgramInstalled pname then
+            programInstalledLine command purpose
+          else
+            "`${command}` is not installed. For ${purpose}, run it on demand via `nix shell nixpkgs#${attr} -c ${command} ...`.";
+        mkProgramCustom =
+          {
+            command,
+            purpose,
+            whenMissing,
+            pname ? command,
+          }:
+          if isProgramInstalled pname then programInstalledLine command purpose else whenMissing;
 
         baseInstructions = {
           "10 - Work Style" = [
@@ -175,8 +195,50 @@ args@{
                 "If the repo is the current one, replace `{{REPO_ROOT}}` with `\"$(git rev-parse --show-toplevel)\"`. If you need a different repo, use its root path explicitly."
               ]
             ];
-          "71 - GitHub" = lib.optionals (!ghInstalled) [
-            "The GitHub CLI(`gh`) is not installed. To query GitHub use the API directly via `curl`."
+          "72 - Available Programs" = [
+            (mkProgram {
+              command = "jq";
+              purpose = "JSON validation and manipulation";
+            })
+            (mkProgram {
+              command = "yq";
+              purpose = "YAML, XML, and TOML processing";
+            })
+            (mkProgram {
+              command = "rg";
+              pname = "ripgrep";
+              attr = "ripgrep";
+              purpose = "fast recursive text search";
+            })
+            (mkProgram {
+              command = "fd";
+              purpose = "fast file finding";
+            })
+            (mkProgram {
+              command = "curl";
+              purpose = "making HTTP requests";
+            })
+            (mkProgram {
+              command = "sqlite3";
+              pname = "sqlite";
+              attr = "sqlite";
+              purpose = "querying SQLite database files";
+            })
+            (mkProgram {
+              command = "wget";
+              purpose = "recursive or mirrored downloads";
+            })
+            (mkProgram {
+              command = "pandoc";
+              pname = "pandoc-cli";
+              attr = "pandoc";
+              purpose = "converting between document formats";
+            })
+            (mkProgramCustom {
+              command = "gh";
+              purpose = "GitHub operations (PRs, issues, releases)";
+              whenMissing = "The GitHub CLI (`gh`) is not installed. To query GitHub, use the REST API directly via `curl` (e.g. `curl https://api.github.com/repos/OWNER/REPO/...`).";
+            })
           ];
         };
 
