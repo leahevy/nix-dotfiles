@@ -19,6 +19,8 @@ let
       ];
       dev = [
         "conda"
+        "go"
+        "rust"
         "just"
         "poetry"
         "uv"
