@@ -14,6 +14,13 @@ args@{
   input = "common";
 
   module = {
+    enabled = config: {
+      nx.common.git.git.globalIgnores = [
+        ".envrc*"
+        ".direnv"
+      ];
+    };
+
     home = config: {
       programs = {
         direnv = {

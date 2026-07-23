@@ -21,24 +21,86 @@ args@{
     };
   };
 
-  settings = {
-    disableSSHRewrites = false;
-    serversToEnforceSSH = [
-      "github.com"
-      "gitlab.com"
-    ];
-    useDifftastic = true;
+  options = {
+    name = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Override the git user name instead of the user profile full name.";
+    };
+    email = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Override the git user email instead of the user profile email.";
+    };
+    gpg = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "GPG key used to sign commits and tags.";
+    };
+    disableSSHRewrites = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Disable rewriting HTTPS remotes to SSH for the enforced servers.";
+    };
+    serversToEnforceSSH = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [
+        "github.com"
+        "gitlab.com"
+      ];
+      description = "Servers whose HTTPS remotes are rewritten to SSH.";
+    };
+    useDifftastic = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Use difftastic as the git diff and difftool.";
+    };
+    globalIgnores = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Extra entries to add to the global git ignore file.";
+    };
   };
 
   module = {
+    darwin.enabled = config: {
+      nx.common.git.git.globalIgnores = [
+        ".DS_Store"
+        "._*"
+      ];
+    };
+
     home =
-      config:
+      {
+        config,
+        name,
+        email,
+        gpg,
+        disableSSHRewrites,
+        serversToEnforceSSH,
+        useDifftastic,
+        globalIgnores,
+        ...
+      }:
       let
         gpgKey =
           let
-            candidate = helpers.ifSet (self.settings.gpg or null) (self.user.gpg or null);
+            candidate = helpers.ifSet gpg (self.user.gpg or null);
           in
           if candidate != null && candidate != "" then candidate else null;
+
+        baseline = [
+          "*.socket"
+          "*.sock"
+          "*~"
+          "dist/"
+          "*.mo"
+          ".cache"
+          "*.bundle"
+          ".vendor"
+          ".local"
+          "nohup.out"
+        ];
       in
       {
         programs.git = {
@@ -46,8 +108,8 @@ args@{
 
           settings = {
             user = {
-              name = helpers.ifSet (self.settings.name or null) self.user.fullname;
-              email = helpers.ifSet (self.settings.email or null) self.user.email;
+              name = helpers.ifSet name self.user.fullname;
+              email = helpers.ifSet email self.user.email;
             };
 
             init = {
@@ -73,14 +135,14 @@ args@{
               helper = lib.mkDefault "cache --timeout=10800";
             };
 
-            url = lib.mkIf (!self.settings.disableSSHRewrites) (
+            url = lib.mkIf (!disableSSHRewrites) (
               lib.listToAttrs (
                 map (server: {
                   name = "git@${server}:";
                   value = {
                     insteadOf = "https://${server}/";
                   };
-                }) self.settings.serversToEnforceSSH
+                }) serversToEnforceSSH
               )
             );
 
@@ -149,7 +211,7 @@ args@{
               rename = "copy";
               wordRegex = ".";
               submodule = "log";
-              tool = lib.mkIf (self.settings.useDifftastic) "difftastic";
+              tool = lib.mkIf useDifftastic "difftastic";
               colorMoved = "default";
               context = 15;
             };
@@ -298,7 +360,7 @@ args@{
           };
         };
 
-        programs.difftastic = lib.mkIf self.settings.useDifftastic {
+        programs.difftastic = lib.mkIf useDifftastic {
           enable = true;
           git = {
             enable = true;
@@ -312,7 +374,7 @@ args@{
         };
 
         home.file.".config/git/gitignore_global" = {
-          source = self.file "gitignore_global";
+          text = lib.concatStringsSep "\n" (lib.unique (baseline ++ globalIgnores)) + "\n";
         };
 
         home.persistence."${self.persist}" = {

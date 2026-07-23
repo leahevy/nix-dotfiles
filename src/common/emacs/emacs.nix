@@ -14,6 +14,12 @@ args@{
   input = "common";
 
   module = {
+    enabled = config: {
+      nx.common.git.git.globalIgnores = [
+        ".\\#*"
+      ];
+    };
+
     home =
       config:
       let

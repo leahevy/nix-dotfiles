@@ -79,7 +79,7 @@ args@{
           gm = "g commit -m";
           gct = "g commit";
           gcn = "gct -m";
-          gh = "g head${if (self.getModuleConfig "git.git").useDifftastic then " --ext-diff" else ""}";
+          gh = "g head${if config.nx.common.git.git.useDifftastic then " --ext-diff" else ""}";
           gl = "g log";
           gg = "g graph";
           gps = "g push";

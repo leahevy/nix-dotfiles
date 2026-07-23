@@ -198,6 +198,11 @@ args@{
 
         nx.common.dev.claude.skills = lib.mkOrder 200 baseSkills;
         nx.common.dev.claude.agents = lib.mkOrder 200 baseAgents;
+
+        nx.common.git.git.globalIgnores = [
+          "CLAUDE.md"
+          ".claude"
+        ];
       };
 
     home =

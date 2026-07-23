@@ -152,6 +152,15 @@ args@{
         desktopFile = "nvim.desktop";
         needsTerminal = true;
       };
+
+      nx.common.git.git.globalIgnores = [
+        "*.swp"
+        "*.un~"
+        "Session.vim"
+        ".netrwhist"
+        ".vimrc"
+        ".vimrc.lua"
+      ];
     };
 
     home =

@@ -35,6 +35,23 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.common.git.git.globalIgnores = [
+        "__pycache__/"
+        "*.py[cod]"
+        "pyrightconfig.json"
+        "pip-log.txt"
+        ".venv"
+        "eggs/"
+        "sdist/"
+        "*.egg-info"
+        "*.egg"
+        ".coverage"
+        "coverage.xml"
+        "docs/_build/"
+      ];
+    };
+
     home =
       {
         config,

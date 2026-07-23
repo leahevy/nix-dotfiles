@@ -16,6 +16,12 @@ args@{
   requirePlatforms = [ "linux" ];
 
   module = {
+    enabled = config: {
+      nx.common.git.git.globalIgnores = [
+        ".vscode/"
+      ];
+    };
+
     home = config: {
       home.packages = with pkgs; [
         vscodium

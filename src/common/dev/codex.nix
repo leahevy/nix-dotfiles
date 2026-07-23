@@ -198,6 +198,10 @@ args@{
           nx.common.dev.codex.instructions = lib.mkOrder 200 baseInstructions;
 
           nx.common.dev.codex.skills = lib.mkOrder 200 baseSkills;
+
+          nx.common.git.git.globalIgnores = [
+            ".codex"
+          ];
         };
 
       home =
