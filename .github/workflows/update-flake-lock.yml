@@ -211,7 +211,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Nix
-        if: env.IS_UPDATE_RUN == 'true' || env.RE_EVAL_ONLY == 'true' || (env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.PR_EVAL_FAILED == 'true' && env.TEST_EVAL_ENABLED == 'true')
+        if: env.IS_UPDATE_RUN == 'true' || env.RE_EVAL_ONLY == 'true' || (env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.TEST_EVAL_ENABLED == 'true')
         uses: DeterminateSystems/nix-installer-action@v22
 
       - name: Extract commit hashes before update
@@ -804,7 +804,7 @@ jobs:
           draft: ${{ (github.event_name != 'workflow_dispatch' || env.EVAL_FAILED == 'true') && 'always-true' || 'false' }}
 
       - name: Re-run test evaluation on current core
-        if: (env.RE_EVAL_ONLY == 'true') || (env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.PR_EVAL_FAILED == 'true' && env.TEST_EVAL_ENABLED == 'true')
+        if: (env.RE_EVAL_ONLY == 'true') || (env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.TEST_EVAL_ENABLED == 'true')
         continue-on-error: true
         timeout-minutes: 90
         env:
@@ -822,42 +822,53 @@ jobs:
             eval_ok=false
           fi
 
-          if [ -f "$workdir/results.md" ]; then
-            gh pr view "${{ env.PR_NUMBER }}" --json body -q .body > "$workdir/body.txt"
-            awk -v mdfile="$workdir/results.md" '
-              /<!-- nx-eval-results-start -->/ {
-                skip = 1
-                found = 1
+          if [ ! -f "$workdir/results.md" ]; then
+            {
+              echo '<!-- nx-eval-results-start -->'
+              echo '> [!CAUTION]'
+              echo '> **Test Build Failed**'
+              echo '> The test evaluation runner failed before producing results!'
+              echo '<!-- nx-eval-results-end -->'
+            } > "$workdir/results.md"
+          fi
+
+          gh pr view "${{ env.PR_NUMBER }}" --json body -q .body > "$workdir/body.txt"
+          awk -v mdfile="$workdir/results.md" '
+            /<!-- nx-eval-results-start -->/ {
+              skip = 1
+              found = 1
+              while ((getline line < mdfile) > 0) print line
+              close(mdfile)
+              next
+            }
+            /<!-- nx-eval-results-end -->/ { skip = 0; next }
+            !skip { print }
+            END {
+              if (!found) {
+                print ""
                 while ((getline line < mdfile) > 0) print line
                 close(mdfile)
-                next
               }
-              /<!-- nx-eval-results-end -->/ { skip = 0; next }
-              !skip { print }
-              END {
-                if (!found) {
-                  print ""
-                  while ((getline line < mdfile) > 0) print line
-                  close(mdfile)
-                }
-              }
-            ' "$workdir/body.txt" > "$workdir/new-body.txt"
-            if [ "$eval_ok" == "true" ]; then
-              grep -vF '<!-- nx-eval-failed -->' "$workdir/new-body.txt" > "$workdir/new-body-clean.txt" || true
-              mv "$workdir/new-body-clean.txt" "$workdir/new-body.txt"
-            fi
-            gh pr edit "${{ env.PR_NUMBER }}" --body-file "$workdir/new-body.txt"
+            }
+          ' "$workdir/body.txt" > "$workdir/new-body.txt"
+
+          grep -vF '<!-- nx-eval-failed -->' "$workdir/new-body.txt" > "$workdir/new-body-clean.txt" || true
+          mv "$workdir/new-body-clean.txt" "$workdir/new-body.txt"
+          if [ "$eval_ok" != "true" ]; then
+            printf '%s\n' '<!-- nx-eval-failed -->' >> "$workdir/new-body.txt"
           fi
+          gh pr edit "${{ env.PR_NUMBER }}" --body-file "$workdir/new-body.txt"
 
           if [ "$eval_ok" == "true" ]; then
             echo "Evaluation succeeds now - failure marker cleared from PR body"
             echo "PR_EVAL_FAILED=false" >> $GITHUB_ENV
           else
-            echo "Evaluation still failing - keeping failure marker"
+            echo "Evaluation failing - failure marker set on PR body"
+            echo "PR_EVAL_FAILED=true" >> $GITHUB_ENV
           fi
 
       - name: Workflow dispatch - Mark PR ready
-        if: github.event_name == 'workflow_dispatch' && env.EVAL_FAILED != 'true' && !(env.RE_EVAL_ONLY == 'true' && env.PR_EVAL_FAILED == 'true') && (steps.cpr.outputs.pull-request-number != '' || env.PR_EXISTS == 'true')
+        if: github.event_name == 'workflow_dispatch' && env.EVAL_FAILED != 'true' && env.PR_EVAL_FAILED != 'true' && (steps.cpr.outputs.pull-request-number != '' || env.PR_EXISTS == 'true')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
