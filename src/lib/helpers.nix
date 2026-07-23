@@ -475,6 +475,29 @@ rec {
     in
     lib.foldl' (acc: d: acc * 16 + d) 0 (map digit (lib.stringToCharacters h));
 
+  # Convert an html hex color to its decimal red, green, and blue channels.
+  # Usage: hexToRgb "#59a6ef" -> { r = 89; g = 166; b = 239; }
+  hexToRgb =
+    hex:
+    let
+      h = lib.toLower (lib.removePrefix "#" hex);
+    in
+    {
+      r = hexToInt (builtins.substring 0 2 h);
+      g = hexToInt (builtins.substring 2 2 h);
+      b = hexToInt (builtins.substring 4 2 h);
+    };
+
+  # Convert an html hex color to the semicolon-separated channel string used by
+  # 24-bit ANSI SGR escapes (38;2;R;G;Bm and 48;2;R;G;Bm) in shell scripts.
+  # Usage: hexToAnsiRgb "#59a6ef" -> "89;166;239"
+  hexToAnsiRgb =
+    hex:
+    let
+      rgb = hexToRgb hex;
+    in
+    "${toString rgb.r};${toString rgb.g};${toString rgb.b}";
+
   # Generate a UUID from a given text input
   # Usage: generateUUID $TEXT
   generateUUID =

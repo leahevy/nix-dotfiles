@@ -231,6 +231,9 @@ args@{
         sharedAgents = config.nx.common.dev.agents;
         renderInstructions = self.common.dev.agents.exports.renderInstructions;
 
+        tc = config.nx.preferences.theme.colors;
+        ansi = color: helpers.hexToAnsiRgb color.html;
+
         mergedInstructions = helpers.deepMergeComplex {
           base = sharedAgents.instructions;
           override = instructions;
@@ -321,19 +324,18 @@ args@{
           CAP_R=""
           SEP_DIM=""
 
-          YEL='239;239;89'  YEL_D='77;71;26'
-          BLU='140;170;255' BLU_D='26;38;85'
-          LBL='239;239;239' LBL_D='26;38;85'
-          GRN='51;203;141'  GRN_D='17;68;47'
-          CYN='89;231;239'  CYN_D='20;90;85'
-          MAG='217;89;239'  MAG_D='95;20;95'
-          ORA='239;164;89'  ORA_D='77;50;26'
-          RED='239;89;89'   RED_D='130;18;28'
-          GRY='150;150;150' GRY_D='45;45;45'
+          YEL='${ansi tc.terminal.colors.yellow}'
+          BLU='${ansi tc.terminal.colors.blue}'
+          LBL='${ansi tc.main.foregrounds.strong}'
+          GRN='${ansi tc.terminal.colors.greenBright}'
+          GRN2='${ansi tc.terminal.colors.green}'
+          CYN='${ansi tc.terminal.colors.cyanBright}'
+          MAG='${ansi tc.terminal.colors.magentaLight}'
+          RED='${ansi tc.terminal.colors.redBright}'
+          GRY='${ansi tc.main.foregrounds.emphasized}'
 
-          RED_H='255;200;200'
-          MAG_H='245;200;255'
-          ORA_H='255;220;180'
+          FG='${ansi tc.main.backgrounds.primary}'
+          BG='${ansi tc.main.backgrounds.primary}'
 
           prev_bg=""
 
@@ -341,7 +343,7 @@ args@{
             if [ -n "$2" ]; then
               printf '\033[48;2;%sm' "$2"
             else
-              printf '\033[49m'
+              printf '\033[48;2;%sm' "$BG"
             fi
             printf '\033[38;2;%sm%s' "$1" "$SEP"
           }
@@ -349,19 +351,19 @@ args@{
           segment() {
             if [ -n "$prev_bg" ]; then
               if [ "$prev_bg" = "$2" ]; then
-                printf '\033[48;2;%sm\033[38;2;%sm%s' "$2" "$GRY" "$SEP_DIM"
+                printf '\033[48;2;%sm\033[38;2;%sm%s' "$2" "$1" "$SEP_DIM"
               else
                 sep "$prev_bg" "$2"
               fi
             else
-              printf '\033[49m\033[38;2;%sm\033[7m%s\033[27m\033[48;2;%sm' "$2" "$CAP_L" "$2"
+              printf '\033[48;2;%sm\033[38;2;%sm\033[7m%s\033[27m\033[48;2;%sm' "$BG" "$2" "$CAP_L" "$2"
             fi
             printf '\033[38;2;%sm %s ' "$1" "$3"
             prev_bg="$2"
           }
 
           end_segments() {
-            printf '\033[0m\033[38;2;%sm%s\033[0m' "$prev_bg" "$CAP_R"
+            printf '\033[0m\033[48;2;%sm\033[38;2;%sm%s\033[0m' "$BG" "$prev_bg" "$CAP_R"
           }
 
           fmt_reset() {
@@ -378,43 +380,43 @@ args@{
             fi
           }
 
-          model_fg="$MAG"; model_bg="$MAG_D"
+          model_fg="$FG"; model_bg="$MAG"
           case "$model" in
-            *Haiku*)  model_fg="$CYN"; model_bg="$CYN_D" ;;
-            *Sonnet*) model_fg="$BLU"; model_bg="$BLU_D" ;;
-            *Opus*)   model_fg="$ORA"; model_bg="$ORA_D" ;;
-            *Fable*)  model_fg="$GRN"; model_bg="$GRN_D" ;;
+            *Haiku*)  model_bg="$CYN" ;;
+            *Sonnet*) model_bg="$BLU" ;;
+            *Opus*)   model_bg="$GRN2" ;;
+            *Fable*)  model_bg="$GRN" ;;
           esac
 
-          ctx_fg="$GRY"; ctx_bg="$GRY_D"
-          [ -n "$ctx_pct" ] && [ "$ctx_pct" -gt 75 ] && { ctx_fg="$RED"; ctx_bg="$RED_D"; }
-          five_h_fg="$GRY"; five_h_bg="$GRY_D"
-          [ -n "$five_h" ] && [ "$five_h" -gt 50 ] && { five_h_fg="$MAG"; five_h_bg="$MAG_D"; }
-          week_fg="$GRY"; week_bg="$GRY_D"
-          [ -n "$week" ] && [ "$week" -gt 75 ] && { week_fg="$ORA"; week_bg="$ORA_D"; }
+          ctx_fg="$FG"; ctx_bg="$GRY"
+          [ -n "$ctx_pct" ] && [ "$ctx_pct" -gt 75 ] && { ctx_bg="$RED"; }
+          five_h_fg="$FG"; five_h_bg="$GRY"
+          [ -n "$five_h" ] && [ "$five_h" -gt 50 ] && { five_h_bg="$MAG"; }
+          week_fg="$FG"; week_bg="$GRY"
+          [ -n "$week" ] && [ "$week" -gt 75 ] && { week_bg="$GRN2"; }
 
-          segment "$YEL" "$YEL_D" "$disp_dir"
-          [ -n "$branch" ] && segment "$LBL" "$LBL_D" "$branch"
+          segment "$FG" "$YEL" "$disp_dir"
+          [ -n "$branch" ] && segment "$FG" "$LBL" "$branch"
           segment "$model_fg" "$model_bg" "$model"
-          [ -n "$cost" ] && segment "$GRY" "$GRY_D" "$(printf '$%.2f' "$cost")"
+          [ -n "$cost" ] && segment "$FG" "$GRY" "$(printf '$%.2f' "$cost")"
           if [ -n "$ctx_pct" ]; then
-            segment "$RED_H" "$RED_D" "Context"
+            segment "$FG" "$CYN" "Context"
             segment "$ctx_fg" "$ctx_bg" "$(printf '%2s' "$ctx_pct")%"
           fi
           if [ -n "$five_h" ]; then
-            segment "$MAG_H" "$MAG_D" "Session"
+            segment "$FG" "$MAG" "Session"
             five_h_label="$(printf '%2s' "$five_h")%"
             [ -n "$five_h_reset" ] && five_h_label="$five_h_label · $(fmt_reset "$five_h_reset")"
             segment "$five_h_fg" "$five_h_bg" "$five_h_label"
           fi
           if [ -n "$week" ]; then
-            segment "$ORA_H" "$ORA_D" "Week"
+            segment "$FG" "$GRN2" "Week"
             week_label="$(printf '%2s' "$week")%"
             [ -n "$week_reset" ] && week_label="$week_label · $(fmt_reset "$week_reset")"
             segment "$week_fg" "$week_bg" "$week_label"
           fi
-          tokens_fg="$GRY"; tokens_bg="$GRY_D"
-          [ "$exceeds" = "true" ] && { tokens_fg="$RED"; tokens_bg="$RED_D"; }
+          tokens_fg="$FG"; tokens_bg="$GRY"
+          [ "$exceeds" = "true" ] && { tokens_bg="$RED"; }
           if [ -n "$tokens" ]; then
             tokens_label="$((tokens / 1000))k tokens used"
           else
