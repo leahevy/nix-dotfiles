@@ -163,6 +163,19 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    devenv = {
+      url = "github:cachix/devenv";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-compat.follows = "flake-compat";
+      inputs.flake-parts.follows = "flake-parts";
+      inputs.nixd.inputs.treefmt-nix.follows = "treefmt-nix";
+    };
+
+    nixpkgs-python = {
+      url = "github:cachix/nixpkgs-python";
+      inputs.flake-compat.follows = "flake-compat";
+    };
+
     # -----------------------------------------------------------------------------
     # Rolling-tag inputs (require manual tag bump)
     # -----------------------------------------------------------------------------
