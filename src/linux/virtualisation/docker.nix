@@ -20,6 +20,13 @@ args@{
     additionalSettings = { };
   };
 
+  assertions = [
+    {
+      assertion = !self.isModuleEnabled "virtualisation.podman";
+      message = "docker and podman modules are mutually exclusive!";
+    }
+  ];
+
   module = {
     linux.system = config: {
       virtualisation.docker = {
