@@ -136,6 +136,7 @@ args@{
         disableTestData = config.nx.common.dev.agents.disableTestData;
         difftasticEnabled =
           (config.programs.difftastic.enable or false) && (config.programs.difftastic.git.enable or false);
+        diffAliasedToColordiff = (config.home.shellAliases.diff or null) == "colordiff";
 
         installedPackages = (config.home.packages or [ ]) ++ (config.environment.systemPackages or [ ]);
         isProgramInstalled = pname: lib.any (p: (p.pname or p.name or "") == pname) installedPackages;
@@ -201,6 +202,9 @@ args@{
             ];
           "71 - Shell" = [
             "`cp`, `mv`, `ln`, and `rm` carry interactive `-i`/`-I` alias guards that hang when run directly; bypass with `command` (e.g. `command cp`). Shebang scripts are unaffected."
+          ]
+          ++ lib.optionals diffAliasedToColordiff [
+            "`diff` is aliased to `colordiff`, which colorizes output and prints a startup banner that corrupts machine-readable output; call the real diff program with `command diff` (e.g. `command diff a b`)."
           ];
           "72 - Available Programs" = [
             (mkProgram {
