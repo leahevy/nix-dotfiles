@@ -57,46 +57,117 @@ let
     use devenv
   '';
 
-  uvFragment = pkgs.writeText "uv.nix" ''
-    { ... }:
-    {
-      languages.python.enable = true;
-      languages.python.venv.enable = true;
-      languages.python.uv.enable = true;
-      languages.python.uv.sync.enable = true;
-    }
-  '';
+  languages = {
+    uv = {
+      options = {
+        languages.python.enable = true;
+        languages.python.venv.enable = true;
+        languages.python.uv.enable = true;
+        languages.python.uv.sync.enable = true;
+      };
+      conflict = "poetry";
+      version = [
+        "languages.python.enable = true;"
+        "languages.python.version = \"{version}\";"
+      ];
+      adder = [
+        "uv"
+        "add"
+      ];
+    };
 
-  poetryFragment = pkgs.writeText "poetry.nix" ''
-    { ... }:
-    {
-      languages.python.enable = true;
-      languages.python.poetry.enable = true;
-      languages.python.poetry.activate.enable = true;
-      languages.python.poetry.install.enable = true;
-    }
-  '';
+    poetry = {
+      options = {
+        languages.python.enable = true;
+        languages.python.poetry.enable = true;
+        languages.python.poetry.activate.enable = true;
+        languages.python.poetry.install.enable = true;
+      };
+      conflict = "uv";
+      version = [
+        "languages.python.enable = true;"
+        "languages.python.version = \"{version}\";"
+      ];
+      adder = [
+        "poetry"
+        "add"
+      ];
+    };
 
-  goFragment = pkgs.writeText "go.nix" ''
-    { ... }:
-    {
-      languages.go.enable = true;
-    }
-  '';
+    go = {
+      options = {
+        languages.go.enable = true;
+      };
+      adder = [
+        "go"
+        "get"
+      ];
+    };
 
-  rustFragment = pkgs.writeText "rust.nix" ''
-    { ... }:
-    {
-      languages.rust.enable = true;
-    }
-  '';
+    rust = {
+      options = {
+        languages.rust.enable = true;
+      };
+      adder = [
+        "cargo"
+        "add"
+      ];
+    };
 
-  dotenvFragment = pkgs.writeText "dotenv.nix" ''
-    { ... }:
-    {
-      dotenv.enable = true;
-    }
-  '';
+    dotenv = {
+      options = {
+        dotenv.enable = true;
+      };
+    };
+  };
+
+  languageNames = lib.attrNames languages;
+
+  flattenOptions =
+    prefix: value:
+    if builtins.isAttrs value then
+      lib.concatMap (
+        name: flattenOptions (if prefix == "" then name else "${prefix}.${name}") value.${name}
+      ) (lib.attrNames value)
+    else
+      [ "${prefix} = ${lib.generators.toPretty { } value};" ];
+
+  renderFragmentText =
+    language:
+    let
+      lines =
+        flattenOptions "" (language.options or { })
+        ++ lib.optional (language ? extraFragmentText) language.extraFragmentText;
+    in
+    ''
+      { pkgs, ... }:
+      {
+        ${lib.concatStringsSep "\n  " lines}
+      }
+    '';
+
+  languageFragments = lib.mapAttrs (
+    name: language: pkgs.writeText "${name}.nix" (renderFragmentText language)
+  ) languages;
+
+  languagesWithAdder = lib.filterAttrs (_: language: language ? adder) languages;
+
+  fragmentsJson = builtins.toJSON (lib.mapAttrs (name: _: "${languageFragments.${name}}") languages);
+  conflictsJson = builtins.toJSON (
+    lib.mapAttrs (_: language: language.conflict) (
+      lib.filterAttrs (_: language: language ? conflict) languages
+    )
+  );
+  versionInsertsJson = builtins.toJSON (
+    lib.mapAttrs (_: language: language.version) (
+      lib.filterAttrs (_: language: language ? version) languages
+    )
+  );
+  addersJson = builtins.toJSON (lib.mapAttrs (_: language: language.adder) languagesWithAdder);
+  langsJson = builtins.toJSON languageNames;
+
+  enableCompletionNames = lib.concatStringsSep " " languageNames;
+  addCompletionNames = lib.concatStringsSep " " (lib.attrNames languagesWithAdder);
 
   colorHelper = ''
     def _supports_color(stream):
@@ -216,32 +287,17 @@ let
     };
 
     enable = {
-      desc = "Enable a language";
+      desc = "Enable a feature";
       text = ''
         import os
         import shutil
         import sys
 
-        FRAGMENTS = {
-            "uv": "${uvFragment}",
-            "poetry": "${poetryFragment}",
-            "go": "${goFragment}",
-            "rust": "${rustFragment}",
-            "dotenv": "${dotenvFragment}",
-        }
+        FRAGMENTS = ${fragmentsJson}
 
-        CONFLICTS = {
-            "uv": "poetry",
-            "poetry": "uv",
-        }
+        CONFLICTS = ${conflictsJson}
 
-        VERSION_INSERTS = {
-            "uv": ("languages.python.enable = true;", 'languages.python.version = "{version}";'),
-            "poetry": (
-                "languages.python.enable = true;",
-                'languages.python.version = "{version}";',
-            ),
-        }
+        VERSION_INSERTS = ${versionInsertsJson}
 
 
         ${colorHelper}
@@ -316,12 +372,12 @@ let
     };
 
     disable = {
-      desc = "Disable a language";
+      desc = "Disable a feature";
       text = ''
         import os
         import sys
 
-        LANGS = ["uv", "poetry", "go", "rust", "dotenv"]
+        LANGS = ${langsJson}
 
 
         ${colorHelper}
@@ -346,15 +402,18 @@ let
     };
 
     list = {
-      desc = "List enabled languages";
+      desc = "List enabled features";
       text = ''
         import os
+        import sys
 
+
+        ${colorHelper}
 
         def main():
             devdir = ".dev"
             if not os.path.isdir(devdir):
-                print("dev: not a dev project (no .dev/)")
+                print(yellow("dev: not a dev project (no .dev/)"))
                 return
             frags = sorted(
                 name[:-4]
@@ -362,7 +421,7 @@ let
                 if name.endswith(".nix") and name not in ("devenv.local.nix", "packages.nix")
             )
             if not frags:
-                print("dev: no languages enabled")
+                print(yellow("dev: no features enabled"))
                 return
             for name in frags:
                 print(name)
@@ -416,12 +475,7 @@ let
         import os
         import sys
 
-        ADDERS = {
-            "uv": ["uv", "add"],
-            "poetry": ["poetry", "add"],
-            "go": ["go", "get"],
-            "rust": ["cargo", "add"],
-        }
+        ADDERS = ${addersJson}
 
 
         ${colorHelper}
@@ -730,6 +784,7 @@ let
     pkgs.writers.writePython3 "dev-${name}" {
       flakeIgnore = [
         "E501"
+        "E231"
         "W503"
       ];
     } sub.text
@@ -799,9 +854,9 @@ let
 
 
       complete -c dev -n "__fish_seen_subcommand_from init" -l force -d "Overwrite an existing devenv.nix"
-      complete -c dev -n "__fish_seen_subcommand_from enable" -a "uv poetry go rust dotenv" -d "Language"
-      complete -c dev -n "__fish_seen_subcommand_from disable" -a "(dev list 2>/dev/null | string match --invert 'dev:*')" -d "Enabled language"
-      complete -c dev -n "__fish_seen_subcommand_from add" -l lang -a "uv poetry go rust" -d "Language to add the dependency to"
+      complete -c dev -n "__fish_seen_subcommand_from enable" -a "${enableCompletionNames}" -d "Feature"
+      complete -c dev -n "__fish_seen_subcommand_from disable" -a "(dev list 2>/dev/null | string match --invert 'dev:*')" -d "Enabled feature"
+      complete -c dev -n "__fish_seen_subcommand_from add" -l lang -a "${addCompletionNames}" -d "Language to add the dependency to"
       complete -c dev -n "__fish_seen_subcommand_from pkg" -a "add remove" -d "Action"
     ''
   );
