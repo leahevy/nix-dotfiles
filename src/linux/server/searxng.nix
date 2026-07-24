@@ -60,7 +60,7 @@ args@{
     title = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "Short text rendered as the instance icon, or null to suppress the default branding.";
+      description = "Short text rendered as the instance icon and used as the SearXNG instance name shown in the page title, or null to suppress the default branding.";
     };
 
     titleColor = lib.mkOption {
@@ -121,6 +121,7 @@ args@{
         extraSecrets,
         blockedHostnames,
         enableCustomBraveSearch,
+        title,
         ...
       }:
       let
@@ -278,6 +279,7 @@ args@{
             // lib.optionalAttrs (domain != null && isExposed) {
               base_url = "https://${exposedSubdomain}.${domain}/";
             };
+            general = lib.optionalAttrs (title != null) { instance_name = title; };
             search = {
               safe_search = 0;
               autocomplete = "brave";
