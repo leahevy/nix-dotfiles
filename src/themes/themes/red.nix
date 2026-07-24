@@ -429,87 +429,87 @@ let
             term = 8;
           };
           cyan = {
-            html = "#2EA599";
+            html = "#C39905";
             name = "cyan";
             term = 6;
           };
           cyanBright = {
-            html = "#2EC3B2";
+            html = "#E9B605";
             name = "bright-cyan";
             term = 14;
           };
           cyanDark = {
-            html = "#2E726B";
+            html = "#856803";
             name = "cyan";
             term = 6;
           };
           green = {
-            html = "#649B42";
+            html = "#DE9321";
             name = "green";
             term = 2;
           };
           greenBright = {
-            html = "#80D150";
+            html = "#FBB859";
             name = "bright-green";
             term = 10;
           };
           greenDark = {
-            html = "#497232";
+            html = "#986712";
             name = "green";
             term = 2;
           };
           yellow = {
-            html = "#FAC35E";
+            html = "#FBA36B";
             name = "yellow";
             term = 3;
           };
           yellowDark = {
-            html = "#DCAB4C";
+            html = "#EB833F";
             name = "yellow";
             term = 3;
           };
           magenta = {
-            html = "#D13BA2";
+            html = "#E5332B";
             name = "magenta";
             term = 5;
           };
           magentaLight = {
-            html = "#EC64BD";
+            html = "#F57770";
             name = "bright-magenta";
             term = 13;
           };
           magentaDark = {
-            html = "#9B206B";
+            html = "#981812";
             name = "magenta";
             term = 5;
           };
           purple = {
-            html = "#9B49CA";
+            html = "#F44F61";
             name = "magenta";
             term = 5;
           };
           pink = {
-            html = "#FA3B86";
+            html = "#FB5F48";
             name = "bright-magenta";
             term = 13;
           };
           orange = {
-            html = "#FA720C";
+            html = "#F95306";
             name = "yellow";
             term = 3;
           };
           red = {
-            html = "#EC2E35";
+            html = "#F3582E";
             name = "red";
             term = 1;
           };
           redBright = {
-            html = "#FA5750";
+            html = "#FB7F59";
             name = "bright-red";
             term = 9;
           };
           blue = {
-            html = "#6472D8";
+            html = "#FB4874";
             name = "blue";
             term = 4;
           };
