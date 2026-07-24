@@ -137,33 +137,83 @@ args@{
         difftasticEnabled =
           (config.programs.difftastic.enable or false) && (config.programs.difftastic.git.enable or false);
         diffAliasedToColordiff = (config.home.shellAliases.diff or null) == "colordiff";
+        agentShell =
+          if self.isDarwin then
+            "zsh"
+          else if (config.nx.common.shell.zsh.enable or false) then
+            "zsh"
+          else
+            "bash";
+        fishEnabled = config.nx.common.shell.fish.enable or false;
 
         installedPackages = (config.home.packages or [ ]) ++ (config.environment.systemPackages or [ ]);
         isProgramInstalled = pname: lib.any (p: (p.pname or p.name or "") == pname) installedPackages;
         programInstalledLine = command: purpose: "For ${purpose}, use the installed `${command}`.";
+        runtimeFileGuardLine =
+          command: purpose: files:
+          let
+            joined = lib.concatStringsSep " or " (map (f: "`${f}`") files);
+          in
+          "For ${purpose}, use the installed `${command}`, but only in a project that has ${joined}. Do not use `${command}` in a project without ${joined}.";
+        mkSkipLine =
+          {
+            command,
+            label ? null,
+            activity ? null,
+            alsoAvoid ? [ ],
+          }:
+          let
+            subject = if label != null then "${label} (`${command}`)" else "`${command}`";
+            object = if activity != null then activity else "`${command}`";
+            avoidList =
+              if activity != null then
+                lib.concatStringsSep ", " (map (c: "`${c}`") ([ command ] ++ alsoAvoid)) + ", or via `nix shell`"
+              else
+                "or fetch it via `nix shell`";
+          in
+          "${subject} is not installed. Do not run ${object} (${avoidList}); skip it instead.";
+        skipLineFor =
+          command: skip: mkSkipLine ({ inherit command; } // (if lib.isAttrs skip then skip else { }));
         mkProgram =
           {
             command,
             purpose,
             pname ? command,
             attr ? null,
+            check ? null,
+            skipIfMissing ? false,
           }:
           let
             pnames = if lib.isList pname then pname else [ pname ];
             attrName = if attr != null then attr else builtins.head pnames;
+            present = if check != null then check else lib.any isProgramInstalled pnames;
           in
-          if lib.any isProgramInstalled pnames then
+          if present then
             programInstalledLine command purpose
+          else if skipIfMissing != false then
+            skipLineFor command skipIfMissing
           else
             "`${command}` is not installed. For ${purpose}, run it on demand via `nix shell nixpkgs#${attrName} -c ${command} ...`.";
         mkProgramCustom =
           {
             command,
             purpose,
-            whenMissing,
+            whenMissing ? null,
             pname ? command,
+            check ? null,
+            runtimeFileCheck ? [ ],
+            skipIfMissing ? false,
           }:
-          if isProgramInstalled pname then programInstalledLine command purpose else whenMissing;
+          let
+            present = if check != null then check else isProgramInstalled pname;
+            presentLine =
+              if runtimeFileCheck != [ ] then
+                runtimeFileGuardLine command purpose runtimeFileCheck
+              else
+                programInstalledLine command purpose;
+            missingLine = if skipIfMissing != false then skipLineFor command skipIfMissing else whenMissing;
+          in
+          if present then presentLine else missingLine;
 
         baseInstructions = {
           "10 - Work Style" = [
@@ -201,6 +251,16 @@ args@{
               ]
             ];
           "71 - Shell" = [
+            "Your shell is `${agentShell}`; run shell tool calls in `${agentShell}` syntax."
+            "When writing scripts on disk always unconditionally use `bash` syntax."
+          ]
+          ++ lib.optionals fishEnabled [
+            "The user's own interactive shell is `fish`. Therefore, scripts the user should execute manually should use `fish` syntax."
+          ]
+          ++ lib.optionals (!fishEnabled) [
+            "The user's own interactive shell is `${agentShell}`. Therefore, scripts the user should execute manually should use `${agentShell}` syntax."
+          ]
+          ++ [
             "`cp`, `mv`, `ln`, and `rm` carry interactive `-i`/`-I` alias guards that hang when run directly; bypass with `command` (e.g. `command cp`). Shebang scripts are unaffected."
           ]
           ++ lib.optionals diffAliasedToColordiff [
@@ -285,6 +345,53 @@ args@{
               command = "gh";
               purpose = "GitHub operations (PRs, issues, releases)";
               whenMissing = "The GitHub CLI (`gh`) is not installed. To query GitHub, use the REST API directly via `curl` (e.g. `curl https://api.github.com/repos/OWNER/REPO/...`).";
+            })
+          ];
+          "73 - Programming Languages" = [
+            (mkProgramCustom {
+              command = "tsc";
+              pname = "typescript";
+              purpose = "TypeScript type-checking";
+              skipIfMissing = {
+                label = "The TypeScript compiler";
+                activity = "TypeScript type-checking";
+                alsoAvoid = [ "npx tsc" ];
+              };
+            })
+            (mkProgramCustom {
+              command = "go";
+              purpose = "building and checking Go code";
+              skipIfMissing = {
+                label = "The Go toolchain";
+                activity = "Go build or checks";
+              };
+            })
+            (mkProgramCustom {
+              command = "cargo";
+              purpose = "building and checking Rust code";
+              skipIfMissing = {
+                label = "The Rust toolchain";
+                activity = "Rust build or checks";
+              };
+            })
+            (mkProgramCustom {
+              command = "python3";
+              purpose = "running Python";
+              check = config.nx.common.python.python.enable or false;
+              skipIfMissing = true;
+            })
+            (mkProgramCustom {
+              command = "uv";
+              purpose = "Python dependency and environment management";
+              runtimeFileCheck = [ "uv.lock" ];
+              skipIfMissing = true;
+            })
+            (mkProgramCustom {
+              command = "poetry";
+              purpose = "Python dependency and environment management";
+              check = config.nx.common.dev.poetry.enable or false;
+              runtimeFileCheck = [ "poetry.lock" ];
+              skipIfMissing = true;
             })
           ];
         };
