@@ -324,18 +324,24 @@ args@{
           CAP_R=""
           SEP_DIM=""
 
-          YEL='${ansi tc.terminal.colors.yellow}'
-          BLU='${ansi tc.terminal.colors.blue}'
-          LBL='${ansi tc.main.foregrounds.strong}'
-          GRN='${ansi tc.terminal.colors.greenBright}'
-          GRN2='${ansi tc.terminal.colors.green}'
-          CYN='${ansi tc.terminal.colors.cyanBright}'
-          MAG='${ansi tc.terminal.colors.magentaLight}'
-          RED='${ansi tc.terminal.colors.redBright}'
-          GRY='${ansi tc.main.foregrounds.emphasized}'
-
-          FG='${ansi tc.main.backgrounds.primary}'
+          INK='${ansi tc.main.backgrounds.primary}'
           BG='${ansi tc.main.backgrounds.primary}'
+
+          DIR_BG='${ansi tc.blocks.primary.foreground}'
+
+          MODEL_DEF='${ansi tc.blocks.critical.foreground}'
+          MODEL_HAIKU='${ansi tc.blocks.info.foreground}'
+          MODEL_SONNET='${ansi tc.blocks.neutral.foreground}'
+          MODEL_OPUS='${ansi tc.blocks.highlight.foreground}'
+          MODEL_FABLE='${ansi tc.blocks.warning.foreground}'
+
+          BODY_BG='${ansi tc.terminal.normalBackgrounds.secondary}'
+          BODY_FG='${ansi tc.terminal.foregrounds.primary}'
+          DIM_FG='${ansi tc.terminal.foregrounds.dim}'
+          LBL_FG='${ansi tc.terminal.foregrounds.secondary}'
+          VAL_FG='${ansi tc.terminal.foregrounds.primary}'
+
+          ERR_BG='${ansi tc.semantic.error}'
 
           prev_bg=""
 
@@ -380,43 +386,43 @@ args@{
             fi
           }
 
-          model_fg="$FG"; model_bg="$MAG"
+          model_bg="$MODEL_DEF"
           case "$model" in
-            *Haiku*)  model_bg="$CYN" ;;
-            *Sonnet*) model_bg="$BLU" ;;
-            *Opus*)   model_bg="$GRN2" ;;
-            *Fable*)  model_bg="$GRN" ;;
+            *Haiku*)  model_bg="$MODEL_HAIKU" ;;
+            *Sonnet*) model_bg="$MODEL_SONNET" ;;
+            *Opus*)   model_bg="$MODEL_OPUS" ;;
+            *Fable*)  model_bg="$MODEL_FABLE" ;;
           esac
 
-          ctx_fg="$FG"; ctx_bg="$GRY"
-          [ -n "$ctx_pct" ] && [ "$ctx_pct" -gt 75 ] && { ctx_bg="$RED"; }
-          five_h_fg="$FG"; five_h_bg="$GRY"
-          [ -n "$five_h" ] && [ "$five_h" -gt 50 ] && { five_h_bg="$MAG"; }
-          week_fg="$FG"; week_bg="$GRY"
-          [ -n "$week" ] && [ "$week" -gt 75 ] && { week_bg="$GRN2"; }
+          ctx_fg="$VAL_FG"; ctx_bg="$BODY_BG"
+          [ -n "$ctx_pct" ] && [ "$ctx_pct" -gt 75 ] && { ctx_fg="$INK"; ctx_bg="$ERR_BG"; }
+          five_h_fg="$VAL_FG"; five_h_bg="$BODY_BG"
+          [ -n "$five_h" ] && [ "$five_h" -gt 50 ] && { five_h_fg="$INK"; five_h_bg="$ERR_BG"; }
+          week_fg="$VAL_FG"; week_bg="$BODY_BG"
+          [ -n "$week" ] && [ "$week" -gt 75 ] && { week_fg="$INK"; week_bg="$ERR_BG"; }
 
-          segment "$FG" "$YEL" "$disp_dir"
-          [ -n "$branch" ] && segment "$FG" "$LBL" "$branch"
-          segment "$model_fg" "$model_bg" "$model"
-          [ -n "$cost" ] && segment "$FG" "$GRY" "$(printf '$%.2f' "$cost")"
+          segment "$INK" "$DIR_BG" "$disp_dir"
+          [ -n "$branch" ] && segment "$BODY_FG" "$BODY_BG" "$branch"
+          segment "$INK" "$model_bg" "$model"
+          [ -n "$cost" ] && segment "$DIM_FG" "$BODY_BG" "$(printf '$%.2f' "$cost")"
           if [ -n "$ctx_pct" ]; then
-            segment "$FG" "$CYN" "Context"
+            segment "$LBL_FG" "$BODY_BG" "Context"
             segment "$ctx_fg" "$ctx_bg" "$(printf '%2s' "$ctx_pct")%"
           fi
           if [ -n "$five_h" ]; then
-            segment "$FG" "$MAG" "Session"
+            segment "$LBL_FG" "$BODY_BG" "Session"
             five_h_label="$(printf '%2s' "$five_h")%"
             [ -n "$five_h_reset" ] && five_h_label="$five_h_label · $(fmt_reset "$five_h_reset")"
             segment "$five_h_fg" "$five_h_bg" "$five_h_label"
           fi
           if [ -n "$week" ]; then
-            segment "$FG" "$GRN2" "Week"
+            segment "$LBL_FG" "$BODY_BG" "Week"
             week_label="$(printf '%2s' "$week")%"
             [ -n "$week_reset" ] && week_label="$week_label · $(fmt_reset "$week_reset")"
             segment "$week_fg" "$week_bg" "$week_label"
           fi
-          tokens_fg="$FG"; tokens_bg="$GRY"
-          [ "$exceeds" = "true" ] && { tokens_bg="$RED"; }
+          tokens_fg="$VAL_FG"; tokens_bg="$BODY_BG"
+          [ "$exceeds" = "true" ] && { tokens_fg="$INK"; tokens_bg="$ERR_BG"; }
           if [ -n "$tokens" ]; then
             tokens_label="$((tokens / 1000))k tokens used"
           else
