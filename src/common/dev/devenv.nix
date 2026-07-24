@@ -157,6 +157,7 @@ let
 
         EXCLUDES = ["devenv.nix", "devenv.yaml", "devenv.lock"]
 
+
         ${colorHelper}
 
         ${addGitExcludesHelper}
@@ -233,6 +234,7 @@ let
                 'languages.python.version = "{version}";',
             ),
         }
+
 
         ${colorHelper}
 
@@ -313,6 +315,7 @@ let
 
         LANGS = ["uv", "poetry", "go", "rust"]
 
+
         ${colorHelper}
 
         def main():
@@ -383,6 +386,7 @@ let
         import os
         import sys
 
+
         ${colorHelper}
 
         def main():
@@ -410,6 +414,7 @@ let
             "go": ["go", "get"],
             "rust": ["cargo", "add"],
         }
+
 
         ${colorHelper}
 
@@ -485,6 +490,7 @@ let
         PACKAGES_JSON = os.path.join(".dev", "packages.json")
         PACKAGES_NIX = os.path.join(".dev", "packages.nix")
         NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_'-]*(\.[A-Za-z_][A-Za-z0-9_'-]*)*$")
+
 
         ${colorHelper}
 
@@ -571,6 +577,7 @@ let
             "}\n"
         )
 
+
         ${colorHelper}
 
         def main():
@@ -633,6 +640,7 @@ let
                 os.remove(path)
             return True
 
+
         ${colorHelper}
 
         def main():
@@ -660,6 +668,7 @@ let
 
         ENTRIES = ["devenv.nix", "devenv.yaml", "devenv.lock"]
 
+
         ${addGitExcludesHelper}
 
         ${colorHelper}
@@ -682,6 +691,7 @@ let
         import sys
 
         ENTRIES = {"devenv.nix", "devenv.yaml", "devenv.lock"}
+
 
         ${gitExcludePathHelper}
 
@@ -709,14 +719,12 @@ let
 
   subScripts = lib.mapAttrs (
     name: sub:
-    pkgs.writeTextFile {
-      name = "dev-${name}";
-      executable = true;
-      text = ''
-        #!${pkgs.python3}/bin/python3
-        ${sub.text}
-      '';
-    }
+    pkgs.writers.writePython3 "dev-${name}" {
+      flakeIgnore = [
+        "E501"
+        "W503"
+      ];
+    } sub.text
   ) subcommands;
 
   dispatcher = pkgs.writeShellScript "dev" ''
