@@ -71,8 +71,6 @@ args@{
     home =
       config:
       let
-        withWayland = self.settings.withWayland;
-
         enabledGamePorts = lib.filterAttrs (
           gameName: gameConfig:
           let
@@ -180,7 +178,6 @@ args@{
           with pkgs;
           [
             heroic
-            lutris
             bottles
           ]
           ++ heroicFirewallScript;
@@ -192,8 +189,6 @@ args@{
             ".local/state/Heroic/logs"
             ".config/unity3d"
             ".local/share/GOG.com"
-            ".local/share/lutris"
-            ".cache/lutris"
             ".wine"
           ]
           ++ lib.optionals self.settings.games.stardewValley [
