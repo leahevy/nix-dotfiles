@@ -91,6 +91,13 @@ let
     }
   '';
 
+  dotenvFragment = pkgs.writeText "dotenv.nix" ''
+    { ... }:
+    {
+      dotenv.enable = true;
+    }
+  '';
+
   colorHelper = ''
     def _supports_color(stream):
         return (
@@ -220,6 +227,7 @@ let
             "poetry": "${poetryFragment}",
             "go": "${goFragment}",
             "rust": "${rustFragment}",
+            "dotenv": "${dotenvFragment}",
         }
 
         CONFLICTS = {
@@ -313,7 +321,7 @@ let
         import os
         import sys
 
-        LANGS = ["uv", "poetry", "go", "rust"]
+        LANGS = ["uv", "poetry", "go", "rust", "dotenv"]
 
 
         ${colorHelper}
@@ -791,7 +799,7 @@ let
 
 
       complete -c dev -n "__fish_seen_subcommand_from init" -l force -d "Overwrite an existing devenv.nix"
-      complete -c dev -n "__fish_seen_subcommand_from enable" -a "uv poetry go rust" -d "Language"
+      complete -c dev -n "__fish_seen_subcommand_from enable" -a "uv poetry go rust dotenv" -d "Language"
       complete -c dev -n "__fish_seen_subcommand_from disable" -a "(dev list 2>/dev/null | string match --invert 'dev:*')" -d "Enabled language"
       complete -c dev -n "__fish_seen_subcommand_from add" -l lang -a "uv poetry go rust" -d "Language to add the dependency to"
       complete -c dev -n "__fish_seen_subcommand_from pkg" -a "add remove" -d "Action"
