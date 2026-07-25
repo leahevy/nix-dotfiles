@@ -18,6 +18,7 @@ args@{
       games = {
         utils = true;
         common = true;
+        game-quirks = true;
       };
       graphics = {
         opengl = true;

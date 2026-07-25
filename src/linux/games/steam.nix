@@ -22,6 +22,7 @@ args@{
     linux = {
       games = {
         common = true;
+        game-quirks = true;
       };
     };
   };
