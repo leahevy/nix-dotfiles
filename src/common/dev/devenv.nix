@@ -396,6 +396,9 @@ let
             if len(args) != 1 or args[0] not in LANGS:
                 print(red("usage: dev disable <" + "|".join(LANGS) + ">"), file=sys.stderr)
                 sys.exit(1)
+            if not os.path.isfile("devenv.nix"):
+                print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
+                sys.exit(1)
             lang = args[0]
             dest = os.path.join(".dev", lang + ".nix")
             if not os.path.exists(dest):
@@ -420,14 +423,18 @@ let
         ${colorHelper}
 
         def main():
+            if not os.path.isfile("devenv.nix"):
+                print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
+                sys.exit(1)
             devdir = ".dev"
-            if not os.path.isdir(devdir):
-                print(yellow("dev: not a dev project (no .dev/)"))
-                return
-            frags = sorted(
-                name[:-4]
-                for name in os.listdir(devdir)
-                if name.endswith(".nix") and name not in ("devenv.local.nix", "packages.nix")
+            frags = (
+                sorted(
+                    name[:-4]
+                    for name in os.listdir(devdir)
+                    if name.endswith(".nix") and name not in ("devenv.local.nix", "packages.nix")
+                )
+                if os.path.isdir(devdir)
+                else []
             )
             if not frags:
                 print(yellow("dev: no features enabled"))
@@ -445,11 +452,17 @@ let
       desc = "Enter the dev shell";
       text = ''
         import os
+        import sys
 
         FISH_PATH = ${if fishShellPath == null then "None" else "\"${fishShellPath}\""}
 
 
+        ${colorHelper}
+
         def main():
+            if not os.path.isfile("devenv.nix"):
+                print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
+                sys.exit(1)
             if FISH_PATH is not None:
                 os.execvp("devenv", ["devenv", "shell", "--", FISH_PATH])
             else:
@@ -474,6 +487,9 @@ let
             args = sys.argv[1:]
             if not args:
                 print(red("usage: dev run <cmd> [args...]"), file=sys.stderr)
+                sys.exit(1)
+            if not os.path.isfile("devenv.nix"):
+                print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
                 sys.exit(1)
             os.execvp("devenv", ["devenv", "shell", "--"] + args)
 
@@ -542,6 +558,9 @@ let
                     sys.exit(1)
             if not args:
                 print(red("usage: dev add [--lang <lang>] <pkg> [pkg...]"), file=sys.stderr)
+                sys.exit(1)
+            if not os.path.isfile("devenv.nix"):
+                print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
                 sys.exit(1)
             enabled = [
                 name for name in ADDERS if os.path.exists(os.path.join(".dev", name + ".nix"))
