@@ -168,6 +168,11 @@ args@{
         wrappedProtontricks = wrapSteamBinary pkgs.protontricks "protontricks";
       in
       {
+        programs.gamescope = {
+          enable = true;
+          capSysNice = true;
+        };
+
         programs.steam = {
           enable = true;
           package =
@@ -192,13 +197,6 @@ args@{
           extraCompatPackages = with pkgs; [
             proton-ge-bin
           ];
-        };
-
-        security.wrappers.gamescope = {
-          source = "${pkgs.gamescope}/bin/gamescope";
-          capabilities = "cap_sys_nice+ep";
-          owner = "root";
-          group = "root";
         };
 
         environment.systemPackages = [

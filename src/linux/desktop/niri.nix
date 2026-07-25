@@ -3297,6 +3297,52 @@ args@{
       };
     };
 
+    ifEnabled.linux.games.steam = {
+      system =
+        config:
+        let
+          mainDisplayName = self.host.displays.main or self.user.displays.main or null;
+        in
+        {
+          environment.systemPackages = lib.mkIf (mainDisplayName != null) [
+            (pkgs.writeShellScriptBin "gamescope-niri" ''
+              set -euo pipefail
+
+              read -r width height rate < <(
+                ${pkgs.niri}/bin/niri msg --json outputs \
+                  | ${pkgs.jq}/bin/jq -r --arg name "${mainDisplayName}" \
+                    '.[$name].modes[] | select(.is_preferred) | "\(.width) \(.height) \(.refresh_rate)"'
+              )
+
+              fit=0
+              sdl=0
+              dashArgs=()
+              rest=()
+              for arg in "$@"; do
+                case "$arg" in
+                  --fit) fit=1 ;;
+                  --sdl) sdl=1 ;;
+                  -*) dashArgs+=("$arg") ;;
+                  *) rest+=("$arg") ;;
+                esac
+              done
+
+              fitArgs=()
+              if [ "$fit" -eq 1 ]; then
+                fitArgs=(-w 2560 -h 1440 -S fit)
+              fi
+
+              backendArgs=()
+              if [ "$sdl" -eq 1 ]; then
+                backendArgs=(--backend sdl)
+              fi
+
+              exec ${config.security.wrapperDir}/gamescope -W "$width" -H "$height" -r "$(( (rate + 500) / 1000 ))" -f -e "''${fitArgs[@]}" "''${backendArgs[@]}" "''${dashArgs[@]}" -- "''${rest[@]}"
+            '')
+          ];
+        };
+    };
+
     linux.system = config: {
       programs.niri = {
         enable = true;
