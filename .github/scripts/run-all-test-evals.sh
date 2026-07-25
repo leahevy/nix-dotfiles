@@ -50,6 +50,10 @@ export TE_TEMPLATE_DIR="$TE_WORKROOT/template"
 export TE_RESULTS_TSV="$TE_WORKROOT/results.tsv"
 : >"$TE_RESULTS_TSV"
 
+if [ -n "${TE_PACKAGES_OUT:-}" ]; then
+	: >"$TE_PACKAGES_OUT"
+fi
+
 failed=0
 for case_script in "${case_scripts[@]}"; do
 	case_name="$(basename "$case_script" .sh)"

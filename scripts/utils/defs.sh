@@ -76,61 +76,11 @@ export AUTO_UPDATE_INPUTS=(
 	"nix-season-wallpaper"
 )
 
-export PACKAGES_TO_HIGHLIGHT=(
-	electron
-	linux-firmware
-	niri
-	firefox
-	firefox-unwrapped
-	thunderbird-latest-unwrapped
-	thunderbird-latest-bin-unwrapped
-	spotify
+export PACKAGES_TO_HIGHLIGHT_EXTRA=(
 	docker
-	ungoogled-chromium
-	google-chrome
-	signal-desktop
-	tor-browser
-	neovim
-	qutebrowser
-	ente-desktop
-	logseq
-	appflowy
-	beeper
-	bitwarden
-	discord
-	easytag
-	fluffychat
-	heroic
-	paperless-ngx
-	home-assistant
-	pihole
-	lutris
-	onlyoffice
-	protonmail-desktop
-	syncthing
-	tmux
-	todoist
-	vlc
-	xwayland
-	steam
-	ghostty
-	waybar
-	nwg-wrapper
-	keyd
-	sops
+	linux-firmware
 	plymouth
-	keepassxc
-	vscodium
-	nvidia-settings
-	ollama
-	vimPlugins.obsidian-nvim
-	vimPlugins.nvim-treesitter
-	borgbackup
-	smartmontools
-	obsidian
-	gotenberg
-	nh-unwrapped
-	opencode
+	sops
 )
 
 export NIXPKGS_INPUTS=(

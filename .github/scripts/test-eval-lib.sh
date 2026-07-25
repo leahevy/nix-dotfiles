@@ -85,6 +85,38 @@ te_git_commit_config() {
 		commit -q -m "test eval snapshot"
 }
 
+te_collect_packages() {
+	local kind="$1"
+	local target="$2"
+
+	[ -n "${TE_PACKAGES_OUT:-}" ] || return 0
+
+	local attrs=()
+	case "$kind" in
+	nixos | nixos-vm)
+		attrs+=('nixosConfigurations.'"$target"'.config.environment.etc."nx/system-packages.json".text')
+		local username
+		username=$(nix eval --raw --no-write-lock-file \
+			--override-input core "git+file://$TE_CORE_DIR" \
+			"git+file://$TE_WORKDIR/config#nixosConfigurations.$target.config.nx.profile.host.mainUser.username" 2>/dev/null) || username=""
+		if [ -n "$username" ]; then
+			attrs+=('nixosConfigurations.'"$target"'.config.home-manager.users.'"$username"'.home.file.".local/share/nx/home-packages.json".text')
+		fi
+		;;
+	home)
+		attrs+=('homeConfigurations.'"$target"'.config.home.file.".local/share/nx/home-packages.json".text')
+		;;
+	esac
+
+	local attr json
+	for attr in "${attrs[@]}"; do
+		json=$(nix eval --raw --no-write-lock-file \
+			--override-input core "git+file://$TE_CORE_DIR" \
+			"git+file://$TE_WORKDIR/config#$attr" 2>/dev/null) || continue
+		printf '%s' "$json" | jq -r '.[].pname' 2>/dev/null >>"$TE_PACKAGES_OUT" || true
+	done
+}
+
 te_eval() {
 	local kind="$1"
 	local target="$2"
@@ -115,4 +147,5 @@ te_eval() {
 
 	echo "$drv"
 	printf '%s\tOK\t%s\n' "$TE_CASE_NAME" "$drv" >>"$TE_RESULTS_TSV"
+	te_collect_packages "$kind" "$target"
 }

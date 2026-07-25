@@ -30,7 +30,7 @@ jobs:
           echo "REBOOT_NORMAL_CHECK_INPUTS=$(IFS=,; echo "${REBOOT_NORMAL_CHECK_INPUTS[*]}")" >> $GITHUB_ENV
           echo "REBOOT_NIX_CHECK_INPUTS=$(IFS=,; echo "${REBOOT_NIX_CHECK_INPUTS[*]}")" >> $GITHUB_ENV
           echo "EXCLUDE_FROM_REBOOT_CHECK=$(printf '%s\n' "${AUTO_UPDATE_INPUTS[@]}" | grep -vxF -f <(printf '%s\n' "${REBOOT_NORMAL_CHECK_INPUTS[@]}" "${REBOOT_NIX_CHECK_INPUTS[@]}") | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_ENV
-          echo "PACKAGES_TO_HIGHLIGHT=$(IFS=,; echo "${PACKAGES_TO_HIGHLIGHT[*]}")" >> $GITHUB_ENV
+          echo "PACKAGES_TO_HIGHLIGHT_EXTRA=$(IFS=,; echo "${PACKAGES_TO_HIGHLIGHT_EXTRA[*]}")" >> $GITHUB_ENV
           echo "NIXPKGS_INPUTS=$(IFS=,; echo "${NIXPKGS_INPUTS[*]}")" >> $GITHUB_ENV
           echo "TRUNCATE_INPUTS=$(IFS=,; echo "${TRUNCATE_INPUTS[*]}")" >> $GITHUB_ENV
           echo "UPDATE_AUTO_MERGE_ENABLED=$UPDATE_AUTO_MERGE_ENABLED" >> $GITHUB_ENV
@@ -285,6 +285,7 @@ jobs:
         timeout-minutes: 90
         env:
           TEST_EVAL_RESULTS_MD: ${{ runner.temp }}/test-eval-results.md
+          TE_PACKAGES_OUT: ${{ runner.temp }}/highlight-packages.txt
         run: |
           set -euo pipefail
           chmod +x .github/scripts/run-all-test-evals.sh .github/scripts/test-evals.d/*.sh
@@ -312,6 +313,32 @@ jobs:
           if [ -f "$results_file" ]; then
             echo "EVAL_RESULTS_FILE=$results_file" >> $GITHUB_ENV
           fi
+
+      - name: Build package highlight list
+        if: env.IS_UPDATE_RUN == 'true' && steps.changes.outputs.changed == 'true'
+        env:
+          TE_PACKAGES_OUT: ${{ runner.temp }}/highlight-packages.txt
+        run: |
+          set -euo pipefail
+          extra_pnames=$(printf '%s\n' "${PACKAGES_TO_HIGHLIGHT_EXTRA:-}" | tr ',' '\n' | sed '/^$/d')
+          collected_pnames=""
+          if [ -f "$TE_PACKAGES_OUT" ]; then
+            collected_pnames=$(cat "$TE_PACKAGES_OUT")
+          fi
+          base_pnames=$(printf '%s\n%s\n' "$collected_pnames" "$extra_pnames" | sed '/^$/d' | sort -fu)
+          highlight_csv=""
+          if [ -n "$base_pnames" ]; then
+            highlight_csv=$(printf '%s\n' "$base_pnames" \
+              | awk '{
+                  n=split("|-latest", channels, "|")
+                  m=split("|-unwrapped|-bin|-bin-unwrapped", wraps, "|")
+                  for (c = 1; c <= n; c++)
+                    for (w = 1; w <= m; w++)
+                      print $0 channels[c] wraps[w]
+                }' \
+              | sort -fu | paste -sd, -)
+          fi
+          echo "PACKAGES_TO_HIGHLIGHT=$highlight_csv" >> $GITHUB_ENV
 
       - name: Generate commit lists
         if: env.IS_UPDATE_RUN == 'true' && steps.changes.outputs.changed == 'true'
