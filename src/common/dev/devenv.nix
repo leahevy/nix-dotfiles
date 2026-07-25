@@ -66,6 +66,7 @@ let
         languages.python.uv.sync.enable = true;
       };
       conflict = "poetry";
+      adderName = "python";
       version = [
         "languages.python.enable = true;"
         "languages.python.version = \"{version}\";"
@@ -84,6 +85,7 @@ let
         languages.python.poetry.install.enable = true;
       };
       conflict = "uv";
+      adderName = "python";
       version = [
         "languages.python.enable = true;"
         "languages.python.version = \"{version}\";"
@@ -122,6 +124,8 @@ let
   };
 
   languageNames = lib.attrNames languages;
+
+  fishShellPath = if self.isModuleEnabled "shell.fish" then "${pkgs.fish}/bin/fish" else null;
 
   flattenOptions =
     prefix: value:
@@ -164,10 +168,15 @@ let
     )
   );
   addersJson = builtins.toJSON (lib.mapAttrs (_: language: language.adder) languagesWithAdder);
+  adderNamesJson = builtins.toJSON (
+    lib.mapAttrs (name: language: language.adderName or name) languagesWithAdder
+  );
   langsJson = builtins.toJSON languageNames;
 
   enableCompletionNames = lib.concatStringsSep " " languageNames;
-  addCompletionNames = lib.concatStringsSep " " (lib.attrNames languagesWithAdder);
+  addCompletionNames = lib.concatStringsSep " " (
+    lib.unique (lib.mapAttrsToList (name: language: language.adderName or name) languagesWithAdder)
+  );
 
   colorHelper = ''
     def _supports_color(stream):
@@ -278,7 +287,7 @@ let
             if has_devdir:
                 print(yellow("dev: already initialised (.dev/ present)"))
             else:
-                print(green("dev: initialised. Run `direnv allow` (or `dev shell`)."))
+                print(green("dev: initialised. Run `dev load` (or `dev shell`)."))
 
 
         if __name__ == "__main__":
@@ -437,9 +446,14 @@ let
       text = ''
         import os
 
+        FISH_PATH = ${if fishShellPath == null then "None" else "\"${fishShellPath}\""}
+
 
         def main():
-            os.execvp("devenv", ["devenv", "shell"])
+            if FISH_PATH is not None:
+                os.execvp("devenv", ["devenv", "shell", "--", FISH_PATH])
+            else:
+                os.execvp("devenv", ["devenv", "shell"])
 
 
         if __name__ == "__main__":
@@ -469,6 +483,38 @@ let
       '';
     };
 
+    load = {
+      desc = "Run 'direnv allow' or 'direnv reload' as appropriate";
+      text = ''
+        import json
+        import os
+        import subprocess
+        import sys
+
+
+        ${colorHelper}
+
+        def main():
+            if not os.path.isfile(".envrc"):
+                print(red("dev: no .envrc here. Run `dev init` first!"), file=sys.stderr)
+                sys.exit(1)
+            result = subprocess.run(
+                ["direnv", "status", "--json"],
+                stdout=subprocess.PIPE,
+                text=True,
+                check=True,
+            )
+            status = json.loads(result.stdout)
+            found_rc = status.get("state", {}).get("foundRC")
+            allowed = found_rc is not None and found_rc.get("allowed") == 0
+            os.execvp("direnv", ["direnv", "reload" if allowed else "allow"])
+
+
+        if __name__ == "__main__":
+            main()
+      '';
+    };
+
     add = {
       desc = "Add a dependency to the enabled language";
       text = ''
@@ -477,20 +523,22 @@ let
 
         ADDERS = ${addersJson}
 
+        ADDER_NAMES = ${adderNamesJson}
+
 
         ${colorHelper}
 
         def main():
             args = sys.argv[1:]
-            lang = None
+            requested = None
             if args[:1] == ["--lang"]:
                 if len(args) < 2:
                     print(red("usage: dev add --lang <lang> <pkg> [pkg...]"), file=sys.stderr)
                     sys.exit(1)
-                lang = args[1]
+                requested = args[1]
                 args = args[2:]
-                if lang not in ADDERS:
-                    print(red("dev: unknown language '" + lang + "'"), file=sys.stderr)
+                if requested not in ADDER_NAMES.values():
+                    print(red("dev: unknown language '" + requested + "'"), file=sys.stderr)
                     sys.exit(1)
             if not args:
                 print(red("usage: dev add [--lang <lang>] <pkg> [pkg...]"), file=sys.stderr)
@@ -498,41 +546,47 @@ let
             enabled = [
                 name for name in ADDERS if os.path.exists(os.path.join(".dev", name + ".nix"))
             ]
-            if lang is not None:
-                if lang not in enabled:
+            if requested is not None:
+                matches = [name for name in enabled if ADDER_NAMES[name] == requested]
+                if not matches:
                     print(
                         red(
                             "dev: "
-                            + lang
+                            + requested
                             + " is not enabled. Run `dev enable "
-                            + lang
+                            + requested
                             + "` first!"
                         ),
                         file=sys.stderr,
                     )
                     sys.exit(1)
-            elif not enabled:
-                print(
-                    red("dev: no language enabled to add to. Run `dev enable <lang>` first!"),
-                    file=sys.stderr,
-                )
-                sys.exit(1)
-            elif len(enabled) > 1:
-                print(
-                    red(
-                        "dev: multiple languages enabled ("
-                        + ", ".join(sorted(enabled))
-                        + "); use --lang to pick one, e.g. `dev add --lang "
-                        + enabled[0]
-                        + " "
-                        + " ".join(args)
-                        + "`"
-                    ),
-                    file=sys.stderr,
-                )
-                sys.exit(1)
+                lang = matches[0]
             else:
-                lang = enabled[0]
+                names = sorted(set(ADDER_NAMES[name] for name in enabled))
+                if not names:
+                    print(
+                        red(
+                            "dev: no language enabled to add to. Run `dev enable <lang>` first!"
+                        ),
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                elif len(names) > 1:
+                    print(
+                        red(
+                            "dev: multiple languages enabled ("
+                            + ", ".join(names)
+                            + "); use --lang to pick one, e.g. `dev add --lang "
+                            + names[0]
+                            + " "
+                            + " ".join(args)
+                            + "`"
+                        ),
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                else:
+                    lang = next(name for name in enabled if ADDER_NAMES[name] == names[0])
             os.execvp("devenv", ["devenv", "shell", "--"] + ADDERS[lang] + args)
 
 
