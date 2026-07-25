@@ -314,6 +314,7 @@ let
       downloadDir,
       nextdnsID,
       enableFingerprintingProtection,
+      allowDNSRebinding,
     }:
     let
       browserCfg = config.nx.common.browser.browser;
@@ -457,6 +458,7 @@ let
       // lib.optionalAttrs (nextdnsID != null) {
         "network.trr.mode" = lockValue 3;
         "network.trr.uri" = lockValue "https://dns.nextdns.io/${nextdnsID}";
+        "network.trr.allow-rfc1918" = lockValue allowDNSRebinding;
       }
       // lib.optionalAttrs self.isLinux {
         "widget.use-xdg-desktop-portal.mime-handler" = lockValue 1;
@@ -616,6 +618,11 @@ in
     nextdnsID = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
+    };
+    allowDNSRebinding = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Allow DNS over HTTPS answers to resolve to private RFC1918 addresses";
     };
     userContentExcludedDomains = lib.mkOption {
       type = lib.types.listOf lib.types.str;
@@ -1269,6 +1276,7 @@ in
         defaultDownloadsName,
         nextdnsID,
         enableFingerprintingProtection,
+        allowDNSRebinding,
         ...
       }:
       let
@@ -1288,6 +1296,7 @@ in
               downloadDir
               nextdnsID
               enableFingerprintingProtection
+              allowDNSRebinding
               ;
           };
         };
@@ -1332,6 +1341,7 @@ in
         defaultDownloadsName,
         nextdnsID,
         enableFingerprintingProtection,
+        allowDNSRebinding,
         ...
       }:
       let
@@ -1359,6 +1369,7 @@ in
               downloadDir
               nextdnsID
               enableFingerprintingProtection
+              allowDNSRebinding
               ;
           };
         };
