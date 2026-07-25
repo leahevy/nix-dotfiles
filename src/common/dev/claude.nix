@@ -193,6 +193,7 @@ args@{
       in
       {
         nx.common.dev.agents.enabledAgents = [ "claude" ];
+        nx.common.dev.agents.preferredAgent = lib.mkDefault "claude";
 
         nx.common.dev.claude.instructions = lib.mkOrder 200 baseInstructions;
 

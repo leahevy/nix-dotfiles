@@ -60,6 +60,12 @@ args@{
       description = "Agent CLI names contributed by enabled agent modules.";
     };
 
+    preferredAgent = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Agent CLI name to list first when multiple agents are enabled.";
+    };
+
     agents = lib.mkOption {
       type = lib.types.attrsOf (
         lib.types.submodule {
@@ -534,6 +540,7 @@ args@{
         config,
         mcpServers,
         enabledAgents,
+        preferredAgent,
         ...
       }:
       let
@@ -541,13 +548,18 @@ args@{
         titleLen = builtins.stringLength headerTitle;
         styleWidth = titleLen + 4;
         headerWidth = styleWidth + 2;
-        maxItemLen = lib.foldl' (acc: n: lib.max acc (builtins.stringLength n)) 0 enabledAgents;
+        orderedAgents =
+          if preferredAgent != null && lib.elem preferredAgent enabledAgents then
+            [ preferredAgent ] ++ lib.sort (a: b: a < b) (lib.remove preferredAgent enabledAgents)
+          else
+            lib.sort (a: b: a < b) enabledAgents;
+        maxItemLen = lib.foldl' (acc: n: lib.max acc (builtins.stringLength n)) 0 orderedAgents;
         menuWidth = lib.max (builtins.stringLength "Select agent:") (3 + maxItemLen);
         menuOffset = (headerWidth - menuWidth) / 2;
         agentScript =
-          if builtins.length enabledAgents == 1 then
+          if builtins.length orderedAgents == 1 then
             pkgs.writeShellScriptBin "agent" ''
-              exec "${builtins.head enabledAgents}"
+              exec "${builtins.head orderedAgents}"
             ''
           else
             pkgs.writeShellScriptBin "agent" ''
@@ -580,7 +592,7 @@ args@{
                   --height=6 \
                   --padding="0 0 0 $(( LEFT + ${toString menuOffset} ))" \
                   --select-if-one \
-                  ${lib.concatStringsSep " " (map (n: "\"${n}\"") enabledAgents)} > "$_tmpfile" &
+                  ${lib.concatStringsSep " " (map (n: "\"${n}\"") orderedAgents)} > "$_tmpfile" &
                 _gum_pid=$!
                 trap "_resized=1; kill $_gum_pid 2>/dev/null" SIGWINCH
                 wait $_gum_pid
@@ -594,6 +606,13 @@ args@{
             '';
       in
       {
+        assertions = [
+          {
+            assertion = preferredAgent == null || lib.elem preferredAgent enabledAgents;
+            message = "nx.common.dev.agents.preferredAgent must be one of nx.common.dev.agents.enabledAgents!";
+          }
+        ];
+
         programs.mcp = {
           enable = true;
           servers = mcpServers;
