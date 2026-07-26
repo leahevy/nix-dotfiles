@@ -20,9 +20,22 @@ args@{
       type = lib.types.bool;
       default = true;
     };
+
+    eveOnline = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+    };
   };
 
   module = {
+    enabled =
+      config:
+      lib.mkMerge [
+        (lib.mkIf config.nx.linux.games.game-quirks.eveOnline {
+          nx.linux.sound.pipewire.rules.speaker.nodeNames = [ "exefile.exe" ];
+        })
+      ];
+
     ifEnabled.linux.desktop.niri.home =
       config:
       let
