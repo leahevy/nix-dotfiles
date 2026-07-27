@@ -16,6 +16,10 @@ args@{
   disableOnVirtual = true;
 
   module = {
+    enabled = config: {
+      nx.packages.extra = [ pkgs.plymouth ];
+    };
+
     linux.system =
       config:
       let

@@ -13,6 +13,10 @@ args@{
   input = "build";
 
   module = {
+    enabled = config: {
+      nx.packages.extra = [ pkgs.sops ];
+    };
+
     ifEnabled.linux.security.aide = {
       enabled = config: {
         nx.linux.security.aide.fileChecks = [

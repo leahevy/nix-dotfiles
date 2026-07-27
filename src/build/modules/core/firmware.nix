@@ -13,6 +13,12 @@ args@{
   input = "build";
 
   module = {
+    enabled = config: {
+      nx.packages.extra = lib.optionals (
+        self.host.settings.system.firmware.unfree || self.host.settings.system.firmware.redistributable
+      ) [ pkgs.linux-firmware ];
+    };
+
     system =
       config:
       let

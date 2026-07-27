@@ -28,6 +28,10 @@ args@{
   ];
 
   module = {
+    enabled = config: {
+      nx.packages.extra = [ pkgs.docker ];
+    };
+
     linux.system = config: {
       virtualisation.docker = {
         enable = true;
