@@ -151,6 +151,7 @@ args@{
           else
             "bash";
         fishEnabled = config.nx.common.shell.fish.enable or false;
+        devenvEnabled = config.nx.common.dev.devenv.enable or false;
 
         installedPackages = (config.home.packages or [ ]) ++ (config.environment.systemPackages or [ ]);
         isProgramInstalled = pname: lib.any (p: (p.pname or p.name or "") == pname) installedPackages;
@@ -244,6 +245,15 @@ args@{
             "Minimise tool calls; don't re-read files you already read this session unless there's a concrete reason they could have changed."
             "Do not do a broad repository sweep unless it's required; ask first if it will be large or token-heavy."
           ];
+          "15 - Devenv" = lib.optionals devenvEnabled [
+            "Before running any project-specific command (build, test, lint, format, type-check, run a script, install a dependency, etc.), check whether the current project has a `devenv.nix` file at its repository root."
+            "If it does, run that command through `dev run <cmd> [args...]` instead of invoking it directly, e.g. `dev run pytest`, `dev run npm test`, `dev run uv run ruff format`. Each `dev run` invocation executes exactly one command non-interactively inside the project's devenv environment and exits when that command finishes; it never opens an interactive shell, and it always needs the full command attached as arguments (`dev run` with no arguments just prints usage and exits)."
+            "This takes precedence over every bare command shown elsewhere in this file, including the \"Available Programs\" and \"Programming Languages\" sections below, and over any command given by the project's own instructions (CLAUDE.md, AGENTS.md, README, etc.): if a project instruction says to run \"uv run ruff format\" and the project has a `devenv.nix`, run \"dev run uv run ruff format\" instead."
+            "`dev run` passes its arguments straight through as a single literal command; it does not interpret shell operators like `&&`, `;`, or `|` (a quoted string containing them is treated as one opaque token and silently drops everything after the operator instead of erroring). To run a command chain, use `dev run --shell '<cmd1> && <cmd2>'`, which runs it as `bash -c` inside the devenv environment."
+            "Does not apply to commands outside the project's own toolchain, such as `git`, `ls`, or `cat`, and does not apply to `dev` itself."
+            "If the project has no `devenv.nix`, this rule does not apply; follow the other instructions in this file normally."
+          ];
+
           "70 - Git" =
             lib.optionals difftasticEnabled [
               "Never run `git diff` without `--no-ext-diff`."
