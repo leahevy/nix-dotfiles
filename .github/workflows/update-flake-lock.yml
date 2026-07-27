@@ -326,19 +326,27 @@ jobs:
             collected_pnames=$(cat "$TE_PACKAGES_OUT")
           fi
           base_pnames=$(printf '%s\n%s\n' "$collected_pnames" "$extra_pnames" | sed '/^$/d' | sort -fu)
-          highlight_csv=""
+          highlight_pairs=""
           if [ -n "$base_pnames" ]; then
-            highlight_csv=$(printf '%s\n' "$base_pnames" \
+            highlight_pairs=$(printf '%s\n' "$base_pnames" \
               | awk '{
+                  base=$0
                   n=split("|-latest", channels, "|")
                   m=split("|-unwrapped|-bin|-bin-unwrapped", wraps, "|")
                   for (c = 1; c <= n; c++)
                     for (w = 1; w <= m; w++)
-                      print $0 channels[c] wraps[w]
-                }' \
-              | sort -fu | paste -sd, -)
+                      print base channels[c] wraps[w] "=" base
+                }')
           fi
+          highlight_csv=$(printf '%s\n' "$highlight_pairs" | cut -d= -f1 | sed '/^$/d' | sort -fu | paste -sd, -)
           echo "PACKAGES_TO_HIGHLIGHT=$highlight_csv" >> $GITHUB_ENV
+
+          map_delim="NXHIGHLIGHTMAP$(openssl rand -hex 16)"
+          {
+            echo "PACKAGES_TO_HIGHLIGHT_MAP<<${map_delim}"
+            printf '%s\n' "$highlight_pairs"
+            echo "${map_delim}"
+          } >> $GITHUB_ENV
 
       - name: Generate commit lists
         if: env.IS_UPDATE_RUN == 'true' && steps.changes.outputs.changed == 'true'
@@ -613,19 +621,22 @@ jobs:
 
                           highlight_list=""
                           other_list=""
-                          highlight_csv="${PACKAGES_TO_HIGHLIGHT:-}"
-                          highlight_norm=$(printf '%s\n' "$highlight_csv" | tr ',' '\n' | sed '/^$/d' | tr '[:upper:]' '[:lower:]' | sort -fu)
+                          highlight_map_norm=$(printf '%s\n' "${PACKAGES_TO_HIGHLIGHT_MAP:-}" | sed '/^$/d' | awk -F= '{print tolower($1) "=" $2}')
                           other_updates_line=""
 
                           while IFS= read -r pkg; do
                             [ -z "$pkg" ] && continue
 
                             pkg_norm=$(printf '%s' "$pkg" | tr '[:upper:]' '[:lower:]')
-                            if [ -n "$highlight_norm" ] && printf '%s\n' "$highlight_norm" | grep -qxF "$pkg_norm"; then
+                            base_name=""
+                            if [ -n "$highlight_map_norm" ]; then
+                              base_name=$(printf '%s\n' "$highlight_map_norm" | awk -F= -v k="$pkg_norm" '$1==k{print $2; exit}')
+                            fi
+                            if [ -n "$base_name" ]; then
                               if [ -z "$highlight_list" ]; then
-                                highlight_list="- $pkg"
+                                highlight_list="- $base_name"
                               else
-                                highlight_list="$highlight_list"$'\n'"- $pkg"
+                                highlight_list="$highlight_list"$'\n'"- $base_name"
                               fi
                             else
                               if [ -z "$other_list" ]; then
@@ -635,6 +646,10 @@ jobs:
                               fi
                             fi
                           done <<< "$package_names"
+
+                          if [ -n "$highlight_list" ]; then
+                            highlight_list=$(printf '%s\n' "$highlight_list" | sort -fu)
+                          fi
 
                           regular_commits=""
                           if [ -n "$highlight_list" ]; then
