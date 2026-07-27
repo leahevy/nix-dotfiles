@@ -17,6 +17,7 @@ let
     { pkgs, lib, inputs, ... }:
     {
       cachix.enable = false;
+      dotenv.disableHint = true;
 
       overlays = [
         (final: prev: {
