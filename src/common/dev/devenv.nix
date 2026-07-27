@@ -8,12 +8,14 @@ args@{
   ...
 }:
 let
-  nixpkgsRev = self.inputs.nixpkgs.rev;
-  nixpkgsUnstableRev = self.inputs.nixpkgs-unstable.rev;
-  devenvRev = self.inputs.devenv.rev;
-  nixpkgsPythonRev = self.inputs.nixpkgs-python.rev;
+  builtinInputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/${self.inputs.nixpkgs.rev}";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/${self.inputs.nixpkgs-unstable.rev}";
+    devenv.url = "github:cachix/devenv/${self.inputs.devenv.rev}";
+    nixpkgs-python.url = "github:cachix/nixpkgs-python/${self.inputs.nixpkgs-python.rev}";
+  };
 
-  devenvTemplate = pkgs.writeText "devenv.nix" ''
+  devenvNixText = ''
     { pkgs, lib, inputs, ... }:
     {
       cachix.enable = false;
@@ -40,17 +42,44 @@ let
     }
   '';
 
-  devenvYamlTemplate = pkgs.writeText "devenv.yaml" ''
-    inputs:
-      nixpkgs:
-        url: github:NixOS/nixpkgs/${nixpkgsRev}
-      nixpkgs-unstable:
-        url: github:NixOS/nixpkgs/${nixpkgsUnstableRev}
-      devenv:
-        url: github:cachix/devenv/${devenvRev}
-      nixpkgs-python:
-        url: github:cachix/nixpkgs-python/${nixpkgsPythonRev}
-  '';
+  devenvTemplate = pkgs.writeText "devenv.nix" devenvNixText;
+
+  devenvNixHash = builtins.hashString "sha256" devenvNixText;
+
+  renderExtraInput =
+    name: entry:
+    let
+      follows = entry.follows or [ ];
+    in
+    lib.concatStringsSep "\n" (
+      [
+        "  ${name}:"
+        "    url: ${entry.url}"
+      ]
+      ++ lib.optionals (follows != [ ]) (
+        [ "    inputs:" ]
+        ++ lib.concatMap (f: [
+          "      ${f}:"
+          "        follows: ${f}"
+        ]) follows
+      )
+    );
+
+  devenvYamlText =
+    extraInputs:
+    let
+      allInputsYaml = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList renderExtraInput (builtinInputs // extraInputs)
+      );
+    in
+    ''
+      inputs:
+      ${allInputsYaml}
+    '';
+
+  devenvYamlTemplate = extraInputs: pkgs.writeText "devenv.yaml" (devenvYamlText extraInputs);
+
+  devenvYamlHash = extraInputs: builtins.hashString "sha256" (devenvYamlText extraInputs);
 
   envrcTemplate = pkgs.writeText "dev-envrc" ''
     eval "$(devenv direnvrc)"
@@ -230,18 +259,57 @@ let
                     handle.write(entry + "\n")
   '';
 
-  subcommands = {
+  configHelper = ''
+    CONFIG_PATH = os.path.join(".dev", "config.json")
+
+
+    def load_config():
+        if not os.path.exists(CONFIG_PATH):
+            return {}
+        with open(CONFIG_PATH) as handle:
+            return json.load(handle)
+
+
+    def save_config(config):
+        with open(CONFIG_PATH, "w") as handle:
+            json.dump(config, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+  '';
+
+  fragmentWriteHelper = ''
+    def write_fragment(lang, version, dest):
+        if version is None:
+            shutil.copyfile(FRAGMENTS[lang], dest)
+        else:
+            marker, option_template = VERSION_INSERTS[lang]
+            with open(FRAGMENTS[lang]) as handle:
+                content = handle.read()
+            content = content.replace(
+                marker,
+                marker + "\n  " + option_template.format(version=version),
+                1,
+            )
+            with open(dest, "w") as handle:
+                handle.write(content)
+  '';
+
+  subcommands = extraInputs: {
     init = {
       desc = "Scaffold a devenv project in the current directory";
       text = ''
+        import json
         import os
         import shutil
         import subprocess
         import sys
 
         DEVENV_TEMPLATE = "${devenvTemplate}"
-        DEVENV_YAML_TEMPLATE = "${devenvYamlTemplate}"
+        DEVENV_YAML_TEMPLATE = "${devenvYamlTemplate extraInputs}"
         ENVRC_TEMPLATE = "${envrcTemplate}"
+
+        FRAGMENTS = ${fragmentsJson}
+
+        VERSION_INSERTS = ${versionInsertsJson}
 
         EXCLUDES = ["devenv.nix", "devenv.yaml", "devenv.lock"]
 
@@ -249,6 +317,10 @@ let
         ${colorHelper}
 
         ${addGitExcludesHelper}
+
+        ${configHelper}
+
+        ${fragmentWriteHelper}
 
         def write_file(src, dest, force):
             if force or not os.path.exists(dest):
@@ -279,14 +351,23 @@ let
                     file=sys.stderr,
                 )
                 sys.exit(1)
-            write_file(DEVENV_TEMPLATE, "devenv.nix", force)
-            write_file(DEVENV_YAML_TEMPLATE, "devenv.yaml", force)
+            write_file(DEVENV_TEMPLATE, "devenv.nix", force or has_devdir)
+            write_file(DEVENV_YAML_TEMPLATE, "devenv.yaml", force or has_devdir)
             if not is_git_tracked(".envrc"):
                 write_file(ENVRC_TEMPLATE, ".envrc", force)
             os.makedirs(".dev", exist_ok=True)
+            config = load_config()
+            for lang, version in config.items():
+                if lang in FRAGMENTS:
+                    write_fragment(lang, version, os.path.join(".dev", lang + ".nix"))
+            for name in os.listdir(".dev"):
+                if not name.endswith(".nix") or name in ("devenv.local.nix", "packages.nix"):
+                    continue
+                if name[:-4] not in config:
+                    os.remove(os.path.join(".dev", name))
             add_git_excludes(EXCLUDES)
             if has_devdir:
-                print(yellow("dev: already initialised (.dev/ present)"))
+                print(green("dev: updated devenv.nix, devenv.yaml and enabled features"))
             else:
                 print(green("dev: initialised. Run `dev load` (or `dev shell`)."))
 
@@ -299,6 +380,7 @@ let
     enable = {
       desc = "Enable a feature";
       text = ''
+        import json
         import os
         import shutil
         import sys
@@ -312,6 +394,10 @@ let
 
         ${colorHelper}
 
+        ${configHelper}
+
+        ${fragmentWriteHelper}
+
         def main():
             args = sys.argv[1:]
             if not args or args[0] not in FRAGMENTS:
@@ -321,6 +407,7 @@ let
             lang = args[0]
             rest = args[1:]
             version = None
+            version_given = False
             if rest:
                 if lang not in VERSION_INSERTS:
                     print(
@@ -332,17 +419,17 @@ let
                     print(red("usage: dev enable " + lang + " [version]"), file=sys.stderr)
                     sys.exit(1)
                 version = rest[0]
+                version_given = True
             if not os.path.isfile("devenv.nix"):
                 print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
                 sys.exit(1)
             os.makedirs(".dev", exist_ok=True)
-            dest = os.path.join(".dev", lang + ".nix")
-            already_enabled = os.path.exists(dest)
-            if already_enabled and version is None:
-                print(yellow("dev: " + lang + " already enabled"))
-                return
+            config = load_config()
+            already_enabled = lang in config
+            if not version_given and already_enabled:
+                version = config[lang]
             conflict = CONFLICTS.get(lang)
-            if conflict and os.path.exists(os.path.join(".dev", conflict + ".nix")):
+            if conflict and conflict in config:
                 print(
                     red(
                         "dev: "
@@ -356,23 +443,14 @@ let
                     file=sys.stderr,
                 )
                 sys.exit(1)
-            if version is None:
-                shutil.copyfile(FRAGMENTS[lang], dest)
-            else:
-                marker, option_template = VERSION_INSERTS[lang]
-                with open(FRAGMENTS[lang]) as handle:
-                    content = handle.read()
-                content = content.replace(
-                    marker,
-                    marker + "\n  " + option_template.format(version=version),
-                    1,
-                )
-                with open(dest, "w") as handle:
-                    handle.write(content)
+            dest = os.path.join(".dev", lang + ".nix")
+            write_fragment(lang, version, dest)
+            config[lang] = version
+            save_config(config)
+            suffix = " (version " + version + ")" if version else ""
             if already_enabled:
-                print(green("dev: " + lang + " updated (version " + version + ")"))
+                print(green("dev: " + lang + " updated" + suffix))
             else:
-                suffix = " (version " + version + ")" if version else ""
                 print(green("dev: enabled " + lang + suffix))
 
 
@@ -384,6 +462,7 @@ let
     disable = {
       desc = "Disable a feature";
       text = ''
+        import json
         import os
         import sys
 
@@ -391,6 +470,8 @@ let
 
 
         ${colorHelper}
+
+        ${configHelper}
 
         def main():
             args = sys.argv[1:]
@@ -402,10 +483,15 @@ let
                 sys.exit(1)
             lang = args[0]
             dest = os.path.join(".dev", lang + ".nix")
-            if not os.path.exists(dest):
+            config = load_config()
+            if not os.path.exists(dest) and lang not in config:
                 print(yellow("dev: " + lang + " not enabled"))
                 return
-            os.remove(dest)
+            if os.path.exists(dest):
+                os.remove(dest)
+            if lang in config:
+                del config[lang]
+                save_config(config)
             print(green("dev: disabled " + lang))
 
 
@@ -861,97 +947,140 @@ let
     };
   };
 
-  subScripts = lib.mapAttrs (
-    name: sub:
-    pkgs.writers.writePython3 "dev-${name}" {
-      flakeIgnore = [
-        "E501"
-        "E231"
-        "W503"
-      ];
-    } sub.text
-  ) subcommands;
+  subScripts =
+    extraInputs:
+    lib.mapAttrs (
+      name: sub:
+      pkgs.writers.writePython3 "dev-${name}" {
+        flakeIgnore = [
+          "E501"
+          "E231"
+          "W503"
+        ];
+      } sub.text
+    ) (subcommands extraInputs);
 
-  dispatcher = pkgs.writeShellScript "dev" ''
-    set -eu
-    self=$(${pkgs.coreutils}/bin/readlink -f "$0")
-    scripts=$(${pkgs.coreutils}/bin/dirname "$self")/../libexec/dev
+  dispatcher =
+    extraInputs:
+    pkgs.writeShellScript "dev" ''
+      set -eu
+      self=$(${pkgs.coreutils}/bin/readlink -f "$0")
+      scripts=$(${pkgs.coreutils}/bin/dirname "$self")/../libexec/dev
+      devenv_nix_hash="${devenvNixHash}"
+      devenv_yaml_hash="${devenvYamlHash extraInputs}"
 
-    list() {
-      for f in "$scripts"/dev-*; do
-        [ -e "$f" ] || continue
-        printf '  %s\n' "''${f##*/dev-}"
-      done
-    }
+      list() {
+        for f in "$scripts"/dev-*; do
+          [ -e "$f" ] || continue
+          printf '  %s\n' "''${f##*/dev-}"
+        done
+      }
 
-    red() {
-      if [ -t 2 ] && [ -z "''${NO_COLOR:-}" ] && [ "''${TERM:-}" != "dumb" ]; then
-        printf '\033[1;31m%s\033[0m\n' "$1" >&2
-      else
-        printf '%s\n' "$1" >&2
+      red() {
+        if [ -t 2 ] && [ -z "''${NO_COLOR:-}" ] && [ "''${TERM:-}" != "dumb" ]; then
+          printf '\033[1;31m%s\033[0m\n' "$1" >&2
+        else
+          printf '%s\n' "$1" >&2
+        fi
+      }
+
+      yellow() {
+        if [ -t 2 ] && [ -z "''${NO_COLOR:-}" ] && [ "''${TERM:-}" != "dumb" ]; then
+          printf '\033[1;33m%s\033[0m' "$1" >&2
+        else
+          printf '%s' "$1" >&2
+        fi
+      }
+
+      if [ "$#" -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "help" ]; then
+        echo "usage: dev <command> [args...]"
+        echo "commands:"
+        list
+        exit 0
       fi
-    }
 
-    if [ "$#" -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "help" ]; then
-      echo "usage: dev <command> [args...]"
-      echo "commands:"
-      list
-      exit 0
-    fi
+      if ! ${pkgs.git}/bin/git rev-parse --git-dir >/dev/null 2>&1; then
+        red "dev: not inside a git repository"
+        red "dev projects must live in a git-managed repo; run 'git init' first"
+        exit 1
+      fi
 
-    if ! ${pkgs.git}/bin/git rev-parse --git-dir >/dev/null 2>&1; then
-      red "dev: not inside a git repository"
-      red "dev projects must live in a git-managed repo; run 'git init' first"
-      exit 1
-    fi
+      cd "$(${pkgs.git}/bin/git rev-parse --show-toplevel)"
 
-    cd "$(${pkgs.git}/bin/git rev-parse --show-toplevel)"
+      cmd="$1"
+      shift
+      target="$scripts/dev-$cmd"
+      if [ ! -x "$target" ]; then
+        red "dev: unknown command '$cmd'"
+        echo "commands:" >&2
+        list >&2
+        exit 1
+      fi
 
-    cmd="$1"
-    shift
-    target="$scripts/dev-$cmd"
-    if [ ! -x "$target" ]; then
-      red "dev: unknown command '$cmd'"
-      echo "commands:" >&2
-      list >&2
-      exit 1
-    fi
-    exec "$target" "$@"
-  '';
+      if [ "$cmd" != "init" ] && [ "$cmd" != "list" ]; then
+        stale=0
+        if [ -f devenv.nix ]; then
+          current_hash=$(${pkgs.coreutils}/bin/sha256sum devenv.nix | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+          [ "$current_hash" = "$devenv_nix_hash" ] || stale=1
+        fi
+        if [ -f devenv.yaml ]; then
+          current_hash=$(${pkgs.coreutils}/bin/sha256sum devenv.yaml | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+          [ "$current_hash" = "$devenv_yaml_hash" ] || stale=1
+        fi
+        if [ "$stale" -eq 1 ] && [ -t 0 ] && [ -t 1 ]; then
+          yellow "dev: devenv.nix/devenv.yaml differ from the current nx configuration. Run 'dev init' first? [Y/n] "
+          reply=""
+          if read -r reply </dev/tty; then
+            case "$reply" in
+              ""|[yY]*) "$scripts/dev-init" ;;
+              *) : ;;
+            esac
+          fi
+        fi
+      fi
 
-  completion = pkgs.writeText "dev.fish" (
-    ''
-      complete -c dev -f
+      exec "$target" "$@"
+    '';
 
-      set -l subcommands ${lib.concatStringsSep " " (builtins.attrNames subcommands)}
+  completion =
+    extraInputs:
+    pkgs.writeText "dev.fish" (
+      ''
+        complete -c dev -f
 
-    ''
-    + lib.concatStringsSep "\n" (
-      lib.mapAttrsToList (
-        name: sub:
-        ''complete -c dev -n "not __fish_seen_subcommand_from $subcommands" -a ${name} -d "${sub.desc}"''
-      ) subcommands
-    )
-    + ''
+        set -l subcommands ${lib.concatStringsSep " " (builtins.attrNames (subcommands extraInputs))}
+
+      ''
+      + lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (
+          name: sub:
+          ''complete -c dev -n "not __fish_seen_subcommand_from $subcommands" -a ${name} -d "${sub.desc}"''
+        ) (subcommands extraInputs)
+      )
+      + ''
 
 
-      complete -c dev -n "__fish_seen_subcommand_from init" -l force -d "Overwrite an existing devenv.nix"
-      complete -c dev -n "__fish_seen_subcommand_from run" -l shell -d "Run <cmd> via bash -c, allowing shell operators like && or ;"
-      complete -c dev -n "__fish_seen_subcommand_from enable" -a "${enableCompletionNames}" -d "Feature"
-      complete -c dev -n "__fish_seen_subcommand_from disable" -a "(dev list 2>/dev/null | string match --invert 'dev:*')" -d "Enabled feature"
-      complete -c dev -n "__fish_seen_subcommand_from add" -l lang -a "${addCompletionNames}" -d "Language to add the dependency to"
-      complete -c dev -n "__fish_seen_subcommand_from pkg" -a "add remove" -d "Action"
-    ''
-  );
+        complete -c dev -n "__fish_seen_subcommand_from init" -l force -d "Overwrite an existing devenv.nix"
+        complete -c dev -n "__fish_seen_subcommand_from run" -l shell -d "Run <cmd> via bash -c, allowing shell operators like && or ;"
+        complete -c dev -n "__fish_seen_subcommand_from enable" -a "${enableCompletionNames}" -d "Feature"
+        complete -c dev -n "__fish_seen_subcommand_from disable" -a "(dev list 2>/dev/null | string match --invert 'dev:*')" -d "Enabled feature"
+        complete -c dev -n "__fish_seen_subcommand_from add" -l lang -a "${addCompletionNames}" -d "Language to add the dependency to"
+        complete -c dev -n "__fish_seen_subcommand_from pkg" -a "add remove" -d "Action"
+      ''
+    );
 
-  devPkg = pkgs.runCommand "dev" { } ''
-    mkdir -p $out/bin $out/libexec/dev $out/share/fish/vendor_completions.d
-    install -m755 ${dispatcher} $out/bin/dev
-    ${lib.concatStringsSep "\n" (
-      lib.mapAttrsToList (name: drv: "install -m755 ${drv} $out/libexec/dev/dev-${name}") subScripts
-    )}
-    install -m644 ${completion} $out/share/fish/vendor_completions.d/dev.fish
-  '';
+  devPkg =
+    extraInputs:
+    pkgs.runCommand "dev" { } ''
+      mkdir -p $out/bin $out/libexec/dev $out/share/fish/vendor_completions.d
+      install -m755 ${dispatcher extraInputs} $out/bin/dev
+      ${lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (name: drv: "install -m755 ${drv} $out/libexec/dev/dev-${name}") (
+          subScripts extraInputs
+        )
+      )}
+      install -m644 ${completion extraInputs} $out/share/fish/vendor_completions.d/dev.fish
+    '';
 in
 {
   name = "devenv";
@@ -961,19 +1090,65 @@ in
 
   description = "devenv and the dev project manager CLI";
 
-  module = {
-    enabled = config: {
-      nx.common.git.git.globalIgnores = [
-        ".devenv*"
-        ".dev/"
-      ];
+  options = {
+    extraInputs = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            url = lib.mkOption {
+              type = lib.types.str;
+              description = "Flake input URL";
+            };
+            follows = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Names of this input's own sub-inputs that should follow the top-level input of the same name";
+            };
+          };
+        }
+      );
+      default = { };
+      description = "Extra flake inputs to include in every generated devenv.yaml";
     };
+  };
 
-    home = config: {
-      home.packages = [
-        pkgs.devenv
-        devPkg
-      ];
-    };
+  module = {
+    enabled =
+      config:
+      let
+        extraInputs = config.nx.common.dev.devenv.extraInputs;
+        reservedNames = lib.attrNames builtinInputs;
+        extraNames = lib.attrNames extraInputs;
+        validFollowsTargets = reservedNames ++ extraNames;
+        invalidFollows = lib.filterAttrs (
+          _: entry: !(lib.all (f: builtins.elem f validFollowsTargets) entry.follows)
+        ) extraInputs;
+      in
+      {
+        nx.common.git.git.globalIgnores = [
+          ".devenv*"
+          ".dev/"
+        ];
+
+        assertions = [
+          {
+            assertion = lib.intersectLists extraNames reservedNames == [ ];
+            message = "nx.common.dev.devenv.extraInputs uses a reserved input name (${lib.concatStringsSep ", " reservedNames})!";
+          }
+          {
+            assertion = invalidFollows == { };
+            message = "nx.common.dev.devenv.extraInputs has a follows value that does not match any known input: ${builtins.toJSON (lib.attrNames invalidFollows)}!";
+          }
+        ];
+      };
+
+    home =
+      { config, extraInputs, ... }:
+      {
+        home.packages = [
+          pkgs.devenv
+          (devPkg extraInputs)
+        ];
+      };
   };
 }
