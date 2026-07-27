@@ -487,11 +487,19 @@ let
             args = sys.argv[1:]
             if not args:
                 print(red("usage: dev run <cmd> [args...]"), file=sys.stderr)
+                print(red("       dev run --shell '<cmd1> && <cmd2>'"), file=sys.stderr)
                 sys.exit(1)
             if not os.path.isfile("devenv.nix"):
                 print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
                 sys.exit(1)
-            os.execvp("devenv", ["devenv", "shell", "--"] + args)
+            if args[0] == "--shell":
+                if len(args) != 2:
+                    print(red("usage: dev run --shell '<cmd>'"), file=sys.stderr)
+                    sys.exit(1)
+                cmd = ["bash", "-c", args[1]]
+            else:
+                cmd = args
+            os.execvp("devenv", ["devenv", "shell", "--"] + cmd)
 
 
         if __name__ == "__main__":
@@ -927,6 +935,7 @@ let
 
 
       complete -c dev -n "__fish_seen_subcommand_from init" -l force -d "Overwrite an existing devenv.nix"
+      complete -c dev -n "__fish_seen_subcommand_from run" -l shell -d "Run <cmd> via bash -c, allowing shell operators like && or ;"
       complete -c dev -n "__fish_seen_subcommand_from enable" -a "${enableCompletionNames}" -d "Feature"
       complete -c dev -n "__fish_seen_subcommand_from disable" -a "(dev list 2>/dev/null | string match --invert 'dev:*')" -d "Enabled feature"
       complete -c dev -n "__fish_seen_subcommand_from add" -l lang -a "${addCompletionNames}" -d "Language to add the dependency to"
