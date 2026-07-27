@@ -11,7 +11,7 @@
   config.host = {
     hostname = "testing";
 
-    mainUser = "testuser";
+    mainUser = "testuser-desktop";
 
     deploymentMode = "develop";
 
