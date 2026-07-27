@@ -268,6 +268,8 @@ args@{
                   "Auto-Upgrade (completed)"
                 else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
                   "Auto-Upgrade (post-reboot)"
+                else if lib.hasPrefix "SUCCESS-REBOOT-MANUAL:" message then
+                  "Auto-Upgrade (reboot required)"
                 else if lib.hasPrefix "FAILURE:" message then
                   "Auto-Upgrade (failed)"
                 else if lib.hasPrefix "WARNING:" message then
@@ -300,6 +302,8 @@ args@{
                   lib.removePrefix "SUCCESS-REBOOT-LATER: " message
                 else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
                   lib.removePrefix "SUCCESS-POST-REBOOT: " message
+                else if lib.hasPrefix "SUCCESS-REBOOT-MANUAL:" message then
+                  lib.removePrefix "SUCCESS-REBOOT-MANUAL: " message
                 else if lib.hasPrefix "FAILURE:" message then
                   lib.removePrefix "FAILURE: " message
                 else if lib.hasPrefix "WARNING:" message then
@@ -332,6 +336,8 @@ args@{
                   "checkmark"
                 else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
                   "checkmark"
+                else if lib.hasPrefix "SUCCESS-REBOOT-MANUAL:" message then
+                  "system-reboot"
                 else if lib.hasPrefix "FAILURE:" message then
                   "dialog-error"
                 else if lib.hasPrefix "WARNING:" message then
@@ -365,6 +371,8 @@ args@{
                 "success"
               else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
                 "success"
+              else if lib.hasPrefix "SUCCESS-REBOOT-MANUAL:" message then
+                "warn"
               else if lib.hasPrefix "DEBUG:" message then
                 null
               else if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then
@@ -399,6 +407,8 @@ args@{
                 lib.removePrefix "SUCCESS-REBOOT-LATER: " message
               else if lib.hasPrefix "SUCCESS-POST-REBOOT:" message then
                 lib.removePrefix "SUCCESS-POST-REBOOT: " message
+              else if lib.hasPrefix "SUCCESS-REBOOT-MANUAL:" message then
+                lib.removePrefix "SUCCESS-REBOOT-MANUAL: " message
               else if lib.hasPrefix "INFO:" message && lib.hasSuffix "skipping upgrade" message then
                 lib.removePrefix "INFO: " message
               else if lib.hasPrefix "INFO:" message && lib.hasInfix "Borg backup" message then
@@ -940,9 +950,13 @@ args@{
                   ${pkgs.coreutils}/bin/sleep $_rebuild_wait
                   _rebuild_wait=$((_rebuild_wait * 3))
                 done
-                ${lib.optionalString (
-                  !self.settings.allowReboot
-                ) "${logScript "info" "SUCCESS: Auto-upgrade completed successfully"}"}
+                ${lib.optionalString (!self.settings.allowReboot) ''
+                  if [[ "$FORCE_REBOOT" == "true" ]] || check_reboot_needed; then
+                    ${logScript "warning" "SUCCESS-REBOOT-MANUAL: Auto-upgrade completed successfully! A manual reboot is required to apply kernel or system changes, automatic reboot is disabled"}
+                  else
+                    ${logScript "info" "SUCCESS: Auto-upgrade completed successfully! No reboot required"}
+                  fi
+                ''}
               ''
           }
         '';
@@ -966,7 +980,7 @@ args@{
           }
         '';
 
-        rebootScript = lib.optionalString self.settings.allowReboot ''
+        checkRebootNeededScript = ''
           check_reboot_needed() {
             local booted_kernel="$(${pkgs.coreutils}/bin/readlink /run/booted-system/kernel)"
             local built_kernel="$(${pkgs.coreutils}/bin/readlink /nix/var/nix/profiles/system/kernel)"
@@ -979,7 +993,9 @@ args@{
               return 1
             fi
           }
+        '';
 
+        rebootScript = lib.optionalString self.settings.allowReboot ''
           ${checkRebootWindow}
 
           ${logScript "info" "INFO: Checking if reboot is needed"}
@@ -1325,6 +1341,7 @@ args@{
               ${logScript "info" "STARTED: Auto-upgrade beginning"}
               ${pullRepositoriesScript}
               ${checkForceRebootScript}
+              ${checkRebootNeededScript}
               ${upgradeScript}
               ${saveMarkerStateScript}
               ${rebootScript}
