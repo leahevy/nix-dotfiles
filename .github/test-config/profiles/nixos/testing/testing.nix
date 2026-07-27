@@ -19,7 +19,16 @@
 
     sopsPublicKey = "@SOPS_AGE_PUBLIC_KEY@";
 
-    modules = { };
+    modules = {
+      linux = {
+        networking = {
+          tailscale = true;
+        };
+        virtualisation = {
+          docker = true;
+        };
+      };
+    };
 
     settings = {
       system = {
