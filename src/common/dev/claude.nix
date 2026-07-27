@@ -80,7 +80,12 @@ args@{
     };
 
     model = lib.mkOption {
-      type = lib.types.str;
+      type = lib.types.enum [
+        "haiku"
+        "opus"
+        "sonnet"
+        "fable"
+      ];
       default = "sonnet";
       description = "Default Claude Code model.";
     };
