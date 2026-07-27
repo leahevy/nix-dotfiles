@@ -32,12 +32,15 @@ let
   renderBrew =
     entry:
     if builtins.isString entry then
-      "brew '${entry}'"
+      lib.concatStringsSep ", " (
+        [ "brew '${entry}'" ] ++ lib.optional (lib.hasInfix "/" entry) "trusted: true"
+      )
     else
       let
         parts = [
           "brew '${entry.name}'"
         ]
+        ++ lib.optional (lib.hasInfix "/" entry.name) "trusted: true"
         ++
           lib.optional (entry.args != [ ])
             "args: [${lib.concatMapStringsSep ", " (a: "\"${a}\"") entry.args}]"
@@ -45,8 +48,12 @@ let
       in
       lib.concatStringsSep ", " parts;
 
-  renderTap = tap: "tap '${tap}'";
-  renderCask = cask: "cask '${cask}'";
+  renderTap = tap: "tap '${tap}', trusted: true";
+  renderCask =
+    cask:
+    lib.concatStringsSep ", " (
+      [ "cask '${cask}'" ] ++ lib.optional (lib.hasInfix "/" cask) "trusted: true"
+    );
   tapOwnerOf = name: lib.concatStringsSep "/" (lib.take 2 (lib.splitString "/" name));
 in
 {
@@ -281,30 +288,7 @@ in
                 echo
               ''}
 
-              echo -e "''${WHITE}Setting up tap trust...''${RESET}"
-              rm -rf /tmp/.homebrew
-              ${lib.concatMapStrings (tap: ''
-                GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust '${tap}'
-              '') cfg.taps}
-              ${lib.concatMapStrings (
-                entry:
-                let
-                  name = if builtins.isString entry then entry else entry.name;
-                in
-                lib.optionalString (lib.hasInfix "/" name && !(builtins.any (tap: lib.hasPrefix tap name) cfg.taps))
-                  ''
-                    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust --formula '${name}'
-                  ''
-              ) cfg.brews}
-              ${lib.concatMapStrings (
-                cask:
-                lib.optionalString (lib.hasInfix "/" cask && !(builtins.any (tap: lib.hasPrefix tap cask) cfg.taps))
-                  ''
-                    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp brew trust --cask '${cask}'
-                  ''
-              ) cfg.casks}
               export HOMEBREW_REQUIRE_TAP_TRUST=1
-              echo
 
               echo -e "''${WHITE}Installing packages from Brewfile...''${RESET}"
               GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null HOME=/tmp HOMEBREW_DOWNLOAD_CONCURRENCY=2 brew bundle --file="$BREWFILE" --quiet
