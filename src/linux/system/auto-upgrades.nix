@@ -830,6 +830,12 @@ args@{
         checkForceRebootScript =
           let
             hasDesktopCheck = helpers.hasDesktop self;
+            rebootRequiredMsg =
+              kind:
+              if self.settings.allowReboot then
+                "INFO: Remote changes indicate ${kind} reboot required"
+              else
+                "INFO: Remote changes indicate ${kind} reboot required, but automatic reboot is disabled, applying with switch and a manual reboot is needed";
           in
           ''
             FORCE_REBOOT=false
@@ -839,7 +845,7 @@ args@{
             if [[ -f "${nxconfigDir}/.core-state/reboot-required" ]]; then
               CURRENT_HASH=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
               if [[ -n "$CURRENT_HASH" && "$CURRENT_HASH" != "$LAST_CORE_STATE_HASH" ]]; then
-                ${logScript "info" "INFO: Remote changes indicate system reboot required"}
+                ${logScript "info" (rebootRequiredMsg "system")}
                 FORCE_REBOOT=true
               fi
             fi
@@ -848,7 +854,7 @@ args@{
               if [[ "$FORCE_REBOOT" == "false" && -f "${nxconfigDir}/.core-state/desktop-reboot-required" ]]; then
                 CURRENT_HASH=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/desktop-reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
                 if [[ -n "$CURRENT_HASH" && "$CURRENT_HASH" != "$LAST_CORE_STATE_HASH" ]]; then
-                  ${logScript "info" "INFO: Remote changes indicate desktop reboot required"}
+                  ${logScript "info" (rebootRequiredMsg "desktop")}
                   FORCE_REBOOT=true
                 fi
               fi
@@ -894,6 +900,9 @@ args@{
                 ${lib.optionalString self.settings.allowReboot ''
                   if [[ "$FORCE_REBOOT" == "true" ]]; then
                     REBUILD_ACTION="boot"
+                    ${logScript "info" "INFO: Using boot action since reboot is required"}
+                  else
+                    ${logScript "info" "INFO: Using switch action since no reboot is required"}
                   fi
                 ''}
                 ${pkgs.coreutils}/bin/echo "Would execute: nixos-rebuild $REBUILD_ACTION --flake '.#${profileName}' --no-update-lock-file --print-build-logs --fallback --show-trace"
