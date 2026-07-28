@@ -504,6 +504,9 @@ args@{
                   }
                   // lib.optionalAttrs (sshHostPublicKeys != [ ]) {
                     knownHostKeys = sshHostPublicKeys;
+                  }
+                  // lib.optionalAttrs (username != "initrd") {
+                    forwardAgent = true;
                   };
                 }
             ) (self.nixOSHosts or { });
