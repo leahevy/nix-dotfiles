@@ -615,50 +615,52 @@ args@{
 
         processedHostsWithKeys = lib.mapAttrs preprocessHostBlock (
           duplicateHostsForIpHostnames (
-            (lib.optionalAttrs isManagingMachine autoHosts)
-            // (lib.optionalAttrs isManagingMachine initrdHosts)
-            // hosts
-            // {
-              "*" = {
-                user = "${self.user.username}";
-                userKnownHostsFile = "~/.ssh/${defaultKnownHostsName}";
-                hashKnownHosts = "yes";
-                VerifyHostKeyDNS = "ask";
-                UpdateHostKeys = "yes";
-                ForwardX11 = false;
-                ForwardX11Trusted = false;
-                Tunnel = "no";
-                PermitLocalCommand = "no";
-                PubkeyAuthentication = "yes";
-                PasswordAuthentication = "yes";
-                KbdInteractiveAuthentication = "yes";
-                HostbasedAuthentication = "no";
-                Compression = false;
-                VisualHostKey = "no";
-                Ciphers = "-3des-cbc,-aes128-cbc,-aes192-cbc,-aes256-cbc";
-                MACs = "-hmac-sha1,-hmac-sha1-96,-hmac-md5,-hmac-md5-96,-umac-64@openssh.com,-hmac-sha1-etm@openssh.com,-hmac-sha1-96-etm@openssh.com,-hmac-md5-etm@openssh.com,-hmac-md5-96-etm@openssh.com,-umac-64-etm@openssh.com";
-                KexAlgorithms = "-diffie-hellman-group1-sha1,-diffie-hellman-group14-sha1,-diffie-hellman-group-exchange-sha1,-ecdh-sha2-nistp*";
-                HostKeyAlgorithms = "-ssh-dss*";
-                PubkeyAcceptedAlgorithms = "-ssh-dss*,-ssh-rsa*";
-                addKeysToAgent = "yes";
-                strictHostKeyChecking = "ask";
-                CheckHostIP = "yes";
-                preferredAuthentications = "publickey,keyboard-interactive,password";
-                serverAliveInterval = 30;
-                serverAliveCountMax = 15;
-                TCPKeepAlive = "yes";
-                connectTimeout = 30;
-                connectionAttempts = 3;
-              }
-              // lib.optionalAttrs (termOverride != null) {
-                setEnv = {
-                  TERM = termOverride;
+            lib.foldl' lib.recursiveUpdate { } [
+              (lib.optionalAttrs isManagingMachine autoHosts)
+              (lib.optionalAttrs isManagingMachine initrdHosts)
+              hosts
+              {
+                "*" = {
+                  user = "${self.user.username}";
+                  userKnownHostsFile = "~/.ssh/${defaultKnownHostsName}";
+                  hashKnownHosts = "yes";
+                  VerifyHostKeyDNS = "ask";
+                  UpdateHostKeys = "yes";
+                  ForwardX11 = false;
+                  ForwardX11Trusted = false;
+                  Tunnel = "no";
+                  PermitLocalCommand = "no";
+                  PubkeyAuthentication = "yes";
+                  PasswordAuthentication = "yes";
+                  KbdInteractiveAuthentication = "yes";
+                  HostbasedAuthentication = "no";
+                  Compression = false;
+                  VisualHostKey = "no";
+                  Ciphers = "-3des-cbc,-aes128-cbc,-aes192-cbc,-aes256-cbc";
+                  MACs = "-hmac-sha1,-hmac-sha1-96,-hmac-md5,-hmac-md5-96,-umac-64@openssh.com,-hmac-sha1-etm@openssh.com,-hmac-sha1-96-etm@openssh.com,-hmac-md5-etm@openssh.com,-hmac-md5-96-etm@openssh.com,-umac-64-etm@openssh.com";
+                  KexAlgorithms = "-diffie-hellman-group1-sha1,-diffie-hellman-group14-sha1,-diffie-hellman-group-exchange-sha1,-ecdh-sha2-nistp*";
+                  HostKeyAlgorithms = "-ssh-dss*";
+                  PubkeyAcceptedAlgorithms = "-ssh-dss*,-ssh-rsa*";
+                  addKeysToAgent = "yes";
+                  strictHostKeyChecking = "ask";
+                  CheckHostIP = "yes";
+                  preferredAuthentications = "publickey,keyboard-interactive,password";
+                  serverAliveInterval = 30;
+                  serverAliveCountMax = 15;
+                  TCPKeepAlive = "yes";
+                  connectTimeout = 30;
+                  connectionAttempts = 3;
+                }
+                // lib.optionalAttrs (termOverride != null) {
+                  setEnv = {
+                    TERM = termOverride;
+                  };
+                }
+                // lib.optionalAttrs (defaultSSHIdentityFile != null) {
+                  identityFile = defaultSSHIdentityFile;
                 };
               }
-              // lib.optionalAttrs (defaultSSHIdentityFile != null) {
-                identityFile = defaultSSHIdentityFile;
-              };
-            }
+            ]
           )
         );
 
