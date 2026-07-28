@@ -632,7 +632,7 @@ jobs:
                             pkg_norm=$(printf '%s' "$pkg" | tr '[:upper:]' '[:lower:]')
                             base_name=""
                             if [ -n "$highlight_map_norm" ]; then
-                              base_name=$(printf '%s\n' "$highlight_map_norm" | awk -F= -v k="$pkg_norm" '$1==k{print $2; exit}')
+                              base_name=$(printf '%s\n' "$highlight_map_norm" | awk -F= -v k="$pkg_norm" '$1==k && !f{print $2; f=1}')
                             fi
                             if [ -n "$base_name" ]; then
                               if [ -z "$highlight_list" ]; then
