@@ -1187,13 +1187,14 @@ in
         systemd.timers.nx-aide-check = {
           description = "AIDE integrity check timer";
           wantedBy = [ "timers.target" ];
+          after = [ "multi-user.target" ];
           timerConfig = {
             OnCalendar = effectiveSchedule;
             RandomizedDelaySec = randomDelaySec;
             Persistent = true;
           }
           // lib.optionalAttrs isHeadless {
-            OnActiveSec = 120;
+            OnActiveSec = 50;
           };
         };
 
@@ -1218,8 +1219,9 @@ in
         systemd.timers.nx-aide-check-boot = lib.mkIf (!isHeadless) {
           description = "AIDE integrity check timer after boot";
           wantedBy = [ "timers.target" ];
+          after = [ "multi-user.target" ];
           timerConfig = {
-            OnActiveSec = 120;
+            OnActiveSec = 30;
           };
         };
 
@@ -1235,8 +1237,9 @@ in
         systemd.timers.nx-aide-post-boot-commit = lib.mkIf (!testingMode) {
           description = "AIDE database commit timer after a pending reboot";
           wantedBy = [ "timers.target" ];
+          after = [ "multi-user.target" ];
           timerConfig = {
-            OnActiveSec = 90;
+            OnActiveSec = 10;
           };
         };
 
