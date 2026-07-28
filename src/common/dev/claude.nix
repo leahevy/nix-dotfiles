@@ -79,6 +79,30 @@ args@{
       description = "Automatically compact the conversation as it approaches the context limit.";
     };
 
+    autoCompactWindow = lib.mkOption {
+      type = lib.types.nullOr lib.types.ints.positive;
+      default = 350000;
+      description = "Context capacity in tokens used for auto-compaction calculations.";
+    };
+
+    autoCompactPercent = lib.mkOption {
+      type = lib.types.nullOr (lib.types.ints.between 1 100);
+      default = 75;
+      description = "Percentage of the auto-compaction window at which compaction triggers.";
+    };
+
+    contextWarnPercent = lib.mkOption {
+      type = lib.types.ints.between 1 100;
+      default = 80;
+      description = "Percentage of the auto-compaction trigger at which the statusline context segment turns red.";
+    };
+
+    caveman = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Instruct Claude to answer in a compressed low-token style.";
+    };
+
     model = lib.mkOption {
       type = lib.types.enum [
         "haiku"
@@ -218,6 +242,10 @@ args@{
         skills,
         agents,
         autoCompact,
+        autoCompactWindow,
+        autoCompactPercent,
+        contextWarnPercent,
+        caveman,
         model,
         effortLevel,
         notifyEnabled,
@@ -250,6 +278,42 @@ args@{
 
         mergedAgents = sharedAgents.agents // agents;
 
+        compactWindowValue = if autoCompactWindow == null then "" else builtins.toString autoCompactWindow;
+        compactPercentValue = builtins.toString (
+          if autoCompactPercent == null then 100 else autoCompactPercent
+        );
+
+        cavemanOutputStyle = ''
+          ---
+          name: caveman
+          description: Shortest possible response for the fastest read.
+          keep-coding-instructions: true
+          ---
+
+          Keep every response as short as the reader needs to act on it immediately. This is a hard constraint, not a preference.
+
+          - Default to 1-3 lines. Go longer only for code, diffs, multi-step lists, or explicit requests for detail.
+          - No preamble. No restating the request. This overrides the standard one-or-two-sentence
+            end-of-turn summary: skip the closing recap of what changed, unless asked.
+          - No politeness, no acknowledgement, no hedging.
+          - No closing offers to help further, no "let me know if..." lines, no restating next steps.
+            Stop the instant the answer is complete.
+          - Sentence fragments over full sentences. Full sentences over paragraphs.
+          - Drop filler words and articles wherever the sentence stays unambiguous.
+          - Say each thing exactly once. Never repeat a point already made this turn.
+          - Assume an expert user. Skip justification, tutorials, and background unless asked.
+          - Don't re-print code, diffs, file contents, or command output already shown by a tool
+            call after the fact; refer to it by name or line number instead.
+          - Exception, no exceptions: code, commands, paths, errors, version numbers, and option
+            names stay exact and complete. Never compress or paraphrase these.
+          - Exception: stay complete and uncompressed for the pre-change disclosure (symptom/goal,
+            root cause, files, expected change), the reason given before a risky or irreversible
+            action or a revert, and a remote-session preview (full diff or content shown before
+            an Edit/Write/Bash call). These are required disclosures, not restating or padding.
+          - Plain ASCII prose only. No arrow or symbol shorthand for words.
+          - If the honest answer is one word or one line, give one word or one line.
+        '';
+
         gitUrl = (config.programs.git.settings.url or { });
         githubEnforceSSH =
           gitUrl ? "git@github.com:"
@@ -265,28 +329,38 @@ args@{
           );
 
         fake-ssh = pkgs.writeShellScriptBin "ssh" "exit 1";
+
+        sshWrapperArgs = lib.optionals (githubEnforceSSH && config.nx.linux.security.yubikey.enable) [
+          "--prefix PATH : ${fake-ssh}/bin"
+          "--set GIT_CONFIG_COUNT 1"
+          ''--set GIT_CONFIG_KEY_0 "url.https://github.com/.insteadOf"''
+          ''--set GIT_CONFIG_VALUE_0 "git@github.com:"''
+        ];
+        autoCompactWrapperArgs =
+          lib.optional (
+            autoCompactWindow != null
+          ) "--set CLAUDE_CODE_AUTO_COMPACT_WINDOW ${builtins.toString autoCompactWindow}"
+          ++ lib.optional (
+            autoCompactPercent != null
+          ) "--set CLAUDE_AUTOCOMPACT_PCT_OVERRIDE ${builtins.toString autoCompactPercent}";
+        claudeWrapperArgs = sshWrapperArgs ++ autoCompactWrapperArgs;
+
         claude-code-wrapped = pkgs.symlinkJoin {
           name = "claude-code-wrapped";
           paths = [ pkgs.claude-code ];
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postBuild = ''
-            wrapProgram $out/bin/claude \
-              --prefix PATH : ${fake-ssh}/bin \
-              --set GIT_CONFIG_COUNT 1 \
-              --set GIT_CONFIG_KEY_0 "url.https://github.com/.insteadOf" \
-              --set GIT_CONFIG_VALUE_0 "git@github.com:"
+            wrapProgram $out/bin/claude ${lib.concatStringsSep " " claudeWrapperArgs}
           '';
         };
-        claude-package =
-          if githubEnforceSSH && config.nx.linux.security.yubikey.enable then
-            claude-code-wrapped
-          else
-            pkgs.claude-code;
+        claude-package = if claudeWrapperArgs != [ ] then claude-code-wrapped else pkgs.claude-code;
 
         statusline-command = pkgs.writeShellScript "statusline-command" ''
           input=$(cat)
 
           ctx_pct=""
+          ctx_warn_tokens=""
+          model_window=""
           five_h=""
           five_h_reset=""
           week=""
@@ -305,6 +379,10 @@ args@{
             exceeds=$(printf '%s' "$input" | jq -r '.exceeds_200k_tokens // false')
             tokens=$(printf '%s' "$input" | jq -r '.context_window.total_input_tokens // empty')
             cost=$(printf '%s' "$input" | jq -r '.cost.total_cost_usd // empty')
+            model_window=$(printf '%s' "$input" | jq -r '
+              if ((.context_window.used_percentage // 0) > 0) and ((.context_window.total_input_tokens // 0) > 0)
+              then (.context_window.total_input_tokens * 100 / .context_window.used_percentage / 1000 | ceil) * 1000
+              else empty end')
           else
             model="Claude"
             dir=""
@@ -348,6 +426,7 @@ args@{
           VAL_FG='${ansi tc.terminal.foregrounds.primary}'
 
           ERR_BG='${ansi tc.semantic.error}'
+          WARN_BG='${ansi tc.semantic.warning}'
 
           prev_bg=""
 
@@ -400,8 +479,28 @@ args@{
             *Fable*)  model_bg="$MODEL_FABLE" ;;
           esac
 
+          COMPACT_WINDOW='${compactWindowValue}'
+          COMPACT_PCT='${compactPercentValue}'
+          WARN_PCT='${builtins.toString contextWarnPercent}'
+
+          if [ -n "$COMPACT_WINDOW" ] && [ -n "$tokens" ]; then
+            eff_window="$COMPACT_WINDOW"
+            if [ -n "$model_window" ] && [ "$model_window" -gt 0 ] && [ "$model_window" -lt "$eff_window" ]; then
+              eff_window="$model_window"
+            fi
+            ctx_pct=$(( tokens * 100 / eff_window ))
+            ctx_warn_tokens=$(( eff_window * COMPACT_PCT * WARN_PCT / 10000 ))
+          fi
+
+          ctx_alert=0
+          if [ -n "$ctx_warn_tokens" ]; then
+            [ "$tokens" -ge "$ctx_warn_tokens" ] && ctx_alert=1
+          else
+            [ -n "$ctx_pct" ] && [ "$ctx_pct" -gt "$WARN_PCT" ] && ctx_alert=1
+          fi
+
           ctx_fg="$VAL_FG"; ctx_bg="$BODY_BG"
-          [ -n "$ctx_pct" ] && [ "$ctx_pct" -gt 75 ] && { ctx_fg="$INK"; ctx_bg="$ERR_BG"; }
+          [ "$ctx_alert" = 1 ] && { ctx_fg="$INK"; ctx_bg="$ERR_BG"; }
           five_h_fg="$VAL_FG"; five_h_bg="$BODY_BG"
           [ -n "$five_h" ] && [ "$five_h" -gt 50 ] && { five_h_fg="$INK"; five_h_bg="$ERR_BG"; }
           week_fg="$VAL_FG"; week_bg="$BODY_BG"
@@ -428,7 +527,11 @@ args@{
             segment "$week_fg" "$week_bg" "$week_label"
           fi
           tokens_fg="$VAL_FG"; tokens_bg="$BODY_BG"
-          [ "$exceeds" = "true" ] && { tokens_fg="$INK"; tokens_bg="$ERR_BG"; }
+          if [ "$ctx_alert" = 1 ]; then
+            tokens_fg="$INK"; tokens_bg="$ERR_BG"
+          elif [ "$exceeds" = "true" ]; then
+            tokens_fg="$INK"; tokens_bg="$WARN_BG"
+          fi
           if [ -n "$tokens" ]; then
             tokens_label="$((tokens / 1000))k tokens used"
           else
@@ -455,7 +558,7 @@ args@{
             autoCompactEnabled = autoCompact;
             inherit model effortLevel;
             agentPushNotifEnabled = notifyEnabled;
-            outputStyle = "default";
+            outputStyle = if caveman then "caveman" else "default";
             inherit
               alwaysThinkingEnabled
               fileCheckpointingEnabled
@@ -508,6 +611,7 @@ args@{
               ${value.text}
             ''
           ) mergedAgents;
+          outputStyles = lib.mkIf caveman { caveman = cavemanOutputStyle; };
         };
 
         home = {
