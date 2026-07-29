@@ -33,7 +33,10 @@ args@{
 
   module = {
     enabled = config: {
-      nx.packages.extra = [ pkgs.tika ];
+      nx.packages.extra = [
+        pkgs.tika
+        pkgs.jdk17
+      ];
     };
 
     ifEnabled.linux.server.paperless-ngx = {
