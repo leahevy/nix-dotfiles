@@ -571,20 +571,28 @@ in
 
       system =
         config:
-        lib.mkIf (!config.nx.linux.security.aide.testingMode) {
-          systemd.services.nx-auto-upgrade.serviceConfig = {
-            ExecStartPre = lib.mkBefore [ "+${checkCoreScript config}" ];
-            ExecStartPost = [
-              "+${pkgs.coreutils}/bin/touch ${postBootMarker}"
-              "+${
-                mkCommitScript {
-                  dbDir = config.nx.linux.security.aide.dbDir;
-                  hcEnabled = config.nx.linux.server.healthchecks.enable;
-                }
-              }/bin/aide-commit --force"
-            ];
-          };
-        };
+        lib.mkIf (!config.nx.linux.security.aide.testingMode) (
+          let
+            autoUpgradeDryRun =
+              config.nx.linux.system.auto-upgrades.dryRun || helpers.isDeploymentMode self [ "develop" ];
+          in
+          {
+            systemd.services.nx-auto-upgrade.serviceConfig = {
+              ExecStartPre = lib.mkBefore [ "+${checkCoreScript config}" ];
+            }
+            // lib.optionalAttrs (!autoUpgradeDryRun) {
+              ExecStartPost = [
+                "+${pkgs.coreutils}/bin/touch ${postBootMarker}"
+                "+${
+                  mkCommitScript {
+                    dbDir = config.nx.linux.security.aide.dbDir;
+                    hcEnabled = config.nx.linux.server.healthchecks.enable;
+                  }
+                }/bin/aide-commit --force"
+              ];
+            };
+          }
+        );
     };
 
     ifEnabled.linux.desktop.niri.home =
