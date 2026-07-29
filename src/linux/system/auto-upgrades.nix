@@ -854,7 +854,7 @@ args@{
 
             if [[ -f "${nxconfigDir}/.core-state/reboot-required" ]]; then
               CURRENT_HASH=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
-              if [[ -n "$CURRENT_HASH" && "$CURRENT_HASH" != "$LAST_CORE_STATE_HASH" ]]; then
+              if [[ -n "$CURRENT_HASH" && -n "$LAST_CORE_STATE_HASH" && "$CURRENT_HASH" != "$LAST_CORE_STATE_HASH" ]]; then
                 ${logScript "info" (rebootRequiredMsg "system")}
                 FORCE_REBOOT=true
               fi
@@ -863,7 +863,7 @@ args@{
             ${lib.optionalString hasDesktopCheck ''
               if [[ "$FORCE_REBOOT" == "false" && -f "${nxconfigDir}/.core-state/desktop-reboot-required" ]]; then
                 CURRENT_HASH=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/desktop-reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
-                if [[ -n "$CURRENT_HASH" && "$CURRENT_HASH" != "$LAST_CORE_STATE_HASH" ]]; then
+                if [[ -n "$CURRENT_HASH" && -n "$LAST_CORE_STATE_HASH" && "$CURRENT_HASH" != "$LAST_CORE_STATE_HASH" ]]; then
                   ${logScript "info" (rebootRequiredMsg "desktop")}
                   FORCE_REBOOT=true
                 fi
