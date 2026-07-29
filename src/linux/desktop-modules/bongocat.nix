@@ -81,6 +81,12 @@ args@{
         ];
       };
 
+      system =
+        config:
+        lib.mkIf (devicePath != null) {
+          users.users.${self.host.mainUser.username}.extraGroups = [ "input" ];
+        };
+
       home =
         config:
         let
