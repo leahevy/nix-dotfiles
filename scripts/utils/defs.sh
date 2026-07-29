@@ -97,6 +97,7 @@ export TRUNCATE_INPUTS=(
 	"nixpkgs-darwin"
 	"nixpkgs-nix"
 	"nixpkgs-unstable"
+	"devenv"
 )
 
 export THIRD_PARTY_INPUTS=(
