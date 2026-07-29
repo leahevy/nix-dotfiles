@@ -111,7 +111,7 @@ notify_info() {
 	message="${2:-}"
 
 	if [[ "$command" != "" ]]; then
-		notify_user "Nix Deployment Command ($command)" "$message" info "$INFO_ICON"
+		notify_user "Nix Deployment ($command)" "$message" info "$INFO_ICON"
 	fi
 }
 
@@ -119,7 +119,7 @@ notify_success() {
 	command="${1:-}"
 
 	if [[ "$command" != "" ]]; then
-		notify_user "Nix Deployment Command" "Successfully completed <b>$command</b>" info "$SUCCESS_ICON"
+		notify_user "Nix Deployment" "Successfully completed <b>$command</b>" info "$SUCCESS_ICON"
 	fi
 }
 
@@ -127,7 +127,7 @@ notify_error() {
 	command="${1:-}"
 
 	if [[ "$command" != "" ]]; then
-		notify_user "Nix Deployment Command" "<b>$command</b> failed!" error "$ERROR_ICON"
+		notify_user "Nix Deployment" "<b>$command</b> failed!" error "$ERROR_ICON"
 	fi
 }
 

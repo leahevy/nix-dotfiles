@@ -41,7 +41,7 @@ export RAINBOW_COLOURS=(
 	"${MAGENTA}"
 )
 
-export INFO_ICON="dialog-information"
+export INFO_ICON="nix-snowflake"
 export SUCCESS_ICON="nix-snowflake"
 export ERROR_ICON="dialog-error"
 
