@@ -26,4 +26,4 @@ else
 	exit 1
 fi
 
-mark_aide_post_boot_commit
+mark_aide_post_boot_commit "Boot"

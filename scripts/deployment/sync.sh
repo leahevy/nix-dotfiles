@@ -71,4 +71,4 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
 	fi
 fi
 
-prompt_aide_commit
+prompt_aide_commit "Sync"

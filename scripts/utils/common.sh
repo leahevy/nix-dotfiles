@@ -255,6 +255,7 @@ prompt_aide_pre_boot_check() {
 }
 
 mark_aide_post_boot_commit() {
+	local command_name="${1:-}"
 	[[ "${NX_CONFIG_LOADED:-0}" != "1" ]] && load_nx_config
 	if [[ -z "${AIDE_POST_BOOT_MARKER:-}" ]]; then
 		print_aide_commit_reminder "aide-commit --force" "after the reboot"
@@ -262,6 +263,7 @@ mark_aide_post_boot_commit() {
 	fi
 	if [[ -t 0 ]]; then
 		echo
+		notify_info "$command_name" "Waiting for input: confirm whether to mark AIDE for auto-commit after reboot"
 		printf "%b" "${YELLOW}Mark for auto-commit after reboot? [Y/n] ${RESET}"
 		local answer=""
 		IFS= read -r answer || answer=""
@@ -277,6 +279,7 @@ mark_aide_post_boot_commit() {
 }
 
 prompt_aide_commit() {
+	local command_name="${1:-}"
 	[[ "${NX_CONFIG_LOADED:-0}" != "1" ]] && load_nx_config
 	if [[ "${AIDE_ENABLED:-false}" != "true" ]]; then
 		return 0
@@ -287,6 +290,7 @@ prompt_aide_commit() {
 		return 0
 	fi
 	echo
+	notify_info "$command_name" "Waiting for input: confirm whether to run aide-commit now"
 	printf "%b" "${YELLOW}AIDE is enabled - run ${GREEN}aide-commit${YELLOW} now to update the integrity database? [Y/n] ${RESET}"
 	local answer=""
 	IFS= read -r answer || answer=""
