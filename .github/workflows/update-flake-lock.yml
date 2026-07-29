@@ -332,10 +332,12 @@ jobs:
               | awk '{
                   base=$0
                   n=split("|-latest", channels, "|")
-                  m=split("|-unwrapped|-bin|-bin-unwrapped", wraps, "|")
-                  for (c = 1; c <= n; c++)
-                    for (w = 1; w <= m; w++)
-                      print base channels[c] wraps[w] "=" base
+                  m=split("|-unwrapped|-bin|-bin-unwrapped|/wrapper", wraps, "|")
+                  p=split("|python3Packages.", prefixes, "|")
+                  for (p_i = 1; p_i <= p; p_i++)
+                    for (c = 1; c <= n; c++)
+                      for (w = 1; w <= m; w++)
+                        print prefixes[p_i] base channels[c] wraps[w] "=" base
                 }')
           fi
           highlight_csv=$(printf '%s\n' "$highlight_pairs" | cut -d= -f1 | sed '/^$/d' | sort -fu | paste -sd, -)
@@ -633,6 +635,12 @@ jobs:
                             base_name=""
                             if [ -n "$highlight_map_norm" ]; then
                               base_name=$(printf '%s\n' "$highlight_map_norm" | awk -F= -v k="$pkg_norm" '$1==k && !f{print $2; f=1}')
+                            fi
+                            if [ -z "$base_name" ] && [ -n "$highlight_map_norm" ]; then
+                              pkg_norm_versionless=$(printf '%s' "$pkg_norm" | sed -E 's/-[0-9]+$//')
+                              if [ "$pkg_norm_versionless" != "$pkg_norm" ]; then
+                                base_name=$(printf '%s\n' "$highlight_map_norm" | awk -F= -v k="$pkg_norm_versionless" '$1==k && !f{print $2; f=1}')
+                              fi
                             fi
                             if [ -n "$base_name" ]; then
                               if [ -z "$highlight_list" ]; then
