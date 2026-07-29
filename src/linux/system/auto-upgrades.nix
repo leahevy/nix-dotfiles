@@ -231,6 +231,7 @@ args@{
         nxcoreDir = "${self.host.mainUser.home}/.config/nx/nxcore";
         nxconfigDir = "${self.host.mainUser.home}/.config/nx/nxconfig";
         isDevelopMode = self.host.deploymentMode == "develop";
+        isServerMode = self.host.deploymentMode == "server";
         effectiveDryRun = self.settings.dryRun || isDevelopMode;
         effectiveBranchNxcore = self.host.branch;
         effectiveBranchNxconfig = self.host.branch;
@@ -786,6 +787,19 @@ args@{
         '';
 
         pullRepositoriesScript = ''
+          ${lib.optionalString isServerMode ''
+            reset_repo_state() {
+              local repo_path="$1"
+              local repo_name="$2"
+              local old_commit="$3"
+
+              cd "$repo_path"
+              ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git merge --abort >/dev/null 2>&1 || true
+              ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git reset --hard "$old_commit" >/dev/null 2>&1 || true
+              ${logScript "err" "WARNING: Reset $repo_name to its previous commit after a failed upgrade attempt!"}
+            }
+          ''}
+
           pull_repo() {
             local repo_path="$1"
             local repo_name="$2"
@@ -807,6 +821,7 @@ args@{
               else
                 ''
                   if ! ${pkgs.sudo}/bin/sudo -u ${self.host.mainUser.username} ${gitEnv} ${pkgs.git}/bin/git pull nx-auto-upgrade "$required_branch"; then
+                    ${lib.optionalString isServerMode ''reset_repo_state "$repo_path" "$repo_name" "$old_commit"''}
                     ${logScript "err" "FAILURE: Failed to pull $repo_name repository!"}
                     exit 1
                   fi
