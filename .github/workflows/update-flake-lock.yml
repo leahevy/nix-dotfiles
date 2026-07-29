@@ -328,19 +328,9 @@ jobs:
           base_pnames=$(printf '%s\n%s\n' "$collected_pnames" "$extra_pnames" | sed '/^$/d' | sort -fu)
           highlight_pairs=""
           if [ -n "$base_pnames" ]; then
-            highlight_pairs=$(printf '%s\n' "$base_pnames" \
-              | awk '{
-                  base=$0
-                  n=split("|-latest", channels, "|")
-                  m=split("|-unwrapped|-bin|-bin-unwrapped|/wrapper", wraps, "|")
-                  p=split("|python3Packages.", prefixes, "|")
-                  for (p_i = 1; p_i <= p; p_i++)
-                    for (c = 1; c <= n; c++)
-                      for (w = 1; w <= m; w++)
-                        print prefixes[p_i] base channels[c] wraps[w] "=" base
-                }')
+            highlight_pairs=$(printf '%s\n' "$base_pnames" | awk '{print $0"="$0}')
           fi
-          highlight_csv=$(printf '%s\n' "$highlight_pairs" | cut -d= -f1 | sed '/^$/d' | sort -fu | paste -sd, -)
+          highlight_csv=$(printf '%s\n' "$base_pnames" | sed '/^$/d' | paste -sd, -)
           echo "PACKAGES_TO_HIGHLIGHT=$highlight_csv" >> $GITHUB_ENV
 
           map_delim="NXHIGHLIGHTMAP$(openssl rand -hex 16)"
@@ -625,22 +615,43 @@ jobs:
 
                           highlight_list=""
                           other_list=""
-                          highlight_map_norm=$(printf '%s\n' "${PACKAGES_TO_HIGHLIGHT_MAP:-}" | sed '/^$/d' | awk -F= '{print tolower($1) "=" $2}')
+                          highlight_map_norm=$(printf '%s\n' "${PACKAGES_TO_HIGHLIGHT_MAP:-}" | sed '/^$/d' | awk -F= '
+                            {
+                              k = tolower($1)
+                              while (1) {
+                                orig = k
+                                sub(/^python3packages\./, "", k)
+                                sub(/-bin-unwrapped$/, "", k)
+                                sub(/-unwrapped$/, "", k)
+                                sub(/-bin$/, "", k)
+                                sub(/-latest$/, "", k)
+                                sub(/\/wrapper$/, "", k)
+                                sub(/-[0-9]+$/, "", k)
+                                if (k == orig) break
+                              }
+                              print k "=" $2
+                            }')
                           other_updates_line=""
+
+                          canon_pkg() {
+                            local v prev
+                            v=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+                            prev=""
+                            while [ "$v" != "$prev" ]; do
+                              prev="$v"
+                              v="${v#python3packages.}"
+                              v=$(printf '%s' "$v" | sed -E 's#(-bin-unwrapped|-unwrapped|-bin|-latest|/wrapper)$##; s/-[0-9]+$//')
+                            done
+                            printf '%s' "$v"
+                          }
 
                           while IFS= read -r pkg; do
                             [ -z "$pkg" ] && continue
 
-                            pkg_norm=$(printf '%s' "$pkg" | tr '[:upper:]' '[:lower:]')
+                            pkg_canon=$(canon_pkg "$pkg")
                             base_name=""
                             if [ -n "$highlight_map_norm" ]; then
-                              base_name=$(printf '%s\n' "$highlight_map_norm" | awk -F= -v k="$pkg_norm" '$1==k && !f{print $2; f=1}')
-                            fi
-                            if [ -z "$base_name" ] && [ -n "$highlight_map_norm" ]; then
-                              pkg_norm_versionless=$(printf '%s' "$pkg_norm" | sed -E 's/-[0-9]+$//')
-                              if [ "$pkg_norm_versionless" != "$pkg_norm" ]; then
-                                base_name=$(printf '%s\n' "$highlight_map_norm" | awk -F= -v k="$pkg_norm_versionless" '$1==k && !f{print $2; f=1}')
-                              fi
+                              base_name=$(printf '%s\n' "$highlight_map_norm" | awk -F= -v k="$pkg_canon" '$1==k && !f{print $2; f=1}')
                             fi
                             if [ -n "$base_name" ]; then
                               if [ -z "$highlight_list" ]; then
