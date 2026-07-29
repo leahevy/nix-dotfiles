@@ -33,6 +33,7 @@ jobs:
           echo "PACKAGES_TO_HIGHLIGHT_EXTRA=$(IFS=,; echo "${PACKAGES_TO_HIGHLIGHT_EXTRA[*]}")" >> $GITHUB_ENV
           echo "NIXPKGS_INPUTS=$(IFS=,; echo "${NIXPKGS_INPUTS[*]}")" >> $GITHUB_ENV
           echo "TRUNCATE_INPUTS=$(IFS=,; echo "${TRUNCATE_INPUTS[*]}")" >> $GITHUB_ENV
+          echo "PRIMARY_UPDATE_INPUTS=$(IFS=,; echo "${PRIMARY_UPDATE_INPUTS[*]}")" >> $GITHUB_ENV
           echo "UPDATE_AUTO_MERGE_ENABLED=$UPDATE_AUTO_MERGE_ENABLED" >> $GITHUB_ENV
           echo "TEST_EVAL_ENABLED=$TEST_EVAL_ENABLED" >> $GITHUB_ENV
 
@@ -328,7 +329,14 @@ jobs:
           base_pnames=$(printf '%s\n%s\n' "$collected_pnames" "$extra_pnames" | sed '/^$/d' | sort -fu)
           highlight_pairs=""
           if [ -n "$base_pnames" ]; then
-            highlight_pairs=$(printf '%s\n' "$base_pnames" | awk '{print $0"="$0}')
+            highlight_pairs=$(printf '%s\n' "$base_pnames" | awk '{
+              print $0"="$0
+              if ($0 ~ /^gnome-shell-extension-/) {
+                slug = $0
+                sub(/^gnome-shell-extension-/, "", slug)
+                print "gnomeExtensions." slug "=" $0
+              }
+            }')
           fi
           highlight_csv=$(printf '%s\n' "$base_pnames" | sed '/^$/d' | paste -sd, -)
           echo "PACKAGES_TO_HIGHLIGHT=$highlight_csv" >> $GITHUB_ENV
@@ -438,19 +446,32 @@ jobs:
           DESKTOP_REBOOT_PATTERNS="${DESKTOP_REBOOT_PATTERNS%|}"
 
           BACKPORT_FILTER='^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]|^- [Bb]ackport '
-          STAGING_FILTER='^- Merge (staging-next|release)-[0-9]{2}\.[0-9]{2} into (staging|staging-next)-[0-9]{2}\.[0-9]{2}|\[(staging|release|Staging|Release)[- ][0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]|^- (staging-next|release)-[0-9]{2}\.[0-9]{2}|^- staging-[a-zA-Z]+-[0-9]{2}\.[0-9]{2} merge for [0-9]{4}-[0-9]{2}-[0-9]{2}'
+          STAGING_FILTER='^- Merge (branch )?'"'"'?(staging-nixos|staging-next|staging|release)-[0-9]{2}\.[0-9]{2}'"'"'? into '"'"'?(staging-nixos|staging-next|staging|release)-[0-9]{2}\.[0-9]{2}|\[(staging|release|Staging|Release)[- ][0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]|^- (staging-next|release)-[0-9]{2}\.[0-9]{2}|^- staging-[a-zA-Z]+-[0-9]{2}\.[0-9]{2} merge for [0-9]{4}-[0-9]{2}-[0-9]{2}'
           REVERT_FILTER='^- [Rr]evert "'
           COMMIT_FILTER_PATTERN="$BACKPORT_FILTER|$STAGING_FILTER|$REVERT_FILTER"
 
           IFS=',' read -ra inputs <<< "$UPDATE_INPUTS"
 
           commit_lists=""
+          other_commit_lists=""
           reboot_commits=""
           requires_reboot="false"
           requires_desktop_reboot="false"
           reboot_packages=""
           desktop_reboot_packages=""
           commits_truncated="false"
+
+          is_primary_input() {
+            echo ",$PRIMARY_UPDATE_INPUTS," | grep -q ",$1,"
+          }
+
+          append_input_section() {
+            if is_primary_input "$input"; then
+              commit_lists="$commit_lists"$'\n\n'"$1"
+            else
+              other_commit_lists="$other_commit_lists"$'\n\n'"$1"
+            fi
+          }
 
           for input in "${inputs[@]}"; do
             input=$(echo "$input" | xargs)
@@ -476,7 +497,7 @@ jobs:
                 if [ "$truncate_this_input" = "true" ]; then
                   compare_json=$(curl --retry 5 --retry-all-errors --retry-delay 2 --retry-connrefused --connect-timeout 10 -m 60 -fsS -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$repo/compare/$old_commit...$new_commit") || compare_json=""
                   total_commits=$(printf '%s' "$compare_json" | jq -r '.total_commits // 0')
-                  commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($total_commits commits, details omitted)"
+                  append_input_section "### $input commits"$'\n'"- ($total_commits commits, details omitted)"
                 else
                   raw_pages=""
                   meaningful_count=0
@@ -620,7 +641,9 @@ jobs:
                               k = tolower($1)
                               while (1) {
                                 orig = k
+                                sub(/^nixos\//, "", k)
                                 sub(/^python3packages\./, "", k)
+                                sub(/^kdepackages\./, "", k)
                                 sub(/-bin-unwrapped$/, "", k)
                                 sub(/-unwrapped$/, "", k)
                                 sub(/-bin$/, "", k)
@@ -639,7 +662,9 @@ jobs:
                             prev=""
                             while [ "$v" != "$prev" ]; do
                               prev="$v"
+                              v="${v#nixos/}"
                               v="${v#python3packages.}"
+                              v="${v#kdepackages.}"
                               v=$(printf '%s' "$v" | sed -E 's#(-bin-unwrapped|-unwrapped|-bin|-latest|/wrapper)$##; s/-[0-9]+$//')
                             done
                             printf '%s' "$v"
@@ -691,43 +716,48 @@ jobs:
                         fi
 
                         if [ "$should_reduce_commit_subjects" = "true" ]; then
+                          details_body=""
                           filtered_total=$((backport_count + staging_count + revert_count))
                           if [ "$filtered_total" -gt 0 ]; then
-                            if [ -n "$commits_to_show" ]; then
-                              commits_to_show="$commits_to_show"$'\n\n'
-                            fi
-                            commits_to_show="$commits_to_show<b>Filtered</b>:"$'\n'
+                            details_body="<b>Filtered</b>:"$'\n'
                             if [ "$backport_count" -gt 0 ]; then
-                              commits_to_show="$commits_to_show- $backport_count backport commits filtered out"$'\n'
+                              details_body="$details_body- $backport_count backport commits filtered out"$'\n'
                             fi
                             if [ "$staging_count" -gt 0 ]; then
-                              commits_to_show="$commits_to_show- $staging_count staging/release merge commits filtered out"$'\n'
+                              details_body="$details_body- $staging_count staging/release merge commits filtered out"$'\n'
                             fi
                             if [ "$revert_count" -gt 0 ]; then
-                              commits_to_show="$commits_to_show- $revert_count revert commits filtered out"$'\n'
+                              details_body="$details_body- $revert_count revert commits filtered out"$'\n'
                             fi
-                            commits_to_show=$(printf '%s' "$commits_to_show" | sed -E 's/\n$//')
+                            details_body=$(printf '%s' "$details_body" | sed -E 's/\n$//')
                           fi
                           if [ -n "$other_updates_line" ]; then
+                            if [ -n "$details_body" ]; then
+                              details_body="$details_body"$'\n\n'
+                            fi
+                            details_body="$details_body$other_updates_line"
+                          fi
+                          if [ -n "$details_body" ]; then
                             if [ -n "$commits_to_show" ]; then
                               commits_to_show="$commits_to_show"$'\n\n'
                             fi
-                            commits_to_show="$commits_to_show$other_updates_line"
+                            commits_to_show="$commits_to_show<details><summary><b>Details</b></summary>"$'\n\n'"$details_body"$'\n'"</details>"
                           fi
                         fi
 
-                        commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"$commits_to_show"
+                        append_input_section "### $input commits"$'\n'"$commits_to_show"
 
                       else
                         filtered_total=$((backport_count + staging_count + revert_count))
                         if [ "$filtered_total" -gt 0 ]; then
-                          commit_lists="$commit_lists"$'\n\n'"### $input commits"$'\n'"- ($backport_count backport commits filtered out)"
+                          section="### $input commits"$'\n'"- ($backport_count backport commits filtered out)"
                           if [ "$staging_count" -gt 0 ]; then
-                            commit_lists="$commit_lists"$'\n'"- ($staging_count staging/release merge commits filtered out)"
+                            section="$section"$'\n'"- ($staging_count staging/release merge commits filtered out)"
                           fi
                           if [ "$revert_count" -gt 0 ]; then
-                            commit_lists="$commit_lists"$'\n'"- ($revert_count revert commits filtered out)"
+                            section="$section"$'\n'"- ($revert_count revert commits filtered out)"
                           fi
+                          append_input_section "$section"
                         fi
                       fi
                     else
@@ -771,6 +801,13 @@ jobs:
             echo "COMMIT_LISTS<<${cl_delim}"
             echo "$commit_lists"
             echo "${cl_delim}"
+          } >> $GITHUB_ENV
+
+          ocl_delim="NXOTHERCOMMITLISTS$(openssl rand -hex 16)"
+          {
+            echo "OTHER_COMMIT_LISTS<<${ocl_delim}"
+            echo "$other_commit_lists"
+            echo "${ocl_delim}"
           } >> $GITHUB_ENV
 
           rc_delim="NXREBOOTCOMMITS$(openssl rand -hex 16)"
@@ -842,6 +879,20 @@ jobs:
             echo '### 📦 Updated inputs:'
             echo "- $UPDATED_INPUTS"
             printf '%s\n' "$COMMIT_LISTS"
+          } >> "$pr_tmpfile"
+
+          if [ -n "$(printf '%s' "${OTHER_COMMIT_LISTS:-}" | tr -d '[:space:]')" ]; then
+            {
+              echo ''
+              echo '<details><summary><b>Other Input Updates</b></summary>'
+              echo ''
+              printf '%s\n' "$OTHER_COMMIT_LISTS"
+              echo ''
+              echo '</details>'
+            } >> "$pr_tmpfile"
+          fi
+
+          {
             echo ''
             echo 'Generated automatically by GitHub Actions'
           } >> "$pr_tmpfile"

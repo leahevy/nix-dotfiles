@@ -76,6 +76,10 @@ export AUTO_UPDATE_INPUTS=(
 	"nix-season-wallpaper"
 )
 
+export PRIMARY_UPDATE_INPUTS=(
+	"nixpkgs"
+)
+
 export PACKAGES_TO_HIGHLIGHT_EXTRA=()
 
 export NIXPKGS_INPUTS=(
