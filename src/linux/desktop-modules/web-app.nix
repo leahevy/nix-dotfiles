@@ -16,7 +16,9 @@ args@{
   options = {
     buildWebApp = lib.mkOption {
       type = lib.types.nullOr (lib.types.functionTo lib.types.attrs);
-      default = null;
+      default =
+        _:
+        throw "No web-app provider is enabled! Enable either desktop-modules.web-app-chromium or desktop-modules.web-app-qutebrowser in your profile!";
       description = "Function to build a web app, returning { homeFiles, desktopEntries, appIds }. Set by the active backend.";
     };
     dashboardIcons = lib.mkOption {
