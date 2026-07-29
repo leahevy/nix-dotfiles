@@ -1265,6 +1265,7 @@ args@{
             [
               coreutils
               git
+              git-crypt
               gnugrep
               openssh
               config.nix.package.out
