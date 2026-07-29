@@ -27,6 +27,20 @@
         virtualisation = {
           docker = true;
         };
+        storage = {
+          samba-utils = true;
+          usb-access = true;
+          borg-backup = {
+            repository = {
+              server = "example.com";
+              port = 22;
+              user = "example";
+              path = "/backups";
+            };
+            schedule = "*-*-* 18:45:00";
+            repoCheckMaxDuration = 900;
+          };
+        };
       };
     };
 
@@ -37,5 +51,7 @@
     };
 
     impermanence = false;
+
+    homeserverDomain = "example.com";
   };
 }
