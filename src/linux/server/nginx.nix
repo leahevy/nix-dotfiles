@@ -143,6 +143,7 @@ args@{
           recommendedTlsSettings = true;
           recommendedGzipSettings = true;
           recommendedOptimisation = true;
+          mapHashBucketSize = lib.mkDefault 128;
           commonHttpConfig = ''
             access_log syslog:server=unix:/dev/log combined;
             geo $nx_is_internal {
