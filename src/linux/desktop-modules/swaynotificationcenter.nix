@@ -35,6 +35,12 @@ args@{
           unitless = true;
           tag = "swaync";
         }
+        {
+          string = "sway_notification_center_notification_request_dismiss_notification: assertion 'SWAY_NOTIFICATION_CENTER_IS_NOTIFICATION \\(self\\)' failed";
+          user = true;
+          unitless = true;
+          tag = "swaync";
+        }
       ];
     };
 
