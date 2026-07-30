@@ -453,7 +453,7 @@ in
                 extraConfig = ''
                   ${lib.optionalString internalOnly "if ($nx_is_internal = 0) { return 403; }"}
                   if ($ollama_auth_ok = 0) { return 401; }
-                  proxy_set_header Host $host;
+                  proxy_set_header Host 127.0.0.1:${toString port};
                   proxy_set_header X-Real-IP $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header X-Forwarded-Proto $scheme;
