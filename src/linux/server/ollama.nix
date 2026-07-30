@@ -315,9 +315,19 @@ in
             user = "ollama";
             group = "ollama";
           };
+          "/var/lib/ollama/models".d = {
+            mode = "0750";
+            user = "ollama";
+            group = "ollama";
+          };
         }
         // lib.optionalAttrs self.host.impermanence {
           "${self.persist}/var/lib/ollama".d = {
+            mode = "0750";
+            user = "ollama";
+            group = "ollama";
+          };
+          "${self.persist}/var/lib/ollama/models".d = {
             mode = "0750";
             user = "ollama";
             group = "ollama";
