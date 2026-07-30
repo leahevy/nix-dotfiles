@@ -2185,6 +2185,48 @@ args@{
           '';
         };
 
+        home.file."${defs.binDir}/niri-focus-column" = {
+          executable = true;
+          text = ''
+            #!/usr/bin/env bash
+            set -euo pipefail
+
+            STATE_FILE="''${XDG_RUNTIME_DIR:-/tmp}/niri-center-on-focus"
+
+            case "''${1:-}" in
+              left) ${pkgs.niri}/bin/niri msg action focus-column-left ;;
+              right) ${pkgs.niri}/bin/niri msg action focus-column-right ;;
+              *) echo "Usage: niri-focus-column left|right" >&2; exit 1 ;;
+            esac
+
+            STATE="1"
+            [[ -f "$STATE_FILE" ]] && read -r STATE < "$STATE_FILE" || true
+            if [[ "$STATE" != "0" ]]; then
+              ${pkgs.niri}/bin/niri msg action center-column
+            fi
+          '';
+        };
+
+        home.file."${defs.binDir}/niri-toggle-center-on-focus" = {
+          executable = true;
+          text = ''
+            #!/usr/bin/env bash
+            set -euo pipefail
+
+            STATE_FILE="''${XDG_RUNTIME_DIR:-/tmp}/niri-center-on-focus"
+
+            STATE="1"
+            [[ -f "$STATE_FILE" ]] && read -r STATE < "$STATE_FILE" || true
+
+            if [[ "$STATE" != "0" ]]; then
+              echo "0" > "$STATE_FILE"
+            else
+              echo "1" > "$STATE_FILE"
+              ${pkgs.niri}/bin/niri msg action center-column
+            fi
+          '';
+        };
+
         home.file."${defs.binDir}/nop" = {
           executable = true;
           text = ''
@@ -2630,7 +2672,7 @@ args@{
                   };
 
                   "Mod+H" = {
-                    action = focus-column-left;
+                    action = spawn-sh "niri-focus-column left";
                     hotkey-overlay.title = "Focus:Focus left";
                   };
 
@@ -2645,7 +2687,7 @@ args@{
                   };
 
                   "Mod+L" = {
-                    action = focus-column-right;
+                    action = spawn-sh "niri-focus-column right";
                     hotkey-overlay.title = "Focus:Focus right";
                   };
 
@@ -2933,8 +2975,8 @@ args@{
                   };
 
                   "Mod+G" = {
-                    action = center-column;
-                    hotkey-overlay.title = "Windows:Center column";
+                    action = spawn-sh "niri-toggle-center-on-focus";
+                    hotkey-overlay.title = "Windows:Toggle center on focus";
                   };
 
                   "Mod+Shift+Backspace" = {
