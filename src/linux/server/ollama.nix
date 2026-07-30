@@ -228,6 +228,20 @@ in
         domain = self.host.remote.baseDomain;
         ollamaCfg = config.nx.linux.server.ollama;
         allModels = allModelsFor ollamaCfg;
+        effectiveModel = effectiveModelFor ollamaCfg;
+        warmupScript = pkgs.writeShellScript "nx-ollama-warmup" ''
+          ${pkgs.curl}/bin/curl -sS --max-time 600 \
+            "http://127.0.0.1:${toString port}/api/generate" \
+            -d ${
+              lib.escapeShellArg (
+                builtins.toJSON {
+                  model = effectiveModel;
+                  prompt = "";
+                }
+              )
+            } \
+            > /dev/null
+        '';
       in
       {
         assertions = [
@@ -304,6 +318,8 @@ in
           RestartSteps = lib.mkDefault "10";
           OOMPolicy = lib.mkDefault "kill";
         };
+
+        systemd.services.ollama-model-loader.serviceConfig.ExecStartPost = "-${warmupScript}";
 
         environment.persistence."${self.persist}" = {
           directories = [ "/var/lib/ollama" ];
