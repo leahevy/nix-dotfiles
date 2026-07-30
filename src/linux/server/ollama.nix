@@ -156,6 +156,12 @@ in
       description = "Systemd MemoryMax cap for the ollama service as an absolute size or a percentage of host memory such as 50%, or null for no cap, with swap also disabled for the service whenever a cap is set.";
     };
 
+    cpuQuotaPercent = lib.mkOption {
+      type = lib.types.nullOr lib.types.ints.positive;
+      default = 75;
+      description = "Maximum percentage of total host CPU capacity for the ollama service, scaled by core count into a runtime CPUQuota, or null for no limit.";
+    };
+
     disableCloud = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -216,6 +222,7 @@ in
         contextLength,
         syncModels,
         memoryMax,
+        cpuQuotaPercent,
         disableCloud,
         flashAttention,
         kvCacheType,
@@ -241,6 +248,10 @@ in
               )
             } \
             > /dev/null
+        '';
+        cpuQuotaScript = pkgs.writeShellScript "nx-ollama-cpuquota" ''
+          ${pkgs.systemd}/bin/systemctl set-property --runtime ollama.service \
+            "CPUQuota=$(( $(${pkgs.coreutils}/bin/nproc --all) * ${toString cpuQuotaPercent} ))%"
         '';
       in
       {
@@ -320,6 +331,17 @@ in
         };
 
         systemd.services.ollama-model-loader.serviceConfig.ExecStartPost = "-${warmupScript}";
+
+        systemd.services.nx-ollama-cpuquota = lib.mkIf (cpuQuotaPercent != null) {
+          description = "Scale the ollama CPUQuota to a share of all host cores";
+          before = [ "ollama.service" ];
+          wantedBy = [ "ollama.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStart = toString cpuQuotaScript;
+          };
+        };
 
         environment.persistence."${self.persist}" = {
           directories = [ "/var/lib/ollama" ];
