@@ -58,6 +58,7 @@
         };
         server = {
           auth = true;
+          ollama = true;
           dashboard = true;
           healthchecks = {
             projectUUID = "12345678-1234-1234-1234-123456789abc";
