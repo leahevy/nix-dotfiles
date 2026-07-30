@@ -92,7 +92,7 @@ in
 
     modelTier = lib.mkOption {
       type = lib.types.ints.between 1 tierCount;
-      default = 3;
+      default = 2;
       description = "Preset model tier used when defaultModel is null, from 1 (smallest and fastest) to ${toString tierCount} (largest and highest quality).";
     };
 
@@ -129,7 +129,7 @@ in
     contextLength = lib.mkOption {
       type = lib.types.nullOr lib.types.int;
       default = 32768;
-      description = "Context window length in tokens passed to OLLAMA_CONTEXT_LENGTH, defaulting to 32768 which fits the default 4b tier under the memory cap, or null to use the ollama default.";
+      description = "Context window length in tokens passed to OLLAMA_CONTEXT_LENGTH, defaulting to 32768 which fits the default tier under the memory cap, or null to use the ollama default.";
     };
 
     syncModels = lib.mkOption {
