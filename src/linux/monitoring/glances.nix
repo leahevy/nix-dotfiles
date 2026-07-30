@@ -237,7 +237,7 @@ args@{
           nx.linux.server.dashboard.services = [
             {
               name = "Glances";
-              group = "admin";
+              group = "health";
               inherit href;
               description = "System monitoring";
               icon = "glances";
