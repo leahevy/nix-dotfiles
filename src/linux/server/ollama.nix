@@ -492,6 +492,7 @@ in
             {
               name = "Ollama";
               href = "#admin";
+              target = "_self";
               siteMonitor = "https://${subdomain}.${domain}";
               description = "Local LLM engine";
               icon = "ollama";

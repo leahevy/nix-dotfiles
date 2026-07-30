@@ -277,6 +277,18 @@ args@{
               description = "URL Homepage site monitoring pings for this entry, defaulting to href when null.";
             };
 
+            target = lib.mkOption {
+              type = lib.types.nullOr (
+                lib.types.enum [
+                  "_blank"
+                  "_self"
+                  "_top"
+                ]
+              );
+              default = null;
+              description = "Link target for this entry such as _self to open in the same tab, defaulting to the Homepage default when null.";
+            };
+
             widgets = lib.mkOption {
               type = lib.types.listOf lib.types.attrs;
               default = [ ];
@@ -600,6 +612,7 @@ args@{
           // lib.optionalAttrs svc.enableSiteMonitor {
             siteMonitor = if svc.siteMonitor != null then svc.siteMonitor else svc.href;
           }
+          // lib.optionalAttrs (svc.target != null) { inherit (svc) target; }
           // lib.optionalAttrs (svc.icon != null) { icon = resolveIcon svc.icon; }
           // lib.optionalAttrs (svc.description != "") { inherit (svc) description; }
           // lib.optionalAttrs (svc.widgets != [ ]) { inherit (svc) widgets; };
