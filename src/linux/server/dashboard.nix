@@ -271,6 +271,12 @@ args@{
               description = "Whether to configure Homepage site monitoring for this generated dashboard service entry.";
             };
 
+            siteMonitor = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "URL Homepage site monitoring pings for this entry, defaulting to href when null.";
+            };
+
             widgets = lib.mkOption {
               type = lib.types.listOf lib.types.attrs;
               default = [ ];
@@ -591,7 +597,9 @@ args@{
           "${svc.name}" = {
             inherit (svc) href;
           }
-          // lib.optionalAttrs svc.enableSiteMonitor { siteMonitor = svc.href; }
+          // lib.optionalAttrs svc.enableSiteMonitor {
+            siteMonitor = if svc.siteMonitor != null then svc.siteMonitor else svc.href;
+          }
           // lib.optionalAttrs (svc.icon != null) { icon = resolveIcon svc.icon; }
           // lib.optionalAttrs (svc.description != "") { inherit (svc) description; }
           // lib.optionalAttrs (svc.widgets != [ ]) { inherit (svc) widgets; };

@@ -491,7 +491,8 @@ in
           nx.linux.server.dashboard.services = [
             {
               name = "Ollama";
-              href = "https://${subdomain}.${domain}";
+              href = "#admin";
+              siteMonitor = "https://${subdomain}.${domain}";
               description = "Local LLM engine";
               icon = "ollama";
               group = "admin";
