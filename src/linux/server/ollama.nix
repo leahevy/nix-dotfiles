@@ -295,6 +295,7 @@ in
         };
 
         systemd.services.ollama.serviceConfig = {
+          DynamicUser = lib.mkForce false;
           MemoryMax = lib.mkIf (memoryMax != null) memoryMax;
           MemorySwapMax = lib.mkIf (memoryMax != null) "0";
           Restart = lib.mkDefault "on-failure";
@@ -380,7 +381,7 @@ in
           };
           authScript = pkgs.writeShellScript "nx-ollama-nginx-auth" ''
             set -euo pipefail
-            umask 077
+            umask 027
             {
               printf 'map $http_authorization $ollama_auth_ok {\n  default 0;\n  "Bearer '
               ${pkgs.coreutils}/bin/tr -d '\r\n' < ${
@@ -402,8 +403,9 @@ in
             serviceConfig = {
               Type = "oneshot";
               RemainAfterExit = true;
+              Group = config.services.nginx.group;
               RuntimeDirectory = "nx-ollama-auth";
-              RuntimeDirectoryMode = "0700";
+              RuntimeDirectoryMode = "0750";
               ExecStart = toString authScript;
             };
           };
