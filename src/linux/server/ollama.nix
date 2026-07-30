@@ -343,6 +343,10 @@ in
           };
         };
 
+        systemd.services.ollama.restartTriggers = lib.mkIf (cpuQuotaPercent != null) [
+          (toString cpuQuotaPercent)
+        ];
+
         environment.persistence."${self.persist}" = {
           directories = [ "/var/lib/ollama" ];
         };
