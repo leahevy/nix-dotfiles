@@ -33,6 +33,33 @@ args@{
           unitless = true;
         }
       ];
+
+      nx.linux.monitoring.journal-watcher.highlightPatterns = [
+        {
+          tag = "flatpak";
+          string = "^user: (Updated|Installed) app/";
+          user = true;
+          unitless = true;
+          extract = "^user: (?P<state>Updated|Installed) app/(?P<app>[^/]+)/";
+          mapping = {
+            label = "Flatpak";
+            title = "Update";
+            icon = "system-software-install";
+            message = "{state} {app}";
+          };
+        }
+        {
+          string = "^(Warning|error): Failed to (install|update|pull) ";
+          user = true;
+          unitless = true;
+          mapping = {
+            label = "Flatpak";
+            title = "Update Failed";
+            icon = "dialog-error";
+            priority = "failed";
+          };
+        }
+      ];
     };
 
     ifEnabled.linux.desktop.niri.enabled = config: {
