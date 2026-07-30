@@ -18,9 +18,9 @@ let
   nonThinkingTierModels = [
     "qwen2.5:1.5b"
     "qwen2.5:3b"
-    "qwen3:4b-instruct-2507"
-    "qwen3:30b-a3b-instruct-2507"
-    "qwen3:235b-a22b-instruct-2507"
+    "qwen3:4b-instruct"
+    "qwen3:30b-a3b-instruct-2507-q4_K_M"
+    "qwen3:235b-a22b-instruct-2507-q4_K_M"
   ];
   tierCount = lib.min (builtins.length thinkingTierModels) (builtins.length nonThinkingTierModels);
   tierModelsFor = cfg: if cfg.tierThinking then thinkingTierModels else nonThinkingTierModels;
