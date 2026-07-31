@@ -30,8 +30,6 @@ let
         "direnv"
         "claude"
         "codex"
-        "opencode"
-        "vibe"
         "nodejs"
         "typescript-lsp"
         "jujutsu"
