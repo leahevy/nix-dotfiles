@@ -907,6 +907,11 @@ args@{
               )
               log = logging.getLogger("niri-auto-tiler")
 
+              CENTER_STATE_FILE = os.path.join(
+                  os.environ.get("XDG_RUNTIME_DIR") or "/tmp",
+                  "niri-center-on-focus",
+              )
+
 
               def wait_for_niri(timeout=30):
                   deadline = time.monotonic() + timeout
@@ -950,6 +955,19 @@ args@{
                       log.warning("niri cmd failed: %s", result.stderr.strip())
                       return False
                   return True
+
+
+              def center_on_focus_enabled():
+                  try:
+                      with open(CENTER_STATE_FILE) as f:
+                          return f.read().strip() != "0"
+                  except OSError:
+                      return True
+
+
+              def center_focused_column_if_enabled():
+                  if center_on_focus_enabled():
+                      niri_action("center-column")
 
 
               def normalize_window(window):
@@ -1514,6 +1532,7 @@ args@{
                   deferred_once = set()
                   solo_maximized = set()
                   solo_resized = {}
+                  newly_opened = set()
                   saw_workspaces = False
                   saw_windows = False
                   bootstrapped = False
@@ -1548,10 +1567,12 @@ args@{
                                       handled, pending, deferred_once, solo_maximized, solo_resized,
                                   )
                               if had_reset:
-                                  process_pending(
+                                  reset_result = process_pending(
                                       config, workspaces_by_id, windows_by_id,
                                       handled, pending, deferred_once, solo_maximized, solo_resized,
                                   )
+                                  if reset_result == "acted":
+                                      center_focused_column_if_enabled()
                           continue
                       if line is None:
                           break
@@ -1611,6 +1632,7 @@ args@{
                                       wid, app_id,
                                   )
                                   pending.add(wid)
+                                  newly_opened.add(wid)
                               elif config["applyOnMove"] and previous.get("workspace_id") != window.get("workspace_id"):
                                   log.info(
                                       "re-queued moved window %d (app-id=%s) from workspace %s to %s",
@@ -1703,6 +1725,7 @@ args@{
                           deferred_once.discard(wid)
                           solo_maximized.discard(wid)
                           solo_resized.pop(wid, None)
+                          newly_opened.discard(wid)
                           if bootstrapped and closing_window is not None and is_tiling_candidate(config, workspaces_by_id, closing_window):
                               closing_workspace_id = closing_window.get("workspace_id")
                               if closing_workspace_id is not None:
@@ -1788,10 +1811,20 @@ args@{
                                   config, workspaces_by_id, windows_by_id,
                                   handled, pending, deferred_once, solo_maximized, solo_resized,
                               )
-                          process_pending(
+                          tile_result = process_pending(
                               config, workspaces_by_id, windows_by_id,
                               handled, pending, deferred_once, solo_maximized, solo_resized,
                           )
+                          settled_new = False
+                          for opened_wid in list(newly_opened):
+                              if opened_wid not in handled:
+                                  continue
+                              newly_opened.discard(opened_wid)
+                              opened_window = windows_by_id.get(opened_wid)
+                              if opened_window is not None and is_tiling_candidate(config, workspaces_by_id, opened_window):
+                                  settled_new = True
+                          if tile_result == "acted" or settled_new:
+                              center_focused_column_if_enabled()
 
                   log.error("event stream ended unexpectedly")
                   sys.exit(1)
