@@ -2673,6 +2673,7 @@ args@{
 
                   "Mod+H" = {
                     action = spawn-sh "niri-focus-column left";
+                    cooldown-ms = 150;
                     hotkey-overlay.title = "Focus:Focus left";
                   };
 
@@ -2688,6 +2689,7 @@ args@{
 
                   "Mod+L" = {
                     action = spawn-sh "niri-focus-column right";
+                    cooldown-ms = 150;
                     hotkey-overlay.title = "Focus:Focus right";
                   };
 
