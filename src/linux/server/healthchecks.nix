@@ -1813,7 +1813,7 @@ args@{
           lib.optionalAttrs checkBtrfsScrub { "10 - Btrfs scrub" = btrfsScrubExpr; } // monthlyHealthChecks;
 
         runCheckBlock =
-          desc: script:
+          endpointName: desc: script:
           let
             hasRetry = lib.hasPrefix "R" desc;
             descNoRetry = if hasRetry then lib.removePrefix "R" desc else desc;
@@ -1831,7 +1831,7 @@ args@{
                 descNoRetry;
             infoFile = "$TMPDIR_HC/info-${sanitizeName cleanDesc}";
             outFile = "$TMPDIR_HC/out-${sanitizeName cleanDesc}";
-            retryStatePath = "/run/nx-healthcheck/retry-${sanitizeName cleanDesc}";
+            retryStatePath = "/run/nx-healthcheck/retry-${endpointName}-${sanitizeName cleanDesc}";
             retryMax = toString checkMaxRetries;
             displayName = stripGroupPrefix cleanDesc;
 
@@ -2123,7 +2123,7 @@ args@{
               if invalidRetryKeys != [ ] then
                 throw "healthchecks (${endpointName}): invalid check keys using R retry prefix: ${
                   lib.concatStringsSep ", " (map (k: "\"${k}\"") invalidRetryKeys)
-                }. R prefix is only allowed in regular checks!"
+                }. R prefix is only allowed in regular and timed checks!"
               else if invalidKeys == [ ] then
                 lib.mapAttrs makeCheckScript checks
               else
@@ -2177,7 +2177,7 @@ args@{
                 pairs = lib.mapAttrsToList (name: script: { inherit name script; }) checkScripts;
                 sorted = lib.sort (a: b: (stripSortKey a.name) < (stripSortKey b.name)) pairs;
               in
-              map ({ name, script }: runCheckBlock name script) sorted
+              map ({ name, script }: runCheckBlock endpointName name script) sorted
             )}
 
             _silent_sfx=
@@ -2652,7 +2652,6 @@ args@{
                   inherit endpointName;
                   checks = entry.checks;
                   networkTimeoutSec = entry.networkTimeoutSec;
-                  allowRetry = false;
                 };
               }
               // (mkLogFilterAttrs entry.logFilterPatterns);
