@@ -34,25 +34,49 @@ args@{
       ];
     };
 
-    linux.system = config: {
-      security.pam.rssh.enable = true;
-      security.pam.services.sudo.rssh = true;
-    };
+    linux.system =
+      config:
+      let
+        mainUserUid = toString config.users.users.${self.host.mainUser.username}.uid;
+        agentSockPath = "/run/user/${mainUserUid}/ssh-agent-forward";
 
-    ifEnabled.common.shell.fish.home = config: {
-      home.file."${config.xdg.configHome}/fish-init/10-ssh-auth-sock.fish".text = ''
-        function __nx_refresh_ssh_auth_sock --on-event fish_prompt
-          if test -z "$TMUX"; or test -z "$SSH_AUTH_SOCK"; or test -S "$SSH_AUTH_SOCK"
-            return
-          end
+        cutBin = helpers.packageFile args pkgs.coreutils "bin/cut";
+        idBin = helpers.packageFile args pkgs.coreutils "bin/id";
+        lnBin = helpers.packageFile args pkgs.coreutils "bin/ln";
+        mvBin = helpers.packageFile args pkgs.coreutils "bin/mv";
+        xauthBin = lib.getExe pkgs.xauth;
 
-          set -l sock (command tmux show-environment SSH_AUTH_SOCK 2>/dev/null | string replace -r '^SSH_AUTH_SOCK=' "")
+        xauthForwarding = ''
+          if read proto cookie && [ -n "$DISPLAY" ]; then
+            if [ "$(echo "$DISPLAY" | ${cutBin} -c1-10)" = "localhost:" ]; then
+              echo add "unix:$(echo "$DISPLAY" | ${cutBin} -c11-)" "$proto" "$cookie"
+            else
+              echo add "$DISPLAY" "$proto" "$cookie"
+            fi | ${xauthBin} -q -
+          fi
+        '';
+      in
+      {
+        security.pam.rssh.enable = true;
+        security.pam.rssh.settings.ssh_agent_addr = agentSockPath;
+        security.pam.services.sudo.rssh = true;
 
-          if test -S "$sock"
-            set -gx SSH_AUTH_SOCK $sock
-          end
-        end
-      '';
-    };
+        environment.etc."ssh/sshrc".text = ''
+          #!/bin/sh
+
+          exec 1>&2
+
+          ${lib.optionalString config.services.openssh.settings.X11Forwarding xauthForwarding}
+
+          if [ -n "$SSH_AUTH_SOCK" ] && [ -S "$SSH_AUTH_SOCK" ]; then
+            runtimeDir="/run/user/$(${idBin} -u)"
+
+            if [ -d "$runtimeDir" ]; then
+              ${lnBin} -sfn "$SSH_AUTH_SOCK" "$runtimeDir/ssh-agent-forward.new"
+              ${mvBin} -Tf "$runtimeDir/ssh-agent-forward.new" "$runtimeDir/ssh-agent-forward"
+            fi
+          fi
+        '';
+      };
   };
 }
