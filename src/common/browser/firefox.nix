@@ -833,7 +833,7 @@ in
             '';
 
             activeTabBackgroundCSS = ''
-              .tabbrowser-tab[selected="true"] .tab-background { background-color: #1a1a1a !important; }
+              .tabbrowser-tab[selected] .tab-background { background-color: #1a1a1a !important; }
             '';
 
             squareTabBackgroundCSS = ''
