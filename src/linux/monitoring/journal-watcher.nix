@@ -921,6 +921,7 @@ args@{
                 description = "NX Shutdown Notification";
                 wantedBy = [ "multi-user.target" ];
                 after = [ "network.target" ];
+                restartIfChanged = false;
                 serviceConfig = {
                   Type = "oneshot";
                   RemainAfterExit = true;
