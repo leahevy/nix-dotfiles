@@ -1151,7 +1151,7 @@ args@{
             _now=$(${pkgs.coreutils}/bin/date +%s)
             _build_mode=normal
             if ${pkgs.procps}/bin/ps -eo pid,etimes,cmd \
-              | ${pkgs.gnugrep}/bin/grep -E 'nix build|nix-store.*realise|nix-store.*build' \
+              | ${pkgs.gnugrep}/bin/grep -E 'nix .*build|nix-store.*realise|nix-store.*build' \
               | ${pkgs.gnugrep}/bin/grep -v grep >/dev/null; then
               ${pkgs.coreutils}/bin/touch "$_build_marker"
             fi
