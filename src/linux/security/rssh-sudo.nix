@@ -37,8 +37,8 @@ args@{
     linux.system =
       config:
       let
-        mainUserUid = toString config.users.users.${self.host.mainUser.username}.uid;
-        agentSockPath = "/run/user/${mainUserUid}/ssh-agent-forward";
+        mainUser = config.users.users.${self.host.mainUser.username};
+        agentSockPath = "/run/user/${toString mainUser.uid}/ssh-agent-forward";
 
         cutBin = helpers.packageFile args pkgs.coreutils "bin/cut";
         idBin = helpers.packageFile args pkgs.coreutils "bin/id";
@@ -57,6 +57,13 @@ args@{
         '';
       in
       {
+        assertions = [
+          {
+            assertion = mainUser.uid != null;
+            message = "rssh-sudo requires an explicit uid for the main user to pin the ssh agent socket path!";
+          }
+        ];
+
         security.pam.rssh.enable = true;
         security.pam.rssh.settings.ssh_agent_addr = agentSockPath;
         security.pam.services.sudo.rssh = true;
