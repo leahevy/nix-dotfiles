@@ -2544,7 +2544,7 @@ args@{
                 { proportion = 0.75; }
                 { proportion = 1.0; }
               ];
-              center-focused-column = "on-overflow";
+              center-focused-column = "never";
               always-center-single-column = true;
               border = {
                 width = 4;
