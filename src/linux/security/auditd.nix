@@ -21,7 +21,6 @@ let
     persist_xdg_autostart = "/etc/xdg/autostart";
     persist_user_units = ".config/systemd/user";
     persist_user_units_share = ".local/share/systemd/user";
-    persist_applications = ".local/share/applications";
   };
 
   baselineTreeWatches = { };
