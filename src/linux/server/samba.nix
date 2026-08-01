@@ -486,6 +486,14 @@ args@{
           string = "\\*{5}";
         }
         {
+          tag = "nmbd";
+          string = "\\.\\./\\.\\./source3/nmbd/nmbd\\.c:[0-9]+\\(terminate\\)";
+        }
+        {
+          tag = "nmbd";
+          string = "terminate: Got SIGTERM: going down";
+        }
+        {
           service = "samba-smbd.service";
           string = "terminate: Got SIGTERM: going down";
         }

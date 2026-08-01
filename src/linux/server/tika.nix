@@ -37,6 +37,19 @@ args@{
         pkgs.tika
         pkgs.jdk17
       ];
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          tag = "systemd";
+          service = "init.scope";
+          string = "tika\\.service: Failed with result 'exit-code'\\.";
+        }
+      ];
+    };
+
+    ifEnabled.linux.server.healthchecks = {
+      enabled = config: {
+        nx.linux.server.healthchecks.requireServicesUp = [ "tika.service" ];
+      };
     };
 
     ifEnabled.linux.server.paperless-ngx = {

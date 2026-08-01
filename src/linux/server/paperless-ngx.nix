@@ -468,6 +468,11 @@ args@{
           service = "redis-paperless.service";
           string = "Redis does not require authentication";
         }
+        {
+          service = "redis-paperless.service";
+          tag = "redis";
+          string = "Redis is now ready to exit, bye bye\\.\\.\\.";
+        }
       ];
       nx.packages.extra = [ pkgs.paperless-ngx ];
     };
