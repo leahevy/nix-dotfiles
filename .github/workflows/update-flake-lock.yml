@@ -410,6 +410,8 @@ jobs:
             "^niri"
             "^xwayland"
             "^uwsm"
+            "^gsettings-desktop-schemas"
+            "^gtk4"
           )
 
           REBOOT_NORMAL_PATTERNS=""
