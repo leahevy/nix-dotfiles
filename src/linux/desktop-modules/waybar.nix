@@ -67,8 +67,13 @@ args@{
           helpers.runWithAbsolutePath config appLauncher appLauncher.openCommand [ ]
         );
 
-        themedNixIcon =
-          pkgs.runCommand "themed-nix-snowflake"
+        mkThemedNixIcon =
+          {
+            name,
+            primary,
+            emphasized,
+          }:
+          pkgs.runCommand name
             {
               nativeBuildInputs = [ pkgs.gnused ];
             }
@@ -79,17 +84,17 @@ args@{
                 helpers.packageFile args pkgs.nixos-icons "share/icons/hicolor/scalable/apps/nix-snowflake.svg"
               }"
 
-              if sed "s/#699ad7/${config.nx.preferences.theme.colors.main.foregrounds.primary.html}/g; \
-                      s/#7eb1dd/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
-                      s/#7ebae4/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
-                      s/#415e9a/${config.nx.preferences.theme.colors.main.foregrounds.primary.html}/g; \
-                      s/#4a6baf/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
-                      s/#5277c3/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
-                      s/#637ddf/${config.nx.preferences.theme.colors.main.foregrounds.primary.html}/g; \
-                      s/#649afa/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
-                      s/#719efa/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g; \
-                      s/#7363df/${config.nx.preferences.theme.colors.main.foregrounds.primary.html}/g; \
-                      s/#6478fa/${config.nx.preferences.theme.colors.main.foregrounds.emphasized.html}/g" \
+              if sed "s/#699ad7/${primary}/g; \
+                      s/#7eb1dd/${emphasized}/g; \
+                      s/#7ebae4/${emphasized}/g; \
+                      s/#415e9a/${primary}/g; \
+                      s/#4a6baf/${emphasized}/g; \
+                      s/#5277c3/${emphasized}/g; \
+                      s/#637ddf/${primary}/g; \
+                      s/#649afa/${emphasized}/g; \
+                      s/#719efa/${emphasized}/g; \
+                      s/#7363df/${primary}/g; \
+                      s/#6478fa/${emphasized}/g" \
                  "$originalIcon" > $out/share/icons/themed-nix-snowflake.svg 2>/dev/null; then
                 echo "Themed icon created successfully"
               else
@@ -97,6 +102,18 @@ args@{
                 cp "$originalIcon" $out/share/icons/themed-nix-snowflake.svg
               fi
             '';
+
+        themedNixIcon = mkThemedNixIcon {
+          name = "themed-nix-snowflake";
+          primary = config.nx.preferences.theme.colors.main.foregrounds.primary.html;
+          emphasized = config.nx.preferences.theme.colors.main.foregrounds.emphasized.html;
+        };
+
+        themedNixIconOff = mkThemedNixIcon {
+          name = "themed-nix-snowflake-off";
+          primary = config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
+          emphasized = config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
+        };
       in
       {
         stylix.targets.waybar.addCss = false;
@@ -191,13 +208,25 @@ args@{
               };
             }
             // {
-              "custom/nix" = {
-                format = " ";
-                interval = "once";
-                tooltip = false;
-                class = "nix";
-                on-click = appLauncherCmd;
-              };
+              "custom/nix" =
+                if (self.isModuleEnabled "desktop.niri") then
+                  {
+                    exec = "${self.binDir}/niri-center-mode-status";
+                    return-type = "json";
+                    interval = "once";
+                    signal = 1;
+                    class = "nix";
+                    on-click = appLauncherCmd;
+                    on-click-right = "${self.binDir}/niri-toggle-center-on-focus";
+                  }
+                else
+                  {
+                    format = " ";
+                    interval = "once";
+                    tooltip = false;
+                    class = "nix";
+                    on-click = appLauncherCmd;
+                  };
 
               "custom/separator" = {
                 format = "<b>|</b>";
@@ -644,6 +673,11 @@ args@{
                 border: 1px solid ${config.nx.preferences.theme.colors.main.foregrounds.primary.html};
                 opacity: 0.8;
               }
+              ${lib.optionalString (self.isModuleEnabled "desktop.niri") ''
+                #custom-nix.off {
+                  background-image: url("${themedNixIconOff}/share/icons/themed-nix-snowflake.svg");
+                }
+              ''}
 
               window#waybar.empty #windowgroup {
                 opacity: 0;

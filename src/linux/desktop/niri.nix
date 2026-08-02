@@ -2257,8 +2257,30 @@ args@{
               echo "1" > "$STATE_FILE"
               ${pkgs.niri}/bin/niri msg action center-column
             fi
+            ${lib.optionalString (self.isModuleEnabled "desktop-modules.waybar") "${pkgs.procps}/bin/pkill -RTMIN+1 waybar || true"}
           '';
         };
+
+        home.file."${defs.binDir}/niri-center-mode-status" =
+          lib.mkIf (self.isModuleEnabled "desktop-modules.waybar")
+            {
+              executable = true;
+              text = ''
+                #!/usr/bin/env bash
+                set -euo pipefail
+
+                STATE_FILE="''${XDG_RUNTIME_DIR:-/tmp}/niri-center-on-focus"
+
+                STATE="1"
+                [[ -f "$STATE_FILE" ]] && read -r STATE < "$STATE_FILE" || true
+
+                if [[ "$STATE" == "0" ]]; then
+                  printf '{"text":" ","tooltip":"Column focus: fill mode","class":"off","alt":"off"}\n'
+                else
+                  printf '{"text":" ","tooltip":"Column focus: center mode","class":"on","alt":"on"}\n'
+                fi
+              '';
+            };
 
         home.file."${defs.binDir}/nop" = {
           executable = true;
