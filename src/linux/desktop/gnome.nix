@@ -28,27 +28,6 @@ args@{
   };
 
   module = {
-    init =
-      config:
-      lib.mkIf self.isEnabled {
-        nx.preferences.desktop.programs.appLauncher = {
-          name = "gnome-shell";
-          package = pkgs.glib.bin;
-          openCommand = [
-            "gdbus"
-            "call"
-            "--session"
-            "--dest"
-            "org.gnome.Shell"
-            "--object-path"
-            "/org/gnome/Shell"
-            "--method"
-            "org.gnome.Shell.ShowApplications"
-          ];
-          desktopFile = null;
-        };
-      };
-
     linux.system = config: {
       services.displayManager.gdm.enable = true;
       services.desktopManager.gnome.enable = true;

@@ -81,10 +81,10 @@ args@{
       in
       {
         nx.preferences.desktop.programs.appLauncher = {
-          name = lib.mkDefault "fuzzel";
-          package = lib.mkDefault fuzzelPackage;
-          openCommand = lib.mkDefault [ "fuzzel" ];
-          desktopFile = lib.mkDefault null;
+          name = "fuzzel";
+          package = fuzzelPackage;
+          openCommand = [ "fuzzel" ];
+          desktopFile = null;
         };
         nx.preferences.desktop.programs.dmenu = {
           name = "fuzzel";
