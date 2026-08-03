@@ -6,23 +6,51 @@ CORE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 source "$CORE_DIR/scripts/utils/defs.sh"
 
-case_filter="${1:-}"
+case_matches() {
+	local case_script="$1"
+	local case_filter="$2"
+	local base name short
+	base="$(basename "$case_script")"
+	name="${base%.sh}"
+	short="${name#[0-9][0-9]-}"
+	[ "$base" = "$case_filter" ] || [ "$name" = "$case_filter" ] || [ "$short" = "$case_filter" ]
+}
 
 case_scripts=()
 for case_script in "$SCRIPT_DIR"/test-evals.d/*.sh; do
-	if [ -n "$case_filter" ]; then
-		base="$(basename "$case_script")"
-		name="${base%.sh}"
-		name="${name#[0-9][0-9]-}"
-		if [ "$base" != "$case_filter" ] && [ "${base%.sh}" != "$case_filter" ] && [ "$name" != "$case_filter" ]; then
-			continue
-		fi
+	if [ "$#" -eq 0 ]; then
+		case_scripts+=("$case_script")
+		continue
 	fi
-	case_scripts+=("$case_script")
+	for case_filter in "$@"; do
+		if case_matches "$case_script" "$case_filter"; then
+			case_scripts+=("$case_script")
+			break
+		fi
+	done
 done
 
-if [ "${#case_scripts[@]}" -eq 0 ]; then
-	echo "No test case matches '$case_filter'. Available cases:" >&2
+unknown_filters=()
+for case_filter in "$@"; do
+	matched=0
+	for case_script in "$SCRIPT_DIR"/test-evals.d/*.sh; do
+		if case_matches "$case_script" "$case_filter"; then
+			matched=1
+			break
+		fi
+	done
+	if [ "$matched" -eq 0 ]; then
+		unknown_filters+=("$case_filter")
+	fi
+done
+
+if [ "${#unknown_filters[@]}" -ne 0 ] || [ "${#case_scripts[@]}" -eq 0 ]; then
+	if [ "${#unknown_filters[@]}" -ne 0 ]; then
+		echo "No test case matches: ${unknown_filters[*]}" >&2
+	else
+		echo "No test case selected." >&2
+	fi
+	echo "Available cases:" >&2
 	for case_script in "$SCRIPT_DIR"/test-evals.d/*.sh; do
 		base="$(basename "$case_script" .sh)"
 		echo "  ${base#[0-9][0-9]-}" >&2
