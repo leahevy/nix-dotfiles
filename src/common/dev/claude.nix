@@ -482,14 +482,23 @@ args@{
           COMPACT_WINDOW='${compactWindowValue}'
           COMPACT_PCT='${compactPercentValue}'
           WARN_PCT='${builtins.toString contextWarnPercent}'
+          AUTO_COMPACT_ENABLED='${lib.boolToString autoCompact}'
 
-          if [ -n "$COMPACT_WINDOW" ] && [ -n "$tokens" ]; then
+          if [ -n "$tokens" ] && { [ -n "$COMPACT_WINDOW" ] || [ -n "$model_window" ]; }; then
             eff_window="$COMPACT_WINDOW"
-            if [ -n "$model_window" ] && [ "$model_window" -gt 0 ] && [ "$model_window" -lt "$eff_window" ]; then
-              eff_window="$model_window"
+            if [ -n "$model_window" ] && [ "$model_window" -gt 0 ]; then
+              if [ -z "$eff_window" ] || [ "$model_window" -lt "$eff_window" ]; then
+                eff_window="$model_window"
+              fi
             fi
-            ctx_pct=$(( tokens * 100 / eff_window ))
-            ctx_warn_tokens=$(( eff_window * COMPACT_PCT * WARN_PCT / 10000 ))
+            if [ "$AUTO_COMPACT_ENABLED" = "true" ]; then
+              threshold_tokens=$(( eff_window * COMPACT_PCT / 100 ))
+              ctx_warn_tokens=$(( eff_window * COMPACT_PCT * WARN_PCT / 10000 ))
+            else
+              threshold_tokens="$eff_window"
+              ctx_warn_tokens=$(( eff_window * WARN_PCT / 100 ))
+            fi
+            [ "$threshold_tokens" -gt 0 ] && ctx_pct=$(( tokens * 100 / threshold_tokens ))
           fi
 
           ctx_alert=0
