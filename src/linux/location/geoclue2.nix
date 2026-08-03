@@ -78,7 +78,7 @@ args@{
           enableCDMA = self.settings.enableCellular;
           enableModemGPS = self.settings.enableCellular;
           enableNmea = self.settings.enableNMEA;
-          enableDemoAgent = self.settings.withDemoAgent;
+          enableDemoAgent = lib.mkDefault self.settings.withDemoAgent;
           enableStatic = onlyStaticEnabled;
           staticLatitude = self.host.location.latitude;
           staticLongitude = self.host.location.longitude;
