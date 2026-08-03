@@ -117,7 +117,7 @@ let
     && config.nx.linux.desktop.niri.enable
     && config.nx.common.browser.firefox.enableNiriKeybinds
     && (self.user.settings.browser or null) == "firefox"
-    && config.nx.preferences.desktop.programs.appLauncher != null;
+    && config.nx.preferences.desktop.programs.dmenu != null;
 
   extensionType = lib.types.submodule {
     options = {
@@ -1502,7 +1502,7 @@ in
       { config, enableNiriKeybinds, ... }:
       let
         isSelectedBrowser = (self.user.settings.browser or null) == "firefox";
-        appLauncher = config.nx.preferences.desktop.programs.appLauncher;
+        dmenu = config.nx.preferences.desktop.programs.dmenu;
         browserCfg = config.nx.common.browser.browser;
 
         flattenBookmarks =
@@ -1532,7 +1532,7 @@ in
               ) flattenedBookmarks
             );
             launcherCmd = lib.escapeShellArgs (
-              helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+              helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand {
                 prompt = "Bookmark: ";
                 placeholder = "Select a bookmark";
                 width = 80;
@@ -1566,7 +1566,7 @@ in
               // lib.optionalAttrs (niriLauncherEffectivelyEnabled config) (
                 let
                   searchLauncherCmd = lib.escapeShellArgs (
-                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                    helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand {
                       prompt = "Web Search: ";
                       placeholder = "Enter search query";
                       width = 60;
@@ -1598,7 +1598,7 @@ in
                     ) orderedKeys
                   );
                   engineLauncherCmd = lib.escapeShellArgs (
-                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                    helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand {
                       prompt = "Engine: ";
                       placeholder = "Select search engine";
                       width = 40;

@@ -36,10 +36,11 @@ args@{
     linux.home =
       config:
       let
-        appLauncher = config.nx.preferences.desktop.programs.appLauncher;
-        appLauncherDmenu =
-          opts:
-          lib.escapeShellArgs (helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts);
+        dmenu =
+          helpers.requirePreferenceProgram config "dmenu"
+            "swaybg wallpaper selection requires a dmenu style picker, enable linux.desktop-modules.fuzzel";
+        dmenuCmd =
+          opts: lib.escapeShellArgs (helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand opts);
 
         stylixWallpaper = config.nx.common.style.stylix.resolvedWallpaper;
         stylixWallpaperPath = toString stylixWallpaper.source;
@@ -398,7 +399,7 @@ args@{
                 FUZZEL_INPUT+="$DISPLAY_NAME"
               done
 
-              SELECTED=$(echo -en "$FUZZEL_INPUT" | ${appLauncherDmenu { prompt = "Select wallpaper: "; }})
+              SELECTED=$(echo -en "$FUZZEL_INPUT" | ${dmenuCmd { prompt = "Select wallpaper: "; }})
 
               if [[ -n "$SELECTED" ]]; then
                 SELECTED_BASENAME="''${SELECTED#● }"

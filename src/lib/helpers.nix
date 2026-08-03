@@ -1048,6 +1048,18 @@ rec {
     in
     if meetsVersion then pkg else fallbackPkg;
 
+  # Return a preferences program slot or throw a legible error when unset
+  # Usage: requirePreferenceProgram config "dmenu" "Enable linux.desktop-modules.fuzzel"
+  requirePreferenceProgram =
+    config: slot: hint:
+    let
+      program = config.nx.preferences.desktop.programs.${slot};
+    in
+    if program == null then
+      throw "No '${slot}' program is configured in nx.preferences.desktop.programs! ${hint}!"
+    else
+      program;
+
   # Prepend absolute path to binary in command list or function result
   # Respects commandIsAbsolute flag (returns unchanged if true)
   # Usage: runWithAbsolutePath config textEditor textEditor.openCommand []

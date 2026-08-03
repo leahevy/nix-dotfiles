@@ -144,8 +144,8 @@ args@{
           let
             programsConfig = config.nx.preferences.desktop.programs;
             terminal = programsConfig.terminal;
-            appLauncher = programsConfig.appLauncher;
-            hasAppLauncher = appLauncher != null;
+            dmenu = programsConfig.dmenu;
+            hasDmenu = dmenu != null;
             isNiriEnabled = self.linux.isModuleEnabled "desktop.niri";
 
             allConfigs = buildConfigs config;
@@ -153,11 +153,10 @@ args@{
             tmuxinatorPackage = self.settings.tmuxinatorPackage;
           in
           lib.mkMerge [
-            (lib.mkIf hasAppLauncher (
+            (lib.mkIf hasDmenu (
               let
-                appLauncherDmenu =
-                  opts:
-                  lib.escapeShellArgs (helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts);
+                dmenuCmd =
+                  opts: lib.escapeShellArgs (helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand opts);
                 tmuxSessionShellWithClass = class: cmd: helpers.runWithClassAndQuotedCmd config class cmd;
                 tmuxSessionShellCmd =
                   class: cmd:
@@ -209,7 +208,7 @@ args@{
                       fi
 
                       selection=$(echo -e "$session_list" | ${
-                        appLauncherDmenu {
+                        dmenuCmd {
                           prompt = "Tmux sessions: ";
                           width = 35;
                         }
@@ -236,7 +235,7 @@ args@{
                 };
               }
             ))
-            (lib.mkIf (hasAppLauncher && isNiriEnabled) {
+            (lib.mkIf (hasDmenu && isNiriEnabled) {
               programs.niri.settings.binds."Mod+Shift+Return" = with config.lib.niri.actions; {
                 action = spawn-sh "tmux-session-manager";
                 hotkey-overlay.title = "Apps:Tmux Session Manager";

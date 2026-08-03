@@ -228,21 +228,6 @@ let
         default = [ ];
         description = "Command to open the launcher (as list of args)";
       };
-      dmenuArgs = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ ];
-        description = "Args for simple dmenu mode (e.g., [\"-d\"] for fuzzel)";
-      };
-      dmenuCommand = lib.mkOption {
-        type = lib.types.nullOr dmenuOptsFnType;
-        default = null;
-        description = "Function: {prompt, width, lines, placeholder} -> [args] for dmenu mode";
-      };
-      dmenuIndexCommand = lib.mkOption {
-        type = lib.types.nullOr dmenuOptsFnType;
-        default = null;
-        description = "Function: {prompt, width, lines, placeholder} -> [args] for dmenu mode returning index";
-      };
       additionalPackages = lib.mkOption {
         type = lib.types.listOf lib.types.package;
         default = [ ];
@@ -262,6 +247,55 @@ let
         type = lib.types.listOf lib.types.attrs;
         default = [ ];
         description = "Journal watcher patterns to highlight for this launcher";
+      };
+      localBin = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether this programs absolute path resides in the user's .local/bin-nx";
+      };
+      commandIsAbsolute = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether command paths are already absolute (e.g., macOS 'open' commands)";
+      };
+    };
+  };
+
+  dmenuType = lib.types.submodule {
+    options = {
+      name = lib.mkOption {
+        type = lib.types.str;
+        description = "Dmenu picker name";
+      };
+      package = lib.mkOption {
+        type = lib.types.nullOr lib.types.package;
+        default = null;
+        description = "Dmenu picker package";
+      };
+      openCommand = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Base command to invoke the picker (as list of args)";
+      };
+      dmenuArgs = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Args for simple dmenu mode (e.g., [\"-d\"] for fuzzel)";
+      };
+      dmenuCommand = lib.mkOption {
+        type = lib.types.nullOr dmenuOptsFnType;
+        default = null;
+        description = "Function: {prompt, width, lines, placeholder} -> [args] for dmenu mode";
+      };
+      dmenuIndexCommand = lib.mkOption {
+        type = lib.types.nullOr dmenuOptsFnType;
+        default = null;
+        description = "Function: {prompt, width, lines, placeholder} -> [args] for dmenu mode returning index";
+      };
+      additionalPackages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [ ];
+        description = "Additional packages required by the picker";
       };
       localBin = lib.mkOption {
         type = lib.types.bool;
@@ -639,6 +673,11 @@ in
                 type = lib.types.nullOr appLauncherType;
                 default = null;
                 description = "Preferred application launcher";
+              };
+              dmenu = lib.mkOption {
+                type = lib.types.nullOr dmenuType;
+                default = null;
+                description = "Preferred dmenu style picker";
               };
             };
           };

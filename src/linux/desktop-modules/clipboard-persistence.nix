@@ -19,10 +19,11 @@ args@{
       let
         clipmanPackage = pkgs.clipman;
         wlClipboardPackage = pkgs.wl-clipboard;
-        appLauncher = config.nx.preferences.desktop.programs.appLauncher;
-        appLauncherDmenuSimple = lib.escapeShellArgs (
-          (helpers.runWithAbsolutePath config appLauncher appLauncher.openCommand [ ])
-          ++ appLauncher.dmenuArgs
+        dmenu =
+          helpers.requirePreferenceProgram config "dmenu"
+            "the clipboard picker requires a dmenu style picker, enable linux.desktop-modules.fuzzel";
+        dmenuCmdSimple = lib.escapeShellArgs (
+          (helpers.runWithAbsolutePath config dmenu dmenu.openCommand [ ]) ++ dmenu.dmenuArgs
         );
       in
       lib.mkMerge [
@@ -45,7 +46,7 @@ args@{
 
         (lib.mkIf (self.isModuleEnabled "desktop.niri") {
           programs.niri.settings.binds."Mod+B" = with config.lib.niri.actions; {
-            action = spawn-sh "${clipmanPackage}/bin/clipman pick --tool=CUSTOM --tool-args=\"${appLauncherDmenuSimple}\"";
+            action = spawn-sh "${clipmanPackage}/bin/clipman pick --tool=CUSTOM --tool-args=\"${dmenuCmdSimple}\"";
             hotkey-overlay.title = "Clipboard:Clipboard manager";
           };
         })

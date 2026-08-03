@@ -1853,21 +1853,18 @@ args@{
           helpers.runWithAbsolutePath config additionalTerminal additionalTerminal.openCommand [ ]
         );
         appLauncher =
-          if programsConfig.appLauncher == null then
-            throw "niri requires an application launcher (e.g., enable linux.desktop-modules.fuzzel)"
-          else
-            programsConfig.appLauncher;
+          helpers.requirePreferenceProgram config "appLauncher"
+            "niri requires an application launcher, enable linux.desktop-modules.fuzzel";
+        dmenu =
+          helpers.requirePreferenceProgram config "dmenu"
+            "niri requires a dmenu style picker, enable linux.desktop-modules.fuzzel";
         appLauncherCmd = lib.escapeShellArgs (
           helpers.runWithAbsolutePath config appLauncher appLauncher.openCommand [ ]
         );
-        appLauncherDmenu =
-          opts:
-          lib.escapeShellArgs (helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts);
-        appLauncherDmenuRaw =
-          opts:
-          lib.concatStringsSep " " (
-            helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand opts
-          );
+        dmenuCmd =
+          opts: lib.escapeShellArgs (helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand opts);
+        dmenuCmdRaw =
+          opts: lib.concatStringsSep " " (helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand opts);
         requiredApps =
           let
             scratchpadCmd = (self.options config).scratchpadCommand;
@@ -2088,7 +2085,7 @@ args@{
             #!/usr/bin/env bash
 
             choice=$(echo -e "Yes\nNo" | ${
-              appLauncherDmenu {
+              dmenuCmd {
                 prompt = "Restart Niri session? ";
                 width = 25;
                 lines = 2;
@@ -2119,7 +2116,7 @@ args@{
             ${powerMenuChecksScript}
 
             action=$(echo -e "Poweroff\nReboot" | ${
-              appLauncherDmenu {
+              dmenuCmd {
                 prompt = "Power actions: ";
                 width = 25;
                 lines = 2;
@@ -2136,7 +2133,7 @@ args@{
             )
 
             confirm=$(echo -e "Yes\nNo" | ${
-              appLauncherDmenuRaw {
+              dmenuCmdRaw {
                 prompt = "$action? ";
                 width = 20;
                 lines = 2;

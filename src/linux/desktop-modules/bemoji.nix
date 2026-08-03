@@ -30,17 +30,18 @@ args@{
     home =
       config:
       let
-        appLauncher = config.nx.preferences.desktop.programs.appLauncher;
-        appLauncherDmenuSimple = lib.escapeShellArgs (
-          (helpers.runWithAbsolutePath config appLauncher appLauncher.openCommand [ ])
-          ++ appLauncher.dmenuArgs
+        dmenu =
+          helpers.requirePreferenceProgram config "dmenu"
+            "bemoji requires a dmenu style picker, enable linux.desktop-modules.fuzzel";
+        dmenuCmdSimple = lib.escapeShellArgs (
+          (helpers.runWithAbsolutePath config dmenu dmenu.openCommand [ ]) ++ dmenu.dmenuArgs
         );
       in
       {
         home.packages = [ pkgs.bemoji ];
 
         home.sessionVariables = {
-          BEMOJI_PICKER_CMD = appLauncherDmenuSimple;
+          BEMOJI_PICKER_CMD = dmenuCmdSimple;
         };
 
         home.persistence."${self.persist}" = {

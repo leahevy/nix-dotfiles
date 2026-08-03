@@ -423,8 +423,8 @@ args@{
       let
         isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
         textEditor = config.nx.preferences.desktop.programs.textEditor;
-        appLauncher = config.nx.preferences.desktop.programs.appLauncher;
-        hasAppLauncher = appLauncher != null;
+        dmenu = config.nx.preferences.desktop.programs.dmenu;
+        hasDmenu = dmenu != null;
 
         flattenBookmarks =
           let
@@ -520,7 +520,7 @@ args@{
             { };
 
         dmenuKeyBindings =
-          if self.isLinux && hasAppLauncher && self.settings.useDmenuForOpenOnLinux then
+          if self.isLinux && hasDmenu && self.settings.useDmenuForOpenOnLinux then
             {
               normal = {
                 "o" = "spawn --userscript launcher-open";
@@ -920,7 +920,7 @@ args@{
               text =
                 let
                   launcherCmd = lib.escapeShellArgs (
-                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                    helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand {
                       prompt = "Open URL: ";
                       placeholder = "Select a URL or enter a new one";
                       width = 60;
@@ -966,7 +966,7 @@ args@{
               text =
                 let
                   launcherCmd = lib.escapeShellArgs (
-                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                    helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand {
                       prompt = "History: ";
                       placeholder = "Select a URL from history";
                       width = 80;
@@ -997,7 +997,7 @@ args@{
               text =
                 let
                   launcherCmd = lib.escapeShellArgs (
-                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                    helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand {
                       prompt = "Open bookmark group (foreground): ";
                       placeholder = "Select a bookmark group";
                       width = 60;
@@ -1026,7 +1026,7 @@ args@{
               text =
                 let
                   launcherCmd = lib.escapeShellArgs (
-                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                    helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand {
                       prompt = "Open bookmark group (background): ";
                       placeholder = "Select a bookmark group";
                       width = 60;
@@ -1110,7 +1110,7 @@ args@{
               //
                 lib.optionalAttrs
                   (
-                    hasAppLauncher
+                    hasDmenu
                     && self.settings.enableNiriKeybinds
                     && (self.user.settings.browser or null) == "qutebrowser"
                   )
@@ -1118,7 +1118,7 @@ args@{
                     "Mod+Alt+Space" =
                       let
                         searchLauncherCmd = lib.escapeShellArgs (
-                          helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                          helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand {
                             prompt = "Web Search: ";
                             placeholder = "Enter search query";
                             width = 60;

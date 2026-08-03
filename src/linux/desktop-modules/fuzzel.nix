@@ -81,6 +81,12 @@ args@{
       in
       {
         nx.preferences.desktop.programs.appLauncher = {
+          name = lib.mkDefault "fuzzel";
+          package = lib.mkDefault fuzzelPackage;
+          openCommand = lib.mkDefault [ "fuzzel" ];
+          desktopFile = lib.mkDefault null;
+        };
+        nx.preferences.desktop.programs.dmenu = {
           name = "fuzzel";
           package = fuzzelPackage;
           openCommand = [ "fuzzel" ];
@@ -111,14 +117,13 @@ args@{
             ++ lib.optionals (opts.placeholder or null != null) [
               "--placeholder=${opts.placeholder or ""}"
             ];
-          desktopFile = null;
         };
       };
 
     home =
       config:
       let
-        fuzzelPackage = config.nx.preferences.desktop.programs.appLauncher.package;
+        fuzzelPackage = config.nx.preferences.desktop.programs.dmenu.package;
         iconThemeName = lib.head (lib.tail (lib.splitString "/" config.nx.preferences.theme.icons.primary));
       in
       {

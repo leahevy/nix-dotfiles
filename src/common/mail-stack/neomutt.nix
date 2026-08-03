@@ -410,8 +410,8 @@ args@{
         colors = if self.settings.colors != null then self.settings.colors else defaultColors;
 
         isNiriEnabled = self.isLinux && (self.linux.isModuleEnabled "desktop.niri");
-        appLauncher = config.nx.preferences.desktop.programs.appLauncher;
-        hasAppLauncher = appLauncher != null;
+        dmenu = config.nx.preferences.desktop.programs.dmenu;
+        hasDmenu = dmenu != null;
 
         accountsConfig = self.getModuleConfig "mail-stack.accounts";
         accounts = accountsConfig.accounts;
@@ -785,10 +785,10 @@ args@{
             set -euo pipefail
 
             ${
-              if isNiriEnabled && hasAppLauncher then
+              if isNiriEnabled && hasDmenu then
                 let
                   launcherCmd = lib.escapeShellArgs (
-                    helpers.runWithAbsolutePath config appLauncher appLauncher.dmenuCommand {
+                    helpers.runWithAbsolutePath config dmenu dmenu.dmenuCommand {
                       prompt = "Select URL: ";
                       width = 80;
                     }
