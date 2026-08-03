@@ -11,7 +11,7 @@
   config.host = {
     hostname = "testing-server";
 
-    mainUser = "testuser";
+    mainUser = "testuser-server";
 
     deploymentMode = "develop";
 
@@ -36,6 +36,9 @@
 
     modules = {
       linux = {
+        notifications = {
+          pushover = true;
+        };
         security = {
           letsencrypt = {
             dnsCerts = {
@@ -90,6 +93,21 @@
           searxng = true;
           syncthing = true;
           tika = true;
+        };
+        system = {
+          auto-upgrades = {
+            schedule = "17:45:10";
+            rebootWindow = {
+              lower = "22:30";
+              upper = "05:00";
+            };
+          };
+        };
+        storage = {
+          luks-data-drive = {
+            uuid = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+            createXDGDirs = true;
+          };
         };
       };
     };

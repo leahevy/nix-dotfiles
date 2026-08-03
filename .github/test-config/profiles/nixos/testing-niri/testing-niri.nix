@@ -23,7 +23,32 @@
       main = "Virtual-1";
     };
 
-    modules = { };
+    modules = {
+      linux = {
+        notifications = {
+          pushover = true;
+        };
+        virtualisation = {
+          docker = true;
+        };
+        desktop-modules = {
+          swaybg = {
+            additionalWallpaperDirectories = [
+              "~/wallpaper"
+            ];
+          };
+          nwg-wrapper = {
+            usedShell = "fish";
+          };
+          waybar = {
+            addDataDisk = true;
+          };
+          bongocat = {
+            useKeydVirtual = true;
+          };
+        };
+      };
+    };
 
     settings = {
       system = {
