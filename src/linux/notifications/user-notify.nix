@@ -258,19 +258,30 @@ args@{
       config:
       let
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;
-        terminalShellCmd =
-          cmd:
-          lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
+        terminalShellCmdWithClass =
+          class: cmd:
+          lib.escapeShellArgs (
+            helpers.runWithAbsolutePath config terminal (terminal.openShellCommandWithClass class) cmd
+          );
       in
       {
         programs.niri = {
           settings = {
             binds = with config.lib.niri.actions; {
               "Mod+Ctrl+Alt+L" = {
-                action = spawn-sh (terminalShellCmd "nx-user-notify-logs");
+                action = spawn-sh (terminalShellCmdWithClass "org.nx.user-notify-logs" "nx-user-notify-logs");
                 hotkey-overlay.title = "System:User notification logs";
               };
             };
+
+            window-rules = [
+              {
+                matches = [ { app-id = "org.nx.user-notify-logs"; } ];
+                open-floating = true;
+                open-focused = true;
+                block-out-from = "screencast";
+              }
+            ];
           };
         };
       };

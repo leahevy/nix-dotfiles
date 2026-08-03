@@ -1203,19 +1203,30 @@ args@{
       config:
       let
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;
-        terminalShellCmd =
-          cmd:
-          lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
+        terminalShellCmdWithClass =
+          class: cmd:
+          lib.escapeShellArgs (
+            helpers.runWithAbsolutePath config terminal (terminal.openShellCommandWithClass class) cmd
+          );
       in
       {
         programs.niri = {
           settings = {
             binds = with config.lib.niri.actions; {
               "Mod+Ctrl+Alt+S" = {
-                action = spawn-sh (terminalShellCmd "syncthing-status");
+                action = spawn-sh (terminalShellCmdWithClass "org.nx.syncthing-status" "syncthing-status");
                 hotkey-overlay.title = "System:Syncthing status";
               };
             };
+
+            window-rules = [
+              {
+                matches = [ { app-id = "org.nx.syncthing-status"; } ];
+                open-floating = true;
+                open-focused = true;
+                block-out-from = "screencast";
+              }
+            ];
           };
         };
       };

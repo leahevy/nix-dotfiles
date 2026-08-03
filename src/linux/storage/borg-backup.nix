@@ -576,19 +576,30 @@ args@{
       config:
       let
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;
-        terminalShellCmd =
-          cmd:
-          lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
+        terminalShellCmdWithClass =
+          class: cmd:
+          lib.escapeShellArgs (
+            helpers.runWithAbsolutePath config terminal (terminal.openShellCommandWithClass class) cmd
+          );
       in
       lib.mkIf (!self.settings.disableOwnBackups) {
         programs.niri = {
           settings = {
             binds = with config.lib.niri.actions; {
               "Mod+Ctrl+Alt+B" = {
-                action = spawn-sh (terminalShellCmd "borg-backup-status");
+                action = spawn-sh (terminalShellCmdWithClass "org.nx.borg-backup-status" "borg-backup-status");
                 hotkey-overlay.title = "System:Backup status";
               };
             };
+
+            window-rules = [
+              {
+                matches = [ { app-id = "org.nx.borg-backup-status"; } ];
+                open-floating = true;
+                open-focused = true;
+                block-out-from = "screencast";
+              }
+            ];
           };
         };
       };

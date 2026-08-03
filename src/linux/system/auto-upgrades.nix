@@ -193,19 +193,30 @@ args@{
       config:
       let
         terminal = config.nx.preferences.desktop.programs.additionalTerminal;
-        terminalShellCmd =
-          cmd:
-          lib.escapeShellArgs (helpers.runWithAbsolutePath config terminal terminal.openShellCommand cmd);
+        terminalShellCmdWithClass =
+          class: cmd:
+          lib.escapeShellArgs (
+            helpers.runWithAbsolutePath config terminal (terminal.openShellCommandWithClass class) cmd
+          );
       in
       {
         programs.niri = {
           settings = {
             binds = with config.lib.niri.actions; {
               "Mod+Ctrl+Alt+G" = {
-                action = spawn-sh (terminalShellCmd "auto-upgrade-status");
+                action = spawn-sh (terminalShellCmdWithClass "org.nx.auto-upgrade-status" "auto-upgrade-status");
                 hotkey-overlay.title = "System:Auto-upgrade status";
               };
             };
+
+            window-rules = [
+              {
+                matches = [ { app-id = "org.nx.auto-upgrade-status"; } ];
+                open-floating = true;
+                open-focused = true;
+                block-out-from = "screencast";
+              }
+            ];
           };
         };
       };
