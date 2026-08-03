@@ -41,6 +41,7 @@
   unstablePackages = [
     "codex"
     "claude-code"
+    "beeper"
   ];
   unstableLinuxPackages = [ ];
   unstableDarwinPackages = [ ];
