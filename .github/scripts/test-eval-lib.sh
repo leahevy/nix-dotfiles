@@ -69,6 +69,54 @@ te_secrets() {
 	done
 }
 
+te_variables() {
+	local file="$TE_WORKDIR/config/variables.nix"
+
+	if [ ! -f "$file" ]; then
+		echo "te_variables: '$file' does not exist in the test config template!" >&2
+		return 1
+	fi
+
+	if ! grep -q '^[[:space:]]*}[[:space:]]*$' "$file"; then
+		echo "te_variables: could not find the closing brace of the attribute set in '$file'!" >&2
+		return 1
+	fi
+
+	local name_re="^[A-Za-z_][A-Za-z0-9_.'-]*$"
+
+	local entry name pattern lines=""
+	for entry in "$@"; do
+		name="${entry%%=*}"
+		name="${name//[[:space:]]/}"
+		if [[ "$entry" != *=* ]] || ! [[ "$name" =~ $name_re ]]; then
+			echo "te_variables: '$entry' is not an attribute assignment of the form 'name = value;'!" >&2
+			return 1
+		fi
+		pattern="${name//./\\.}"
+		if grep -qE "^[[:space:]]*${pattern}[[:space:]]*=" "$file"; then
+			echo "te_variables: '$name' is already defined in '$file'!" >&2
+			return 1
+		fi
+		lines+="  $entry"$'\n'
+	done
+
+	[ -n "$lines" ] || return 0
+
+	local rendered
+	rendered=$(TE_VARIABLES_INSERT="$lines" awk '
+		FNR == NR {
+			if ($0 ~ /^[[:space:]]*}[[:space:]]*$/) {
+				close_line = FNR
+			}
+			next
+		}
+		FNR == close_line { printf "%s", ENVIRON["TE_VARIABLES_INSERT"] }
+		{ print }
+	' "$file" "$file")
+
+	printf '%s\n' "$rendered" >"$file"
+}
+
 te_git_commit_config() {
 	local repo="$TE_WORKDIR/config"
 	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null \
