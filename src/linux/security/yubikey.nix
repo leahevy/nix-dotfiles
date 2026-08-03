@@ -21,6 +21,8 @@ args@{
     enableU2fAuth = false;
     useU2fAuthForSudo = true;
     useU2fAuthForLogin = true;
+    useU2fAuthForPolkit = true;
+    enableU2fCue = true;
     enableYubikeyInitrdUnlock = true;
   };
 
@@ -142,9 +144,22 @@ args@{
         security.pam.u2f.settings.authfile =
           lib.mkIf self.settings.enableU2fAuth config.sops.secrets.yubikey-u2f-keys.path;
 
+        security.pam.u2f.settings.cue = lib.mkIf self.settings.enableU2fAuth self.settings.enableU2fCue;
+
+        systemd.services."polkit-agent-helper@".serviceConfig =
+          lib.mkIf (self.settings.enableU2fAuth && self.settings.useU2fAuthForPolkit)
+            {
+              PrivateDevices = false;
+              DeviceAllow = [
+                "/dev/urandom r"
+                "char-hidraw rw"
+              ];
+            };
+
         security.pam.services = lib.mkIf self.settings.enableU2fAuth {
           sudo.u2fAuth = self.settings.useU2fAuthForSudo;
           login.u2fAuth = self.settings.useU2fAuthForLogin;
+          polkit-1.u2fAuth = self.settings.useU2fAuthForPolkit;
         };
       };
   };
