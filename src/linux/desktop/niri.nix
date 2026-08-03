@@ -2539,7 +2539,7 @@ args@{
             );
 
             overview = {
-              zoom = 0.5;
+              zoom = 0.6;
               backdrop-color = config.nx.preferences.theme.colors.main.backgrounds.primary.html;
             };
 
