@@ -29,6 +29,26 @@ args@{
           user = true;
           unitless = true;
         }
+        {
+          tag = "polkit-mate-authentication-agent-1";
+          string = "g_task_return_boolean: assertion '!task->ever_returned' failed";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "polkit-agent-helper-1";
+          string = "pam_unix\\(polkit-1:auth\\): conversation failed";
+        }
+        {
+          tag = "polkit-agent-helper-1";
+          string = "pam_unix\\(polkit-1:auth\\): auth could not identify password for \\[.*\\]";
+        }
+        {
+          tag = "pkexec";
+          string = "Error executing command as another user: Request dismissed";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 
