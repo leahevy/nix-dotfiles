@@ -237,8 +237,22 @@ in
         allModels = allModelsFor ollamaCfg;
         effectiveModel = effectiveModelFor ollamaCfg;
         warmupScript = pkgs.writeShellScript "nx-ollama-warmup" ''
+          baseUrl="http://127.0.0.1:${toString port}"
+          model=${lib.escapeShellArg effectiveModel}
+
+          waited=0
+          while ! ${pkgs.curl}/bin/curl -sS --max-time 10 "$baseUrl/api/tags" 2>/dev/null \
+            | ${pkgs.jq}/bin/jq -e --arg m "$model" '.models[]? | select(.name == $m)' >/dev/null 2>&1; do
+            if [ "$waited" -ge 3600 ]; then
+              echo "nx-ollama-warmup: model $model not available after 60 minutes, giving up!" >&2
+              exit 1
+            fi
+            ${pkgs.coreutils}/bin/sleep 10
+            waited=$((waited + 10))
+          done
+
           ${pkgs.curl}/bin/curl -sS --max-time 600 \
-            "http://127.0.0.1:${toString port}/api/generate" \
+            "$baseUrl/api/generate" \
             -d ${
               lib.escapeShellArg (
                 builtins.toJSON {
