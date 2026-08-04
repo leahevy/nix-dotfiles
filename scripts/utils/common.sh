@@ -1321,8 +1321,8 @@ verify_checked_out_branch() {
 
 get_latest_commit_timestamp() {
 	local repo_dir="$1"
-	if [[ -d "$repo_dir/.git" ]]; then
-		cd "$repo_dir" && git log --no-merges -1 --pretty=format:"%ct" 2>/dev/null || echo "0"
+	if is_git_repo_dir "$repo_dir"; then
+		git -C "$repo_dir" log --no-merges -1 --pretty=format:"%ct" 2>/dev/null || echo "0"
 	else
 		echo "0"
 	fi
