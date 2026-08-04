@@ -36,6 +36,11 @@ args@{
               default = null;
               description = "Name of the SOPS secret entry holding this API key.";
             };
+            rotationURL = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "URL where this API key can be rotated, included in the Todoist task description when created.";
+            };
             healthchecksUUID = lib.mkOption {
               type = lib.types.nullOr lib.types.str;
               default = null;
@@ -185,6 +190,7 @@ args@{
             markerFile = "/var/lib/nx-api-keys/${keyId}-last-notified";
             secretInfo = lib.optionalString (keyCfg.secretName != null) "\n\nSecret: ${keyCfg.secretName}";
             pushoverEnabled = config.nx.linux.notifications.pushover.enable;
+            todoistEnabled = config.nx.linux.todo.todoist-api.enable;
           in
           lib.nameValuePair serviceName {
             description = "${keyCfg.displayName} API key expiry check";
@@ -231,6 +237,16 @@ args@{
                       type = "warn";
                     }
                   )}
+                  ${lib.optionalString todoistEnabled (
+                    config.nx.linux.todo.todoist-api.queueTask {
+                      topic = "api-key-expiry-${keyId}";
+                      emoticon = "🔑";
+                      content = "Rotate ${keyCfg.displayName} API Key";
+                      description = "${keyCfg.displayName} API key expired $DAYS_OVERDUE days ago (expiry: $EXPIRY_DATE).${secretInfo}";
+                      url = keyCfg.rotationURL;
+                      shellVars = true;
+                    }
+                  )}
                 else
                   printf 'WARN: ${keyCfg.displayName} API key expires in %d days (expiry: %s), rotate it soon!\n' "$DAYS_LEFT" "$EXPIRY_DATE" >&2
                   ${lib.optionalString pushoverEnabled (
@@ -239,6 +255,16 @@ args@{
                       message = "${keyCfg.displayName} API key expires in $DAYS_LEFT days, rotate it soon!${secretInfo}";
                       shellVars = true;
                       type = "warn";
+                    }
+                  )}
+                  ${lib.optionalString todoistEnabled (
+                    config.nx.linux.todo.todoist-api.queueTask {
+                      topic = "api-key-expiry-${keyId}";
+                      emoticon = "🔑";
+                      content = "Rotate ${keyCfg.displayName} API Key";
+                      description = "${keyCfg.displayName} API key expires in $DAYS_LEFT days (expiry: $EXPIRY_DATE).${secretInfo}";
+                      url = keyCfg.rotationURL;
+                      shellVars = true;
                     }
                   )}
                 fi

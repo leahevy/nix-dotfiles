@@ -139,13 +139,20 @@ in
 
     when = {
       option.bootstrapMode = false;
-      do.enabled = config: {
-        nx.linux.security.api-keys.keys."pocket-id" = {
-          displayName = "Pocket-ID";
-          secretName = lib.mkDefault "pocket-id-api-key";
-          healthchecksIcon = "pocket-id";
+      do.enabled =
+        config:
+        let
+          domain = self.host.remote.baseDomain;
+          subdomain = config.nx.linux.server.auth.subdomain;
+        in
+        {
+          nx.linux.security.api-keys.keys."pocket-id" = {
+            displayName = "Pocket-ID";
+            secretName = lib.mkDefault "pocket-id-api-key";
+            healthchecksIcon = "pocket-id";
+            rotationURL = lib.mkIf (domain != null) "https://${subdomain}.${domain}/settings/admin/api-keys";
+          };
         };
-      };
     };
 
     linux.system =

@@ -120,6 +120,7 @@ args@{
               displayName = "Tailscale";
               secretName = lib.mkDefault "tailscale-api-key";
               lifetimeDays = lib.mkDefault 90;
+              rotationURL = "https://console.tailscale.com/admin/settings/keys";
               healthchecksIcon = "tailscale";
             };
           })
