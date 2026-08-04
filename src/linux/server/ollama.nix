@@ -92,7 +92,7 @@ in
 
     modelTier = lib.mkOption {
       type = lib.types.ints.between 1 tierCount;
-      default = 3;
+      default = 2;
       description = "Preset model tier used when defaultModel is null, from 1 (smallest and fastest) to ${toString tierCount} (largest and highest quality).";
     };
 
