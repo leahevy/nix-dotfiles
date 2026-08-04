@@ -414,6 +414,11 @@
         ];
         options = gitOptions // {
           bump = option "Push nxcore first, then bump and push nxconfig (implies --commit on config)";
+          merge-into =
+            optionRepeatable "Merge main into a branch, then bump and push it (requires --bump, main only)"
+              "branch"
+              "string";
+          dry = option "Rehearse the merge and bump in temporary worktrees without pushing (requires --merge-into)";
         };
       };
 

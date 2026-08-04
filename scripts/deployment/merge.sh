@@ -61,83 +61,15 @@ if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
 	fi
 fi
 
-resolve_generated_conflicts() {
-	local repo_name="$1"
-
-	if [[ "$repo_name" != "config" ]]; then
-		exit 1
-	fi
-
-	local conflicts=()
-	local file
-	while IFS= read -r file; do
-		[[ -n "$file" ]] && conflicts+=("$file")
-	done < <(git diff --name-only --diff-filter=U)
-
-	if [[ ${#conflicts[@]} -eq 0 ]]; then
-		exit 1
-	fi
-
-	local remaining=()
-	for file in "${conflicts[@]}"; do
-		case "$file" in
-		.label | flake.lock | .core-state/*)
-			echo -e "${CYAN}Auto-resolving ${WHITE}$file${CYAN} with the version from ${WHITE}$BRANCH_TO_MERGE${CYAN}...${RESET}"
-			if git checkout --theirs -- "$file" 2>/dev/null; then
-				git add -- "$file"
-			else
-				git rm --quiet -f -- "$file"
-			fi
-			;;
-		*)
-			remaining+=("$file")
-			;;
-		esac
-	done
-
-	if [[ ${#remaining[@]} -gt 0 ]]; then
-		echo
-		echo -e "${RED}Merge conflicts require manual resolution:${RESET}"
-		printf "  ${WHITE}%s${RESET}\n" "${remaining[@]}"
-		exit 1
-	fi
-
-	git commit --no-edit
-}
-
-merge_branch_in_repo() {
-	local repo_path="$1"
-	local repo_name="$2"
-	local repo_label="$3"
-
-	pushd "$repo_path" >/dev/null
-
-	if git merge-base --is-ancestor HEAD "refs/heads/$BRANCH_TO_MERGE"; then
-		echo -e "${GREEN}Fast-forwarding to branch ${WHITE}$BRANCH_TO_MERGE${GREEN} in $repo_name repository ${WHITE}($repo_label)${RESET}..."
-		git merge --ff-only "$BRANCH_TO_MERGE"
-	else
-		echo -e "${GREEN}Merging branch ${WHITE}$BRANCH_TO_MERGE${GREEN} with a merge commit in $repo_name repository ${WHITE}($repo_label)${RESET}..."
-		if [[ "$repo_name" == "config" ]]; then
-			if ! git merge --no-edit "$BRANCH_TO_MERGE"; then
-				resolve_generated_conflicts "$repo_name"
-			fi
-		elif ! git merge "$BRANCH_TO_MERGE"; then
-			resolve_generated_conflicts "$repo_name"
-		fi
-	fi
-
-	popd >/dev/null
-}
-
 if [[ "$ONLY_CONFIG" != true ]]; then
-	merge_branch_in_repo "." "core" ".config/nx/nxcore"
+	merge_branch_in_dir "." "core" ".config/nx/nxcore" "$BRANCH_TO_MERGE" || exit 1
 fi
 
 if [[ "$ONLY_CORE" != true ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
 	if [[ "$ONLY_CONFIG" != true ]]; then
 		echo
 	fi
-	merge_branch_in_repo "$CONFIG_DIR" "config" ".config/nx/nxconfig"
+	merge_branch_in_dir "$CONFIG_DIR" "config" ".config/nx/nxconfig" "$BRANCH_TO_MERGE" || exit 1
 elif [[ "$ONLY_CORE" != true ]] && [[ "$ONLY_CONFIG" != true ]]; then
 	echo
 	echo -e "${YELLOW}Warning: Config directory does not exist or is no directory.${RESET}"

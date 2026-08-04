@@ -32,16 +32,15 @@ append_trap() {
 	fi
 
 	local sig line existing
+	local parts=()
 	for sig in "$@"; do
 		line="$(trap -p "$sig" 2>/dev/null || true)"
-		if [[ -z "${line:-}" ]]; then
-			# shellcheck disable=SC2064
-			trap "${new_cmd}" "$sig"
-			continue
+		existing=""
+		if [[ -n "${line:-}" ]]; then
+			parts=()
+			eval "parts=(${line})"
+			existing="${parts[2]:-}"
 		fi
-
-		existing="${line#trap -- \'}"
-		existing="${existing%\' *}"
 
 		if [[ -n "${existing:-}" ]]; then
 			# shellcheck disable=SC2064
@@ -1093,6 +1092,206 @@ require_repos_on_same_branch() {
 	fi
 }
 
+is_git_repo_dir() {
+	local dir="${1:-}"
+	[[ -n "$dir" ]] && git -C "$dir" rev-parse --git-dir >/dev/null 2>&1
+}
+
+resolve_generated_merge_conflicts() {
+	local repo_name="$1"
+	local branch_to_merge="$2"
+
+	local conflicts=()
+	local file
+	while IFS= read -r file; do
+		[[ -n "$file" ]] && conflicts+=("$file")
+	done < <(git diff --name-only --diff-filter=U)
+
+	if [[ ${#conflicts[@]} -eq 0 ]]; then
+		return 1
+	fi
+
+	local remaining=()
+	for file in "${conflicts[@]}"; do
+		case "$file" in
+		.label | flake.lock | .core-state/*)
+			if [[ "$repo_name" != "config" ]]; then
+				remaining+=("$file")
+				continue
+			fi
+			echo -e "${CYAN}Auto-resolving ${WHITE}$file${CYAN} with the version from ${WHITE}$branch_to_merge${CYAN}...${RESET}"
+			if git checkout --theirs -- "$file" 2>/dev/null; then
+				git add -- "$file"
+			else
+				git rm --quiet -f -- "$file"
+			fi
+			;;
+		*)
+			remaining+=("$file")
+			;;
+		esac
+	done
+
+	if [[ ${#remaining[@]} -gt 0 ]]; then
+		echo
+		echo -e "${RED}Merge conflicts require manual resolution:${RESET}"
+		printf "  ${WHITE}%s${RESET}\n" "${remaining[@]}"
+		return 1
+	fi
+
+	git commit --no-edit
+}
+
+merge_branch_in_dir() {
+	local repo_path="$1"
+	local repo_name="$2"
+	local repo_label="$3"
+	local branch_to_merge="$4"
+	local no_edit="${5:-false}"
+	local merge_message="${6:-}"
+
+	pushd "$repo_path" >/dev/null || return 1
+
+	if git merge-base --is-ancestor HEAD "refs/heads/$branch_to_merge"; then
+		echo -e "${GREEN}Fast-forwarding to branch ${WHITE}$branch_to_merge${GREEN} in $repo_name repository ${WHITE}($repo_label)${RESET}..."
+		if ! git merge --ff-only "$branch_to_merge"; then
+			popd >/dev/null || return 1
+			return 1
+		fi
+	else
+		echo -e "${GREEN}Merging branch ${WHITE}$branch_to_merge${GREEN} with a merge commit in $repo_name repository ${WHITE}($repo_label)${RESET}..."
+		local merge_args=()
+		if [[ -n "$merge_message" ]]; then
+			merge_args+=("-m" "$merge_message")
+		elif [[ "$repo_name" == "config" || "$no_edit" == "true" ]]; then
+			merge_args+=("--no-edit")
+		fi
+		if ! git merge ${merge_args[@]+"${merge_args[@]}"} "$branch_to_merge"; then
+			if ! resolve_generated_merge_conflicts "$repo_name" "$branch_to_merge"; then
+				popd >/dev/null || return 1
+				return 1
+			fi
+		fi
+	fi
+
+	popd >/dev/null || return 1
+	return 0
+}
+
+NX_TEMP_WORKTREE_ROOT=""
+NX_TEMP_WORKTREE_REPOS=()
+NX_TEMP_WORKTREE_PATHS=()
+
+add_temp_worktree() {
+	local repo_path="$1"
+	local worktree_path="$2"
+	local commitish="$3"
+
+	NX_TEMP_WORKTREE_REPOS+=("$repo_path")
+	NX_TEMP_WORKTREE_PATHS+=("$worktree_path")
+
+	if ! git -C "$repo_path" worktree add --detach --no-checkout "$worktree_path" "$commitish" >/dev/null; then
+		echo -e "${RED}Error: Failed to create a temporary worktree for ${WHITE}$repo_path${RED}!${RESET}" >&2
+		return 1
+	fi
+
+	local worktree_gitdir common_dir
+	worktree_gitdir="$(git -C "$worktree_path" rev-parse --absolute-git-dir)"
+	common_dir="$(git -C "$worktree_path" rev-parse --path-format=absolute --git-common-dir)"
+	if [[ -d "$common_dir/git-crypt" && ! -e "$worktree_gitdir/git-crypt" ]]; then
+		ln -s "$common_dir/git-crypt" "$worktree_gitdir/git-crypt"
+	fi
+
+	if ! git -C "$worktree_path" checkout >/dev/null; then
+		echo -e "${RED}Error: Failed to check out the temporary worktree for ${WHITE}$repo_path${RED}!${RESET}" >&2
+		return 1
+	fi
+}
+
+cleanup_temp_worktrees() {
+	local index=0
+	while [[ $index -lt ${#NX_TEMP_WORKTREE_PATHS[@]} ]]; do
+		git -C "${NX_TEMP_WORKTREE_REPOS[$index]}" worktree remove --force "${NX_TEMP_WORKTREE_PATHS[$index]}" >/dev/null 2>&1 || true
+		index=$((index + 1))
+	done
+
+	if [[ -n "$NX_TEMP_WORKTREE_ROOT" && -d "$NX_TEMP_WORKTREE_ROOT" ]]; then
+		rm -rf -- "$NX_TEMP_WORKTREE_ROOT"
+	fi
+	NX_TEMP_WORKTREE_ROOT=""
+
+	index=0
+	while [[ $index -lt ${#NX_TEMP_WORKTREE_REPOS[@]} ]]; do
+		git -C "${NX_TEMP_WORKTREE_REPOS[$index]}" worktree prune >/dev/null 2>&1 || true
+		index=$((index + 1))
+	done
+	NX_TEMP_WORKTREE_REPOS=()
+	NX_TEMP_WORKTREE_PATHS=()
+}
+
+is_branch_checked_out() {
+	local repo_path="$1"
+	local branch="$2"
+
+	git -C "$repo_path" worktree list --porcelain 2>/dev/null | grep -Fqx "branch refs/heads/$branch"
+}
+
+resolve_merge_target_base() {
+	local repo_path="$1"
+	local repo_name="$2"
+	local branch="$3"
+
+	local local_ref remote_ref
+	local_ref="$(git -C "$repo_path" rev-parse --verify --quiet "refs/heads/$branch" || true)"
+
+	if ! git -C "$repo_path" fetch --quiet origin "$branch"; then
+		local ls_remote_status=0
+		git -C "$repo_path" ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1 || ls_remote_status=$?
+		if [[ $ls_remote_status -ne 2 ]]; then
+			echo -e "${RED}Error: Could not fetch ${WHITE}$branch${RED} from origin in the $repo_name repository!${RESET}" >&2
+			return 1
+		fi
+		if [[ -z "$local_ref" ]]; then
+			echo -e "${RED}Error: Branch ${WHITE}$branch${RED} does not exist in the $repo_name repository!${RESET}" >&2
+			return 1
+		fi
+		echo -e "${CYAN}Branch ${WHITE}$branch${CYAN} does not exist on ${WHITE}origin${CYAN} in the $repo_name repository, using the local branch...${RESET}" >&2
+		echo "$local_ref"
+		return 0
+	fi
+
+	remote_ref="$(git -C "$repo_path" rev-parse --verify --quiet FETCH_HEAD || true)"
+
+	if [[ -z "$local_ref" ]]; then
+		if [[ -z "$remote_ref" ]]; then
+			echo -e "${RED}Error: Branch ${WHITE}$branch${RED} does not exist in the $repo_name repository!${RESET}" >&2
+			return 1
+		fi
+		echo -e "${CYAN}Branch ${WHITE}$branch${CYAN} does not exist locally in the $repo_name repository, using ${WHITE}origin/$branch${CYAN}...${RESET}" >&2
+		echo "$remote_ref"
+		return 0
+	fi
+
+	if [[ -z "$remote_ref" || "$remote_ref" == "$local_ref" ]]; then
+		echo "$local_ref"
+		return 0
+	fi
+
+	if git -C "$repo_path" merge-base --is-ancestor "$remote_ref" "$local_ref"; then
+		echo "$local_ref"
+		return 0
+	fi
+
+	if git -C "$repo_path" merge-base --is-ancestor "$local_ref" "$remote_ref"; then
+		echo -e "${CYAN}Branch ${WHITE}$branch${CYAN} is behind ${WHITE}origin/$branch${CYAN} in the $repo_name repository, using the remote state...${RESET}" >&2
+		echo "$remote_ref"
+		return 0
+	fi
+
+	echo -e "${RED}Error: Branch ${WHITE}$branch${RED} has diverged from ${WHITE}origin/$branch${RED} in the $repo_name repository!${RESET}" >&2
+	return 1
+}
+
 verify_checked_out_branch() {
 	local repo_dir="$1"
 
@@ -1611,7 +1810,7 @@ run_bump() {
 	local push="$2"
 	local exit_cleanup="${3:-}"
 
-	if [[ "$push" == "true" ]] && [[ -d "$CONFIG_DIR/.git" ]]; then
+	if [[ "$push" == "true" ]] && is_git_repo_dir "$CONFIG_DIR"; then
 		if [[ "$(git -C "$CONFIG_DIR" status --porcelain)" != "" ]]; then
 			echo -e "${RED}Error: bump-push requires a clean config worktree!${RESET}" >&2
 			echo
@@ -1656,7 +1855,7 @@ run_bump() {
 	fi
 
 	local use_dir="$CONFIG_DIR"
-	if [[ -d "$CONFIG_DIR/.git" && -d "$NXCORE_DIR/.git" ]]; then
+	if is_git_repo_dir "$CONFIG_DIR" && is_git_repo_dir "$NXCORE_DIR"; then
 		local config_timestamp core_timestamp
 
 		config_timestamp=$(
@@ -1668,7 +1867,7 @@ run_bump() {
 		if [[ -z "${config_timestamp:-}" || "$core_timestamp" -gt "$config_timestamp" ]]; then
 			use_dir="$NXCORE_DIR"
 		fi
-	elif [[ -d "$NXCORE_DIR/.git" ]]; then
+	elif is_git_repo_dir "$NXCORE_DIR"; then
 		use_dir="$NXCORE_DIR"
 	fi
 
@@ -1688,7 +1887,7 @@ run_bump() {
 
 	local commit_msg label branch_name old_label label_rest
 	commit_msg=$(git -C "$use_dir" log -1 --pretty=format:"%s" "$commit_ref" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9-]//g' | awk '{if(length($0)>25) print substr($0,1,24)"-"; else print $0}' | sed 's/--$/-/')
-	branch_name="$(git -C "$use_dir" branch --show-current)"
+	branch_name="${NX_BUMP_BRANCH:-$(git -C "$use_dir" branch --show-current)}"
 	label="$(git -C "$use_dir" log -1 --pretty=format:"${branch_name}.%cd.${commit_msg}" --date=format:'%d-%m-%y.%H:%M' "$commit_ref" | sed 's/ /-/g' | sed 's/[^a-zA-Z0-9:_.-]//g')"
 
 	old_label="$(cat "$CONFIG_DIR/.label" 2>/dev/null || true)"
