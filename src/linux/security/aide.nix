@@ -497,42 +497,55 @@ in
   };
 
   module = {
-    enabled = config: {
-      nx.global.aideEnabled = true;
-      nx.global.aidePostBootMarker =
-        if !config.nx.linux.security.aide.testingMode then postBootMarker else null;
-      nx.lib.icons = [
-        "checkmark"
-        "dialog-error"
-        "dialog-warning"
-      ];
-      nx.linux.monitoring.journal-watcher.highlightPatterns =
-        let
-          hcEnabled = config.nx.linux.server.healthchecks.enable;
-          testingMode = config.nx.linux.security.aide.testingMode;
-        in
-        lib.optional (!testingMode && !hcEnabled) (
-          failHighlightPattern "nx-aide-check.service" "AIDE Check Failed" "{reason}"
-        )
-        ++ lib.optional (!testingMode) (
-          failHighlightPattern "nx-aide-check-boot.service" "AIDE Boot Check" "{reason}"
-        )
-        ++ lib.optional (!testingMode) (
-          failHighlightPattern "nx-aide-post-boot-commit.service" "AIDE Post-Boot Commit Failed" "{reason}"
-        );
-      nx.linux.monitoring.journal-watcher.ignorePatterns = [
-        {
-          tag = "systemd-inhibit";
-          string = "aide-commit-main failed with exit status";
-          unitless = true;
-        }
-        {
-          service = "auditd.service";
-          tag = "audisp-syslog";
-          string = ''comm="(chmod|chown)".*key="aide_db"'';
-        }
-      ];
-    };
+    enabled =
+      config:
+      let
+        hcEnabled = config.nx.linux.server.healthchecks.enable;
+        testingMode = config.nx.linux.security.aide.testingMode;
+      in
+      {
+        nx.global.aideEnabled = true;
+        nx.global.aidePostBootMarker = if !testingMode then postBootMarker else null;
+        nx.lib.icons = [
+          "checkmark"
+          "dialog-error"
+          "dialog-warning"
+        ];
+        nx.linux.monitoring.journal-watcher.highlightPatterns =
+          lib.optional (!testingMode && !hcEnabled) (
+            failHighlightPattern "nx-aide-check.service" "AIDE Check Failed" "{reason}"
+          )
+          ++ lib.optional (!testingMode) (
+            failHighlightPattern "nx-aide-check-boot.service" "AIDE Boot Check" "{reason}"
+          )
+          ++ lib.optional (!testingMode) (
+            failHighlightPattern "nx-aide-post-boot-commit.service" "AIDE Post-Boot Commit Failed" "{reason}"
+          );
+        nx.linux.monitoring.journal-watcher.ignorePatterns = [
+          {
+            tag = "systemd-inhibit";
+            string = "aide-commit-main failed with exit status";
+            unitless = true;
+          }
+          {
+            service = "auditd.service";
+            tag = "audisp-syslog";
+            string = ''comm="(chmod|chown)".*key="aide_db"'';
+          }
+        ]
+        ++ lib.optionals (!testingMode && hcEnabled) [
+          {
+            service = "init.scope";
+            tag = "systemd";
+            string = "nx-aide-check\\.service: Failed with result 'exit-code'\\.";
+          }
+          {
+            service = "init.scope";
+            tag = "systemd";
+            string = "Failed to start AIDE integrity check\\.";
+          }
+        ];
+      };
 
     ifEnabled.linux.security.auditd.enabled = config: {
       nx.linux.security.auditd.dirContentWatches.aide_db =
