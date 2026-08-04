@@ -191,6 +191,7 @@ args@{
             secretInfo = lib.optionalString (keyCfg.secretName != null) "\n\nSecret: ${keyCfg.secretName}";
             pushoverEnabled = config.nx.linux.notifications.pushover.enable;
             todoistEnabled = config.nx.linux.todo.todoist-api.enable;
+            pushoverSecretInfo = if todoistEnabled then "" else secretInfo;
           in
           lib.nameValuePair serviceName {
             description = "${keyCfg.displayName} API key expiry check";
@@ -232,7 +233,7 @@ args@{
                   ${lib.optionalString pushoverEnabled (
                     config.nx.linux.notifications.pushover.send {
                       title = keyCfg.displayName;
-                      message = "${keyCfg.displayName} API key expired $DAYS_OVERDUE days ago, rotate it!${secretInfo}";
+                      message = "${keyCfg.displayName} API key expired $DAYS_OVERDUE days ago, rotate it!${pushoverSecretInfo}";
                       shellVars = true;
                       type = "warn";
                     }
@@ -252,7 +253,7 @@ args@{
                   ${lib.optionalString pushoverEnabled (
                     config.nx.linux.notifications.pushover.send {
                       title = keyCfg.displayName;
-                      message = "${keyCfg.displayName} API key expires in $DAYS_LEFT days, rotate it soon!${secretInfo}";
+                      message = "${keyCfg.displayName} API key expires in $DAYS_LEFT days, rotate it soon!${pushoverSecretInfo}";
                       shellVars = true;
                       type = "warn";
                     }
