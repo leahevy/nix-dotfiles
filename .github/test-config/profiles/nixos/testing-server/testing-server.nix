@@ -36,6 +36,16 @@
 
     modules = {
       linux = {
+        todo = {
+          todoist-api = {
+            defaultProjectId = "ffffffffffffffff";
+            defaultSectionId = "eeeeeeeeeeeeeeee";
+            defaultAssignee = "testuser";
+            knownAssignees = {
+              testuser = "dddddddd";
+            };
+          };
+        };
         notifications = {
           pushover = true;
         };

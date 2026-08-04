@@ -26,5 +26,6 @@ te_secrets nixos:testing-server binary \
 	openldap-root-pass \
 	openldap-reader-pass \
 	searxng-brave-api-key \
-	ollama-api-key
+	ollama-api-key \
+	todoist-api-token
 te_eval nixos "testing-server--x86_64-linux"
