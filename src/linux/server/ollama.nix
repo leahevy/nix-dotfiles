@@ -128,8 +128,8 @@ in
 
     contextLength = lib.mkOption {
       type = lib.types.nullOr lib.types.int;
-      default = 32768;
-      description = "Context window length in tokens passed to OLLAMA_CONTEXT_LENGTH, defaulting to 32768 which fits the default tier under the memory cap, or null to use the ollama default.";
+      default = 2048;
+      description = "Context window length in tokens passed to OLLAMA_CONTEXT_LENGTH, or null to use the ollama default.";
     };
 
     syncModels = lib.mkOption {
