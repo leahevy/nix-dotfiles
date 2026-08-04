@@ -166,6 +166,12 @@ args@{
       default = false;
       description = "Encrypt messages end-to-end using AES-256-CBC with a 64-char hex key stored in the pushover-e2e-key config SOPS secret.";
     };
+
+    additionalUsers = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional usernames that also get their own copy of the Pushover secrets.";
+    };
   };
 
   module =
@@ -333,8 +339,9 @@ args@{
               TOKEN_FILE="/run/secrets/${self.host.hostname}-pushover-token"
               USER_FILE="/run/secrets/pushover-user"
           else
-              TOKEN_FILE="/run/pushover-token-${self.host.mainUser.username}"
-              USER_FILE="/run/pushover-user-${self.host.mainUser.username}"
+              CALLER_USER=$(${pkgs.coreutils}/bin/id -un)
+              TOKEN_FILE="/run/pushover-token-$CALLER_USER"
+              USER_FILE="/run/pushover-user-$CALLER_USER"
 
               if [[ ! -r "$TOKEN_FILE" || ! -r "$USER_FILE" ]]; then
                   echo "Error: Pushover secrets not accessible for user. Run as root or ensure secrets are properly configured." >&2
@@ -346,7 +353,7 @@ args@{
             if [[ $EUID -eq 0 ]]; then
                 E2E_KEY_FILE="/run/secrets/pushover-e2e-key"
             else
-                E2E_KEY_FILE="/run/pushover-e2e-key-${self.host.mainUser.username}"
+                E2E_KEY_FILE="/run/pushover-e2e-key-$CALLER_USER"
                 if [[ ! -r "$E2E_KEY_FILE" ]]; then
                     echo "Error: Pushover e2e key not accessible for user." >&2
                     exit 1
@@ -886,13 +893,48 @@ args@{
           config,
           enableSendmail,
           enableE2EEncryption,
+          additionalUsers,
           ...
         }:
         let
           hostname = self.host.hostname;
-          mainUser = config.users.users.${self.host.mainUser.username};
-          mainUserGroup = mainUser.group;
           userNotifyEnabled = self.isModuleEnabled "notifications.user-notify";
+          perUserSecrets =
+            username:
+            let
+              group = config.users.users.${username}.group;
+            in
+            {
+              "pushover-user-${username}" = {
+                format = "binary";
+                sopsFile = self.config.secretsPath "pushover-user";
+                mode = "0440";
+                owner = "root";
+                inherit group;
+                path = "/run/pushover-user-${username}";
+              };
+              "pushover-token-${username}" = {
+                format = "binary";
+                sopsFile = self.profile.secretsPath "pushover-token";
+                mode = "0440";
+                owner = "root";
+                inherit group;
+                path = "/run/pushover-token-${username}";
+              };
+            }
+            // lib.optionalAttrs enableE2EEncryption {
+              "pushover-e2e-key-${username}" = {
+                format = "binary";
+                sopsFile = self.config.secretsPath "pushover-e2e-key";
+                mode = "0440";
+                owner = "root";
+                inherit group;
+                path = "/run/pushover-e2e-key-${username}";
+              };
+            };
+          perUserSopsSecrets = lib.foldl' (acc: username: acc // perUserSecrets username) { } (
+            lib.unique ([ self.host.mainUser.username ] ++ additionalUsers)
+          );
         in
         {
           assertions = lib.optionals enableSendmail [
@@ -914,56 +956,32 @@ args@{
               permissions = "u+rwx,g+rx,o+rx";
             };
           };
-          sops.secrets."pushover-user" = {
-            format = "binary";
-            sopsFile = self.config.secretsPath "pushover-user";
-            mode = if (self.isModuleEnabled "security.letsencrypt") then "0440" else "0400";
-            owner = "root";
-            group = if (self.isModuleEnabled "security.letsencrypt") then "acme" else "root";
-          };
+          sops.secrets = {
+            "pushover-user" = {
+              format = "binary";
+              sopsFile = self.config.secretsPath "pushover-user";
+              mode = if (self.isModuleEnabled "security.letsencrypt") then "0440" else "0400";
+              owner = "root";
+              group = if (self.isModuleEnabled "security.letsencrypt") then "acme" else "root";
+            };
 
-          sops.secrets."${hostname}-pushover-token" = {
-            format = "binary";
-            sopsFile = self.profile.secretsPath "pushover-token";
-            mode = if (self.isModuleEnabled "security.letsencrypt") then "0440" else "0400";
-            owner = "root";
-            group = if (self.isModuleEnabled "security.letsencrypt") then "acme" else "root";
-          };
+            "${hostname}-pushover-token" = {
+              format = "binary";
+              sopsFile = self.profile.secretsPath "pushover-token";
+              mode = if (self.isModuleEnabled "security.letsencrypt") then "0440" else "0400";
+              owner = "root";
+              group = if (self.isModuleEnabled "security.letsencrypt") then "acme" else "root";
+            };
 
-          sops.secrets."pushover-user-${self.host.mainUser.username}" = {
-            format = "binary";
-            sopsFile = self.config.secretsPath "pushover-user";
-            mode = "0440";
-            owner = "root";
-            group = mainUserGroup;
-            path = "/run/pushover-user-${self.host.mainUser.username}";
-          };
-
-          sops.secrets."pushover-token-${self.host.mainUser.username}" = {
-            format = "binary";
-            sopsFile = self.profile.secretsPath "pushover-token";
-            mode = "0440";
-            owner = "root";
-            group = mainUserGroup;
-            path = "/run/pushover-token-${self.host.mainUser.username}";
-          };
-
-          sops.secrets."pushover-e2e-key" = lib.mkIf enableE2EEncryption {
-            format = "binary";
-            sopsFile = self.config.secretsPath "pushover-e2e-key";
-            mode = "0400";
-            owner = "root";
-            group = "root";
-          };
-
-          sops.secrets."pushover-e2e-key-${self.host.mainUser.username}" = lib.mkIf enableE2EEncryption {
-            format = "binary";
-            sopsFile = self.config.secretsPath "pushover-e2e-key";
-            mode = "0440";
-            owner = "root";
-            group = mainUserGroup;
-            path = "/run/pushover-e2e-key-${self.host.mainUser.username}";
-          };
+            "pushover-e2e-key" = lib.mkIf enableE2EEncryption {
+              format = "binary";
+              sopsFile = self.config.secretsPath "pushover-e2e-key";
+              mode = "0400";
+              owner = "root";
+              group = "root";
+            };
+          }
+          // perUserSopsSecrets;
 
           environment.systemPackages = [
             config.nx.linux.notifications.pushover.script
