@@ -1892,7 +1892,7 @@ run_bump() {
 
 	old_label="$(cat "$CONFIG_DIR/.label" 2>/dev/null || true)"
 	label_rest="${label#"${branch_name}".}"
-	if [[ "$label" != "$old_label" && "$old_label" == ?*".${label_rest}" && -z "$(git -C "$CONFIG_DIR" status --porcelain -- flake.lock .core-state)" ]]; then
+	if [[ -z "${NX_BUMP_BRANCH:-}" && "$label" != "$old_label" && "$old_label" == ?*".${label_rest}" && -z "$(git -C "$CONFIG_DIR" status --porcelain -- flake.lock .core-state)" ]]; then
 		echo -e "Keeping label ${GREEN}$old_label${RESET} (only the branch name would change)"
 	else
 		echo "$label" >"$CONFIG_DIR/.label"
