@@ -2267,6 +2267,7 @@ args@{
           "[[:alnum:]_.%+-]+@[[:alnum:].-]+[.][[:alpha:]]{2,}"
           "(^|[^[:alnum:]_])[0-9A-F]{40}([^[:alnum:]_]|$)"
           "(^|[^[:alnum:]_])[0-9A-F]{16}([^[:alnum:]_]|$)"
+          "[+][0-9]{7,15}([^[:digit:]]|$)"
         ]
         ++ additionalSecretWipeValueRegexes;
 
@@ -2395,7 +2396,7 @@ args@{
           else
             pkgs.writeShellScript "nx-hc-censor" ''
                   ${pkgs.gawk}/bin/awk '
-                    BEGIN { IGNORECASE = 1; line_pat = "${secretWipeLineRegex}"; val_pat = "${secretWipeValueRegex}" }
+                    BEGIN { IGNORECASE = 1; line_pat = "${secretWipeLineRegex}"; val_pat = "${secretWipeValueRegex}"; max_wipe_matches = 64 }
                     ${lib.optionalString (secretReplaceValues != { }) ''
                       {
                         ${lib.concatStringsSep "\n" secretReplaceAwkLines}
@@ -2409,17 +2410,33 @@ args@{
                   next
                 }
                 match($0, val_pat) {
-                  prefix = substr($0, 1, RSTART - 1)
-                  rest = substr($0, RSTART)
-                  if (match(rest, /[ \t]/)) {
-                    token = substr(rest, 1, RSTART - 1)
-                    tail = substr(rest, RSTART)
-                  } else {
-                    token = rest
-                    tail = ""
+                  out = ""
+                  rest = $0
+                  iterations = 0
+                  while (iterations < max_wipe_matches && match(rest, val_pat)) {
+                    iterations = iterations + 1
+                    prefix = substr(rest, 1, RSTART - 1)
+                    matched = substr(rest, RSTART)
+                    if (match(matched, /[ \t]/)) {
+                      token = substr(matched, 1, RSTART - 1)
+                      tail = substr(matched, RSTART)
+                    } else {
+                      token = matched
+                      tail = ""
+                    }
+                    if (token == "") {
+                      out = out prefix substr(matched, 1, 1)
+                      rest = substr(matched, 2)
+                      continue
+                    }
+                    gsub(/[^ \t]/, "*", token)
+                    out = out prefix token
+                    rest = tail
                   }
-                  gsub(/[^ \t]/, "*", token)
-                  print prefix token tail
+                  if (iterations >= max_wipe_matches) {
+                    gsub(/[^ \t]/, "*", rest)
+                  }
+                  print out rest
                   next
                 }
                 { print }
