@@ -22,6 +22,22 @@ print_debug() {
 	printf "%b%b%b\n" "${GRAY}" "$*" "${RESET}" >&2
 }
 
+print_stage_header() {
+	local index="$1"
+	local total="$2"
+	local title="$3"
+	local color="${4:-$MAGENTA}"
+
+	local rule
+	rule="$(printf '%*s' 62 '' | tr ' ' '=')"
+
+	echo
+	echo -e "${color}${rule}${RESET}"
+	echo -e "${color}  [${index}/${total}] ${title}${RESET}"
+	echo -e "${color}${rule}${RESET}"
+	echo
+}
+
 append_trap() {
 	local new_cmd="${1:-}"
 	shift || true

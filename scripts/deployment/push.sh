@@ -56,6 +56,20 @@ run_or_print() {
 	"$@"
 }
 
+STAGE_INDEX=0
+STAGE_TOTAL=0
+TARGET_STAGE_COLORS=("$BLUE" "$ORANGE" "$WHITE_BOLD")
+
+next_stage() {
+	[[ $MERGE_TARGET_COUNT -eq 0 ]] && return 0
+	STAGE_INDEX=$((STAGE_INDEX + 1))
+	print_stage_header "$STAGE_INDEX" "$STAGE_TOTAL" "$1" "${2:-$MAGENTA}"
+}
+
+target_stage_color() {
+	echo "${TARGET_STAGE_COLORS[$(($1 % ${#TARGET_STAGE_COLORS[@]}))]}"
+}
+
 MERGE_TARGET_COUNT=${#MERGE_TARGETS[@]}
 SOURCE_BRANCH=""
 MERGE_BASE_CORE=()
@@ -78,6 +92,10 @@ if [[ $MERGE_TARGET_COUNT -gt 0 ]]; then
 		echo -e "${YELLOW}Dry run: merges and bumps run in temporary worktrees, nothing is pushed and no local branch is moved!${RESET}"
 		echo
 	fi
+
+	stage_steps=3
+	[[ "$ONLY_CONFIG" == true ]] && stage_steps=2
+	STAGE_TOTAL=$((stage_steps * (1 + MERGE_TARGET_COUNT)))
 
 	if ! is_git_repo_dir "$CONFIG_DIR"; then
 		echo -e "${RED}Error: Config directory is not a git repository, cannot use ${WHITE}--merge-into${RED}!${RESET}" >&2
@@ -122,7 +140,8 @@ if [[ $MERGE_TARGET_COUNT -gt 0 ]]; then
 		index=$((index + 1))
 	done
 
-	echo -e "${CYAN}Checking merge targets ${YELLOW}(Authentication required)${CYAN}...${RESET}"
+	next_stage "Checking merge targets"
+	echo -e "${CYAN}Fetching target branches ${YELLOW}(Authentication required)${CYAN}...${RESET}"
 	index=0
 	while [[ $index -lt $MERGE_TARGET_COUNT ]]; do
 		target="${MERGE_TARGETS[$index]}"
@@ -141,11 +160,11 @@ if [[ $MERGE_TARGET_COUNT -gt 0 ]]; then
 		MERGE_OLD_CONFIG+=("$old_ref")
 		index=$((index + 1))
 	done
-	echo
 fi
 
 cd "$NXCORE_DIR"
 if [[ "$ONLY_CONFIG" != true ]]; then
+	next_stage "Pushing nxcore on $SOURCE_BRANCH"
 	echo -e "${GREEN}Pushing core repository ${YELLOW}(Authentication required)${GREEN}...${RESET}"
 	if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
 		run_or_print git push "${EXTRA_ARGS[@]}"
@@ -161,6 +180,7 @@ if [[ "$BUMP" == "true" ]]; then
 		sleep 1
 		echo
 	fi
+	next_stage "Bumping and pushing nxconfig on $SOURCE_BRANCH"
 	echo -e "${CYAN}Pulling config repository before bump ${YELLOW}(Authentication required)${CYAN}...${RESET}"
 	(cd "$CONFIG_DIR" && run_or_print git pull --no-rebase)
 	echo
@@ -175,6 +195,8 @@ if [[ "$BUMP" == "true" ]]; then
 	echo
 	if [[ "$DRY" == "true" ]]; then
 		print_dry "Nothing was pushed for $SOURCE_BRANCH"
+	elif [[ $MERGE_TARGET_COUNT -gt 0 ]]; then
+		echo -e "${GREEN}Branch ${WHITE}$SOURCE_BRANCH${GREEN} pushed successfully (with bump).${RESET}"
 	elif [[ "$ONLY_CONFIG" == true ]]; then
 		echo -e "${GREEN}Done. Config repository pushed successfully (with bump).${RESET}"
 	else
@@ -237,10 +259,9 @@ append_trap "report_incomplete_merge_targets" EXIT
 index=0
 while [[ $index -lt $MERGE_TARGET_COUNT ]]; do
 	target="${MERGE_TARGETS[$index]}"
+	target_color="$(target_stage_color "$index")"
 
-	echo
-	echo -e "${CYAN}Merging ${WHITE}$SOURCE_BRANCH${CYAN} into ${WHITE}$target${CYAN} and bumping it...${RESET}"
-	echo
+	next_stage "Merging $SOURCE_BRANCH into $target" "$target_color"
 
 	NX_TEMP_WORKTREE_ROOT="$(mktemp_dir)"
 	worktree_core="$NX_TEMP_WORKTREE_ROOT/core"
@@ -264,9 +285,9 @@ while [[ $index -lt $MERGE_TARGET_COUNT ]]; do
 		echo -e "${YELLOW}The temporary worktree is discarded, resolve the conflicts in a checkout of ${WHITE}$target${YELLOW} and retry!${RESET}" >&2
 		exit 1
 	fi
-	echo
 
 	if [[ "$ONLY_CONFIG" != true ]]; then
+		next_stage "Pushing nxcore on $target" "$target_color"
 		echo -e "${GREEN}Pushing core branch ${WHITE}$target${GREEN} ${YELLOW}(Authentication required)${GREEN}...${RESET}"
 		run_or_print git -C "$worktree_core" push origin "HEAD:refs/heads/$target"
 		merged_ref="$(git -C "$worktree_core" rev-parse HEAD)"
@@ -277,11 +298,9 @@ while [[ $index -lt $MERGE_TARGET_COUNT ]]; do
 			echo -e "${CYAN}Waiting for remote to propagate...${RESET}"
 			sleep 1
 		fi
-		echo
 	fi
 
-	echo -e "${CYAN}Bumping nxconfig on branch ${WHITE}$target${CYAN}...${RESET}"
-	echo
+	next_stage "Bumping and pushing nxconfig on $target" "$target_color"
 	(
 		CONFIG_DIR="$worktree_config"
 		if [[ "$ONLY_CONFIG" != true ]]; then
