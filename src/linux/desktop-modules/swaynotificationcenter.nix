@@ -41,6 +41,18 @@ args@{
           unitless = true;
           tag = "swaync";
         }
+        {
+          string = "Main process exited, code=dumped, status=11/SEGV";
+          user = true;
+          service = "swaync.service";
+          tag = "systemd";
+        }
+        {
+          string = "Failed with result 'core-dump'\\.";
+          user = true;
+          service = "swaync.service";
+          tag = "systemd";
+        }
       ];
     };
 
