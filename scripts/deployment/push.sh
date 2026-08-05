@@ -58,12 +58,12 @@ run_or_print() {
 
 STAGE_INDEX=0
 STAGE_TOTAL=0
-TARGET_STAGE_COLORS=("$BLUE" "$ORANGE" "$GRAY_BOLD")
+TARGET_STAGE_COLORS=("$ORANGE" "$WHITE_BOLD" "$GRAY_BOLD")
 
 next_stage() {
 	[[ $MERGE_TARGET_COUNT -eq 0 ]] && return 0
 	STAGE_INDEX=$((STAGE_INDEX + 1))
-	print_stage_header "$STAGE_INDEX" "$STAGE_TOTAL" "$1" "${2:-$WHITE_BOLD}"
+	print_stage_header "$STAGE_INDEX" "$STAGE_TOTAL" "$1" "${2:-$BLUE}"
 }
 
 target_stage_color() {
