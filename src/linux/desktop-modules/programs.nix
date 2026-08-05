@@ -374,6 +374,20 @@ let
     imageViewer = mkKdeProgram {
       name = "gwenview";
       filesToPersist = [ ".config/gwenviewrc" ];
+      journalPatternsToIgnore = [
+        {
+          tag = "gwenview";
+          string = "Couldn't write to config: \".*\\.config/gwenviewrc\"";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "gwenview";
+          string = "Couldn't write \".*\\.config/gwenviewrc\"";
+          user = true;
+          unitless = true;
+        }
+      ];
     };
     imageEditor = mkKdeProgram {
       name = "spectacle";
