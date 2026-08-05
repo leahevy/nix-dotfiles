@@ -26,7 +26,7 @@ print_stage_header() {
 	local index="$1"
 	local total="$2"
 	local title="$3"
-	local color="${4:-$MAGENTA}"
+	local color="${4:-$WHITE_BOLD}"
 
 	local rule
 	rule="$(printf '%*s' 62 '' | tr ' ' '=')"
