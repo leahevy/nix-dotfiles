@@ -38,7 +38,7 @@ args@{
 
     ifEnabled.linux.security.aide = {
       enabled = config: {
-        nx.linux.security.aide.directoryWatches = [ ".config/fish/conf.d" ];
+        nx.linux.security.aide.contentDirectoryWatches = [ ".config/fish/conf.d" ];
         nx.linux.security.aide.excludePaths = [
           ".local/share/fish/fish_history"
           ".config/fish/fish_variables"
