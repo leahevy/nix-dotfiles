@@ -120,7 +120,7 @@ args@{
 
     maxRequestsPerSenderPerDay = lib.mkOption {
       type = lib.types.ints.positive;
-      default = 100;
+      default = 250;
       description = "Maximum number of Home Assistant conversation requests a single sender can trigger per rolling day.";
     };
 
