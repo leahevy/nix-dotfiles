@@ -1197,12 +1197,12 @@ in
       };
     };
 
-    ifEnabled.linux.security.auditd = {
+    ifEnabled.linux.security.aide = {
       enabled = config: {
-        nx.linux.security.auditd.dirContentWatches = {
-          persist_firefox_nmh = ".config/mozilla/native-messaging-hosts";
-          persist_firefox_nmh_home = ".mozilla/native-messaging-hosts";
-        };
+        nx.linux.security.aide.directoryWatches = [
+          ".config/mozilla/native-messaging-hosts"
+          ".mozilla/native-messaging-hosts"
+        ];
       };
     };
 

@@ -82,10 +82,9 @@ args@{
         nx.linux.desktop-modules.web-app.buildWebApp = buildWebAppFn config;
       };
 
-      ifEnabled.linux.security.auditd = {
+      ifEnabled.linux.security.aide = {
         enabled = config: {
-          nx.linux.security.auditd.dirContentWatches.persist_chromium_nmh =
-            ".config/chromium/NativeMessagingHosts";
+          nx.linux.security.aide.directoryWatches = [ ".config/chromium/NativeMessagingHosts" ];
         };
       };
 

@@ -36,14 +36,9 @@ args@{
       };
     };
 
-    ifEnabled.linux.security.auditd = {
-      enabled = config: {
-        nx.linux.security.auditd.dirContentWatches.persist_fish_confd = ".config/fish/conf.d";
-      };
-    };
-
     ifEnabled.linux.security.aide = {
       enabled = config: {
+        nx.linux.security.aide.directoryWatches = [ ".config/fish/conf.d" ];
         nx.linux.security.aide.excludePaths = [
           ".local/share/fish/fish_history"
           ".config/fish/fish_variables"
