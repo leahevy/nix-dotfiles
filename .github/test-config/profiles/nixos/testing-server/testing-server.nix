@@ -49,6 +49,15 @@
         notifications = {
           pushover = true;
         };
+        services = {
+          signal-bot = {
+            configured = true;
+            mainGroupName = "Test Home Assistant";
+            haUrl = "https://homeassistant.testingserver.example:8123";
+            enableAvatar = true;
+            enableGroupAvatar = true;
+          };
+        };
         security = {
           letsencrypt = {
             dnsCerts = {

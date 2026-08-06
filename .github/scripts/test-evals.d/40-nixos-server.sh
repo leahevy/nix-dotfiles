@@ -27,5 +27,10 @@ te_secrets nixos:testing-server binary \
 	openldap-reader-pass \
 	searxng-brave-api-key \
 	ollama-api-key \
-	todoist-api-token
+	todoist-api-token \
+	signal-bot-phone-number \
+	signal-bot-ha-token \
+	signal-bot-api-token
+te_secrets nixos:testing-server yaml signal-bot-contacts.yaml
+te_files nixos:testing-server signal-profile-picture.jpg signal-group-picture.jpg
 te_eval nixos "testing-server--x86_64-linux"
