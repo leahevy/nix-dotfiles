@@ -69,6 +69,37 @@ te_secrets() {
 	done
 }
 
+te_files() {
+	local scope="$1"
+	shift
+
+	local basedir
+	case "$scope" in
+	global)
+		basedir="$TE_WORKDIR/config/files"
+		;;
+	nixos:*)
+		basedir="$TE_WORKDIR/config/profiles/nixos/${scope#nixos:}/files"
+		;;
+	integrated:*)
+		basedir="$TE_WORKDIR/config/profiles/home-integrated/${scope#integrated:}/files"
+		;;
+	standalone:*)
+		basedir="$TE_WORKDIR/config/profiles/home-standalone/${scope#standalone:}/files"
+		;;
+	*)
+		echo "te_files: unknown scope '$scope' (use global, nixos:NAME, integrated:NAME, standalone:NAME)" >&2
+		return 1
+		;;
+	esac
+
+	local file
+	for file in "$@"; do
+		mkdir -p "$(dirname "$basedir/$file")"
+		printf 'dummy test file\n' >"$basedir/$file"
+	done
+}
+
 te_variables() {
 	local file="$TE_WORKDIR/config/variables.nix"
 
