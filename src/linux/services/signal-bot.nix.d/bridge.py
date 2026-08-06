@@ -40,6 +40,7 @@ QUOTE_TEXT_LIMIT = 300
 QUOTE_CONTEXT_LIMIT = 500
 SENDER_BUDGET_WINDOW_SECONDS = 86400.0
 TYPING_REFRESH_SECONDS = 10
+DISCOVERABLE_BY_NUMBER = False
 GROUP_PARTICIPANT_FIELDS = ("members", "pendingMembers", "requestingMembers")
 GROUP_BANNED_FIELDS = ("banned",)
 GROUP_ADMIN_FIELDS = ("admins",)
@@ -527,6 +528,7 @@ def profile_fingerprint(cfg):
     for key in ("profile_given_name", "profile_about"):
         digest.update(f"{key}={cfg.get(key) or ''}\n".encode())
     digest.update(f"profile_avatar={file_digest(cfg.get('profile_avatar'))}\n".encode())
+    digest.update(f"discoverable_by_number={DISCOVERABLE_BY_NUMBER}\n".encode())
     return digest.hexdigest()
 
 
@@ -548,6 +550,7 @@ def apply_profile(rpc, cfg):
     rpc.call_checked("updateProfile", profile_params)
 
     rpc.call_checked("updateConfiguration", {"typingIndicators": True})
+    rpc.call_checked("updateAccount", {"discoverableByNumber": DISCOVERABLE_BY_NUMBER})
     state["fingerprint"] = fingerprint
     write_json_state(cfg["profile_state_file"], state)
 
@@ -1742,11 +1745,6 @@ def serve(cfg):
             )
             return
 
-        message_key = f"{source_uuid or source_number}:{timestamp}"
-        if not handled.claim(message_key):
-            print("signal-bot: ignoring a duplicate inbound message", file=sys.stderr)
-            return
-
         sender_key = source_uuid or source_number
         reply_quote = None
         group_info = data_message.get("groupInfo")
@@ -1766,6 +1764,11 @@ def serve(cfg):
             notice_keys = [
                 f"direct:{value}" for value in (contact_number, source_uuid) if value
             ]
+
+        message_key = f"{sender_key}:{timestamp}"
+        if not handled.claim(message_key):
+            print("signal-bot: ignoring a duplicate inbound message", file=sys.stderr)
+            return
 
         conversation_id = None
         if text.startswith("/"):
