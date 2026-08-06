@@ -7,6 +7,10 @@ args@{
   self,
   ...
 }:
+let
+  runtimeDir = "/run/nx-auto-upgrade";
+  completedMarkerFile = "${runtimeDir}/completed";
+in
 {
   name = "auto-upgrades";
 
@@ -33,6 +37,8 @@ args@{
     borgCheckIntervalMinutes = 15;
     healthcheckUUID = null;
   };
+
+  exports = { ... }: { inherit completedMarkerFile; };
 
   module = {
     enabled = config: {
@@ -976,6 +982,9 @@ args@{
                   ${pkgs.coreutils}/bin/sleep $_rebuild_wait
                   _rebuild_wait=$((_rebuild_wait * 3))
                 done
+                ${pkgs.coreutils}/bin/touch ${completedMarkerFile}
+                ${pkgs.coreutils}/bin/chown root:root ${completedMarkerFile}
+                ${pkgs.coreutils}/bin/chmod 600 ${completedMarkerFile}
                 ${lib.optionalString (!self.settings.allowReboot) ''
                   if [[ "$FORCE_REBOOT" == "true" ]] || check_reboot_needed; then
                     ${logScript "warning" "SUCCESS-REBOOT-MANUAL: Auto-upgrade completed successfully! A manual reboot is required to apply kernel or system changes, automatic reboot is disabled"}
@@ -1207,6 +1216,12 @@ args@{
           group = config.users.users.${self.host.mainUser.username}.group;
         };
 
+        systemd.tmpfiles.settings."nx-auto-upgrade"."${runtimeDir}".d = {
+          mode = "0700";
+          user = "root";
+          group = "root";
+        };
+
         systemd.services.nx-auto-upgrade-log-failure = {
           description = "Log NX Auto-Upgrade Failure";
           serviceConfig = {
@@ -1334,6 +1349,7 @@ args@{
               trap cleanup EXIT TERM
 
               ${pkgs.coreutils}/bin/rm -f ${pendingUpgradeMarkerFile}
+              ${pkgs.coreutils}/bin/rm -f ${completedMarkerFile}
 
               ${checkDailyStartScript}
               check_daily_start

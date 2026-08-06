@@ -351,6 +351,22 @@ let
       fi
       ${commitBin}/bin/aide-commit --force
     '';
+
+  mkUpgradeCommitScript =
+    { commitBin, completedMarker }:
+    pkgs.writeShellScript "nx-aide-upgrade-commit" ''
+      set -euo pipefail
+      if [ -L ${completedMarker} ] || [ ! -f ${completedMarker} ]; then
+        exit 0
+      fi
+      if [ "$(${pkgs.coreutils}/bin/stat -c %u ${completedMarker})" != "0" ]; then
+        echo "AIDE upgrade commit marker is not owned by root, ignoring it"
+        exit 0
+      fi
+      ${pkgs.coreutils}/bin/rm -f ${completedMarker}
+      ${pkgs.coreutils}/bin/touch ${postBootMarker}
+      ${commitBin}/bin/aide-commit --force
+    '';
 in
 {
   name = "aide";
@@ -595,13 +611,15 @@ in
             }
             // lib.optionalAttrs (!autoUpgradeDryRun) {
               ExecStartPost = [
-                "+${pkgs.coreutils}/bin/touch ${postBootMarker}"
                 "+${
-                  mkCommitScript {
-                    dbDir = config.nx.linux.security.aide.dbDir;
-                    hcEnabled = config.nx.linux.server.healthchecks.enable;
+                  mkUpgradeCommitScript {
+                    commitBin = mkCommitScript {
+                      dbDir = config.nx.linux.security.aide.dbDir;
+                      hcEnabled = config.nx.linux.server.healthchecks.enable;
+                    };
+                    completedMarker = self.linux.system.auto-upgrades.exports.completedMarkerFile;
                   }
-                }/bin/aide-commit --force"
+                }"
               ];
             };
           }
