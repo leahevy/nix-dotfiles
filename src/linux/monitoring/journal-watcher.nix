@@ -370,6 +370,7 @@ args@{
         "uvcvideo.*UVC non compliance: Reducing max payload transfer size \\([0-9]+\\) to fit endpoint limit \\([0-9]+\\)\\."
         "hub.*config failed, can't get hub status \\(err -[0-9]+\\)"
         "uvcvideo.*Failed to query \\([0-9]+\\) UVC probe control.*\\(exp\\. [0-9]+\\)\\."
+        "uvcvideo.*Failed to set UVC probe control.*\\(exp\\. [0-9]+\\)\\."
         "uvcvideo.*Failed to initialize the device \\(-[0-9]+\\)\\."
         "usb.*Failed to query.*UVC control.*"
         "usb.*cannot set freq [0-9]+ to ep"
