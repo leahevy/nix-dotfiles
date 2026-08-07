@@ -148,6 +148,18 @@ args@{
       description = "Send the title of an outbound message as bold text using Signal text styles.";
     };
 
+    titleSeparator = lib.mkOption {
+      type = lib.types.str;
+      default = "------------------------";
+      description = "Line rendered as monospace text directly below the title of an outbound message, empty to send no separator.";
+    };
+
+    markdown = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Convert a small markdown subset in outbound messages into Signal text styles.";
+    };
+
     quoteReplies = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -696,6 +708,8 @@ args@{
           inboundMaxAgeMinutes,
           maxSplitMessages,
           boldTitle,
+          titleSeparator,
+          markdown,
           quoteReplies,
           conversationFollowUpSeconds,
           messages,
@@ -756,6 +770,8 @@ args@{
               inbound_max_age_seconds = inboundMaxAgeMinutes * 60;
               max_split_messages = maxSplitMessages;
               bold_title = boldTitle;
+              title_separator = titleSeparator;
+              inherit markdown;
               quote_replies = quoteReplies;
               conversation_follow_up_seconds = conversationFollowUpSeconds;
               messages = {

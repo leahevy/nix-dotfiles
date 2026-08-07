@@ -24,6 +24,17 @@ RECIPIENTS_RECHECK_SECONDS = 60.0
 REJECT_LOG_INTERVAL_SECONDS = 60.0
 MAX_MESSAGE_BYTES = 2048
 MESSAGE_ELLIPSIS = "..."
+MARKDOWN_FENCE = "```"
+MARKDOWN_ESCAPABLE = "*_~`|#\\"
+MARKDOWN_MARKERS = (
+    ("**", "BOLD", False),
+    ("__", "BOLD", False),
+    ("~~", "STRIKETHROUGH", False),
+    ("||", "SPOILER", False),
+    ("`", "MONOSPACE", True),
+    ("*", "ITALIC", False),
+    ("_", "ITALIC", False),
+)
 JOURNAL_ERROR_PREFIX = "<3>"
 RESPONSE_SETTLE_SECONDS = 1.0
 SEND_PACING_SECONDS = 1.0
@@ -84,6 +95,8 @@ REQUIRED_CONFIG_KEYS = (
     "inbound_max_age_seconds",
     "max_split_messages",
     "bold_title",
+    "title_separator",
+    "markdown",
     "quote_replies",
     "conversation_follow_up_seconds",
     "messages",
@@ -1016,11 +1029,160 @@ def bootstrap(cfg):
     print("signal-bot: bootstrap complete")
 
 
-def format_outbound_text(title, message, url):
-    text = f"{title}\n\n{message}" if title else message
+def markdown_heading_length(text, start):
+    index = start
+    while index < len(text) and text[index] == "#" and index - start < 6:
+        index += 1
+    if index == start:
+        return 0
+    marks = index
+    while index < len(text) and text[index] in " \t":
+        index += 1
+    if index == marks:
+        return 0
+    return index - start
+
+
+def markdown_opens(text, index, marker):
+    if index > 0 and text[index - 1].isalnum():
+        return False
+    after = index + len(marker)
+    return after < len(text) and not text[after].isspace()
+
+
+def markdown_marker(text, index):
+    for marker, style, literal in MARKDOWN_MARKERS:
+        if text.startswith(marker, index) and markdown_opens(text, index, marker):
+            return marker, style, literal
+    return "", "", False
+
+
+def markdown_closing(text, marker, start):
+    index = start
+    while True:
+        index = text.find(marker, index)
+        if index < 0:
+            return -1
+        after = index + len(marker)
+        if (
+            index == start
+            or text[index - 1] == "\\"
+            or text[index - 1].isspace()
+            or (after < len(text) and text[after].isalnum())
+        ):
+            index = after
+            continue
+        return index
+
+
+def markdown_fence_body(block):
+    head, newline, rest = block.partition("\n")
+    if newline and head.strip() and len(head.split()) == 1:
+        block = rest
+    return block.strip("\n")
+
+
+def parse_markdown(text, headings=True):
+    parts = []
+    ranges = []
+    length = 0
+    index = 0
+    line_start = True
+
+    def emit(body, body_ranges, style=None):
+        nonlocal length
+        ranges.extend((start + length, span, name) for start, span, name in body_ranges)
+        if style:
+            ranges.append((length, len(body), style))
+        parts.append(body)
+        length += len(body)
+
+    while index < len(text):
+        char = text[index]
+        if (
+            char == "\\"
+            and index + 1 < len(text)
+            and text[index + 1] in MARKDOWN_ESCAPABLE
+        ):
+            emit(text[index + 1], [])
+            index += 2
+            line_start = False
+            continue
+        if headings and line_start and char == "#":
+            marks = markdown_heading_length(text, index)
+            if marks:
+                stop = text.find("\n", index + marks)
+                if stop < 0:
+                    stop = len(text)
+                body, body_ranges = parse_markdown(text[index + marks : stop], False)
+                if body:
+                    emit(body, body_ranges, "BOLD")
+                index = stop
+                line_start = False
+                continue
+        if text.startswith(MARKDOWN_FENCE, index):
+            stop = text.find(MARKDOWN_FENCE, index + len(MARKDOWN_FENCE))
+            if stop >= 0:
+                body = markdown_fence_body(text[index + len(MARKDOWN_FENCE) : stop])
+                if body:
+                    emit(body, [], "MONOSPACE")
+                index = stop + len(MARKDOWN_FENCE)
+                line_start = False
+                continue
+        marker, style, literal = markdown_marker(text, index)
+        if marker:
+            stop = markdown_closing(text, marker, index + len(marker))
+            if stop >= 0:
+                inner = text[index + len(marker) : stop]
+                body, body_ranges = (
+                    (inner, []) if literal else parse_markdown(inner, False)
+                )
+                if body:
+                    emit(body, body_ranges, style)
+                index = stop + len(marker)
+                line_start = False
+                continue
+        emit(char, [])
+        line_start = char == "\n"
+        index += 1
+    return "".join(parts), ranges
+
+
+def render_markdown(cfg, text):
+    if not cfg["markdown"]:
+        return text, []
+    return parse_markdown(text)
+
+
+def markdown_emphasis(cfg, text, marker):
+    stripped = text.strip()
+    if not cfg["markdown"] or not stripped:
+        return text
+    return f"{marker}{stripped}{marker}"
+
+
+def format_outbound_text(cfg, title, message, url):
+    parts = []
+    ranges = []
+    length = 0
+    if title:
+        parts.append(title)
+        if cfg["bold_title"]:
+            ranges.append((0, len(title), "BOLD"))
+        length += len(title)
+        separator = cfg["title_separator"]
+        if separator:
+            parts.append(f"\n{separator}")
+            ranges.append((length + 1, len(separator), "MONOSPACE"))
+            length += 1 + len(separator)
+        parts.append("\n\n")
+        length += 2
+    body, body_ranges = render_markdown(cfg, message)
+    ranges.extend((start + length, span, style) for start, span, style in body_ranges)
+    parts.append(body)
     if url:
-        text = f"{text}\n\n{url}"
-    return text
+        parts.append(f"\n\n{url}")
+    return "".join(parts), ranges
 
 
 def utf16_length(text):
@@ -1048,28 +1210,38 @@ def take_chunk(text, limit):
 def split_message(text, max_messages):
     chunks = []
     remaining = text
+    offset = 0
     while remaining and len(chunks) < max_messages:
         chunk, remaining = take_chunk(remaining, MAX_MESSAGE_BYTES)
-        chunks.append(chunk)
+        chunks.append((chunk, offset, len(chunk)))
+        offset = len(text) - len(remaining)
     if not chunks:
-        return [text]
+        return [(text, 0, len(text))]
     if remaining:
         print(
             f"signal-bot: outbound message truncated after {len(chunks)} parts",
             file=sys.stderr,
         )
         limit = MAX_MESSAGE_BYTES - len(MESSAGE_ELLIPSIS.encode("utf-8"))
-        chunks[-1] = truncate_to_bytes(chunks[-1], limit) + MESSAGE_ELLIPSIS
+        chunk, chunk_offset, _ = chunks[-1]
+        kept = truncate_to_bytes(chunk, limit)
+        chunks[-1] = (kept + MESSAGE_ELLIPSIS, chunk_offset, len(kept))
     return chunks
 
 
-def title_bold_style(title, text):
-    if not title:
-        return []
-    length = min(utf16_length(title), utf16_length(text))
-    if length == 0:
-        return []
-    return [f"0:{length}:BOLD"]
+def chunk_text_styles(chunk, offset, span, ranges):
+    styles = []
+    for start, length, style in ranges:
+        first = max(start, offset)
+        last = min(start + length, offset + span)
+        if last <= first:
+            continue
+        begin = first - offset
+        styles.append(
+            f"{utf16_length(chunk[:begin])}:"
+            f"{utf16_length(chunk[begin : last - offset])}:{style}"
+        )
+    return styles
 
 
 def build_quote(timestamp, author, text):
@@ -1294,8 +1466,12 @@ def cmd_status(cfg, ha_token, account):
     ha_key = "status_ha_reachable" if ha_ok else "status_ha_unreachable"
     return (
         message_text(cfg, "status_template")
-        .replace("{account}", message_text(cfg, account_key))
-        .replace("{homeAssistant}", message_text(cfg, ha_key))
+        .replace(
+            "{account}", markdown_emphasis(cfg, message_text(cfg, account_key), "**")
+        )
+        .replace(
+            "{homeAssistant}", markdown_emphasis(cfg, message_text(cfg, ha_key), "**")
+        )
     )
 
 
@@ -1317,9 +1493,9 @@ def cmd_help(cfg, ha_token, account):
                 .replace("{shortcut}", shortcut)
             )
     return "\n".join(
-        template.replace("{command}", labels.get(name, name)).replace(
-            "{description}", description
-        )
+        template.replace(
+            "{command}", markdown_emphasis(cfg, labels.get(name, name), "**")
+        ).replace("{description}", markdown_emphasis(cfg, description, "*"))
         for name, description in sorted(entries.items())
     )
 
@@ -1745,8 +1921,8 @@ def serve(cfg):
                 sender.wait_for_budget()
             params = {"message": chunk}
             params.update(target)
-            if text_styles and index == 0:
-                params["textStyle"] = text_styles
+            if text_styles[index]:
+                params["textStyle"] = text_styles[index]
             result = send_chunk(params, quote)
             sent += 1
             failures = describe_send_failures(result)
@@ -1773,7 +1949,7 @@ def serve(cfg):
         conversation_id=None,
         quote=None,
         thread_key=None,
-        title=None,
+        ranges=None,
         notice=False,
     ):
         if not isinstance(text, str) or not text.strip():
@@ -1782,12 +1958,23 @@ def serve(cfg):
                 file=sys.stderr,
             )
             return True
+        if ranges is None:
+            text, ranges = render_markdown(cfg, text)
         chunks = split_message(text, max_split_messages)
-        styles = (
-            title_bold_style(title, chunks[0]) if title and cfg["bold_title"] else []
-        )
+        styles = [
+            chunk_text_styles(chunk, offset, span, ranges)
+            for chunk, offset, span in chunks
+        ]
         return sender.try_enqueue(
-            (target, chunks, styles, quote, conversation_id, thread_key, notice)
+            (
+                target,
+                [chunk for chunk, _, _ in chunks],
+                styles,
+                quote,
+                conversation_id,
+                thread_key,
+                notice,
+            )
         )
 
     def send_typing(reply_target, stop=False):
@@ -2079,13 +2266,13 @@ def serve(cfg):
                 )
         title = (body.get("title") or "").strip()
         url = (body.get("url") or "").strip()
-        text = format_outbound_text(title, message.rstrip(), url)
+        text, ranges = format_outbound_text(cfg, title, message.rstrip(), url)
         target = (
             {"recipient": [contacts_by_name[recipient]]}
             if recipient
             else {"groupId": current_group_id()}
         )
-        if enqueue_send(target, text, title=title, notice=True):
+        if enqueue_send(target, text, ranges=ranges, notice=True):
             return jsonify(status="queued"), 202
         return jsonify(error="send queue is full"), 503
 
