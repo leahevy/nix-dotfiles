@@ -49,6 +49,7 @@ HANDLED_HISTORY_LIMIT = 500
 CONVERSATION_HISTORY_LIMIT = 200
 QUOTE_TEXT_LIMIT = 300
 QUOTE_CONTEXT_LIMIT = 500
+GROUP_SEQUENCE_KEY = "_nxGroupSequence"
 SENDER_BUDGET_WINDOW_SECONDS = 86400.0
 TYPING_REFRESH_SECONDS = 5
 DISCOVERABLE_BY_NUMBER = False
@@ -1645,6 +1646,22 @@ class ConversationTracker:
         return None
 
 
+class GroupActivity:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.counts = {}
+
+    def note(self, group_id):
+        with self.lock:
+            count = self.counts.get(group_id, 0) + 1
+            self.counts[group_id] = count
+            return count
+
+    def count(self, group_id):
+        with self.lock:
+            return self.counts.get(group_id, 0)
+
+
 def is_recent_timestamp(value, now, window=3600):
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return False
@@ -1935,6 +1952,7 @@ def serve(cfg):
         CONVERSATION_HISTORY_LIMIT,
         cfg["conversation_follow_up_seconds"],
     )
+    group_activity = GroupActivity()
 
     def send_chunk(params, quote):
         try:
@@ -2128,6 +2146,8 @@ def serve(cfg):
         )
         charged_key = None
         reply_quote = None
+        quote_group_id = None
+        quote_baseline = 0
         group_info = data_message.get("groupInfo")
         if group_info:
             active_group_id = current_group_id()
@@ -2138,6 +2158,13 @@ def serve(cfg):
             notice_keys = [f"group:{active_group_id}"]
             if quote_replies:
                 reply_quote = build_quote(timestamp, sender_key, text)
+                quote_group_id = active_group_id
+                sequence = params.get(GROUP_SEQUENCE_KEY)
+                quote_baseline = (
+                    sequence
+                    if isinstance(sequence, int)
+                    else group_activity.count(active_group_id)
+                )
         else:
             reply_target = {"recipient": [source_number or source_uuid]}
             thread_key = f"direct:{sender_key}"
@@ -2145,6 +2172,13 @@ def serve(cfg):
             notice_keys = [
                 f"direct:{value}" for value in (contact_number, source_uuid) if value
             ]
+
+        def current_quote():
+            if reply_quote is None:
+                return None
+            if group_activity.count(quote_group_id) == quote_baseline:
+                return None
+            return reply_quote
 
         message_key = f"{sender_key}:{timestamp}"
         if not handled.claim(message_key):
@@ -2171,7 +2205,7 @@ def serve(cfg):
                     ).replace("{shortcut}", text[:1])
         if script_command is not None:
             if not claim_budget(
-                budget_key, text, reply_target, reply_quote, thread_key
+                budget_key, text, reply_target, current_quote(), thread_key
             ):
                 return
             reply_text = shortcut_problem or script_argument_problem(
@@ -2191,7 +2225,7 @@ def serve(cfg):
             reply_text = handle_command(cfg, ha_token, account, text, budget_report)
         else:
             if not claim_budget(
-                budget_key, text, reply_target, reply_quote, thread_key
+                budget_key, text, reply_target, current_quote(), thread_key
             ):
                 return
             charged_key = budget_key
@@ -2233,7 +2267,7 @@ def serve(cfg):
             reply_target,
             reply_text,
             conversation_id,
-            quote=reply_quote,
+            quote=current_quote(),
             thread_key=thread_key,
         ):
             print("signal-bot: reply queue full, dropping reply", file=sys.stderr)
@@ -2257,6 +2291,12 @@ def serve(cfg):
             return
         if not isinstance(envelope.get("dataMessage"), dict):
             return
+        group_info = envelope["dataMessage"].get("groupInfo")
+        inbound_group_id = (
+            group_info.get("groupId") if isinstance(group_info, dict) else None
+        )
+        if inbound_group_id and inbound_group_id == current_group_id():
+            payload[GROUP_SEQUENCE_KEY] = group_activity.note(inbound_group_id)
         if not is_allowed(envelope.get("sourceNumber"), envelope.get("sourceUuid")):
             rejections.record()
             return
