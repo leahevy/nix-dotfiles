@@ -99,7 +99,6 @@ REQUIRED_CONFIG_KEYS = (
     "inbound_max_age_seconds",
     "max_split_messages",
     "bold_title",
-    "title_separator",
     "markdown",
     "quote_replies",
     "conversation_follow_up_seconds",
@@ -1185,13 +1184,8 @@ def format_outbound_text(cfg, title, message, url):
         if cfg["bold_title"]:
             ranges.append((0, len(title), "BOLD"))
         length += len(title)
-        separator = cfg["title_separator"]
-        if separator:
-            parts.append(f"\n{separator}")
-            ranges.append((length + 1, len(separator), "MONOSPACE"))
-            length += 1 + len(separator)
-        parts.append("\n\n")
-        length += 2
+        parts.append("\n\n\n")
+        length += 3
     body, body_ranges = render_markdown(cfg, message)
     ranges.extend((start + length, span, style) for start, span, style in body_ranges)
     parts.append(body)
