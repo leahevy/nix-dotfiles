@@ -118,10 +118,22 @@ args@{
       description = "Maximum number of outbound messages sent per rolling hour.";
     };
 
-    maxRequestsPerSenderPerDay = lib.mkOption {
+    maxBudgetPerSenderPerDay = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 100;
+      description = "Maximum budget a single sender can spend per rolling day, counted from the length of their messages and the replies they trigger.";
+    };
+
+    budgetInputChars = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 1000;
+      description = "Number of characters of an incoming message that count as one unit of the daily sender budget.";
+    };
+
+    budgetOutputChars = lib.mkOption {
       type = lib.types.ints.positive;
       default = 250;
-      description = "Maximum number of Home Assistant conversation requests a single sender can trigger per rolling day.";
+      description = "Number of characters of a triggered reply that count as one unit of the daily sender budget.";
     };
 
     maxSendsPerMinute = lib.mkOption {
@@ -189,8 +201,14 @@ args@{
 
           statusTemplate = lib.mkOption {
             type = lib.types.str;
-            default = "signal-cli account data: {account}\nHome Assistant: {homeAssistant}";
-            description = "Body of the status reply, with the placeholders {account} and {homeAssistant} substituted.";
+            default = "signal-cli account data: {account}\nHome Assistant: {homeAssistant}\n\nDaily budget:\n{budget}";
+            description = "Body of the status reply, with the placeholders {account}, {homeAssistant} and {budget} substituted.";
+          };
+
+          statusBudgetEntryTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{contact}: {used} of {limit}";
+            description = "Format of a single budget line in the status reply, with the placeholders {contact}, {used} and {limit} substituted.";
           };
 
           statusAccountOk = lib.mkOption {
@@ -704,7 +722,9 @@ args@{
           queueMaxDepth,
           maxSendsPerHour,
           maxSendsPerMinute,
-          maxRequestsPerSenderPerDay,
+          maxBudgetPerSenderPerDay,
+          budgetInputChars,
+          budgetOutputChars,
           inboundMaxAgeMinutes,
           maxSplitMessages,
           boldTitle,
@@ -766,7 +786,9 @@ args@{
               queue_max_depth = queueMaxDepth;
               max_sends_per_hour = maxSendsPerHour;
               max_sends_per_minute = maxSendsPerMinute;
-              max_requests_per_sender_per_day = maxRequestsPerSenderPerDay;
+              max_budget_per_sender_per_day = maxBudgetPerSenderPerDay;
+              budget_input_chars = budgetInputChars;
+              budget_output_chars = budgetOutputChars;
               inbound_max_age_seconds = inboundMaxAgeMinutes * 60;
               max_split_messages = maxSplitMessages;
               bold_title = boldTitle;
@@ -778,6 +800,7 @@ args@{
                 ha_unreachable = messages.haUnreachable;
                 ha_unexpected_response = messages.haUnexpectedResponse;
                 status_template = messages.statusTemplate;
+                status_budget_entry_template = messages.statusBudgetEntryTemplate;
                 status_account_ok = messages.statusAccountOk;
                 status_account_missing = messages.statusAccountMissing;
                 status_ha_reachable = messages.statusHaReachable;

@@ -91,7 +91,9 @@ REQUIRED_CONFIG_KEYS = (
     "queue_max_depth",
     "max_sends_per_hour",
     "max_sends_per_minute",
-    "max_requests_per_sender_per_day",
+    "max_budget_per_sender_per_day",
+    "budget_input_chars",
+    "budget_output_chars",
     "inbound_max_age_seconds",
     "max_split_messages",
     "bold_title",
@@ -106,6 +108,7 @@ REQUIRED_MESSAGE_KEYS = (
     "ha_unreachable",
     "ha_unexpected_response",
     "status_template",
+    "status_budget_entry_template",
     "status_account_ok",
     "status_account_missing",
     "status_ha_reachable",
@@ -1459,7 +1462,7 @@ def register_command(name, description_key):
 
 
 @register_command("/status", "help_status_description")
-def cmd_status(cfg, ha_token, account):
+def cmd_status(cfg, ha_token, account, budget_report):
     account_ok = not missing_account_files(cfg, account)
     ha_ok = ha_reachable(cfg["ha_url"], ha_token)
     account_key = "status_account_ok" if account_ok else "status_account_missing"
@@ -1472,11 +1475,12 @@ def cmd_status(cfg, ha_token, account):
         .replace(
             "{homeAssistant}", markdown_emphasis(cfg, message_text(cfg, ha_key), "**")
         )
+        .replace("{budget}", budget_report())
     )
 
 
 @register_command("/help", "help_help_description")
-def cmd_help(cfg, ha_token, account):
+def cmd_help(cfg, ha_token, account, budget_report):
     template = message_text(cfg, "help_entry_template")
     entries = {
         name: message_text(cfg, command.description_key)
@@ -1500,11 +1504,11 @@ def cmd_help(cfg, ha_token, account):
     )
 
 
-def handle_command(cfg, ha_token, account, text):
+def handle_command(cfg, ha_token, account, text, budget_report):
     words = text.strip().split()
     name = words[0] if words else ""
     command = COMMANDS.get(name, COMMANDS["/help"])
-    return command.handler(cfg, ha_token, account)
+    return command.handler(cfg, ha_token, account, budget_report)
 
 
 def is_fresh(timestamp_ms, max_age_seconds):
@@ -1714,9 +1718,11 @@ class RejectionCounter:
 
 
 class SenderBudget:
-    def __init__(self, limit, window, state_path=None):
+    def __init__(self, limit, window, input_chars, output_chars, state_path=None):
         self.limit = limit
         self.window = window
+        self.input_chars = input_chars
+        self.output_chars = output_chars
         self.state_path = state_path
         self.lock = threading.Lock()
         self.notified = set()
@@ -1736,8 +1742,18 @@ class SenderBudget:
                 loaded[key] = recent
         return loaded
 
+    def _is_entry(self, entry):
+        if not isinstance(entry, list) or len(entry) != 2:
+            return False
+        cost = entry[1]
+        return not isinstance(cost, bool) and isinstance(cost, (int, float))
+
     def _recent(self, values, now):
-        return [t for t in values if is_recent_timestamp(t, now, self.window)]
+        return [
+            entry
+            for entry in values
+            if self._is_entry(entry) and is_recent_timestamp(entry[0], now, self.window)
+        ]
 
     def _persist(self):
         if not self.state_path:
@@ -1747,21 +1763,40 @@ class SenderBudget:
         except OSError as e:
             log_error(f"signal-bot: could not persist the sender budget state: {e}")
 
-    def claim(self, key):
+    def _record(self, key, cost, now):
+        recent = self._recent(self.hits.get(key, []), now)
+        if cost > 0:
+            recent.append([now, cost])
+        self.hits[key] = recent
+        self._persist()
+
+    def claim(self, key, text):
         now = time.time()
+        cost = len(text) / self.input_chars
         with self.lock:
             recent = self._recent(self.hits.get(key, []), now)
-            exhausted = len(recent) >= self.limit
+            exhausted = sum(entry[1] for entry in recent) >= self.limit
             if exhausted:
                 first = key not in self.notified
                 self.notified.add(key)
+                self.hits[key] = recent
+                self._persist()
             else:
                 first = False
-                recent.append(now)
                 self.notified.discard(key)
-            self.hits[key] = recent
-            self._persist()
+                self._record(key, cost, now)
         return not exhausted, first
+
+    def charge(self, key, text):
+        now = time.time()
+        cost = len(text) / self.output_chars
+        with self.lock:
+            self._record(key, cost, now)
+
+    def used(self, key):
+        now = time.time()
+        with self.lock:
+            return sum(entry[1] for entry in self._recent(self.hits.get(key, []), now))
 
 
 class SendQueue:
@@ -1890,8 +1925,10 @@ def serve(cfg):
     handled = HandledMessages(cfg["handled_file"], HANDLED_HISTORY_LIMIT)
     rejections = RejectionCounter(REJECT_LOG_INTERVAL_SECONDS)
     budget = SenderBudget(
-        cfg["max_requests_per_sender_per_day"],
+        cfg["max_budget_per_sender_per_day"],
         SENDER_BUDGET_WINDOW_SECONDS,
+        cfg["budget_input_chars"],
+        cfg["budget_output_chars"],
         cfg["sender_budget_file"],
     )
     conversations = ConversationTracker(
@@ -2030,13 +2067,30 @@ def serve(cfg):
             return True
         return source_uuid is not None and allowed_uuids.holds(source_uuid)
 
-    def claim_budget(sender_key, reply_target, reply_quote, thread_key):
-        granted, first_rejection = budget.claim(sender_key)
+    def budget_keys(number):
+        return {number} | {
+            uuid for uuid, value in allowed_uuids.numbers.items() if value == number
+        }
+
+    def budget_report():
+        template = message_text(cfg, "status_budget_entry_template")
+        return "\n".join(
+            template.replace("{contact}", markdown_emphasis(cfg, name, "**"))
+            .replace(
+                "{used}",
+                f"{sum(budget.used(key) for key in budget_keys(number)):.1f}",
+            )
+            .replace("{limit}", str(budget.limit))
+            for name, number in sorted(contacts_by_name.items())
+        )
+
+    def claim_budget(budget_key, text, reply_target, reply_quote, thread_key):
+        granted, first_rejection = budget.claim(budget_key, text)
         if granted:
             return True
         if first_rejection:
             print(
-                "signal-bot: a sender reached the daily request budget",
+                "signal-bot: a sender reached the daily budget",
                 file=sys.stderr,
             )
             enqueue_send(
@@ -2069,6 +2123,10 @@ def serve(cfg):
             return
 
         sender_key = source_uuid or source_number
+        budget_key = (
+            source_number or allowed_uuids.number_for(source_uuid) or sender_key
+        )
+        charged_key = None
         reply_quote = None
         group_info = data_message.get("groupInfo")
         if group_info:
@@ -2112,8 +2170,11 @@ def serve(cfg):
                         cfg, "script_shortcut_invalid", command_name
                     ).replace("{shortcut}", text[:1])
         if script_command is not None:
-            if not claim_budget(sender_key, reply_target, reply_quote, thread_key):
+            if not claim_budget(
+                budget_key, text, reply_target, reply_quote, thread_key
+            ):
                 return
+            charged_key = budget_key
             reply_text = shortcut_problem or script_argument_problem(
                 cfg, command_name, script_command, command_argument
             )
@@ -2127,10 +2188,13 @@ def serve(cfg):
                         cfg, ha_token, command_name, script_command, command_argument
                     )
         elif text.startswith("/"):
-            reply_text = handle_command(cfg, ha_token, account, text)
+            reply_text = handle_command(cfg, ha_token, account, text, budget_report)
         else:
-            if not claim_budget(sender_key, reply_target, reply_quote, thread_key):
+            if not claim_budget(
+                budget_key, text, reply_target, reply_quote, thread_key
+            ):
                 return
+            charged_key = budget_key
             quote = data_message.get("quote")
             quote_id = quote.get("id") if isinstance(quote, dict) else None
             conversation_id = conversations.resolve_quote(thread_key, quote_id)
@@ -2161,6 +2225,9 @@ def serve(cfg):
                     cfg, ha_token, prompt, conversation_id
                 )
             conversations.remember_thread(thread_key, conversation_id)
+
+        if charged_key is not None and isinstance(reply_text, str):
+            budget.charge(charged_key, reply_text)
 
         if not enqueue_send(
             reply_target,
