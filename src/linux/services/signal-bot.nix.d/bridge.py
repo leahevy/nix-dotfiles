@@ -39,7 +39,7 @@ CONVERSATION_HISTORY_LIMIT = 200
 QUOTE_TEXT_LIMIT = 300
 QUOTE_CONTEXT_LIMIT = 500
 SENDER_BUDGET_WINDOW_SECONDS = 86400.0
-TYPING_REFRESH_SECONDS = 10
+TYPING_REFRESH_SECONDS = 5
 DISCOVERABLE_BY_NUMBER = False
 GROUP_PARTICIPANT_FIELDS = ("members", "pendingMembers", "requestingMembers")
 GROUP_BANNED_FIELDS = ("banned",)
@@ -1785,9 +1785,12 @@ def serve(cfg):
         params = {**reply_target, "stop": True} if stop else reply_target
         try:
             rpc.call_checked("sendTyping", params)
-        except RpcError as e:
+        except Exception as e:
             action = "stop" if stop else "start"
-            print(f"signal-bot: sendTyping {action} failed: {e}", file=sys.stderr)
+            print(
+                f"signal-bot: sendTyping {action} failed: {type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
 
     @contextlib.contextmanager
     def typing_indicator(reply_target):
@@ -1795,8 +1798,20 @@ def serve(cfg):
         done = threading.Event()
 
         def refresh():
-            while not done.wait(TYPING_REFRESH_SECONDS):
-                send_typing(reply_target)
+            try:
+                delay = TYPING_REFRESH_SECONDS
+                while not done.wait(delay):
+                    started = time.monotonic()
+                    send_typing(reply_target)
+                    delay = max(
+                        0.0, TYPING_REFRESH_SECONDS - (time.monotonic() - started)
+                    )
+            except Exception as e:
+                print(
+                    f"signal-bot: the typing indicator refresher stopped: "
+                    f"{type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
 
         refresher = threading.Thread(target=refresh, daemon=True)
         refresher.start()
