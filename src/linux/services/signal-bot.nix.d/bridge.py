@@ -130,6 +130,7 @@ REQUIRED_MESSAGE_KEYS = (
     "group_speaker_template",
     "context_recap_template",
     "context_recap_entry_template",
+    "script_recap_template",
     "budget_exhausted",
 )
 
@@ -1325,6 +1326,21 @@ def render_recap(cfg, entries, max_chars):
     return "\n".join(lines)
 
 
+def with_script_description(cfg, text, command):
+    description = command.get("description")
+    if not description:
+        return text
+    values = {"text": text, "description": description}
+    try:
+        return message_text(cfg, "script_recap_template").format(**values)
+    except (KeyError, IndexError):
+        print(
+            "signal-bot: invalid script recap template, using the default",
+            file=sys.stderr,
+        )
+        return f"{values['text']} ({values['description']})"
+
+
 def with_context_recap(cfg, transcript, text):
     values = {"transcript": transcript, "text": text}
     try:
@@ -1654,7 +1670,7 @@ class ConversationTracker:
     def _touch_thread(self, thread_key):
         entry = self.by_thread.get(thread_key)
         if entry is None:
-            entry = {"id": None, "recap": False, "log": []}
+            entry = {"id": None, "recap": False, "log": [], "pending": []}
             self.by_thread[thread_key] = entry
         entry["seen"] = time.monotonic()
         return entry
@@ -1684,13 +1700,21 @@ class ConversationTracker:
             entry = self._live_thread(thread_key)
             return list(entry["log"]) if entry else []
 
-    def remember_turn(self, thread_key, author, text):
+    def pending_turns(self, thread_key):
+        with self.lock:
+            entry = self._live_thread(thread_key)
+            return list(entry["pending"]) if entry else []
+
+    def remember_turn(self, thread_key, author, text, pending=False):
         if thread_key is None or not text:
             return
         with self.lock:
             entry = self._touch_thread(thread_key)
             entry["log"].append((author, text))
             del entry["log"][: -self.max_messages]
+            if pending:
+                entry["pending"].append((author, text))
+                del entry["pending"][: -self.max_messages]
             self._prune_threads()
 
     def remember_thread(
@@ -1701,6 +1725,7 @@ class ConversationTracker:
             entry["id"] = conversation_id
             if recap_sent:
                 entry["recap"] = False
+                entry["pending"].clear()
             elif drift:
                 entry["recap"] = True
             self._prune_threads()
@@ -2343,6 +2368,19 @@ def serve(cfg):
                     reply_text = call_ha_script(
                         cfg, ha_token, command_name, script_command, command_argument
                     )
+                conversations.remember_turn(
+                    thread_key,
+                    sender_label,
+                    with_script_description(cfg, text, script_command),
+                    True,
+                )
+                if isinstance(reply_text, str):
+                    conversations.remember_turn(
+                        thread_key,
+                        message_text(cfg, "quote_context_bot"),
+                        reply_text,
+                        True,
+                    )
         elif text.startswith("/"):
             reply_text = handle_command(cfg, ha_token, account, text, budget_report)
         else:
@@ -2375,9 +2413,10 @@ def serve(cfg):
                     thread_key, ha_session_seconds
                 )
                 if conversation_id is None or conversations.needs_recap(thread_key):
-                    recap = render_recap(
-                        cfg, conversations.transcript(thread_key), context_max_chars
-                    )
+                    entries = conversations.transcript(thread_key)
+                else:
+                    entries = conversations.pending_turns(thread_key)
+                recap = render_recap(cfg, entries, context_max_chars)
                 if conversation_id is None and not recap and not quoted:
                     quoted = conversations.recent_notice(notice_keys)
                     author = message_text(cfg, "quote_context_bot")

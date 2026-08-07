@@ -331,6 +331,12 @@ args@{
             description = "Format of a single line of the restated conversation, with the placeholders {author} and {message} substituted.";
           };
 
+          scriptRecapTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{text} ({description})";
+            description = "Format of a script command in the restated conversation, with the placeholders {text} and {description} substituted.";
+          };
+
           budgetExhausted = lib.mkOption {
             type = lib.types.str;
             default = "You have reached your daily request limit. Please try again later.";
@@ -881,6 +887,7 @@ args@{
                 group_speaker_template = messages.groupSpeakerTemplate;
                 context_recap_template = messages.contextRecapTemplate;
                 context_recap_entry_template = messages.contextRecapEntryTemplate;
+                script_recap_template = messages.scriptRecapTemplate;
                 budget_exhausted = messages.budgetExhausted;
                 script_completed = messages.scriptCompleted;
                 script_failed = messages.scriptFailed;
