@@ -2174,11 +2174,11 @@ def serve(cfg):
                 budget_key, text, reply_target, reply_quote, thread_key
             ):
                 return
-            charged_key = budget_key
             reply_text = shortcut_problem or script_argument_problem(
                 cfg, command_name, script_command, command_argument
             )
             if reply_text is None:
+                charged_key = budget_key
                 print(
                     f"signal-bot: running the script command {command_name}",
                     file=sys.stderr,
