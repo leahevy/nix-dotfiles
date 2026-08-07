@@ -102,6 +102,9 @@ REQUIRED_CONFIG_KEYS = (
     "markdown",
     "quote_replies",
     "conversation_follow_up_seconds",
+    "night_follow_up_seconds",
+    "night_start_hour",
+    "night_end_hour",
     "messages",
 )
 
@@ -120,6 +123,7 @@ REQUIRED_MESSAGE_KEYS = (
     "quote_context_template",
     "quote_context_bot",
     "quote_context_user",
+    "group_speaker_template",
     "budget_exhausted",
 )
 
@@ -1281,6 +1285,18 @@ def with_quote_context(cfg, author, quoted, text):
         return f"{values['author']}: {values['message']}\n{values['text']}"
 
 
+def with_group_speaker(cfg, author, text):
+    values = {"author": author, "text": text}
+    try:
+        return message_text(cfg, "group_speaker_template").format(**values)
+    except (KeyError, IndexError):
+        print(
+            "signal-bot: invalid group speaker template, using the default",
+            file=sys.stderr,
+        )
+        return f"{values['author']}: {values['text']}"
+
+
 def quote_author_label(cfg, contacts_by_number, account, number):
     if number and number == account:
         return message_text(cfg, "quote_context_bot")
@@ -1549,10 +1565,25 @@ class HandledMessages:
         return True
 
 
+def follow_up_window(cfg):
+    start = cfg["night_start_hour"]
+    end = cfg["night_end_hour"]
+    if start == end:
+        return cfg["conversation_follow_up_seconds"]
+    hour = time.localtime().tm_hour
+    if start < end:
+        night = start <= hour < end
+    else:
+        night = hour >= start or hour < end
+    if night:
+        return cfg["night_follow_up_seconds"]
+    return cfg["conversation_follow_up_seconds"]
+
+
 class ConversationTracker:
-    def __init__(self, limit, follow_up_seconds):
+    def __init__(self, limit, follow_up_window):
         self.limit = limit
-        self.follow_up_seconds = follow_up_seconds
+        self.follow_up_window = follow_up_window
         self.lock = threading.Lock()
         self.by_quote = {}
         self.quote_order = []
@@ -1563,10 +1594,9 @@ class ConversationTracker:
 
     def _prune_threads(self):
         now = time.monotonic()
+        window = self.follow_up_window()
         expired = [
-            key
-            for key, (_, seen) in self.by_thread.items()
-            if now - seen > self.follow_up_seconds
+            key for key, (_, seen) in self.by_thread.items() if now - seen > window
         ]
         for key in expired:
             del self.by_thread[key]
@@ -1583,7 +1613,7 @@ class ConversationTracker:
             if entry is None:
                 return None
             conversation_id, seen = entry
-            if time.monotonic() - seen > self.follow_up_seconds:
+            if time.monotonic() - seen > self.follow_up_window():
                 del self.by_thread[thread_key]
                 return None
             return conversation_id
@@ -1633,13 +1663,14 @@ class ConversationTracker:
 
     def recent_notice(self, target_keys):
         now = time.monotonic()
+        window = self.follow_up_window()
         with self.lock:
             for key in target_keys:
                 entry = self.latest_notice.get(key)
                 if entry is None:
                     continue
                 text, seen = entry
-                if now - seen > self.follow_up_seconds:
+                if now - seen > window:
                     del self.latest_notice[key]
                     continue
                 return text
@@ -1950,7 +1981,7 @@ def serve(cfg):
     )
     conversations = ConversationTracker(
         CONVERSATION_HISTORY_LIMIT,
-        cfg["conversation_follow_up_seconds"],
+        lambda: follow_up_window(cfg),
     )
     group_activity = GroupActivity()
 
@@ -2141,20 +2172,23 @@ def serve(cfg):
             return
 
         sender_key = source_uuid or source_number
-        budget_key = (
-            source_number or allowed_uuids.number_for(source_uuid) or sender_key
-        )
+        sender_number = source_number or allowed_uuids.number_for(source_uuid)
+        budget_key = sender_number or sender_key
         charged_key = None
         reply_quote = None
         quote_group_id = None
         quote_baseline = 0
+        speaker_label = None
         group_info = data_message.get("groupInfo")
         if group_info:
             active_group_id = current_group_id()
             if group_info.get("groupId") != active_group_id:
                 return
             reply_target = {"groupId": active_group_id}
-            thread_key = f"group:{active_group_id}:{sender_key}"
+            thread_key = f"group:{active_group_id}"
+            speaker_label = quote_author_label(
+                cfg, contacts_by_number, account, sender_number
+            )
             notice_keys = [f"group:{active_group_id}"]
             if quote_replies:
                 reply_quote = build_quote(timestamp, sender_key, text)
@@ -2168,9 +2202,8 @@ def serve(cfg):
         else:
             reply_target = {"recipient": [source_number or source_uuid]}
             thread_key = f"direct:{sender_key}"
-            contact_number = source_number or allowed_uuids.number_for(source_uuid)
             notice_keys = [
-                f"direct:{value}" for value in (contact_number, source_uuid) if value
+                f"direct:{value}" for value in (sender_number, source_uuid) if value
             ]
 
         def current_quote():
@@ -2252,7 +2285,11 @@ def serve(cfg):
                 if conversation_id is None:
                     quoted = conversations.recent_notice(notice_keys)
                     author = message_text(cfg, "quote_context_bot")
-            prompt = with_quote_context(cfg, author, quoted, text) if quoted else text
+            prompt = (
+                with_group_speaker(cfg, speaker_label, text) if speaker_label else text
+            )
+            if quoted:
+                prompt = with_quote_context(cfg, author, quoted, prompt)
 
             with typing_indicator(reply_target):
                 reply_text, conversation_id = call_ha_conversation(

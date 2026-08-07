@@ -181,7 +181,25 @@ args@{
     conversationFollowUpSeconds = lib.mkOption {
       type = lib.types.ints.positive;
       default = 300;
-      description = "Seconds after a Home Assistant reply in which a further message from the same sender continues that conversation.";
+      description = "Seconds after a Home Assistant reply in which a further message continues that conversation outside the night hours.";
+    };
+
+    nightFollowUpSeconds = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 300;
+      description = "Seconds after a Home Assistant reply in which a further message continues that conversation during the night hours.";
+    };
+
+    nightStartHour = lib.mkOption {
+      type = lib.types.ints.between 0 23;
+      default = 0;
+      description = "Local hour at which the night follow up window starts, set it to the same value as nightEndHour to disable the night window.";
+    };
+
+    nightEndHour = lib.mkOption {
+      type = lib.types.ints.between 0 23;
+      default = 4;
+      description = "Local hour at which the night follow up window ends.";
     };
 
     messages = lib.mkOption {
@@ -275,6 +293,12 @@ args@{
             type = lib.types.str;
             default = "a user";
             description = "Wording used for {author} when the referenced message came from an unknown sender.";
+          };
+
+          groupSpeakerTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{author} wrote: {text}";
+            description = "Prompt sent to Home Assistant for a group message, with the placeholders {author} and {text} substituted.";
           };
 
           budgetExhausted = lib.mkOption {
@@ -732,6 +756,9 @@ args@{
           markdown,
           quoteReplies,
           conversationFollowUpSeconds,
+          nightFollowUpSeconds,
+          nightStartHour,
+          nightEndHour,
           messages,
           scriptCommands,
           syncIntervalMinutes,
@@ -796,6 +823,9 @@ args@{
               inherit markdown;
               quote_replies = quoteReplies;
               conversation_follow_up_seconds = conversationFollowUpSeconds;
+              night_follow_up_seconds = nightFollowUpSeconds;
+              night_start_hour = nightStartHour;
+              night_end_hour = nightEndHour;
               messages = {
                 ha_unreachable = messages.haUnreachable;
                 ha_unexpected_response = messages.haUnexpectedResponse;
@@ -812,6 +842,7 @@ args@{
                 quote_context_template = messages.quoteContextTemplate;
                 quote_context_bot = messages.quoteContextBot;
                 quote_context_user = messages.quoteContextUser;
+                group_speaker_template = messages.groupSpeakerTemplate;
                 budget_exhausted = messages.budgetExhausted;
                 script_completed = messages.scriptCompleted;
                 script_failed = messages.scriptFailed;
