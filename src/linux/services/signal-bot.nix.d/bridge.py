@@ -1223,13 +1223,18 @@ def script_response_text(response):
 
 
 def call_ha_script(cfg, ha_token, name, command, argument):
-    request_body = {}
+    variables = {}
     if command.get("argument", "none") != "none":
-        request_body[command["argument_variable"]] = argument
-    url = (
-        f"{cfg['ha_url'].rstrip('/')}"
-        f"/api/services/script/{command['script']}?return_response"
-    )
+        variables[command["argument_variable"]] = argument
+    base_url = f"{cfg['ha_url'].rstrip('/')}/api/services/script"
+    if command.get("async"):
+        url = f"{base_url}/turn_on"
+        request_body = {"entity_id": f"script.{command['script']}"}
+        if variables:
+            request_body["variables"] = variables
+    else:
+        url = f"{base_url}/{command['script']}?return_response"
+        request_body = variables
     req = urllib.request.Request(
         url,
         data=json.dumps(request_body).encode(),
@@ -1250,8 +1255,12 @@ def call_ha_script(cfg, ha_token, name, command, argument):
         return command_message(
             cfg, "script_failed", name, command.get("failed_message"), argument
         )
-    response = script_response_text(
-        body.get("service_response") if isinstance(body, dict) else None
+    response = (
+        None
+        if command.get("async")
+        else script_response_text(
+            body.get("service_response") if isinstance(body, dict) else None
+        )
     )
     if response is not None:
         return response

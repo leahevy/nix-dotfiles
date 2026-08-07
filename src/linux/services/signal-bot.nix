@@ -337,6 +337,12 @@ args@{
               description = "Maximum accepted length of the value in characters.";
             };
 
+            async = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Start the script through script.turn_on and answer as soon as it was started instead of waiting for it to finish, which also gives up any script response.";
+            };
+
             completedMessage = lib.mkOption {
               type = lib.types.nullOr lib.types.str;
               default = null;
@@ -784,6 +790,7 @@ args@{
                   argument = command.argument;
                   argument_variable = command.argumentVariable;
                   max_argument_length = command.maxArgumentLength;
+                  async = command.async;
                   completed_message = command.completedMessage;
                   failed_message = command.failedMessage;
                   shortcut = command.shortcut;
