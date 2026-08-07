@@ -1184,8 +1184,8 @@ def format_outbound_text(cfg, title, message, url):
         if cfg["bold_title"]:
             ranges.append((0, len(title), "BOLD"))
         length += len(title)
-        parts.append("\n\n\n")
-        length += 3
+        parts.append("\n\n")
+        length += 2
     body, body_ranges = render_markdown(cfg, message)
     ranges.extend((start + length, span, style) for start, span, style in body_ranges)
     parts.append(body)
