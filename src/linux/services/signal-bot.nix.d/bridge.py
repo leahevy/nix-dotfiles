@@ -50,6 +50,7 @@ CONVERSATION_HISTORY_LIMIT = 200
 QUOTE_TEXT_LIMIT = 300
 QUOTE_CONTEXT_LIMIT = 500
 GROUP_SEQUENCE_KEY = "_nxGroupSequence"
+RECAP_BUDGET_WEIGHT = 0.5
 SENDER_BUDGET_WINDOW_SECONDS = 86400.0
 TYPING_REFRESH_SECONDS = 5
 DISCOVERABLE_BY_NUMBER = False
@@ -105,6 +106,9 @@ REQUIRED_CONFIG_KEYS = (
     "night_follow_up_seconds",
     "night_start_hour",
     "night_end_hour",
+    "ha_session_seconds",
+    "context_max_messages",
+    "context_max_chars",
     "messages",
 )
 
@@ -124,6 +128,8 @@ REQUIRED_MESSAGE_KEYS = (
     "quote_context_bot",
     "quote_context_user",
     "group_speaker_template",
+    "context_recap_template",
+    "context_recap_entry_template",
     "budget_exhausted",
 )
 
@@ -1297,6 +1303,40 @@ def with_group_speaker(cfg, author, text):
         return f"{values['author']}: {values['text']}"
 
 
+def render_recap(cfg, entries, max_chars):
+    template = message_text(cfg, "context_recap_entry_template")
+    lines = []
+    total = 0
+    for author, message in reversed(entries):
+        values = {"author": author, "message": collapse_quote_context(message)}
+        try:
+            line = template.format(**values)
+        except (KeyError, IndexError):
+            print(
+                "signal-bot: invalid context recap entry template, using the default",
+                file=sys.stderr,
+            )
+            line = f"{values['author']}: {values['message']}"
+        if lines and total + len(line) > max_chars:
+            break
+        lines.append(line)
+        total += len(line)
+    lines.reverse()
+    return "\n".join(lines)
+
+
+def with_context_recap(cfg, transcript, text):
+    values = {"transcript": transcript, "text": text}
+    try:
+        return message_text(cfg, "context_recap_template").format(**values)
+    except (KeyError, IndexError):
+        print(
+            "signal-bot: invalid context recap template, using the default",
+            file=sys.stderr,
+        )
+        return f"{values['transcript']}\n{values['text']}"
+
+
 def quote_author_label(cfg, contacts_by_number, account, number):
     if number and number == account:
         return message_text(cfg, "quote_context_bot")
@@ -1581,9 +1621,10 @@ def follow_up_window(cfg):
 
 
 class ConversationTracker:
-    def __init__(self, limit, follow_up_window):
+    def __init__(self, limit, follow_up_window, max_messages):
         self.limit = limit
         self.follow_up_window = follow_up_window
+        self.max_messages = max_messages
         self.lock = threading.Lock()
         self.by_quote = {}
         self.quote_order = []
@@ -1596,10 +1637,27 @@ class ConversationTracker:
         now = time.monotonic()
         window = self.follow_up_window()
         expired = [
-            key for key, (_, seen) in self.by_thread.items() if now - seen > window
+            key for key, entry in self.by_thread.items() if now - entry["seen"] > window
         ]
         for key in expired:
             del self.by_thread[key]
+
+    def _live_thread(self, thread_key):
+        entry = self.by_thread.get(thread_key)
+        if entry is None:
+            return None
+        if time.monotonic() - entry["seen"] > self.follow_up_window():
+            del self.by_thread[thread_key]
+            return None
+        return entry
+
+    def _touch_thread(self, thread_key):
+        entry = self.by_thread.get(thread_key)
+        if entry is None:
+            entry = {"id": None, "recap": False, "log": []}
+            self.by_thread[thread_key] = entry
+        entry["seen"] = time.monotonic()
+        return entry
 
     def resolve_quote(self, thread_key, quote_id):
         if quote_id is None:
@@ -1607,23 +1665,44 @@ class ConversationTracker:
         with self.lock:
             return self.by_quote.get((thread_key, quote_id))
 
-    def resolve_thread(self, thread_key):
+    def resolve_thread(self, thread_key, session_seconds):
         with self.lock:
-            entry = self.by_thread.get(thread_key)
-            if entry is None:
+            entry = self._live_thread(thread_key)
+            if entry is None or entry["id"] is None:
                 return None
-            conversation_id, seen = entry
-            if time.monotonic() - seen > self.follow_up_window():
-                del self.by_thread[thread_key]
+            if time.monotonic() - entry["seen"] > session_seconds:
                 return None
-            return conversation_id
+            return entry["id"]
 
-    def remember_thread(self, thread_key, conversation_id):
+    def needs_recap(self, thread_key):
         with self.lock:
-            if conversation_id is None:
-                self.by_thread.pop(thread_key, None)
-                return
-            self.by_thread[thread_key] = (conversation_id, time.monotonic())
+            entry = self._live_thread(thread_key)
+            return bool(entry and entry["recap"])
+
+    def transcript(self, thread_key):
+        with self.lock:
+            entry = self._live_thread(thread_key)
+            return list(entry["log"]) if entry else []
+
+    def remember_turn(self, thread_key, author, text):
+        if thread_key is None or not text:
+            return
+        with self.lock:
+            entry = self._touch_thread(thread_key)
+            entry["log"].append((author, text))
+            del entry["log"][: -self.max_messages]
+            self._prune_threads()
+
+    def remember_thread(
+        self, thread_key, conversation_id, recap_sent=False, drift=False
+    ):
+        with self.lock:
+            entry = self._touch_thread(thread_key)
+            entry["id"] = conversation_id
+            if recap_sent:
+                entry["recap"] = False
+            elif drift:
+                entry["recap"] = True
             self._prune_threads()
 
     def remember_quote(self, thread_key, sent_timestamp, conversation_id):
@@ -1841,6 +1920,12 @@ class SenderBudget:
         with self.lock:
             self._record(key, cost, now)
 
+    def charge_context(self, key, text):
+        now = time.time()
+        cost = RECAP_BUDGET_WEIGHT * len(text) / self.input_chars
+        with self.lock:
+            self._record(key, cost, now)
+
     def used(self, key):
         now = time.time()
         with self.lock:
@@ -1949,6 +2034,8 @@ def serve(cfg):
     ha_token = require_secret(cfg["ha_token_file"], "Home Assistant token")
     max_age_seconds = cfg["inbound_max_age_seconds"]
     quote_replies = cfg["quote_replies"]
+    ha_session_seconds = cfg["ha_session_seconds"]
+    context_max_chars = cfg["context_max_chars"]
     max_split_messages = cfg["max_split_messages"]
     group_id = read_group_id(cfg["group_id_file"])
     if group_id is None:
@@ -1982,6 +2069,7 @@ def serve(cfg):
     conversations = ConversationTracker(
         CONVERSATION_HISTORY_LIMIT,
         lambda: follow_up_window(cfg),
+        cfg["context_max_messages"],
     )
     group_activity = GroupActivity()
 
@@ -2174,6 +2262,9 @@ def serve(cfg):
         sender_key = source_uuid or source_number
         sender_number = source_number or allowed_uuids.number_for(source_uuid)
         budget_key = sender_number or sender_key
+        sender_label = quote_author_label(
+            cfg, contacts_by_number, account, sender_number
+        )
         charged_key = None
         reply_quote = None
         quote_group_id = None
@@ -2186,9 +2277,7 @@ def serve(cfg):
                 return
             reply_target = {"groupId": active_group_id}
             thread_key = f"group:{active_group_id}"
-            speaker_label = quote_author_label(
-                cfg, contacts_by_number, account, sender_number
-            )
+            speaker_label = sender_label
             notice_keys = [f"group:{active_group_id}"]
             if quote_replies:
                 reply_quote = build_quote(timestamp, sender_key, text)
@@ -2280,9 +2369,16 @@ def serve(cfg):
                         quote.get("authorNumber")
                         or allowed_uuids.number_for(quote.get("authorUuid")),
                     )
+            recap = ""
             if conversation_id is None and not quoted:
-                conversation_id = conversations.resolve_thread(thread_key)
-                if conversation_id is None:
+                conversation_id = conversations.resolve_thread(
+                    thread_key, ha_session_seconds
+                )
+                if conversation_id is None or conversations.needs_recap(thread_key):
+                    recap = render_recap(
+                        cfg, conversations.transcript(thread_key), context_max_chars
+                    )
+                if conversation_id is None and not recap:
                     quoted = conversations.recent_notice(notice_keys)
                     author = message_text(cfg, "quote_context_bot")
             prompt = (
@@ -2290,12 +2386,35 @@ def serve(cfg):
             )
             if quoted:
                 prompt = with_quote_context(cfg, author, quoted, prompt)
+            if recap:
+                prompt = with_context_recap(cfg, recap, prompt)
+            conversations.remember_turn(thread_key, sender_label, text)
 
             with typing_indicator(reply_target):
-                reply_text, conversation_id = call_ha_conversation(
+                reply_text, new_conversation_id = call_ha_conversation(
                     cfg, ha_token, prompt, conversation_id
                 )
-            conversations.remember_thread(thread_key, conversation_id)
+            drift = bool(
+                conversation_id
+                and new_conversation_id
+                and new_conversation_id != conversation_id
+            )
+            if drift:
+                print(
+                    "signal-bot: Home Assistant replaced the conversation id, its "
+                    "session had expired before the reply",
+                    file=sys.stderr,
+                )
+            conversations.remember_thread(
+                thread_key, new_conversation_id, bool(recap), drift
+            )
+            if new_conversation_id and isinstance(reply_text, str):
+                conversations.remember_turn(
+                    thread_key, message_text(cfg, "quote_context_bot"), reply_text
+                )
+            if recap:
+                budget.charge_context(charged_key, recap)
+            conversation_id = new_conversation_id
 
         if charged_key is not None and isinstance(reply_text, str):
             budget.charge(charged_key, reply_text)

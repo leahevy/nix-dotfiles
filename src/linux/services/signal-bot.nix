@@ -180,14 +180,32 @@ args@{
 
     conversationFollowUpSeconds = lib.mkOption {
       type = lib.types.ints.positive;
-      default = 300;
-      description = "Seconds after a Home Assistant reply in which a further message continues that conversation outside the night hours.";
+      default = 7200;
+      description = "Seconds without a further message after which the bot ends a conversation outside the night hours.";
     };
 
     nightFollowUpSeconds = lib.mkOption {
       type = lib.types.ints.positive;
       default = 300;
-      description = "Seconds after a Home Assistant reply in which a further message continues that conversation during the night hours.";
+      description = "Seconds without a further message after which the bot ends a conversation during the night hours.";
+    };
+
+    haSessionSeconds = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 240;
+      description = "Seconds within which a Home Assistant conversation is assumed to still hold its history, keep this below the five minutes Home Assistant itself allows.";
+    };
+
+    contextMaxMessages = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 12;
+      description = "Maximum number of earlier messages kept per conversation for the recap.";
+    };
+
+    contextMaxChars = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 2000;
+      description = "Maximum number of characters of the recap prepended to a prompt.";
     };
 
     nightStartHour = lib.mkOption {
@@ -299,6 +317,18 @@ args@{
             type = lib.types.str;
             default = "{author} wrote: {text}";
             description = "Prompt sent to Home Assistant for a group message, with the placeholders {author} and {text} substituted.";
+          };
+
+          contextRecapTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "[Earlier in this conversation:\n{transcript}]\n{text}";
+            description = "Prompt sent to Home Assistant when the earlier conversation has to be restated, with the placeholders {transcript} and {text} substituted.";
+          };
+
+          contextRecapEntryTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{author} wrote: {message}";
+            description = "Format of a single line of the restated conversation, with the placeholders {author} and {message} substituted.";
           };
 
           budgetExhausted = lib.mkOption {
@@ -759,6 +789,9 @@ args@{
           nightFollowUpSeconds,
           nightStartHour,
           nightEndHour,
+          haSessionSeconds,
+          contextMaxMessages,
+          contextMaxChars,
           messages,
           scriptCommands,
           syncIntervalMinutes,
@@ -826,6 +859,9 @@ args@{
               night_follow_up_seconds = nightFollowUpSeconds;
               night_start_hour = nightStartHour;
               night_end_hour = nightEndHour;
+              ha_session_seconds = haSessionSeconds;
+              context_max_messages = contextMaxMessages;
+              context_max_chars = contextMaxChars;
               messages = {
                 ha_unreachable = messages.haUnreachable;
                 ha_unexpected_response = messages.haUnexpectedResponse;
@@ -843,6 +879,8 @@ args@{
                 quote_context_bot = messages.quoteContextBot;
                 quote_context_user = messages.quoteContextUser;
                 group_speaker_template = messages.groupSpeakerTemplate;
+                context_recap_template = messages.contextRecapTemplate;
+                context_recap_entry_template = messages.contextRecapEntryTemplate;
                 budget_exhausted = messages.budgetExhausted;
                 script_completed = messages.scriptCompleted;
                 script_failed = messages.scriptFailed;
