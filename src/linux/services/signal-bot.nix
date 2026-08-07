@@ -520,9 +520,10 @@ args@{
           fi
 
           show_usage() {
-              echo "Usage: $0 --message <message> [--title <title>] [--url <url>] [--recipient <contact-name>]" >&2
-              echo "       $0 --message-file <path> [--title <title>] [--url <url>] [--recipient <contact-name>]" >&2
+              echo "Usage: $0 --message <message> [--title <title>] [--url <url>] [--recipient <contact-name>] [--no-context]" >&2
+              echo "       $0 --message-file <path> [--title <title>] [--url <url>] [--recipient <contact-name>] [--no-context]" >&2
               echo "       $0 --stdin  (reads the complete JSON payload from stdin)" >&2
+              echo "       --no-context keeps the message out of the conversation the bot carries over" >&2
           }
 
           require_value() {
@@ -540,6 +541,7 @@ args@{
           RECIPIENT=""
           HAVE_MESSAGE=0
           READ_STDIN=0
+          CONTEXT=1
 
           while [[ $# -gt 0 ]]; do
               case $1 in
@@ -578,6 +580,10 @@ args@{
                       RECIPIENT="$2"
                       shift 2
                       ;;
+                  --no-context)
+                      CONTEXT=0
+                      shift
+                      ;;
                   *)
                       echo "Unknown option: $1" >&2
                       show_usage
@@ -607,7 +613,7 @@ args@{
           trap '${pkgs.coreutils}/bin/rm -rf "$WORKDIR"' EXIT
 
           if [[ $READ_STDIN -eq 1 ]]; then
-              if [[ $HAVE_MESSAGE -eq 1 || -n "$MESSAGE_FILE" || -n "$TITLE" || -n "$URL" || -n "$RECIPIENT" ]]; then
+              if [[ $HAVE_MESSAGE -eq 1 || -n "$MESSAGE_FILE" || -n "$TITLE" || -n "$URL" || -n "$RECIPIENT" || $CONTEXT -eq 0 ]]; then
                   echo "Error: --stdin cannot be combined with the other options!" >&2
                   show_usage
                   exit 1
@@ -652,10 +658,12 @@ args@{
                   --rawfile title "$WORKDIR/title" \
                   --rawfile url "$WORKDIR/url" \
                   --rawfile recipient "$WORKDIR/recipient" \
+                  --argjson context "$CONTEXT" \
                   '{message: $message}
                    + (if $title != "" then {title: $title} else {} end)
                    + (if $url != "" then {url: $url} else {} end)
-                   + (if $recipient != "" then {recipient: $recipient} else {} end)' \
+                   + (if $recipient != "" then {recipient: $recipient} else {} end)
+                   + (if $context == 0 then {context: false} else {} end)' \
                   >"$WORKDIR/payload.json"
           fi
 
@@ -677,6 +685,7 @@ args@{
               title ? null,
               url ? null,
               recipient ? null,
+              context ? true,
               path ? null,
             }:
             let
@@ -720,7 +729,8 @@ args@{
               ++ lib.optionals (recipient != null) [
                 "--recipient"
                 recipient
-              ];
+              ]
+              ++ lib.optionals (!context) [ "--no-context" ];
         in
         {
           nx.linux.services.signal-bot.sendList = sendListFn;
@@ -743,6 +753,7 @@ args@{
                 // lib.optionalAttrs (args.title or null != null) { inherit (args) title; }
                 // lib.optionalAttrs (args.url or null != null) { inherit (args) url; }
                 // lib.optionalAttrs (args.recipient or null != null) { inherit (args) recipient; }
+                // lib.optionalAttrs ((args.context or true) == false) { context = false; }
               );
               stdinCmd = lib.escapeShellArgs [
                 (builtins.head cmdList)

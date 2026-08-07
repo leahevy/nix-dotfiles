@@ -1664,7 +1664,7 @@ class ConversationTracker:
     def _touch_thread(self, thread_key):
         entry = self.by_thread.get(thread_key)
         if entry is None:
-            entry = {"id": None, "recap": False, "log": [], "pending": []}
+            entry = {"id": None, "ha": 0.0, "recap": False, "log": [], "pending": []}
             self.by_thread[thread_key] = entry
         entry["seen"] = time.monotonic()
         return entry
@@ -1680,7 +1680,7 @@ class ConversationTracker:
             entry = self._live_thread(thread_key)
             if entry is None or entry["id"] is None:
                 return None
-            if time.monotonic() - entry["seen"] > session_seconds:
+            if time.monotonic() - entry["ha"] > session_seconds:
                 return None
             return entry["id"]
 
@@ -1717,6 +1717,8 @@ class ConversationTracker:
         with self.lock:
             entry = self._touch_thread(thread_key)
             entry["id"] = conversation_id
+            if conversation_id is not None:
+                entry["ha"] = time.monotonic()
             if recap_sent:
                 entry["recap"] = False
                 entry["pending"].clear()
@@ -1838,6 +1840,14 @@ class AllowedUuids:
         if uuid is None:
             return None
         return self.numbers.get(uuid)
+
+    def uuid_for(self, number):
+        if number is None:
+            return None
+        for uuid, value in self.numbers.items():
+            if value == number:
+                return uuid
+        return None
 
 
 class RejectionCounter:
@@ -2144,6 +2154,7 @@ def serve(cfg):
         thread_key=None,
         ranges=None,
         notice=False,
+        transcript_key=None,
     ):
         if not isinstance(text, str) or not text.strip():
             print(
@@ -2158,7 +2169,7 @@ def serve(cfg):
             chunk_text_styles(chunk, offset, span, ranges)
             for chunk, offset, span in chunks
         ]
-        return sender.try_enqueue(
+        queued = sender.try_enqueue(
             (
                 target,
                 [chunk for chunk, _, _ in chunks],
@@ -2169,6 +2180,11 @@ def serve(cfg):
                 notice,
             )
         )
+        if queued and transcript_key:
+            conversations.remember_turn(
+                transcript_key, message_text(cfg, "quote_context_bot"), text, True
+            )
+        return queued
 
     def send_typing(reply_target, stop=False):
         params = {**reply_target, "stop": True} if stop else reply_target
@@ -2340,7 +2356,7 @@ def serve(cfg):
                 command_name = shortcut_name
                 command_argument = text[1:].strip()
                 script_command = script_commands[shortcut_name]
-                if not text[1:2].isalnum():
+                if not command_argument[:1].isalnum():
                     shortcut_problem = command_message(
                         cfg, "script_shortcut_invalid", command_name
                     ).replace("{shortcut}", text[:1])
@@ -2438,14 +2454,15 @@ def serve(cfg):
                     "session had expired before the reply",
                     file=sys.stderr,
                 )
+            delivered = new_conversation_id is not None
             conversations.remember_thread(
-                thread_key, new_conversation_id, bool(recap), drift
+                thread_key, new_conversation_id, bool(recap) and delivered, drift
             )
-            if new_conversation_id and isinstance(reply_text, str):
+            if delivered and isinstance(reply_text, str):
                 conversations.remember_turn(
                     thread_key, message_text(cfg, "quote_context_bot"), reply_text
                 )
-            if recap:
+            if recap and delivered:
                 budget.charge_context(charged_key, recap)
             conversation_id = new_conversation_id
 
@@ -2560,15 +2577,27 @@ def serve(cfg):
                     jsonify(error="recipient must be a configured contact name"),
                     400,
                 )
+        context = body.get("context", True)
+        if not isinstance(context, bool):
+            return jsonify(error="context must be a boolean"), 400
         title = (body.get("title") or "").strip()
         url = (body.get("url") or "").strip()
         text, ranges = format_outbound_text(cfg, title, message.rstrip(), url)
-        target = (
-            {"recipient": [contacts_by_name[recipient]]}
-            if recipient
-            else {"groupId": current_group_id()}
-        )
-        if enqueue_send(target, text, ranges=ranges, notice=True):
+        if recipient:
+            number = contacts_by_name[recipient]
+            target = {"recipient": [number]}
+            transcript_key = f"direct:{allowed_uuids.uuid_for(number) or number}"
+        else:
+            group_id = current_group_id()
+            target = {"groupId": group_id}
+            transcript_key = f"group:{group_id}"
+        if enqueue_send(
+            target,
+            text,
+            ranges=ranges,
+            notice=True,
+            transcript_key=transcript_key if context else None,
+        ):
             return jsonify(status="queued"), 202
         return jsonify(error="send queue is full"), 503
 
