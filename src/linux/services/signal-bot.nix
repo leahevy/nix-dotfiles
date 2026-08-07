@@ -223,6 +223,12 @@ args@{
             description = "Help text describing the help command.";
           };
 
+          helpShortcutTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{command} or {shortcut}";
+            description = "Format of the command part of a help line for a command that has a shortcut, with the placeholders {command} and {shortcut} substituted.";
+          };
+
           quoteContextTemplate = lib.mkOption {
             type = lib.types.str;
             default = "[Context - {author} wrote: {message}]\n{text}";
@@ -246,10 +252,114 @@ args@{
             default = "You have reached your daily request limit. Please try again later.";
             description = "Reply sent once when a sender exhausts the daily request budget.";
           };
+
+          scriptCompleted = lib.mkOption {
+            type = lib.types.str;
+            default = "Done: {command}";
+            description = "Reply sent when a script command finished and returned no response of its own, with the placeholders {command} and {argument} substituted.";
+          };
+
+          scriptFailed = lib.mkOption {
+            type = lib.types.str;
+            default = "The command {command} could not be run. Please check Home Assistant.";
+            description = "Reply sent when a script command could not be run, with the placeholders {command} and {argument} substituted.";
+          };
+
+          scriptArgumentRequired = lib.mkOption {
+            type = lib.types.str;
+            default = "The command {command} needs a value after the command name.";
+            description = "Reply sent when a script command that requires a value was sent without one, with the placeholder {command} substituted.";
+          };
+
+          scriptArgumentNotAllowed = lib.mkOption {
+            type = lib.types.str;
+            default = "The command {command} does not take a value.";
+            description = "Reply sent when a value was sent to a script command that takes none, with the placeholder {command} substituted.";
+          };
+
+          scriptArgumentTooLong = lib.mkOption {
+            type = lib.types.str;
+            default = "The value for {command} is too long.";
+            description = "Reply sent when the value of a script command exceeds its length limit, with the placeholder {command} substituted.";
+          };
+
+          scriptShortcutInvalid = lib.mkOption {
+            type = lib.types.str;
+            default = "The shortcut {shortcut} must be followed directly by a letter or a digit. Use {command} instead.";
+            description = "Reply sent when a message starts with a command shortcut that is not followed by a letter or a digit, with the placeholders {command} and {shortcut} substituted.";
+          };
+
+          scriptArgumentInvalid = lib.mkOption {
+            type = lib.types.str;
+            default = "The value for {command} contains characters that are not allowed.";
+            description = "Reply sent when the value of a script command contains control characters, with the placeholder {command} substituted.";
+          };
         };
       };
       default = { };
       description = "Texts the bot sends into Signal on its own behalf.";
+    };
+
+    scriptCommands = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            script = lib.mkOption {
+              type = lib.types.str;
+              description = "Object id of the Home Assistant script to run, without the script domain prefix.";
+            };
+
+            description = lib.mkOption {
+              type = lib.types.str;
+              default = "Run a Home Assistant script.";
+              description = "Help text describing the command.";
+            };
+
+            argument = lib.mkOption {
+              type = lib.types.enum [
+                "none"
+                "optional"
+                "required"
+              ];
+              default = "none";
+              description = "Whether the command accepts a value after the command name.";
+            };
+
+            argumentVariable = lib.mkOption {
+              type = lib.types.str;
+              default = "argument";
+              description = "Name of the script variable the value is passed as.";
+            };
+
+            maxArgumentLength = lib.mkOption {
+              type = lib.types.ints.positive;
+              default = 200;
+              description = "Maximum accepted length of the value in characters.";
+            };
+
+            completedMessage = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Reply sent when this command finished and returned no response of its own, overriding the global scriptCompleted message.";
+            };
+
+            failedMessage = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Reply sent when this command could not be run, overriding the global scriptFailed message.";
+            };
+
+            shortcut = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Optional single special character that runs this command when a message starts with it followed directly by a letter or a digit, with the rest of the message used as the value.";
+            };
+
+          };
+        }
+      );
+      default = { };
+      description = "Slash commands that run Home Assistant scripts, keyed by the command name without its leading slash.";
     };
 
     syncIntervalMinutes = lib.mkOption {
@@ -583,6 +693,7 @@ args@{
           quoteReplies,
           conversationFollowUpSeconds,
           messages,
+          scriptCommands,
           syncIntervalMinutes,
           additionalUsers,
           script,
@@ -652,11 +763,32 @@ args@{
                 help_entry_template = messages.helpEntryTemplate;
                 help_status_description = messages.helpStatusDescription;
                 help_help_description = messages.helpHelpDescription;
+                help_shortcut_template = messages.helpShortcutTemplate;
                 quote_context_template = messages.quoteContextTemplate;
                 quote_context_bot = messages.quoteContextBot;
                 quote_context_user = messages.quoteContextUser;
                 budget_exhausted = messages.budgetExhausted;
+                script_completed = messages.scriptCompleted;
+                script_failed = messages.scriptFailed;
+                script_argument_required = messages.scriptArgumentRequired;
+                script_argument_not_allowed = messages.scriptArgumentNotAllowed;
+                script_argument_too_long = messages.scriptArgumentTooLong;
+                script_argument_invalid = messages.scriptArgumentInvalid;
+                script_shortcut_invalid = messages.scriptShortcutInvalid;
               };
+              script_commands = lib.mapAttrs' (
+                name: command:
+                lib.nameValuePair "/${name}" {
+                  script = command.script;
+                  description = command.description;
+                  argument = command.argument;
+                  argument_variable = command.argumentVariable;
+                  max_argument_length = command.maxArgumentLength;
+                  completed_message = command.completedMessage;
+                  failed_message = command.failedMessage;
+                  shortcut = command.shortcut;
+                }
+              ) scriptCommands;
             }
           );
 
@@ -723,6 +855,34 @@ args@{
             "::1"
           ];
 
+          scriptShortcutChars = [
+            "!"
+            "?"
+            "@"
+            "#"
+            "$"
+            "%"
+            "&"
+            "*"
+            "+"
+            "="
+            "~"
+            "^"
+            "."
+            ","
+            ":"
+            ";"
+            "_"
+            "-"
+            "|"
+            "<"
+            ">"
+          ];
+
+          scriptShortcuts = lib.filter (shortcut: shortcut != null) (
+            lib.mapAttrsToList (_: command: command.shortcut) scriptCommands
+          );
+
           tokenUsers = lib.unique ([ self.host.mainUser.username ] ++ additionalUsers);
 
           perUserTokenSecrets = lib.listToAttrs (
@@ -784,6 +944,35 @@ args@{
                 || lib.hasPrefix "https://" haUrl
                 || lib.elem haHost haLoopbackHosts;
               message = "linux.services.signal-bot requires haUrl to use https unless Home Assistant runs on loopback!";
+            }
+            {
+              assertion = lib.all (name: builtins.match "[a-z0-9-]+" name != null) (lib.attrNames scriptCommands);
+              message = "linux.services.signal-bot requires every scriptCommands name to consist of lowercase letters, digits or dashes without a leading slash!";
+            }
+            {
+              assertion =
+                !lib.any (
+                  name:
+                  lib.elem name [
+                    "help"
+                    "status"
+                  ]
+                ) (lib.attrNames scriptCommands);
+              message = "linux.services.signal-bot cannot replace the built-in help and status commands through scriptCommands!";
+            }
+            {
+              assertion = lib.all (command: builtins.match "[a-z0-9_]+" command.script != null) (
+                lib.attrValues scriptCommands
+              );
+              message = "linux.services.signal-bot requires every scriptCommands script to be a Home Assistant object id of lowercase letters, digits or underscores!";
+            }
+            {
+              assertion = lib.all (shortcut: lib.elem shortcut scriptShortcutChars) scriptShortcuts;
+              message = "linux.services.signal-bot requires every scriptCommands shortcut to be one of ${lib.concatStrings scriptShortcutChars}!";
+            }
+            {
+              assertion = lib.length scriptShortcuts == lib.length (lib.unique scriptShortcuts);
+              message = "linux.services.signal-bot requires every scriptCommands shortcut to be used by only one command!";
             }
           ];
 

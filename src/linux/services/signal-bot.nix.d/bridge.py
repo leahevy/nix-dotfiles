@@ -1186,6 +1186,80 @@ def ha_reachable(ha_url, ha_token):
         return False
 
 
+def command_message(cfg, key, name, override=None, argument=""):
+    template = override or message_text(cfg, key)
+    return template.replace("{command}", name).replace("{argument}", argument)
+
+
+def split_command(text):
+    parts = text.strip().split(None, 1)
+    name = parts[0] if parts else ""
+    argument = parts[1].strip() if len(parts) > 1 else ""
+    return name, argument
+
+
+def script_argument_problem(cfg, name, command, argument):
+    mode = command.get("argument", "none")
+    if not argument:
+        if mode == "required":
+            return command_message(cfg, "script_argument_required", name)
+        return None
+    if mode == "none":
+        return command_message(cfg, "script_argument_not_allowed", name)
+    if len(argument) > command["max_argument_length"]:
+        return command_message(cfg, "script_argument_too_long", name)
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in argument):
+        return command_message(cfg, "script_argument_invalid", name)
+    return None
+
+
+def script_response_text(response):
+    if not isinstance(response, dict) or not response:
+        return None
+    message = response.get("message")
+    if isinstance(message, str) and message.strip():
+        return message
+    return json.dumps(response, sort_keys=True)
+
+
+def call_ha_script(cfg, ha_token, name, command, argument):
+    request_body = {}
+    if command.get("argument", "none") != "none":
+        request_body[command["argument_variable"]] = argument
+    url = (
+        f"{cfg['ha_url'].rstrip('/')}"
+        f"/api/services/script/{command['script']}?return_response"
+    )
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(request_body).encode(),
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {ha_token}",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with HA_OPENER.open(req, timeout=cfg["ha_timeout_seconds"]) as resp:
+            body = json.loads(resp.read())
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
+        print(
+            f"signal-bot: the Home Assistant script {command['script']} failed: {e}",
+            file=sys.stderr,
+        )
+        return command_message(
+            cfg, "script_failed", name, command.get("failed_message"), argument
+        )
+    response = script_response_text(
+        body.get("service_response") if isinstance(body, dict) else None
+    )
+    if response is not None:
+        return response
+    return command_message(
+        cfg, "script_completed", name, command.get("completed_message"), argument
+    )
+
+
 class Command:
     def __init__(self, description_key, handler):
         self.description_key = description_key
@@ -1219,11 +1293,25 @@ def cmd_status(cfg, ha_token, account):
 @register_command("/help", "help_help_description")
 def cmd_help(cfg, ha_token, account):
     template = message_text(cfg, "help_entry_template")
+    entries = {
+        name: message_text(cfg, command.description_key)
+        for name, command in COMMANDS.items()
+    }
+    labels = {}
+    for name, command in (cfg.get("script_commands") or {}).items():
+        entries[name] = command["description"]
+        shortcut = command.get("shortcut")
+        if shortcut:
+            labels[name] = (
+                message_text(cfg, "help_shortcut_template")
+                .replace("{command}", name)
+                .replace("{shortcut}", shortcut)
+            )
     return "\n".join(
-        template.replace("{command}", name).replace(
-            "{description}", message_text(cfg, command.description_key)
+        template.replace("{command}", labels.get(name, name)).replace(
+            "{description}", description
         )
-        for name, command in sorted(COMMANDS.items())
+        for name, description in sorted(entries.items())
     )
 
 
@@ -1719,10 +1807,34 @@ def serve(cfg):
             refresher.join(timeout=TYPING_REFRESH_SECONDS)
             send_typing(reply_target, stop=True)
 
+    script_commands = cfg.get("script_commands") or {}
+    script_shortcuts = {
+        command["shortcut"]: name
+        for name, command in script_commands.items()
+        if command.get("shortcut")
+    }
+
     def is_allowed(source_number, source_uuid):
         if source_number is not None and source_number in contact_numbers:
             return True
         return source_uuid is not None and allowed_uuids.holds(source_uuid)
+
+    def claim_budget(sender_key, reply_target, reply_quote, thread_key):
+        granted, first_rejection = budget.claim(sender_key)
+        if granted:
+            return True
+        if first_rejection:
+            print(
+                "signal-bot: a sender reached the daily request budget",
+                file=sys.stderr,
+            )
+            enqueue_send(
+                reply_target,
+                message_text(cfg, "budget_exhausted"),
+                quote=reply_quote,
+                thread_key=thread_key,
+            )
+        return False
 
     def handle_receive(params):
         envelope = params.get("envelope", {})
@@ -1771,22 +1883,42 @@ def serve(cfg):
             return
 
         conversation_id = None
+        script_command = None
+        command_name = ""
+        command_argument = ""
+        shortcut_problem = None
         if text.startswith("/"):
+            command_name, command_argument = split_command(text)
+            script_command = script_commands.get(command_name)
+        else:
+            shortcut_name = script_shortcuts.get(text[:1])
+            if shortcut_name is not None:
+                command_name = shortcut_name
+                command_argument = text[1:].strip()
+                script_command = script_commands[shortcut_name]
+                if not text[1:2].isalnum():
+                    shortcut_problem = command_message(
+                        cfg, "script_shortcut_invalid", command_name
+                    ).replace("{shortcut}", text[:1])
+        if script_command is not None:
+            if not claim_budget(sender_key, reply_target, reply_quote, thread_key):
+                return
+            reply_text = shortcut_problem or script_argument_problem(
+                cfg, command_name, script_command, command_argument
+            )
+            if reply_text is None:
+                print(
+                    f"signal-bot: running the script command {command_name}",
+                    file=sys.stderr,
+                )
+                with typing_indicator(reply_target):
+                    reply_text = call_ha_script(
+                        cfg, ha_token, command_name, script_command, command_argument
+                    )
+        elif text.startswith("/"):
             reply_text = handle_command(cfg, ha_token, account, text)
         else:
-            granted, first_rejection = budget.claim(sender_key)
-            if not granted:
-                if first_rejection:
-                    print(
-                        "signal-bot: a sender reached the daily request budget",
-                        file=sys.stderr,
-                    )
-                    enqueue_send(
-                        reply_target,
-                        message_text(cfg, "budget_exhausted"),
-                        quote=reply_quote,
-                        thread_key=thread_key,
-                    )
+            if not claim_budget(sender_key, reply_target, reply_quote, thread_key):
                 return
             quote = data_message.get("quote")
             quote_id = quote.get("id") if isinstance(quote, dict) else None
@@ -1833,7 +1965,10 @@ def serve(cfg):
         if not isinstance(data_message, dict):
             return False
         text = data_message.get("message")
-        return isinstance(text, str) and text.startswith("/")
+        if not isinstance(text, str) or not text.startswith("/"):
+            return False
+        name, _ = split_command(text)
+        return name not in script_commands
 
     def dispatch_receive(params):
         payload = params.get("result")
