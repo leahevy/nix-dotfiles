@@ -1199,7 +1199,7 @@ in
 
     ifEnabled.linux.security.aide = {
       enabled = config: {
-        nx.linux.security.aide.directoryWatches = [
+        nx.linux.security.aide.contentDirectoryWatches = [
           ".config/mozilla/native-messaging-hosts"
           ".mozilla/native-messaging-hosts"
         ];

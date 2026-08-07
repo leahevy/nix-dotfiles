@@ -84,7 +84,7 @@ args@{
 
       ifEnabled.linux.security.aide = {
         enabled = config: {
-          nx.linux.security.aide.directoryWatches = [ ".config/chromium/NativeMessagingHosts" ];
+          nx.linux.security.aide.contentDirectoryWatches = [ ".config/chromium/NativeMessagingHosts" ];
         };
       };
 
