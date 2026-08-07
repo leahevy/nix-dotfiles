@@ -2370,7 +2370,7 @@ def serve(cfg):
                         or allowed_uuids.number_for(quote.get("authorUuid")),
                     )
             recap = ""
-            if conversation_id is None and not quoted:
+            if conversation_id is None:
                 conversation_id = conversations.resolve_thread(
                     thread_key, ha_session_seconds
                 )
@@ -2378,7 +2378,7 @@ def serve(cfg):
                     recap = render_recap(
                         cfg, conversations.transcript(thread_key), context_max_chars
                     )
-                if conversation_id is None and not recap:
+                if conversation_id is None and not recap and not quoted:
                     quoted = conversations.recent_notice(notice_keys)
                     author = message_text(cfg, "quote_context_bot")
             prompt = (
