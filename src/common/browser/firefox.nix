@@ -1203,6 +1203,10 @@ in
           ".config/mozilla/native-messaging-hosts"
           ".mozilla/native-messaging-hosts"
         ];
+        nx.linux.security.aide.excludePathsRegex = [
+          "\\.config/mozilla/native-messaging-hosts/.*\\.socket"
+          "\\.mozilla/native-messaging-hosts/.*\\.socket"
+        ];
       };
     };
 

@@ -85,6 +85,9 @@ args@{
       ifEnabled.linux.security.aide = {
         enabled = config: {
           nx.linux.security.aide.contentDirectoryWatches = [ ".config/chromium/NativeMessagingHosts" ];
+          nx.linux.security.aide.excludePathsRegex = [
+            "\\.config/chromium/NativeMessagingHosts/.*\\.socket"
+          ];
         };
       };
 
