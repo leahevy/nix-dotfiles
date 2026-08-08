@@ -115,7 +115,12 @@ args@{
     };
 
     effortLevel = lib.mkOption {
-      type = lib.types.str;
+      type = lib.types.enum [
+        "low"
+        "medium"
+        "high"
+        "xhigh"
+      ];
       default = "high";
       description = "Default Claude Code effort level.";
     };
