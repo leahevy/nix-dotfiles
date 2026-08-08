@@ -608,6 +608,7 @@ args@{
       config:
       let
         pushover = config.nx.linux.notifications.pushover;
+        piperTts = config.nx.linux.notifications.piper-tts;
         hcFinalUrl = config.nx.linux.server.healthchecks.healthchecksFinalChecksURL;
         hcBaseUrl = config.nx.linux.server.healthchecks.healthchecksBaseUrl;
         hcUrl =
@@ -775,6 +776,18 @@ args@{
                 lib.removePrefix "INFO: " message
               else
                 message;
+
+            piperTtsEnabled = config.nx.linux.notifications.piper-tts.enable;
+
+            piperTtsMessage =
+              if lib.hasPrefix "SUCCESS:" message then
+                "System backup completed"
+              else if lib.hasPrefix "FAILURE:" message then
+                "System backup failed"
+              else
+                null;
+
+            shouldSpeak = piperTtsEnabled && piperTtsMessage != null;
           in
           ''
             ${lib.optionalString userNotifyEnabled (
@@ -796,6 +809,14 @@ args@{
                 url = hcUrl;
                 urlTitle = hcUrlTitle;
                 shellVars = true;
+              }
+            )}
+
+            ${lib.optionalString shouldSpeak (
+              piperTts.speak {
+                text = piperTtsMessage;
+                priority = "high";
+                viaLog = true;
               }
             )}
             echo "${message}" ${if level == "err" then ">&2" else ""}
