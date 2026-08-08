@@ -217,6 +217,12 @@ args@{
               "Even with many choices to present, still use this tool: split them across multiple questions rather than skipping it, since each question accepts at most 4 options and a single call accepts at most 4 questions"
             ]
             [
+              "Use the TodoWrite tool when:"
+              "A task or plan implementation has more than 3 steps"
+              "The work is non-trivial multi-step implementation work, not just a mental plan"
+              "Create the list before starting, mark each item completed as soon as it's done, don't batch updates"
+            ]
+            [
               "Remote / Mobile Sessions"
               "When the user says they are remote or mobile (or using a phone or tablet), show every change verbatim in the chat - as an inline diff or as the full updated content - before issuing the actual Edit/Write/Bash tool call. This lets the user review and approve the changes without needing to inspect the tool call details."
             ]
