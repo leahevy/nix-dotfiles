@@ -780,7 +780,9 @@ args@{
             piperTtsEnabled = config.nx.linux.notifications.piper-tts.enable;
 
             piperTtsMessage =
-              if lib.hasPrefix "SUCCESS:" message then
+              if lib.hasPrefix "STARTED:" message then
+                "System backup started"
+              else if lib.hasPrefix "SUCCESS:" message then
                 "System backup completed"
               else if lib.hasPrefix "FAILURE:" message then
                 "System backup failed"
