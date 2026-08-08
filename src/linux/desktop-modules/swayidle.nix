@@ -66,7 +66,7 @@ args@{
       let
         toggleSwayidleScript = pkgs.writeShellScript "toggle-swayidle" ''
           #!/usr/bin/env bash
-          DISABLE_FILE="/tmp/.nx-no-swayidle"
+          DISABLE_FILE="''${XDG_RUNTIME_DIR:-/tmp}/.nx-no-swayidle"
 
           if [[ -f "$DISABLE_FILE" ]]; then
             rm "$DISABLE_FILE"
@@ -153,7 +153,7 @@ args@{
           command:
           pkgs.writeShellScript "swayidle-timeout-wrapper" ''
             #!/usr/bin/env bash
-            if [[ ! -f "/tmp/.nx-no-swayidle" ]]; then
+            if [[ ! -f "''${XDG_RUNTIME_DIR:-/tmp}/.nx-no-swayidle" ]]; then
               ${command}
             fi
           '';
@@ -181,7 +181,7 @@ args@{
 
             set -euo pipefail
 
-            UNLOCK_TIME_FILE="/tmp/swaylock_unlock_time"
+            UNLOCK_TIME_FILE="''${XDG_RUNTIME_DIR:-/tmp}/swaylock_unlock_time"
             SCRIPT_NAME="swaylock-wrapper"
 
             echo "swaylock-wrapper called with args: $*"
@@ -202,7 +202,24 @@ args@{
                 fi
             fi
 
+            if ${pkgs.procps}/bin/pgrep -x "swaylock" >/dev/null 2>&1; then
+                echo "swaylock already running, skipping redundant launch"
+                exit 0
+            fi
+
             echo "Starting swaylock: $*"
+
+            ALREADY_LOCKED="no"
+            for _lock_session in $(${pkgs.systemd}/bin/loginctl show-user "$(${pkgs.coreutils}/bin/id -u)" -p Sessions --value 2>/dev/null); do
+                if [[ "$(${pkgs.systemd}/bin/loginctl show-session "$_lock_session" -p LockedHint --value 2>/dev/null)" == "yes" ]]; then
+                    ALREADY_LOCKED="yes"
+                    break
+                fi
+            done
+
+            if [[ "$ALREADY_LOCKED" != "yes" ]]; then
+                ${pkgs.systemd}/bin/loginctl lock-session || true
+            fi
 
             "$@"
             echo "swaylock command returned with exit code: $?"
@@ -236,6 +253,19 @@ args@{
               wrapTimeoutCommand (lib.concatStringsSep ";" [ turnOffMonitorsCommand ])
             );
             lockEventScript = pkgs.writeShellScript "swayidle-lock-event" ''
+              LOCK_TRIGGER_TIME_FILE="''${XDG_RUNTIME_DIR:-/tmp}/swaylock_lock_trigger_time"
+              CURRENT_TIME=$(${pkgs.coreutils}/bin/date +%s)
+
+              if [[ -f "$LOCK_TRIGGER_TIME_FILE" ]]; then
+                  LAST_TRIGGER=$(${pkgs.coreutils}/bin/cat "$LOCK_TRIGGER_TIME_FILE" 2>/dev/null || echo 0)
+                  TIME_DIFF=$((CURRENT_TIME - LAST_TRIGGER))
+
+                  if [[ $TIME_DIFF -lt 2 ]]; then
+                      exit 0
+                  fi
+              fi
+
+              ${pkgs.coreutils}/bin/date +%s > "$LOCK_TRIGGER_TIME_FILE"
               ${wrapperCommand}
               ${lib.concatMapStringsSep "\n" (cmd: "${cmd} || true") scriptsOnLock}
             '';
