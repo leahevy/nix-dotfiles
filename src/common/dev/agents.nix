@@ -20,6 +20,16 @@ args@{
       description = "Disable built-in test skills and agents.";
     };
 
+    language = lib.mkOption {
+      type = lib.types.enum [
+        "adaptive"
+        "de"
+        "en"
+      ];
+      default = "en";
+      description = "Language agents must use when answering the user, or adaptive to follow the user";
+    };
+
     instructions = lib.mkOption {
       type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
       default = { };
@@ -222,7 +232,19 @@ args@{
           in
           if present then presentLine else missingLine;
 
+        language = config.nx.common.dev.agents.language;
+        languageNames = {
+          de = "German";
+          en = "English";
+        };
+        languageName = languageNames.${language} or language;
+
         baseInstructions = {
+          "05 - Language" = lib.optionals (language != "adaptive") [
+            "Always answer the user in ${languageName}, regardless of the language the user writes in."
+            "This applies even when the code, files, logs, or quoted text you are discussing are in another language; keep quoted material in its original language but write everything you say yourself in ${languageName}."
+            "This only governs the chat text you address to the user. Never translate code, identifiers, commands, file contents, commit messages, or any other written artifact because of this rule; those follow their own conventions and the project's instructions."
+          ];
           "10 - Work Style" = [
             "Always follow the user's explicit instructions exactly; don't add extra work, refactors, formatting, or \"helpful checks\" unless asked."
             "Before making any code/content changes, state: (a) the symptom/goal, (b) suspected root cause, (c) exact files to change, (d) expected behaviour change."
