@@ -251,6 +251,12 @@ in
       description = "Minimum seconds to sleep between two separate queued messages, not applied between lines split from the same nx-speak call";
     };
 
+    maxMessageAgeSeconds = lib.mkOption {
+      type = lib.types.nullOr lib.types.ints.positive;
+      default = 3600;
+      description = "Maximum age in seconds a message may reach before it is dropped unspoken, counted from when it was queued or logged, critical priority always speaks regardless of age, null keeps messages until they are spoken";
+    };
+
     script = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
@@ -321,6 +327,7 @@ in
         minMessageGapSeconds,
         nighttime,
         maxMessageLength,
+        maxMessageAgeSeconds,
         ...
       }:
       let
@@ -421,6 +428,9 @@ in
           NIGHTTIME_END = "${nighttime.end}"
           NIGHTTIME_VOLUME = ${toString nighttime.volume}
           MIN_MESSAGE_GAP_SECONDS = ${toString minMessageGapSeconds}
+          MAX_MESSAGE_AGE_SECONDS = ${
+            if maxMessageAgeSeconds != null then toString maxMessageAgeSeconds else "None"
+          }
 
           RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.geteuid()}"
           BASE_DIR = os.path.join(RUNTIME_DIR, "nx-piper-tts")
@@ -524,6 +534,25 @@ in
               return priority if priority in ("low", "high", "critical") else "normal"
 
 
+          def queued_at(path):
+              stamp = os.path.basename(path).split("-", 1)[0]
+              try:
+                  return int(stamp) / 1000000000
+              except ValueError:
+                  pass
+              try:
+                  return os.path.getmtime(path)
+              except OSError:
+                  return time.time()
+
+
+          def expired_age(queued):
+              if MAX_MESSAGE_AGE_SECONDS is None:
+                  return None
+              age = time.time() - queued
+              return age if age > MAX_MESSAGE_AGE_SECONDS else None
+
+
           def process_pending_bypass_priority():
               for f in sorted(os.listdir(QUEUE_DIR)):
                   if f.endswith(".msg") and priority_of_file(f) in ("high", "critical"):
@@ -539,6 +568,19 @@ in
               def nighttime_drop():
                   return NIGHTTIME_ENABLE and priority != "critical" and is_nighttime()
 
+              def expiry_drop():
+                  if priority == "critical":
+                      return False
+                  age = expired_age(queued_at(path))
+                  if age is None:
+                      return False
+                  log.info("dropping message older than %ss (age %ds): %s", MAX_MESSAGE_AGE_SECONDS, age, path)
+                  safe_remove(path)
+                  return True
+
+              if expiry_drop():
+                  return
+
               if nighttime_drop():
                   log.info("dropping message during nighttime: %s", path)
                   safe_remove(path)
@@ -551,6 +593,8 @@ in
                       return
                   log.info("delaying message while session locked: %s", path)
                   while is_locked():
+                      if expiry_drop():
+                          return
                       if nighttime_drop():
                           log.info("dropping message: nighttime started while waiting for session unlock: %s", path)
                           safe_remove(path)
@@ -649,13 +693,15 @@ in
               return text[:MAX_MESSAGE_LENGTH]
 
 
-          def enqueue_message(text, priority):
+          def enqueue_message(text, priority, timestamp_ns):
               if priority not in ("low", "high", "critical"):
                   priority = "normal"
+              if priority != "critical" and expired_age(timestamp_ns / 1000000000) is not None:
+                  return
               text = sanitize_text(text)
               if not text:
                   return
-              name = f"{time.time_ns()}-000-{uuid.uuid4().hex[:6]}.{priority}"
+              name = f"{timestamp_ns}-000-{uuid.uuid4().hex[:6]}.{priority}"
               tmp_path = os.path.join(QUEUE_DIR, f"{name}.tmp")
               with open(tmp_path, "w") as f:
                   f.write(text)
@@ -670,13 +716,14 @@ in
               for line in proc.stdout:
                   try:
                       entry = json.loads(line)
+                      timestamp_ns = int(entry["__REALTIME_TIMESTAMP"]) * 1000
                       payload = json.loads(entry["MESSAGE"])
                       text = payload["text"]
                       priority = payload.get("priority", "normal")
                       if not isinstance(text, str) or not isinstance(priority, str):
                           continue
-                      enqueue_message(text, priority)
-                  except (json.JSONDecodeError, KeyError, TypeError):
+                      enqueue_message(text, priority, timestamp_ns)
+                  except (ValueError, KeyError, TypeError):
                       continue
 
 
