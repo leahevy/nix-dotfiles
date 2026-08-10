@@ -447,7 +447,7 @@ jobs:
           done
           DESKTOP_REBOOT_PATTERNS="${DESKTOP_REBOOT_PATTERNS%|}"
 
-          BACKPORT_FILTER='^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[Backport (release|staging)-|\[(release|staging)-.* backport\]|^- [Bb]ackport '
+          BACKPORT_FILTER='^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[[Bb]ackport (release|staging)-|\[(release|staging)-.* backport\]|^- [Bb]ackport '
           STAGING_FILTER='^- Merge (branch )?'"'"'?(staging-nixos|staging-next|staging|release)-[0-9]{2}\.[0-9]{2}'"'"'? into '"'"'?(staging-nixos|staging-next|staging|release)-[0-9]{2}\.[0-9]{2}|\[(staging|release|Staging|Release)[- ][0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]|^- (staging-next|release)-[0-9]{2}\.[0-9]{2}|^- staging-[a-zA-Z]+-[0-9]{2}\.[0-9]{2} merge for [0-9]{4}-[0-9]{2}-[0-9]{2}'
           REVERT_FILTER='^- [Rr]evert "'
           COMMIT_FILTER_PATTERN="$BACKPORT_FILTER|$STAGING_FILTER|$REVERT_FILTER"
