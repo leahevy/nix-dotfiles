@@ -109,7 +109,7 @@ args@{
             environmentVariables = {
               OLLAMA_KEEP_ALIVE = self.settings.keepAlive;
             }
-            // lib.optionalAttrs (self.settings.allowGPU && self.settings.gpuOverheadGB > 0) {
+            // lib.optionalAttrs (self.isLinux && self.settings.allowGPU && self.settings.gpuOverheadGB > 0) {
               OLLAMA_GPU_OVERHEAD = toString gpuOverheadBytes;
             }
             // self.settings.environmentVariables;
@@ -279,7 +279,11 @@ args@{
             };
           };
 
-          launchd.agents.ollama.config.RunAtLoad = lib.mkIf self.isDarwin true;
+          launchd.agents.ollama.config = lib.mkIf self.isDarwin {
+            RunAtLoad = true;
+            StandardOutPath = "/tmp/ollama-server.log";
+            StandardErrorPath = "/tmp/ollama-server.err";
+          };
 
           home.persistence."${self.persist}" = {
             directories = [ ".ollama" ];
