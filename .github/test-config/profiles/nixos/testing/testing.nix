@@ -56,6 +56,7 @@
           podman = true;
         };
         notifications = {
+          piper-tts = true;
           pushover = {
             enableE2EEncryption = true;
             enableSendmail = false;
