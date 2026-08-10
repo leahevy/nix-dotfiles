@@ -634,6 +634,11 @@ in
       default = [ ];
       description = "List of domains (e.g. 'example.com') where only Dark Reader is disabled.";
     };
+    fingerprintingProtectionExcludedDomains = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "List of base domains (e.g. 'example.com') where all fingerprinting protection targets are disabled, subdomains are always included and must not be listed separately";
+    };
     extensions = lib.mkOption {
       type = lib.types.attrsOf extensionType;
       default = { };
@@ -666,6 +671,7 @@ in
         bottomToolbars,
         userContentExcludedDomains,
         userContentDarkReaderExcludedDomains,
+        fingerprintingProtectionExcludedDomains,
         ...
       }:
       let
@@ -1082,7 +1088,17 @@ in
               assertion = userContentDarkReaderExcludedDomains == [ ] || darkMode;
               message = "nx.common.browser.firefox.userContentDarkReaderExcludedDomains requires darkMode to be enabled!";
             }
-          ];
+          ]
+          ++ lib.concatMap (d: [
+            {
+              assertion =
+                d == "*"
+                ||
+                  builtins.match "[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\\.[a-zA-Z]{2,6}" d
+                  != null;
+              message = "nx.common.browser.firefox.fingerprintingProtectionExcludedDomains: '${d}' is not a valid domain (no schemes, no paths, use plain base domains such as 'example.com' or '*')!";
+            }
+          ]) fingerprintingProtectionExcludedDomains;
 
         programs.firefox.enable = true;
 
@@ -1108,6 +1124,20 @@ in
             "privacy.fingerprintingProtection" = true;
             "privacy.fingerprintingProtection.overrides" = "+AllTargets,-CSSPrefersColorScheme";
           }
+          // lib.optionalAttrs (fingerprintingProtectionExcludedDomains != [ ]) (
+            let
+              granularOverrides = builtins.toJSON (
+                map (d: {
+                  firstPartyDomain = d;
+                  overrides = "-AllTargets";
+                }) fingerprintingProtectionExcludedDomains
+              );
+            in
+            {
+              "privacy.fingerprintingProtection.granularOverrides" = granularOverrides;
+              "privacy.baselineFingerprintingProtection.granularOverrides" = granularOverrides;
+            }
+          )
           // lib.optionalAttrs (!sidebar) {
             "sidebar.revamp" = false;
           };
