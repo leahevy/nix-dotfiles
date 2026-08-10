@@ -131,6 +131,21 @@ args@{
       description = "Enable agent push notifications.";
     };
 
+    voiceModeEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable voice mode.";
+    };
+
+    defaultVoiceMode = lib.mkOption {
+      type = lib.types.enum [
+        "tap"
+        "hold"
+      ];
+      default = "tap";
+      description = "Default mode for voice mode.";
+    };
+
     alwaysThinkingEnabled = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -270,6 +285,8 @@ args@{
         awaySummaryEnabled,
         autoScrollEnabled,
         remoteControlAtStartup,
+        voiceModeEnabled,
+        defaultVoiceMode,
         ...
       }:
       let
@@ -588,6 +605,12 @@ args@{
             inherit editorMode askUserQuestionTimeout;
             inherit spinnerTipsEnabled awaySummaryEnabled autoScrollEnabled;
             inherit remoteControlAtStartup;
+          }
+          // lib.optionalAttrs voiceModeEnabled {
+            voice = {
+              enabled = true;
+              mode = defaultVoiceMode;
+            };
           };
           skills = lib.mapAttrs (
             name: value:
@@ -635,28 +658,37 @@ args@{
         };
 
         home = {
-          file = {
-            ".config/doom/config/80-claude.el".text =
-              if (self.isModuleEnabled "emacs.doom") then
-                ''
-                  (use-package claude-code-ide
-                    :bind ("C-c '" . claude-code-ide-menu)
-                    :config
-                    (claude-code-ide-emacs-tools-setup)
-                    (setq claude-code-ide-terminal-backend 'eat))
-                ''
-              else
-                "";
+          file =
+            lib.optionalAttrs (self.isModuleEnabled "emacs.doom") {
+              ".config/doom/config/80-claude.el".text = ''
+                (use-package claude-code-ide
+                  :bind ("C-c '" . claude-code-ide-menu)
+                  :config
+                  (claude-code-ide-emacs-tools-setup)
+                  (setq claude-code-ide-terminal-backend 'eat))
+              '';
 
-            ".config/doom/packages/80-claude.el".text =
-              if (self.isModuleEnabled "emacs.doom") then
-                ''
-                  (package! claude-code-ide
-                    :recipe (:host github :repo "manzaltu/claude-code-ide.el" :files ("*.el")))
-                ''
-              else
-                "";
-          };
+              ".config/doom/packages/80-claude.el".text = ''
+                (package! claude-code-ide
+                  :recipe (:host github :repo "manzaltu/claude-code-ide.el" :files ("*.el")))
+              '';
+            }
+            // lib.optionalAttrs voiceModeEnabled {
+              ".claude/keybindings.json".text = builtins.toJSON {
+                "bindings" =
+                  let
+                    voiceModeKeyBind = if defaultVoiceMode == "tap" then "space" else "meta+s";
+                  in
+                  [
+                    {
+                      "context" = "Chat";
+                      "bindings" = {
+                        ${voiceModeKeyBind} = "voice:pushToTalk";
+                      };
+                    }
+                  ];
+              };
+            };
 
           persistence."${self.persist}" = {
             directories = [
