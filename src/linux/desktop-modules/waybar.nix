@@ -109,8 +109,8 @@ args@{
           emphasized = config.nx.preferences.theme.colors.main.foregrounds.emphasized.html;
         };
 
-        themedNixIconOff = mkThemedNixIcon {
-          name = "themed-nix-snowflake-off";
+        themedNixIconCentered = mkThemedNixIcon {
+          name = "themed-nix-snowflake-centered";
           primary = config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
           emphasized = config.nx.preferences.theme.colors.main.foregrounds.subtle.html;
         };
@@ -674,8 +674,8 @@ args@{
                 opacity: 0.8;
               }
               ${lib.optionalString (self.isModuleEnabled "desktop.niri") ''
-                #custom-nix.off {
-                  background-image: url("${themedNixIconOff}/share/icons/themed-nix-snowflake.svg");
+                #custom-nix.on {
+                  background-image: url("${themedNixIconCentered}/share/icons/themed-nix-snowflake.svg");
                 }
               ''}
 

@@ -962,7 +962,7 @@ args@{
                       with open(CENTER_STATE_FILE) as f:
                           return f.read().strip() != "0"
                   except OSError:
-                      return True
+                      return False
 
 
               def center_focused_column_if_enabled():
@@ -2229,7 +2229,7 @@ args@{
               *) echo "Usage: niri-focus-column left|right" >&2; exit 1 ;;
             esac
 
-            STATE="1"
+            STATE="0"
             [[ -f "$STATE_FILE" ]] && read -r STATE < "$STATE_FILE" || true
             if [[ "$STATE" != "0" ]]; then
               ${pkgs.niri}/bin/niri msg action center-column
@@ -2245,7 +2245,7 @@ args@{
 
             STATE_FILE="''${XDG_RUNTIME_DIR:-/tmp}/niri-center-on-focus"
 
-            STATE="1"
+            STATE="0"
             [[ -f "$STATE_FILE" ]] && read -r STATE < "$STATE_FILE" || true
 
             if [[ "$STATE" != "0" ]]; then
@@ -2268,7 +2268,7 @@ args@{
 
                 STATE_FILE="''${XDG_RUNTIME_DIR:-/tmp}/niri-center-on-focus"
 
-                STATE="1"
+                STATE="0"
                 [[ -f "$STATE_FILE" ]] && read -r STATE < "$STATE_FILE" || true
 
                 if [[ "$STATE" == "0" ]]; then
