@@ -646,6 +646,11 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ ];
     };
+    firejailAllowHomeExec = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Allow executing files inside the home directory in the Firejail sandbox which Firefox requires for the media plugins it downloads at runtime such as OpenH264 and Widevine";
+    };
   };
 
   module = {
@@ -1342,6 +1347,7 @@ in
         extensions,
         firejailXDGAllowedUserDirs,
         firejailExtraRules,
+        firejailAllowHomeExec,
         defaultDownloadsName,
         nextdnsID,
         enableFingerprintingProtection,
@@ -1406,18 +1412,24 @@ in
             notificationRules = [
               "dbus-user.talk org.freedesktop.Notifications"
             ];
+            luksDataDriveEnabled = self.linux.isModuleEnabled "storage.luks-data-drive";
+            luksMountPoint = (self.linux.getModuleConfig "storage.luks-data-drive").mountpoint;
+            userDirRules =
+              prefix:
+              (map (e: "${prefix} ${home}/${e.dir}") resolvedDirs)
+              ++ lib.optionals luksDataDriveEnabled (
+                map (e: "${prefix} ${luksMountPoint}/${self.host.hostname}/${home}/${e.dir}") resolvedDirs
+              );
+            homeExecRules = lib.optionals firejailAllowHomeExec (
+              [ "ignore noexec \${HOME}" ] ++ userDirRules "noexec"
+            );
           in
           lib.concatStringsSep "\n" (
-            (map (e: "whitelist ${home}/${e.dir}") resolvedDirs)
-            ++ lib.optionals (self.linux.isModuleEnabled "storage.luks-data-drive") (
-              let
-                mountPoint = (self.linux.getModuleConfig "storage.luks-data-drive").mountpoint;
-              in
-              map (e: "whitelist ${mountPoint}/${self.host.hostname}/${home}/${e.dir}") resolvedDirs
-            )
+            userDirRules "whitelist"
             ++ generalRules
             ++ screensaverRules
             ++ notificationRules
+            ++ homeExecRules
             ++ lib.optionals (helpers.resolveFromHostOrUser config [ "hardware" "gpu" ] null == "nvidia") [
               "private-etc egl"
             ]
