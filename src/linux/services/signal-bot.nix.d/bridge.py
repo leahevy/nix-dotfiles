@@ -20,6 +20,8 @@ BOOTSTRAP_RETRY_SECONDS = 180
 BOOTSTRAP_RETRY_DELAY = 10.0
 GROUP_UPDATE_ATTEMPTS = 3
 GROUP_UPDATE_RETRY_DELAY = 5.0
+HA_AGENT_ERROR_SPEECH = "Error talking to OpenAI"
+HA_AGENT_ERROR_RETRY_DELAYS = (3.0, 10.0)
 RECIPIENTS_RECHECK_SECONDS = 60.0
 REJECT_LOG_INTERVAL_SECONDS = 60.0
 MAX_MESSAGE_BYTES = 2048
@@ -114,6 +116,7 @@ REQUIRED_CONFIG_KEYS = (
 REQUIRED_MESSAGE_KEYS = (
     "ha_unreachable",
     "ha_unexpected_response",
+    "ha_agent_failed",
     "status_template",
     "status_budget_entry_template",
     "status_account_ok",
@@ -1377,7 +1380,7 @@ class RefuseRedirect(urllib.request.HTTPRedirectHandler):
 HA_OPENER = urllib.request.build_opener(RefuseRedirect)
 
 
-def call_ha_conversation(cfg, ha_token, text, conversation_id=None):
+def request_ha_conversation(cfg, ha_token, text, conversation_id=None):
     request_body = {"text": text, "language": cfg["ha_language"]}
     agent_id = cfg.get("ha_agent_id")
     if agent_id:
@@ -1414,6 +1417,22 @@ def call_ha_conversation(cfg, ha_token, text, conversation_id=None):
         return message_text(cfg, "ha_unexpected_response"), None
     new_id = body.get("conversation_id")
     return speech, new_id if isinstance(new_id, str) else None
+
+
+def call_ha_conversation(cfg, ha_token, text, conversation_id=None):
+    attempts = len(HA_AGENT_ERROR_RETRY_DELAYS) + 1
+    for attempt in range(attempts):
+        speech, new_id = request_ha_conversation(cfg, ha_token, text, conversation_id)
+        if not isinstance(speech, str) or speech.strip() != HA_AGENT_ERROR_SPEECH:
+            return speech, new_id
+        print(
+            f"signal-bot: Home Assistant conversation agent failed on attempt "
+            f"{attempt + 1} of {attempts}: {speech.strip()}",
+            file=sys.stderr,
+        )
+        if attempt + 1 < attempts:
+            time.sleep(HA_AGENT_ERROR_RETRY_DELAYS[attempt])
+    return message_text(cfg, "ha_agent_failed"), None
 
 
 def ha_reachable(ha_url, ha_token):

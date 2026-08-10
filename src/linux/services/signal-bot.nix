@@ -229,6 +229,12 @@ args@{
             description = "Reply sent when Home Assistant answers with an unexpected payload.";
           };
 
+          haAgentFailed = lib.mkOption {
+            type = lib.types.str;
+            default = "Home Assistant is awake, but I am having trouble thinking right now. Please ask me again in a moment.";
+            description = "Reply sent when Home Assistant answers but its conversation agent keeps failing after all retries.";
+          };
+
           statusTemplate = lib.mkOption {
             type = lib.types.str;
             default = "signal-cli account data: {account}\nHome Assistant: {homeAssistant}\n\nDaily budget:\n{budget}";
@@ -874,6 +880,7 @@ args@{
               messages = {
                 ha_unreachable = messages.haUnreachable;
                 ha_unexpected_response = messages.haUnexpectedResponse;
+                ha_agent_failed = messages.haAgentFailed;
                 status_template = messages.statusTemplate;
                 status_budget_entry_template = messages.statusBudgetEntryTemplate;
                 status_account_ok = messages.statusAccountOk;
