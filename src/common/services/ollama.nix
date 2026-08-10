@@ -23,6 +23,7 @@ args@{
     codingModel = "qwen2.5-coder:7b";
     additionalModels = [ ];
     warmupModel = null;
+    serverLog = false;
   };
 
   submodules = lib.optionalAttrs self.isLinux {
@@ -298,11 +299,15 @@ args@{
             };
           };
 
-          launchd.agents.ollama.config = lib.mkIf self.isDarwin {
-            RunAtLoad = true;
-            StandardOutPath = "/tmp/ollama-server.log";
-            StandardErrorPath = "/tmp/ollama-server.err";
-          };
+          launchd.agents.ollama.config = lib.mkIf self.isDarwin (
+            {
+              RunAtLoad = true;
+            }
+            // lib.optionalAttrs self.settings.serverLog {
+              StandardOutPath = "/tmp/ollama-server.log";
+              StandardErrorPath = "/tmp/ollama-server.err";
+            }
+          );
 
           home.persistence."${self.persist}" = {
             directories = [ ".ollama" ];
