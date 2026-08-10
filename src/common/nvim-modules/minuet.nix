@@ -28,7 +28,7 @@ args@{
     throttle = 30;
     multilineCompletion = false;
     additionalStopCharacters = [ ];
-    request_timeout = 30;
+    request_timeout = 90;
     baseFiletypesToEnable = [
       "nix"
       "python"

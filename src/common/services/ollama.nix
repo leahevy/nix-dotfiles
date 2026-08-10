@@ -17,11 +17,12 @@ args@{
     host = "127.0.0.1";
     port = 11434;
     allowGPU = true;
-    keepAlive = "1h";
+    keepAlive = if self.isDarwin then "-1" else "1h";
     gpuOverheadGB = 4;
     environmentVariables = { };
     codingModel = "qwen2.5-coder:7b";
     additionalModels = [ ];
+    warmupModel = null;
   };
 
   submodules = lib.optionalAttrs self.isLinux {
@@ -121,6 +122,9 @@ args@{
         let
           allModels = [ self.settings.codingModel ] ++ self.settings.additionalModels;
 
+          warmupModel =
+            if self.settings.warmupModel == null then self.isDarwin else self.settings.warmupModel;
+
           pullModelsScript = pkgs.writeShellScript "ollama-pull-models-worker" ''
             set -euo pipefail
 
@@ -211,6 +215,21 @@ args@{
               }}
               exit 1
             fi
+
+            ${lib.optionalString warmupModel ''
+              CODING_MODEL="${self.settings.codingModel}"
+              WARMUP_TIMEOUT=900
+
+              echo "Warming up model: $CODING_MODEL"
+
+              if ${pkgs.curl}/bin/curl -sf --max-time $WARMUP_TIMEOUT "$OLLAMA_URL/api/generate" \
+                -H "Content-Type: application/json" \
+                -d "{\"model\": \"$CODING_MODEL\", \"prompt\": \"\"}" > /dev/null; then
+                echo "Model warmed up: $CODING_MODEL"
+              else
+                echo "WARNING: Failed to warm up model $CODING_MODEL."
+              fi
+            ''}
 
             echo "All models pulled successfully."
             ${self.notifyUser {
