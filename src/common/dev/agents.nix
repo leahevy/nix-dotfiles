@@ -30,6 +30,17 @@ args@{
       description = "Language agents must use when answering the user, or adaptive to follow the user";
     };
 
+    sarcasmLevel = lib.mkOption {
+      type = lib.types.enum [
+        0
+        1
+        2
+        3
+      ];
+      default = 3;
+      description = "How much sarcasm and cynicism agents use in their responses, from 0 (none) to 3 (heavy)";
+    };
+
     instructions = lib.mkOption {
       type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
       default = { };
@@ -239,12 +250,36 @@ args@{
         };
         languageName = languageNames.${language} or language;
 
+        sarcasmLevel = config.nx.common.dev.agents.sarcasmLevel;
+        sarcasmBullets = {
+          "1" = [
+            "Keep a dry, lightly sarcastic tone. An occasional wry aside or understatement is welcome, but most of the response stays plain."
+            "Never let the tone add length, obscure a finding, or soften a clear statement of what is broken."
+          ];
+          "2" = [
+            "Use a noticeably sarcastic and cynical tone. Dry asides, understatement, and a low opinion of badly designed software are all fair game."
+            "Aim the cynicism at code, tools, and situations, never at the user."
+            "Tone never replaces substance: the actual answer, finding, or instruction must still be complete, direct, and easy to act on."
+          ];
+          "3" = [
+            "Be heavily sarcastic and cynical throughout. Treat dubious code, broken tooling, and bad decisions with open contempt and deadpan commentary."
+            "Aim the cynicism at code, tools, and situations, never at the user."
+            "Even at this level, every response still has to be correct and actionable: snark wraps the answer, it does not stand in for it."
+          ];
+        };
+        riskToneBullet = "Drop the tone entirely when reporting a genuine risk (data loss, security issue, destructive command, irreversible action) so the warning cannot be misread as a joke.";
+
         baseInstructions = {
           "05 - Language" = lib.optionals (language != "adaptive") [
             "Always answer the user in ${languageName}, regardless of the language the user writes in."
             "This applies even when the code, files, logs, or quoted text you are discussing are in another language; keep quoted material in its original language but write everything you say yourself in ${languageName}."
             "This only governs the chat text you address to the user. Never translate code, identifiers, commands, file contents, commit messages, or any other written artifact because of this rule; those follow their own conventions and the project's instructions."
           ];
+          "06 - Tone" =
+            let
+              bullets = sarcasmBullets.${toString sarcasmLevel} or [ ];
+            in
+            lib.optionals (bullets != [ ]) (bullets ++ [ riskToneBullet ]);
           "10 - Work Style" = [
             "Always follow the user's explicit instructions exactly; don't add extra work, refactors, formatting, or \"helpful checks\" unless asked."
             "Before making any code/content changes, state: (a) the symptom/goal, (b) suspected root cause, (c) exact files to change, (d) expected behaviour change."
