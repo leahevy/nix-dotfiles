@@ -56,6 +56,7 @@
             haUrl = "https://homeassistant.testingserver.example:8123";
             enableAvatar = true;
             enableGroupAvatar = true;
+            noReplyMarker = "NO_ANSWER";
             transcription = {
               maxAttachmentBytes = 8388608;
               attachmentRetentionMinutes = 30;

@@ -181,6 +181,24 @@ in
       description = "Quote the triggering message when replying in the group chat, a reply to a transcribed audio message always quotes its transcript in every chat regardless of this setting.";
     };
 
+    noReplyMarker = lib.mkOption {
+      type = lib.types.str;
+      default = "NO_REPLY";
+      description = "Marker the agent answers with to stay silent in the group chat, empty disables it.";
+    };
+
+    noReplyInstruction = lib.mkOption {
+      type = lib.types.str;
+      default = "This message comes from a group chat, answer with {marker} alone when it is not meant for you.";
+      description = "Instruction prepended to a group message so the agent knows it may stay silent, empty skips it.";
+    };
+
+    noReplyPromptTemplate = lib.mkOption {
+      type = lib.types.str;
+      default = "{instruction} {prompt}";
+      description = "Format of the prompt built from a group message, with the placeholders {instruction} and {prompt} substituted.";
+    };
+
     conversationFollowUpSeconds = lib.mkOption {
       type = lib.types.ints.positive;
       default = 7200;
@@ -1071,6 +1089,9 @@ in
           markdown,
           instructionTemplate,
           quoteReplies,
+          noReplyMarker,
+          noReplyInstruction,
+          noReplyPromptTemplate,
           conversationFollowUpSeconds,
           nightFollowUpSeconds,
           nightStartHour,
@@ -1150,6 +1171,9 @@ in
               inherit markdown;
               instruction_template = instructionTemplate;
               quote_replies = quoteReplies;
+              no_reply_marker = noReplyMarker;
+              no_reply_instruction = noReplyInstruction;
+              no_reply_prompt_template = noReplyPromptTemplate;
               conversation_follow_up_seconds = conversationFollowUpSeconds;
               night_follow_up_seconds = nightFollowUpSeconds;
               night_start_hour = nightStartHour;

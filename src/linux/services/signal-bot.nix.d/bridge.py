@@ -112,6 +112,9 @@ REQUIRED_CONFIG_KEYS = (
     "bold_title",
     "markdown",
     "quote_replies",
+    "no_reply_marker",
+    "no_reply_instruction",
+    "no_reply_prompt_template",
     "conversation_follow_up_seconds",
     "night_follow_up_seconds",
     "night_start_hour",
@@ -1688,6 +1691,31 @@ def contains_tool_call_artifact(speech):
     return isinstance(speech, str) and TOOL_CALL_ARTIFACT_PATTERN.search(speech)
 
 
+def no_reply_pattern(marker):
+    if not isinstance(marker, str) or not marker.strip():
+        return None
+    return re.compile(
+        r"(?<![0-9A-Za-z_])" + re.escape(marker.strip()) + r"(?![0-9A-Za-z_])",
+        re.IGNORECASE,
+    )
+
+
+def is_no_reply(pattern, speech):
+    return bool(pattern) and isinstance(speech, str) and bool(pattern.search(speech))
+
+
+def no_reply_prompt(template, instruction, prompt):
+    values = {"instruction": instruction, "prompt": prompt}
+    try:
+        return template.format(**values)
+    except (KeyError, IndexError):
+        print(
+            "signal-bot: invalid no reply prompt template, using the default",
+            file=sys.stderr,
+        )
+        return f"{values['instruction']} {values['prompt']}"
+
+
 def call_ha_conversation(cfg, ha_token, text, conversation_id=None):
     attempts = len(HA_AGENT_ERROR_RETRY_DELAYS) + 1
     for attempt in range(attempts):
@@ -2389,6 +2417,17 @@ def serve(cfg):
     ha_token = require_secret(cfg["ha_token_file"], "Home Assistant token")
     max_age_seconds = cfg["inbound_max_age_seconds"]
     quote_replies = cfg["quote_replies"]
+    no_reply_matcher = no_reply_pattern(cfg["no_reply_marker"])
+    no_reply_instruction = (
+        wrap_instruction(
+            cfg["instruction_template"],
+            cfg["no_reply_instruction"].replace(
+                "{marker}", cfg["no_reply_marker"].strip()
+            ),
+        )
+        if no_reply_matcher and cfg["no_reply_instruction"].strip()
+        else ""
+    )
     ha_session_seconds = cfg["ha_session_seconds"]
     context_max_chars = cfg["context_max_chars"]
     max_split_messages = cfg["max_split_messages"]
@@ -2901,6 +2940,7 @@ def serve(cfg):
             return
 
         conversation_id = None
+        suppressed = False
         script_command = None
         command_name = ""
         command_argument = ""
@@ -3008,6 +3048,10 @@ def serve(cfg):
                 prompt = with_quote_context(cfg, author, quoted, prompt)
             if recap:
                 prompt = with_context_recap(cfg, recap, prompt)
+            if group_info and no_reply_instruction:
+                prompt = no_reply_prompt(
+                    cfg["no_reply_prompt_template"], no_reply_instruction, prompt
+                )
             conversations.remember_turn(thread_key, sender_label, text)
 
             with typing_indicator(reply_target):
@@ -3026,16 +3070,24 @@ def serve(cfg):
                     file=sys.stderr,
                 )
             delivered = new_conversation_id is not None
+            suppressed = bool(group_info) and is_no_reply(no_reply_matcher, reply_text)
             conversations.remember_thread(
                 thread_key, new_conversation_id, bool(recap) and delivered, drift
             )
-            if delivered and isinstance(reply_text, str):
+            if delivered and isinstance(reply_text, str) and not suppressed:
                 conversations.remember_turn(
                     thread_key, message_text(cfg, "quote_context_bot"), reply_text
                 )
             if recap and delivered:
                 budget.charge_context(charged_key, recap)
             conversation_id = new_conversation_id
+
+        if suppressed:
+            print(
+                "signal-bot: the agent decided against answering in the group chat",
+                file=sys.stderr,
+            )
+            return
 
         if charged_key is not None and isinstance(reply_text, str):
             budget.charge(charged_key, reply_text)
