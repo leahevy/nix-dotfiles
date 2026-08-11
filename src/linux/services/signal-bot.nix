@@ -183,26 +183,43 @@ in
 
     typingIndicatorDelaySeconds = lib.mkOption {
       type = lib.types.ints.unsigned;
-      default = 3;
-      description = "Seconds to wait before showing the typing indicator so quick replies stay silent, zero shows it immediately.";
+      default = 1;
+      description = "Seconds to wait after the bot knows it answers before showing the typing indicator, zero shows it immediately.";
     };
 
-    noReplyMarker = lib.mkOption {
-      type = lib.types.str;
-      default = "NO_REPLY";
-      description = "Marker the agent answers with to stay silent in the group chat, empty disables it.";
-    };
+    groupFilter = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Ask a conversation agent whether a group message is meant for the bot before answering it.";
+      };
 
-    noReplyInstruction = lib.mkOption {
-      type = lib.types.str;
-      default = "This message comes from a group chat, answer with {marker} alone when it is not meant for you.";
-      description = "Instruction prepended to a group message so the agent knows it may stay silent, empty skips it.";
-    };
+      agentId = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Conversation agent asked for the judgement, null uses the agent that answers.";
+      };
 
-    noReplyPromptTemplate = lib.mkOption {
-      type = lib.types.str;
-      default = "{instruction} {prompt}";
-      description = "Format of the prompt built from a group message, with the placeholders {instruction} and {prompt} substituted.";
+      instruction = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Instruction prepended to a group message for the judgement, empty leaves the rule to the agent prompt.";
+      };
+
+      promptTemplate = lib.mkOption {
+        type = lib.types.str;
+        default = "{instruction}\n{prompt}";
+        description = "Format of the prompt built for the judgement, with the placeholders {instruction} and {prompt} substituted.";
+      };
+
+      silentAnswers = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [
+          "no"
+          "nein"
+        ];
+        description = "Answers whose first word makes the bot stay silent, anything else is answered normally.";
+      };
     };
 
     conversationFollowUpSeconds = lib.mkOption {
@@ -1096,9 +1113,7 @@ in
           instructionTemplate,
           quoteReplies,
           typingIndicatorDelaySeconds,
-          noReplyMarker,
-          noReplyInstruction,
-          noReplyPromptTemplate,
+          groupFilter,
           conversationFollowUpSeconds,
           nightFollowUpSeconds,
           nightStartHour,
@@ -1179,9 +1194,12 @@ in
               instruction_template = instructionTemplate;
               quote_replies = quoteReplies;
               typing_indicator_delay_seconds = typingIndicatorDelaySeconds;
-              no_reply_marker = noReplyMarker;
-              no_reply_instruction = noReplyInstruction;
-              no_reply_prompt_template = noReplyPromptTemplate;
+              group_filter = {
+                inherit (groupFilter) enable instruction;
+                agent_id = if groupFilter.agentId == null then null else "conversation.${groupFilter.agentId}";
+                prompt_template = groupFilter.promptTemplate;
+                silent_answers = groupFilter.silentAnswers;
+              };
               conversation_follow_up_seconds = conversationFollowUpSeconds;
               night_follow_up_seconds = nightFollowUpSeconds;
               night_start_hour = nightStartHour;

@@ -113,9 +113,7 @@ REQUIRED_CONFIG_KEYS = (
     "markdown",
     "quote_replies",
     "typing_indicator_delay_seconds",
-    "no_reply_marker",
-    "no_reply_instruction",
-    "no_reply_prompt_template",
+    "group_filter",
     "conversation_follow_up_seconds",
     "night_follow_up_seconds",
     "night_start_hour",
@@ -151,6 +149,14 @@ REQUIRED_TRANSCRIPTION_KEYS = (
     "failure_message",
     "instruction",
     "prompt_template",
+)
+
+REQUIRED_GROUP_FILTER_KEYS = (
+    "enable",
+    "agent_id",
+    "instruction",
+    "prompt_template",
+    "silent_answers",
 )
 
 REQUIRED_MESSAGE_KEYS = (
@@ -216,6 +222,16 @@ def load_config(path):
         )
     if transcription["enable"] and not transcription["transcribe_command"]:
         raise SystemExit("signal-bot: the config transcription has no command!")
+    group_filter = cfg["group_filter"]
+    if not isinstance(group_filter, dict):
+        raise SystemExit("signal-bot: the config group filter is not an object!")
+    missing = [key for key in REQUIRED_GROUP_FILTER_KEYS if key not in group_filter]
+    if missing:
+        raise SystemExit(
+            f"signal-bot: the config group filter is missing {', '.join(missing)}!"
+        )
+    if group_filter["enable"] and not group_filter["silent_answers"]:
+        raise SystemExit("signal-bot: the config group filter has no silent answers!")
     return cfg
 
 
@@ -1649,9 +1665,11 @@ class RefuseRedirect(urllib.request.HTTPRedirectHandler):
 HA_OPENER = urllib.request.build_opener(RefuseRedirect)
 
 
-def request_ha_conversation(cfg, ha_token, text, conversation_id=None):
+def request_ha_conversation(
+    cfg, ha_token, text, conversation_id=None, agent_override=None
+):
     request_body = {"text": text, "language": cfg["ha_language"]}
-    agent_id = cfg.get("ha_agent_id")
+    agent_id = agent_override or cfg.get("ha_agent_id")
     if agent_id:
         request_body["agent_id"] = agent_id
     if conversation_id:
@@ -1692,29 +1710,25 @@ def contains_tool_call_artifact(speech):
     return isinstance(speech, str) and TOOL_CALL_ARTIFACT_PATTERN.search(speech)
 
 
-def no_reply_pattern(marker):
-    if not isinstance(marker, str) or not marker.strip():
-        return None
-    return re.compile(
-        r"(?<![0-9A-Za-z_])" + re.escape(marker.strip()) + r"(?![0-9A-Za-z_])",
-        re.IGNORECASE,
-    )
-
-
-def is_no_reply(pattern, speech):
-    return bool(pattern) and isinstance(speech, str) and bool(pattern.search(speech))
-
-
-def no_reply_prompt(template, instruction, prompt):
+def group_filter_prompt(template, instruction, prompt):
+    if not instruction:
+        return prompt
     values = {"instruction": instruction, "prompt": prompt}
     try:
         return template.format(**values)
     except (KeyError, IndexError):
         print(
-            "signal-bot: invalid no reply prompt template, using the default",
+            "signal-bot: invalid group filter prompt template, using the default",
             file=sys.stderr,
         )
-        return f"{values['instruction']} {values['prompt']}"
+        return f"{values['instruction']}\n{values['prompt']}"
+
+
+def group_filter_silence(silent_answers, speech):
+    if not isinstance(speech, str):
+        return False
+    match = re.search(r"\w+", speech)
+    return match is not None and match.group(0).casefold() in silent_answers
 
 
 def call_ha_conversation(cfg, ha_token, text, conversation_id=None):
@@ -2419,16 +2433,10 @@ def serve(cfg):
     max_age_seconds = cfg["inbound_max_age_seconds"]
     quote_replies = cfg["quote_replies"]
     typing_delay_seconds = cfg["typing_indicator_delay_seconds"]
-    no_reply_matcher = no_reply_pattern(cfg["no_reply_marker"])
-    no_reply_instruction = (
-        wrap_instruction(
-            cfg["instruction_template"],
-            cfg["no_reply_instruction"].replace(
-                "{marker}", cfg["no_reply_marker"].strip()
-            ),
-        )
-        if no_reply_matcher and cfg["no_reply_instruction"].strip()
-        else ""
+    group_filter = cfg["group_filter"]
+    group_filter_enabled = bool(group_filter["enable"])
+    group_filter_silent = frozenset(
+        answer.casefold() for answer in group_filter["silent_answers"]
     )
     ha_session_seconds = cfg["ha_session_seconds"]
     context_max_chars = cfg["context_max_chars"]
@@ -2947,7 +2955,6 @@ def serve(cfg):
             return
 
         conversation_id = None
-        suppressed = False
         script_command = None
         command_name = ""
         command_argument = ""
@@ -3051,14 +3058,30 @@ def serve(cfg):
                 if speaker_label
                 else spoken
             )
+            if group_info and group_filter_enabled:
+                verdict, _ = request_ha_conversation(
+                    cfg,
+                    ha_token,
+                    group_filter_prompt(
+                        group_filter["prompt_template"],
+                        group_filter["instruction"],
+                        prompt,
+                    ),
+                    None,
+                    group_filter["agent_id"],
+                )
+                if group_filter_silence(group_filter_silent, verdict):
+                    conversations.remember_turn(thread_key, sender_label, text)
+                    print(
+                        "signal-bot: the group filter judged the message as not meant "
+                        f"for the bot: {verdict[:200]!r}",
+                        file=sys.stderr,
+                    )
+                    return
             if quoted:
                 prompt = with_quote_context(cfg, author, quoted, prompt)
             if recap:
                 prompt = with_context_recap(cfg, recap, prompt)
-            if group_info and no_reply_instruction:
-                prompt = no_reply_prompt(
-                    cfg["no_reply_prompt_template"], no_reply_instruction, prompt
-                )
             conversations.remember_turn(thread_key, sender_label, text)
 
             with typing_indicator(reply_target, typing_delay_seconds):
@@ -3077,25 +3100,16 @@ def serve(cfg):
                     file=sys.stderr,
                 )
             delivered = new_conversation_id is not None
-            suppressed = bool(group_info) and is_no_reply(no_reply_matcher, reply_text)
             conversations.remember_thread(
                 thread_key, new_conversation_id, bool(recap) and delivered, drift
             )
-            if delivered and isinstance(reply_text, str) and not suppressed:
+            if delivered and isinstance(reply_text, str):
                 conversations.remember_turn(
                     thread_key, message_text(cfg, "quote_context_bot"), reply_text
                 )
             if recap and delivered:
                 budget.charge_context(charged_key, recap)
             conversation_id = new_conversation_id
-
-        if suppressed:
-            print(
-                "signal-bot: the agent decided against answering in the group chat: "
-                f"{reply_text[:200]!r}",
-                file=sys.stderr,
-            )
-            return
 
         if charged_key is not None and isinstance(reply_text, str):
             budget.charge(charged_key, reply_text)

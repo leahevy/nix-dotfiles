@@ -56,7 +56,11 @@
             haUrl = "https://homeassistant.testingserver.example:8123";
             enableAvatar = true;
             enableGroupAvatar = true;
-            noReplyMarker = "NO_ANSWER";
+            groupFilter = {
+              enable = true;
+              agentId = "testing_group_filter";
+              instruction = "Answer with YES or NO and nothing else.";
+            };
             transcription = {
               maxAttachmentBytes = 8388608;
               attachmentRetentionMinutes = 30;
