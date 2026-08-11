@@ -187,39 +187,45 @@ in
       description = "Seconds to wait after the bot knows it answers before showing the typing indicator, zero shows it immediately.";
     };
 
-    groupFilter = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = "Ask a conversation agent whether a group message is meant for the bot before answering it.";
-      };
+    groupFilter = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Ask a conversation agent whether a group message is meant for the bot before answering it.";
+          };
 
-      agentId = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Conversation agent asked for the judgement, null uses the agent that answers.";
-      };
+          agentId = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Conversation agent asked for the judgement, null uses the agent that answers.";
+          };
 
-      instruction = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        description = "Instruction prepended to a group message for the judgement, empty leaves the rule to the agent prompt.";
-      };
+          instruction = lib.mkOption {
+            type = lib.types.str;
+            default = "";
+            description = "Instruction prepended to a group message for the judgement, empty leaves the rule to the agent prompt.";
+          };
 
-      promptTemplate = lib.mkOption {
-        type = lib.types.str;
-        default = "{instruction}\n{prompt}";
-        description = "Format of the prompt built for the judgement, with the placeholders {instruction} and {prompt} substituted.";
-      };
+          promptTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{instruction}\n{prompt}";
+            description = "Format of the prompt built for the judgement, with the placeholders {instruction} and {prompt} substituted.";
+          };
 
-      silentAnswers = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [
-          "no"
-          "nein"
-        ];
-        description = "Answers whose first word makes the bot stay silent, anything else is answered normally.";
+          silentAnswers = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [
+              "no"
+              "nein"
+            ];
+            description = "Answers whose first word makes the bot stay silent, anything else is answered normally.";
+          };
+        };
       };
+      default = { };
+      description = "How the bot decides whether a group message is meant for it.";
     };
 
     conversationFollowUpSeconds = lib.mkOption {
