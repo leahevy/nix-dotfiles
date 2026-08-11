@@ -2879,7 +2879,11 @@ def serve(cfg):
                     if source is None:
                         transcript = None
                     else:
-                        with typing_indicator(reply_target):
+                        with (
+                            contextlib.nullcontext()
+                            if group_info and group_filter_enabled
+                            else typing_indicator(reply_target)
+                        ):
                             transcript = transcribe_audio(transcription_config, source)
                     if transcript is None:
                         transcription_failed = True
