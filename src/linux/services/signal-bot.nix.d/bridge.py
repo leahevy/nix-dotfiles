@@ -1509,13 +1509,14 @@ def discard_attachment(attachments_dir, attachment):
             print(f"signal-bot: cannot delete {candidate}: {e}", file=sys.stderr)
 
 
-def is_voice_note(attachment):
-    return bool(attachment.get("voiceNote"))
+def is_audio_attachment(attachment):
+    content_type = attachment.get("contentType")
+    return isinstance(content_type, str) and content_type.startswith("audio/")
 
 
-def select_voice_note(attachments):
+def select_audio_attachment(attachments):
     for attachment in attachments:
-        if isinstance(attachment, dict) and is_voice_note(attachment):
+        if isinstance(attachment, dict) and is_audio_attachment(attachment):
             return attachment
     return None
 
@@ -2780,7 +2781,7 @@ def serve(cfg):
             try:
                 if not transcription_enabled:
                     return
-                audio = select_voice_note(attachments)
+                audio = select_audio_attachment(attachments)
                 if audio is None:
                     if not text:
                         return

@@ -438,14 +438,14 @@ in
 
           maxAttachmentBytes = lib.mkOption {
             type = lib.types.ints.positive;
-            default = 25 * 1024 * 1024;
-            description = "Largest voice message that is transcribed, anything bigger is discarded unheard.";
+            default = 5 * 1024 * 1024;
+            description = "Largest audio attachment that is transcribed, anything bigger is discarded unheard, keep it low enough that shared audio files are rejected instead of transcribed.";
           };
 
           failureMessage = lib.mkOption {
             type = lib.types.str;
             default = "Sorry, I could not understand that voice message!";
-            description = "Reply sent when a voice message could not be transcribed.";
+            description = "Reply sent when an audio attachment could not be transcribed.";
           };
 
           instruction = lib.mkOption {
