@@ -2852,19 +2852,22 @@ def serve(cfg):
             )
             return
 
-        if group_info and (quote_replies or transcribed):
+        if transcribed or (group_info and quote_replies):
             reply_quote = build_quote(timestamp, sender_key, text)
-            quote_group_id = active_group_id
-            sequence = params.get(GROUP_SEQUENCE_KEY)
-            quote_baseline = (
-                sequence
-                if isinstance(sequence, int)
-                else group_activity.count(active_group_id)
-            )
+            if group_info:
+                quote_group_id = active_group_id
+                sequence = params.get(GROUP_SEQUENCE_KEY)
+                quote_baseline = (
+                    sequence
+                    if isinstance(sequence, int)
+                    else group_activity.count(active_group_id)
+                )
 
         def current_quote():
             if reply_quote is None:
                 return None
+            if quote_group_id is None:
+                return reply_quote
             if (
                 not transcribed
                 and group_activity.count(quote_group_id) == quote_baseline

@@ -178,7 +178,7 @@ in
     quoteReplies = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Quote the triggering message when replying in the group chat, a reply to a voice message quotes its transcript there regardless of this setting.";
+      description = "Quote the triggering message when replying in the group chat, a reply to a transcribed audio message always quotes its transcript in every chat regardless of this setting.";
     };
 
     conversationFollowUpSeconds = lib.mkOption {
