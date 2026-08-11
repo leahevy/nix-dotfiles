@@ -1313,14 +1313,27 @@ def chunk_text_styles(chunk, offset, span, ranges):
     return styles
 
 
-def build_quote(timestamp, author, text):
+def build_quote(timestamp, author, text, attachments=None):
     if not timestamp or not author:
         return None
-    return {
+    quote = {
         "quoteTimestamp": timestamp,
         "quoteAuthor": author,
-        "quoteMessage": text[:QUOTE_TEXT_LIMIT],
+        "quoteMessage": (text or "")[:QUOTE_TEXT_LIMIT],
     }
+    if attachments:
+        quote["quoteAttachments"] = attachments
+    return quote
+
+
+def quote_attachment_specs(attachment):
+    content_type = attachment.get("contentType")
+    if not isinstance(content_type, str) or not content_type or ":" in content_type:
+        return None
+    filename = attachment.get("filename")
+    if isinstance(filename, str) and filename and ":" not in filename:
+        return [f"{content_type}:{filename}"]
+    return [content_type]
 
 
 def collapse_quote_context(text):
@@ -2737,6 +2750,8 @@ def serve(cfg):
             discard_all_attachments()
             return
         text = data_message.get("message")
+        original_text = text
+        quote_attachments = None
         timestamp = envelope.get("timestamp") or data_message.get("timestamp")
         sender_key = source_uuid or source_number
         message_key = f"{sender_key}:{timestamp}"
@@ -2816,6 +2831,7 @@ def serve(cfg):
                         transcription_failed = True
                     else:
                         transcribed = True
+                        quote_attachments = quote_attachment_specs(audio)
                         text = "\n".join(
                             part
                             for part in (transcript, audio.get("caption"), text)
@@ -2853,7 +2869,12 @@ def serve(cfg):
             return
 
         if transcribed or (group_info and quote_replies):
-            reply_quote = build_quote(timestamp, sender_key, text)
+            reply_quote = build_quote(
+                timestamp,
+                sender_key,
+                original_text if transcribed else text,
+                quote_attachments,
+            )
             if group_info:
                 quote_group_id = active_group_id
                 sequence = params.get(GROUP_SEQUENCE_KEY)
