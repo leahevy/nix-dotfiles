@@ -7,6 +7,33 @@ args@{
   self,
   ...
 }:
+let
+  modelVersionsByAlias = {
+    opus = [
+      "5"
+      "4.8"
+      "4.7"
+      "4.6"
+      "4.5"
+    ];
+    sonnet = [
+      "5"
+      "4.6"
+      "4.5"
+    ];
+    haiku = [ "4.5" ];
+    fable = [ "5" ];
+  };
+
+  modelAliasEnvVars = {
+    opus = "ANTHROPIC_DEFAULT_OPUS_MODEL";
+    sonnet = "ANTHROPIC_DEFAULT_SONNET_MODEL";
+    haiku = "ANTHROPIC_DEFAULT_HAIKU_MODEL";
+    fable = "ANTHROPIC_DEFAULT_FABLE_MODEL";
+  };
+
+  modelIdFor = alias: version: "claude-${alias}-${lib.replaceStrings [ "." ] [ "-" ] version}";
+in
 {
   name = "claude";
 
@@ -112,6 +139,21 @@ args@{
       ];
       default = "sonnet";
       description = "Default Claude Code model.";
+    };
+
+    modelVersions = lib.mkOption {
+      type = lib.types.submodule {
+        options = lib.mapAttrs (
+          alias: versions:
+          lib.mkOption {
+            type = lib.types.nullOr (lib.types.enum versions);
+            default = null;
+            description = "Version the ${alias} alias resolves to, null selects the newest known version.";
+          }
+        ) modelVersionsByAlias;
+      };
+      default = { };
+      description = "Pins every Claude Code model alias to a specific model version.";
     };
 
     effortLevel = lib.mkOption {
@@ -273,6 +315,7 @@ args@{
         contextWarnPercent,
         caveman,
         model,
+        modelVersions,
         effortLevel,
         notifyEnabled,
         alwaysThinkingEnabled,
@@ -371,7 +414,14 @@ args@{
           ++ lib.optional (
             autoCompactPercent != null
           ) "--set CLAUDE_AUTOCOMPACT_PCT_OVERRIDE ${builtins.toString autoCompactPercent}";
-        claudeWrapperArgs = sshWrapperArgs ++ autoCompactWrapperArgs;
+        modelVersionWrapperArgs = lib.mapAttrsToList (
+          alias: versions:
+          let
+            version = if modelVersions.${alias} == null then lib.head versions else modelVersions.${alias};
+          in
+          "--set ${modelAliasEnvVars.${alias}} ${modelIdFor alias version}"
+        ) modelVersionsByAlias;
+        claudeWrapperArgs = sshWrapperArgs ++ autoCompactWrapperArgs ++ modelVersionWrapperArgs;
 
         claude-code-wrapped = pkgs.symlinkJoin {
           name = "claude-code-wrapped";
