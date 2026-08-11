@@ -395,9 +395,9 @@ args@{
           meanings = lib.mkOption {
             type = lib.types.attrsOf lib.types.str;
             default = {
-              heart = "I love your last message.";
-              thumbsUp = "I like your last message.";
-              thumbsDown = "I do not like your last message.";
+              heart = "I love your last message. If it was a question, my answer is yes, go ahead.";
+              thumbsUp = "I like your last message and I confirm it. If it was a question, my answer is yes, go ahead.";
+              thumbsDown = "I do not like your last message and I reject it. If it was a question, my answer is no, do not do it.";
               sad = "Your last message makes me sad.";
               crying = "Your last message makes me cry.";
               fear = "Your last message scares me.";
@@ -408,7 +408,7 @@ args@{
               thanks = "Thank you for your last message.";
               celebrate = "Your last message is worth celebrating.";
               impressed = "Your last message impresses me.";
-              ok = "Your last message is fine with me.";
+              ok = "I confirm your last message. If it was a question, my answer is yes, go ahead.";
               disgust = "Your last message disgusts me.";
               bored = "Your last message bores me.";
               annoyed = "Your last message annoys me.";
