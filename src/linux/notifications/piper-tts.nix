@@ -370,35 +370,38 @@ in
           set -euo pipefail
 
           if [[ $# -lt 3 || $# -gt 4 ]]; then
-              echo "Usage: nx-piper-voice-hash <language> <model> <quality> [revision]" >&2
+              echo "Usage: nx-piper-voice-hash <language> <model> <quality> [ref]" >&2
               echo "Example: nx-piper-voice-hash en_GB alba medium" >&2
-              echo "Without a revision the current head revision is resolved and pinned." >&2
+              echo "The ref may be a branch, tag or short commit and defaults to main." >&2
+              echo "It is always resolved to a full commit revision before pinning." >&2
               exit 1
           fi
 
           LANGUAGE="$1"
           MODEL="$2"
           QUALITY="$3"
-          REVISION="''${4:-}"
+          REF="''${4:-main}"
           BASE_URL="${baseUrl}"
 
-          if [[ -z "$REVISION" ]]; then
+          if [[ "$REF" =~ ^[0-9a-f]{40}$ ]]; then
+              REVISION="$REF"
+          else
               case "$BASE_URL" in
                   https://huggingface.co/*)
                       REPO_ID="''${BASE_URL#https://huggingface.co/}"
                       ;;
                   *)
-                      echo "Cannot resolve a head revision for $BASE_URL, pass one explicitly!" >&2
+                      echo "Cannot resolve refs for $BASE_URL, pass a full commit revision!" >&2
                       exit 1
                       ;;
               esac
               REVISION=$(${helpers.packageFile args pkgs.curl "bin/curl"} -fsSL \
-                  "https://huggingface.co/api/models/''${REPO_ID}" \
-                  | ${helpers.packageFile args pkgs.jq "bin/jq"} -r '.sha')
+                  "https://huggingface.co/api/models/''${REPO_ID}/revision/''${REF}" \
+                  | ${helpers.packageFile args pkgs.jq "bin/jq"} -r '.sha // empty')
           fi
 
-          if [[ -z "$REVISION" || "$REVISION" == "null" ]]; then
-              echo "Failed to resolve a revision for $BASE_URL!" >&2
+          if [[ ! "$REVISION" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Failed to resolve ref $REF in $BASE_URL to a full commit revision!" >&2
               exit 1
           fi
 
