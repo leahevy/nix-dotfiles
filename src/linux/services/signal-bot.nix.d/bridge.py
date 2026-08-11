@@ -124,6 +124,7 @@ REQUIRED_CONFIG_KEYS = (
 REQUIRED_REACTION_KEYS = (
     "enable",
     "target_max_age_seconds",
+    "target_max_messages",
     "instruction",
     "instruction_template",
     "prompt_template",
@@ -1760,10 +1761,11 @@ def follow_up_window(cfg):
 
 
 class ConversationTracker:
-    def __init__(self, limit, follow_up_window, max_messages):
+    def __init__(self, limit, follow_up_window, max_messages, reactable_messages):
         self.limit = limit
         self.follow_up_window = follow_up_window
         self.max_messages = max_messages
+        self.reactable_messages = reactable_messages
         self.lock = threading.Lock()
         self.by_quote = {}
         self.quote_order = []
@@ -1895,25 +1897,28 @@ class ConversationTracker:
         if target_key is None or not timestamps:
             return
         with self.lock:
-            self.reactable[target_key] = (
-                set(timestamps),
-                conversation_id,
-                text,
-                time.monotonic(),
-            )
+            entries = self.reactable.setdefault(target_key, [])
+            entries.append((set(timestamps), conversation_id, text, time.monotonic()))
+            del entries[: -self.reactable_messages]
 
     def claim_reactable(self, target_keys, timestamp, max_age):
         if timestamp is None:
             return None
         with self.lock:
             for key in target_keys:
-                entry = self.reactable.get(key)
-                if entry is None or timestamp not in entry[0]:
+                entries = self.reactable.get(key)
+                if not entries:
                     continue
-                del self.reactable[key]
-                if time.monotonic() - entry[3] > max_age:
-                    return None
-                return entry[1], entry[2]
+                for index, entry in enumerate(entries):
+                    if timestamp not in entry[0]:
+                        continue
+                    del entries[index]
+                    if not entries:
+                        del self.reactable[key]
+                    age = time.monotonic() - entry[3]
+                    if age > max_age:
+                        return None
+                    return entry[1], entry[2], age
         return None
 
     def recent_notice(self, target_keys):
@@ -2258,6 +2263,7 @@ def serve(cfg):
         CONVERSATION_HISTORY_LIMIT,
         lambda: follow_up_window(cfg),
         cfg["context_max_messages"],
+        reactions_config["target_max_messages"],
     )
     group_activity = GroupActivity()
 
@@ -2491,8 +2497,10 @@ def serve(cfg):
         )
         if claimed is None:
             return
-        conversation_id, reacted_text = claimed
+        conversation_id, reacted_text, target_age = claimed
 
+        if target_age > ha_session_seconds:
+            conversation_id = None
         if conversation_id is None:
             conversation_id = conversations.resolve_thread(
                 thread_key, ha_session_seconds

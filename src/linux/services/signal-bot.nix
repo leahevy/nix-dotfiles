@@ -226,7 +226,13 @@ args@{
           targetMaxAgeSeconds = lib.mkOption {
             type = lib.types.ints.positive;
             default = 3600;
-            description = "Seconds after which the most recent message of the bot stops accepting reactions.";
+            description = "Seconds after which a message of the bot stops accepting reactions.";
+          };
+
+          targetMaxMessages = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 10;
+            description = "Number of recent messages of the bot per chat that keep accepting reactions, older ones stop accepting them even within targetMaxAgeSeconds.";
           };
 
           instruction = lib.mkOption {
@@ -1091,6 +1097,7 @@ args@{
               reactions = {
                 enable = reactions.enable;
                 target_max_age_seconds = reactions.targetMaxAgeSeconds;
+                target_max_messages = reactions.targetMaxMessages;
                 instruction = reactions.instruction;
                 instruction_template = reactions.instructionTemplate;
                 prompt_template = reactions.promptTemplate;
