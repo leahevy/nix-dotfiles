@@ -156,6 +156,8 @@ REQUIRED_GROUP_FILTER_KEYS = (
     "agent_id",
     "instruction",
     "prompt_template",
+    "context_messages",
+    "context_template",
     "silent_answers",
 )
 
@@ -1710,6 +1712,18 @@ def contains_tool_call_artifact(speech):
     return isinstance(speech, str) and TOOL_CALL_ARTIFACT_PATTERN.search(speech)
 
 
+def group_filter_context(template, transcript, prompt):
+    values = {"transcript": transcript, "prompt": prompt}
+    try:
+        return template.format(**values)
+    except (KeyError, IndexError):
+        print(
+            "signal-bot: invalid group filter context template, using the default",
+            file=sys.stderr,
+        )
+        return f"[{values['transcript']}]\n{values['prompt']}"
+
+
 def group_filter_prompt(template, instruction, prompt):
     if not instruction:
         return prompt
@@ -2435,6 +2449,7 @@ def serve(cfg):
     typing_delay_seconds = cfg["typing_indicator_delay_seconds"]
     group_filter = cfg["group_filter"]
     group_filter_enabled = bool(group_filter["enable"])
+    group_filter_context_messages = group_filter["context_messages"]
     group_filter_silent = frozenset(
         answer.casefold() for answer in group_filter["silent_answers"]
     )
@@ -3063,13 +3078,28 @@ def serve(cfg):
                 else spoken
             )
             if group_info and group_filter_enabled:
+                filter_prompt = prompt
+                if group_filter_context_messages:
+                    filter_transcript = render_recap(
+                        cfg,
+                        conversations.transcript(thread_key)[
+                            -group_filter_context_messages:
+                        ],
+                        context_max_chars,
+                    )
+                    if filter_transcript:
+                        filter_prompt = group_filter_context(
+                            group_filter["context_template"],
+                            filter_transcript,
+                            filter_prompt,
+                        )
                 verdict, _ = request_ha_conversation(
                     cfg,
                     ha_token,
                     group_filter_prompt(
                         group_filter["prompt_template"],
                         group_filter["instruction"],
-                        prompt,
+                        filter_prompt,
                     ),
                     None,
                     group_filter["agent_id"],

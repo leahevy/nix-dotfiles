@@ -214,6 +214,18 @@ in
             description = "Format of the prompt built for the judgement, with the placeholders {instruction} and {prompt} substituted.";
           };
 
+          contextMessages = lib.mkOption {
+            type = lib.types.ints.unsigned;
+            default = 5;
+            description = "Number of earlier messages shown to the agent for the judgement, zero shows the message alone.";
+          };
+
+          contextTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "[Earlier messages, judge only the message after this block:\n{transcript}]\n{prompt}";
+            description = "Format of the judged message with earlier ones in front, with the placeholders {transcript} and {prompt} substituted.";
+          };
+
           silentAnswers = lib.mkOption {
             type = lib.types.listOf lib.types.str;
             default = [
@@ -1204,6 +1216,8 @@ in
                 inherit (groupFilter) enable instruction;
                 agent_id = if groupFilter.agentId == null then null else "conversation.${groupFilter.agentId}";
                 prompt_template = groupFilter.promptTemplate;
+                context_messages = groupFilter.contextMessages;
+                context_template = groupFilter.contextTemplate;
                 silent_answers = groupFilter.silentAnswers;
               };
               conversation_follow_up_seconds = conversationFollowUpSeconds;
