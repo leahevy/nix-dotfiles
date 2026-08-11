@@ -1431,8 +1431,8 @@ def reaction_instruction(template, instruction):
         return f"[{values['instruction']}]"
 
 
-def reaction_prompt(template, instruction, meaning):
-    values = {"instruction": instruction, "meaning": meaning}
+def reaction_prompt(template, instruction, emoji, meaning):
+    values = {"instruction": instruction, "emoji": emoji or "", "meaning": meaning}
     try:
         return template.format(**values)
     except (KeyError, IndexError):
@@ -1440,7 +1440,7 @@ def reaction_prompt(template, instruction, meaning):
             "signal-bot: invalid reaction prompt template, using the default",
             file=sys.stderr,
         )
-        return f"{values['instruction']} {values['meaning']}"
+        return f"{values['instruction']} {values['emoji']} {values['meaning']}"
 
 
 def reaction_targets_account(reaction, account):
@@ -2513,6 +2513,7 @@ def serve(cfg):
                 reactions_config["instruction_template"],
                 reactions_config["instruction"],
             ),
+            emoji,
             reaction_meaning(reaction_meanings, reactions_config["fallback"], emoji),
         )
         if speaker_label:

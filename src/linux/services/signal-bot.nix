@@ -249,13 +249,13 @@ args@{
 
           promptTemplate = lib.mkOption {
             type = lib.types.str;
-            default = "{instruction} {meaning}";
-            description = "Format of the prompt built from a reaction, with the placeholders {instruction} and {meaning} substituted.";
+            default = "{instruction} {emoji} {meaning}";
+            description = "Format of the prompt built from a reaction, with the placeholders {instruction}, {emoji} and {meaning} substituted.";
           };
 
           fallback = lib.mkOption {
             type = lib.types.str;
-            default = "I reacted to your last message with {emoji}, I am just being silly and making fun of it.";
+            default = "I reacted to your last message like this, I am just being silly and making fun of it.";
             description = "Meaning used for a reaction that no emoji entry covers, written in the first person as if the user had sent it, with the placeholder {emoji} substituted.";
           };
 
