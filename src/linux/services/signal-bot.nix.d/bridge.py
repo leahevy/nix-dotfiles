@@ -22,6 +22,9 @@ GROUP_UPDATE_ATTEMPTS = 3
 GROUP_UPDATE_RETRY_DELAY = 5.0
 HA_AGENT_ERROR_SPEECH = "Error talking to OpenAI"
 HA_AGENT_ERROR_RETRY_DELAYS = (3.0, 10.0)
+TOOL_CALL_ARTIFACT_PATTERN = re.compile(
+    r"multi_tool_use\.parallel|\bfunctions\.[A-Za-z_]\w*\s*\("
+)
 RECIPIENTS_RECHECK_SECONDS = 60.0
 REJECT_LOG_INTERVAL_SECONDS = 60.0
 MAX_MESSAGE_BYTES = 2048
@@ -132,6 +135,7 @@ REQUIRED_MESSAGE_KEYS = (
     "ha_unreachable",
     "ha_unexpected_response",
     "ha_agent_failed",
+    "ha_tool_call_artifact",
     "status_template",
     "status_budget_entry_template",
     "status_account_ok",
@@ -1514,11 +1518,22 @@ def request_ha_conversation(cfg, ha_token, text, conversation_id=None):
     return speech, new_id if isinstance(new_id, str) else None
 
 
+def contains_tool_call_artifact(speech):
+    return isinstance(speech, str) and TOOL_CALL_ARTIFACT_PATTERN.search(speech)
+
+
 def call_ha_conversation(cfg, ha_token, text, conversation_id=None):
     attempts = len(HA_AGENT_ERROR_RETRY_DELAYS) + 1
     for attempt in range(attempts):
         speech, new_id = request_ha_conversation(cfg, ha_token, text, conversation_id)
         if not isinstance(speech, str) or speech.strip() != HA_AGENT_ERROR_SPEECH:
+            if contains_tool_call_artifact(speech):
+                log_error(
+                    "signal-bot: the Home Assistant conversation agent wrote a tool "
+                    "call into its reply instead of running it, the requested action "
+                    "did not happen"
+                )
+                return message_text(cfg, "ha_tool_call_artifact"), new_id
             return speech, new_id
         print(
             f"signal-bot: Home Assistant conversation agent failed on attempt "

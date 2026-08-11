@@ -231,7 +231,7 @@ args@{
 
           instruction = lib.mkOption {
             type = lib.types.str;
-            default = "The user did not write a message, they only reacted to your last message with an emoji. Answer with a very short line or with emoji alone. You can still call tools if the reaction answers a question you asked.";
+            default = "The user did not write a message, they only reacted to your last message with an emoji. If the reaction answers a question you asked, carry out the matching action with your normal tools first. Then reply with one very short sentence or with emoji alone. Never write tool calls, function names or code into your reply.";
             description = "Instruction prepended to the meaning of a reaction so the answer stays short, wrapped by instructionTemplate.";
           };
 
@@ -437,6 +437,12 @@ args@{
             type = lib.types.str;
             default = "Home Assistant is awake, but I am having trouble thinking right now. Please ask me again in a moment.";
             description = "Reply sent when Home Assistant answers but its conversation agent keeps failing after all retries.";
+          };
+
+          haToolCallArtifact = lib.mkOption {
+            type = lib.types.str;
+            default = "Something went wrong in Home Assistant and the action was not carried out. Please ask me for it again.";
+            description = "Reply sent when the conversation agent writes a tool call into its answer instead of running it.";
           };
 
           statusTemplate = lib.mkOption {
@@ -1098,6 +1104,7 @@ args@{
                 ha_unreachable = messages.haUnreachable;
                 ha_unexpected_response = messages.haUnexpectedResponse;
                 ha_agent_failed = messages.haAgentFailed;
+                ha_tool_call_artifact = messages.haToolCallArtifact;
                 status_template = messages.statusTemplate;
                 status_budget_entry_template = messages.statusBudgetEntryTemplate;
                 status_account_ok = messages.statusAccountOk;
