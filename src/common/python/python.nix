@@ -7,6 +7,14 @@ args@{
   self,
   ...
 }:
+let
+  agentProgram = {
+    purpose = "running Python";
+    section = "languages";
+    order = 40;
+    skip = true;
+  };
+in
 {
   name = "python";
 
@@ -36,6 +44,8 @@ args@{
 
   module = {
     enabled = config: {
+      nx.common.dev.agents.programs.python3 = agentProgram;
+
       nx.common.git.git.globalIgnores = [
         "__pycache__/"
         "*.py[cod]"
@@ -50,6 +60,12 @@ args@{
         "coverage.xml"
         "docs/_build/"
       ];
+    };
+
+    disabled = config: {
+      nx.common.dev.agents.programs.python3 = agentProgram // {
+        available = false;
+      };
     };
 
     home =

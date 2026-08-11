@@ -13,6 +13,44 @@ args@{
   input = "build";
 
   module = {
+    enabled = config: {
+      nx.common.dev.agents.programs = {
+        jq = {
+          purpose = "JSON validation and manipulation";
+          order = 10;
+        };
+        yq = {
+          purpose = "YAML, XML, and TOML processing";
+          order = 20;
+        };
+        treefmt = {
+          purpose = "formatting code";
+          requiresFiles = [
+            "treefmt.toml"
+            ".treefmt.toml"
+          ];
+          order = 90;
+        };
+        shellcheck = {
+          purpose = "linting shell scripts";
+          order = 100;
+        };
+        shfmt = {
+          purpose = "formatting and parsing shell scripts";
+          order = 110;
+        };
+        tree = {
+          purpose = "viewing directory structure";
+          order = 130;
+        };
+        pre-commit = {
+          purpose = "running Git hooks";
+          requiresFiles = [ ".pre-commit-config.yaml" ];
+          order = 150;
+        };
+      };
+    };
+
     ifDisabled.common.python.python.home = config: {
       home.packages = [ pkgs.python3 ];
     };

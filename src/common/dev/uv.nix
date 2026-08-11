@@ -7,6 +7,15 @@ args@{
   self,
   ...
 }:
+let
+  agentProgram = {
+    purpose = "Python dependency and environment management";
+    section = "languages";
+    order = 50;
+    skip = true;
+    requiresFiles = [ "uv.lock" ];
+  };
+in
 {
   name = "uv";
 
@@ -14,6 +23,16 @@ args@{
   input = "common";
 
   module = {
+    enabled = config: {
+      nx.common.dev.agents.programs.uv = agentProgram;
+    };
+
+    disabled = config: {
+      nx.common.dev.agents.programs.uv = agentProgram // {
+        available = false;
+      };
+    };
+
     home = config: {
       home.packages = with pkgs; [
         uv

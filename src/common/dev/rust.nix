@@ -7,6 +7,16 @@ args@{
   self,
   ...
 }:
+let
+  agentProgram = {
+    purpose = "building and checking Rust code";
+    section = "languages";
+    order = 30;
+    skip = true;
+    label = "The Rust toolchain";
+    activity = "Rust build or checks";
+  };
+in
 {
   name = "rust";
 
@@ -24,6 +34,16 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.common.dev.agents.programs.cargo = agentProgram;
+    };
+
+    disabled = config: {
+      nx.common.dev.agents.programs.cargo = agentProgram // {
+        available = false;
+      };
+    };
+
     home =
       { config, additionalPackages, ... }:
       {

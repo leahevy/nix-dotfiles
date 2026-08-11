@@ -58,6 +58,12 @@ args@{
       description = "Additional Codex rules to merge in.";
     };
 
+    style = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
+      default = { };
+      description = "Codex-specific personality and response style rules.";
+    };
+
     instructions = lib.mkOption {
       type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
       default = { };
@@ -215,6 +221,7 @@ args@{
           trustedProjects,
           untrustedProjects,
           additionalRules,
+          style,
           instructions,
           skills,
           ...
@@ -253,13 +260,16 @@ args@{
           codex-package =
             if githubEnforceSSH && config.nx.linux.security.yubikey.enable then codex-wrapped else pkgs.codex;
 
-          renderInstructions = self.common.dev.agents.exports.renderInstructions;
+          renderMerged = self.common.dev.agents.exports.renderMerged;
+          renderPrograms = self.common.dev.agents.exports.renderPrograms;
 
-          mergedInstructions = helpers.deepMergeComplex {
-            base = agents.instructions;
-            override = instructions;
-          };
-          instructionsText = renderInstructions mergedInstructions;
+          instructionsText = renderMerged [
+            agents.style
+            style
+            agents.instructions
+            instructions
+            (renderPrograms agents.programs)
+          ];
 
           customInstructionsRaw = lib.concatStringsSep "\n\n" defaultInstructions;
           customInstructions = lib.concatStringsSep "\n\n" (

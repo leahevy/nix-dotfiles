@@ -14,6 +14,12 @@ args@{
   input = "common";
 
   options = {
+    style = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
+      default = { };
+      description = "OpenCode-specific personality and response style rules.";
+    };
+
     instructions = lib.mkOption {
       type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
       default = { };
@@ -98,6 +104,7 @@ args@{
     home =
       {
         config,
+        style,
         instructions,
         skills,
         agents,
@@ -105,13 +112,16 @@ args@{
       }:
       let
         sharedAgents = config.nx.common.dev.agents;
-        renderInstructions = self.common.dev.agents.exports.renderInstructions;
+        renderMerged = self.common.dev.agents.exports.renderMerged;
+        renderPrograms = self.common.dev.agents.exports.renderPrograms;
 
-        mergedInstructions = helpers.deepMergeComplex {
-          base = sharedAgents.instructions;
-          override = instructions;
-        };
-        mergedContext = renderInstructions mergedInstructions;
+        mergedContext = renderMerged [
+          sharedAgents.style
+          style
+          sharedAgents.instructions
+          instructions
+          (renderPrograms sharedAgents.programs)
+        ];
 
         mergedSkills = sharedAgents.skills // skills;
 

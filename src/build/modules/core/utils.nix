@@ -13,6 +13,20 @@ args@{
   input = "build";
 
   module = {
+    enabled = config: {
+      nx.common.dev.agents.programs = {
+        wget = {
+          purpose = "recursive or mirrored downloads";
+          order = 70;
+        };
+        jd = {
+          purpose = "structured JSON diff and patch";
+          attr = "jd-diff-patch";
+          order = 120;
+        };
+      };
+    };
+
     home = config: {
       home.packages = with pkgs; [
         coreutils

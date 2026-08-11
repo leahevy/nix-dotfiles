@@ -7,6 +7,16 @@ args@{
   self,
   ...
 }:
+let
+  agentProgram = {
+    purpose = "building and checking Go code";
+    section = "languages";
+    order = 20;
+    skip = true;
+    label = "The Go toolchain";
+    activity = "Go build or checks";
+  };
+in
 {
   name = "go";
 
@@ -24,6 +34,16 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.common.dev.agents.programs.go = agentProgram;
+    };
+
+    disabled = config: {
+      nx.common.dev.agents.programs.go = agentProgram // {
+        available = false;
+      };
+    };
+
     home =
       { config, additionalPackages, ... }:
       {

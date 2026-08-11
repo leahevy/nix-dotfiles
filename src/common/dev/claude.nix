@@ -43,6 +43,12 @@ in
   unfree = [ "claude-code" ];
 
   options = {
+    style = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
+      default = { };
+      description = "Claude-specific personality and response style rules.";
+    };
+
     instructions = lib.mkOption {
       type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
       default = { };
@@ -122,12 +128,6 @@ in
       type = lib.types.ints.between 1 100;
       default = 80;
       description = "Percentage of the auto-compaction trigger at which the statusline context segment turns red.";
-    };
-
-    caveman = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Instruct Claude to answer in a compressed low-token style.";
     };
 
     model = lib.mkOption {
@@ -313,7 +313,7 @@ in
         autoCompactWindow,
         autoCompactPercent,
         contextWarnPercent,
-        caveman,
+        style,
         model,
         modelVersions,
         effortLevel,
@@ -334,16 +334,22 @@ in
       }:
       let
         sharedAgents = config.nx.common.dev.agents;
-        renderInstructions = self.common.dev.agents.exports.renderInstructions;
-
         tc = config.nx.preferences.theme.colors;
         ansi = color: helpers.hexToAnsiRgb color.html;
 
-        mergedInstructions = helpers.deepMergeComplex {
-          base = sharedAgents.instructions;
-          override = instructions;
-        };
-        mergedContext = renderInstructions mergedInstructions;
+        renderMerged = self.common.dev.agents.exports.renderMerged;
+        renderPrograms = self.common.dev.agents.exports.renderPrograms;
+
+        mergedContext = renderMerged [
+          sharedAgents.instructions
+          instructions
+          (renderPrograms sharedAgents.programs)
+        ];
+        styleText = renderMerged [
+          sharedAgents.style
+          style
+        ];
+        styleEnabled = styleText != "";
 
         mergedSkills = sharedAgents.skills // skills;
 
@@ -354,35 +360,14 @@ in
           if autoCompactPercent == null then 100 else autoCompactPercent
         );
 
-        cavemanOutputStyle = ''
+        nxOutputStyle = ''
           ---
-          name: caveman
-          description: Shortest possible response for the fastest read.
+          name: nx
+          description: Personality and response style rules from the nx agent configuration.
           keep-coding-instructions: true
           ---
 
-          Keep every response as short as the reader needs to act on it immediately. This is a hard constraint, not a preference.
-
-          - Default to 1-3 lines. Go longer only for code, diffs, multi-step lists, or explicit requests for detail.
-          - No preamble. No restating the request. This overrides the standard one-or-two-sentence
-            end-of-turn summary: skip the closing recap of what changed, unless asked.
-          - No politeness, no acknowledgement, no hedging.
-          - No closing offers to help further, no "let me know if..." lines, no restating next steps.
-            Stop the instant the answer is complete.
-          - Sentence fragments over full sentences. Full sentences over paragraphs.
-          - Drop filler words and articles wherever the sentence stays unambiguous.
-          - Say each thing exactly once. Never repeat a point already made this turn.
-          - Assume an expert user. Skip justification, tutorials, and background unless asked.
-          - Don't re-print code, diffs, file contents, or command output already shown by a tool
-            call after the fact; refer to it by name or line number instead.
-          - Exception, no exceptions: code, commands, paths, errors, version numbers, and option
-            names stay exact and complete. Never compress or paraphrase these.
-          - Exception: stay complete and uncompressed for the pre-change disclosure (symptom/goal,
-            root cause, files, expected change), the reason given before a risky or irreversible
-            action or a revert, and a remote-session preview (full diff or content shown before
-            an Edit/Write/Bash call). These are required disclosures, not restating or padding.
-          - Plain ASCII prose only. No arrow or symbol shorthand for words.
-          - If the honest answer is one word or one line, give one word or one line.
+          ${styleText}
         '';
 
         gitUrl = (config.programs.git.settings.url or { });
@@ -645,7 +630,7 @@ in
             autoCompactEnabled = autoCompact;
             inherit model effortLevel;
             agentPushNotifEnabled = notifyEnabled;
-            outputStyle = if caveman then "caveman" else "default";
+            outputStyle = if styleEnabled then "nx" else "default";
             inherit
               alwaysThinkingEnabled
               fileCheckpointingEnabled
@@ -704,7 +689,7 @@ in
               ${value.text}
             ''
           ) mergedAgents;
-          outputStyles = lib.mkIf caveman { caveman = cavemanOutputStyle; };
+          outputStyles = lib.mkIf styleEnabled { nx = nxOutputStyle; };
         };
 
         home = {

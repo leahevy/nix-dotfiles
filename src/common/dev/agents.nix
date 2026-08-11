@@ -41,10 +41,98 @@ args@{
       description = "How much sarcasm and cynicism agents use in their responses, from 0 (none) to 3 (heavy)";
     };
 
+    caveman = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Instruct agents to answer in a compressed low-token style.";
+    };
+
+    style = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
+      default = { };
+      description = "Shared personality and response style rules used by agent tools.";
+    };
+
     instructions = lib.mkOption {
       type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
       default = { };
       description = "Shared instructions used by agent tools.";
+    };
+
+    programs = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule (
+          { name, ... }:
+          {
+            options = {
+              command = lib.mkOption {
+                type = lib.types.str;
+                default = name;
+                description = "Command agents invoke.";
+              };
+              purpose = lib.mkOption {
+                type = lib.types.str;
+                description = "What agents should use the command for.";
+              };
+              section = lib.mkOption {
+                type = lib.types.enum [
+                  "programs"
+                  "languages"
+                ];
+                default = "programs";
+                description = "Instruction section the rule is rendered into.";
+              };
+              order = lib.mkOption {
+                type = lib.types.int;
+                default = 500;
+                description = "Sort order of the rule inside its section.";
+              };
+              available = lib.mkOption {
+                type = lib.types.bool;
+                default = true;
+                description = "Whether the command is installed on this profile.";
+              };
+              attr = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Nixpkgs attribute used for the on-demand fallback, defaults to the command.";
+              };
+              label = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Descriptive name used instead of the bare command in the missing case.";
+              };
+              activity = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Activity agents must skip when the command is missing.";
+              };
+              alsoAvoid = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [ ];
+                description = "Further invocations agents must not use to reach the missing command.";
+              };
+              alternative = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Sentence describing what to do instead when the command is missing.";
+              };
+              requiresFiles = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [ ];
+                description = "Files a project must contain before the command may be used.";
+              };
+              skip = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "Whether agents skip the activity instead of fetching the missing command on demand.";
+              };
+            };
+          }
+        )
+      );
+      default = { };
+      description = "Program availability rules contributed by the modules that own each program.";
     };
 
     skills = lib.mkOption {
@@ -133,8 +221,61 @@ args@{
             ++ map (renderBulletItem (depth + 1)) (builtins.tail item)
           );
     in
-    {
+    rec {
       inherit renderBulletItem;
+      renderPrograms =
+        programs:
+        let
+          quoteList = items: lib.concatStringsSep ", " (map (i: "`${i}`") items);
+          joinFiles = files: lib.concatStringsSep " or " (map (f: "`${f}`") files);
+          subject = p: if p.label != null then "${p.label} (`${p.command}`)" else "`${p.command}`";
+          availableLine =
+            p:
+            if p.requiresFiles != [ ] then
+              "For ${p.purpose}, use the installed `${p.command}`, but only in a project that has ${joinFiles p.requiresFiles}. Do not use `${p.command}` in a project without ${joinFiles p.requiresFiles}."
+            else
+              "For ${p.purpose}, use the installed `${p.command}`.";
+          missingLine =
+            p:
+            if p.alternative != null then
+              "${subject p} is not installed. ${p.alternative}"
+            else if p.skip then
+              let
+                object = if p.activity != null then p.activity else "`${p.command}`";
+                avoidList =
+                  if p.activity != null then
+                    "${quoteList ([ p.command ] ++ p.alsoAvoid)}, or via `nix shell`"
+                  else
+                    "or fetch it via `nix shell`";
+              in
+              "${subject p} is not installed. Do not run ${object} (${avoidList}); skip it instead."
+            else
+              "${subject p} is not installed. For ${p.purpose}, run it on demand via `nix shell nixpkgs#${
+                if p.attr != null then p.attr else p.command
+              } -c ${p.command} ...`.";
+          entries = lib.sort (a: b: if a.order != b.order then a.order < b.order else a.command < b.command) (
+            builtins.attrValues programs
+          );
+          sectionBullets =
+            section:
+            map (p: if p.available then availableLine p else missingLine p) (
+              lib.filter (p: p.section == section) entries
+            );
+        in
+        {
+          "72 - Available Programs" = sectionBullets "programs";
+          "73 - Programming Languages" = sectionBullets "languages";
+        };
+      mergeInstructions =
+        sets:
+        lib.foldl' (
+          acc: set:
+          helpers.deepMergeComplex {
+            base = acc;
+            override = set;
+          }
+        ) { } sets;
+      renderMerged = sets: renderInstructions (mergeInstructions sets);
       renderInstructions =
         instructionsSet:
         let
@@ -174,75 +315,6 @@ args@{
         fishEnabled = config.nx.common.shell.fish.enable or false;
         devenvEnabled = config.nx.common.dev.devenv.enable or false;
 
-        installedPackages = (config.home.packages or [ ]) ++ (config.environment.systemPackages or [ ]);
-        isProgramInstalled = pname: lib.any (p: (p.pname or p.name or "") == pname) installedPackages;
-        programInstalledLine = command: purpose: "For ${purpose}, use the installed `${command}`.";
-        runtimeFileGuardLine =
-          command: purpose: files:
-          let
-            joined = lib.concatStringsSep " or " (map (f: "`${f}`") files);
-          in
-          "For ${purpose}, use the installed `${command}`, but only in a project that has ${joined}. Do not use `${command}` in a project without ${joined}.";
-        mkSkipLine =
-          {
-            command,
-            label ? null,
-            activity ? null,
-            alsoAvoid ? [ ],
-          }:
-          let
-            subject = if label != null then "${label} (`${command}`)" else "`${command}`";
-            object = if activity != null then activity else "`${command}`";
-            avoidList =
-              if activity != null then
-                lib.concatStringsSep ", " (map (c: "`${c}`") ([ command ] ++ alsoAvoid)) + ", or via `nix shell`"
-              else
-                "or fetch it via `nix shell`";
-          in
-          "${subject} is not installed. Do not run ${object} (${avoidList}); skip it instead.";
-        skipLineFor =
-          command: skip: mkSkipLine ({ inherit command; } // (if lib.isAttrs skip then skip else { }));
-        mkProgram =
-          {
-            command,
-            purpose,
-            pname ? command,
-            attr ? null,
-            check ? null,
-            skipIfMissing ? false,
-          }:
-          let
-            pnames = if lib.isList pname then pname else [ pname ];
-            attrName = if attr != null then attr else builtins.head pnames;
-            present = if check != null then check else lib.any isProgramInstalled pnames;
-          in
-          if present then
-            programInstalledLine command purpose
-          else if skipIfMissing != false then
-            skipLineFor command skipIfMissing
-          else
-            "`${command}` is not installed. For ${purpose}, run it on demand via `nix shell nixpkgs#${attrName} -c ${command} ...`.";
-        mkProgramCustom =
-          {
-            command,
-            purpose,
-            whenMissing ? null,
-            pname ? command,
-            check ? null,
-            runtimeFileCheck ? [ ],
-            skipIfMissing ? false,
-          }:
-          let
-            present = if check != null then check else isProgramInstalled pname;
-            presentLine =
-              if runtimeFileCheck != [ ] then
-                runtimeFileGuardLine command purpose runtimeFileCheck
-              else
-                programInstalledLine command purpose;
-            missingLine = if skipIfMissing != false then skipLineFor command skipIfMissing else whenMissing;
-          in
-          if present then presentLine else missingLine;
-
         language = config.nx.common.dev.agents.language;
         languageNames = {
           de = "German";
@@ -269,7 +341,25 @@ args@{
         };
         riskToneBullet = "Drop the tone entirely when reporting a genuine risk (data loss, security issue, destructive command, irreversible action) so the warning cannot be misread as a joke.";
 
-        baseInstructions = {
+        caveman = config.nx.common.dev.agents.caveman;
+        cavemanBullets = [
+          "Keep every response as short as the reader needs to act on it immediately. This is a hard constraint, not a preference."
+          "Default to 1-3 lines. Go longer only for code, diffs, multi-step lists, or explicit requests for detail."
+          "No preamble. No restating the request. This overrides the standard one-or-two-sentence end-of-turn summary: skip the closing recap of what changed, unless asked."
+          "No politeness, no acknowledgement, no hedging."
+          "No closing offers to help further, no \"let me know if...\" lines, no restating next steps. Stop the instant the answer is complete."
+          "Sentence fragments over full sentences. Full sentences over paragraphs."
+          "Drop filler words and articles wherever the sentence stays unambiguous."
+          "Say each thing exactly once. Never repeat a point already made this turn."
+          "Assume an expert user. Skip justification, tutorials, and background unless asked."
+          "Don't re-print code, diffs, file contents, or command output already shown by a tool call after the fact; refer to it by name or line number instead."
+          "Exception, no exceptions: code, commands, paths, errors, version numbers, and option names stay exact and complete. Never compress or paraphrase these."
+          "Exception: stay complete and uncompressed for the pre-change disclosure (symptom/goal, root cause, files, expected change), the reason given before a risky or irreversible action or a revert, and a remote-session preview (full diff or content shown before an Edit/Write/Bash call). These are required disclosures, not restating or padding."
+          "Plain ASCII prose only. No arrow or symbol shorthand for words."
+          "If the honest answer is one word or one line, give one word or one line."
+        ];
+
+        baseStyle = {
           "05 - Language" = lib.optionals (language != "adaptive") [
             "Always answer the user in ${languageName}, regardless of the language the user writes in."
             "This applies even when the code, files, logs, or quoted text you are discussing are in another language; keep quoted material in its original language but write everything you say yourself in ${languageName}."
@@ -280,6 +370,10 @@ args@{
               bullets = sarcasmBullets.${toString sarcasmLevel} or [ ];
             in
             lib.optionals (bullets != [ ]) (bullets ++ [ riskToneBullet ]);
+          "07 - Response Length" = lib.optionals caveman cavemanBullets;
+        };
+
+        baseInstructions = {
           "10 - Work Style" = [
             "Always follow the user's explicit instructions exactly; don't add extra work, refactors, formatting, or \"helpful checks\" unless asked."
             "Before making any code/content changes, state: (a) the symptom/goal, (b) suspected root cause, (c) exact files to change, (d) expected behaviour change."
@@ -338,134 +432,6 @@ args@{
           ]
           ++ lib.optionals diffAliasedToColordiff [
             "`diff` is aliased to `colordiff`, which colorizes output and prints a startup banner that corrupts machine-readable output; call the real diff program with `command diff` (e.g. `command diff a b`)."
-          ];
-          "72 - Available Programs" = [
-            (mkProgram {
-              command = "jq";
-              purpose = "JSON validation and manipulation";
-            })
-            (mkProgram {
-              command = "yq";
-              purpose = "YAML, XML, and TOML processing";
-            })
-            (mkProgram {
-              command = "rg";
-              pname = "ripgrep";
-              attr = "ripgrep";
-              purpose = "fast recursive text search";
-            })
-            (mkProgram {
-              command = "fd";
-              purpose = "fast file finding";
-            })
-            (mkProgram {
-              command = "curl";
-              purpose = "making HTTP requests";
-            })
-            (mkProgram {
-              command = "sqlite3";
-              pname = "sqlite";
-              attr = "sqlite";
-              purpose = "querying SQLite database files";
-            })
-            (mkProgram {
-              command = "wget";
-              purpose = "recursive or mirrored downloads";
-            })
-            (mkProgram {
-              command = "pandoc";
-              pname = "pandoc-cli";
-              attr = "pandoc";
-              purpose = "converting between document formats";
-            })
-            (mkProgram {
-              command = "treefmt";
-              pname = [
-                "nixfmt-tree"
-                "treefmt"
-              ];
-              purpose = "formatting code in a repository that has a treefmt config (e.g. `.treefmt.toml`)";
-            })
-            (mkProgram {
-              command = "shellcheck";
-              pname = "ShellCheck";
-              attr = "shellcheck";
-              purpose = "linting shell scripts";
-            })
-            (mkProgram {
-              command = "shfmt";
-              purpose = "formatting and parsing shell scripts";
-            })
-            (mkProgram {
-              command = "jd";
-              pname = "jd-diff-patch";
-              attr = "jd-diff-patch";
-              purpose = "structured JSON diff and patch";
-            })
-            (mkProgram {
-              command = "tree";
-              purpose = "viewing directory structure";
-            })
-            (mkProgram {
-              command = "just";
-              purpose = "running project tasks in a repository that has a justfile";
-            })
-            (mkProgram {
-              command = "pre-commit";
-              purpose = "running hooks in a repository that has a .pre-commit-config.yaml";
-            })
-            (mkProgramCustom {
-              command = "gh";
-              purpose = "GitHub operations (PRs, issues, releases)";
-              whenMissing = "The GitHub CLI (`gh`) is not installed. To query GitHub, use the REST API directly via `curl` (e.g. `curl https://api.github.com/repos/OWNER/REPO/...`).";
-            })
-          ];
-          "73 - Programming Languages" = [
-            (mkProgramCustom {
-              command = "tsc";
-              pname = "typescript";
-              purpose = "TypeScript type-checking";
-              skipIfMissing = {
-                label = "The TypeScript compiler";
-                activity = "TypeScript type-checking";
-                alsoAvoid = [ "npx tsc" ];
-              };
-            })
-            (mkProgramCustom {
-              command = "go";
-              purpose = "building and checking Go code";
-              skipIfMissing = {
-                label = "The Go toolchain";
-                activity = "Go build or checks";
-              };
-            })
-            (mkProgramCustom {
-              command = "cargo";
-              purpose = "building and checking Rust code";
-              skipIfMissing = {
-                label = "The Rust toolchain";
-                activity = "Rust build or checks";
-              };
-            })
-            (mkProgramCustom {
-              command = "python3";
-              purpose = "running Python";
-              check = config.nx.common.python.python.enable or false;
-              skipIfMissing = true;
-            })
-            (mkProgramCustom {
-              command = "uv";
-              purpose = "Python dependency and environment management";
-              runtimeFileCheck = [ "uv.lock" ];
-              skipIfMissing = true;
-            })
-            (mkProgramCustom {
-              command = "poetry";
-              purpose = "Python dependency and environment management";
-              check = config.nx.common.dev.poetry.enable or false;
-              runtimeFileCheck = [ "poetry.lock" ];
-              skipIfMissing = true;
-            })
           ];
         };
 
@@ -596,6 +562,32 @@ args@{
           if disableTestData then lib.removeAttrs baseAgents [ "hello-world" ] else baseAgents;
       in
       {
+        nx.common.dev.agents.programs = {
+          curl = {
+            purpose = "making HTTP requests";
+            order = 50;
+          };
+          sqlite3 = {
+            purpose = "querying SQLite database files";
+            attr = "sqlite";
+            available = false;
+            order = 60;
+          };
+          pandoc = {
+            purpose = "converting between document formats";
+            available = false;
+            order = 80;
+          };
+          gh = {
+            purpose = "GitHub operations (PRs, issues, releases)";
+            label = "The GitHub CLI";
+            alternative = "To query GitHub, use the REST API directly via `curl` (e.g. `curl https://api.github.com/repos/OWNER/REPO/...`).";
+            available = false;
+            order = 160;
+          };
+        };
+
+        nx.common.dev.agents.style = lib.mkOrder 100 baseStyle;
         nx.common.dev.agents.instructions = lib.mkOrder 100 baseInstructions;
 
         nx.common.dev.agents.skills = lib.mkOrder 100 filteredBaseSkills;

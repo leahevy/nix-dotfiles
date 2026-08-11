@@ -19,6 +19,12 @@ args@{
   ];
 
   options = {
+    style = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
+      default = { };
+      description = "Mistral Vibe-specific style rules merged on top of shared agent style rules.";
+    };
+
     instructions = lib.mkOption {
       type = lib.types.attrsOf (lib.types.listOf helpers.optionsHelpers.recursiveStringListType);
       default = { };
@@ -97,6 +103,7 @@ args@{
     home =
       {
         config,
+        style,
         instructions,
         skills,
         defaultAgent,
@@ -104,13 +111,16 @@ args@{
       }:
       let
         sharedAgents = config.nx.common.dev.agents;
-        renderInstructions = self.common.dev.agents.exports.renderInstructions;
+        renderMerged = self.common.dev.agents.exports.renderMerged;
+        renderPrograms = self.common.dev.agents.exports.renderPrograms;
 
-        mergedInstructions = helpers.deepMergeComplex {
-          base = sharedAgents.instructions;
-          override = instructions;
-        };
-        mergedContext = renderInstructions mergedInstructions;
+        mergedContext = renderMerged [
+          sharedAgents.style
+          style
+          sharedAgents.instructions
+          instructions
+          (renderPrograms sharedAgents.programs)
+        ];
 
         mergedSkills = sharedAgents.skills // skills;
 
