@@ -3091,7 +3091,8 @@ def serve(cfg):
 
         if suppressed:
             print(
-                "signal-bot: the agent decided against answering in the group chat",
+                "signal-bot: the agent decided against answering in the group chat: "
+                f"{reply_text[:200]!r}",
                 file=sys.stderr,
             )
             return
