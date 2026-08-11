@@ -7,6 +7,9 @@ args@{
   self,
   ...
 }:
+let
+  audioPlaceholder = "{audio}";
+in
 {
   name = "signal-bot";
 
@@ -166,10 +169,16 @@ args@{
       description = "Convert a small markdown subset in outbound messages into Signal text styles.";
     };
 
+    instructionTemplate = lib.mkOption {
+      type = lib.types.str;
+      default = "[{instruction}]";
+      description = "Format marking an instruction to the agent as an aside rather than as words of the user, with the placeholder {instruction} substituted, shared by every instruction the bot prepends to a prompt.";
+    };
+
     quoteReplies = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Quote the triggering message when replying in the group chat.";
+      description = "Quote the triggering message when replying in the group chat, a reply to a voice message quotes its transcript there regardless of this setting.";
     };
 
     conversationFollowUpSeconds = lib.mkOption {
@@ -239,12 +248,6 @@ args@{
             type = lib.types.str;
             default = "The user did not write a message, they only reacted to your last message with an emoji. If the reaction answers a question you asked, carry out the matching action with your normal tools first. Then reply with one very short sentence or with emoji alone. Never write tool calls, function names or code into your reply.";
             description = "Instruction prepended to the meaning of a reaction so the answer stays short, wrapped by instructionTemplate.";
-          };
-
-          instructionTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "[{instruction}]";
-            description = "Format marking the instruction as an aside rather than as words of the user, with the placeholder {instruction} substituted.";
           };
 
           promptTemplate = lib.mkOption {
@@ -422,6 +425,56 @@ args@{
       };
       default = { };
       description = "How the bot answers reactions placed on its most recent message.";
+    };
+
+    transcription = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.nullOr lib.types.bool;
+            default = null;
+            description = "Transcribe inbound voice messages with the linux.services.whisper module and answer them like text messages, null follows whether that module is enabled.";
+          };
+
+          maxAttachmentBytes = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 25 * 1024 * 1024;
+            description = "Largest voice message that is transcribed, anything bigger is discarded unheard.";
+          };
+
+          failureMessage = lib.mkOption {
+            type = lib.types.str;
+            default = "Sorry, I could not understand that voice message!";
+            description = "Reply sent when a voice message could not be transcribed.";
+          };
+
+          instruction = lib.mkOption {
+            type = lib.types.str;
+            default = "The user did not type this message, it was transcribed from a voice message and can hold recognition errors. Read a word that makes no sense in context as the word it most likely was, and ask a short question back when the intent stays unclear. Never mention the transcription itself in your reply.";
+            description = "Instruction prepended to a transcript so the answer tolerates recognition errors, wrapped by instructionTemplate.";
+          };
+
+          promptTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{instruction} {transcript}";
+            description = "Format of the prompt built from a transcript, with the placeholders {instruction} and {transcript} substituted.";
+          };
+
+          attachmentRetentionMinutes = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 60;
+            description = "Age in minutes after which the attachment sweeper deletes leftover attachment files.";
+          };
+
+          attachmentMaxBytesTotal = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 512 * 1024 * 1024;
+            description = "Byte budget for the attachment directory, oldest files are deleted first once it is exceeded.";
+          };
+        };
+      };
+      default = { };
+      description = "How the bot handles inbound voice messages and the attachment files they leave behind.";
     };
 
     messages = lib.mkOption {
@@ -1016,6 +1069,7 @@ args@{
           maxSplitMessages,
           boldTitle,
           markdown,
+          instructionTemplate,
           quoteReplies,
           conversationFollowUpSeconds,
           nightFollowUpSeconds,
@@ -1025,6 +1079,7 @@ args@{
           contextMaxMessages,
           contextMaxChars,
           reactions,
+          transcription,
           messages,
           scriptCommands,
           syncIntervalMinutes,
@@ -1041,6 +1096,13 @@ args@{
           senderBudgetFile = "${stateSubDir}/sender-budget.json";
 
           secretPath = name: config.sops.secrets.${name}.path;
+
+          whisperCfg = config.nx.linux.services.whisper;
+          attachmentsDir = "${signalCliDataDir}/attachments";
+          transcriptionActive =
+            if transcription.enable == null then configured && whisperCfg.enable else transcription.enable;
+          transcribeCommand =
+            if whisperCfg.transcribeList == null then [ ] else whisperCfg.transcribeList audioPlaceholder;
 
           bridgeScript = self.file "bridge.py";
           pythonEnv = pkgs.python3.withPackages (ps: [
@@ -1086,6 +1148,7 @@ args@{
               max_split_messages = maxSplitMessages;
               bold_title = boldTitle;
               inherit markdown;
+              instruction_template = instructionTemplate;
               quote_replies = quoteReplies;
               conversation_follow_up_seconds = conversationFollowUpSeconds;
               night_follow_up_seconds = nightFollowUpSeconds;
@@ -1099,13 +1162,25 @@ args@{
                 target_max_age_seconds = reactions.targetMaxAgeSeconds;
                 target_max_messages = reactions.targetMaxMessages;
                 instruction = reactions.instruction;
-                instruction_template = reactions.instructionTemplate;
                 prompt_template = reactions.promptTemplate;
                 fallback = reactions.fallback;
                 emoji = lib.mapAttrs (name: emoji: {
                   inherit emoji;
                   meaning = reactions.meanings.${name} or "";
                 }) reactions.emoji;
+              };
+              transcription = {
+                enable = transcriptionActive;
+                attachments_dir = attachmentsDir;
+                audio_placeholder = audioPlaceholder;
+                transcribe_command = transcribeCommand;
+                ffmpeg = helpers.packageFile args pkgs.ffmpeg-headless "bin/ffmpeg";
+                timeout_seconds = whisperCfg.timeoutSeconds;
+                max_duration_seconds = whisperCfg.maxDurationSeconds;
+                max_attachment_bytes = transcription.maxAttachmentBytes;
+                failure_message = transcription.failureMessage;
+                instruction = transcription.instruction;
+                prompt_template = transcription.promptTemplate;
               };
               messages = {
                 ha_unreachable = messages.haUnreachable;
@@ -1154,6 +1229,37 @@ args@{
               ) scriptCommands;
             }
           );
+
+          attachmentSweeper = pkgs.writeShellScript "nx-signal-bot-sweep-attachments" ''
+            set -euo pipefail
+
+            DIR="${attachmentsDir}"
+            BUDGET=${toString transcription.attachmentMaxBytesTotal}
+
+            if [ ! -d "$DIR" ]; then
+                exit 0
+            fi
+
+            ${pkgs.findutils}/bin/find "$DIR"/ -mindepth 1 -type f \
+                -mmin +${toString transcription.attachmentRetentionMinutes} -delete
+
+            TOTAL=$(${pkgs.findutils}/bin/find "$DIR"/ -mindepth 1 -type f -printf '%s\n' \
+                | ${pkgs.gawk}/bin/awk '{ sum += $1 } END { print sum + 0 }')
+
+            if [ "$TOTAL" -le "$BUDGET" ]; then
+                exit 0
+            fi
+
+            ${pkgs.findutils}/bin/find "$DIR"/ -mindepth 1 -type f -printf '%T@ %s %p\n' \
+                | ${pkgs.coreutils}/bin/sort -n \
+                | while read -r _ SIZE PATH_TO_DELETE; do
+                    if [ "$TOTAL" -le "$BUDGET" ]; then
+                        break
+                    fi
+                    ${pkgs.coreutils}/bin/rm -f -- "$PATH_TO_DELETE"
+                    TOTAL=$((TOTAL - SIZE))
+                done
+          '';
 
           permissionsScript = pkgs.writeShellScript "nx-signal-bot-fix-permissions" ''
             set -euo pipefail
@@ -1355,6 +1461,18 @@ args@{
               assertion = lib.length reactionEmoji == lib.length (lib.unique reactionEmoji);
               message = "linux.services.signal-bot requires every reactions emoji to be used by only one entry!";
             }
+            {
+              assertion = !transcriptionActive || configured;
+              message = "linux.services.signal-bot requires configured to be true for transcription!";
+            }
+            {
+              assertion = !transcriptionActive || whisperCfg.enable;
+              message = "linux.services.signal-bot requires the linux.services.whisper module for transcription!";
+            }
+            {
+              assertion = !transcriptionActive || transcribeCommand != [ ];
+              message = "linux.services.signal-bot got no transcribe command from the linux.services.whisper module!";
+            }
           ];
 
           sops.secrets = lib.mkIf configured (
@@ -1426,7 +1544,9 @@ args@{
               Restart = "always";
               RestartSec = "30";
               ExecStartPre = "${pkgs.coreutils}/bin/test -f ${signalCliDataDir}/data/accounts.json";
-              ExecStart = "${pkgs.signal-cli}/bin/signal-cli --scrub-log --config ${signalCliDataDir} daemon --socket ${socketPath} --receive-mode manual --ignore-attachments --ignore-avatars --ignore-stickers --ignore-stories";
+              ExecStart = "${pkgs.signal-cli}/bin/signal-cli --scrub-log --config ${signalCliDataDir} daemon --socket ${socketPath} --receive-mode manual${
+                lib.optionalString (!transcriptionActive) " --ignore-attachments"
+              } --ignore-avatars --ignore-stickers --ignore-stories";
             };
           };
 
@@ -1441,16 +1561,22 @@ args@{
               StartLimitBurst = 10;
             };
 
-            serviceConfig = hardening // {
-              Type = "simple";
-              User = "signal-bot";
-              Group = "signal-bot";
-              Restart = "always";
-              RestartSec = "30";
-              TimeoutStartSec = "900";
-              ExecStartPre = "${pkgs.util-linux}/bin/flock ${bootstrapLockFile} ${pythonEnv}/bin/python3 ${bridgeScript} bootstrap ${botConfigJson}";
-              ExecStart = "${pythonEnv}/bin/python3 ${bridgeScript} serve ${botConfigJson}";
-            };
+            serviceConfig =
+              hardening
+              // {
+                Type = "simple";
+                User = "signal-bot";
+                Group = "signal-bot";
+                Restart = "always";
+                RestartSec = "30";
+                TimeoutStartSec = "900";
+                ExecStartPre = "${pkgs.util-linux}/bin/flock ${bootstrapLockFile} ${pythonEnv}/bin/python3 ${bridgeScript} bootstrap ${botConfigJson}";
+                ExecStart = "${pythonEnv}/bin/python3 ${bridgeScript} serve ${botConfigJson}";
+              }
+              // lib.optionalAttrs transcriptionActive {
+                Nice = 5;
+                CPUWeight = 50;
+              };
           };
 
           systemd.services.nx-signal-bot-sync = lib.mkIf configured {
@@ -1463,7 +1589,10 @@ args@{
               User = "signal-bot";
               Group = "signal-bot";
               TimeoutStartSec = "900";
-              ExecStart = "${pkgs.util-linux}/bin/flock -n -E 0 ${bootstrapLockFile} ${pythonEnv}/bin/python3 ${bridgeScript} bootstrap ${botConfigJson}";
+              ExecStart = [
+                "${pkgs.util-linux}/bin/flock -n -E 0 ${bootstrapLockFile} ${pythonEnv}/bin/python3 ${bridgeScript} bootstrap ${botConfigJson}"
+              ]
+              ++ lib.optional transcriptionActive "${attachmentSweeper}";
             };
           };
 
@@ -1479,6 +1608,14 @@ args@{
             };
           };
         };
+
+      ifEnabled.linux.services.whisper = {
+        linux.system = config: {
+          users.users.signal-bot.extraGroups = lib.mkIf (
+            config.nx.linux.services.whisper.backend == "server"
+          ) [ config.nx.linux.services.whisper.server.group ];
+        };
+      };
 
       ifEnabled.linux.server.nginx = {
         system =

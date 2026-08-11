@@ -5,7 +5,9 @@ import json
 import os
 import re
 import socket
+import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
@@ -117,7 +119,9 @@ REQUIRED_CONFIG_KEYS = (
     "ha_session_seconds",
     "context_max_messages",
     "context_max_chars",
+    "instruction_template",
     "reactions",
+    "transcription",
     "messages",
 )
 
@@ -126,10 +130,23 @@ REQUIRED_REACTION_KEYS = (
     "target_max_age_seconds",
     "target_max_messages",
     "instruction",
-    "instruction_template",
     "prompt_template",
     "fallback",
     "emoji",
+)
+
+REQUIRED_TRANSCRIPTION_KEYS = (
+    "enable",
+    "attachments_dir",
+    "audio_placeholder",
+    "transcribe_command",
+    "ffmpeg",
+    "timeout_seconds",
+    "max_duration_seconds",
+    "max_attachment_bytes",
+    "failure_message",
+    "instruction",
+    "prompt_template",
 )
 
 REQUIRED_MESSAGE_KEYS = (
@@ -185,6 +202,16 @@ def load_config(path):
         )
     if not isinstance(reactions["emoji"], dict):
         raise SystemExit("signal-bot: the config reaction emoji are not an object!")
+    transcription = cfg["transcription"]
+    if not isinstance(transcription, dict):
+        raise SystemExit("signal-bot: the config transcription is not an object!")
+    missing = [key for key in REQUIRED_TRANSCRIPTION_KEYS if key not in transcription]
+    if missing:
+        raise SystemExit(
+            f"signal-bot: the config transcription is missing {', '.join(missing)}!"
+        )
+    if transcription["enable"] and not transcription["transcribe_command"]:
+        raise SystemExit("signal-bot: the config transcription has no command!")
     return cfg
 
 
@@ -1419,13 +1446,13 @@ def reaction_meaning(meanings, fallback, emoji):
         return meaning
 
 
-def reaction_instruction(template, instruction):
+def wrap_instruction(template, instruction):
     values = {"instruction": instruction}
     try:
         return template.format(**values)
     except (KeyError, IndexError):
         print(
-            "signal-bot: invalid reaction instruction template, using the default",
+            "signal-bot: invalid instruction template, using the default",
             file=sys.stderr,
         )
         return f"[{values['instruction']}]"
@@ -1441,6 +1468,130 @@ def reaction_prompt(template, instruction, emoji, meaning):
             file=sys.stderr,
         )
         return f"{values['instruction']} {values['emoji']} {values['meaning']}"
+
+
+def transcription_prompt(template, instruction, transcript):
+    values = {"instruction": instruction, "transcript": transcript}
+    try:
+        return template.format(**values)
+    except (KeyError, IndexError):
+        print(
+            "signal-bot: invalid transcription prompt template, using the default",
+            file=sys.stderr,
+        )
+        return f"{values['instruction']} {values['transcript']}"
+
+
+def attachment_file(attachments_dir, attachment):
+    name = attachment.get("id")
+    if not isinstance(name, str) or not name or os.sep in name:
+        return None
+    path = os.path.realpath(os.path.join(attachments_dir, name))
+    root = os.path.realpath(attachments_dir) + os.sep
+    if not path.startswith(root):
+        print(
+            "signal-bot: rejecting an attachment outside its directory", file=sys.stderr
+        )
+        return None
+    return path
+
+
+def discard_attachment(attachments_dir, attachment):
+    path = attachment_file(attachments_dir, attachment)
+    if path is None:
+        return
+    for candidate in (path, f"{path}.preview"):
+        try:
+            os.unlink(candidate)
+        except FileNotFoundError:
+            pass
+        except OSError as e:
+            print(f"signal-bot: cannot delete {candidate}: {e}", file=sys.stderr)
+
+
+def is_voice_note(attachment):
+    return bool(attachment.get("voiceNote"))
+
+
+def select_voice_note(attachments):
+    for attachment in attachments:
+        if isinstance(attachment, dict) and is_voice_note(attachment):
+            return attachment
+    return None
+
+
+def run_transcription_step(argv, timeout, label):
+    try:
+        result = subprocess.run(
+            argv,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=timeout,
+            start_new_session=True,
+        )
+    except subprocess.TimeoutExpired:
+        print(f"signal-bot: {label} timed out after {timeout}s", file=sys.stderr)
+        return None
+    except OSError as e:
+        print(f"signal-bot: cannot run {label}: {e}", file=sys.stderr)
+        return None
+    if result.returncode != 0:
+        details = result.stderr.decode("utf-8", "replace").strip().splitlines()
+        print(
+            f"signal-bot: {label} failed: {details[-1] if details else result.returncode}",
+            file=sys.stderr,
+        )
+        return None
+    return result.stdout
+
+
+def transcribe_audio(transcription_config, source):
+    timeout = transcription_config["timeout_seconds"]
+    placeholder = transcription_config["audio_placeholder"]
+    with tempfile.TemporaryDirectory() as workdir:
+        wav = os.path.join(workdir, "audio.wav")
+        if (
+            run_transcription_step(
+                [
+                    transcription_config["ffmpeg"],
+                    "-nostdin",
+                    "-loglevel",
+                    "error",
+                    "-i",
+                    source,
+                    "-t",
+                    str(transcription_config["max_duration_seconds"]),
+                    "-ar",
+                    "16000",
+                    "-ac",
+                    "1",
+                    "-c:a",
+                    "pcm_s16le",
+                    "-f",
+                    "wav",
+                    wav,
+                ],
+                timeout,
+                "the audio transcode",
+            )
+            is None
+        ):
+            return None
+        stdout = run_transcription_step(
+            [
+                part.replace(placeholder, wav)
+                for part in transcription_config["transcribe_command"]
+            ],
+            timeout,
+            "the transcription",
+        )
+    if stdout is None:
+        return None
+    transcript = " ".join(stdout.decode("utf-8", "replace").split())
+    if not transcript:
+        print("signal-bot: the transcription came back empty", file=sys.stderr)
+        return None
+    return transcript
 
 
 def reaction_targets_account(reaction, account):
@@ -2227,9 +2378,13 @@ def serve(cfg):
     ha_session_seconds = cfg["ha_session_seconds"]
     context_max_chars = cfg["context_max_chars"]
     max_split_messages = cfg["max_split_messages"]
+    instruction_template = cfg["instruction_template"]
     reactions_config = cfg["reactions"]
     reactions_enabled = bool(reactions_config["enable"])
     reaction_meanings = build_reaction_meanings(cfg)
+    transcription_config = cfg["transcription"]
+    transcription_enabled = bool(transcription_config["enable"])
+    attachments_dir = transcription_config["attachments_dir"]
     group_id = read_group_id(cfg["group_id_file"])
     if group_id is None:
         print(
@@ -2509,8 +2664,8 @@ def serve(cfg):
         emoji = reaction.get("emoji")
         prompt = reaction_prompt(
             reactions_config["prompt_template"],
-            reaction_instruction(
-                reactions_config["instruction_template"],
+            wrap_instruction(
+                instruction_template,
                 reactions_config["instruction"],
             ),
             emoji,
@@ -2565,30 +2720,33 @@ def serve(cfg):
         data_message = envelope.get("dataMessage")
         if not data_message:
             return
-        if data_message.get("attachments"):
-            return
+        attachments = [
+            attachment
+            for attachment in (data_message.get("attachments") or [])
+            if isinstance(attachment, dict)
+        ]
+
+        def discard_all_attachments():
+            for attachment in attachments:
+                discard_attachment(attachments_dir, attachment)
+
         source_number = envelope.get("sourceNumber")
         source_uuid = envelope.get("sourceUuid")
         if not is_allowed(source_number, source_uuid):
+            discard_all_attachments()
             return
         text = data_message.get("message")
-        if not text:
-            reaction = data_message.get("reaction")
-            if reactions_enabled and isinstance(reaction, dict):
-                handle_reaction(
-                    envelope, data_message, reaction, source_number, source_uuid
-                )
-            return
-
         timestamp = envelope.get("timestamp") or data_message.get("timestamp")
-        if not is_fresh(timestamp, max_age_seconds):
-            print(
-                f"signal-bot: ignoring an inbound message older than {max_age_seconds}s",
-                file=sys.stderr,
-            )
-            return
-
         sender_key = source_uuid or source_number
+        message_key = f"{sender_key}:{timestamp}"
+        claimed = False
+
+        def claim_message():
+            nonlocal claimed
+            if not claimed:
+                claimed = handled.claim(message_key)
+            return claimed
+
         sender_number = source_number or allowed_uuids.number_for(source_uuid)
         budget_key = sender_number or sender_key
         sender_label = quote_author_label(
@@ -2603,20 +2761,12 @@ def serve(cfg):
         if group_info:
             active_group_id = current_group_id()
             if group_info.get("groupId") != active_group_id:
+                discard_all_attachments()
                 return
             reply_target = {"groupId": active_group_id}
             thread_key = f"group:{active_group_id}"
             speaker_label = sender_label
             notice_keys = [f"group:{active_group_id}"]
-            if quote_replies:
-                reply_quote = build_quote(timestamp, sender_key, text)
-                quote_group_id = active_group_id
-                sequence = params.get(GROUP_SEQUENCE_KEY)
-                quote_baseline = (
-                    sequence
-                    if isinstance(sequence, int)
-                    else group_activity.count(active_group_id)
-                )
         else:
             reply_target = {"recipient": [source_number or source_uuid]}
             thread_key = f"direct:{sender_key}"
@@ -2624,15 +2774,104 @@ def serve(cfg):
                 f"direct:{value}" for value in (sender_number, source_uuid) if value
             ]
 
+        transcribed = False
+        transcription_failed = False
+        if attachments:
+            try:
+                if not transcription_enabled:
+                    return
+                audio = select_voice_note(attachments)
+                if audio is None:
+                    if not text:
+                        return
+                elif not is_fresh(timestamp, max_age_seconds):
+                    print(
+                        f"signal-bot: ignoring a voice message older than {max_age_seconds}s",
+                        file=sys.stderr,
+                    )
+                    return
+                elif not claim_message():
+                    print(
+                        "signal-bot: ignoring a duplicate voice message",
+                        file=sys.stderr,
+                    )
+                    return
+                elif (
+                    audio.get("size", 0) > transcription_config["max_attachment_bytes"]
+                ):
+                    print(
+                        "signal-bot: rejecting a voice message above the size limit",
+                        file=sys.stderr,
+                    )
+                    transcription_failed = True
+                else:
+                    source = attachment_file(attachments_dir, audio)
+                    if source is None:
+                        transcript = None
+                    else:
+                        with typing_indicator(reply_target):
+                            transcript = transcribe_audio(transcription_config, source)
+                    if transcript is None:
+                        transcription_failed = True
+                    else:
+                        transcribed = True
+                        text = "\n".join(
+                            part
+                            for part in (transcript, audio.get("caption"), text)
+                            if part
+                        )
+            finally:
+                discard_all_attachments()
+
+        if transcription_failed:
+            if not enqueue_send(
+                reply_target,
+                transcription_config["failure_message"],
+                None,
+                thread_key=thread_key,
+            ):
+                print(
+                    "signal-bot: reply queue full, dropping a transcription failure",
+                    file=sys.stderr,
+                )
+            return
+
+        if not text:
+            reaction = data_message.get("reaction")
+            if reactions_enabled and isinstance(reaction, dict):
+                handle_reaction(
+                    envelope, data_message, reaction, source_number, source_uuid
+                )
+            return
+
+        if not is_fresh(timestamp, max_age_seconds):
+            print(
+                f"signal-bot: ignoring an inbound message older than {max_age_seconds}s",
+                file=sys.stderr,
+            )
+            return
+
+        if group_info and (quote_replies or transcribed):
+            reply_quote = build_quote(timestamp, sender_key, text)
+            quote_group_id = active_group_id
+            sequence = params.get(GROUP_SEQUENCE_KEY)
+            quote_baseline = (
+                sequence
+                if isinstance(sequence, int)
+                else group_activity.count(active_group_id)
+            )
+
         def current_quote():
             if reply_quote is None:
                 return None
-            if group_activity.count(quote_group_id) == quote_baseline:
+            if (
+                not transcribed
+                and group_activity.count(quote_group_id) == quote_baseline
+            ):
                 return None
             return reply_quote
 
-        message_key = f"{sender_key}:{timestamp}"
-        if not handled.claim(message_key):
+        if not claim_message():
             print("signal-bot: ignoring a duplicate inbound message", file=sys.stderr)
             return
 
@@ -2724,8 +2963,21 @@ def serve(cfg):
                 if conversation_id is None and not recap and not quoted:
                     quoted = conversations.recent_notice(notice_keys)
                     author = message_text(cfg, "quote_context_bot")
+            spoken = (
+                transcription_prompt(
+                    transcription_config["prompt_template"],
+                    wrap_instruction(
+                        instruction_template, transcription_config["instruction"]
+                    ),
+                    text,
+                )
+                if transcribed
+                else text
+            )
             prompt = (
-                with_group_speaker(cfg, speaker_label, text) if speaker_label else text
+                with_group_speaker(cfg, speaker_label, spoken)
+                if speaker_label
+                else spoken
             )
             if quoted:
                 prompt = with_quote_context(cfg, author, quoted, prompt)
@@ -2775,6 +3027,8 @@ def serve(cfg):
     def is_command_message(payload):
         data_message = payload.get("envelope", {}).get("dataMessage")
         if not isinstance(data_message, dict):
+            return False
+        if data_message.get("attachments"):
             return False
         text = data_message.get("message")
         if not isinstance(text, str) or not text.startswith("/"):

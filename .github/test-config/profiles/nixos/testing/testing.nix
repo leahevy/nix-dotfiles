@@ -104,6 +104,12 @@
             disableEsclBackend = true;
             disablePixmaBackend = true;
           };
+          whisper = {
+            model = "tiny";
+            backend = "oneshot";
+            threads = 2;
+            maxDurationSeconds = 120;
+          };
         };
         monitoring = {
           journal-watcher = {
