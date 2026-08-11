@@ -20,6 +20,7 @@ let
     {
       cachix.enable = false;
       dotenv.disableHint = true;
+      devenv.warnOnNewVersion = false;
 
       overlays = [
         (final: prev: {
