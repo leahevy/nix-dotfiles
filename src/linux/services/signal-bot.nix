@@ -129,13 +129,13 @@ in
 
     budgetInputChars = lib.mkOption {
       type = lib.types.ints.positive;
-      default = 1000;
+      default = 3000;
       description = "Number of characters of an incoming message that count as one unit of the daily sender budget.";
     };
 
     budgetOutputChars = lib.mkOption {
       type = lib.types.ints.positive;
-      default = 250;
+      default = 750;
       description = "Number of characters of a triggered reply that count as one unit of the daily sender budget.";
     };
 
@@ -201,13 +201,13 @@ in
 
     contextMaxMessages = lib.mkOption {
       type = lib.types.ints.positive;
-      default = 12;
+      default = 24;
       description = "Maximum number of earlier messages kept per conversation for the recap.";
     };
 
     contextMaxChars = lib.mkOption {
       type = lib.types.ints.positive;
-      default = 2000;
+      default = 6000;
       description = "Maximum number of characters of the recap prepended to a prompt.";
     };
 
