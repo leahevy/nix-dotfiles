@@ -112,6 +112,7 @@ REQUIRED_CONFIG_KEYS = (
     "bold_title",
     "markdown",
     "quote_replies",
+    "typing_indicator_delay_seconds",
     "no_reply_marker",
     "no_reply_instruction",
     "no_reply_prompt_template",
@@ -2417,6 +2418,7 @@ def serve(cfg):
     ha_token = require_secret(cfg["ha_token_file"], "Home Assistant token")
     max_age_seconds = cfg["inbound_max_age_seconds"]
     quote_replies = cfg["quote_replies"]
+    typing_delay_seconds = cfg["typing_indicator_delay_seconds"]
     no_reply_matcher = no_reply_pattern(cfg["no_reply_marker"])
     no_reply_instruction = (
         wrap_instruction(
@@ -2593,17 +2595,21 @@ def serve(cfg):
             )
 
     @contextlib.contextmanager
-    def typing_indicator(reply_target):
-        send_typing(reply_target)
+    def typing_indicator(reply_target, delay=0.0):
         done = threading.Event()
+        announced = threading.Event()
 
         def refresh():
             try:
-                delay = TYPING_REFRESH_SECONDS
-                while not done.wait(delay):
+                if delay and done.wait(delay):
+                    return
+                send_typing(reply_target)
+                announced.set()
+                wait = TYPING_REFRESH_SECONDS
+                while not done.wait(wait):
                     started = time.monotonic()
                     send_typing(reply_target)
-                    delay = max(
+                    wait = max(
                         0.0, TYPING_REFRESH_SECONDS - (time.monotonic() - started)
                     )
             except Exception as e:
@@ -2620,7 +2626,8 @@ def serve(cfg):
         finally:
             done.set()
             refresher.join(timeout=TYPING_REFRESH_SECONDS)
-            send_typing(reply_target, stop=True)
+            if announced.is_set():
+                send_typing(reply_target, stop=True)
 
     script_commands = cfg.get("script_commands") or {}
     script_shortcuts = {
@@ -3054,7 +3061,7 @@ def serve(cfg):
                 )
             conversations.remember_turn(thread_key, sender_label, text)
 
-            with typing_indicator(reply_target):
+            with typing_indicator(reply_target, typing_delay_seconds):
                 reply_text, new_conversation_id = call_ha_conversation(
                     cfg, ha_token, prompt, conversation_id
                 )

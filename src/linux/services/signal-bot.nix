@@ -181,6 +181,12 @@ in
       description = "Quote the triggering message when replying in the group chat, a reply to a transcribed audio message always quotes its transcript in every chat regardless of this setting.";
     };
 
+    typingIndicatorDelaySeconds = lib.mkOption {
+      type = lib.types.ints.unsigned;
+      default = 3;
+      description = "Seconds to wait before showing the typing indicator so quick replies stay silent, zero shows it immediately.";
+    };
+
     noReplyMarker = lib.mkOption {
       type = lib.types.str;
       default = "NO_REPLY";
@@ -1089,6 +1095,7 @@ in
           markdown,
           instructionTemplate,
           quoteReplies,
+          typingIndicatorDelaySeconds,
           noReplyMarker,
           noReplyInstruction,
           noReplyPromptTemplate,
@@ -1171,6 +1178,7 @@ in
               inherit markdown;
               instruction_template = instructionTemplate;
               quote_replies = quoteReplies;
+              typing_indicator_delay_seconds = typingIndicatorDelaySeconds;
               no_reply_marker = noReplyMarker;
               no_reply_instruction = noReplyInstruction;
               no_reply_prompt_template = noReplyPromptTemplate;
