@@ -67,6 +67,10 @@ CONTACT_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9._-]*$")
 E164_DIGITS = "0123456789"
 E164_MIN_DIGITS = 7
 E164_MAX_DIGITS = 15
+EMOJI_VARIATION_SELECTORS = ("\ufe0e", "\ufe0f")
+EMOJI_SKIN_TONE_FIRST = "\U0001f3fb"
+EMOJI_SKIN_TONE_LAST = "\U0001f3ff"
+EMOJI_ZWJ = "\u200d"
 
 
 REQUIRED_CONFIG_KEYS = (
@@ -110,7 +114,18 @@ REQUIRED_CONFIG_KEYS = (
     "ha_session_seconds",
     "context_max_messages",
     "context_max_chars",
+    "reactions",
     "messages",
+)
+
+REQUIRED_REACTION_KEYS = (
+    "enable",
+    "target_max_age_seconds",
+    "instruction",
+    "instruction_template",
+    "prompt_template",
+    "fallback",
+    "emoji",
 )
 
 REQUIRED_MESSAGE_KEYS = (
@@ -155,6 +170,16 @@ def load_config(path):
         raise SystemExit(
             f"signal-bot: the config messages are missing {', '.join(missing)}!"
         )
+    reactions = cfg["reactions"]
+    if not isinstance(reactions, dict):
+        raise SystemExit("signal-bot: the config reactions are not an object!")
+    missing = [key for key in REQUIRED_REACTION_KEYS if key not in reactions]
+    if missing:
+        raise SystemExit(
+            f"signal-bot: the config reactions are missing {', '.join(missing)}!"
+        )
+    if not isinstance(reactions["emoji"], dict):
+        raise SystemExit("signal-bot: the config reaction emoji are not an object!")
     return cfg
 
 
@@ -1350,6 +1375,76 @@ def with_context_recap(cfg, transcript, text):
         return f"{values['transcript']}\n{values['text']}"
 
 
+def normalize_emoji(value):
+    if not isinstance(value, str):
+        return ""
+    return "".join(
+        char
+        for char in value
+        if char not in EMOJI_VARIATION_SELECTORS
+        and not EMOJI_SKIN_TONE_FIRST <= char <= EMOJI_SKIN_TONE_LAST
+    )
+
+
+def build_reaction_meanings(cfg):
+    meanings = {}
+    for entry in cfg["reactions"]["emoji"].values():
+        if not isinstance(entry, dict):
+            continue
+        meaning = entry.get("meaning")
+        if not isinstance(meaning, str):
+            continue
+        for emoji in entry.get("emoji") or []:
+            key = normalize_emoji(emoji)
+            if key:
+                meanings.setdefault(key, meaning)
+    return meanings
+
+
+def reaction_meaning(meanings, fallback, emoji):
+    key = normalize_emoji(emoji)
+    meaning = meanings.get(key)
+    if meaning is None and EMOJI_ZWJ in key:
+        meaning = meanings.get(key.split(EMOJI_ZWJ, 1)[0])
+    if meaning is None:
+        meaning = fallback
+    try:
+        return meaning.format(emoji=emoji or "")
+    except (KeyError, IndexError):
+        return meaning
+
+
+def reaction_instruction(template, instruction):
+    values = {"instruction": instruction}
+    try:
+        return template.format(**values)
+    except (KeyError, IndexError):
+        print(
+            "signal-bot: invalid reaction instruction template, using the default",
+            file=sys.stderr,
+        )
+        return f"[{values['instruction']}]"
+
+
+def reaction_prompt(template, instruction, meaning):
+    values = {"instruction": instruction, "meaning": meaning}
+    try:
+        return template.format(**values)
+    except (KeyError, IndexError):
+        print(
+            "signal-bot: invalid reaction prompt template, using the default",
+            file=sys.stderr,
+        )
+        return f"{values['instruction']} {values['meaning']}"
+
+
+def reaction_targets_account(reaction, account):
+    number = reaction.get("targetAuthorNumber") or reaction.get("targetAuthor")
+    if isinstance(number, str) and number.startswith("+"):
+        return number == account
+    return True
+
+
 def quote_author_label(cfg, contacts_by_number, account, number):
     if number and number == account:
         return message_text(cfg, "quote_context_bot")
@@ -1661,6 +1756,7 @@ class ConversationTracker:
         self.by_notice = {}
         self.notice_order = []
         self.latest_notice = {}
+        self.reactable = {}
 
     def _prune_threads(self):
         now = time.monotonic()
@@ -1778,6 +1874,31 @@ class ConversationTracker:
                 text = self.by_notice.get((key, quote_id))
                 if text is not None:
                     return text
+        return None
+
+    def remember_reactable(self, target_key, timestamps, conversation_id, text):
+        if target_key is None or not timestamps:
+            return
+        with self.lock:
+            self.reactable[target_key] = (
+                set(timestamps),
+                conversation_id,
+                text,
+                time.monotonic(),
+            )
+
+    def claim_reactable(self, target_keys, timestamp, max_age):
+        if timestamp is None:
+            return None
+        with self.lock:
+            for key in target_keys:
+                entry = self.reactable.get(key)
+                if entry is None or timestamp not in entry[0]:
+                    continue
+                del self.reactable[key]
+                if time.monotonic() - entry[3] > max_age:
+                    return None
+                return entry[1], entry[2]
         return None
 
     def recent_notice(self, target_keys):
@@ -1945,15 +2066,16 @@ class SenderBudget:
         self.hits[key] = recent
         self._persist()
 
-    def claim(self, key, text):
+    def claim(self, key, text, notify=True):
         now = time.time()
         cost = len(text) / self.input_chars
         with self.lock:
             recent = self._recent(self.hits.get(key, []), now)
             exhausted = sum(entry[1] for entry in recent) >= self.limit
             if exhausted:
-                first = key not in self.notified
-                self.notified.add(key)
+                first = notify and key not in self.notified
+                if notify:
+                    self.notified.add(key)
                 self.hits[key] = recent
                 self._persist()
             else:
@@ -2085,6 +2207,9 @@ def serve(cfg):
     ha_session_seconds = cfg["ha_session_seconds"]
     context_max_chars = cfg["context_max_chars"]
     max_split_messages = cfg["max_split_messages"]
+    reactions_config = cfg["reactions"]
+    reactions_enabled = bool(reactions_config["enable"])
+    reaction_meanings = build_reaction_meanings(cfg)
     group_id = read_group_id(cfg["group_id_file"])
     if group_id is None:
         print(
@@ -2134,9 +2259,21 @@ def serve(cfg):
             return rpc.call_checked("send", params)
 
     def do_send(job):
-        target, chunks, text_styles, quote, conversation_id, thread_key, notice = job
-        notice_target = notice_key(target) if notice else None
+        (
+            target,
+            chunks,
+            text_styles,
+            quote,
+            conversation_id,
+            thread_key,
+            notice,
+            reactable,
+        ) = job
+        target_key = notice_key(target)
+        notice_target = target_key if notice else None
         sent = 0
+        reactable_timestamps = []
+        reactable_text = ""
         for index, chunk in enumerate(chunks):
             if index:
                 time.sleep(SEND_PACING_SECONDS)
@@ -2163,6 +2300,14 @@ def serve(cfg):
                 conversations.remember_notice(
                     notice_target, sent_timestamp, chunk, index == 0
                 )
+                if sent_timestamp is not None:
+                    reactable_timestamps.append(sent_timestamp)
+                    if not reactable_text:
+                        reactable_text = chunk
+        if reactable:
+            conversations.remember_reactable(
+                target_key, reactable_timestamps, conversation_id, reactable_text
+            )
         return sent
 
     def enqueue_send(
@@ -2174,6 +2319,7 @@ def serve(cfg):
         ranges=None,
         notice=False,
         transcript_key=None,
+        reactable=True,
     ):
         if not isinstance(text, str) or not text.strip():
             print(
@@ -2197,6 +2343,7 @@ def serve(cfg):
                 conversation_id,
                 thread_key,
                 notice,
+                reactable and reactions_enabled,
             )
         )
         if queued and transcript_key:
@@ -2292,6 +2439,103 @@ def serve(cfg):
             )
         return False
 
+    def handle_reaction(envelope, data_message, reaction, source_number, source_uuid):
+        if reaction.get("isRemove") or not reaction_targets_account(reaction, account):
+            return
+        timestamp = envelope.get("timestamp") or data_message.get("timestamp")
+        if not is_fresh(timestamp, max_age_seconds):
+            return
+
+        sender_key = source_uuid or source_number
+        sender_number = source_number or allowed_uuids.number_for(source_uuid)
+        speaker_label = None
+        group_info = data_message.get("groupInfo")
+        if group_info:
+            active_group_id = current_group_id()
+            if group_info.get("groupId") != active_group_id:
+                return
+            reply_target = {"groupId": active_group_id}
+            thread_key = f"group:{active_group_id}"
+            target_keys = [thread_key]
+            speaker_label = quote_author_label(
+                cfg, contacts_by_number, account, sender_number
+            )
+        else:
+            reply_target = {"recipient": [source_number or source_uuid]}
+            thread_key = f"direct:{sender_key}"
+            target_keys = [
+                f"direct:{value}" for value in (sender_number, source_uuid) if value
+            ]
+
+        if not handled.claim(f"reaction:{sender_key}:{timestamp}"):
+            print("signal-bot: ignoring a duplicate reaction", file=sys.stderr)
+            return
+        target_timestamp = reaction.get("targetSentTimestamp")
+        claimed = conversations.claim_reactable(
+            target_keys, target_timestamp, reactions_config["target_max_age_seconds"]
+        )
+        if claimed is None:
+            return
+        conversation_id, reacted_text = claimed
+
+        if conversation_id is None:
+            conversation_id = conversations.resolve_thread(
+                thread_key, ha_session_seconds
+            )
+
+        emoji = reaction.get("emoji")
+        prompt = reaction_prompt(
+            reactions_config["prompt_template"],
+            reaction_instruction(
+                reactions_config["instruction_template"],
+                reactions_config["instruction"],
+            ),
+            reaction_meaning(reaction_meanings, reactions_config["fallback"], emoji),
+        )
+        if speaker_label:
+            prompt = with_group_speaker(cfg, speaker_label, prompt)
+        if conversation_id is None and reacted_text:
+            prompt = with_quote_context(
+                cfg, message_text(cfg, "quote_context_bot"), reacted_text, prompt
+            )
+
+        budget_key = sender_number or sender_key
+        granted, _ = budget.claim(budget_key, prompt, notify=False)
+        if not granted:
+            print(
+                "signal-bot: ignoring a reaction from a sender that reached the daily "
+                "budget",
+                file=sys.stderr,
+            )
+            return
+
+        with typing_indicator(reply_target):
+            reply_text, new_conversation_id = call_ha_conversation(
+                cfg, ha_token, prompt, conversation_id
+            )
+        if new_conversation_id is not None:
+            conversations.remember_thread(thread_key, new_conversation_id)
+        if isinstance(reply_text, str):
+            budget.charge(budget_key, reply_text)
+
+        quote = (
+            build_quote(target_timestamp, account, reacted_text)
+            if quote_replies
+            else None
+        )
+        if not enqueue_send(
+            reply_target,
+            reply_text,
+            new_conversation_id,
+            quote=quote,
+            thread_key=thread_key,
+            reactable=False,
+        ):
+            print(
+                "signal-bot: reply queue full, dropping a reaction reply",
+                file=sys.stderr,
+            )
+
     def handle_receive(params):
         envelope = params.get("envelope", {})
         data_message = envelope.get("dataMessage")
@@ -2301,8 +2545,15 @@ def serve(cfg):
             return
         source_number = envelope.get("sourceNumber")
         source_uuid = envelope.get("sourceUuid")
+        if not is_allowed(source_number, source_uuid):
+            return
         text = data_message.get("message")
-        if not text or not is_allowed(source_number, source_uuid):
+        if not text:
+            reaction = data_message.get("reaction")
+            if reactions_enabled and isinstance(reaction, dict):
+                handle_reaction(
+                    envelope, data_message, reaction, source_number, source_uuid
+                )
             return
 
         timestamp = envelope.get("timestamp") or data_message.get("timestamp")
@@ -2520,7 +2771,14 @@ def serve(cfg):
         inbound_group_id = (
             group_info.get("groupId") if isinstance(group_info, dict) else None
         )
-        if inbound_group_id and inbound_group_id == current_group_id():
+        is_reaction = not envelope["dataMessage"].get("message") and isinstance(
+            envelope["dataMessage"].get("reaction"), dict
+        )
+        if (
+            not is_reaction
+            and inbound_group_id
+            and inbound_group_id == current_group_id()
+        ):
             payload[GROUP_SEQUENCE_KEY] = group_activity.note(inbound_group_id)
         if not is_allowed(envelope.get("sourceNumber"), envelope.get("sourceUuid")):
             rejections.record()

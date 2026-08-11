@@ -214,6 +214,210 @@ args@{
       description = "Local hour at which the night follow up window ends.";
     };
 
+    reactions = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Answer reactions that a contact places on the most recent message of the bot.";
+          };
+
+          targetMaxAgeSeconds = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 3600;
+            description = "Seconds after which the most recent message of the bot stops accepting reactions.";
+          };
+
+          instruction = lib.mkOption {
+            type = lib.types.str;
+            default = "The user did not write a message, they only reacted to your last message with an emoji. Answer with a very short line or with emoji alone. You can still call tools if the reaction answers a question you asked.";
+            description = "Instruction prepended to the meaning of a reaction so the answer stays short, wrapped by instructionTemplate.";
+          };
+
+          instructionTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "[{instruction}]";
+            description = "Format marking the instruction as an aside rather than as words of the user, with the placeholder {instruction} substituted.";
+          };
+
+          promptTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{instruction} {meaning}";
+            description = "Format of the prompt built from a reaction, with the placeholders {instruction} and {meaning} substituted.";
+          };
+
+          fallback = lib.mkOption {
+            type = lib.types.str;
+            default = "I reacted to your last message with {emoji}, I am just being silly and making fun of it.";
+            description = "Meaning used for a reaction that no emoji entry covers, written in the first person as if the user had sent it, with the placeholder {emoji} substituted.";
+          };
+
+          emoji = lib.mkOption {
+            type = lib.types.attrsOf (lib.types.listOf lib.types.str);
+            default = {
+              heart = [
+                "❤️"
+                "🧡"
+                "💛"
+                "💚"
+                "💙"
+                "💜"
+                "🖤"
+                "🤍"
+                "🤎"
+                "💖"
+                "💗"
+                "💓"
+                "💕"
+                "😍"
+                "🥰"
+                "💯"
+              ];
+              thumbsUp = [ "👍" ];
+              thumbsDown = [ "👎" ];
+              sad = [
+                "🙁"
+                "☹️"
+                "😞"
+                "😔"
+                "😟"
+              ];
+              crying = [
+                "😢"
+                "😭"
+                "😥"
+              ];
+              fear = [
+                "😨"
+                "😱"
+                "😰"
+                "😧"
+              ];
+              anger = [
+                "😠"
+                "😡"
+                "🤬"
+                "👿"
+              ];
+              laugh = [
+                "😂"
+                "🤣"
+                "😆"
+                "😅"
+                "😹"
+                "🤭"
+              ];
+              surprise = [
+                "😮"
+                "😲"
+                "😯"
+                "😳"
+                "🤯"
+              ];
+              confused = [
+                "🤔"
+                "😕"
+                "🤨"
+                "🫤"
+                "😶"
+                "😐"
+              ];
+              thanks = [
+                "🙏"
+                "🤗"
+              ];
+              celebrate = [
+                "🎉"
+                "🥳"
+                "🎊"
+                "✨"
+                "🍾"
+                "👏"
+                "🙌"
+              ];
+              impressed = [
+                "🔥"
+                "🤩"
+                "😎"
+                "⭐"
+                "🌟"
+                "💪"
+              ];
+              ok = [
+                "👌"
+                "✅"
+                "☑️"
+                "🆗"
+                "🫡"
+              ];
+              disgust = [
+                "🤢"
+                "🤮"
+                "😖"
+                "😣"
+              ];
+              bored = [
+                "😴"
+                "🥱"
+                "😑"
+              ];
+              annoyed = [
+                "🙄"
+                "😒"
+                "😤"
+              ];
+              playful = [
+                "😉"
+                "😜"
+                "😝"
+                "🤪"
+                "😏"
+              ];
+              kiss = [
+                "😘"
+                "😗"
+                "😙"
+                "😚"
+                "💋"
+              ];
+              unsure = [ "🤷" ];
+            };
+            description = "Emoji carrying each meaning, keyed by a name of your choice, variation selectors and skin tones are ignored when matching.";
+          };
+
+          meanings = lib.mkOption {
+            type = lib.types.attrsOf lib.types.str;
+            default = {
+              heart = "I love your last message.";
+              thumbsUp = "I like your last message.";
+              thumbsDown = "I do not like your last message.";
+              sad = "Your last message makes me sad.";
+              crying = "Your last message makes me cry.";
+              fear = "Your last message scares me.";
+              anger = "Your last message makes me angry.";
+              laugh = "Your last message makes me laugh.";
+              surprise = "Your last message surprises me.";
+              confused = "I do not understand your last message.";
+              thanks = "Thank you for your last message.";
+              celebrate = "Your last message is worth celebrating.";
+              impressed = "Your last message impresses me.";
+              ok = "Your last message is fine with me.";
+              disgust = "Your last message disgusts me.";
+              bored = "Your last message bores me.";
+              annoyed = "Your last message annoys me.";
+              playful = "I am teasing you about your last message.";
+              kiss = "I send you a kiss for your last message.";
+              unsure = "I do not know what to say about your last message.";
+            };
+            description = "Sentence each reaction is turned into, keyed by the same names as emoji, written in the first person as if the user had sent it, with the placeholder {emoji} substituted.";
+          };
+        };
+      };
+      default = { };
+      description = "How the bot answers reactions placed on its most recent message.";
+    };
+
     messages = lib.mkOption {
       type = lib.types.submodule {
         options = {
@@ -808,6 +1012,7 @@ args@{
           haSessionSeconds,
           contextMaxMessages,
           contextMaxChars,
+          reactions,
           messages,
           scriptCommands,
           syncIntervalMinutes,
@@ -877,6 +1082,18 @@ args@{
               ha_session_seconds = haSessionSeconds;
               context_max_messages = contextMaxMessages;
               context_max_chars = contextMaxChars;
+              reactions = {
+                enable = reactions.enable;
+                target_max_age_seconds = reactions.targetMaxAgeSeconds;
+                instruction = reactions.instruction;
+                instruction_template = reactions.instructionTemplate;
+                prompt_template = reactions.promptTemplate;
+                fallback = reactions.fallback;
+                emoji = lib.mapAttrs (name: emoji: {
+                  inherit emoji;
+                  meaning = reactions.meanings.${name} or "";
+                }) reactions.emoji;
+              };
               messages = {
                 ha_unreachable = messages.haUnreachable;
                 ha_unexpected_response = messages.haUnexpectedResponse;
@@ -1015,6 +1232,8 @@ args@{
             lib.mapAttrsToList (_: command: command.shortcut) scriptCommands
           );
 
+          reactionEmoji = lib.concatLists (lib.attrValues reactions.emoji);
+
           tokenUsers = lib.unique ([ self.host.mainUser.username ] ++ additionalUsers);
 
           perUserTokenSecrets = lib.listToAttrs (
@@ -1105,6 +1324,22 @@ args@{
             {
               assertion = lib.length scriptShortcuts == lib.length (lib.unique scriptShortcuts);
               message = "linux.services.signal-bot requires every scriptCommands shortcut to be used by only one command!";
+            }
+            {
+              assertion = lib.attrNames reactions.emoji == lib.attrNames reactions.meanings;
+              message = "linux.services.signal-bot requires reactions emoji and reactions meanings to use exactly the same names!";
+            }
+            {
+              assertion = lib.all (entry: entry != [ ]) (lib.attrValues reactions.emoji);
+              message = "linux.services.signal-bot requires every reactions emoji entry to hold at least one emoji!";
+            }
+            {
+              assertion = lib.all (meaning: meaning != "") (lib.attrValues reactions.meanings);
+              message = "linux.services.signal-bot requires every reactions meaning to be non empty!";
+            }
+            {
+              assertion = lib.length reactionEmoji == lib.length (lib.unique reactionEmoji);
+              message = "linux.services.signal-bot requires every reactions emoji to be used by only one entry!";
             }
           ];
 
