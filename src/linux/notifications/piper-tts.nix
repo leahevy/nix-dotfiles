@@ -139,8 +139,8 @@ in
   options = {
     baseUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://huggingface.co/rhasspy/piper-voices/resolve/main";
-      description = "Base URL under which language/model/quality voice files are hosted";
+      default = "https://huggingface.co/rhasspy/piper-voices";
+      description = "Base repository URL under which language/model/quality voice files are hosted";
     };
 
     voiceModel = lib.mkOption {
@@ -162,6 +162,10 @@ in
             ];
             description = "Piper voice quality tier";
           };
+          revision = lib.mkOption {
+            type = lib.types.str;
+            description = "Full commit revision of the voice repository the files are fetched from";
+          };
           onnxSha256 = lib.mkOption {
             type = lib.types.str;
             description = "sha256 hash of the onnx model file";
@@ -181,6 +185,7 @@ in
         language = "en_GB";
         model = "alba";
         quality = "medium";
+        revision = "ea046e8458f6acd997706d6e6066a022b42f6fb1";
         onnxSha256 = "0fyhdak36wagsvicsrk4qvfdn4888ijcii9jdkcgs28xm326j4s0";
         jsonSha256 = "1x49vmrqr4a5m5y5dasz4rgxdxmz5g3iykk9q8rddkpc08pmm5ma";
       };
@@ -342,7 +347,7 @@ in
 
         langFamily = lib.head (lib.splitString "_" voiceModel.language);
         voiceFileBase = "${voiceModel.language}-${voiceModel.model}-${voiceModel.quality}";
-        onnxUrl = "${baseUrl}/${langFamily}/${voiceModel.language}/${voiceModel.model}/${voiceModel.quality}/${voiceFileBase}.onnx";
+        onnxUrl = "${baseUrl}/resolve/${voiceModel.revision}/${langFamily}/${voiceModel.language}/${voiceModel.model}/${voiceModel.quality}/${voiceFileBase}.onnx";
         jsonUrl = "${onnxUrl}.json";
 
         onnxFile = pkgs.fetchurl {
@@ -364,18 +369,42 @@ in
         nxPiperVoiceHash = pkgs.writeShellScriptBin "nx-piper-voice-hash" ''
           set -euo pipefail
 
-          if [[ $# -ne 3 ]]; then
-              echo "Usage: nx-piper-voice-hash <language> <model> <quality>" >&2
+          if [[ $# -lt 3 || $# -gt 4 ]]; then
+              echo "Usage: nx-piper-voice-hash <language> <model> <quality> [revision]" >&2
               echo "Example: nx-piper-voice-hash en_GB alba medium" >&2
+              echo "Without a revision the current head revision is resolved and pinned." >&2
               exit 1
           fi
 
           LANGUAGE="$1"
           MODEL="$2"
           QUALITY="$3"
+          REVISION="''${4:-}"
+          BASE_URL="${baseUrl}"
+
+          if [[ -z "$REVISION" ]]; then
+              case "$BASE_URL" in
+                  https://huggingface.co/*)
+                      REPO_ID="''${BASE_URL#https://huggingface.co/}"
+                      ;;
+                  *)
+                      echo "Cannot resolve a head revision for $BASE_URL, pass one explicitly!" >&2
+                      exit 1
+                      ;;
+              esac
+              REVISION=$(${helpers.packageFile args pkgs.curl "bin/curl"} -fsSL \
+                  "https://huggingface.co/api/models/''${REPO_ID}" \
+                  | ${helpers.packageFile args pkgs.jq "bin/jq"} -r '.sha')
+          fi
+
+          if [[ -z "$REVISION" || "$REVISION" == "null" ]]; then
+              echo "Failed to resolve a revision for $BASE_URL!" >&2
+              exit 1
+          fi
+
           LANG_FAMILY="''${LANGUAGE%%_*}"
           FILE_BASE="''${LANGUAGE}-''${MODEL}-''${QUALITY}"
-          ONNX_URL="${baseUrl}/''${LANG_FAMILY}/''${LANGUAGE}/''${MODEL}/''${QUALITY}/''${FILE_BASE}.onnx"
+          ONNX_URL="${baseUrl}/resolve/''${REVISION}/''${LANG_FAMILY}/''${LANGUAGE}/''${MODEL}/''${QUALITY}/''${FILE_BASE}.onnx"
           JSON_URL="''${ONNX_URL}.json"
 
           ONNX_SHA256=$(${pkgs.nix}/bin/nix-prefetch-url "$ONNX_URL" 2>/dev/null | ${pkgs.coreutils}/bin/tail -n1)
@@ -386,6 +415,7 @@ in
             language = "$LANGUAGE";
             model = "$MODEL";
             quality = "$QUALITY";
+            revision = "$REVISION";
             onnxSha256 = "$ONNX_SHA256";
             jsonSha256 = "$JSON_SHA256";
           };
