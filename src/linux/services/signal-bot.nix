@@ -252,7 +252,7 @@ in
 
           maybeBudget = lib.mkOption {
             type = lib.types.ints.unsigned;
-            default = 3;
+            default = 5;
             description = "Maximum maybe messages answered within maybeBudgetSeconds per group, zero blocks all maybe answers.";
           };
 
