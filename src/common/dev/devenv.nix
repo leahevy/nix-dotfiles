@@ -1268,7 +1268,8 @@ let
         exit 1
       fi
 
-      cd "$(${pkgs.git}/bin/git rev-parse --show-toplevel)"
+      git_root=$(${pkgs.git}/bin/git rev-parse --show-toplevel)
+      invocation_dir=$(pwd -P)
 
       cmd="$1"
       shift
@@ -1280,7 +1281,36 @@ let
         exit 1
       fi
 
-      if [ "$cmd" != "init" ] && [ "$cmd" != "list" ]; then
+      root=""
+      search_dir="$invocation_dir"
+      while : ; do
+        if [ -d "$search_dir/.dev" ]; then
+          root="$search_dir"
+          break
+        fi
+        [ "$search_dir" = "$git_root" ] && break
+        parent=$(${pkgs.coreutils}/bin/dirname "$search_dir")
+        [ "$parent" = "$search_dir" ] && break
+        search_dir="$parent"
+      done
+
+      if [ -z "$root" ]; then
+        if [ "$cmd" = "init" ] && [ "$invocation_dir" != "$git_root" ] && [ -t 0 ] && [ -t 1 ]; then
+          yellow "dev: create a nested devenv in $invocation_dir instead of the repo root $git_root? [y/N] "
+          reply=""
+          read -r reply </dev/tty || true
+          case "$reply" in
+            [yY]*) root="$invocation_dir" ;;
+            *) root="$git_root" ;;
+          esac
+        else
+          root="$git_root"
+        fi
+      fi
+
+      cd "$root"
+
+      if [ "$cmd" != "init" ] && [ "$cmd" != "list" ] && [ -d .dev ]; then
         stale=0
         if [ -f devenv.nix ]; then
           current_hash=$(${pkgs.coreutils}/bin/sha256sum devenv.nix | ${pkgs.coreutils}/bin/cut -d' ' -f1)
