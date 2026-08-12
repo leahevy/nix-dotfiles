@@ -33,6 +33,18 @@ args@{
         }
         {
           tag = "waybar";
+          string = "Group Properties error: GDBus\.Error:org\.freedesktop\.DBus\.Error\.UnknownObject: No such object path '/MenuBar'";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "waybar";
+          string = "Unable to replace properties on [0-9]+: GDBus\.Error:org\.freedesktop\.DBus\.Error\.UnknownObject: No such object path '/MenuBar'";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "waybar";
           string = "unhandled exception \\(type std::exception\\) in signal handler:";
           user = true;
           unitless = true;
