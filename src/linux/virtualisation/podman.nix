@@ -56,6 +56,24 @@ args@{
     };
 
     linux.enabled = config: {
+      nx.common.dev.agents.programs = {
+        docker = {
+          purpose = "building and running container images from a Dockerfile";
+          requiresFiles = [ "Dockerfile" ];
+          order = 90;
+        };
+        docker-compose = {
+          purpose = "running multi-container projects from a compose file";
+          requiresFiles = [
+            "docker-compose.yml"
+            "docker-compose.yaml"
+            "compose.yml"
+            "compose.yaml"
+          ];
+          order = 91;
+        };
+      };
+
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
           service = "podman.service";
