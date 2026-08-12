@@ -33,6 +33,13 @@ let
   };
 
   modelIdFor = alias: version: "claude-${alias}-${lib.replaceStrings [ "." ] [ "-" ] version}";
+
+  modelVersionPins = {
+    opus = "5";
+    sonnet = "5";
+    haiku = "4.5";
+    fable = "5";
+  };
 in
 {
   name = "claude";
@@ -147,7 +154,7 @@ in
           alias: versions:
           lib.mkOption {
             type = lib.types.nullOr (lib.types.enum versions);
-            default = null;
+            default = modelVersionPins.${alias};
             description = "Version the ${alias} alias resolves to, null selects the newest known version.";
           }
         ) modelVersionsByAlias;
