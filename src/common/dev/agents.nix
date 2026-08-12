@@ -30,6 +30,12 @@ args@{
       description = "Language agents must use when answering the user, or adaptive to follow the user";
     };
 
+    wrapLines = lib.mkOption {
+      type = lib.types.nullOr lib.types.ints.positive;
+      default = 90;
+      description = "If set, instructs the model to wrap its prose at the configured column width";
+    };
+
     sarcasmLevel = lib.mkOption {
       type = lib.types.enum [
         0
@@ -359,6 +365,17 @@ args@{
           "If the honest answer is one word or one line, give one word or one line."
         ];
 
+        wrapLines = config.nx.common.dev.agents.wrapLines;
+        wrapLinesBullets = [
+          "Hard-wrap the prose you write to the user at ${toString wrapLines} columns: insert a real newline before any line would exceed it, rather than relying on the terminal to soft-wrap."
+          "Break at whitespace between words only. Never hyphenate, split, or reflow a token that must stay verbatim: identifiers, paths, commands, flags, URLs, error strings, version numbers. If a single such token is longer than ${toString wrapLines} columns, let that one line overflow."
+          "Count the full rendered line width, including markdown list markers, indentation, and blockquote prefixes. Continuation lines of a bullet or numbered item keep the item's indentation."
+          "This applies only to the chat text you emit. It never applies to anything that lands somewhere else: file contents written or edited, code blocks, diffs, commit messages, tool arguments, or shell commands. Those keep their own line lengths and are copied through unchanged."
+          "Do not rewrap or truncate quoted tool output, logs, or file excerpts to satisfy this. Show them as they are."
+          "Leave table rows unwrapped; a wrapped markdown table stops rendering as a table."
+          "This is a formatting rule only. It does not change what you say, how much you say, or the wording you choose."
+        ];
+
         baseStyle = {
           "05 - Language" = lib.optionals (language != "adaptive") [
             "Always answer the user in ${languageName}, regardless of the language the user writes in."
@@ -371,6 +388,7 @@ args@{
             in
             lib.optionals (bullets != [ ]) (bullets ++ [ riskToneBullet ]);
           "07 - Response Length" = lib.optionals caveman cavemanBullets;
+          "08 - Wrap Lines" = lib.optionals (wrapLines != null) wrapLinesBullets;
         };
 
         baseInstructions = {
