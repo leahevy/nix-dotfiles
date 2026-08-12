@@ -282,7 +282,7 @@ in
             ]
             [
               "Use the TodoWrite tool when:"
-              "A task or plan implementation has more than 3 steps"
+              "A task, plan implementation, or review requires more than 1 step"
               "The work is non-trivial multi-step implementation work, not just a mental plan"
               "Create the list before starting, mark each item completed as soon as it's done, don't batch updates"
             ]
