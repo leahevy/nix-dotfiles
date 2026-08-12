@@ -170,14 +170,16 @@ let
   renderFragmentText =
     language:
     let
-      lines =
-        flattenOptions "" (language.options or { })
-        ++ lib.optional (language ? extraFragmentText) language.extraFragmentText;
+      extraLines = lib.optionals (language ? extraFragmentText) (
+        lib.splitString "\n" (lib.removeSuffix "\n" language.extraFragmentText)
+      );
+      lines = flattenOptions "" (language.options or { }) ++ extraLines;
+      indent = line: if line == "" then "" else "  ${line}";
     in
     ''
       { pkgs, ... }:
       {
-        ${lib.concatStringsSep "\n  " lines}
+      ${lib.concatStringsSep "\n" (map indent lines)}
       }
     '';
 
