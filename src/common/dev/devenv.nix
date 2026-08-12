@@ -1143,6 +1143,15 @@ let
         ${colorHelper}
 
         def main():
+            if os.path.isfile("devenv.nix") and not os.path.isdir(".dev"):
+                print(
+                    red(
+                        "dev: devenv.nix here is not managed by dev (no .dev/). "
+                        "Refusing to reset it. Run `dev init --force` to take it over first!"
+                    ),
+                    file=sys.stderr,
+                )
+                sys.exit(1)
             removed = [path for path in PATHS if remove(path)]
             if not is_git_tracked(".envrc") and remove(".envrc"):
                 removed.append(".envrc")
