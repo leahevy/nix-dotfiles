@@ -29,7 +29,7 @@ args@{
             "treefmt.toml"
             ".treefmt.toml"
           ];
-          order = 90;
+          order = 89;
         };
         shellcheck = {
           purpose = "linting shell scripts";
