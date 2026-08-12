@@ -3181,14 +3181,20 @@ def serve(cfg):
                 )
                 detail = ""
                 if decision == "maybe":
-                    if random.random() * 100 < group_filter_maybe_probability and (
-                        group_filter_maybe_budget.allow(thread_key)
-                    ):
+                    roll = random.random() * 100
+                    roll_passed = roll < group_filter_maybe_probability
+                    if not roll_passed:
+                        decision = "maybe-silent"
+                        reason = "roll"
+                    elif group_filter_maybe_budget.allow(thread_key):
                         decision = "maybe-answer"
+                        reason = "pass"
                     else:
                         decision = "maybe-silent"
+                        reason = "budget"
                     detail = (
-                        f", answer chance {group_filter_maybe_probability}% budget "
+                        f", roll {roll:.1f}/{group_filter_maybe_probability}% "
+                        f"reason {reason} budget "
                         f"{group_filter['maybe_budget']}/"
                         f"{group_filter['maybe_budget_seconds']}s"
                     )
