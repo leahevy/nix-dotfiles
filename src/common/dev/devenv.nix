@@ -392,6 +392,8 @@ let
 
         EXCLUDES = ["devenv.nix", "devenv.yaml", "devenv.lock"]
 
+        MARKER = os.path.join(".dev", "keep-devenv-tracked")
+
 
         ${colorHelper}
 
@@ -444,7 +446,8 @@ let
                     continue
                 if name[:-4] not in config:
                     os.remove(os.path.join(".dev", name))
-            add_git_excludes(EXCLUDES)
+            if not os.path.exists(MARKER):
+                add_git_excludes(EXCLUDES)
             if has_devdir:
                 print(green("dev: updated devenv.nix, devenv.yaml and enabled features"))
             else:
@@ -1025,30 +1028,6 @@ let
       '';
     };
 
-    "ignore-devenv" = {
-      desc = "Exclude devenv files via .git/info/exclude";
-      text = ''
-        import os
-        import subprocess
-        import sys
-
-        ENTRIES = ["devenv.nix", "devenv.yaml", "devenv.lock"]
-
-
-        ${addGitExcludesHelper}
-
-        ${colorHelper}
-
-        def main():
-            add_git_excludes(ENTRIES)
-            print(green("dev: excluded devenv.nix, devenv.yaml, devenv.lock via .git/info/exclude"))
-
-
-        if __name__ == "__main__":
-            main()
-      '';
-    };
-
     "unignore-devenv" = {
       desc = "Remove devenv files from .git/info/exclude";
       text = ''
@@ -1058,6 +1037,8 @@ let
 
         ENTRIES = {"devenv.nix", "devenv.yaml", "devenv.lock"}
 
+        MARKER = os.path.join(".dev", "keep-devenv-tracked")
+
 
         ${gitExcludePathHelper}
 
@@ -1065,16 +1046,23 @@ let
 
         def main():
             path = git_exclude_path()
-            if not os.path.exists(path):
-                print(yellow("dev: nothing to unignore"))
-                return
-            with open(path) as handle:
-                lines = [line.rstrip("\n") for line in handle]
-            kept = [line for line in lines if line not in ENTRIES]
-            with open(path, "w") as handle:
-                for line in kept:
-                    handle.write(line + "\n")
-            print(green("dev: removed devenv.nix, devenv.yaml, devenv.lock from .git/info/exclude"))
+            removed = False
+            if os.path.exists(path):
+                with open(path) as handle:
+                    lines = [line.rstrip("\n") for line in handle]
+                kept = [line for line in lines if line not in ENTRIES]
+                if kept != lines:
+                    with open(path, "w") as handle:
+                        for line in kept:
+                            handle.write(line + "\n")
+                    removed = True
+            os.makedirs(".dev", exist_ok=True)
+            with open(MARKER, "w"):
+                pass
+            if removed:
+                print(green("dev: removed devenv.nix, devenv.yaml, devenv.lock from .git/info/exclude and marked them to stay tracked"))
+            else:
+                print(green("dev: marked devenv.nix, devenv.yaml, devenv.lock to stay tracked"))
 
 
         if __name__ == "__main__":
