@@ -96,6 +96,11 @@ let
         languages.python.uv.enable = true;
         languages.python.uv.sync.enable = true;
       };
+      extraFragmentText = ''
+        enterShell = '''
+          unset NIX_PYTHONPATH
+        ''';
+      '';
       conflict = "poetry";
       adderName = "python";
       version = [
@@ -115,6 +120,11 @@ let
         languages.python.poetry.activate.enable = true;
         languages.python.poetry.install.enable = true;
       };
+      extraFragmentText = ''
+        enterShell = '''
+          unset NIX_PYTHONPATH
+        ''';
+      '';
       conflict = "uv";
       adderName = "python";
       version = [
