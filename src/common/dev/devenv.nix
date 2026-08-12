@@ -85,6 +85,23 @@ let
   envrcTemplate = pkgs.writeText "dev-envrc" ''
     eval "$(devenv direnvrc)"
 
+    watch_dir .dev
+
+    dev_eval_stamp=".devenv/dev-envrc-eval.stamp"
+    dev_eval_hash="$(
+      for f in .dev/*.nix devenv.nix devenv.yaml devenv.lock; do
+        [ -f "$f" ] || continue
+        printf '%s\0' "$f"
+        cat "$f"
+      done | sha256sum | cut -c1-64
+    )"
+    if [ "$dev_eval_hash" != "$(cat "$dev_eval_stamp" 2>/dev/null)" ]; then
+      if devenv shell --refresh-eval-cache -- true; then
+        mkdir -p .devenv
+        printf '%s' "$dev_eval_hash" > "$dev_eval_stamp"
+      fi
+    fi
+
     use devenv
   '';
 
@@ -244,6 +261,55 @@ let
 
     def red(text):
         return _wrap("1;31", text, sys.stderr)
+  '';
+
+  evalCacheHelper = ''
+    STAMP = os.path.join(".devenv", "dev-eval-cache.stamp")
+
+
+    def _inputs_hash():
+        digest = hashlib.sha256()
+        paths = sorted(glob.glob(os.path.join(".dev", "*.nix"))) + [
+            "devenv.nix",
+            "devenv.yaml",
+            "devenv.lock",
+        ]
+        for path in paths:
+            if not os.path.isfile(path):
+                continue
+            digest.update(path.encode())
+            with open(path, "rb") as handle:
+                digest.update(handle.read())
+        return digest.hexdigest()
+
+
+    def _read_stamp():
+        try:
+            with open(STAMP) as handle:
+                return handle.read()
+        except OSError:
+            return None
+
+
+    def _write_stamp(value):
+        try:
+            os.makedirs(os.path.dirname(STAMP), exist_ok=True)
+            with open(STAMP, "w") as handle:
+                handle.write(value)
+        except OSError:
+            pass
+
+
+    def refresh_eval_cache_if_needed():
+        want = _inputs_hash()
+        if want == _read_stamp():
+            return
+        rc = subprocess.run(
+            ["devenv", "shell", "--refresh-eval-cache", "--", "true"]
+        ).returncode
+        if rc != 0:
+            sys.exit(rc)
+        _write_stamp(want)
   '';
 
   gitExcludePathHelper = ''
@@ -551,7 +617,10 @@ let
     shell = {
       desc = "Enter the dev shell";
       text = ''
+        import glob
+        import hashlib
         import os
+        import subprocess
         import sys
 
         FISH_PATH = ${if fishShellPath == null then "None" else "\"${fishShellPath}\""}
@@ -559,10 +628,13 @@ let
 
         ${colorHelper}
 
+        ${evalCacheHelper}
+
         def main():
             if not os.path.isfile("devenv.nix"):
                 print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
                 sys.exit(1)
+            refresh_eval_cache_if_needed()
             if FISH_PATH is not None:
                 os.execvp("devenv", ["devenv", "shell", "--", FISH_PATH])
             else:
@@ -577,11 +649,16 @@ let
     run = {
       desc = "Run a command in the dev shell";
       text = ''
+        import glob
+        import hashlib
         import os
+        import subprocess
         import sys
 
 
         ${colorHelper}
+
+        ${evalCacheHelper}
 
         def main():
             args = sys.argv[1:]
@@ -599,6 +676,7 @@ let
                 cmd = ["bash", "-c", args[1]]
             else:
                 cmd = args
+            refresh_eval_cache_if_needed()
             os.execvp("devenv", ["devenv", "shell", "--"] + cmd)
 
 
