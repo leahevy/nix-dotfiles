@@ -442,7 +442,7 @@ let
                 if lang in FRAGMENTS:
                     write_fragment(lang, version, os.path.join(".dev", lang + ".nix"))
             for name in os.listdir(".dev"):
-                if not name.endswith(".nix") or name in ("devenv.local.nix", "packages.nix"):
+                if not name.endswith(".nix") or name in ("devenv.local.nix", "packages.nix", "env.nix"):
                     continue
                 if name[:-4] not in config:
                     os.remove(os.path.join(".dev", name))
@@ -618,7 +618,7 @@ let
                 sorted(
                     name[:-4]
                     for name in os.listdir(devdir)
-                    if name.endswith(".nix") and name not in ("devenv.local.nix", "packages.nix")
+                    if name.endswith(".nix") and name not in ("devenv.local.nix", "packages.nix", "env.nix")
                 )
                 if os.path.isdir(devdir)
                 else []
@@ -921,6 +921,136 @@ let
       '';
     };
 
+    env = {
+      desc = "Set, unset, or clear environment variables (dev env set/unset/clear)";
+      text = ''
+        import json
+        import os
+        import re
+        import sys
+
+        ENV_JSON = os.path.join(".dev", "env.json")
+        ENV_NIX = os.path.join(".dev", "env.nix")
+        NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+        ${colorHelper}
+
+        def nix_str(value):
+            escaped = (
+                value.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("''${", "\\''${")
+                .replace("\n", "\\n")
+                .replace("\t", "\\t")
+            )
+            return "\"" + escaped + "\""
+
+
+        def load():
+            if not os.path.exists(ENV_JSON):
+                return {}
+            with open(ENV_JSON) as handle:
+                return json.load(handle)
+
+
+        def regenerate(env):
+            if not env:
+                for path in (ENV_JSON, ENV_NIX):
+                    if os.path.exists(path):
+                        os.remove(path)
+                return
+            with open(ENV_JSON, "w") as handle:
+                json.dump(env, handle, indent=2, sort_keys=True)
+                handle.write("\n")
+            lines = ["{ ... }:", "{", "  env = {"]
+            for name in sorted(env):
+                lines.append("    " + name + " = " + nix_str(env[name]) + ";")
+            lines.append("  };")
+            lines.append("}")
+            with open(ENV_NIX, "w") as handle:
+                handle.write("\n".join(lines) + "\n")
+
+
+        def usage():
+            print(red("usage: dev env set <name> <value>"), file=sys.stderr)
+            print(red("       dev env set <name>=<value>..."), file=sys.stderr)
+            print(red("       dev env unset <name>..."), file=sys.stderr)
+            print(red("       dev env clear"), file=sys.stderr)
+            sys.exit(1)
+
+
+        def main():
+            args = sys.argv[1:]
+            action = args[0] if args else None
+            rest = args[1:]
+            pairs = []
+            names = []
+            if action == "set" and rest:
+                if "=" in rest[0]:
+                    for item in rest:
+                        if "=" not in item:
+                            usage()
+                        name, _, value = item.partition("=")
+                        pairs.append((name, value))
+                elif len(rest) == 2:
+                    pairs.append((rest[0], rest[1]))
+                else:
+                    usage()
+                names = [name for name, _ in pairs]
+            elif action == "unset" and rest:
+                names = rest
+            elif action == "clear" and not rest:
+                pass
+            else:
+                usage()
+            invalid = [name for name in names if not NAME_RE.match(name)]
+            if invalid:
+                print(
+                    red("dev: invalid variable name(s): " + ", ".join(invalid) + "!"),
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            if not os.path.isfile("devenv.nix"):
+                print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
+                sys.exit(1)
+            if not os.path.isdir(".dev"):
+                print(
+                    red(
+                        "dev: devenv.nix here is not managed by dev (no .dev/). "
+                        "Run `dev init --force` to take it over first!"
+                    ),
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            os.makedirs(".dev", exist_ok=True)
+            current = load()
+            if action == "set":
+                for name, value in pairs:
+                    current[name] = value
+                    print(green("dev: " + name + " set"))
+                regenerate(current)
+            elif action == "unset":
+                for name in names:
+                    if name in current:
+                        del current[name]
+                        print(green("dev: " + name + " unset"))
+                    else:
+                        print(yellow("dev: " + name + " not set"))
+                regenerate(current)
+            else:
+                if current:
+                    regenerate({})
+                    print(green("dev: cleared all environment variables"))
+                else:
+                    print(yellow("dev: no environment variables set"))
+
+
+        if __name__ == "__main__":
+            main()
+      '';
+    };
+
     edit = {
       desc = "Edit .dev/devenv.local.nix in $EDITOR";
       text = ''
@@ -1190,6 +1320,7 @@ let
         complete -c dev -n "__fish_seen_subcommand_from disable" -a "(dev list 2>/dev/null | string match --invert 'dev:*')" -d "Enabled feature"
         complete -c dev -n "__fish_seen_subcommand_from add" -l lang -a "${addCompletionNames}" -d "Language to add the dependency to"
         complete -c dev -n "__fish_seen_subcommand_from pkg" -a "add remove" -d "Action"
+        complete -c dev -n "__fish_seen_subcommand_from env" -a "set unset clear" -d "Action"
       ''
     );
 
