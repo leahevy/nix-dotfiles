@@ -59,7 +59,7 @@
             groupFilter = {
               enable = true;
               agentId = "testing_group_filter";
-              instruction = "Answer with YES or NO and nothing else.";
+              instruction = "Answer with YES, MAYBE or NO and nothing else.";
             };
             transcription = {
               maxAttachmentBytes = 8388608;

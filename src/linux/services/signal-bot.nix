@@ -234,6 +234,33 @@ in
             ];
             description = "Answers whose first word makes the bot stay silent, anything else is answered normally.";
           };
+
+          maybeAnswers = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [
+              "maybe"
+              "vielleicht"
+            ];
+            description = "Answers whose first word makes the bot stay silent unless a random draw falls below maybeProbability.";
+          };
+
+          maybeProbability = lib.mkOption {
+            type = lib.types.ints.between 0 100;
+            default = 60;
+            description = "Percent chance the bot answers a maybe message, zero always stays silent and hundred always answers.";
+          };
+
+          maybeBudget = lib.mkOption {
+            type = lib.types.ints.unsigned;
+            default = 3;
+            description = "Maximum maybe messages answered within maybeBudgetSeconds per group, zero blocks all maybe answers.";
+          };
+
+          maybeBudgetSeconds = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 900;
+            description = "Length in seconds of the sliding window over which maybeBudget answers are counted.";
+          };
         };
       };
       default = { };
@@ -565,14 +592,26 @@ in
 
           statusTemplate = lib.mkOption {
             type = lib.types.str;
-            default = "signal-cli account data: {account}\nHome Assistant: {homeAssistant}\n\nDaily budget:\n{budget}";
-            description = "Body of the status reply, with the placeholders {account}, {homeAssistant} and {budget} substituted.";
+            default = "{name} status\n\nsignal-cli account data: {account}\nHome Assistant: {homeAssistant}\n\nDaily budget:\n{budget}\n\nMaybe answers: {maybeBudget}";
+            description = "Body of the status reply, with the placeholders {name}, {account}, {homeAssistant}, {budget} and {maybeBudget} substituted.";
           };
 
           statusBudgetEntryTemplate = lib.mkOption {
             type = lib.types.str;
             default = "{contact}: {used} of {limit}";
             description = "Format of a single budget line in the status reply, with the placeholders {contact}, {used} and {limit} substituted.";
+          };
+
+          statusMaybeBudgetTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{remaining} of {limit} left";
+            description = "Format of the maybe budget line in the status reply, with the placeholders {remaining} and {limit} substituted.";
+          };
+
+          statusMaybeBudgetDisabled = lib.mkOption {
+            type = lib.types.str;
+            default = "group filter off";
+            description = "Maybe budget text in the status reply when the group filter is disabled.";
           };
 
           statusAccountOk = lib.mkOption {
@@ -1219,6 +1258,10 @@ in
                 context_messages = groupFilter.contextMessages;
                 context_template = groupFilter.contextTemplate;
                 silent_answers = groupFilter.silentAnswers;
+                maybe_answers = groupFilter.maybeAnswers;
+                maybe_probability = groupFilter.maybeProbability;
+                maybe_budget = groupFilter.maybeBudget;
+                maybe_budget_seconds = groupFilter.maybeBudgetSeconds;
               };
               conversation_follow_up_seconds = conversationFollowUpSeconds;
               night_follow_up_seconds = nightFollowUpSeconds;
@@ -1259,6 +1302,8 @@ in
                 ha_tool_call_artifact = messages.haToolCallArtifact;
                 status_template = messages.statusTemplate;
                 status_budget_entry_template = messages.statusBudgetEntryTemplate;
+                status_maybe_budget_template = messages.statusMaybeBudgetTemplate;
+                status_maybe_budget_disabled = messages.statusMaybeBudgetDisabled;
                 status_account_ok = messages.statusAccountOk;
                 status_account_missing = messages.statusAccountMissing;
                 status_ha_reachable = messages.statusHaReachable;

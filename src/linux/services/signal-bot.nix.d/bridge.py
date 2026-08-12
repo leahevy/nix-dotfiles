@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import os
+import random
 import re
 import socket
 import subprocess
@@ -159,6 +160,10 @@ REQUIRED_GROUP_FILTER_KEYS = (
     "context_messages",
     "context_template",
     "silent_answers",
+    "maybe_answers",
+    "maybe_probability",
+    "maybe_budget",
+    "maybe_budget_seconds",
 )
 
 REQUIRED_MESSAGE_KEYS = (
@@ -168,6 +173,8 @@ REQUIRED_MESSAGE_KEYS = (
     "ha_tool_call_artifact",
     "status_template",
     "status_budget_entry_template",
+    "status_maybe_budget_template",
+    "status_maybe_budget_disabled",
     "status_account_ok",
     "status_account_missing",
     "status_ha_reachable",
@@ -1738,11 +1745,46 @@ def group_filter_prompt(template, instruction, prompt):
         return f"{values['instruction']}\n{values['prompt']}"
 
 
-def group_filter_silence(silent_answers, speech):
+def group_filter_verdict(silent_answers, maybe_answers, speech):
     if not isinstance(speech, str):
-        return False
+        return "answer"
     match = re.search(r"\w+", speech)
-    return match is not None and match.group(0).casefold() in silent_answers
+    if match is None:
+        return "answer"
+    word = match.group(0).casefold()
+    if word in silent_answers:
+        return "silent"
+    if word in maybe_answers:
+        return "maybe"
+    return "answer"
+
+
+class MaybeBudget:
+    def __init__(self, limit, window_seconds):
+        self.limit = limit
+        self.window = window_seconds
+        self.events = {}
+        self.lock = threading.Lock()
+
+    def allow(self, key):
+        if self.limit <= 0:
+            return False
+        now = time.monotonic()
+        with self.lock:
+            stamps = [t for t in self.events.get(key, ()) if now - t < self.window]
+            if len(stamps) >= self.limit:
+                self.events[key] = stamps
+                return False
+            stamps.append(now)
+            self.events[key] = stamps
+            return True
+
+    def remaining(self, key):
+        now = time.monotonic()
+        with self.lock:
+            stamps = [t for t in self.events.get(key, ()) if now - t < self.window]
+            self.events[key] = stamps
+            return max(self.limit - len(stamps), 0)
 
 
 def call_ha_conversation(cfg, ha_token, text, conversation_id=None):
@@ -1881,13 +1923,14 @@ def register_command(name, description_key):
 
 
 @register_command("/status", "help_status_description")
-def cmd_status(cfg, ha_token, account, budget_report):
+def cmd_status(cfg, ha_token, account, budget_report, maybe_report):
     account_ok = not missing_account_files(cfg, account)
     ha_ok = ha_reachable(cfg["ha_url"], ha_token)
     account_key = "status_account_ok" if account_ok else "status_account_missing"
     ha_key = "status_ha_reachable" if ha_ok else "status_ha_unreachable"
     return (
         message_text(cfg, "status_template")
+        .replace("{name}", cfg.get("profile_given_name") or "")
         .replace(
             "{account}", markdown_emphasis(cfg, message_text(cfg, account_key), "**")
         )
@@ -1895,11 +1938,12 @@ def cmd_status(cfg, ha_token, account, budget_report):
             "{homeAssistant}", markdown_emphasis(cfg, message_text(cfg, ha_key), "**")
         )
         .replace("{budget}", budget_report())
+        .replace("{maybeBudget}", maybe_report())
     )
 
 
 @register_command("/help", "help_help_description")
-def cmd_help(cfg, ha_token, account, budget_report):
+def cmd_help(cfg, ha_token, account, budget_report, maybe_report):
     template = message_text(cfg, "help_entry_template")
     entries = {
         name: message_text(cfg, command.description_key)
@@ -1923,11 +1967,11 @@ def cmd_help(cfg, ha_token, account, budget_report):
     )
 
 
-def handle_command(cfg, ha_token, account, text, budget_report):
+def handle_command(cfg, ha_token, account, text, budget_report, maybe_report):
     words = text.strip().split()
     name = words[0] if words else ""
     command = COMMANDS.get(name, COMMANDS["/help"])
-    return command.handler(cfg, ha_token, account, budget_report)
+    return command.handler(cfg, ha_token, account, budget_report, maybe_report)
 
 
 def is_fresh(timestamp_ms, max_age_seconds):
@@ -2452,6 +2496,13 @@ def serve(cfg):
     group_filter_context_messages = group_filter["context_messages"]
     group_filter_silent = frozenset(
         answer.casefold() for answer in group_filter["silent_answers"]
+    )
+    group_filter_maybe = frozenset(
+        answer.casefold() for answer in group_filter["maybe_answers"]
+    )
+    group_filter_maybe_probability = group_filter["maybe_probability"]
+    group_filter_maybe_budget = MaybeBudget(
+        group_filter["maybe_budget"], group_filter["maybe_budget_seconds"]
     )
     ha_session_seconds = cfg["ha_session_seconds"]
     context_max_chars = cfg["context_max_chars"]
@@ -3023,7 +3074,22 @@ def serve(cfg):
                         True,
                     )
         elif text.startswith("/"):
-            reply_text = handle_command(cfg, ha_token, account, text, budget_report)
+
+            def maybe_report():
+                if not group_filter_enabled:
+                    return message_text(cfg, "status_maybe_budget_disabled")
+                return (
+                    message_text(cfg, "status_maybe_budget_template")
+                    .replace(
+                        "{remaining}",
+                        str(group_filter_maybe_budget.remaining(thread_key)),
+                    )
+                    .replace("{limit}", str(group_filter_maybe_budget.limit))
+                )
+
+            reply_text = handle_command(
+                cfg, ha_token, account, text, budget_report, maybe_report
+            )
         else:
             if not claim_budget(
                 budget_key, text, reply_target, current_quote(), thread_key
@@ -3077,6 +3143,12 @@ def serve(cfg):
                 if speaker_label
                 else spoken
             )
+            print(
+                "signal-bot: handling a "
+                + ("group" if group_info else "direct")
+                + " message",
+                file=sys.stderr,
+            )
             if group_info and group_filter_enabled:
                 filter_prompt = prompt
                 if group_filter_context_messages:
@@ -3104,13 +3176,29 @@ def serve(cfg):
                     None,
                     group_filter["agent_id"],
                 )
-                if group_filter_silence(group_filter_silent, verdict):
-                    conversations.remember_turn(thread_key, sender_label, text)
-                    print(
-                        "signal-bot: the group filter judged the message as not meant "
-                        f"for the bot: {verdict[:200]!r}",
-                        file=sys.stderr,
+                decision = group_filter_verdict(
+                    group_filter_silent, group_filter_maybe, verdict
+                )
+                detail = ""
+                if decision == "maybe":
+                    if random.random() * 100 < group_filter_maybe_probability and (
+                        group_filter_maybe_budget.allow(thread_key)
+                    ):
+                        decision = "maybe-answer"
+                    else:
+                        decision = "maybe-silent"
+                    detail = (
+                        f", answer chance {group_filter_maybe_probability}% budget "
+                        f"{group_filter['maybe_budget']}/"
+                        f"{group_filter['maybe_budget_seconds']}s"
                     )
+                print(
+                    "signal-bot: the group filter judged a group message, decision "
+                    f"{decision}{detail}, verdict {verdict[:200]!r}",
+                    file=sys.stderr,
+                )
+                if decision in ("silent", "maybe-silent"):
+                    conversations.remember_turn(thread_key, sender_label, text)
                     return
             if quoted:
                 prompt = with_quote_context(cfg, author, quoted, prompt)
