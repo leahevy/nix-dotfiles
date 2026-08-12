@@ -426,6 +426,10 @@ args@{
             "If the project has no `devenv.nix`, this rule does not apply; follow the other instructions in this file normally."
           ];
 
+          "72 - Available Programs" = [
+            "Never attempt to run `ssh`, `rsync`, or `scp`."
+          ];
+
           "70 - Git" =
             lib.optionals difftasticEnabled [
               "Never run `git diff` without `--no-ext-diff`."
