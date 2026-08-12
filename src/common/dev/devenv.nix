@@ -502,6 +502,15 @@ let
             if not os.path.isfile("devenv.nix"):
                 print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
                 sys.exit(1)
+            if not os.path.isdir(".dev"):
+                print(
+                    red(
+                        "dev: devenv.nix here is not managed by dev (no .dev/). "
+                        "Run `dev init --force` to take it over first!"
+                    ),
+                    file=sys.stderr,
+                )
+                sys.exit(1)
             os.makedirs(".dev", exist_ok=True)
             config = load_config()
             already_enabled = lang in config
@@ -559,6 +568,15 @@ let
                 sys.exit(1)
             if not os.path.isfile("devenv.nix"):
                 print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
+                sys.exit(1)
+            if not os.path.isdir(".dev"):
+                print(
+                    red(
+                        "dev: devenv.nix here is not managed by dev (no .dev/). "
+                        "Run `dev init --force` to take it over first!"
+                    ),
+                    file=sys.stderr,
+                )
                 sys.exit(1)
             lang = args[0]
             dest = os.path.join(".dev", lang + ".nix")
@@ -748,6 +766,15 @@ let
             if not os.path.isfile("devenv.nix"):
                 print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
                 sys.exit(1)
+            if not os.path.isdir(".dev"):
+                print(
+                    red(
+                        "dev: devenv.nix here is not managed by dev (no .dev/). "
+                        "Run `dev init --force` to take it over first!"
+                    ),
+                    file=sys.stderr,
+                )
+                sys.exit(1)
             enabled = [
                 name for name in ADDERS if os.path.exists(os.path.join(".dev", name + ".nix"))
             ]
@@ -857,6 +884,15 @@ let
             if not os.path.isfile("devenv.nix"):
                 print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
                 sys.exit(1)
+            if not os.path.isdir(".dev"):
+                print(
+                    red(
+                        "dev: devenv.nix here is not managed by dev (no .dev/). "
+                        "Run `dev init --force` to take it over first!"
+                    ),
+                    file=sys.stderr,
+                )
+                sys.exit(1)
             os.makedirs(".dev", exist_ok=True)
             current = load()
             if action == "add":
@@ -904,6 +940,15 @@ let
         def main():
             if not os.path.isfile("devenv.nix"):
                 print(red("dev: no devenv.nix here. Run `dev init` first!"), file=sys.stderr)
+                sys.exit(1)
+            if not os.path.isdir(".dev"):
+                print(
+                    red(
+                        "dev: devenv.nix here is not managed by dev (no .dev/). "
+                        "Run `dev init --force` to take it over first!"
+                    ),
+                    file=sys.stderr,
+                )
                 sys.exit(1)
             editor = os.environ.get("EDITOR")
             if not editor:
