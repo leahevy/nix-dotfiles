@@ -300,10 +300,11 @@ in
               "Even with many choices to present, still use this tool: split them across multiple questions rather than skipping it, since each question accepts at most 4 options and a single call accepts at most 4 questions"
             ]
             [
-              "Use the TodoWrite tool when:"
+              "Use the Task tools (TaskCreate, TaskUpdate, TaskGet, TaskList) to track work when:"
               "A task, plan implementation, or review requires more than 1 step"
               "The work is non-trivial multi-step implementation work, not just a mental plan"
-              "Create the list before starting, mark each item completed as soon as it's done, don't batch updates"
+              "TaskCreate adds one pending item, TaskUpdate patches one item by taskId, TaskGet and TaskList read the current list"
+              "Create tasks before starting, set each to in_progress when you begin it and completed as soon as it's done, don't batch updates; delete a task you no longer need with status deleted"
             ]
             [
               "Remote / Mobile Sessions"
