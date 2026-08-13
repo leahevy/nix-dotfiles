@@ -291,6 +291,7 @@ in
             "Batch all changes into as few operations as possible."
             "Don't analyse too much on first feasibility questions to avoid wasting tokens."
             "Keep sub-agents to a minimum."
+            "If a tool call fails only because its approval could not be delivered (a transient approval-path error asking to try again, never a nonzero exit code or other tool error), silently reissue it up to three times before telling the user, and do not print that message."
             [
               "Use the AskUserQuestion tool when:"
               "The user needs to pick between 2-4 distinct implementation approaches"
