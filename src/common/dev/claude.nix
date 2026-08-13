@@ -254,6 +254,25 @@ in
       default = true;
       description = "Enable Remote Control for all sessions at startup.";
     };
+
+    permissionMode = lib.mkOption {
+      type = lib.types.enum [
+        "manual"
+        "acceptEdits"
+        "plan"
+        "dontAsk"
+        "auto"
+        "bypassPermissions"
+      ];
+      default = "manual";
+      description = "Default permission mode Claude Code starts sessions in.";
+    };
+
+    useAutoModeDuringPlan = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Let plan mode use auto mode semantics to auto-approve read-only commands while planning.";
+    };
   };
 
   submodules = {
@@ -335,6 +354,8 @@ in
         awaySummaryEnabled,
         autoScrollEnabled,
         remoteControlAtStartup,
+        permissionMode,
+        useAutoModeDuringPlan,
         voiceModeEnabled,
         defaultVoiceMode,
         ...
@@ -646,7 +667,8 @@ in
               ;
             inherit editorMode askUserQuestionTimeout;
             inherit spinnerTipsEnabled awaySummaryEnabled autoScrollEnabled;
-            inherit remoteControlAtStartup;
+            inherit remoteControlAtStartup useAutoModeDuringPlan;
+            permissions.defaultMode = permissionMode;
           }
           // lib.optionalAttrs voiceModeEnabled {
             voice = {
