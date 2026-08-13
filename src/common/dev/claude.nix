@@ -35,8 +35,8 @@ let
   modelIdFor = alias: version: "claude-${alias}-${lib.replaceStrings [ "." ] [ "-" ] version}";
 
   modelVersionPins = {
-    opus = "5";
-    sonnet = "5";
+    opus = "4.8";
+    sonnet = "4.6";
     haiku = "4.5";
     fable = "5";
   };
@@ -170,7 +170,7 @@ in
         "high"
         "xhigh"
       ];
-      default = "high";
+      default = "medium";
       description = "Default Claude Code effort level.";
     };
 
