@@ -1294,18 +1294,22 @@ let
         search_dir="$parent"
       done
 
-      if [ -z "$root" ]; then
-        if [ "$cmd" = "init" ] && [ "$invocation_dir" != "$git_root" ] && [ -t 0 ] && [ -t 1 ]; then
-          yellow "dev: create a nested devenv in $invocation_dir instead of the repo root $git_root? [y/N] "
-          reply=""
-          read -r reply </dev/tty || true
-          case "$reply" in
-            [yY]*) root="$invocation_dir" ;;
-            *) root="$git_root" ;;
-          esac
+      if [ "$cmd" = "init" ] && [ "$root" != "$invocation_dir" ] && [ "$invocation_dir" != "$git_root" ] && [ -t 0 ] && [ -t 1 ]; then
+        if [ -n "$root" ]; then
+          yellow "dev: $root is already a dev project. Create a nested devenv in $invocation_dir instead? [y/N] "
         else
-          root="$git_root"
+          yellow "dev: create a nested devenv in $invocation_dir instead of the repo root $git_root? [y/N] "
         fi
+        reply=""
+        read -r reply </dev/tty || true
+        case "$reply" in
+          [yY]*) root="$invocation_dir" ;;
+          *) : ;;
+        esac
+      fi
+
+      if [ -z "$root" ]; then
+        root="$git_root"
       fi
 
       cd "$root"
