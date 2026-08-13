@@ -80,6 +80,11 @@ args@{
                 type = lib.types.str;
                 description = "What agents should use the command for.";
               };
+              notes = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [ ];
+                description = "Usage caveats rendered as sub-bullets under the command rule.";
+              };
               section = lib.mkOption {
                 type = lib.types.enum [
                   "programs"
@@ -264,9 +269,13 @@ args@{
           );
           sectionBullets =
             section:
-            map (p: if p.available then availableLine p else missingLine p) (
-              lib.filter (p: p.section == section) entries
-            );
+            map (
+              p:
+              let
+                line = if p.available then availableLine p else missingLine p;
+              in
+              if p.notes == [ ] then line else [ line ] ++ p.notes
+            ) (lib.filter (p: p.section == section) entries);
         in
         {
           "72 - Available Programs" = sectionBullets "programs";

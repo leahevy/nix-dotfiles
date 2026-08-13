@@ -13,6 +13,10 @@ let
       purpose = "fast recursive text search";
       attr = "ripgrep";
       order = 30;
+      notes = [
+        "`rg` searches recursively by default, so a plain `rg PATTERN` or `rg PATTERN .` already walks the tree, no recursion flag needed."
+        "`-r` is `--replace`, not recursive. Never pass `-r` to make `rg` recurse, it rewrites match output instead and mangles results. There is no recursion flag to add."
+      ];
     };
     fd = {
       purpose = "fast file finding";
