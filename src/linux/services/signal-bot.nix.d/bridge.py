@@ -3030,9 +3030,12 @@ class HookScheduler:
                 else None
             )
         if scheduled is not None:
+            time_text = time.strftime("%H:%M", time.localtime(scheduled))
+            if time.localtime(scheduled)[:3] != time.localtime()[:3]:
+                time_text = f"{time_text} (tomorrow)"
             return (
                 message_text(self.cfg, "status_hook_scheduled")
-                .replace("{time}", time.strftime("%H:%M", time.localtime(scheduled)))
+                .replace("{time}", time_text)
                 .replace("{window}", window)
             )
         return message_text(self.cfg, "status_hook_idle").replace("{window}", window)
