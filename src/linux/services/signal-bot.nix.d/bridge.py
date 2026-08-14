@@ -2884,10 +2884,12 @@ class HookScheduler:
             fire_at = random.uniform(lo, close_epoch)
         entry = {"key": key, "close": close_epoch, "fire_at": fire_at, "done": False}
         if fire_at is not None:
+            same_day = time.localtime(fire_at)[:3] == time.localtime(now)[:3]
+            when_label = "today" if same_day else "tomorrow"
             print(
                 f"signal-bot: hook {name!r} scheduled for "
-                f"{time.strftime('%H:%M', time.localtime(fire_at))} in window "
-                f"{hook['start_time']}-{hook['end_time']}",
+                f"{time.strftime('%H:%M', time.localtime(fire_at))} ({when_label}) "
+                f"in window {hook['start_time']}-{hook['end_time']}",
                 file=sys.stderr,
             )
         return entry
