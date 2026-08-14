@@ -513,10 +513,10 @@ in
       description = "How the bot answers reactions placed on its most recent message.";
     };
 
-    maxHookSendsPerDay = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 5;
-      description = "Maximum number of autonomous hook messages sent per calendar day across all hooks.";
+    additionalHookSendsPerDay = lib.mkOption {
+      type = lib.types.ints.unsigned;
+      default = 3;
+      description = "Extra autonomous hook messages allowed per calendar day on top of the baseline of one per enabled hook, mainly useful when iterating on hooks.";
     };
 
     minSecondsBetweenHooks = lib.mkOption {
@@ -1415,7 +1415,7 @@ in
           scriptCommands,
           syncIntervalMinutes,
           additionalUsers,
-          maxHookSendsPerDay,
+          additionalHookSendsPerDay,
           minSecondsBetweenHooks,
           minSecondsSinceBotMessage,
           minSecondsSinceUserMessage,
@@ -1516,7 +1516,7 @@ in
               ha_session_seconds = haSessionSeconds;
               context_max_messages = contextMaxMessages;
               context_max_chars = contextMaxChars;
-              max_hook_sends_per_day = maxHookSendsPerDay;
+              additional_hook_sends_per_day = additionalHookSendsPerDay;
               min_seconds_between_hooks = minSecondsBetweenHooks;
               min_seconds_since_bot_message = minSecondsSinceBotMessage;
               min_seconds_since_user_message = minSecondsSinceUserMessage;

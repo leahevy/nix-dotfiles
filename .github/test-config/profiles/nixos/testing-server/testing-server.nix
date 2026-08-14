@@ -65,7 +65,7 @@
               maxAttachmentBytes = 8388608;
               attachmentRetentionMinutes = 30;
             };
-            maxHookSendsPerDay = 3;
+            additionalHookSendsPerDay = 3;
             minSecondsBetweenHooks = 900;
             minSecondsSinceBotMessage = 300;
             minSecondsSinceUserMessage = 300;

@@ -127,7 +127,7 @@ REQUIRED_CONFIG_KEYS = (
     "ha_session_seconds",
     "context_max_messages",
     "context_max_chars",
-    "max_hook_sends_per_day",
+    "additional_hook_sends_per_day",
     "min_seconds_between_hooks",
     "min_seconds_since_bot_message",
     "min_seconds_since_user_message",
@@ -2855,7 +2855,7 @@ class HookScheduler:
         self.hook_state = hook_state
         self.transcript = transcript
         self.fire_fn = fire_fn
-        self.max_sends = cfg["max_hook_sends_per_day"]
+        self.max_sends = len(hooks) + cfg["additional_hook_sends_per_day"]
         self.min_between = cfg["min_seconds_between_hooks"]
         self.min_since_bot = cfg["min_seconds_since_bot_message"]
         self.min_since_user = cfg["min_seconds_since_user_message"]
@@ -3974,8 +3974,8 @@ def serve(cfg):
     def hooks_report():
         if not hooks_active:
             return message_text(cfg, "status_hooks_disabled")
-        remaining = hook_state.budget_remaining(cfg["max_hook_sends_per_day"])
-        used = cfg["max_hook_sends_per_day"] - remaining
+        remaining = hook_state.budget_remaining(scheduler.max_sends)
+        used = scheduler.max_sends - remaining
         entries = "\n".join(
             message_text(cfg, "status_hook_entry_template")
             .replace("{hook}", markdown_emphasis(cfg, name, "**"))
@@ -3985,7 +3985,7 @@ def serve(cfg):
         return (
             message_text(cfg, "status_hooks_template")
             .replace("{used}", str(used))
-            .replace("{limit}", str(cfg["max_hook_sends_per_day"]))
+            .replace("{limit}", str(scheduler.max_sends))
             .replace("{entries}", entries)
         )
 
