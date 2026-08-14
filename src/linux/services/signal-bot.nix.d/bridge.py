@@ -62,6 +62,7 @@ RECAP_BUDGET_WEIGHT = 0.5
 SENDER_BUDGET_WINDOW_SECONDS = 86400.0
 DAILY_TRANSCRIPT_LIMIT = 200
 HOOK_POLL_SECONDS = 30.0
+HOOK_MIN_SLEEP_SECONDS = 0.5
 SECONDS_PER_DAY = 86400
 HOOK_BLOCK_POLICY = {"exclusion": "skip", "prerequisite": "wait"}
 TYPING_REFRESH_SECONDS = 5
@@ -2977,17 +2978,31 @@ class HookScheduler:
                     new_at = self._reschedule(self.schedule[name], now)
                     self.schedule[name]["fire_at"] = new_at
                     self.schedule[name]["done"] = new_at is None
+        return self._next_sleep()
+
+    def _next_sleep(self):
+        now = time.time()
+        with self.lock:
+            upcoming = [
+                entry["fire_at"] - now
+                for entry in self.schedule.values()
+                if entry["fire_at"] is not None
+                and not entry["done"]
+                and entry["fire_at"] > now
+            ]
+        return max(min([HOOK_POLL_SECONDS] + upcoming), HOOK_MIN_SLEEP_SECONDS)
 
     def run(self):
         while True:
             try:
-                self._tick()
+                wait = self._tick()
             except Exception as e:
                 print(
                     f"signal-bot: hook scheduler tick failed: {type(e).__name__}: {e}",
                     file=sys.stderr,
                 )
-            time.sleep(HOOK_POLL_SECONDS)
+                wait = HOOK_POLL_SECONDS
+            time.sleep(wait)
 
     def describe(self, name):
         hook = self.hooks[name]
