@@ -157,6 +157,8 @@ REQUIRED_HOOK_KEYS = (
     "context_recent_messages",
     "on_block",
     "agent_id",
+    "min_seconds_since_bot_message",
+    "min_seconds_since_user_message",
     "send_errors_into_chat",
     "run_only_if_fired_today",
     "skip_if_fired_today",
@@ -2919,13 +2921,19 @@ class HookScheduler:
         since_fire = self.hook_state.seconds_since_last_fire()
         if since_fire is not None and since_fire < self.min_between:
             return False, "between"
+        min_since_bot = hook["min_seconds_since_bot_message"]
+        if min_since_bot is None:
+            min_since_bot = self.min_since_bot
+        min_since_user = hook["min_seconds_since_user_message"]
+        if min_since_user is None:
+            min_since_user = self.min_since_user
         since_bot, since_user = self.transcript.gate_seconds()
-        if since_bot is not None and since_bot < self.min_since_bot:
+        if since_bot is not None and since_bot < min_since_bot:
             return False, "bot"
         if (
-            self.min_since_user > 0
+            min_since_user > 0
             and since_user is not None
-            and since_user < self.min_since_user
+            and since_user < min_since_user
         ):
             return False, "user"
         if self.transcript.user_interactions() < hook["min_user_interactions"]:

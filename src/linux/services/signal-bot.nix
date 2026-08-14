@@ -678,6 +678,18 @@ in
               description = "Home Assistant conversation agent suffix for this hook, null falls back to hooksAgentId.";
             };
 
+            minSecondsSinceBotMessage = lib.mkOption {
+              type = lib.types.nullOr lib.types.ints.unsigned;
+              default = null;
+              description = "Minimum seconds since the last bot message before this hook may fire, null falls back to the global minSecondsSinceBotMessage.";
+            };
+
+            minSecondsSinceUserMessage = lib.mkOption {
+              type = lib.types.nullOr lib.types.ints.unsigned;
+              default = null;
+              description = "Minimum seconds since the last user message before this hook may fire, null falls back to the global minSecondsSinceUserMessage.";
+            };
+
             sendErrorsIntoChat = lib.mkOption {
               type = lib.types.bool;
               default = false;
@@ -1543,6 +1555,8 @@ in
                 context_recent_messages = hook.contextRecentMessages;
                 on_block = hook.onBlock;
                 agent_id = if hook.agentId != null then "conversation.${hook.agentId}" else effectiveHooksAgentId;
+                min_seconds_since_bot_message = hook.minSecondsSinceBotMessage;
+                min_seconds_since_user_message = hook.minSecondsSinceUserMessage;
                 send_errors_into_chat = hook.sendErrorsIntoChat;
                 run_only_if_fired_today = hook.runOnlyIfFiredToday;
                 skip_if_fired_today = hook.skipIfFiredToday;
