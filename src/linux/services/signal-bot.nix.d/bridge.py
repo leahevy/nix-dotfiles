@@ -2878,20 +2878,28 @@ class HookScheduler:
         start_hm, end_hm = self.times[name]
         open_epoch, close_epoch, key, _ = current_window(now, start_hm, end_hm)
         lo = max(now, open_epoch)
-        if lo >= close_epoch or random.random() >= hook["probability"]:
-            fire_at = None
-        else:
-            fire_at = random.uniform(lo, close_epoch)
+        window = f"{hook['start_time']}-{hook['end_time']}"
+        fire_at = None
+        if lo < close_epoch:
+            roll = random.random()
+            if roll < hook["probability"]:
+                fire_at = random.uniform(lo, close_epoch)
+            if fire_at is None:
+                print(
+                    f"signal-bot: hook {name!r} not scheduled for window {window}, "
+                    f"roll {roll:.2f}/{hook['probability']}",
+                    file=sys.stderr,
+                )
+            else:
+                same_day = time.localtime(fire_at)[:3] == time.localtime(now)[:3]
+                when_label = "today" if same_day else "tomorrow"
+                print(
+                    f"signal-bot: hook {name!r} scheduled for "
+                    f"{time.strftime('%H:%M', time.localtime(fire_at))} ({when_label}) "
+                    f"in window {window}, roll {roll:.2f}/{hook['probability']}",
+                    file=sys.stderr,
+                )
         entry = {"key": key, "close": close_epoch, "fire_at": fire_at, "done": False}
-        if fire_at is not None:
-            same_day = time.localtime(fire_at)[:3] == time.localtime(now)[:3]
-            when_label = "today" if same_day else "tomorrow"
-            print(
-                f"signal-bot: hook {name!r} scheduled for "
-                f"{time.strftime('%H:%M', time.localtime(fire_at))} ({when_label}) "
-                f"in window {hook['start_time']}-{hook['end_time']}",
-                file=sys.stderr,
-            )
         return entry
 
     def _reschedule(self, entry, now):
