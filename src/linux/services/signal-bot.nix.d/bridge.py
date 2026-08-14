@@ -60,6 +60,10 @@ QUOTE_CONTEXT_LIMIT = 500
 GROUP_SEQUENCE_KEY = "_nxGroupSequence"
 RECAP_BUDGET_WEIGHT = 0.5
 SENDER_BUDGET_WINDOW_SECONDS = 86400.0
+DAILY_TRANSCRIPT_LIMIT = 200
+HOOK_POLL_SECONDS = 30.0
+SECONDS_PER_DAY = 86400
+HOOK_BLOCK_POLICY = {"exclusion": "skip", "prerequisite": "wait"}
 TYPING_REFRESH_SECONDS = 5
 DISCOVERABLE_BY_NUMBER = False
 GROUP_PARTICIPANT_FIELDS = ("members", "pendingMembers", "requestingMembers")
@@ -122,11 +126,48 @@ REQUIRED_CONFIG_KEYS = (
     "ha_session_seconds",
     "context_max_messages",
     "context_max_chars",
+    "max_hook_sends_per_day",
+    "min_seconds_between_hooks",
+    "min_seconds_since_bot_message",
+    "min_seconds_since_user_message",
+    "hooks_instruction",
+    "hooks_prompt_template",
+    "hooks_transcript_separator",
+    "hooks_transcript_separator_template",
+    "hooks_context_max_chars",
+    "hooks_block_min_chars",
+    "daily_transcript_limit",
+    "hooks",
+    "hook_state_file",
     "instruction_template",
     "reactions",
     "transcription",
     "messages",
 )
+
+REQUIRED_HOOK_KEYS = (
+    "enable",
+    "start_time",
+    "end_time",
+    "probability",
+    "min_user_interactions",
+    "triggers",
+    "context_first_messages",
+    "context_recent_messages",
+    "on_block",
+    "agent_id",
+    "send_errors_into_chat",
+    "run_only_if_fired_today",
+    "skip_if_fired_today",
+)
+
+REQUIRED_TRIGGER_KEYS = (
+    "instruction",
+    "title",
+    "url",
+)
+
+HOOK_TIME_PATTERN = re.compile(r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
 
 REQUIRED_REACTION_KEYS = (
     "enable",
@@ -175,6 +216,12 @@ REQUIRED_MESSAGE_KEYS = (
     "status_budget_entry_template",
     "status_maybe_budget_template",
     "status_maybe_budget_disabled",
+    "status_hooks_disabled",
+    "status_hooks_template",
+    "status_hook_entry_template",
+    "status_hook_fired",
+    "status_hook_scheduled",
+    "status_hook_idle",
     "status_account_ok",
     "status_account_missing",
     "status_ha_reachable",
@@ -241,7 +288,65 @@ def load_config(path):
         )
     if group_filter["enable"] and not group_filter["silent_answers"]:
         raise SystemExit("signal-bot: the config group filter has no silent answers!")
+    validate_hooks(cfg["hooks"])
     return cfg
+
+
+def validate_hooks(hooks):
+    if not isinstance(hooks, dict):
+        raise SystemExit("signal-bot: the config hooks are not an object!")
+    for name, hook in hooks.items():
+        if not isinstance(hook, dict):
+            raise SystemExit(f"signal-bot: hook {name!r} is not an object!")
+        missing = [key for key in REQUIRED_HOOK_KEYS if key not in hook]
+        if missing:
+            raise SystemExit(
+                f"signal-bot: hook {name!r} is missing {', '.join(missing)}!"
+            )
+        for key in ("start_time", "end_time"):
+            if not HOOK_TIME_PATTERN.match(str(hook[key])):
+                raise SystemExit(
+                    f"signal-bot: hook {name!r} has an invalid {key}, expected HH:MM!"
+                )
+        triggers = hook["triggers"]
+        if not isinstance(triggers, list) or not triggers:
+            raise SystemExit(
+                f"signal-bot: hook {name!r} must define at least one trigger!"
+            )
+        for trigger in triggers:
+            if not isinstance(trigger, dict):
+                raise SystemExit(
+                    f"signal-bot: hook {name!r} has a trigger that is not an object!"
+                )
+            trigger_missing = [
+                key for key in REQUIRED_TRIGGER_KEYS if key not in trigger
+            ]
+            if trigger_missing:
+                raise SystemExit(
+                    f"signal-bot: hook {name!r} has a trigger missing "
+                    f"{', '.join(trigger_missing)}!"
+                )
+            instruction = trigger["instruction"]
+            if not isinstance(instruction, str) or not instruction:
+                raise SystemExit(
+                    f"signal-bot: hook {name!r} has a trigger without an instruction!"
+                )
+        for key in ("run_only_if_fired_today", "skip_if_fired_today"):
+            deps = hook[key]
+            if not isinstance(deps, list) or not all(
+                isinstance(dep, str) for dep in deps
+            ):
+                raise SystemExit(
+                    f"signal-bot: hook {name!r} {key} must be a list of hook names!"
+                )
+            if name in deps:
+                raise SystemExit(f"signal-bot: hook {name!r} {key} lists its own name!")
+            missing_deps = [dep for dep in deps if dep not in hooks]
+            if missing_deps:
+                raise SystemExit(
+                    f"signal-bot: hook {name!r} {key} references unknown hooks "
+                    f"{', '.join(missing_deps)}!"
+                )
 
 
 def message_text(cfg, key):
@@ -1400,11 +1505,12 @@ def with_group_speaker(cfg, author, text):
         return f"{values['author']}: {values['text']}"
 
 
-def render_recap(cfg, entries, max_chars):
+def render_recap(cfg, entries, max_chars, keep_newest=True):
     template = message_text(cfg, "context_recap_entry_template")
+    ordered = list(reversed(entries)) if keep_newest else list(entries)
     lines = []
     total = 0
-    for author, message in reversed(entries):
+    for author, message in ordered:
         values = {"author": author, "message": collapse_quote_context(message)}
         try:
             line = template.format(**values)
@@ -1418,7 +1524,8 @@ def render_recap(cfg, entries, max_chars):
             break
         lines.append(line)
         total += len(line)
-    lines.reverse()
+    if keep_newest:
+        lines.reverse()
     return "\n".join(lines)
 
 
@@ -1787,10 +1894,14 @@ class MaybeBudget:
             return max(self.limit - len(stamps), 0)
 
 
-def call_ha_conversation(cfg, ha_token, text, conversation_id=None):
+def call_ha_conversation(
+    cfg, ha_token, text, conversation_id=None, agent_override=None
+):
     attempts = len(HA_AGENT_ERROR_RETRY_DELAYS) + 1
     for attempt in range(attempts):
-        speech, new_id = request_ha_conversation(cfg, ha_token, text, conversation_id)
+        speech, new_id = request_ha_conversation(
+            cfg, ha_token, text, conversation_id, agent_override
+        )
         if not isinstance(speech, str) or speech.strip() != HA_AGENT_ERROR_SPEECH:
             if contains_tool_call_artifact(speech):
                 log_error(
@@ -1844,7 +1955,7 @@ def script_argument_problem(cfg, name, command, argument):
         return command_message(cfg, "script_argument_not_allowed", name)
     if len(argument) > command["max_argument_length"]:
         return command_message(cfg, "script_argument_too_long", name)
-    if any(ord(ch) < 32 or ord(ch) == 127 for ch in argument):
+    if any((ord(ch) < 32 and ch not in "\t\n") or ord(ch) == 127 for ch in argument):
         return command_message(cfg, "script_argument_invalid", name)
     return None
 
@@ -1881,7 +1992,8 @@ def call_ha_script(cfg, ha_token, name, command, argument):
         },
     )
     try:
-        with HA_OPENER.open(req, timeout=cfg["ha_timeout_seconds"]) as resp:
+        script_timeout = command.get("timeout_seconds") or cfg["ha_timeout_seconds"]
+        with HA_OPENER.open(req, timeout=script_timeout) as resp:
             body = json.loads(resp.read())
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
         print(
@@ -1923,7 +2035,7 @@ def register_command(name, description_key):
 
 
 @register_command("/status", "help_status_description")
-def cmd_status(cfg, ha_token, account, budget_report, maybe_report):
+def cmd_status(cfg, ha_token, account, budget_report, maybe_report, hooks_report):
     account_ok = not missing_account_files(cfg, account)
     ha_ok = ha_reachable(cfg["ha_url"], ha_token)
     account_key = "status_account_ok" if account_ok else "status_account_missing"
@@ -1939,11 +2051,12 @@ def cmd_status(cfg, ha_token, account, budget_report, maybe_report):
         )
         .replace("{budget}", budget_report())
         .replace("{maybeBudget}", maybe_report())
+        .replace("{hooks}", hooks_report())
     )
 
 
 @register_command("/help", "help_help_description")
-def cmd_help(cfg, ha_token, account, budget_report, maybe_report):
+def cmd_help(cfg, ha_token, account, budget_report, maybe_report, hooks_report):
     template = message_text(cfg, "help_entry_template")
     entries = {
         name: message_text(cfg, command.description_key)
@@ -1967,11 +2080,15 @@ def cmd_help(cfg, ha_token, account, budget_report, maybe_report):
     )
 
 
-def handle_command(cfg, ha_token, account, text, budget_report, maybe_report):
+def handle_command(
+    cfg, ha_token, account, text, budget_report, maybe_report, hooks_report
+):
     words = text.strip().split()
     name = words[0] if words else ""
     command = COMMANDS.get(name, COMMANDS["/help"])
-    return command.handler(cfg, ha_token, account, budget_report, maybe_report)
+    return command.handler(
+        cfg, ha_token, account, budget_report, maybe_report, hooks_report
+    )
 
 
 def is_fresh(timestamp_ms, max_age_seconds):
@@ -2478,6 +2595,424 @@ class SendQueue:
             time.sleep(SEND_PACING_SECONDS)
 
 
+def today_string():
+    return time.strftime("%Y-%m-%d", time.localtime())
+
+
+def parse_hook_time(value):
+    hour, minute = value.split(":")
+    return int(hour), int(minute)
+
+
+def window_instance(now, start_hm, end_hm, day_offset):
+    base = time.localtime(now + day_offset * SECONDS_PER_DAY)
+    start_hour, start_minute = start_hm
+    end_hour, end_minute = end_hm
+    open_epoch = time.mktime(
+        (base.tm_year, base.tm_mon, base.tm_mday, start_hour, start_minute, 0, 0, 0, -1)
+    )
+    crosses_midnight = (end_hour, end_minute) <= (start_hour, start_minute)
+    close_base = time.localtime(
+        open_epoch + (SECONDS_PER_DAY if crosses_midnight else 0)
+    )
+    close_epoch = time.mktime(
+        (
+            close_base.tm_year,
+            close_base.tm_mon,
+            close_base.tm_mday,
+            end_hour,
+            end_minute,
+            0,
+            0,
+            0,
+            -1,
+        )
+    )
+    key = time.strftime("%Y-%m-%d", time.localtime(open_epoch))
+    return open_epoch, close_epoch, key
+
+
+def current_window(now, start_hm, end_hm):
+    best = None
+    for offset in (-1, 0, 1):
+        open_epoch, close_epoch, key = window_instance(now, start_hm, end_hm, offset)
+        if open_epoch <= now < close_epoch:
+            return open_epoch, close_epoch, key, True
+        if open_epoch > now and (best is None or open_epoch < best[0]):
+            best = (open_epoch, close_epoch, key)
+    if best is None:
+        return (*window_instance(now, start_hm, end_hm, 0), False)
+    return (*best, False)
+
+
+class DailyTranscript:
+    def __init__(self, limit=DAILY_TRANSCRIPT_LIMIT):
+        self.limit = limit
+        self.lock = threading.Lock()
+        self.day = None
+        self.entries = []
+        self.user_count = 0
+        self.last_bot = None
+        self.last_user = None
+
+    def _roll_locked(self):
+        lt = time.localtime()
+        today = (lt.tm_year, lt.tm_yday)
+        if today != self.day:
+            self.day = today
+            self.entries = []
+            self.user_count = 0
+
+    def record(self, author, text, is_bot):
+        if not isinstance(text, str) or not text.strip():
+            return
+        now = time.monotonic()
+        with self.lock:
+            self._roll_locked()
+            self.entries.append((author, text))
+            if len(self.entries) > self.limit:
+                del self.entries[: len(self.entries) - self.limit]
+            if is_bot:
+                self.last_bot = now
+            else:
+                self.user_count += 1
+                self.last_user = now
+
+    def user_interactions(self):
+        with self.lock:
+            self._roll_locked()
+            return self.user_count
+
+    def gate_seconds(self):
+        now = time.monotonic()
+        with self.lock:
+            self._roll_locked()
+            since_bot = None if self.last_bot is None else now - self.last_bot
+            since_user = None if self.last_user is None else now - self.last_user
+            return since_bot, since_user
+
+    def slice_blocks(self, first_messages, recent_messages):
+        with self.lock:
+            self._roll_locked()
+            entries = list(self.entries)
+        count = len(entries)
+        if first_messages + recent_messages >= count:
+            return entries, []
+        head = entries[:first_messages] if first_messages > 0 else []
+        tail = entries[count - recent_messages :] if recent_messages > 0 else []
+        return head, tail
+
+
+class HookState:
+    def __init__(self, path):
+        self.path = path
+        self.lock = threading.Lock()
+        stored = read_json_state(path)
+        if not isinstance(stored, dict):
+            stored = {}
+        runs = stored.get("runs")
+        self.runs = (
+            {
+                name: key
+                for name, key in runs.items()
+                if isinstance(name, str) and isinstance(key, str)
+            }
+            if isinstance(runs, dict)
+            else {}
+        )
+        budget = stored.get("budget")
+        if isinstance(budget, dict):
+            date = budget.get("date")
+            count = budget.get("count")
+            self.budget_date = date if isinstance(date, str) else None
+            self.budget_count = (
+                count if isinstance(count, int) and not isinstance(count, bool) else 0
+            )
+        else:
+            self.budget_date = None
+            self.budget_count = 0
+        last_fire = stored.get("last_fire")
+        self.last_fire = (
+            last_fire
+            if isinstance(last_fire, (int, float)) and not isinstance(last_fire, bool)
+            else 0.0
+        )
+
+    def _persist_locked(self):
+        try:
+            write_json_state(
+                self.path,
+                {
+                    "runs": self.runs,
+                    "budget": {"date": self.budget_date, "count": self.budget_count},
+                    "last_fire": self.last_fire,
+                },
+            )
+        except OSError as e:
+            log_error(f"signal-bot: could not persist the hook state: {e}")
+
+    def _roll_budget_locked(self, today):
+        if self.budget_date != today:
+            self.budget_date = today
+            self.budget_count = 0
+
+    def already_fired(self, name, window_key):
+        with self.lock:
+            return self.runs.get(name) == window_key
+
+    def fired_today(self, name):
+        today = today_string()
+        with self.lock:
+            return self.runs.get(name) == today
+
+    def budget_remaining(self, limit):
+        today = today_string()
+        with self.lock:
+            self._roll_budget_locked(today)
+            return max(limit - self.budget_count, 0)
+
+    def seconds_since_last_fire(self):
+        with self.lock:
+            if not self.last_fire:
+                return None
+            return max(0.0, time.time() - self.last_fire)
+
+    def mark_fired(self, name, window_key):
+        today = today_string()
+        with self.lock:
+            self._roll_budget_locked(today)
+            snapshot = {
+                "run": self.runs.get(name),
+                "budget_date": self.budget_date,
+                "budget_count": self.budget_count,
+                "last_fire": self.last_fire,
+            }
+            self.runs[name] = window_key
+            self.budget_count += 1
+            self.last_fire = time.time()
+            self._persist_locked()
+            return snapshot
+
+    def rollback_fire(self, name, snapshot):
+        with self.lock:
+            if snapshot["run"] is None:
+                self.runs.pop(name, None)
+            else:
+                self.runs[name] = snapshot["run"]
+            self.budget_date = snapshot["budget_date"]
+            self.budget_count = snapshot["budget_count"]
+            self.last_fire = snapshot["last_fire"]
+            self._persist_locked()
+
+
+def format_transcript_separator(template, separator):
+    try:
+        return template.format(separator=separator)
+    except (KeyError, IndexError):
+        print(
+            "signal-bot: invalid hooks transcript separator template, using the marker as is",
+            file=sys.stderr,
+        )
+        return separator
+
+
+def render_hook_transcript(cfg, head, tail, separator, total_max, block_min):
+    if not (head and tail):
+        return render_recap(cfg, head + tail, total_max)
+    joiner = "\n" + separator + "\n"
+    body_max = max(total_max - len(joiner), 0)
+    head_max = max(body_max // 2, block_min)
+    head_text = render_recap(cfg, head, head_max, keep_newest=False)
+    tail_max = max(body_max - len(head_text), block_min)
+    tail_text = render_recap(cfg, tail, tail_max)
+    return head_text + joiner + tail_text
+
+
+def hook_prompt(template, system_instruction, instruction, transcript):
+    values = {
+        "systemInstruction": system_instruction,
+        "instruction": instruction,
+        "transcript": transcript,
+    }
+    try:
+        return template.format(**values)
+    except (KeyError, IndexError):
+        print(
+            "signal-bot: invalid hooks prompt template, using the default",
+            file=sys.stderr,
+        )
+        return (
+            f"{values['systemInstruction']}\n\n"
+            f"{values['transcript']}\n\n{values['instruction']}"
+        )
+
+
+class HookScheduler:
+    def __init__(self, cfg, hooks, hook_state, transcript, fire_fn):
+        self.cfg = cfg
+        self.hooks = hooks
+        self.hook_state = hook_state
+        self.transcript = transcript
+        self.fire_fn = fire_fn
+        self.max_sends = cfg["max_hook_sends_per_day"]
+        self.min_between = cfg["min_seconds_between_hooks"]
+        self.min_since_bot = cfg["min_seconds_since_bot_message"]
+        self.min_since_user = cfg["min_seconds_since_user_message"]
+        self.times = {
+            name: (
+                parse_hook_time(hook["start_time"]),
+                parse_hook_time(hook["end_time"]),
+            )
+            for name, hook in hooks.items()
+        }
+        self.lock = threading.Lock()
+        self.schedule = {}
+
+    def _window_key(self, name, now):
+        start_hm, end_hm = self.times[name]
+        _, _, key, _ = current_window(now, start_hm, end_hm)
+        return key
+
+    def _roll(self, name, hook, now):
+        start_hm, end_hm = self.times[name]
+        open_epoch, close_epoch, key, _ = current_window(now, start_hm, end_hm)
+        lo = max(now, open_epoch)
+        if lo >= close_epoch or random.random() >= hook["probability"]:
+            fire_at = None
+        else:
+            fire_at = random.uniform(lo, close_epoch)
+        entry = {"key": key, "close": close_epoch, "fire_at": fire_at, "done": False}
+        if fire_at is not None:
+            print(
+                f"signal-bot: hook {name!r} scheduled for "
+                f"{time.strftime('%H:%M', time.localtime(fire_at))} in window "
+                f"{hook['start_time']}-{hook['end_time']}",
+                file=sys.stderr,
+            )
+        return entry
+
+    def _reschedule(self, entry, now):
+        if now >= entry["close"]:
+            return None
+        return random.uniform(now, entry["close"])
+
+    def _gates_pass(self, name, hook):
+        if any(self.hook_state.fired_today(dep) for dep in hook["skip_if_fired_today"]):
+            return False, "exclusion"
+        if not all(
+            self.hook_state.fired_today(dep) for dep in hook["run_only_if_fired_today"]
+        ):
+            return False, "prerequisite"
+        if self.hook_state.budget_remaining(self.max_sends) <= 0:
+            return False, "budget"
+        since_fire = self.hook_state.seconds_since_last_fire()
+        if since_fire is not None and since_fire < self.min_between:
+            return False, "between"
+        since_bot, since_user = self.transcript.gate_seconds()
+        if since_bot is not None and since_bot < self.min_since_bot:
+            return False, "bot"
+        if (
+            self.min_since_user > 0
+            and since_user is not None
+            and since_user < self.min_since_user
+        ):
+            return False, "user"
+        if self.transcript.user_interactions() < hook["min_user_interactions"]:
+            return False, "activity"
+        return True, "pass"
+
+    def _apply_block(self, name, policy, now):
+        with self.lock:
+            entry = self.schedule[name]
+            if policy == "skip":
+                entry["done"] = True
+                return
+            if policy == "wait":
+                if now >= entry["close"]:
+                    entry["done"] = True
+                else:
+                    entry["fire_at"] = now
+                return
+            new_at = self._reschedule(entry, now)
+            entry["fire_at"] = new_at
+            entry["done"] = new_at is None
+
+    def _tick(self):
+        now = time.time()
+        for name, hook in self.hooks.items():
+            key = self._window_key(name, now)
+            with self.lock:
+                entry = self.schedule.get(name)
+                if entry is None or entry["key"] != key:
+                    entry = self._roll(name, hook, now)
+                    self.schedule[name] = entry
+                fire_at = entry["fire_at"]
+                done = entry["done"]
+            if fire_at is None or done or now < fire_at:
+                continue
+            if self.hook_state.already_fired(name, key):
+                with self.lock:
+                    self.schedule[name]["done"] = True
+                continue
+            passed, reason = self._gates_pass(name, hook)
+            if not passed:
+                policy = HOOK_BLOCK_POLICY.get(reason, hook["on_block"])
+                with self.lock:
+                    entry = self.schedule[name]
+                    changed = entry.get("reason") != reason
+                    entry["reason"] = reason
+                if changed:
+                    print(
+                        f"signal-bot: hook {name!r} blocked by {reason}, applying "
+                        f"{policy}",
+                        file=sys.stderr,
+                    )
+                self._apply_block(name, policy, now)
+                continue
+            fired = self.fire_fn(name, hook, key)
+            with self.lock:
+                if fired:
+                    self.schedule[name]["done"] = True
+                else:
+                    new_at = self._reschedule(self.schedule[name], now)
+                    self.schedule[name]["fire_at"] = new_at
+                    self.schedule[name]["done"] = new_at is None
+
+    def run(self):
+        while True:
+            try:
+                self._tick()
+            except Exception as e:
+                print(
+                    f"signal-bot: hook scheduler tick failed: {type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
+            time.sleep(HOOK_POLL_SECONDS)
+
+    def describe(self, name):
+        hook = self.hooks[name]
+        window = f"{hook['start_time']}-{hook['end_time']}"
+        key = self._window_key(name, time.time())
+        if self.hook_state.already_fired(name, key):
+            return message_text(self.cfg, "status_hook_fired").replace(
+                "{window}", window
+            )
+        with self.lock:
+            entry = self.schedule.get(name)
+            scheduled = (
+                entry["fire_at"]
+                if entry and entry["key"] == key and not entry["done"]
+                else None
+            )
+        if scheduled is not None:
+            return (
+                message_text(self.cfg, "status_hook_scheduled")
+                .replace("{time}", time.strftime("%H:%M", time.localtime(scheduled)))
+                .replace("{window}", window)
+            )
+        return message_text(self.cfg, "status_hook_idle").replace("{window}", window)
+
+
 def serve(cfg):
     from flask import Flask, jsonify, request
     from waitress import serve as waitress_serve
@@ -2514,6 +3049,30 @@ def serve(cfg):
     transcription_config = cfg["transcription"]
     transcription_enabled = bool(transcription_config["enable"])
     attachments_dir = transcription_config["attachments_dir"]
+    hooks_config = {
+        name: hook for name, hook in cfg["hooks"].items() if hook.get("enable")
+    }
+    hooks_active = bool(hooks_config)
+    hooks_instruction = cfg["hooks_instruction"]
+    hooks_prompt_template = cfg["hooks_prompt_template"]
+    hooks_transcript_separator = format_transcript_separator(
+        cfg["hooks_transcript_separator_template"], cfg["hooks_transcript_separator"]
+    )
+    hooks_context_max_chars = cfg["hooks_context_max_chars"]
+    hooks_block_min_chars = cfg["hooks_block_min_chars"]
+    ha_error_messages = {
+        message_text(cfg, key)
+        for key in (
+            "ha_unreachable",
+            "ha_unexpected_response",
+            "ha_agent_failed",
+            "ha_tool_call_artifact",
+        )
+    }
+    bot_label = message_text(cfg, "quote_context_bot")
+    daily_transcript = DailyTranscript(cfg["daily_transcript_limit"])
+    hook_state = HookState(cfg["hook_state_file"]) if hooks_active else None
+    scheduler = None
     group_id = read_group_id(cfg["group_id_file"])
     if group_id is None:
         print(
@@ -2625,6 +3184,7 @@ def serve(cfg):
         notice=False,
         transcript_key=None,
         reactable=True,
+        record_transcript=True,
     ):
         if not isinstance(text, str) or not text.strip():
             print(
@@ -2651,6 +3211,8 @@ def serve(cfg):
                 reactable and reactions_enabled,
             )
         )
+        if queued and hooks_active and record_transcript and "groupId" in target:
+            daily_transcript.record(bot_label, text, is_bot=True)
         if queued and transcript_key:
             conversations.remember_turn(
                 transcript_key, message_text(cfg, "quote_context_bot"), text, True
@@ -2992,6 +3554,13 @@ def serve(cfg):
             )
             return
 
+        message_is_builtin_command = (
+            text.startswith("/") and split_command(text)[0] not in script_commands
+        )
+
+        if hooks_active and group_info and not message_is_builtin_command:
+            daily_transcript.record(sender_label, text, is_bot=False)
+
         if transcribed or (group_info and quote_replies):
             reply_quote = build_quote(
                 timestamp,
@@ -3088,7 +3657,7 @@ def serve(cfg):
                 )
 
             reply_text = handle_command(
-                cfg, ha_token, account, text, budget_report, maybe_report
+                cfg, ha_token, account, text, budget_report, maybe_report, hooks_report
             )
         else:
             if not claim_budget(
@@ -3248,6 +3817,7 @@ def serve(cfg):
             conversation_id,
             quote=current_quote(),
             thread_key=thread_key,
+            record_transcript=not message_is_builtin_command,
         ):
             print("signal-bot: reply queue full, dropping reply", file=sys.stderr)
 
@@ -3317,12 +3887,93 @@ def serve(cfg):
             target=inbound_worker, args=(queue, label), daemon=True
         ).start()
 
+    def fire_hook(name, hook, window_key):
+        head, tail = daily_transcript.slice_blocks(
+            hook["context_first_messages"], hook["context_recent_messages"]
+        )
+        transcript_text = render_hook_transcript(
+            cfg,
+            head,
+            tail,
+            hooks_transcript_separator,
+            hooks_context_max_chars,
+            hooks_block_min_chars,
+        )
+        trigger = random.choice(hook["triggers"])
+        static_message = trigger.get("message")
+        if static_message is not None:
+            print(f"signal-bot: firing hook {name!r}", file=sys.stderr)
+            speech = static_message
+        else:
+            prompt = hook_prompt(
+                hooks_prompt_template,
+                hooks_instruction,
+                trigger["instruction"],
+                transcript_text,
+            )
+            print(f"signal-bot: firing hook {name!r}", file=sys.stderr)
+            speech, new_conversation_id = call_ha_conversation(
+                cfg, ha_token, prompt, None, hook["agent_id"]
+            )
+            if not isinstance(speech, str) or not speech.strip():
+                print(
+                    f"signal-bot: hook {name!r} got an empty reply from Home Assistant, "
+                    "not sending",
+                    file=sys.stderr,
+                )
+                return False
+            errored = new_conversation_id is None or speech in ha_error_messages
+            if errored and not hook["send_errors_into_chat"]:
+                log_error(
+                    f"signal-bot: hook {name!r} got an error reply from Home Assistant, "
+                    f"skipping instead of posting it: {speech.strip()[:200]!r}"
+                )
+                return False
+        title = (trigger.get("title") or "").strip()
+        url = (trigger.get("url") or "").strip()
+        text, ranges = format_outbound_text(cfg, title, speech.rstrip(), url)
+        target = {"groupId": current_group_id()}
+        reservation = hook_state.mark_fired(name, window_key)
+        queued = enqueue_send(target, text, ranges=ranges, notice=True)
+        if not queued:
+            hook_state.rollback_fire(name, reservation)
+            print(
+                f"signal-bot: hook {name!r} send queue full, will retry",
+                file=sys.stderr,
+            )
+        return queued
+
+    def hooks_report():
+        if not hooks_active:
+            return message_text(cfg, "status_hooks_disabled")
+        remaining = hook_state.budget_remaining(cfg["max_hook_sends_per_day"])
+        used = cfg["max_hook_sends_per_day"] - remaining
+        entries = "\n".join(
+            message_text(cfg, "status_hook_entry_template")
+            .replace("{hook}", markdown_emphasis(cfg, name, "**"))
+            .replace("{state}", scheduler.describe(name))
+            for name in sorted(hooks_config)
+        )
+        return (
+            message_text(cfg, "status_hooks_template")
+            .replace("{used}", str(used))
+            .replace("{limit}", str(cfg["max_hook_sends_per_day"]))
+            .replace("{entries}", entries)
+        )
+
+    if hooks_active:
+        scheduler = HookScheduler(
+            cfg, hooks_config, hook_state, daily_transcript, fire_hook
+        )
+
     rpc.on_receive = dispatch_receive
     rpc.start_reader()
 
     start_worker(inbound, "inbound")
     start_worker(commands, "command")
     threading.Thread(target=sender.run, args=(do_send,), daemon=True).start()
+    if scheduler is not None:
+        threading.Thread(target=scheduler.run, daemon=True).start()
 
     rpc.call_checked("subscribeReceive")
 

@@ -65,6 +65,50 @@
               maxAttachmentBytes = 8388608;
               attachmentRetentionMinutes = 30;
             };
+            maxHookSendsPerDay = 3;
+            minSecondsBetweenHooks = 900;
+            minSecondsSinceBotMessage = 300;
+            minSecondsSinceUserMessage = 300;
+            hooksAgentId = "testing_hooks";
+            hooksContextMaxChars = 8000;
+            dailyTranscriptLimit = 150;
+            hooks = {
+              hook-a = {
+                startTime = "07:00";
+                endTime = "09:00";
+                probability = 0.5;
+                minUserInteractions = 2;
+                whenTriggered = [
+                  {
+                    instruction = "Some instructions";
+                    title = "Some title";
+                  }
+                ];
+              };
+              hook-b = {
+                startTime = "22:00";
+                endTime = "01:00";
+                probability = 0.75;
+                contextFirstMessages = 3;
+                contextRecentMessages = 10;
+                onBlock = "skip";
+                agentId = "hook_agent";
+                sendErrorsIntoChat = true;
+                whenTriggered = [
+                  {
+                    instruction = "Some midnight spanning hook";
+                    title = "Some other title";
+                    url = "https://homeassistant.testingserver.example:8123/todo";
+                  }
+                  {
+                    instruction = "Some single instruction";
+                  }
+                  {
+                    message = "Some static message";
+                  }
+                ];
+              };
+            };
           };
           whisper = {
             model = "base";

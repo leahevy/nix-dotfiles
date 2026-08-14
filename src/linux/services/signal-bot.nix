@@ -513,6 +513,195 @@ in
       description = "How the bot answers reactions placed on its most recent message.";
     };
 
+    maxHookSendsPerDay = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 5;
+      description = "Maximum number of autonomous hook messages sent per calendar day across all hooks.";
+    };
+
+    minSecondsBetweenHooks = lib.mkOption {
+      type = lib.types.ints.unsigned;
+      default = 1800;
+      description = "Minimum seconds between any two hook fires.";
+    };
+
+    minSecondsSinceBotMessage = lib.mkOption {
+      type = lib.types.ints.unsigned;
+      default = 600;
+      description = "Minimum seconds since the last bot message before a hook may fire.";
+    };
+
+    minSecondsSinceUserMessage = lib.mkOption {
+      type = lib.types.ints.unsigned;
+      default = 600;
+      description = "Minimum seconds since the last user message before a hook may fire, zero disables it.";
+    };
+
+    hooksInstruction = lib.mkOption {
+      type = lib.types.str;
+      default = "This is an automatic system trigger, not a message from a user. You are the assistant speaking on your own initiative into the group chat. What follows is a transcript of today's group conversation, the first messages of the day first and the most recent messages last, and when older messages in the middle were left out a marker line separates the two blocks. Use it to ground your message in what happened. Lines are labelled with who wrote them, and your own earlier messages are labelled as the bot. The conversation may be short or empty, in that case proceed sensibly without inventing details. After the transcript comes the task describing what to post. Write only the message to send to the group, in the language the group uses, with no preamble about being triggered.";
+      description = "System baseline prepended to every hook prompt to frame the trigger and transcript.";
+    };
+
+    hooksPromptTemplate = lib.mkOption {
+      type = lib.types.str;
+      default = "{systemInstruction}\n\n{transcript}\n\n{instruction}";
+      description = "Prompt format for every hook, with {systemInstruction}, {transcript} and {instruction} substituted.";
+    };
+
+    hooksTranscriptSeparator = lib.mkOption {
+      type = lib.types.str;
+      default = "older messages skipped, the most recent messages follow";
+      description = "Marker between the first and most recent message blocks, shown only when they do not overlap.";
+    };
+
+    hooksTranscriptSeparatorTemplate = lib.mkOption {
+      type = lib.types.str;
+      default = "[... {separator} ...]";
+      description = "Format wrapping the separator marker, with the placeholder {separator} substituted.";
+    };
+
+    hooksAgentId = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Home Assistant conversation agent suffix used for hooks, null falls back to haAgentId.";
+    };
+
+    hooksContextMaxChars = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 10000;
+      description = "Maximum characters of the hook transcript slice, shared across both message blocks.";
+    };
+
+    hooksBlockMinChars = lib.mkOption {
+      type = lib.types.ints.unsigned;
+      default = 500;
+      description = "Minimum characters each message block keeps, honoured even past hooksContextMaxChars so both always render.";
+    };
+
+    dailyTranscriptLimit = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 200;
+      description = "Maximum messages kept in the in memory daily transcript.";
+    };
+
+    hooks = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            enable = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Whether this hook is active.";
+            };
+
+            startTime = lib.mkOption {
+              type = lib.types.strMatching "([01][0-9]|2[0-3]):[0-5][0-9]";
+              description = "Local start of the fire window as HH:MM.";
+            };
+
+            endTime = lib.mkOption {
+              type = lib.types.strMatching "([01][0-9]|2[0-3]):[0-5][0-9]";
+              description = "Local end of the fire window as HH:MM, an end not after the start wraps past midnight.";
+            };
+
+            probability = lib.mkOption {
+              type = lib.types.numbers.between 0.0 1.0;
+              default = 1.0;
+              description = "Chance from zero to one that the hook rolls a fire time for a window.";
+            };
+
+            minUserInteractions = lib.mkOption {
+              type = lib.types.ints.unsigned;
+              default = 0;
+              description = "Minimum non bot messages that day before the hook may fire.";
+            };
+
+            whenTriggered = lib.mkOption {
+              type = lib.types.listOf (
+                lib.types.submodule {
+                  options = {
+                    instruction = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = null;
+                      description = "Instruction sent to Home Assistant when this trigger is chosen, mutually exclusive with message.";
+                    };
+
+                    message = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = null;
+                      description = "Static text posted as is when this trigger is chosen, mutually exclusive with instruction.";
+                    };
+
+                    title = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = null;
+                      description = "Optional title for the posted message, null means no title.";
+                    };
+
+                    url = lib.mkOption {
+                      type = lib.types.nullOr lib.types.str;
+                      default = null;
+                      description = "Optional link appended to the posted message, null means no link.";
+                    };
+                  };
+                }
+              );
+              default = [ ];
+              description = "Trigger variants for the hook, one is picked at random each fire.";
+            };
+
+            contextFirstMessages = lib.mkOption {
+              type = lib.types.ints.unsigned;
+              default = 5;
+              description = "Earliest messages of the day always included in the hook transcript.";
+            };
+
+            contextRecentMessages = lib.mkOption {
+              type = lib.types.ints.unsigned;
+              default = 15;
+              description = "Newest messages of the day included in the hook transcript.";
+            };
+
+            onBlock = lib.mkOption {
+              type = lib.types.enum [
+                "reschedule"
+                "skip"
+              ];
+              default = "reschedule";
+              description = "What to do when a fire time is blocked, reschedule pushes it later or skip drops it.";
+            };
+
+            agentId = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Home Assistant conversation agent suffix for this hook, null falls back to hooksAgentId.";
+            };
+
+            sendErrorsIntoChat = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Post Home Assistant error replies into the group instead of only logging and skipping.";
+            };
+
+            runOnlyIfFiredToday = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Names of hooks that must all have fired today before this hook may fire, it waits inside its window until they do.";
+            };
+
+            skipIfFiredToday = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Names of hooks whose firing today makes this hook skip the day.";
+            };
+          };
+        }
+      );
+      default = { };
+      description = "Autonomous daily hooks that let the bot speak on its own in the main group, keyed by a name of your choice.";
+    };
+
     transcription = lib.mkOption {
       type = lib.types.submodule {
         options = {
@@ -592,8 +781,8 @@ in
 
           statusTemplate = lib.mkOption {
             type = lib.types.str;
-            default = "{name} status\n\nsignal-cli account data: {account}\nHome Assistant: {homeAssistant}\n\nDaily budget:\n{budget}\n\nMaybe answers: {maybeBudget}";
-            description = "Body of the status reply, with the placeholders {name}, {account}, {homeAssistant}, {budget} and {maybeBudget} substituted.";
+            default = "{name} status\n\nsignal-cli account data: {account}\nHome Assistant: {homeAssistant}\n\nDaily budget:\n{budget}\n\nMaybe answers: {maybeBudget}\n\nHooks:\n{hooks}";
+            description = "Body of the status reply, with the placeholders {name}, {account}, {homeAssistant}, {budget}, {maybeBudget} and {hooks} substituted.";
           };
 
           statusBudgetEntryTemplate = lib.mkOption {
@@ -612,6 +801,42 @@ in
             type = lib.types.str;
             default = "group filter off";
             description = "Maybe budget text in the status reply when the group filter is disabled.";
+          };
+
+          statusHooksDisabled = lib.mkOption {
+            type = lib.types.str;
+            default = "no hooks configured";
+            description = "Hooks text in the status reply when no hooks are configured.";
+          };
+
+          statusHooksTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{used} of {limit} today\n{entries}";
+            description = "Format of the hooks section in the status reply, with the placeholders {used}, {limit} and {entries} substituted.";
+          };
+
+          statusHookEntryTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{hook}: {state}";
+            description = "Format of a single hook line in the status reply, with the placeholders {hook} and {state} substituted.";
+          };
+
+          statusHookFired = lib.mkOption {
+            type = lib.types.str;
+            default = "already fired, window {window}";
+            description = "Hook state wording when the hook already fired this window, with {window} substituted.";
+          };
+
+          statusHookScheduled = lib.mkOption {
+            type = lib.types.str;
+            default = "scheduled {time}, window {window}";
+            description = "Hook state wording when a fire time is rolled, with {time} and {window} substituted.";
+          };
+
+          statusHookIdle = lib.mkOption {
+            type = lib.types.str;
+            default = "idle, window {window}";
+            description = "Hook state wording when the hook has no fire time this window, with {window} substituted.";
           };
 
           statusAccountOk = lib.mkOption {
@@ -798,6 +1023,12 @@ in
               type = lib.types.bool;
               default = false;
               description = "Start the script through script.turn_on and answer as soon as it was started instead of waiting for it to finish, which also gives up any script response.";
+            };
+
+            timeoutSeconds = lib.mkOption {
+              type = lib.types.nullOr lib.types.ints.positive;
+              default = null;
+              description = "Seconds to wait for this script to finish, overriding the global haTimeoutSeconds.";
             };
 
             completedMessage = lib.mkOption {
@@ -1184,6 +1415,19 @@ in
           scriptCommands,
           syncIntervalMinutes,
           additionalUsers,
+          maxHookSendsPerDay,
+          minSecondsBetweenHooks,
+          minSecondsSinceBotMessage,
+          minSecondsSinceUserMessage,
+          hooksInstruction,
+          hooksPromptTemplate,
+          hooksTranscriptSeparator,
+          hooksTranscriptSeparatorTemplate,
+          hooksAgentId,
+          hooksContextMaxChars,
+          hooksBlockMinChars,
+          dailyTranscriptLimit,
+          hooks,
           script,
           ...
         }:
@@ -1194,6 +1438,7 @@ in
           handledFile = "${stateSubDir}/handled.json";
           sendStateFile = "${stateSubDir}/send-rate.json";
           senderBudgetFile = "${stateSubDir}/sender-budget.json";
+          hookStateFile = "${stateSubDir}/hooks.json";
 
           secretPath = name: config.sops.secrets.${name}.path;
 
@@ -1225,6 +1470,7 @@ in
               handled_file = handledFile;
               send_state_file = sendStateFile;
               sender_budget_file = senderBudgetFile;
+              hook_state_file = hookStateFile;
               main_group_name = mainGroupName;
               profile_given_name = effectiveProfileGivenName;
               profile_about = profileAbout;
@@ -1232,7 +1478,7 @@ in
               group_avatar = if enableGroupAvatar then self.profile.filesPath groupAvatar else null;
               ha_url = haUrl;
               ha_language = haLanguage;
-              ha_agent_id = if haAgentId == null then null else "conversation.${haAgentId}";
+              ha_agent_id = haAgentIdResolved;
               ha_timeout_seconds = haTimeoutSeconds;
               ha_token_file = secretPath haTokenSecretName;
               api_token_file = secretPath apiTokenSecretName;
@@ -1270,6 +1516,37 @@ in
               ha_session_seconds = haSessionSeconds;
               context_max_messages = contextMaxMessages;
               context_max_chars = contextMaxChars;
+              max_hook_sends_per_day = maxHookSendsPerDay;
+              min_seconds_between_hooks = minSecondsBetweenHooks;
+              min_seconds_since_bot_message = minSecondsSinceBotMessage;
+              min_seconds_since_user_message = minSecondsSinceUserMessage;
+              hooks_instruction = hooksInstruction;
+              hooks_prompt_template = hooksPromptTemplate;
+              hooks_transcript_separator = hooksTranscriptSeparator;
+              hooks_transcript_separator_template = hooksTranscriptSeparatorTemplate;
+              hooks_context_max_chars = hooksContextMaxChars;
+              hooks_block_min_chars = hooksBlockMinChars;
+              daily_transcript_limit = dailyTranscriptLimit;
+              hooks = lib.mapAttrs (_: hook: {
+                enable = hook.enable;
+                start_time = hook.startTime;
+                end_time = hook.endTime;
+                probability = hook.probability;
+                min_user_interactions = hook.minUserInteractions;
+                triggers = map (trigger: {
+                  instruction = trigger.instruction;
+                  message = trigger.message;
+                  title = trigger.title;
+                  url = trigger.url;
+                }) hook.whenTriggered;
+                context_first_messages = hook.contextFirstMessages;
+                context_recent_messages = hook.contextRecentMessages;
+                on_block = hook.onBlock;
+                agent_id = if hook.agentId != null then "conversation.${hook.agentId}" else effectiveHooksAgentId;
+                send_errors_into_chat = hook.sendErrorsIntoChat;
+                run_only_if_fired_today = hook.runOnlyIfFiredToday;
+                skip_if_fired_today = hook.skipIfFiredToday;
+              }) enabledHooks;
               reactions = {
                 enable = reactions.enable;
                 target_max_age_seconds = reactions.targetMaxAgeSeconds;
@@ -1304,6 +1581,12 @@ in
                 status_budget_entry_template = messages.statusBudgetEntryTemplate;
                 status_maybe_budget_template = messages.statusMaybeBudgetTemplate;
                 status_maybe_budget_disabled = messages.statusMaybeBudgetDisabled;
+                status_hooks_disabled = messages.statusHooksDisabled;
+                status_hooks_template = messages.statusHooksTemplate;
+                status_hook_entry_template = messages.statusHookEntryTemplate;
+                status_hook_fired = messages.statusHookFired;
+                status_hook_scheduled = messages.statusHookScheduled;
+                status_hook_idle = messages.statusHookIdle;
                 status_account_ok = messages.statusAccountOk;
                 status_account_missing = messages.statusAccountMissing;
                 status_ha_reachable = messages.statusHaReachable;
@@ -1337,6 +1620,7 @@ in
                   argument_variable = command.argumentVariable;
                   max_argument_length = command.maxArgumentLength;
                   async = command.async;
+                  timeout_seconds = command.timeoutSeconds;
                   completed_message = command.completedMessage;
                   failed_message = command.failedMessage;
                   shortcut = command.shortcut;
@@ -1469,6 +1753,12 @@ in
 
           reactionEmoji = lib.concatLists (lib.attrValues reactions.emoji);
 
+          enabledHooks = lib.filterAttrs (_: hook: hook.enable) hooks;
+
+          haAgentIdResolved = if haAgentId == null then null else "conversation.${haAgentId}";
+          effectiveHooksAgentId =
+            if hooksAgentId != null then "conversation.${hooksAgentId}" else haAgentIdResolved;
+
           tokenUsers = lib.unique ([ self.host.mainUser.username ] ++ additionalUsers);
 
           perUserTokenSecrets = lib.listToAttrs (
@@ -1577,6 +1867,12 @@ in
               message = "linux.services.signal-bot requires every reactions emoji to be used by only one entry!";
             }
             {
+              assertion = lib.all (trigger: (trigger.instruction != null) != (trigger.message != null)) (
+                lib.concatMap (hook: hook.whenTriggered) (lib.attrValues hooks)
+              );
+              message = "linux.services.signal-bot requires every hook trigger to set exactly one of instruction or message!";
+            }
+            {
               assertion = !transcriptionActive || configured;
               message = "linux.services.signal-bot requires configured to be true for transcription!";
             }
@@ -1587,6 +1883,32 @@ in
             {
               assertion = !transcriptionActive || transcribeCommand != [ ];
               message = "linux.services.signal-bot got no transcribe command from the linux.services.whisper module!";
+            }
+            {
+              assertion = lib.all (hook: hook.whenTriggered != [ ]) (lib.attrValues enabledHooks);
+              message = "linux.services.signal-bot requires every enabled hook to define at least one whenTriggered entry!";
+            }
+            {
+              assertion = lib.all (hook: lib.all (trigger: trigger.instruction != "") hook.whenTriggered) (
+                lib.attrValues enabledHooks
+              );
+              message = "linux.services.signal-bot requires every hook trigger to hold a non empty instruction!";
+            }
+            {
+              assertion = lib.all (
+                name:
+                lib.all (dep: builtins.hasAttr dep enabledHooks) (
+                  enabledHooks.${name}.runOnlyIfFiredToday ++ enabledHooks.${name}.skipIfFiredToday
+                )
+              ) (lib.attrNames enabledHooks);
+              message = "linux.services.signal-bot hook dependencies must reference enabled hooks that exist!";
+            }
+            {
+              assertion = lib.all (
+                name:
+                !lib.elem name (enabledHooks.${name}.runOnlyIfFiredToday ++ enabledHooks.${name}.skipIfFiredToday)
+              ) (lib.attrNames enabledHooks);
+              message = "linux.services.signal-bot hooks must not list their own name as a dependency!";
             }
           ];
 
