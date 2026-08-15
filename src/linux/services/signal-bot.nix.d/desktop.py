@@ -208,6 +208,7 @@ class DesktopChannel:
                     f"signal-bot: could not read the desktop chat avatar: {e}"
                 )
 
+        @app.route("/")
         @app.route("/chat")
         def http_chat_page():
             if not chat_user():
