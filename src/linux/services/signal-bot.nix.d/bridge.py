@@ -3347,6 +3347,27 @@ def serve(cfg):
             )
         return False
 
+    def reaction_prompt_text(emoji, reacted_text, conversation_id, speaker_label=None):
+        prompt = reaction_prompt(
+            reactions_config["prompt_template"],
+            wrap_instruction(instruction_template, reactions_config["instruction"]),
+            emoji,
+            reaction_meaning(reaction_meanings, reactions_config["fallback"], emoji),
+        )
+        if speaker_label:
+            prompt = with_group_speaker(cfg, speaker_label, prompt)
+        if conversation_id is None and reacted_text:
+            prompt = with_quote_context(
+                cfg, message_text(cfg, "quote_context_bot"), reacted_text, prompt
+            )
+        return prompt
+
+    def reaction_reply(conversation_id, reacted_text, emoji, speaker_label=None):
+        prompt = reaction_prompt_text(
+            emoji, reacted_text, conversation_id, speaker_label
+        )
+        return call_ha_conversation(cfg, ha_token, prompt, conversation_id)
+
     def handle_reaction(envelope, data_message, reaction, source_number, source_uuid):
         if reaction.get("isRemove") or not reaction_targets_account(reaction, account):
             return
@@ -3394,21 +3415,9 @@ def serve(cfg):
             )
 
         emoji = reaction.get("emoji")
-        prompt = reaction_prompt(
-            reactions_config["prompt_template"],
-            wrap_instruction(
-                instruction_template,
-                reactions_config["instruction"],
-            ),
-            emoji,
-            reaction_meaning(reaction_meanings, reactions_config["fallback"], emoji),
+        prompt = reaction_prompt_text(
+            emoji, reacted_text, conversation_id, speaker_label
         )
-        if speaker_label:
-            prompt = with_group_speaker(cfg, speaker_label, prompt)
-        if conversation_id is None and reacted_text:
-            prompt = with_quote_context(
-                cfg, message_text(cfg, "quote_context_bot"), reacted_text, prompt
-            )
 
         budget_key = sender_number or sender_key
         granted, _ = budget.claim(budget_key, prompt, notify=False)
@@ -4068,6 +4077,14 @@ def serve(cfg):
             value = body.get(name)
             if value is not None and not isinstance(value, str):
                 return jsonify(error=f"{name} must be a string"), 400
+        if body.get("channel") == "desktop":
+            if desktop is None:
+                return jsonify(error="the desktop chat channel is not enabled"), 400
+            title = (body.get("title") or "").strip()
+            url = (body.get("url") or "").strip()
+            if not desktop.deliver(body.get("recipient"), message.rstrip(), title, url):
+                return jsonify(error="unknown or unset desktop recipient"), 400
+            return jsonify(status="delivered"), 202
         recipient = body.get("recipient")
         if recipient is not None:
             if not isinstance(recipient, str):
@@ -4100,6 +4117,51 @@ def serve(cfg):
         ):
             return jsonify(status="queued"), 202
         return jsonify(error="send queue is full"), 503
+
+    desktop = None
+    if bool(cfg.get("chat_enable")):
+        import importlib.util
+        import types as pytypes
+
+        spec = importlib.util.spec_from_file_location(
+            "desktop", cfg["desktop_module_file"]
+        )
+        desktop_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(desktop_mod)
+
+        def desktop_maybe_report():
+            return message_text(cfg, "status_maybe_budget_disabled")
+
+        def desktop_handle_command(text):
+            return handle_command(
+                cfg,
+                ha_token,
+                account,
+                text,
+                budget_report,
+                desktop_maybe_report,
+                hooks_report,
+            )
+
+        def desktop_call_ha(text, conversation_id):
+            return call_ha_conversation(cfg, ha_token, text, conversation_id)
+
+        brain = pytypes.SimpleNamespace(
+            cfg=cfg,
+            log_error=log_error,
+            read_json_state=read_json_state,
+            write_json_state=write_json_state,
+            read_secret=read_secret,
+            reactions_enabled=reactions_enabled,
+            reactions_config=reactions_config,
+            ha_session_seconds=ha_session_seconds,
+            command_names=set(COMMANDS),
+            handle_command=desktop_handle_command,
+            call_ha_conversation=desktop_call_ha,
+            reaction_reply=reaction_reply,
+        )
+        desktop = desktop_mod.DesktopChannel(brain)
+        desktop.register(app, jsonify, request)
 
     waitress_serve(app, host="127.0.0.1", port=cfg["api_port"], threads=4, ident=None)
 

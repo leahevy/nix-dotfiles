@@ -52,6 +52,11 @@
         services = {
           signal-bot = {
             configured = true;
+            chatEnable = true;
+            chatRecipients = {
+              testldap = "testldap";
+            };
+            chatDefaultRecipient = "testldap";
             mainGroupName = "Test Home Assistant";
             haUrl = "https://homeassistant.testingserver.example:8123";
             enableAvatar = true;
@@ -140,7 +145,9 @@
           };
         };
         server = {
-          auth = true;
+          auth = {
+            enableOAuthProxy = true;
+          };
           ollama = true;
           dashboard = true;
           healthchecks = {
@@ -153,6 +160,7 @@
               {
                 username = "testldap";
                 email = "testldap@example.com";
+                groups = [ "signal-chat-users" ];
               }
             ];
             groups = [ "testgroup" ];

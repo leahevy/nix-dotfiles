@@ -109,6 +109,54 @@ in
       description = "Restrict the send API vhost to internal clients via the nx_is_internal nginx guard.";
     };
 
+    chatEnable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable the authenticated desktop chat channel and its web-app.";
+    };
+
+    chatSubdomain = lib.mkOption {
+      type = lib.types.str;
+      default = "signal-chat";
+      description = "Subdomain under baseDomain serving the desktop chat channel.";
+    };
+
+    chatAllowedGroup = lib.mkOption {
+      type = lib.types.str;
+      default = "signal-chat-users";
+      description = "Dedicated LDAP group allowed through oauth2-proxy to reach the desktop chat channel.";
+    };
+
+    chatRingBufferSize = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 50;
+      description = "Number of recent desktop-channel messages replayed to a client on connect.";
+    };
+
+    chatRecipients = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Mapping of desktop-channel recipient names to oauth usernames for /v1/send.";
+    };
+
+    chatDefaultRecipient = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Desktop recipient name used when /v1/send targets the desktop channel without one.";
+    };
+
+    chatFontSize = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 14;
+      description = "Base font size in pixels used by the desktop chat client.";
+    };
+
+    chatFontFamily = lib.mkOption {
+      type = lib.types.str;
+      default = "monospace";
+      description = "CSS font family stack used by the desktop chat client.";
+    };
+
     queueMaxDepth = lib.mkOption {
       type = lib.types.ints.positive;
       default = 20;
@@ -1400,6 +1448,12 @@ in
           haAgentId,
           haTimeoutSeconds,
           apiPort,
+          chatEnable,
+          chatRingBufferSize,
+          chatRecipients,
+          chatDefaultRecipient,
+          chatFontSize,
+          chatFontFamily,
           queueMaxDepth,
           maxSendsPerHour,
           maxSendsPerMinute,
@@ -1451,6 +1505,7 @@ in
           sendStateFile = "${stateSubDir}/send-rate.json";
           senderBudgetFile = "${stateSubDir}/sender-budget.json";
           hookStateFile = "${stateSubDir}/hooks.json";
+          chatThreadsFile = "${stateSubDir}/chat-threads.json";
 
           secretPath = name: config.sops.secrets.${name}.path;
 
@@ -1462,6 +1517,9 @@ in
             if whisperCfg.transcribeList == null then [ ] else whisperCfg.transcribeList audioPlaceholder;
 
           bridgeScript = self.file "bridge.py";
+          desktopModuleFile = self.file "desktop.py";
+          chatPageFile = self.file "chat.html";
+          chatScriptFile = self.file "chat.js";
           pythonEnv = pkgs.python3.withPackages (ps: [
             ps.flask
             ps.pyyaml
@@ -1483,6 +1541,16 @@ in
               send_state_file = sendStateFile;
               sender_budget_file = senderBudgetFile;
               hook_state_file = hookStateFile;
+              chat_enable = chatEnable;
+              chat_ring_buffer_size = chatRingBufferSize;
+              chat_recipients = chatRecipients;
+              chat_default_recipient = chatDefaultRecipient;
+              chat_font_size = chatFontSize;
+              chat_font_family = chatFontFamily;
+              chat_threads_file = chatThreadsFile;
+              desktop_module_file = desktopModuleFile;
+              chat_page_file = chatPageFile;
+              chat_script_file = chatScriptFile;
               main_group_name = mainGroupName;
               profile_given_name = effectiveProfileGivenName;
               profile_about = profileAbout;
@@ -1887,6 +1955,18 @@ in
               message = "linux.services.signal-bot requires every hook trigger to set exactly one of instruction or message!";
             }
             {
+              assertion = !chatEnable || configured;
+              message = "linux.services.signal-bot requires configured to be true for the desktop chat channel!";
+            }
+            {
+              assertion = !chatEnable || config.nx.linux.server.auth.enableOAuthProxy;
+              message = "linux.services.signal-bot chatEnable requires linux.server.auth.enableOAuthProxy to be true so the chat channel is never exposed unauthenticated!";
+            }
+            {
+              assertion = !chatEnable || chatDefaultRecipient == null || chatRecipients ? ${chatDefaultRecipient};
+              message = "linux.services.signal-bot chatDefaultRecipient must be a name declared in chatRecipients!";
+            }
+            {
               assertion = !transcriptionActive || configured;
               message = "linux.services.signal-bot requires configured to be true for transcription!";
             }
@@ -2076,6 +2156,8 @@ in
             subdomain,
             configured,
             internalOnly,
+            chatEnable,
+            chatSubdomain,
             ...
           }:
           let
@@ -2091,16 +2173,64 @@ in
             '';
           in
           lib.mkIf (configured && domain != null) {
-            services.nginx.virtualHosts."${subdomain}.${domain}" = {
-              useACMEHost = domain;
-              forceSSL = true;
-              locations."/v1/send" = {
-                proxyPass = "http://127.0.0.1:${toString apiPort}/v1/send";
-                recommendedProxySettings = false;
-                extraConfig = internalGuard + proxyHeaders;
+            services.nginx.virtualHosts = {
+              "${subdomain}.${domain}" = {
+                useACMEHost = domain;
+                forceSSL = true;
+                locations."/v1/send" = {
+                  proxyPass = "http://127.0.0.1:${toString apiPort}/v1/send";
+                  recommendedProxySettings = false;
+                  extraConfig = internalGuard + proxyHeaders;
+                };
+                locations."/".return = "404";
               };
-              locations."/".return = "404";
+            }
+            // lib.optionalAttrs chatEnable {
+              "${chatSubdomain}.${domain}" = {
+                useACMEHost = domain;
+                forceSSL = true;
+                locations."/" = {
+                  proxyPass = "http://127.0.0.1:${toString apiPort}";
+                  recommendedProxySettings = false;
+                  extraConfig = proxyHeaders;
+                };
+                locations."/v1/chat/stream" = {
+                  proxyPass = "http://127.0.0.1:${toString apiPort}/v1/chat/stream";
+                  recommendedProxySettings = false;
+                  extraConfig = proxyHeaders + ''
+                    proxy_buffering off;
+                    proxy_cache off;
+                    proxy_set_header Connection "";
+                    proxy_read_timeout 3600s;
+                    chunked_transfer_encoding off;
+                  '';
+                };
+              };
             };
+          };
+      };
+
+      ifEnabled.linux.server.auth = {
+        enabled =
+          config:
+          let
+            moduleConfig = config.nx.linux.services.signal-bot;
+          in
+          lib.mkIf (moduleConfig.chatEnable && config.nx.linux.server.auth.enableOAuthProxy) {
+            nx.linux.server.auth.proxyProtectedVhosts = [
+              {
+                vhost = moduleConfig.chatSubdomain;
+                allowedGroups = [ moduleConfig.chatAllowedGroup ];
+              }
+            ];
+          };
+      };
+
+      ifEnabled.linux.server.ldap = {
+        enabled =
+          config:
+          lib.mkIf config.nx.linux.services.signal-bot.chatEnable {
+            nx.linux.server.ldap.groups = [ config.nx.linux.services.signal-bot.chatAllowedGroup ];
           };
       };
 

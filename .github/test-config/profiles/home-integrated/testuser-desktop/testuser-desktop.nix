@@ -163,6 +163,9 @@
           home-assistant = {
             subdomain = "home";
           };
+          signal-chat = {
+            subdomain = "signal-chat";
+          };
         };
       };
     };
