@@ -1,6 +1,7 @@
 import collections
 import contextlib
 import json
+import sys
 import threading
 import time
 from queue import Empty, Full, Queue
@@ -256,6 +257,7 @@ class DesktopChannel:
 
             def work():
                 try:
+                    print("signal-bot: handling a desktop message", file=sys.stderr)
                     if text.split()[0] in brain.command_names:
                         reply = brain.handle_command(text)
                         new_id = None
@@ -309,6 +311,7 @@ class DesktopChannel:
 
             def work():
                 try:
+                    print("signal-bot: handling a desktop reaction", file=sys.stderr)
                     hub.publish(
                         user, {"kind": "typing", "role": "bot", "on": True}, store=False
                     )
