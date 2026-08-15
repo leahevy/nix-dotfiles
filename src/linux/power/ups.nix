@@ -73,6 +73,31 @@ args@{
   };
 
   module = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          service = "upsmon.service";
+          tag = "upsmon";
+          string = "Poll UPS \\[ups@localhost\\] failed - Driver not connected";
+        }
+        {
+          service = "upsmon.service";
+          tag = "upsmon";
+          string = "UPS \\[ups@localhost\\]: connect failed: Connection failure: Connection refused";
+        }
+        {
+          service = "upsd.service";
+          tag = "upsd";
+          string = "WARNING: /etc/nut/upsd\\.conf is world readable \\(hope you don't have passwords there\\)";
+        }
+        {
+          service = "upsd.service";
+          tag = "upsd";
+          string = "mainloop: Interrupted system call";
+        }
+      ];
+    };
+
     ifEnabled.linux.server.healthchecks.enabled = config: {
       nx.linux.server.healthchecks.requireServicesUp = [
         "upsd.service"
