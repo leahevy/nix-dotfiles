@@ -116,14 +116,32 @@ args@{
 
         startupCommandList = startupCommands ++ lib.optional disableBeeper "beeper.disable";
         grantedInstcmds = lib.unique (map (c: lib.head (lib.splitString " " c)) startupCommandList);
+        upscmdAuth = pkgs.writeScript "ups-upscmd-auth" ''
+          #!${pkgs.expect}/bin/expect -f
+          log_user 0
+          set timeout 15
+          set pwfile [lindex $argv 0]
+          set target [lindex $argv 1]
+          set user [lindex $argv 2]
+          set cmd [lrange $argv 3 end]
+          set fh [open $pwfile r]
+          set pw [string trim [read $fh]]
+          close $fh
+          spawn ${config.power.ups.package}/bin/upscmd -u $user $target {*}$cmd
+          expect {
+            -re "(?i)password:" { send -- "$pw\r" }
+            timeout { exit 1 }
+            eof { exit 1 }
+          }
+          expect eof
+          catch wait result
+          exit [lindex $result 3]
+        '';
         startupCommandsScript = pkgs.writeShellScript "ups-startup-commands" ''
           set -eu
-          password=$(${pkgs.coreutils}/bin/cat "${passwordFile}")
           ${lib.concatMapStringsSep "\n" (
             cmd:
-            "printf '%s\\n' \"$password\" | ${pkgs.util-linux}/bin/script -qec "
-            + lib.escapeShellArg "${config.power.ups.package}/bin/upscmd -u ${monitorUser} ${upsName}@localhost ${cmd}"
-            + " /dev/null || true"
+            "${upscmdAuth} ${lib.escapeShellArg passwordFile} ${upsName}@localhost ${monitorUser} ${cmd} || true"
           ) startupCommandList}
         '';
 
