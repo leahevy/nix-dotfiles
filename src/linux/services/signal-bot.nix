@@ -644,13 +644,21 @@ in
             };
 
             startTime = lib.mkOption {
-              type = lib.types.strMatching "([01][0-9]|2[0-3]):[0-5][0-9]";
-              description = "Local start of the fire window as HH:MM.";
+              type = lib.types.nullOr (lib.types.strMatching "([01][0-9]|2[0-3]):[0-5][0-9]");
+              default = null;
+              description = "Local start of the fire window as HH:MM, mutually exclusive with time.";
             };
 
             endTime = lib.mkOption {
-              type = lib.types.strMatching "([01][0-9]|2[0-3]):[0-5][0-9]";
-              description = "Local end of the fire window as HH:MM, an end not after the start wraps past midnight.";
+              type = lib.types.nullOr (lib.types.strMatching "([01][0-9]|2[0-3]):[0-5][0-9]");
+              default = null;
+              description = "Local end of the fire window as HH:MM, an end not after the start wraps past midnight, mutually exclusive with time.";
+            };
+
+            time = lib.mkOption {
+              type = lib.types.nullOr (lib.types.strMatching "([01][0-9]|2[0-3]):[0-5][0-9]");
+              default = null;
+              description = "Exact local fire time as HH:MM that fires at that moment when the gates pass, mutually exclusive with startTime and endTime.";
             };
 
             probability = lib.mkOption {
@@ -1617,6 +1625,7 @@ in
                 enable = hook.enable;
                 start_time = hook.startTime;
                 end_time = hook.endTime;
+                exact_time = hook.time;
                 probability = hook.probability;
                 min_user_interactions = hook.minUserInteractions;
                 triggers = map (trigger: {
@@ -1988,6 +1997,14 @@ in
             {
               assertion = lib.all (hook: hook.whenTriggered != [ ]) (lib.attrValues enabledHooks);
               message = "linux.services.signal-bot requires every enabled hook to define at least one whenTriggered entry!";
+            }
+            {
+              assertion = lib.all (
+                hook:
+                (hook.time != null && hook.startTime == null && hook.endTime == null)
+                || (hook.time == null && hook.startTime != null && hook.endTime != null)
+              ) (lib.attrValues enabledHooks);
+              message = "linux.services.signal-bot requires every hook to set either time or both startTime and endTime, never mixed!";
             }
             {
               assertion = lib.all (hook: lib.all (trigger: trigger.instruction != "") hook.whenTriggered) (

@@ -150,6 +150,7 @@ REQUIRED_HOOK_KEYS = (
     "enable",
     "start_time",
     "end_time",
+    "exact_time",
     "probability",
     "min_user_interactions",
     "triggers",
@@ -309,11 +310,23 @@ def validate_hooks(hooks):
             raise SystemExit(
                 f"signal-bot: hook {name!r} is missing {', '.join(missing)}!"
             )
-        for key in ("start_time", "end_time"):
-            if not HOOK_TIME_PATTERN.match(str(hook[key])):
+        if hook["exact_time"] is not None:
+            if hook["start_time"] is not None or hook["end_time"] is not None:
                 raise SystemExit(
-                    f"signal-bot: hook {name!r} has an invalid {key}, expected HH:MM!"
+                    f"signal-bot: hook {name!r} sets exact_time together with a window!"
                 )
+            if not HOOK_TIME_PATTERN.match(str(hook["exact_time"])):
+                raise SystemExit(
+                    f"signal-bot: hook {name!r} has an invalid exact_time, "
+                    "expected HH:MM!"
+                )
+        else:
+            for key in ("start_time", "end_time"):
+                if not HOOK_TIME_PATTERN.match(str(hook[key])):
+                    raise SystemExit(
+                        f"signal-bot: hook {name!r} has an invalid {key}, "
+                        "expected HH:MM!"
+                    )
         triggers = hook["triggers"]
         if not isinstance(triggers, list) or not triggers:
             raise SystemExit(
@@ -2610,6 +2623,13 @@ def parse_hook_time(value):
     return int(hour), int(minute)
 
 
+def hook_window_label(hook):
+    exact = hook.get("exact_time")
+    if exact:
+        return exact
+    return f"{hook['start_time']}-{hook['end_time']}"
+
+
 def window_instance(now, start_hm, end_hm, day_offset):
     base = time.localtime(now + day_offset * SECONDS_PER_DAY)
     start_hour, start_minute = start_hm
@@ -2864,13 +2884,20 @@ class HookScheduler:
         self.min_between = cfg["min_seconds_between_hooks"]
         self.min_since_bot = cfg["min_seconds_since_bot_message"]
         self.min_since_user = cfg["min_seconds_since_user_message"]
-        self.times = {
-            name: (
-                parse_hook_time(hook["start_time"]),
-                parse_hook_time(hook["end_time"]),
-            )
-            for name, hook in hooks.items()
-        }
+        self.times = {}
+        self.exact = {}
+        for name, hook in hooks.items():
+            exact = hook.get("exact_time")
+            if exact:
+                start = parse_hook_time(exact)
+                self.times[name] = (start, (start[0], start[1] + 1))
+                self.exact[name] = True
+            else:
+                self.times[name] = (
+                    parse_hook_time(hook["start_time"]),
+                    parse_hook_time(hook["end_time"]),
+                )
+                self.exact[name] = False
         self.lock = threading.Lock()
         self.schedule = {}
 
@@ -2883,12 +2910,14 @@ class HookScheduler:
         start_hm, end_hm = self.times[name]
         open_epoch, close_epoch, key, _ = current_window(now, start_hm, end_hm)
         lo = max(now, open_epoch)
-        window = f"{hook['start_time']}-{hook['end_time']}"
+        window = hook_window_label(hook)
         fire_at = None
         if lo < close_epoch:
             roll = random.random()
             if roll < hook["probability"]:
-                fire_at = random.uniform(lo, close_epoch)
+                fire_at = (
+                    open_epoch if self.exact[name] else random.uniform(lo, close_epoch)
+                )
             if fire_at is None:
                 print(
                     f"signal-bot: hook {name!r} not scheduled for window {window}, "
@@ -3027,7 +3056,7 @@ class HookScheduler:
 
     def describe(self, name):
         hook = self.hooks[name]
-        window = f"{hook['start_time']}-{hook['end_time']}"
+        window = hook_window_label(hook)
         key = self._window_key(name, time.time())
         if self.hook_state.already_fired(name, key):
             return message_text(self.cfg, "status_hook_fired").replace(
