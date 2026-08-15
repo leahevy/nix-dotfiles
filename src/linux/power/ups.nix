@@ -63,6 +63,13 @@ args@{
   };
 
   module = {
+    ifEnabled.linux.server.healthchecks.enabled = config: {
+      nx.linux.server.healthchecks.requireServicesUp = [
+        "upsd.service"
+        "upsmon.service"
+      ];
+    };
+
     linux.system =
       {
         config,
