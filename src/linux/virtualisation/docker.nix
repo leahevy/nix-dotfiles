@@ -92,6 +92,18 @@ args@{
       };
     };
 
+    ifEnabled.linux.power.ups = {
+      enabled = config: {
+        nx.linux.power.ups.onBatteryShutdownCommands = [
+          {
+            name = "docker-containers";
+            command = "ids=$(${pkgs.docker}/bin/docker ps -q); if [ -n \"$ids\" ]; then ${pkgs.docker}/bin/docker stop --time 60 $ids; fi";
+            killCommand = "ids=$(${pkgs.docker}/bin/docker ps -q); if [ -n \"$ids\" ]; then ${pkgs.docker}/bin/docker kill $ids; fi";
+          }
+        ];
+      };
+    };
+
     ifEnabled.linux.security.aide = {
       enabled = config: {
         nx.linux.security.aide.skipPaths = [

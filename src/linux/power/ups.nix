@@ -42,6 +42,16 @@ args@{
       };
       description = "Device match directives injected by the host profile to bind a specific UPS, required when the module is enabled";
     };
+    offdelay = lib.mkOption {
+      type = lib.types.int;
+      default = 60;
+      description = "Seconds the UPS waits before cutting output power after being told to shut down, only takes effect on the killpower path";
+    };
+    ondelay = lib.mkOption {
+      type = lib.types.int;
+      default = 70;
+      description = "Seconds before the UPS restores output power after mains returns, must be greater than offdelay for a clean power cycle";
+    };
     notifyThrottle = lib.mkOption {
       type = lib.types.attrsOf lib.types.int;
       default = {
@@ -69,6 +79,59 @@ args@{
       type = lib.types.bool;
       default = false;
       description = "Disable the UPS beeper on startup by issuing the beeper.disable instant command";
+    };
+    enableAutomaticShutdown = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable delayed graceful shutdown after a prolonged on battery period, notification only when this is off";
+    };
+    dryRun = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Exercise the on battery timer, notifications and dispatcher but log the teardown and poweroff instead of running them, only meaningful when enableAutomaticShutdown is set";
+    };
+    onBatteryTimeout = lib.mkOption {
+      type = lib.types.int;
+      default = 600;
+      description = "Seconds on battery before a graceful shutdown is triggered, only used when enableAutomaticShutdown is set";
+    };
+    shutdownCommandTimeout = lib.mkOption {
+      type = lib.types.int;
+      default = 180;
+      description = "Default seconds allowed for each graceful teardown command before it is considered failed";
+    };
+    killCommandTimeout = lib.mkOption {
+      type = lib.types.int;
+      default = 60;
+      description = "Seconds allowed for a teardown kill escalation command";
+    };
+    onBatteryShutdownCommands = lib.mkOption {
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.str;
+              description = "Label used in shutdown teardown logs";
+            };
+            command = lib.mkOption {
+              type = lib.types.str;
+              description = "Graceful teardown command run as root before poweroff";
+            };
+            killCommand = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Optional escalation command run when the graceful command fails or times out";
+            };
+            timeout = lib.mkOption {
+              type = lib.types.nullOr lib.types.int;
+              default = null;
+              description = "Seconds allowed for the graceful command, null uses shutdownCommandTimeout";
+            };
+          };
+        }
+      );
+      default = [ ];
+      description = "Root teardown commands run in order before the automatic poweroff, each isolated with its own timeout and optional kill escalation";
     };
   };
 
@@ -117,11 +180,19 @@ args@{
         upsDriver,
         upsDescription,
         deviceMatch,
+        offdelay,
+        ondelay,
         notifyThrottle,
         rbWarnTime,
         noCommWarnTime,
         startupCommands,
         disableBeeper,
+        enableAutomaticShutdown,
+        dryRun,
+        onBatteryTimeout,
+        shutdownCommandTimeout,
+        killCommandTimeout,
+        onBatteryShutdownCommands,
         ...
       }:
       let
@@ -131,6 +202,7 @@ args@{
         passwordFile = "${varDir}/monitor-password";
         upsmonUser = config.power.ups.upsmon.user;
         upsmonGroup = config.power.ups.upsmon.group;
+        realShutdown = enableAutomaticShutdown && !dryRun;
 
         pushover = config.nx.linux.notifications.pushover;
         pushoverEnabled = self.isModuleEnabled "notifications.pushover" && pushover.script != null;
@@ -236,12 +308,109 @@ args@{
               ;;
           esac
         '';
+
+        loggerBin = "${pkgs.util-linux}/bin/logger";
+        timeoutBin = "${pkgs.coreutils}/bin/timeout";
+        touchBin = "${pkgs.coreutils}/bin/touch";
+        teardownShell = pkgs.runtimeShell;
+        fsdRequest = "${stateDir}/fsd-request";
+
+        shutdownCommandsBlock = lib.concatMapStringsSep "\n" (
+          c:
+          let
+            graceTimeout = if c.timeout != null then c.timeout else shutdownCommandTimeout;
+            killBlock = lib.optionalString (c.killCommand != null) ''
+              ${loggerBin} -t nx-ups "teardown '${c.name}': escalating to kill command"
+              if ${timeoutBin} ${toString killCommandTimeout} ${teardownShell} -c ${lib.escapeShellArg c.killCommand}; then
+                ${loggerBin} -t nx-ups "teardown '${c.name}': kill command completed"
+              else
+                ${loggerBin} -t nx-ups "teardown '${c.name}': kill command failed with status $?"
+              fi'';
+          in
+          ''
+            ${loggerBin} -t nx-ups "teardown '${c.name}': starting (timeout ${toString graceTimeout}s)"
+            if ${timeoutBin} ${toString graceTimeout} ${teardownShell} -c ${lib.escapeShellArg c.command}; then
+              ${loggerBin} -t nx-ups "teardown '${c.name}': completed"
+            else
+              ${loggerBin} -t nx-ups "teardown '${c.name}': failed or timed out with status $?"
+            ${killBlock}
+            fi''
+        ) onBatteryShutdownCommands;
+
+        teardownScript = pkgs.writeShellScript "ups-graceful-shutdown" ''
+          set -u
+          ${loggerBin} -t nx-ups "UPS forced shutdown reached, running graceful teardown"
+          ${shutdownCommandsBlock}
+          ${loggerBin} -t nx-ups "UPS teardown finished, powering off"
+          ${pkgs.systemd}/bin/systemctl poweroff -i
+        '';
+
+        dryShutdownBlock = lib.concatMapStringsSep "\n" (
+          c:
+          let
+            graceTimeout = if c.timeout != null then c.timeout else shutdownCommandTimeout;
+            killLine =
+              lib.optionalString (c.killCommand != null)
+                "\n${loggerBin} -t nx-ups ${lib.escapeShellArg "DRY RUN teardown '${c.name}': would escalate to kill: ${c.killCommand}"}";
+          in
+          "${loggerBin} -t nx-ups ${lib.escapeShellArg "DRY RUN teardown '${c.name}': would run (timeout ${toString graceTimeout}s): ${c.command}"}${killLine}"
+        ) onBatteryShutdownCommands;
+
+        dryTeardownScript = pkgs.writeShellScript "ups-graceful-shutdown-dryrun" ''
+          ${loggerBin} -t nx-ups "DRY RUN: UPS forced shutdown reached, teardown and poweroff suppressed"
+          ${dryShutdownBlock}
+          ${loggerBin} -t nx-ups "DRY RUN: would power off with systemctl poweroff -i"
+        '';
+
+        dispatcherScript = pkgs.writeShellScript "ups-upssched-cmd" ''
+          set -u
+          case "$1" in
+            onbatt-timeout)
+              ${
+                if pushoverEnabled then
+                  pushover.send {
+                    title = "UPS";
+                    message =
+                      if dryRun then
+                        "DRY RUN: on battery for ${toString onBatteryTimeout}s, graceful shutdown suppressed"
+                      else
+                        "On battery for ${toString onBatteryTimeout}s, starting graceful shutdown";
+                    type = "warn";
+                  }
+                else
+                  ":"
+              }
+              ${if dryRun then "${dryTeardownScript}" else "${touchBin} ${fsdRequest}"}
+              ;;
+          esac
+        '';
+
+        upsschedConf = pkgs.writeText "upssched.conf" ''
+          CMDSCRIPT ${dispatcherScript}
+          PIPEFN ${stateDir}/upssched.pipe
+          LOCKFN ${stateDir}/upssched.lock
+          AT ONBATT * START-TIMER onbatt-timeout ${toString onBatteryTimeout}
+          AT ONLINE * CANCEL-TIMER onbatt-timeout
+        '';
+
+        upsschedWrapper = pkgs.writeShellScript "ups-notify-sched" ''
+          ${notifyScript} "$@" || true
+          ${config.power.ups.package}/bin/upssched || true
+        '';
       in
       {
         assertions = [
           {
             assertion = deviceMatch != { };
             message = "linux.power.ups: deviceMatch is empty, inject vendorid/productid/serial from the host profile!";
+          }
+          {
+            assertion = !enableAutomaticShutdown || onBatteryTimeout > 0;
+            message = "linux.power.ups: onBatteryTimeout must be greater than zero when enableAutomaticShutdown is set!";
+          }
+          {
+            assertion = !enableAutomaticShutdown || ondelay > offdelay;
+            message = "linux.power.ups: ondelay must be greater than offdelay for the UPS to power cycle cleanly!";
           }
           {
             assertion = !(notifyThrottle ? REPLBATT || notifyThrottle ? NOCOMM);
@@ -314,15 +483,40 @@ args@{
           requires = [ "ups-monitor-password.service" ];
         };
 
+        systemd.services.ups-onbatt-shutdown = lib.mkIf realShutdown {
+          description = "Force NUT forced shutdown after a prolonged on battery timeout";
+          environment = {
+            NUT_CONFPATH = "/etc/nut";
+            NUT_STATEPATH = "/var/lib/nut";
+          };
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStartPre = "${pkgs.coreutils}/bin/rm -f ${fsdRequest}";
+            ExecStart = "${config.power.ups.package}/sbin/upsmon -c fsd";
+          };
+        };
+
+        systemd.paths.ups-onbatt-shutdown = lib.mkIf realShutdown {
+          description = "Watch for the NUT on battery shutdown request flag";
+          wantedBy = [ "multi-user.target" ];
+          pathConfig.PathExists = fsdRequest;
+        };
+
         power.ups = {
           enable = true;
           mode = "standalone";
+          schedulerRules = lib.mkIf enableAutomaticShutdown "${upsschedConf}";
 
           ups.${upsName} = {
             driver = upsDriver;
             port = "auto";
             description = upsDescription;
-            directives = lib.mapAttrsToList (k: v: "${k} = ${v}") deviceMatch;
+            directives =
+              lib.mapAttrsToList (k: v: "${k} = ${v}") deviceMatch
+              ++ lib.optionals realShutdown [
+                "offdelay = ${toString offdelay}"
+                "ondelay = ${toString ondelay}"
+              ];
           };
 
           upsd.listen = [ { address = "127.0.0.1"; } ];
@@ -340,9 +534,13 @@ args@{
           };
 
           upsmon.settings = {
-            NOTIFYCMD = "${notifyScript}";
-            SHUTDOWNCMD = "${shutdownSuppressed}";
-            POWERDOWNFLAG = null;
+            NOTIFYCMD = if enableAutomaticShutdown then "${upsschedWrapper}" else "${notifyScript}";
+            SHUTDOWNCMD =
+              if enableAutomaticShutdown then
+                (if dryRun then "${dryTeardownScript}" else "${teardownScript}")
+              else
+                "${shutdownSuppressed}";
+            POWERDOWNFLAG = if realShutdown then "/run/killpower" else null;
             RBWARNTIME = rbWarnTime;
             NOCOMMWARNTIME = noCommWarnTime;
             NOTIFYFLAG = [
