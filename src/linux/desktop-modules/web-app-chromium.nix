@@ -18,7 +18,7 @@ args@{
   };
 
   settings = {
-    package = pkgs.ungoogled-chromium;
+    useGoogleChromium = false;
     program = "chromium";
     args = "--app=";
     dataBaseDir = ".local/share/webapps";
@@ -34,7 +34,7 @@ args@{
 
   module =
     let
-      package = self.settings.package;
+      package = if self.settings.useGoogleChromium then pkgs.chromium else pkgs.ungoogled-chromium;
       program = self.settings.program;
       chromiumArgs = self.settings.args;
       bin = package + "/bin/${program}";
@@ -92,7 +92,7 @@ args@{
       };
 
       linux.home = config: {
-        home.packages = [ self.settings.package ];
+        home.packages = [ package ];
 
         home.persistence."${self.persist}" = {
           directories = self.settings.persistenceDirs;
