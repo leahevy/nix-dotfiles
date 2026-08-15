@@ -258,25 +258,25 @@ class DesktopChannel:
             def work():
                 try:
                     print("signal-bot: handling a desktop message", file=sys.stderr)
-                    if text.split()[0] in brain.command_names:
-                        reply = brain.handle_command(text)
-                        new_id = None
-                    else:
-                        hub.publish(
-                            user,
-                            {"kind": "typing", "role": "bot", "on": True},
-                            store=False,
-                        )
-                        try:
+                    hub.publish(
+                        user,
+                        {"kind": "typing", "role": "bot", "on": True},
+                        store=False,
+                    )
+                    try:
+                        reply = brain.command_reply(text)
+                        if reply is not None:
+                            new_id = None
+                        else:
                             reply, new_id = brain.call_ha_conversation(
                                 text, self.threads.resolve(user)
                             )
-                        finally:
-                            hub.publish(
-                                user,
-                                {"kind": "typing", "role": "bot", "on": False},
-                                store=False,
-                            )
+                    finally:
+                        hub.publish(
+                            user,
+                            {"kind": "typing", "role": "bot", "on": False},
+                            store=False,
+                        )
                     if new_id:
                         self.threads.remember(user, new_id)
                     bot_id = self.publish_message(

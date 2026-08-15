@@ -4146,6 +4146,42 @@ def serve(cfg):
         def desktop_call_ha(text, conversation_id):
             return call_ha_conversation(cfg, ha_token, text, conversation_id)
 
+        def desktop_run_script(command_name, script_command, command_argument):
+            problem = script_argument_problem(
+                cfg, command_name, script_command, command_argument
+            )
+            if problem is not None:
+                return problem
+            print(
+                f"signal-bot: running the desktop script command {command_name}",
+                file=sys.stderr,
+            )
+            return call_ha_script(
+                cfg, ha_token, command_name, script_command, command_argument
+            )
+
+        def desktop_command_reply(text):
+            stripped = text.strip()
+            if stripped.startswith("/"):
+                command_name, command_argument = split_command(stripped)
+                script_command = script_commands.get(command_name)
+                if script_command is None:
+                    return desktop_handle_command(stripped)
+                return desktop_run_script(
+                    command_name, script_command, command_argument
+                )
+            shortcut_name = script_shortcuts.get(stripped[:1]) if stripped else None
+            if shortcut_name is None:
+                return None
+            command_argument = stripped[1:].strip()
+            if not command_argument[:1].isalnum():
+                return command_message(
+                    cfg, "script_shortcut_invalid", shortcut_name
+                ).replace("{shortcut}", stripped[:1])
+            return desktop_run_script(
+                shortcut_name, script_commands[shortcut_name], command_argument
+            )
+
         brain = pytypes.SimpleNamespace(
             cfg=cfg,
             log_error=log_error,
@@ -4155,9 +4191,8 @@ def serve(cfg):
             reactions_enabled=reactions_enabled,
             reactions_config=reactions_config,
             ha_session_seconds=ha_session_seconds,
-            command_names=set(COMMANDS),
-            handle_command=desktop_handle_command,
             call_ha_conversation=desktop_call_ha,
+            command_reply=desktop_command_reply,
             reaction_reply=reaction_reply,
         )
         desktop = desktop_mod.DesktopChannel(brain)
