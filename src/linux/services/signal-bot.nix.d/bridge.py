@@ -2950,24 +2950,25 @@ class HookScheduler:
             return False, "prerequisite"
         if self.hook_state.budget_remaining(self.max_sends) <= 0:
             return False, "budget"
-        since_fire = self.hook_state.seconds_since_last_fire()
-        if since_fire is not None and since_fire < self.min_between:
-            return False, "between"
-        min_since_bot = hook["min_seconds_since_bot_message"]
-        if min_since_bot is None:
-            min_since_bot = self.min_since_bot
-        min_since_user = hook["min_seconds_since_user_message"]
-        if min_since_user is None:
-            min_since_user = self.min_since_user
-        since_bot, since_user = self.transcript.gate_seconds()
-        if since_bot is not None and since_bot < min_since_bot:
-            return False, "bot"
-        if (
-            min_since_user > 0
-            and since_user is not None
-            and since_user < min_since_user
-        ):
-            return False, "user"
+        if not self.exact[name]:
+            since_fire = self.hook_state.seconds_since_last_fire()
+            if since_fire is not None and since_fire < self.min_between:
+                return False, "between"
+            min_since_bot = hook["min_seconds_since_bot_message"]
+            if min_since_bot is None:
+                min_since_bot = self.min_since_bot
+            min_since_user = hook["min_seconds_since_user_message"]
+            if min_since_user is None:
+                min_since_user = self.min_since_user
+            since_bot, since_user = self.transcript.gate_seconds()
+            if since_bot is not None and since_bot < min_since_bot:
+                return False, "bot"
+            if (
+                min_since_user > 0
+                and since_user is not None
+                and since_user < min_since_user
+            ):
+                return False, "user"
         if self.transcript.user_interactions() < hook["min_user_interactions"]:
             return False, "activity"
         return True, "pass"
@@ -3007,7 +3008,8 @@ class HookScheduler:
                 continue
             passed, reason = self._gates_pass(name, hook)
             if not passed:
-                policy = HOOK_BLOCK_POLICY.get(reason, hook["on_block"])
+                default_policy = "skip" if self.exact[name] else hook["on_block"]
+                policy = HOOK_BLOCK_POLICY.get(reason, default_policy)
                 with self.lock:
                     entry = self.schedule[name]
                     changed = entry.get("reason") != reason
