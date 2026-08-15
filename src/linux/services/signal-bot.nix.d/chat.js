@@ -7,6 +7,7 @@ const input = document.getElementById("input");
 
 let reactionButtons = [];
 let botAvatar = null;
+let typingText = "the bot is typing";
 const messagesById = new Map();
 const seenIds = new Set();
 
@@ -192,7 +193,7 @@ function addMessage(event) {
 }
 
 function setTyping(on) {
-  typing.textContent = on ? "the bot is typing..." : "";
+  typing.textContent = on ? `${typingText}...` : "";
 }
 
 async function react(targetId, emoji) {
@@ -282,6 +283,9 @@ async function boot() {
       }
       if (cfg.fontFamily) {
         root.setProperty("--font-family", cfg.fontFamily);
+      }
+      if (cfg.typing) {
+        typingText = cfg.typing;
       }
     }
   } catch (e) {

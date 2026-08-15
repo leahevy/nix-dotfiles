@@ -865,6 +865,12 @@ in
             description = "Contact label for the shared budget line covering desktop users that map to no configured contact.";
           };
 
+          chatTypingTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = "{name} is typing";
+            description = "Desktop chat typing indicator, with the placeholder {name} substituted by the bot given name.";
+          };
+
           statusMaybeBudgetTemplate = lib.mkOption {
             type = lib.types.str;
             default = "{remaining} of {limit} left";
@@ -1561,6 +1567,9 @@ in
               chat_default_recipient = chatDefaultRecipient;
               chat_font_size = chatFontSize;
               chat_font_family = chatFontFamily;
+              chat_typing_text =
+                lib.replaceStrings [ "{name}" ] [ effectiveProfileGivenName ]
+                  messages.chatTypingTemplate;
               chat_threads_file = chatThreadsFile;
               desktop_module_file = desktopModuleFile;
               chat_page_file = chatPageFile;
