@@ -95,6 +95,11 @@ args@{
           tag = "upsd";
           string = "mainloop: Interrupted system call";
         }
+        {
+          service = "upsd.service";
+          tag = "upsd";
+          string = "Can't connect to UPS \\[ups\\] \\(/var/lib/nut/usbhid-ups-ups\\): No such file or directory";
+        }
       ];
     };
 
