@@ -4191,19 +4191,22 @@ def serve(cfg):
         def desktop_call_ha(text, conversation_id):
             return call_ha_conversation(cfg, ha_token, text, conversation_id)
 
-        def desktop_run_script(command_name, script_command, command_argument):
+        def desktop_run_script(
+            command_name, script_command, command_argument, source_text
+        ):
             problem = script_argument_problem(
                 cfg, command_name, script_command, command_argument
             )
             if problem is not None:
-                return problem
+                return problem, None
             print(
                 f"signal-bot: running the desktop script command {command_name}",
                 file=sys.stderr,
             )
-            return call_ha_script(
+            reply = call_ha_script(
                 cfg, ha_token, command_name, script_command, command_argument
             )
+            return reply, with_script_description(cfg, source_text, script_command)
 
         def desktop_command_reply(text):
             stripped = text.strip()
@@ -4211,20 +4214,26 @@ def serve(cfg):
                 command_name, command_argument = split_command(stripped)
                 script_command = script_commands.get(command_name)
                 if script_command is None:
-                    return desktop_handle_command(stripped)
+                    return desktop_handle_command(stripped), None
                 return desktop_run_script(
-                    command_name, script_command, command_argument
+                    command_name, script_command, command_argument, stripped
                 )
             shortcut_name = script_shortcuts.get(stripped[:1]) if stripped else None
             if shortcut_name is None:
-                return None
+                return None, None
             command_argument = stripped[1:].strip()
             if not command_argument[:1].isalnum():
-                return command_message(
-                    cfg, "script_shortcut_invalid", shortcut_name
-                ).replace("{shortcut}", stripped[:1])
+                return (
+                    command_message(
+                        cfg, "script_shortcut_invalid", shortcut_name
+                    ).replace("{shortcut}", stripped[:1]),
+                    None,
+                )
             return desktop_run_script(
-                shortcut_name, script_commands[shortcut_name], command_argument
+                shortcut_name,
+                script_commands[shortcut_name],
+                command_argument,
+                stripped,
             )
 
         desktop_recipients = cfg.get("chat_recipients") or {}
@@ -4252,6 +4261,12 @@ def serve(cfg):
             budget=budget,
             budget_key_for=desktop_budget_key,
             budget_exhausted=message_text(cfg, "budget_exhausted"),
+            render_recap=render_recap,
+            with_context_recap=with_context_recap,
+            context_max_chars=context_max_chars,
+            context_max_messages=cfg["context_max_messages"],
+            bot_label=message_text(cfg, "quote_context_bot"),
+            follow_up_window=lambda: follow_up_window(cfg),
         )
         desktop = desktop_mod.DesktopChannel(brain)
         desktop.register(app, jsonify, request)

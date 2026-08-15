@@ -133,7 +133,9 @@ function addMessage(event) {
     seenIds.add(event.id);
   }
   const el = document.createElement("div");
-  el.className = `msg ${event.role === "user" ? "user" : "bot"}`;
+  el.className =
+    `msg ${event.role === "user" ? "user" : "bot"}` +
+    (event.failed ? " failed" : "");
   let html = "";
   if (event.quoteId != null && messagesById.has(event.quoteId)) {
     const quoted = messagesById.get(event.quoteId);
@@ -196,27 +198,47 @@ function setTyping(on) {
   typing.textContent = on ? `${typingText}...` : "";
 }
 
+function flashFailed(targetId) {
+  const row = log.querySelector(`.reactions[data-target="${targetId}"]`);
+  const bubble = row ? row.closest(".msg") : null;
+  if (!bubble) return;
+  bubble.classList.remove("flash-failed");
+  void bubble.offsetWidth;
+  bubble.classList.add("flash-failed");
+  setTimeout(() => bubble.classList.remove("flash-failed"), 600);
+}
+
 async function react(targetId, emoji) {
+  let ok = false;
   try {
-    await fetch("/v1/chat/react", {
+    const res = await fetch("/v1/chat/react", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ targetId, emoji }),
     });
+    ok = res.ok;
   } catch (e) {
     console.error("reaction failed", e);
+  }
+  if (!ok) {
+    flashFailed(targetId);
   }
 }
 
 async function send(message) {
+  let ok = false;
   try {
-    await fetch("/v1/chat", {
+    const res = await fetch("/v1/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message }),
     });
+    ok = res.ok;
   } catch (e) {
     console.error("send failed", e);
+  }
+  if (!ok) {
+    addMessage({ role: "user", text: message, failed: true });
   }
 }
 

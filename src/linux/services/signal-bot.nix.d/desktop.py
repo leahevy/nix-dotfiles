@@ -107,6 +107,79 @@ class DesktopThreads:
                 )
 
 
+class DesktopTranscripts:
+    def __init__(self, max_messages, follow_up_window):
+        self.max_messages = max_messages
+        self.follow_up_window = follow_up_window
+        self.lock = threading.Lock()
+        self.threads = {}
+
+    def _live(self, user):
+        entry = self.threads.get(user)
+        if entry is None:
+            return None
+        if time.monotonic() - entry["seen"] > self.follow_up_window():
+            del self.threads[user]
+            return None
+        return entry
+
+    def _touch(self, user):
+        entry = self.threads.get(user)
+        if entry is None:
+            entry = {"seen": 0.0, "recap": False, "log": [], "pending": []}
+            self.threads[user] = entry
+        entry["seen"] = time.monotonic()
+        return entry
+
+    def _prune(self):
+        now = time.monotonic()
+        window = self.follow_up_window()
+        expired = [
+            user for user, entry in self.threads.items() if now - entry["seen"] > window
+        ]
+        for user in expired:
+            del self.threads[user]
+
+    def remember_turn(self, user, author, text, pending=False):
+        if not text:
+            return
+        with self.lock:
+            entry = self._touch(user)
+            entry["log"].append((author, text))
+            del entry["log"][: -self.max_messages]
+            if pending:
+                entry["pending"].append((author, text))
+                del entry["pending"][: -self.max_messages]
+            self._prune()
+
+    def transcript(self, user):
+        with self.lock:
+            entry = self._live(user)
+            return list(entry["log"]) if entry else []
+
+    def pending_turns(self, user):
+        with self.lock:
+            entry = self._live(user)
+            return list(entry["pending"]) if entry else []
+
+    def needs_recap(self, user):
+        with self.lock:
+            entry = self._live(user)
+            return bool(entry and entry["recap"])
+
+    def mark_recap(self, user, recap_sent=False, drift=False):
+        with self.lock:
+            entry = self._live(user)
+            if entry is None:
+                return
+            if recap_sent:
+                entry["recap"] = False
+                entry["pending"].clear()
+            elif drift:
+                entry["recap"] = True
+            self._prune()
+
+
 class DesktopChannel:
     def __init__(self, brain):
         self.brain = brain
@@ -125,6 +198,9 @@ class DesktopChannel:
             brain.write_json_state,
             brain.log_error,
         )
+        self.transcripts = DesktopTranscripts(
+            brain.context_max_messages, brain.follow_up_window
+        )
         self.id_lock = threading.Lock()
         self.id_counter = int(time.time() * 1000)
 
@@ -132,6 +208,12 @@ class DesktopChannel:
         with self.id_lock:
             self.id_counter += 1
             return self.id_counter
+
+    def speaker_label(self, user):
+        for name, oauth_user in self.recipients.items():
+            if oauth_user == user:
+                return name
+        return self.default_recipient or user
 
     def publish_message(
         self, user, role, text, reactable=False, title="", url="", quote_id=None
@@ -275,13 +357,57 @@ class DesktopChannel:
                         store=False,
                     )
                     try:
-                        reply = brain.command_reply(text)
+                        reply, script_turn = brain.command_reply(text)
                         if reply is not None:
                             new_id = None
+                            if script_turn is not None:
+                                self.transcripts.remember_turn(
+                                    user,
+                                    self.speaker_label(user),
+                                    script_turn,
+                                    pending=True,
+                                )
+                                if isinstance(reply, str):
+                                    self.transcripts.remember_turn(
+                                        user, brain.bot_label, reply, pending=True
+                                    )
                         else:
-                            reply, new_id = brain.call_ha_conversation(
-                                text, self.threads.resolve(user)
+                            conversation_id = self.threads.resolve(user)
+                            if conversation_id is None or self.transcripts.needs_recap(
+                                user
+                            ):
+                                entries = self.transcripts.transcript(user)
+                            else:
+                                entries = self.transcripts.pending_turns(user)
+                            recap = brain.render_recap(
+                                self.cfg, entries, brain.context_max_chars
                             )
+                            prompt = (
+                                brain.with_context_recap(self.cfg, recap, text)
+                                if recap
+                                else text
+                            )
+                            self.transcripts.remember_turn(
+                                user, self.speaker_label(user), text
+                            )
+                            reply, new_id = brain.call_ha_conversation(
+                                prompt, conversation_id
+                            )
+                            delivered = new_id is not None
+                            drift = bool(
+                                conversation_id and new_id and new_id != conversation_id
+                            )
+                            self.transcripts.mark_recap(
+                                user,
+                                recap_sent=bool(recap) and delivered,
+                                drift=drift,
+                            )
+                            if delivered and isinstance(reply, str):
+                                self.transcripts.remember_turn(
+                                    user, brain.bot_label, reply
+                                )
+                            if recap and delivered and budget_key is not None:
+                                brain.budget.charge_context(budget_key, recap)
                     finally:
                         hub.publish(
                             user,

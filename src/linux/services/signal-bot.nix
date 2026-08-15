@@ -317,7 +317,7 @@ in
 
     conversationFollowUpSeconds = lib.mkOption {
       type = lib.types.ints.positive;
-      default = 7200;
+      default = 10800;
       description = "Seconds without a further message after which the bot ends a conversation outside the night hours.";
     };
 
