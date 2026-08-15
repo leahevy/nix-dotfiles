@@ -4182,6 +4182,14 @@ def serve(cfg):
                 shortcut_name, script_commands[shortcut_name], command_argument
             )
 
+        desktop_recipients = cfg.get("chat_recipients") or {}
+
+        def desktop_budget_key(user):
+            for recipient_name, oauth_user in desktop_recipients.items():
+                if oauth_user == user:
+                    return contacts_by_name.get(recipient_name)
+            return None
+
         brain = pytypes.SimpleNamespace(
             cfg=cfg,
             log_error=log_error,
@@ -4194,6 +4202,9 @@ def serve(cfg):
             call_ha_conversation=desktop_call_ha,
             command_reply=desktop_command_reply,
             reaction_reply=reaction_reply,
+            budget=budget,
+            budget_key_for=desktop_budget_key,
+            budget_exhausted=message_text(cfg, "budget_exhausted"),
         )
         desktop = desktop_mod.DesktopChannel(brain)
         desktop.register(app, jsonify, request)

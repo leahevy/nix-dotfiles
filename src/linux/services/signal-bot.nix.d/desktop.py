@@ -258,6 +258,12 @@ class DesktopChannel:
             def work():
                 try:
                     print("signal-bot: handling a desktop message", file=sys.stderr)
+                    budget_key = brain.budget_key_for(user)
+                    if budget_key is not None:
+                        granted, _ = brain.budget.claim(budget_key, text, notify=False)
+                        if not granted:
+                            self.publish_message(user, "bot", brain.budget_exhausted)
+                            return
                     hub.publish(
                         user,
                         {"kind": "typing", "role": "bot", "on": True},
@@ -279,6 +285,8 @@ class DesktopChannel:
                         )
                     if new_id:
                         self.threads.remember(user, new_id)
+                    if budget_key is not None and isinstance(reply, str):
+                        brain.budget.charge(budget_key, reply)
                     bot_id = self.publish_message(
                         user, "bot", reply, reactable=brain.reactions_enabled
                     )
@@ -312,6 +320,14 @@ class DesktopChannel:
             def work():
                 try:
                     print("signal-bot: handling a desktop reaction", file=sys.stderr)
+                    budget_key = brain.budget_key_for(user)
+                    if budget_key is not None:
+                        granted, _ = brain.budget.claim(
+                            budget_key, reacted_text or emoji, notify=False
+                        )
+                        if not granted:
+                            self.publish_message(user, "bot", brain.budget_exhausted)
+                            return
                     hub.publish(
                         user, {"kind": "typing", "role": "bot", "on": True}, store=False
                     )
@@ -327,6 +343,8 @@ class DesktopChannel:
                         )
                     if new_id:
                         self.threads.remember(user, new_id)
+                    if budget_key is not None and isinstance(reply, str):
+                        brain.budget.charge(budget_key, reply)
                     bot_id = self.publish_message(
                         user, "bot", reply, reactable=True, quote_id=target_id
                     )
