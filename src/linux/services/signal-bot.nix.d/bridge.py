@@ -217,6 +217,7 @@ REQUIRED_MESSAGE_KEYS = (
     "ha_tool_call_artifact",
     "status_template",
     "status_budget_entry_template",
+    "status_unknown_contact_label",
     "status_maybe_budget_template",
     "status_maybe_budget_disabled",
     "status_hooks_disabled",
@@ -241,6 +242,8 @@ REQUIRED_MESSAGE_KEYS = (
     "script_recap_template",
     "budget_exhausted",
 )
+
+DESKTOP_UNKNOWN_BUDGET_KEY = "desktop:unknown"
 
 
 def load_config(path):
@@ -3320,7 +3323,7 @@ def serve(cfg):
 
     def budget_report():
         template = message_text(cfg, "status_budget_entry_template")
-        return "\n".join(
+        lines = [
             template.replace("{contact}", markdown_emphasis(cfg, name, "**"))
             .replace(
                 "{used}",
@@ -3328,7 +3331,18 @@ def serve(cfg):
             )
             .replace("{limit}", str(budget.limit))
             for name, number in sorted(contacts_by_name.items())
+        ]
+        lines.append(
+            template.replace(
+                "{contact}",
+                markdown_emphasis(
+                    cfg, message_text(cfg, "status_unknown_contact_label"), "**"
+                ),
+            )
+            .replace("{used}", f"{budget.used(DESKTOP_UNKNOWN_BUDGET_KEY):.1f}")
+            .replace("{limit}", str(budget.limit))
         )
+        return "\n".join(lines)
 
     def claim_budget(budget_key, text, reply_target, reply_quote, thread_key):
         granted, first_rejection = budget.claim(budget_key, text)
@@ -4187,8 +4201,10 @@ def serve(cfg):
         def desktop_budget_key(user):
             for recipient_name, oauth_user in desktop_recipients.items():
                 if oauth_user == user:
-                    return contacts_by_name.get(recipient_name)
-            return None
+                    number = contacts_by_name.get(recipient_name)
+                    if number is not None:
+                        return number
+            return DESKTOP_UNKNOWN_BUDGET_KEY
 
         brain = pytypes.SimpleNamespace(
             cfg=cfg,

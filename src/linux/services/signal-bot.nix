@@ -851,6 +851,12 @@ in
             description = "Format of a single budget line in the status reply, with the placeholders {contact}, {used} and {limit} substituted.";
           };
 
+          statusUnknownContactLabel = lib.mkOption {
+            type = lib.types.str;
+            default = "Unknown desktop user";
+            description = "Contact label for the shared budget line covering desktop users that map to no configured contact.";
+          };
+
           statusMaybeBudgetTemplate = lib.mkOption {
             type = lib.types.str;
             default = "{remaining} of {limit} left";
@@ -1661,6 +1667,7 @@ in
                 ha_tool_call_artifact = messages.haToolCallArtifact;
                 status_template = messages.statusTemplate;
                 status_budget_entry_template = messages.statusBudgetEntryTemplate;
+                status_unknown_contact_label = messages.statusUnknownContactLabel;
                 status_maybe_budget_template = messages.statusMaybeBudgetTemplate;
                 status_maybe_budget_disabled = messages.statusMaybeBudgetDisabled;
                 status_hooks_disabled = messages.statusHooksDisabled;
