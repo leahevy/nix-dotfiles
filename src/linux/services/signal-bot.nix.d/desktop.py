@@ -126,7 +126,7 @@ class DesktopChannel:
             brain.log_error,
         )
         self.id_lock = threading.Lock()
-        self.id_counter = 0
+        self.id_counter = int(time.time() * 1000)
 
     def next_id(self):
         with self.id_lock:

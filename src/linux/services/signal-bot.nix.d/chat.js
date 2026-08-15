@@ -254,6 +254,9 @@ function connect() {
   };
   source.onerror = () => {
     setTyping(false);
+    if (source.readyState === EventSource.CLOSED) {
+      setTimeout(connect, 2000);
+    }
   };
 }
 
