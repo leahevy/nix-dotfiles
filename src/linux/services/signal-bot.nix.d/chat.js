@@ -70,7 +70,7 @@ function renderMarkdown(text) {
 
   function flush() {
     if (paragraph.length) {
-      parts.push(renderInline(paragraph.join("\n")));
+      parts.push(paragraph.map(renderInline).join("<br>"));
       paragraph = [];
     }
   }
