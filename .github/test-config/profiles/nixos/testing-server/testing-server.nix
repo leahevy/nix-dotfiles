@@ -36,6 +36,14 @@
 
     modules = {
       linux = {
+        power = {
+          ups = {
+            deviceMatch = {
+              vendorid = "ffff";
+              productid = "ffff";
+            };
+          };
+        };
         todo = {
           todoist-api = {
             defaultProjectId = "ffffffffffffffff";
