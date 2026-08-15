@@ -216,8 +216,9 @@ async function send(message) {
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   const text = input.value.trim();
-  if (!text) return;
   input.value = "";
+  input.focus();
+  if (!text) return;
   send(text);
 });
 
@@ -225,6 +226,14 @@ input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     form.requestSubmit();
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.target === input) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key.length === 1 || e.key === "Enter" || e.key === "Backspace") {
+    input.focus();
   }
 });
 
@@ -270,6 +279,7 @@ async function boot() {
     console.error("config failed", e);
   }
   connect();
+  input.focus();
 }
 
 boot();
