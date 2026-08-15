@@ -2171,6 +2171,10 @@ in
               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
               proxy_set_header X-Forwarded-Proto $scheme;
             '';
+            chatAuthHeader = ''
+              auth_request_set $chat_user $upstream_http_x_auth_request_user;
+              proxy_set_header X-Auth-Request-User $chat_user;
+            '';
           in
           lib.mkIf (configured && domain != null) {
             services.nginx.virtualHosts = {
@@ -2192,18 +2196,21 @@ in
                 locations."/" = {
                   proxyPass = "http://127.0.0.1:${toString apiPort}";
                   recommendedProxySettings = false;
-                  extraConfig = proxyHeaders;
+                  extraConfig = proxyHeaders + chatAuthHeader;
                 };
                 locations."/v1/chat/stream" = {
                   proxyPass = "http://127.0.0.1:${toString apiPort}/v1/chat/stream";
                   recommendedProxySettings = false;
-                  extraConfig = proxyHeaders + ''
-                    proxy_buffering off;
-                    proxy_cache off;
-                    proxy_set_header Connection "";
-                    proxy_read_timeout 3600s;
-                    chunked_transfer_encoding off;
-                  '';
+                  extraConfig =
+                    proxyHeaders
+                    + chatAuthHeader
+                    + ''
+                      proxy_buffering off;
+                      proxy_cache off;
+                      proxy_set_header Connection "";
+                      proxy_read_timeout 3600s;
+                      chunked_transfer_encoding off;
+                    '';
                 };
               };
             };
