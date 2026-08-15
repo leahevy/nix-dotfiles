@@ -3704,6 +3704,31 @@ def serve(cfg):
             quote = data_message.get("quote")
             quote_id = quote.get("id") if isinstance(quote, dict) else None
             conversation_id = conversations.resolve_quote(thread_key, quote_id)
+            reply_to_bot = quote_id is not None and (
+                conversation_id is not None
+                or conversations.notice_text(notice_keys, quote_id) is not None
+                or (
+                    isinstance(quote, dict)
+                    and quote_author_label(
+                        cfg,
+                        contacts_by_number,
+                        account,
+                        quote.get("authorNumber")
+                        or allowed_uuids.number_for(quote.get("authorUuid")),
+                    )
+                    == bot_label
+                )
+            )
+            given_name = (cfg.get("profile_given_name") or "").strip()
+            name_mentioned = bool(given_name) and (
+                re.search(
+                    r"(?<![a-zA-Z])" + re.escape(given_name) + r"(?![a-zA-Z])",
+                    text,
+                    re.IGNORECASE,
+                )
+                is not None
+            )
+            force_answer = reply_to_bot or name_mentioned
             quoted = None
             author = None
             if conversation_id is None and quote_id is not None:
@@ -3754,7 +3779,13 @@ def serve(cfg):
                 + " message",
                 file=sys.stderr,
             )
-            if group_info and group_filter_enabled:
+            if group_info and group_filter_enabled and force_answer:
+                print(
+                    "signal-bot: forcing a group answer, reason "
+                    + ("reply-to-bot" if reply_to_bot else "name-mention"),
+                    file=sys.stderr,
+                )
+            if group_info and group_filter_enabled and not force_answer:
                 filter_prompt = prompt
                 if group_filter_context_messages:
                     filter_transcript = render_recap(
