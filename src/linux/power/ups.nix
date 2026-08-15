@@ -60,6 +60,16 @@ args@{
       default = 21600;
       description = "Seconds between NOCOMM re-warning notifications, handled natively by upsmon NOCOMMWARNTIME";
     };
+    startupCommands = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "NUT instant commands issued once after the driver starts, each run via upscmd and allowed to fail";
+    };
+    disableBeeper = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Disable the UPS beeper on startup by issuing the beeper.disable instant command";
+    };
   };
 
   module = {
@@ -80,6 +90,8 @@ args@{
         notifyThrottle,
         rbWarnTime,
         noCommWarnTime,
+        startupCommands,
+        disableBeeper,
         ...
       }:
       let
@@ -100,6 +112,19 @@ args@{
             ${pkgs.openssl}/bin/openssl rand -hex 32 > "${passwordFile}"
             ${pkgs.coreutils}/bin/chmod 600 "${passwordFile}"
           fi
+        '';
+
+        startupCommandList = startupCommands ++ lib.optional disableBeeper "beeper.disable";
+        grantedInstcmds = lib.unique (map (c: lib.head (lib.splitString " " c)) startupCommandList);
+        startupCommandsScript = pkgs.writeShellScript "ups-startup-commands" ''
+          set -eu
+          password=$(${pkgs.coreutils}/bin/cat "${passwordFile}")
+          ${lib.concatMapStringsSep "\n" (
+            cmd:
+            "printf '%s\\n' \"$password\" | ${pkgs.util-linux}/bin/script -qec "
+            + lib.escapeShellArg "${config.power.ups.package}/bin/upscmd -u ${monitorUser} ${upsName}@localhost ${cmd}"
+            + " /dev/null || true"
+          ) startupCommandList}
         '';
 
         shutdownSuppressed = pkgs.writeShellScript "ups-shutdown-suppressed" ''
@@ -212,6 +237,26 @@ args@{
           };
         };
 
+        systemd.services.ups-startup-commands = lib.mkIf (startupCommandList != [ ]) {
+          description = "Run declarative NUT instant commands after the driver starts";
+          wantedBy = [ "multi-user.target" ];
+          after = [
+            "upsd.service"
+            "upsdrv.service"
+            "ups-monitor-password.service"
+          ];
+          requires = [
+            "upsd.service"
+            "upsdrv.service"
+            "ups-monitor-password.service"
+          ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStart = "${startupCommandsScript}";
+          };
+        };
+
         systemd.services.upsd = {
           after = [ "ups-monitor-password.service" ];
           requires = [ "ups-monitor-password.service" ];
@@ -237,6 +282,7 @@ args@{
           users.${monitorUser} = {
             inherit passwordFile;
             upsmon = "primary";
+            instcmds = grantedInstcmds;
           };
 
           upsmon.monitor.${upsName} = {
