@@ -119,7 +119,11 @@ function reactionRow(id) {
         )}">${escapeHtml(r.emoji)}</button>`
     )
     .join("");
-  return `<div class="reactions" data-target="${id}">${buttons}</div>`;
+  return (
+    `<div class="reactions collapsed" data-target="${id}">` +
+    `<button class="opener" type="button" title="React" aria-label="React">+</button>` +
+    `<div class="react-buttons">${buttons}</div></div>`
+  );
 }
 
 function addMessage(event) {
@@ -147,9 +151,16 @@ function addMessage(event) {
   }
   el.innerHTML = html;
   bindSpoilers(el);
-  el.querySelectorAll(".reactions button").forEach((btn) => {
+  el.querySelectorAll(".reactions .opener").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      btn.closest(".reactions").classList.toggle("collapsed");
+    });
+  });
+  el.querySelectorAll(".reactions .react-buttons button").forEach((btn) => {
     btn.addEventListener("click", () => {
       react(event.id, btn.dataset.emoji);
+      const row = btn.closest(".reactions");
+      if (row) row.classList.add("collapsed");
     });
   });
   messagesById.set(event.id, event.text || "");

@@ -106,9 +106,26 @@
       }
       .reactions {
         display: flex;
+        align-items: center;
         gap: 4px;
         margin-top: 6px;
         flex-wrap: wrap;
+      }
+      .react-buttons {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .reactions.collapsed .react-buttons {
+        display: none;
+      }
+      .reactions .opener {
+        padding: 0 6px;
+        line-height: 1.6;
+        opacity: 0.6;
+      }
+      .reactions .opener:hover {
+        opacity: 1;
       }
       .reactions button {
         background: #0a0a0a;
