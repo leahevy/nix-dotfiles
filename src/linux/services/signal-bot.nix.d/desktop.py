@@ -222,6 +222,10 @@ class DesktopChannel:
                 return jsonify(error="unauthorized"), 401
             return app.response_class(chat_script, mimetype="text/javascript")
 
+        @app.route("/v1/chat/whoami")
+        def http_chat_whoami():
+            return jsonify(user=chat_user())
+
         @app.route("/v1/chat/config")
         def http_chat_config():
             if not chat_user():
