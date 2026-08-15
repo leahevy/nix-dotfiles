@@ -42,6 +42,7 @@
               vendorid = "ffff";
               productid = "ffff";
             };
+            enableAutomaticShutdown = true;
           };
         };
         todo = {
