@@ -153,7 +153,13 @@ function addMessage(event) {
   bindSpoilers(el);
   el.querySelectorAll(".reactions .opener").forEach((btn) => {
     btn.addEventListener("click", () => {
-      btn.closest(".reactions").classList.toggle("collapsed");
+      const row = btn.closest(".reactions");
+      const nearBottom =
+        log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+      row.classList.toggle("collapsed");
+      if (!row.classList.contains("collapsed") && nearBottom) {
+        log.scrollTop = log.scrollHeight;
+      }
     });
   });
   el.querySelectorAll(".reactions .react-buttons button").forEach((btn) => {
