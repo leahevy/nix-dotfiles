@@ -129,7 +129,7 @@ args@{
           close $fh
           spawn ${config.power.ups.package}/bin/upscmd -u $user $target {*}$cmd
           expect {
-            -re "(?i)password:" { send -- "$pw\r" }
+            -re "assword" { send -- "$pw\r" }
             timeout { exit 1 }
             eof { exit 1 }
           }
