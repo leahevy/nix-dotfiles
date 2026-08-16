@@ -1030,6 +1030,7 @@ def process_message(
             "failed": "user.err",
             "warn": "user.warning",
             "info": "user.info",
+            "debug": "user.info",
         }
         syslog_priority = syslog_priority_map.get(notify_type, "user.warning")
 

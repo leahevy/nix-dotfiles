@@ -46,6 +46,10 @@ args@{
         }
       );
       default = {
+        "debug" = {
+          sound = "none";
+          ttl = "1800";
+        };
         "-2" = {
           sound = "none";
           ttl = "14400";

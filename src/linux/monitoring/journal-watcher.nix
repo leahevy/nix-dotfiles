@@ -60,6 +60,7 @@ args@{
           priority = lib.mkOption {
             type = lib.types.nullOr (
               lib.types.enum [
+                "debug"
                 "info"
                 "warn"
                 "failed"
@@ -273,6 +274,7 @@ args@{
             title = "System Switch";
             icon = "applications-science";
             message = "{state} to {generation}{failed}";
+            priority = "debug";
           };
         }
       ];
