@@ -7,6 +7,7 @@ const input = document.getElementById("input");
 
 let reactionButtons = [];
 let botAvatar = null;
+let botName = "";
 let typingText = "the bot is typing";
 let splash = null;
 const messagesById = new Map();
@@ -147,7 +148,11 @@ function addMessage(event) {
     (event.failed ? " failed" : "");
   let html = "";
   if (event.tsStr) {
-    html += `<div class="ts">${escapeHtml(event.tsStr)}</div>`;
+    if (event.role !== "user" && botName) {
+      html += `<div class="ts-row"><span class="bot-name">${escapeHtml(botName)}</span><span class="ts">${escapeHtml(event.tsStr)}</span></div>`;
+    } else {
+      html += `<div class="ts">${escapeHtml(event.tsStr)}</div>`;
+    }
   }
   if (event.quoteId != null && messagesById.has(event.quoteId)) {
     const quoted = messagesById.get(event.quoteId);
@@ -308,6 +313,7 @@ async function boot() {
       const cfg = await res.json();
       reactionButtons = cfg.reactionsEnabled ? cfg.emoji || [] : [];
       botAvatar = cfg.avatar ? "/v1/chat/avatar" : null;
+      botName = cfg.title || "";
       if (cfg.title) {
         document.title = cfg.title;
       }

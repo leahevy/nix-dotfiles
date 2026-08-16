@@ -1568,6 +1568,7 @@ in
               :root {
                 --user: ${userBg};
                 --accent: ${accent};
+                --bot-name: ${userFg};
               }
               button.send { background: ${userBg}; color: ${userFg}; }
               textarea { border-color: ${border}; }
