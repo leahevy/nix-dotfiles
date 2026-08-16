@@ -1571,7 +1571,7 @@ in
                 --bot-name: ${userFg};
               }
               button.send { background: ${userBg}; color: ${userFg}; }
-              textarea { border-color: ${border}; }
+              textarea { border-color: ${border}; outline-color: ${border}; }
               .msg.user.failed { background: ${failedBg}; color: ${failedFg}; }
               @keyframes flashFailed {
                 0%, 100% { box-shadow: none; }
