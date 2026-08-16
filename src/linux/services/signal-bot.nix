@@ -2250,6 +2250,9 @@ in
               auth_request_set $chat_user $upstream_http_x_auth_request_user;
               proxy_set_header X-Auth-Request-User $chat_user;
             '';
+            apiUnauthorized = ''
+              error_page 401 =401 @signal_chat_api_401;
+            '';
           in
           lib.mkIf (configured && domain != null) {
             services.nginx.virtualHosts = {
@@ -2268,10 +2271,20 @@ in
               "${chatSubdomain}.${domain}" = {
                 useACMEHost = domain;
                 forceSSL = true;
+                extraConfig = ''
+                  location @signal_chat_api_401 {
+                    return 401;
+                  }
+                '';
                 locations."/" = {
                   proxyPass = "http://127.0.0.1:${toString apiPort}";
                   recommendedProxySettings = false;
                   extraConfig = proxyHeaders + chatAuthHeader;
+                };
+                locations."/v1/" = {
+                  proxyPass = "http://127.0.0.1:${toString apiPort}";
+                  recommendedProxySettings = false;
+                  extraConfig = proxyHeaders + chatAuthHeader + apiUnauthorized;
                 };
                 locations."/v1/chat/stream" = {
                   proxyPass = "http://127.0.0.1:${toString apiPort}/v1/chat/stream";
@@ -2279,6 +2292,7 @@ in
                   extraConfig =
                     proxyHeaders
                     + chatAuthHeader
+                    + apiUnauthorized
                     + ''
                       proxy_buffering off;
                       proxy_cache off;

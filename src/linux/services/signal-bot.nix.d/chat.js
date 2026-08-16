@@ -226,35 +226,31 @@ function flashFailed(targetId) {
 }
 
 async function react(targetId, emoji) {
-  let ok = false;
   try {
     const res = await fetch("/v1/chat/react", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ targetId, emoji }),
     });
-    ok = res.ok;
+    if (res.status === 401) { window.location.reload(); return; }
+    if (!res.ok) flashFailed(targetId);
   } catch (e) {
     console.error("reaction failed", e);
-  }
-  if (!ok) {
     flashFailed(targetId);
   }
 }
 
 async function send(message) {
-  let ok = false;
   try {
     const res = await fetch("/v1/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message }),
     });
-    ok = res.ok;
+    if (res.status === 401) { window.location.reload(); return; }
+    if (!res.ok) addMessage({ role: "user", text: message, failed: true });
   } catch (e) {
     console.error("send failed", e);
-  }
-  if (!ok) {
     addMessage({ role: "user", text: message, failed: true });
   }
 }
@@ -309,6 +305,7 @@ function connect() {
 async function boot() {
   try {
     const res = await fetch("/v1/chat/config");
+    if (res.status === 401) { window.location.reload(); return; }
     if (res.ok) {
       const cfg = await res.json();
       reactionButtons = cfg.reactionsEnabled ? cfg.emoji || [] : [];
