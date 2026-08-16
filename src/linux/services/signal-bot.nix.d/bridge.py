@@ -3636,6 +3636,43 @@ def serve(cfg):
                 handle_reaction(
                     envelope, data_message, reaction, source_number, source_uuid
                 )
+                return
+            sticker = data_message.get("sticker")
+            if (
+                reactions_enabled
+                and isinstance(sticker, dict)
+                and is_fresh(timestamp, max_age_seconds)
+                and claim_message()
+            ):
+                conversation_id = conversations.resolve_thread(
+                    thread_key, ha_session_seconds
+                )
+                emoji = sticker.get("emoji") or None
+                prompt = reaction_prompt_text(
+                    emoji, None, conversation_id, speaker_label
+                )
+                granted, _ = budget.claim(budget_key, prompt, notify=False)
+                if granted:
+                    with typing_indicator(reply_target):
+                        reply_text, new_conversation_id = call_ha_conversation(
+                            cfg, ha_token, prompt, conversation_id
+                        )
+                    if new_conversation_id is not None:
+                        conversations.remember_thread(thread_key, new_conversation_id)
+                    if isinstance(reply_text, str):
+                        budget.charge(budget_key, reply_text)
+                    if not enqueue_send(
+                        reply_target,
+                        reply_text,
+                        new_conversation_id,
+                        thread_key=thread_key,
+                        transcript_key=thread_key,
+                        reactable=False,
+                    ):
+                        print(
+                            "signal-bot: reply queue full, dropping a sticker reply",
+                            file=sys.stderr,
+                        )
             return
 
         if not is_fresh(timestamp, max_age_seconds):
