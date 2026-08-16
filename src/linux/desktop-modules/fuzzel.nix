@@ -26,6 +26,12 @@ args@{
           user = true;
           unitless = true;
         }
+        {
+          tag = "fuzzel-original";
+          string = "render: .*: PNG is too large \\(\\d+x\\d+\\); downscaling using a less precise filter \\(fast\\)";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 
