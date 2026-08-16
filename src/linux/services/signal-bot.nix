@@ -1560,7 +1560,7 @@ in
               userBg = c.blocks.primary.background.html;
               userFg = c.blocks.primary.foreground.html;
               accent = c.main.foregrounds.primary.html;
-              border = c.separators.dark.html;
+              border = c.semantic.comment.html;
               failedBg = c.blocks.critical.background.html;
               failedFg = c.blocks.critical.foreground.html;
             in
