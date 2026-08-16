@@ -1560,6 +1560,7 @@ in
               userBg = c.blocks.primary.background.html;
               userFg = c.blocks.primary.foreground.html;
               accent = c.main.foregrounds.primary.html;
+              border = c.separators.dark.html;
               failedBg = c.blocks.critical.background.html;
               failedFg = c.blocks.critical.foreground.html;
             in
@@ -1568,7 +1569,8 @@ in
                 --user: ${userBg};
                 --accent: ${accent};
               }
-              .msg.user { color: ${userFg}; }
+              button.send { background: ${userBg}; color: ${userFg}; }
+              textarea { border-color: ${border}; }
               .msg.user.failed { background: ${failedBg}; color: ${failedFg}; }
               @keyframes flashFailed {
                 0%, 100% { box-shadow: none; }
