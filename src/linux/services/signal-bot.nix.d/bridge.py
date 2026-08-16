@@ -1689,6 +1689,16 @@ def select_audio_attachment(attachments):
     return None
 
 
+def has_image_attachment(attachments):
+    for attachment in attachments:
+        if not isinstance(attachment, dict):
+            continue
+        content_type = attachment.get("contentType")
+        if isinstance(content_type, str) and content_type.startswith("image/"):
+            return True
+    return False
+
+
 def run_transcription_step(argv, timeout, label):
     try:
         result = subprocess.run(
@@ -3568,10 +3578,85 @@ def serve(cfg):
         if attachments:
             try:
                 if not transcription_enabled:
+                    if (
+                        not text
+                        and reactions_enabled
+                        and has_image_attachment(attachments)
+                        and is_fresh(timestamp, max_age_seconds)
+                        and claim_message()
+                    ):
+                        conversation_id = conversations.resolve_thread(
+                            thread_key, ha_session_seconds
+                        )
+                        prompt = reaction_prompt_text(
+                            None, None, conversation_id, speaker_label
+                        )
+                        granted, _ = budget.claim(budget_key, prompt, notify=False)
+                        if granted:
+                            with typing_indicator(reply_target):
+                                reply_text, new_conversation_id = call_ha_conversation(
+                                    cfg, ha_token, prompt, conversation_id
+                                )
+                            if new_conversation_id is not None:
+                                conversations.remember_thread(
+                                    thread_key, new_conversation_id
+                                )
+                            if isinstance(reply_text, str):
+                                budget.charge(budget_key, reply_text)
+                            if not enqueue_send(
+                                reply_target,
+                                reply_text,
+                                new_conversation_id,
+                                thread_key=thread_key,
+                                transcript_key=thread_key,
+                                reactable=False,
+                            ):
+                                print(
+                                    "signal-bot: reply queue full, dropping an image reply",
+                                    file=sys.stderr,
+                                )
                     return
                 audio = select_audio_attachment(attachments)
                 if audio is None:
                     if not text:
+                        if (
+                            reactions_enabled
+                            and has_image_attachment(attachments)
+                            and is_fresh(timestamp, max_age_seconds)
+                            and claim_message()
+                        ):
+                            conversation_id = conversations.resolve_thread(
+                                thread_key, ha_session_seconds
+                            )
+                            prompt = reaction_prompt_text(
+                                None, None, conversation_id, speaker_label
+                            )
+                            granted, _ = budget.claim(budget_key, prompt, notify=False)
+                            if granted:
+                                with typing_indicator(reply_target):
+                                    reply_text, new_conversation_id = (
+                                        call_ha_conversation(
+                                            cfg, ha_token, prompt, conversation_id
+                                        )
+                                    )
+                                if new_conversation_id is not None:
+                                    conversations.remember_thread(
+                                        thread_key, new_conversation_id
+                                    )
+                                if isinstance(reply_text, str):
+                                    budget.charge(budget_key, reply_text)
+                                if not enqueue_send(
+                                    reply_target,
+                                    reply_text,
+                                    new_conversation_id,
+                                    thread_key=thread_key,
+                                    transcript_key=thread_key,
+                                    reactable=False,
+                                ):
+                                    print(
+                                        "signal-bot: reply queue full, dropping an image reply",
+                                        file=sys.stderr,
+                                    )
                         return
                 elif not is_fresh(timestamp, max_age_seconds):
                     print(
