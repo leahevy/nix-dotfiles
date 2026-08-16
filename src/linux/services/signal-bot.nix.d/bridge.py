@@ -3470,6 +3470,14 @@ def serve(cfg):
             )
 
         emoji = reaction.get("emoji")
+        print(
+            "signal-bot: handling a "
+            + ("group" if group_info else "direct")
+            + " reaction",
+            file=sys.stderr,
+        )
+        if hooks_active and group_info:
+            daily_transcript.record(speaker_label, emoji or "[reaction]", is_bot=False)
         prompt = reaction_prompt_text(
             emoji, reacted_text, conversation_id, speaker_label
         )
@@ -3585,6 +3593,16 @@ def serve(cfg):
                         and is_fresh(timestamp, max_age_seconds)
                         and claim_message()
                     ):
+                        print(
+                            "signal-bot: handling a "
+                            + ("group" if group_info else "direct")
+                            + " image",
+                            file=sys.stderr,
+                        )
+                        if hooks_active and group_info:
+                            daily_transcript.record(
+                                sender_label, "[image]", is_bot=False
+                            )
                         conversation_id = conversations.resolve_thread(
                             thread_key, ha_session_seconds
                         )
@@ -3625,6 +3643,16 @@ def serve(cfg):
                             and is_fresh(timestamp, max_age_seconds)
                             and claim_message()
                         ):
+                            print(
+                                "signal-bot: handling a "
+                                + ("group" if group_info else "direct")
+                                + " image",
+                                file=sys.stderr,
+                            )
+                            if hooks_active and group_info:
+                                daily_transcript.record(
+                                    sender_label, "[image]", is_bot=False
+                                )
                             conversation_id = conversations.resolve_thread(
                                 thread_key, ha_session_seconds
                             )
@@ -3733,6 +3761,11 @@ def serve(cfg):
                     thread_key, ha_session_seconds
                 )
                 emoji = sticker.get("emoji") or None
+                print("signal-bot: handling a group sticker", file=sys.stderr)
+                if hooks_active and group_info:
+                    daily_transcript.record(
+                        sender_label, emoji or "[sticker]", is_bot=False
+                    )
                 prompt = reaction_prompt_text(
                     emoji, None, conversation_id, speaker_label
                 )
