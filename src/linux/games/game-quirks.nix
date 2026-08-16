@@ -34,6 +34,9 @@ args@{
         (lib.mkIf config.nx.linux.games.game-quirks.eveOnline {
           nx.linux.sound.pipewire.rules.speaker.nodeNames = [ "exefile.exe" ];
         })
+        (lib.mkIf config.nx.linux.games.game-quirks.albionOnline {
+          nx.linux.sound.pipewire.rules.speaker.nodeNames = [ "Wwise" ];
+        })
       ];
 
     ifEnabled.linux.desktop.niri.home =
