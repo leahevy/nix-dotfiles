@@ -253,10 +253,10 @@ args@{
       baseHighlightPatterns = [
         {
           tag = "nixos";
-          string = "switching to system configuration";
+          string = "^switching to system configuration";
           all = true;
           ignoreRateLimiting = true;
-          extract = "(?P<state>finished switching|switching) to system configuration /nix/store/[a-z0-9]+-nixos-system-(?P<generation>\\S+?)(?P<failed> failed \\(status [0-9]+\\))?$";
+          extract = "switching to system configuration /nix/store/[a-z0-9]+-nixos-system-(?P<generation>\\S+?)$";
           channels = {
             pushover =
               if
@@ -273,8 +273,33 @@ args@{
             label = "NixOS";
             title = "System Switch";
             icon = "applications-science";
-            message = "{state} to {generation}{failed}";
+            message = "switching to {generation}";
             priority = "debug";
+          };
+        }
+        {
+          tag = "nixos";
+          string = "^finished switching to system configuration";
+          all = true;
+          ignoreRateLimiting = true;
+          extract = "finished switching to system configuration /nix/store/[a-z0-9]+-nixos-system-(?P<generation>\\S+?)(?P<failed> failed \\(status [0-9]+\\))?$";
+          channels = {
+            pushover =
+              if
+                helpers.isDeploymentMode self [
+                  "server"
+                  "managed"
+                ]
+              then
+                null
+              else
+                false;
+          };
+          mapping = {
+            label = "NixOS";
+            title = "System Switch";
+            icon = "applications-science";
+            message = "finished switching to {generation}{failed}";
           };
         }
       ];
