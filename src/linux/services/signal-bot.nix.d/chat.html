@@ -187,6 +187,31 @@
         cursor: pointer;
         font: inherit;
       }
+      #splash {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 32px 16px;
+        text-align: center;
+      }
+      #splash img {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+      #splash-name {
+        font-size: 1.15em;
+        color: var(--text);
+      }
+      #splash-about {
+        color: var(--muted);
+        font-size: 0.9em;
+        max-width: 340px;
+      }
     </style>
   </head>
   <body>

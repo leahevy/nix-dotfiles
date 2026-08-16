@@ -8,6 +8,7 @@ const input = document.getElementById("input");
 let reactionButtons = [];
 let botAvatar = null;
 let typingText = "the bot is typing";
+let splash = null;
 const messagesById = new Map();
 const seenIds = new Set();
 
@@ -127,11 +128,19 @@ function reactionRow(id) {
   );
 }
 
+function removeSplash() {
+  if (splash) {
+    splash.remove();
+    splash = null;
+  }
+}
+
 function addMessage(event) {
   if (event.id != null) {
     if (seenIds.has(event.id)) return;
     seenIds.add(event.id);
   }
+  removeSplash();
   const el = document.createElement("div");
   el.className =
     `msg ${event.role === "user" ? "user" : "bot"}` +
@@ -308,6 +317,31 @@ async function boot() {
       }
       if (cfg.typing) {
         typingText = cfg.typing;
+      }
+      const splashTitle = cfg.title || "";
+      const splashAbout = cfg.about || "";
+      if (splashTitle || splashAbout || cfg.avatar) {
+        splash = document.createElement("div");
+        splash.id = "splash";
+        if (cfg.avatar) {
+          const img = document.createElement("img");
+          img.src = "/v1/chat/avatar";
+          img.alt = splashTitle;
+          splash.appendChild(img);
+        }
+        if (splashTitle) {
+          const name = document.createElement("div");
+          name.id = "splash-name";
+          name.textContent = splashTitle;
+          splash.appendChild(name);
+        }
+        if (splashAbout) {
+          const about = document.createElement("div");
+          about.id = "splash-about";
+          about.textContent = splashAbout;
+          splash.appendChild(about);
+        }
+        log.appendChild(splash);
       }
     }
   } catch (e) {

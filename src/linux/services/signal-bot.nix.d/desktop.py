@@ -316,6 +316,7 @@ class DesktopChannel:
                 reactionsEnabled=brain.reactions_enabled,
                 emoji=self.reaction_buttons(),
                 title=cfg.get("profile_given_name") or "Signal Chat",
+                about=cfg.get("profile_about") or "",
                 fontSize=cfg.get("chat_font_size", 14),
                 fontFamily=cfg.get("chat_font_family", "monospace"),
                 typing=cfg.get("chat_typing_text") or "",
