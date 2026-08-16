@@ -104,9 +104,9 @@ in
       (final: prev: {
         pocket-id = prev.pocket-id.overrideAttrs (old: {
           postPatch = (old.postPatch or "") + ''
-            substituteInPlace internal/service/oidc_service.go \
-              --replace-fail "RefreshTokenDuration = 30 * 24 * time.Hour" \
-                             "RefreshTokenDuration = 90 * 24 * time.Hour"
+            substituteInPlace internal/oidc/provider.go \
+              --replace-fail "RefreshTokenLifespan:                    30 * 24 * time.Hour," \
+                             "RefreshTokenLifespan:                    90 * 24 * time.Hour,"
           '';
         });
       })
