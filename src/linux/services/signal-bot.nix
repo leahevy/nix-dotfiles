@@ -1554,6 +1554,27 @@ in
           desktopModuleFile = self.file "desktop.py";
           chatPageFile = self.file "chat.html";
           chatScriptFile = self.file "chat.js";
+          chatThemeFile =
+            let
+              c = config.nx.preferences.theme.colors;
+              userBg = c.blocks.primary.background.html;
+              userFg = c.blocks.primary.foreground.html;
+              accent = c.main.foregrounds.primary.html;
+              failedBg = c.blocks.critical.background.html;
+              failedFg = c.blocks.critical.foreground.html;
+            in
+            pkgs.writeText "signal-bot-theme.css" ''
+              :root {
+                --user: ${userBg};
+                --accent: ${accent};
+              }
+              .msg.user { color: ${userFg}; }
+              .msg.user.failed { background: ${failedBg}; color: ${failedFg}; }
+              @keyframes flashFailed {
+                0%, 100% { box-shadow: none; }
+                50% { box-shadow: inset 0 0 0 9999px color-mix(in srgb, ${failedBg} 55%, transparent); }
+              }
+            '';
           pythonEnv = pkgs.python3.withPackages (ps: [
             ps.flask
             ps.pyyaml
@@ -1590,6 +1611,7 @@ in
               desktop_module_file = desktopModuleFile;
               chat_page_file = chatPageFile;
               chat_script_file = chatScriptFile;
+              chat_theme_file = chatThemeFile;
               main_group_name = mainGroupName;
               profile_given_name = effectiveProfileGivenName;
               profile_about = profileAbout;

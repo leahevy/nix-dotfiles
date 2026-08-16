@@ -274,7 +274,11 @@ class DesktopChannel:
         def chat_user():
             return request.headers.get("X-Auth-Request-User") or None
 
-        chat_page = brain.read_secret(cfg["chat_page_file"])
+        chat_page_raw = brain.read_secret(cfg["chat_page_file"])
+        chat_theme = brain.read_secret(cfg["chat_theme_file"])
+        chat_page = chat_page_raw.replace(
+            "</style>", "\n" + chat_theme + "\n</style>", 1
+        )
         chat_script = brain.read_secret(cfg["chat_script_file"])
 
         avatar_mimes = {
