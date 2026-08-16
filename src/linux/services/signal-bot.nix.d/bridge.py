@@ -3494,6 +3494,7 @@ def serve(cfg):
             new_conversation_id,
             quote=quote,
             thread_key=thread_key,
+            transcript_key=thread_key,
             reactable=False,
         ):
             print(
@@ -4053,9 +4054,16 @@ def serve(cfg):
         title = (trigger.get("title") or "").strip()
         url = (trigger.get("url") or "").strip()
         text, ranges = format_outbound_text(cfg, title, speech.rstrip(), url)
-        target = {"groupId": current_group_id()}
+        group_id = current_group_id()
+        target = {"groupId": group_id}
         reservation = hook_state.mark_fired(name, window_key)
-        queued = enqueue_send(target, text, ranges=ranges, notice=True)
+        queued = enqueue_send(
+            target,
+            text,
+            ranges=ranges,
+            notice=True,
+            transcript_key=f"group:{group_id}" if group_id else None,
+        )
         if not queued:
             hook_state.rollback_fire(name, reservation)
             print(
