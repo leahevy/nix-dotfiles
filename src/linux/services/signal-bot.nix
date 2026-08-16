@@ -133,6 +133,18 @@ in
       description = "Number of recent desktop-channel messages replayed to a client on connect.";
     };
 
+    chatRingBufferTtlHours = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 24;
+      description = "Hours after which a message is dropped from the ring buffer and no longer replayed on reconnect.";
+    };
+
+    chatTimestampFormat = lib.mkOption {
+      type = lib.types.str;
+      default = "%a %H:%M";
+      description = "Python strftime format string used to render the per-message timestamp shown at the top of each chat bubble.";
+    };
+
     chatRecipients = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
@@ -1470,6 +1482,8 @@ in
           apiPort,
           chatEnable,
           chatRingBufferSize,
+          chatRingBufferTtlHours,
+          chatTimestampFormat,
           chatRecipients,
           chatDefaultRecipient,
           chatFontSize,
@@ -1563,6 +1577,8 @@ in
               hook_state_file = hookStateFile;
               chat_enable = chatEnable;
               chat_ring_buffer_size = chatRingBufferSize;
+              chat_ring_buffer_ttl_hours = chatRingBufferTtlHours;
+              chat_timestamp_format = chatTimestampFormat;
               chat_recipients = chatRecipients;
               chat_default_recipient = chatDefaultRecipient;
               chat_font_size = chatFontSize;

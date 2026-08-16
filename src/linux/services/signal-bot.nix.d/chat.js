@@ -146,6 +146,9 @@ function addMessage(event) {
     `msg ${event.role === "user" ? "user" : "bot"}` +
     (event.failed ? " failed" : "");
   let html = "";
+  if (event.tsStr) {
+    html += `<div class="ts">${escapeHtml(event.tsStr)}</div>`;
+  }
   if (event.quoteId != null && messagesById.has(event.quoteId)) {
     const quoted = messagesById.get(event.quoteId);
     html += `<div class="quote">${escapeHtml(quoted.slice(0, 200))}</div>`;

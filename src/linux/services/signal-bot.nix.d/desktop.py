@@ -1,5 +1,6 @@
 import collections
 import contextlib
+import datetime
 import json
 import sys
 import threading
@@ -8,8 +9,9 @@ from queue import Empty, Full, Queue
 
 
 class ChatHub:
-    def __init__(self, ring_size):
+    def __init__(self, ring_size, ttl_seconds):
         self.ring_size = ring_size
+        self.ttl_seconds = ttl_seconds
         self.lock = threading.Lock()
         self.subscribers = {}
         self.rings = {}
@@ -20,7 +22,7 @@ class ChatHub:
                 ring = self.rings.setdefault(
                     user, collections.deque(maxlen=self.ring_size)
                 )
-                ring.append(event)
+                ring.append((time.time(), event))
             targets = list(self.subscribers.get(user, ()))
         for q in targets:
             with contextlib.suppress(Full):
@@ -28,8 +30,10 @@ class ChatHub:
 
     def subscribe(self, user):
         q = Queue(maxsize=100)
+        cutoff = time.time() - self.ttl_seconds
         with self.lock:
-            backlog = list(self.rings.get(user, ()))
+            raw = self.rings.get(user, ())
+            backlog = [ev for ts, ev in raw if ts >= cutoff]
             self.subscribers.setdefault(user, set()).add(q)
         return q, backlog
 
@@ -187,7 +191,9 @@ class DesktopChannel:
         self.cfg = cfg
         self.recipients = cfg.get("chat_recipients") or {}
         self.default_recipient = cfg.get("chat_default_recipient")
-        self.hub = ChatHub(cfg.get("chat_ring_buffer_size", 50))
+        ttl_hours = cfg.get("chat_ring_buffer_ttl_hours", 24)
+        self.ts_format = cfg.get("chat_timestamp_format", "%a %H:%M")
+        self.hub = ChatHub(cfg.get("chat_ring_buffer_size", 50), ttl_hours * 3600)
         self.reactables = DesktopReactables(
             brain.reactions_config["target_max_age_seconds"]
         )
@@ -219,6 +225,7 @@ class DesktopChannel:
         self, user, role, text, reactable=False, title="", url="", quote_id=None
     ):
         event_id = self.next_id()
+        ts_str = datetime.datetime.now().strftime(self.ts_format)
         self.hub.publish(
             user,
             {
@@ -230,6 +237,7 @@ class DesktopChannel:
                 "title": title,
                 "url": url,
                 "quoteId": quote_id,
+                "tsStr": ts_str,
             },
         )
         return event_id
