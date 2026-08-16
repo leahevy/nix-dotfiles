@@ -144,7 +144,7 @@ in
         "sonnet"
         "fable"
       ];
-      default = "sonnet";
+      default = "opus";
       description = "Default Claude Code model.";
     };
 
@@ -273,6 +273,31 @@ in
       default = true;
       description = "Let plan mode use auto mode semantics to auto-approve read-only commands while planning.";
     };
+
+    delegateToSubagents = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Delegate implementation, review, search, and web search work to subagents.";
+    };
+
+    subagentModel = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "haiku"
+          "sonnet"
+          "opus"
+          "fable"
+        ]
+      );
+      default = null;
+      description = "Model for spawned subagents, null uses the main session model with no override.";
+    };
+
+    maxConcurrentSubagents = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 3;
+      description = "Maximum number of subagents to run concurrently when delegation is enabled.";
+    };
   };
 
   submodules = {
@@ -285,12 +310,15 @@ in
     enabled =
       config:
       let
+        delegateEnabled = config.nx.common.dev.claude.delegateToSubagents;
+        agentModel = config.nx.common.dev.claude.subagentModel;
+        maxAgents = config.nx.common.dev.claude.maxConcurrentSubagents;
+        resolvedAgentModel = if agentModel != null then agentModel else config.nx.common.dev.claude.model;
         baseInstructions = {
           "90 - Claude" = [
             "Use the conversation as initial context, then read only the files and local context required to complete the request."
             "Batch all changes into as few operations as possible."
             "Don't analyse too much on first feasibility questions to avoid wasting tokens."
-            "Keep sub-agents to a minimum."
             "If a tool call fails only because its approval could not be delivered (a transient approval-path error asking to try again, never a nonzero exit code or other tool error), silently reissue it up to three times before telling the user, and do not print that message."
             [
               "Use the AskUserQuestion tool when:"
@@ -311,6 +339,14 @@ in
               "Remote / Mobile Sessions"
               "When the user says they are remote or mobile (or using a phone or tablet), show every change verbatim in the chat - as an inline diff or as the full updated content - before issuing the actual Edit/Write/Bash tool call. This lets the user review and approve the changes without needing to inspect the tool call details."
             ]
+          ]
+          ++ lib.optional (!delegateEnabled) "Keep sub-agents to a minimum.";
+        }
+        // lib.optionalAttrs delegateEnabled {
+          "95 - Subagent Workflow" = [
+            "All implementation, review, search, and web search work must be executed in subagents, not inline in the main session."
+            "Always pass model: ${resolvedAgentModel} to the Agent tool when spawning subagents."
+            "Keep no more than ${builtins.toString maxAgents} subagents running concurrently."
           ];
         };
         baseSkills = { };
