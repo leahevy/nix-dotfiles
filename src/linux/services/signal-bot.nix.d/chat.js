@@ -146,6 +146,7 @@ function addMessage(event) {
   el.className =
     `msg ${event.role === "user" ? "user" : "bot"}` +
     (event.failed ? " failed" : "");
+  if (event.id != null) el.dataset.id = event.id;
   let html = "";
   if (event.tsStr) {
     if (event.role !== "user" && botName) {
@@ -225,6 +226,21 @@ function flashFailed(targetId) {
   setTimeout(() => bubble.classList.remove("flash-failed"), 600);
 }
 
+function showReactionChip(targetId, emoji) {
+  const msg = log.querySelector(`.msg[data-id="${targetId}"]`);
+  if (!msg) return;
+  let chip = msg.querySelector(".reaction-chip");
+  if (!chip) {
+    chip = document.createElement("div");
+    chip.className = "reaction-chip";
+    msg.appendChild(chip);
+    msg.style.marginBottom = "14px";
+  }
+  chip.textContent = emoji;
+  const reactions = msg.querySelector(".reactions");
+  if (reactions) reactions.remove();
+}
+
 async function react(targetId, emoji) {
   try {
     const res = await fetch("/v1/chat/react", {
@@ -233,7 +249,8 @@ async function react(targetId, emoji) {
       body: JSON.stringify({ targetId, emoji }),
     });
     if (res.status === 401) { window.location.reload(); return; }
-    if (!res.ok) flashFailed(targetId);
+    if (res.ok) showReactionChip(targetId, emoji);
+    else flashFailed(targetId);
   } catch (e) {
     console.error("reaction failed", e);
     flashFailed(targetId);
