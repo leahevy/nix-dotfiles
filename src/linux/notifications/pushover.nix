@@ -46,10 +46,6 @@ args@{
         }
       );
       default = {
-        "debug" = {
-          sound = "none";
-          ttl = "1800";
-        };
         "-2" = {
           sound = "none";
           ttl = "14400";
@@ -114,7 +110,7 @@ args@{
         };
         debug = {
           sound = "none";
-          ttl = "7200";
+          ttl = "1800";
         };
         emerg = {
           sound = "tugboat";
