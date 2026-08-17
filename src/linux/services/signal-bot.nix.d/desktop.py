@@ -489,10 +489,9 @@ class DesktopChannel:
                         self.threads.remember(user, new_id)
                     if budget_key is not None and isinstance(reply, str):
                         brain.budget.charge(budget_key, reply)
-                    bot_id = self.publish_message(
-                        user, "bot", reply, reactable=True, quote_id=target_id
+                    self.publish_message(
+                        user, "bot", reply, reactable=False, quote_id=target_id
                     )
-                    self.reactables.remember(user, bot_id, new_id, reply)
                 except Exception as e:
                     brain.log_error(
                         f"signal-bot: a desktop reaction failed: "

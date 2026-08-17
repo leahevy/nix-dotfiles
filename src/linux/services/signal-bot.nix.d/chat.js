@@ -167,8 +167,10 @@ function addMessage(event) {
     const safe = escapeHtml(event.url);
     html += `<br><a href="${safe}" target="_blank" rel="noopener">${safe}</a>`;
   }
-  if (event.reactable) {
+  if (event.role !== "user") {
     log.querySelectorAll(".reactions").forEach((row) => row.remove());
+  }
+  if (event.reactable) {
     html += reactionRow(event.id);
   }
   el.innerHTML = html;
