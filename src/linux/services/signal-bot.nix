@@ -321,6 +321,24 @@ in
             default = 900;
             description = "Length in seconds of the sliding window over which maybeBudget answers are counted.";
           };
+
+          maybeRecencySeconds = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 3600;
+            description = "Seconds after the last bot message over which the maybe answer chance decays from certain back to maybeProbability.";
+          };
+
+          maybeRecencyGraceSeconds = lib.mkOption {
+            type = lib.types.ints.unsigned;
+            default = 300;
+            description = "Seconds after the last bot message during which a maybe message is always answered regardless of the roll.";
+          };
+
+          maybeBudgetBoostFloor = lib.mkOption {
+            type = lib.types.numbers.between 0.0 1.0;
+            default = 0.3;
+            description = "Fraction of the recency boost that survives when the maybe budget is down to its last slot.";
+          };
         };
       };
       default = { };
@@ -1653,6 +1671,9 @@ in
                 maybe_probability = groupFilter.maybeProbability;
                 maybe_budget = groupFilter.maybeBudget;
                 maybe_budget_seconds = groupFilter.maybeBudgetSeconds;
+                maybe_recency_seconds = groupFilter.maybeRecencySeconds;
+                maybe_recency_grace_seconds = groupFilter.maybeRecencyGraceSeconds;
+                maybe_budget_boost_floor = groupFilter.maybeBudgetBoostFloor;
               };
               conversation_follow_up_seconds = conversationFollowUpSeconds;
               night_follow_up_seconds = nightFollowUpSeconds;

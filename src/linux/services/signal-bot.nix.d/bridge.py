@@ -209,6 +209,9 @@ REQUIRED_GROUP_FILTER_KEYS = (
     "maybe_probability",
     "maybe_budget",
     "maybe_budget_seconds",
+    "maybe_recency_seconds",
+    "maybe_recency_grace_seconds",
+    "maybe_budget_boost_floor",
 )
 
 REQUIRED_MESSAGE_KEYS = (
@@ -1923,6 +1926,40 @@ class MaybeBudget:
             return max(self.limit - len(stamps), 0)
 
 
+class BotActivity:
+    def __init__(self):
+        self.stamps = {}
+        self.lock = threading.Lock()
+
+    def mark(self, key):
+        if not key:
+            return
+        with self.lock:
+            self.stamps[key] = time.monotonic()
+
+    def age(self, key):
+        with self.lock:
+            stamp = self.stamps.get(key)
+        if stamp is None:
+            return None
+        return time.monotonic() - stamp
+
+
+def maybe_effective_probability(base, age, grace, window, remaining, limit, floor):
+    if remaining >= limit or (age is not None and age <= grace):
+        boost = 1.0
+    elif age is None or age >= window or window <= grace:
+        boost = 0.0
+    else:
+        recency = min(max((window - age) / (window - grace), 0.0), 1.0)
+        if limit > 1:
+            budget = min(max((remaining - 1) / (limit - 1), 0.0), 1.0)
+        else:
+            budget = 1.0 if remaining >= limit else 0.0
+        boost = recency * (floor + (1.0 - floor) * budget)
+    return base + (100.0 - base) * boost
+
+
 def call_ha_conversation(
     cfg, ha_token, text, conversation_id=None, agent_override=None
 ):
@@ -3119,6 +3156,10 @@ def serve(cfg):
     group_filter_maybe_budget = MaybeBudget(
         group_filter["maybe_budget"], group_filter["maybe_budget_seconds"]
     )
+    group_filter_maybe_window = group_filter["maybe_recency_seconds"]
+    group_filter_maybe_grace = group_filter["maybe_recency_grace_seconds"]
+    group_filter_maybe_boost_floor = group_filter["maybe_budget_boost_floor"]
+    bot_activity = BotActivity()
     ha_session_seconds = cfg["ha_session_seconds"]
     context_max_chars = cfg["context_max_chars"]
     max_split_messages = cfg["max_split_messages"]
@@ -3291,6 +3332,8 @@ def serve(cfg):
                 reactable and reactions_enabled,
             )
         )
+        if queued and "groupId" in target:
+            bot_activity.mark(f"group:{target['groupId']}")
         if queued and hooks_active and record_transcript and "groupId" in target:
             daily_transcript.record(bot_label, text, is_bot=True)
         if queued and transcript_key:
@@ -4027,8 +4070,19 @@ def serve(cfg):
                 )
                 detail = ""
                 if decision == "maybe":
+                    remaining = group_filter_maybe_budget.remaining(thread_key)
+                    age = bot_activity.age(thread_key)
+                    effective = maybe_effective_probability(
+                        group_filter_maybe_probability,
+                        age,
+                        group_filter_maybe_grace,
+                        group_filter_maybe_window,
+                        remaining,
+                        group_filter_maybe_budget.limit,
+                        group_filter_maybe_boost_floor,
+                    )
                     roll = random.random() * 100
-                    roll_passed = roll < group_filter_maybe_probability
+                    roll_passed = roll < effective
                     if not roll_passed:
                         decision = "maybe-silent"
                         reason = "roll"
@@ -4038,8 +4092,11 @@ def serve(cfg):
                     else:
                         decision = "maybe-silent"
                         reason = "budget"
+                    age_str = "never" if age is None else f"{age / 60:.1f}m"
                     detail = (
-                        f", roll {roll:.1f}/{group_filter_maybe_probability}% "
+                        f", roll {roll:.1f}/{effective:.1f}% "
+                        f"(base {group_filter_maybe_probability}%, budget "
+                        f"{remaining}/{group_filter_maybe_budget.limit}, age {age_str}) "
                         f"reason {reason} budget "
                         f"{group_filter['maybe_budget']}/"
                         f"{group_filter['maybe_budget_seconds']}s"
