@@ -1038,6 +1038,22 @@ jobs:
               https://api.pushover.net/1/messages.json || true
           }
 
+          notify_merged_directly() {
+            PR_URL="https://github.com/${{ github.repository }}/pull/${{ env.PR_NUMBER }}"
+            curl -fsS -m 20 --retry 10 -o /dev/null \
+              --form-string "token=${PUSHOVER_TOKEN}" \
+              --form-string "user=${PUSHOVER_USER}" \
+              --form-string "message=<b>Repository:</b> ${{ github.repository }}<br><b>PR #${{ env.PR_NUMBER }}</b> merged directly<br><br>✅ PR was already mergeable and has been squash-merged" \
+              --form-string "title=🟢 Merged for ${{ github.repository }}" \
+              --form-string "priority=0" \
+              --form-string "sound=pianobar" \
+              --form-string "ttl=129600" \
+              --form-string "html=1" \
+              --form-string "url=$PR_URL" \
+              --form-string "url_title=View Pull Request" \
+              https://api.pushover.net/1/messages.json || true
+          }
+
           echo "Enabling auto-merge for PR #${{ env.PR_NUMBER }}"
           sleep 10
 
@@ -1046,6 +1062,10 @@ jobs:
             if gh pr merge --auto --squash "${{ env.PR_NUMBER }}"; then
               echo "Auto-merge enabled successfully on attempt $attempt"
               notify_automerge_enabled
+              exit 0
+            elif gh pr merge --squash "${{ env.PR_NUMBER }}"; then
+              echo "PR already mergeable, merged directly on attempt $attempt"
+              notify_merged_directly
               exit 0
             else
               echo "Auto-merge failed on attempt $attempt"
