@@ -312,7 +312,7 @@ in
 
           maybeBudget = lib.mkOption {
             type = lib.types.ints.unsigned;
-            default = 5;
+            default = 8;
             description = "Maximum maybe messages answered within maybeBudgetSeconds per group, zero blocks all maybe answers.";
           };
 
@@ -324,13 +324,13 @@ in
 
           maybeRecencySeconds = lib.mkOption {
             type = lib.types.ints.positive;
-            default = 3600;
+            default = 1800;
             description = "Seconds after the last bot message over which the maybe answer chance decays from certain back to maybeProbability.";
           };
 
           maybeRecencyGraceSeconds = lib.mkOption {
             type = lib.types.ints.unsigned;
-            default = 300;
+            default = 120;
             description = "Seconds after the last bot message during which a maybe message is always answered regardless of the roll.";
           };
 
