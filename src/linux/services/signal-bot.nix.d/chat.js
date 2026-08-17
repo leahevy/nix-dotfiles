@@ -168,6 +168,7 @@ function addMessage(event) {
     html += `<br><a href="${safe}" target="_blank" rel="noopener">${safe}</a>`;
   }
   if (event.reactable) {
+    log.querySelectorAll(".reactions").forEach((row) => row.remove());
     html += reactionRow(event.id);
   }
   el.innerHTML = html;
