@@ -37,6 +37,7 @@ in
 
   submodules = {
     linux.server.pocket-id = true;
+    linux.server.redis = true;
   };
 
   options = {
@@ -321,6 +322,9 @@ in
               pkceEnabled = true;
             };
           })
+          (lib.mkIf (config.nx.linux.server.auth.enableOAuthProxy && domain != null) {
+            nx.linux.server.redis.instances.oauth.accessUsers = [ "oauth2-proxy" ];
+          })
           { nx.packages.extra = [ pkgs.oauth2-proxy ]; }
         ]
       );
@@ -507,6 +511,8 @@ in
                 code-challenge-method = "S256";
                 whitelist-domain = ".${domain}";
                 insecure-oidc-allow-unverified-email = true;
+                session-store-type = "redis";
+                redis-connection-url = "unix:///run/redis-oauth/redis.sock";
               };
             };
 
@@ -533,8 +539,10 @@ in
             };
 
             systemd.services.oauth2-proxy = {
+              wants = [ "redis-oauth.service" ];
               after = [
                 "nx-oauth2-proxy-env.service"
+                "redis-oauth.service"
               ]
               ++ lib.optional (
                 config.nx.linux.server.auth.oidcProviderSystemdService != null

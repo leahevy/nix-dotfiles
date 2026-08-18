@@ -107,9 +107,6 @@ in
             substituteInPlace internal/oidc/provider.go \
               --replace-fail "RefreshTokenLifespan:                    30 * 24 * time.Hour," \
                              "RefreshTokenLifespan:                    90 * 24 * time.Hour,"
-            substituteInPlace internal/oidc/store.go \
-              --replace-fail "return request, fosite.ErrInactiveToken" \
-                             "return nil, fosite.ErrNotFound"
           '';
         });
       })
