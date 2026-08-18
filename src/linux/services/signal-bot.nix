@@ -189,13 +189,13 @@ in
 
     budgetInputChars = lib.mkOption {
       type = lib.types.ints.positive;
-      default = 3000;
+      default = 750;
       description = "Number of characters of an incoming message that count as one unit of the daily sender budget.";
     };
 
     budgetOutputChars = lib.mkOption {
       type = lib.types.ints.positive;
-      default = 750;
+      default = 188;
       description = "Number of characters of a triggered reply that count as one unit of the daily sender budget.";
     };
 
