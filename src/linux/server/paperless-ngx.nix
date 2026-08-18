@@ -15,7 +15,10 @@ args@{
   input = "linux";
 
   submodules = {
-    linux.server = [ "postgresql" ];
+    linux.server = [
+      "postgresql"
+      "redis"
+    ];
   };
 
   options = {
