@@ -13,7 +13,7 @@ let
 in
 {
   name = "redis";
-  description = "Shared Redis-compatible server with optional named instances";
+  description = "Shared Redis-compatible server with named instances";
 
   group = "server";
   input = "linux";
