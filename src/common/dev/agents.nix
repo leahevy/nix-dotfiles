@@ -450,8 +450,8 @@ args@{
               "Prefer `git --no-pager diff${lib.optionalString difftasticEnabled " --no-ext-diff"}` for consistent output."
               "Never stage, commit, push, pull, or rebase unless the user explicitly asks."
               [
-                "For navigating a Git repo to locate files, prefer: `(cd {{REPO_ROOT}} && git ls-files | grep \"{{SEARCH-TERM}}\" | tree --fromfile)`."
-                "If the repo is the current one, replace `{{REPO_ROOT}}` with `\"$(git rev-parse --show-toplevel)\"`. If you need a different repo, use its root path explicitly."
+                "When you need to find a file whose location you do not already know, search the current repo with `git ls-files | grep \"{{SEARCH-TERM}}\" | tree --fromfile`. If you already know where a file lives, open it directly instead."
+                "To search a different repo, do not `cd` into it. Point git at it with `-C` and an absolute path: `git -C {{REPO_ROOT}} ls-files | grep \"{{SEARCH-TERM}}\" | tree --fromfile`."
               ]
             ];
           "71 - Shell" = [

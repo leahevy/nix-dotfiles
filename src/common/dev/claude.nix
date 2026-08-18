@@ -40,6 +40,63 @@ let
     haiku = "4.5";
     fable = "5";
   };
+
+  hookEvents = [
+    "SessionStart"
+    "Setup"
+    "UserPromptSubmit"
+    "UserPromptExpansion"
+    "PreToolUse"
+    "PermissionRequest"
+    "PermissionDenied"
+    "PostToolUse"
+    "PostToolUseFailure"
+    "PostToolBatch"
+    "Notification"
+    "MessageDisplay"
+    "SubagentStart"
+    "SubagentStop"
+    "TaskCreated"
+    "TaskCompleted"
+    "Stop"
+    "StopFailure"
+    "TeammateIdle"
+    "InstructionsLoaded"
+    "ConfigChange"
+    "CwdChanged"
+    "DirectoryAdded"
+    "FileChanged"
+    "WorktreeCreate"
+    "WorktreeRemove"
+    "PreCompact"
+    "PostCompact"
+    "Elicitation"
+    "ElicitationResult"
+    "SessionEnd"
+  ];
+
+  hookHandlerType = lib.types.submodule {
+    options = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Whether this hook handler is active.";
+      };
+      matcher = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Tool-name matcher for the handler, null matches every event.";
+      };
+      command = lib.mkOption {
+        type = lib.types.oneOf [
+          lib.types.package
+          lib.types.path
+          lib.types.str
+        ];
+        description = "Executable run when the hook fires.";
+      };
+    };
+  };
 in
 {
   name = "claude";
@@ -298,6 +355,39 @@ in
       default = 3;
       description = "Maximum number of subagents to run concurrently when delegation is enabled.";
     };
+
+    hookHandlers = lib.mkOption {
+      type = lib.types.submodule {
+        options = lib.genAttrs hookEvents (
+          event:
+          lib.mkOption {
+            type = lib.types.nullOr hookHandlerType;
+            default = null;
+            description = "Handler for the ${event} lifecycle hook, null installs no handler.";
+          }
+        );
+      };
+      default = { };
+      description = "Claude Code lifecycle hook handlers, one per supported event.";
+    };
+
+    enableDefaultHookHandlers = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Install the built-in default hook handlers.";
+    };
+
+    guardrailDisallowedPaths = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Extra regexes matched against resolved tool paths that the built-in guardrail denies.";
+    };
+
+    guardrailDisallowedCommands = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Extra regexes matched against Bash commands that the built-in guardrail denies.";
+    };
   };
 
   submodules = {
@@ -351,8 +441,384 @@ in
         };
         baseSkills = { };
         baseAgents = { };
+
+        pythonHookLib = ''
+          import json
+          import sys
+          import os
+          import re
+          import shutil
+          import subprocess
+          from datetime import datetime
+
+          HOME = os.path.expanduser("~")
+          GIT = "${pkgs.git}/bin/git"
+
+
+          def load(strict=False):
+              try:
+                  return json.loads(sys.stdin.read() or "{}")
+              except Exception:
+                  if strict:
+                      deny("guardrail could not parse the hook input")
+                  return {}
+
+
+          def emit(obj):
+              json.dump(obj, sys.stdout)
+              sys.exit(0)
+
+
+          def deny(reason, event="PreToolUse"):
+              emit({"hookSpecificOutput": {"hookEventName": event, "permissionDecision": "deny", "permissionDecisionReason": reason}})
+
+
+          def ask(reason, event="PreToolUse"):
+              emit({"hookSpecificOutput": {"hookEventName": event, "permissionDecision": "ask", "permissionDecisionReason": reason}})
+
+
+          def allow(reason, event="PreToolUse"):
+              emit({"hookSpecificOutput": {"hookEventName": event, "permissionDecision": "allow", "permissionDecisionReason": reason}})
+
+
+          def context(text, event="SessionStart"):
+              sys.stdout.write(text + "\n")
+              sys.exit(0)
+
+
+          def tool_input(data):
+              return data.get("tool_input") or {}
+
+
+          def tool_path(data):
+              ti = tool_input(data)
+              return ti.get("file_path") or ti.get("path") or ti.get("notebook_path")
+
+
+          def resolve(cwd, path):
+              if not os.path.isabs(path):
+                  path = os.path.join(cwd, path)
+              return os.path.normpath(path)
+
+
+          def under(path, base):
+              return path == base or path.startswith(base + os.sep)
+
+
+          def matches(text, patterns):
+              return any(re.search(pattern, text) for pattern in patterns)
+
+
+          def run(cmd, cwd):
+              try:
+                  result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=5)
+                  return result.stdout.strip()
+              except Exception:
+                  return ""
+
+
+          def state_dir():
+              base = os.environ.get("XDG_RUNTIME_DIR") or os.environ.get("XDG_STATE_HOME") or os.path.join(HOME, ".local", "state")
+              path = os.path.join(base, "nx-claude")
+              os.makedirs(path, exist_ok=True)
+              return path
+
+
+          def safe_id(session_id):
+              return re.sub(r"[^A-Za-z0-9_-]", "_", session_id or "default")
+
+
+          def pointer_path(session_id):
+              return os.path.join(state_dir(), "precompact-last-" + safe_id(session_id))
+
+
+          def snapshot(src, session_id):
+              if not src or not os.path.isfile(src):
+                  return None
+              directory = state_dir()
+              dest = os.path.join(directory, "precompact-" + datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + safe_id(session_id) + ".jsonl")
+              shutil.copyfile(src, dest)
+              with open(pointer_path(session_id), "w") as handle:
+                  handle.write(dest + "\n")
+              return dest
+
+
+          def project_tree(root, max_depth=6, max_dirs=1000):
+              root = os.path.abspath(root)
+              dirs_out = []
+              truncated = False
+              for current, dirs, files in os.walk(root):
+                  rel = os.path.relpath(current, root)
+                  depth = 0 if rel == "." else rel.count(os.sep) + 1
+                  dirs[:] = sorted(d for d in dirs if not d.startswith("."))
+                  if depth >= max_depth:
+                      dirs[:] = []
+                  if rel != "." and any(not f.startswith(".") for f in files):
+                      if len(dirs_out) >= max_dirs:
+                          truncated = True
+                          break
+                      dirs_out.append(rel + os.sep)
+              dirs_out.sort()
+              if truncated:
+                  dirs_out.append("... (more entries omitted, limit " + str(max_dirs) + " reached)")
+              return "\n".join(dirs_out)
+
+
+          def full_files(root, max_depth=10, max_files=5000):
+              root = os.path.abspath(root)
+              files_out = []
+              for current, dirs, files in os.walk(root):
+                  rel = os.path.relpath(current, root)
+                  depth = 0 if rel == "." else rel.count(os.sep) + 1
+                  dirs[:] = sorted(d for d in dirs if not d.startswith("."))
+                  if depth >= max_depth:
+                      dirs[:] = []
+                  prefix = "" if rel == "." else rel + os.sep
+                  for name in sorted(f for f in files if not f.startswith(".")):
+                      if len(files_out) >= max_files:
+                          return None
+                      files_out.append(prefix + name)
+              files_out.sort()
+              return "\n".join(files_out)
+
+
+          def shallow_files(root, max_file_depth=1):
+              root = os.path.abspath(root)
+              files_out = []
+              for current, dirs, files in os.walk(root):
+                  rel = os.path.relpath(current, root)
+                  depth = 0 if rel == "." else rel.count(os.sep) + 1
+                  dirs[:] = sorted(d for d in dirs if not d.startswith("."))
+                  if depth >= max_file_depth:
+                      dirs[:] = []
+                  if depth > max_file_depth:
+                      continue
+                  prefix = "" if rel == "." else rel + os.sep
+                  for name in sorted(f for f in files if not f.startswith(".")):
+                      files_out.append(prefix + name)
+              files_out.sort()
+              return "\n".join(files_out)
+        '';
+
+        forbiddenCommandWords = [
+          "sudo"
+          "mkfs"
+          "dmesg"
+        ];
+
+        guardrailBody = ''
+          NXCONFIG = os.path.join(HOME, ".config", "nx", "nxconfig")
+
+          def nxconfig_allowed(target):
+              base = os.path.basename(target)
+              return target.endswith(".md") or base in ("flake.nix", "flake.lock")
+          SECRET_DIRS = [
+              os.path.join(HOME, ".ssh"),
+              os.path.join(HOME, ".gnupg"),
+              os.path.join(HOME, ".config", "sops-nix", "secrets"),
+              os.path.join(HOME, ".config", "sops"),
+          ]
+          SECRET_FILE = re.compile(r"(\.pem|\.key|\.age|/id_rsa|/id_ed25519|/id_ecdsa|/\.env(\.|$))")
+          EXTRA_PATH_DENY = ${builtins.toJSON config.nx.common.dev.claude.guardrailDisallowedPaths}
+          EXTRA_CMD_DENY = ${builtins.toJSON config.nx.common.dev.claude.guardrailDisallowedCommands}
+          FORBIDDEN_COMMANDS = ${builtins.toJSON forbiddenCommandWords}
+
+          GREP_FAMILY = ("grep", "egrep", "fgrep")
+          READONLY_FILTERS = GREP_FAMILY + (
+              "rg", "tree", "sort", "head", "tail", "wc", "cut", "cat",
+              "nl", "tac", "rev", "uniq", "comm", "column", "fmt", "fold",
+          )
+
+          def is_readonly_listing(command):
+              s = command.strip()
+              if not s:
+                  return False
+              if re.search(r"[;&<>`(){}\n\\$]", s):
+                  return False
+              if "||" in s:
+                  return False
+              if ".." in s:
+                  return False
+              segments = [seg.strip() for seg in s.split("|")]
+              if any(seg == "" for seg in segments):
+                  return False
+              lead = segments[0]
+              lead_tokens = lead.split()
+              if lead_tokens[:1] == ["git"]:
+                  if not re.match(r"^git(\s+-C\s+\S+)*\s+ls-files\b", lead):
+                      return False
+                  if "=" in lead:
+                      return False
+                  if re.search(r"(^|\s)(-c|--config|--exec-path|--git-dir|--work-tree|--namespace|--bare)\b", lead):
+                      return False
+              elif lead_tokens[:1] == ["fd"]:
+                  for tok in lead_tokens[1:]:
+                      if tok in ("-x", "-X") or re.match(r"^(--exec|--exec-batch)(=|$)", tok):
+                          return False
+                      if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
+                          return False
+              else:
+                  return False
+              for seg in segments[1:]:
+                  tokens = seg.split()
+                  if not tokens:
+                      return False
+                  tool = tokens[0]
+                  if tool not in READONLY_FILTERS:
+                      return False
+                  for tok in tokens[1:]:
+                      if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
+                          return False
+                  if tool not in GREP_FAMILY:
+                      for tok in tokens[1:]:
+                          if re.match(r"^(-o|-O|--output|--output-file|--out-file)(=|$)", tok):
+                              return False
+                  if tool == "rg":
+                      for tok in tokens[1:]:
+                          if re.match(r"^(--pre|--pre-glob|--hostname-bin)(=|$)", tok):
+                              return False
+              return True
+
+          data = load(strict=True)
+
+          cwd = data.get("cwd") or os.getcwd()
+          path = tool_path(data)
+          cmd = tool_input(data).get("command") or ""
+
+          if path:
+              target = resolve(cwd, path)
+              if under(target, NXCONFIG) and not nxconfig_allowed(target):
+                  deny("access to nxconfig is off-limits: " + target)
+              if any(under(target, secret) for secret in SECRET_DIRS):
+                  deny("access to secret material is blocked: " + target)
+              if SECRET_FILE.search(target):
+                  deny("access to secret material is blocked: " + target)
+              for pattern in EXTRA_PATH_DENY:
+                  if re.search(pattern, target):
+                      deny("path denied by guardrailDisallowedPaths: " + target)
+
+          if cmd:
+              for pattern in EXTRA_CMD_DENY:
+                  if re.search(pattern, cmd):
+                      deny("command denied by guardrailDisallowedCommands")
+              for word in FORBIDDEN_COMMANDS:
+                  if re.search(r"(^|[;&|()\s])" + re.escape(word) + r"\b", cmd):
+                      deny(word + " is blocked")
+              if re.search(r"(^|[;&|()\s])rm\s", cmd) and re.search(r"-\w*r\w*f|-\w*f\w*r|-r\b.*-f\b|-f\b.*-r\b", cmd):
+                  deny("rm -rf is blocked")
+              if re.search(r"\bgit\b.*\bpush\b", cmd) and re.search(r"(--force(\W|$)|\s-f(\s|$))", cmd) and not re.search(r"--force-with-lease", cmd):
+                  deny("git push --force is blocked")
+              if re.search(r"\bgit\b.*\b(commit|push|pull|fetch)\b", cmd):
+                  deny("git commit, push, pull and fetch are blocked")
+              if re.search(r"(^|[;&|()\s])(ssh|scp|rsync)\b(?!-)", cmd):
+                  deny("ssh, scp and rsync are blocked")
+              if re.search(r"\bdd\s.*of=/dev/", cmd):
+                  deny("writing with dd to a block device is blocked")
+              if re.search(r"(curl|wget)[^|]*\|[^|]*(sh|bash|python3?|perl|ruby|node)", cmd):
+                  deny("piping a download into a shell or interpreter is blocked")
+              if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", cmd) and not re.search(r"\.md(\W|$)|flake\.nix|flake\.lock", cmd):
+                  deny("referencing nxconfig from a shell command is blocked")
+              if is_readonly_listing(cmd):
+                  allow("read-only file listing")
+              if re.search(r"(?<!\|)\|(?!\|)", cmd):
+                  ask("this command contains a pipe, review it before allowing")
+        '';
+
+        contextBody = ''
+          data = load()
+          event = data.get("hook_event_name") or "SessionStart"
+          cwd = data.get("cwd") or os.getcwd()
+
+          sections = ["Session context (auto-injected):\nDate: " + datetime.now().strftime("%Y-%m-%d %H:%M")]
+
+          if run([GIT, "-C", cwd, "rev-parse", "--is-inside-work-tree"], cwd) == "true":
+              git_lines = ["Branch: " + run([GIT, "-C", cwd, "branch", "--show-current"], cwd)]
+              status = run([GIT, "-C", cwd, "status", "--porcelain"], cwd)
+              if status:
+                  git_lines.append(status)
+              sections.append("\n".join(git_lines))
+
+          if event != "PostCompact":
+              full = full_files(cwd)
+              if full is not None and len(full) <= 3500:
+                  sections.append("Project files (COMPLETE list of every file, full paths, dotfiles excluded):\n" + full)
+              else:
+                  sections.append("Project directories (COMPLETE list of every dir containing files, dotfiles excluded):\n" + project_tree(cwd))
+                  sections.append("Files in the top two levels only (repo root and one level deep; this is NOT the full file list, deeper files are omitted, use the directory list above to locate them):\n" + shallow_files(cwd))
+
+          last = pointer_path(data.get("session_id"))
+          if event == "PostCompact" and os.path.isfile(last):
+              with open(last) as handle:
+                  sections.append("Pre-compact transcript snapshot: " + handle.read().strip())
+
+          context("\n\n".join(sections), event)
+        '';
+
+        precompactBody = ''
+          data = load()
+          snapshot(data.get("transcript_path"), data.get("session_id"))
+        '';
+
+        notifyCmd = self.notifyUser {
+          inherit pkgs;
+          title = "Claude Code";
+          body = "$NX_CLAUDE_MSG";
+          icon = "computer";
+          urgency = "normal";
+        };
+
+        notifyBody = ''
+          NOTIFY_CMD = ${builtins.toJSON notifyCmd}
+
+          data = load()
+          message = data.get("message") or ""
+          if not message:
+              sys.exit(0)
+
+          subprocess.run(NOTIFY_CMD, shell=True, env=dict(os.environ, NX_CLAUDE_MSG=message))
+        '';
+
+        mkPythonHook =
+          name: body:
+          pkgs.writers.writePython3 name {
+            flakeIgnore = [
+              "E501"
+              "E302"
+              "E305"
+              "E128"
+              "E131"
+              "E231"
+            ];
+          } (pythonHookLib + "\n" + body);
+
+        guardrailScript = mkPythonHook "nx-claude-guardrail" guardrailBody;
+        contextInjectScript = mkPythonHook "nx-claude-context" contextBody;
+        precompactScript = mkPythonHook "nx-claude-precompact" precompactBody;
+        notifyScript = mkPythonHook "nx-claude-notify" notifyBody;
+
+        rawDefaultHookHandlers = {
+          PreToolUse = {
+            command = guardrailScript;
+          };
+          SessionStart = {
+            command = contextInjectScript;
+          };
+          PostCompact = {
+            command = contextInjectScript;
+          };
+          PreCompact = {
+            command = precompactScript;
+          };
+          Notification = {
+            command = notifyScript;
+          };
+        };
+        defaultHookHandlers = lib.mapAttrs (_event: lib.mkDefault) rawDefaultHookHandlers;
       in
       {
+        nx.common.dev.claude.hookHandlers =
+          lib.mkIf config.nx.common.dev.claude.enableDefaultHookHandlers defaultHookHandlers;
+
         nx.common.dev.agents.enabledAgents = [ "claude" ];
         nx.common.dev.agents.preferredAgent = lib.mkDefault "claude";
 
@@ -680,6 +1146,24 @@ in
           end_segments
           printf '\n'
         '';
+
+        hookHandlers = config.nx.common.dev.claude.hookHandlers;
+        renderedHooks = lib.filterAttrs (_event: entries: entries != [ ]) (
+          lib.mapAttrs (
+            _event: handler:
+            lib.optional (handler != null && handler.enable) (
+              lib.optionalAttrs (handler.matcher != null) { matcher = handler.matcher; }
+              // {
+                hooks = [
+                  {
+                    type = "command";
+                    command = builtins.toString handler.command;
+                  }
+                ];
+              }
+            )
+          ) hookHandlers
+        );
       in
       {
         programs.claude-code = {
@@ -696,6 +1180,7 @@ in
             autoCompactEnabled = autoCompact;
             inherit model effortLevel;
             agentPushNotifEnabled = notifyEnabled;
+            preferredNotifChannel = "notifications_disabled";
             outputStyle = if styleEnabled then "nx" else "default";
             inherit
               alwaysThinkingEnabled
@@ -707,6 +1192,9 @@ in
             inherit spinnerTipsEnabled awaySummaryEnabled autoScrollEnabled;
             inherit remoteControlAtStartup useAutoModeDuringPlan;
             permissions.defaultMode = permissionMode;
+          }
+          // lib.optionalAttrs (renderedHooks != { }) {
+            hooks = renderedHooks;
           }
           // lib.optionalAttrs voiceModeEnabled {
             voice = {
