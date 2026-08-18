@@ -673,6 +673,29 @@ in
               description = "Whether this hook is active.";
             };
 
+            targetGroup = lib.mkOption {
+              type = lib.types.enum [
+                "group"
+                "direct"
+                "desktop"
+                "all"
+              ];
+              default = "group";
+              description = "Which built-in destination the hook posts to, group for the main group, direct for every contact direct chat, desktop for every desktop session, or all for every chat including desktop sessions.";
+            };
+
+            targetContact = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Single contact name the hook posts to instead of a built-in destination, null uses targetGroup.";
+            };
+
+            desktop = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Deliver to the target contact in its desktop chat session instead of its Signal direct chat, only valid together with targetContact.";
+            };
+
             startTime = lib.mkOption {
               type = lib.types.nullOr (lib.types.strMatching "([01][0-9]|2[0-3]):[0-5][0-9]");
               default = null;
@@ -1695,6 +1718,9 @@ in
               daily_transcript_limit = dailyTranscriptLimit;
               hooks = lib.mapAttrs (_: hook: {
                 enable = hook.enable;
+                target_group = hook.targetGroup;
+                target_contact = hook.targetContact;
+                desktop = hook.desktop;
                 start_time = hook.startTime;
                 end_time = hook.endTime;
                 exact_time = hook.time;
@@ -1925,6 +1951,8 @@ in
 
           enabledHooks = lib.filterAttrs (_: hook: hook.enable) hooks;
 
+          desktopHooks = lib.filterAttrs (_: hook: hook.desktop) enabledHooks;
+
           haAgentIdResolved = if haAgentId == null then null else "conversation.${haAgentId}";
           effectiveHooksAgentId =
             if hooksAgentId != null then "conversation.${hooksAgentId}" else haAgentIdResolved;
@@ -2099,6 +2127,31 @@ in
                 !lib.elem name (enabledHooks.${name}.runOnlyIfFiredToday ++ enabledHooks.${name}.skipIfFiredToday)
               ) (lib.attrNames enabledHooks);
               message = "linux.services.signal-bot hooks must not list their own name as a dependency!";
+            }
+            {
+              assertion = lib.all (hook: hook.targetContact == null || hook.targetGroup == "group") (
+                lib.attrValues enabledHooks
+              );
+              message = "linux.services.signal-bot hooks must set either targetGroup or targetContact, not both!";
+            }
+            {
+              assertion = lib.all (hook: hook.targetContact != null) (lib.attrValues desktopHooks);
+              message = "linux.services.signal-bot hooks with desktop set to true require targetContact to be set!";
+            }
+            {
+              assertion = desktopHooks == { } || chatEnable;
+              message = "linux.services.signal-bot hooks with desktop set to true require the desktop chat channel chatEnable to be enabled!";
+            }
+            {
+              assertion =
+                chatEnable || lib.all (hook: hook.targetGroup != "desktop") (lib.attrValues enabledHooks);
+              message = "linux.services.signal-bot hooks with targetGroup set to desktop require the desktop chat channel chatEnable to be enabled!";
+            }
+            {
+              assertion = lib.all (hook: hook.targetContact == null || chatRecipients ? ${hook.targetContact}) (
+                lib.attrValues desktopHooks
+              );
+              message = "linux.services.signal-bot hooks with desktop set to true require targetContact to be a name declared in chatRecipients!";
             }
           ];
 

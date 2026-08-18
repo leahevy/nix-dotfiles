@@ -148,6 +148,9 @@ REQUIRED_CONFIG_KEYS = (
 
 REQUIRED_HOOK_KEYS = (
     "enable",
+    "target_group",
+    "target_contact",
+    "desktop",
     "start_time",
     "end_time",
     "exact_time",
@@ -3194,6 +3197,7 @@ def serve(cfg):
     daily_transcript = DailyTranscript(cfg["daily_transcript_limit"])
     hook_state = HookState(cfg["hook_state_file"]) if hooks_active else None
     scheduler = None
+    desktop = None
     group_id = read_group_id(cfg["group_id_file"])
     if group_id is None:
         print(
@@ -4265,21 +4269,68 @@ def serve(cfg):
                 return False
         title = (trigger.get("title") or "").strip()
         url = (trigger.get("url") or "").strip()
-        text, ranges = format_outbound_text(cfg, title, speech.rstrip(), url)
+        body = speech.rstrip()
+        text, ranges = format_outbound_text(cfg, title, body, url)
         group_id = current_group_id()
-        target = {"groupId": group_id}
+
+        def send_group():
+            return enqueue_send(
+                {"groupId": group_id},
+                text,
+                ranges=ranges,
+                notice=True,
+                transcript_key=f"group:{group_id}" if group_id else None,
+            )
+
+        def send_contact(contact_name):
+            number = contacts_by_name.get(contact_name)
+            if number is None:
+                log_error(
+                    f"signal-bot: hook {name!r} target {contact_name!r} is not a "
+                    "known contact, skipping"
+                )
+                return False
+            direct_key = allowed_uuids.uuid_for(number) or number
+            return enqueue_send(
+                {"recipient": [number]},
+                text,
+                ranges=ranges,
+                notice=True,
+                transcript_key=f"direct:{direct_key}",
+            )
+
+        def send_desktop(contact_name):
+            if desktop is None:
+                log_error(
+                    f"signal-bot: hook {name!r} wants the desktop channel but it is "
+                    "not available, skipping"
+                )
+                return False
+            return desktop.deliver(contact_name, body, title, url)
+
+        contact = hook["target_contact"]
         reservation = hook_state.mark_fired(name, window_key)
-        queued = enqueue_send(
-            target,
-            text,
-            ranges=ranges,
-            notice=True,
-            transcript_key=f"group:{group_id}" if group_id else None,
-        )
+        if contact is not None:
+            queued = send_desktop(contact) if hook["desktop"] else send_contact(contact)
+        elif hook["target_group"] == "direct":
+            queued = any([send_contact(cn) for cn in contacts_by_name])
+        elif hook["target_group"] == "desktop":
+            if desktop is None:
+                queued = send_desktop(None)
+            else:
+                queued = any([send_desktop(cn) for cn in list(desktop.recipients)])
+        elif hook["target_group"] == "all":
+            results = [send_group()]
+            results += [send_contact(cn) for cn in contacts_by_name]
+            if desktop is not None:
+                results += [send_desktop(cn) for cn in list(desktop.recipients)]
+            queued = any(results)
+        else:
+            queued = send_group()
         if not queued:
             hook_state.rollback_fire(name, reservation)
             print(
-                f"signal-bot: hook {name!r} send queue full, will retry",
+                f"signal-bot: hook {name!r} send queue full or no targets, will retry",
                 file=sys.stderr,
             )
         return queued
@@ -4383,7 +4434,6 @@ def serve(cfg):
             return jsonify(status="queued"), 202
         return jsonify(error="send queue is full"), 503
 
-    desktop = None
     if bool(cfg.get("chat_enable")):
         import importlib.util
         import types as pytypes
