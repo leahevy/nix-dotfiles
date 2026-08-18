@@ -25,10 +25,20 @@ args@{
           string = "Bluetooth: hci[0-9]+: Failed to send firmware data \\(-38\\)";
           kernel = true;
         }
+      ];
+    };
+
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
           service = "bluetooth.service";
           tag = "bluetoothd";
           string = "Failed to set default system config for hci[0-9]+";
+        }
+        {
+          service = "dbus-broker.service";
+          tag = "dbus-broker";
+          string = "A security policy denied [^ ]+ to send method call /midi/profile:org\\.bluez\\.GattProfile1\\.Release to [^ ]+\\.";
         }
       ];
     };
@@ -36,7 +46,10 @@ args@{
     ifEnabled.linux.security.aide = {
       enabled = config: {
         nx.linux.security.aide.directoryWatches = [ "/var/lib/bluetooth" ];
-        nx.linux.security.aide.excludePathsRegex = [ "^/var/lib/bluetooth/[0-9A-Fa-f:]+/cache(/|$)" ];
+        nx.linux.security.aide.excludePathsRegex = [
+          "^/var/lib/bluetooth/[0-9A-Fa-f:]+/cache(/|$)"
+          "^/var/lib/bluetooth/[0-9A-Fa-f:]+/attributes$"
+        ];
       };
     };
 
