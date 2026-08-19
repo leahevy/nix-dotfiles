@@ -432,7 +432,7 @@ args@{
 
         upsschedWrapper = pkgs.writeShellScript "ups-notify-sched" ''
           ${notifyScript} "$@" || true
-          ${config.power.ups.package}/bin/upssched || true
+          NUT_STATEPATH=${stateDir} ${config.power.ups.package}/bin/upssched || true
         '';
       in
       {
