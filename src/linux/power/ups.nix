@@ -273,6 +273,16 @@ args@{
           ${pkgs.util-linux}/bin/logger -t nx-ups "UPS reached forced shutdown but automatic poweroff is disabled!"
         '';
 
+        onbattSuffix =
+          if enableAutomaticShutdown then
+            " (" + lib.optionalString dryRun "dry run, " + "shutdown after ${toString onBatteryTimeout}s)"
+          else
+            "";
+
+        effectiveNotifyMessages = notifyMessages // {
+          ONBATT = notifyMessages.ONBATT + onbattSuffix;
+        };
+
         throttleCases = lib.concatStringsSep "\n" (
           lib.mapAttrsToList (
             event: seconds: "            ${event}) throttle=${toString seconds} ;;"
@@ -559,7 +569,7 @@ args@{
             NOTIFYMSG = lib.mapAttrsToList (event: msg: [
               event
               msg
-            ]) notifyMessages;
+            ]) effectiveNotifyMessages;
             NOTIFYCMD = if enableAutomaticShutdown then "${upsschedWrapper}" else "${notifyScript}";
             SHUTDOWNCMD =
               if enableAutomaticShutdown then
