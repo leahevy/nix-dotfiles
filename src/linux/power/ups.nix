@@ -324,6 +324,15 @@ args@{
           MESSAGE="''${1:-UPS event}"
           TYPE="''${NOTIFYTYPE:-UNKNOWN}"
 
+          case "$TYPE" in
+            COMMBAD|COMMOK)
+              _uptime_sec=$(${pkgs.coreutils}/bin/cat /proc/uptime | ${pkgs.coreutils}/bin/cut -d. -f1)
+              if [ "$_uptime_sec" -lt 300 ]; then
+                exit 0
+              fi
+              ;;
+          esac
+
           throttle=0
           case "$TYPE" in
           ${throttleCases}
