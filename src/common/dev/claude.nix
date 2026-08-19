@@ -651,6 +651,9 @@ in
           )
 
           def is_readonly_listing(command):
+              def _abs_under_cwd(tok):
+                  part = tok.split("=", 1)[-1] if "=" in tok else tok
+                  return under(os.path.normpath(os.path.expanduser(part)), cwd)
               s = command.strip()
               if not s:
                   return False
@@ -676,11 +679,13 @@ in
                       if tok in ("-x", "-X") or re.match(r"^(--exec|--exec-batch)(=|$)", tok):
                           return False
                       if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
-                          return False
+                          if not _abs_under_cwd(tok):
+                              return False
               elif lead_cmd in READONLY_FILTERS:
                   for tok in lead_tokens[1:]:
                       if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
-                          return False
+                          if not _abs_under_cwd(tok):
+                              return False
                   if lead_cmd not in GREP_FAMILY:
                       for tok in lead_tokens[1:]:
                           if re.match(r"^(-o|-O|--output|--output-file|--out-file)(=|$)", tok):
@@ -705,7 +710,8 @@ in
                       return False
                   for tok in tokens[1:]:
                       if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
-                          return False
+                          if not _abs_under_cwd(tok):
+                              return False
                   if tool not in GREP_FAMILY:
                       for tok in tokens[1:]:
                           if re.match(r"^(-o|-O|--output|--output-file|--out-file)(=|$)", tok):
