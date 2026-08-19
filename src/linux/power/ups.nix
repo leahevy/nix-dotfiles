@@ -87,6 +87,12 @@ args@{
       description = "Notification message text per UPS event type, overrides NUT defaults";
     };
 
+    batteryChargeMinPct = lib.mkOption {
+      type = lib.types.int;
+      default = 80;
+      description = "Minimum battery charge percentage before the daily health check fails, detects a battery that is not charging properly while on mains";
+    };
+
     startupCommands = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -197,6 +203,25 @@ args@{
         "upsd.service"
         "upsmon.service"
       ];
+      nx.linux.server.healthchecks.dailyHealthChecks = {
+        "!50 - UPS battery charge" =
+          let
+            upsc = "${pkgs.nut}/bin/upsc";
+            upsTarget = "${config.nx.linux.power.ups.upsName}@localhost";
+            minPct = toString config.nx.linux.power.ups.batteryChargeMinPct;
+          in
+          ''
+            _charge=$(${upsc} ${upsTarget} battery.charge 2>/dev/null || true)
+            if [[ ! "$_charge" =~ ^[0-9]+$ ]]; then
+              printf 'battery charge unavailable\n' >&3
+              exit 1
+            fi
+            printf 'battery charge: %s%%\n' "$_charge" >&3
+            if [[ $_charge -lt ${minPct} ]]; then
+              exit 1
+            fi
+          '';
+      };
     };
 
     linux.system =
