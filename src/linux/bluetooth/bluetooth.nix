@@ -47,8 +47,8 @@ args@{
       enabled = config: {
         nx.linux.security.aide.directoryWatches = [ "/var/lib/bluetooth" ];
         nx.linux.security.aide.excludePathsRegex = [
-          "^/var/lib/bluetooth/[0-9A-Fa-f:]+/cache(/|$)"
-          "^/var/lib/bluetooth/[0-9A-Fa-f:]+/attributes$"
+          "/var/lib/bluetooth/[0-9A-Fa-f:]+/cache(/|$)"
+          "/var/lib/bluetooth/[0-9A-Fa-f:]+/attributes$"
         ];
       };
     };
