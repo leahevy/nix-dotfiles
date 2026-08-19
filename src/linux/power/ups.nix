@@ -166,6 +166,10 @@ args@{
       ];
     };
 
+    ifEnabled.linux.notifications.pushover.enabled = config: {
+      nx.linux.notifications.pushover.additionalUsers = [ config.power.ups.upsmon.user ];
+    };
+
     ifEnabled.linux.server.healthchecks.enabled = config: {
       nx.linux.server.healthchecks.requireServicesUp = [
         "upsd.service"
