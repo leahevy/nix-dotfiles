@@ -45,6 +45,11 @@ args@{
           tag = "systemd-resolved";
           string = "Using degraded feature set TCP instead of UDP for DNS server fd7a:115c:a1e0::53\\.";
         }
+        {
+          service = "systemd-resolved.service";
+          tag = "systemd-resolved";
+          string = "Using degraded feature set UDP instead of TCP for DNS server fd7a:115c:a1e0::53\\.";
+        }
       ];
     };
 
