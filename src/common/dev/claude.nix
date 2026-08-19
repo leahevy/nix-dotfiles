@@ -184,7 +184,7 @@ in
 
     autoCompactPercent = lib.mkOption {
       type = lib.types.nullOr (lib.types.ints.between 1 100);
-      default = 75;
+      default = 85;
       description = "Percentage of the auto-compaction window at which compaction triggers.";
     };
 
