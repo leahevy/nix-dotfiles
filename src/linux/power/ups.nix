@@ -70,6 +70,23 @@ args@{
       default = 21600;
       description = "Seconds between NOCOMM re-warning notifications, handled natively by upsmon NOCOMMWARNTIME";
     };
+    notifyMessages = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {
+        ONLINE = "Back on mains power";
+        ONBATT = "On battery power";
+        LOWBATT = "Battery is low";
+        FSD = "Forced shutdown in progress";
+        COMMOK = "UPS communications restored";
+        COMMBAD = "UPS communications lost";
+        SHUTDOWN = "Shutdown in progress";
+        REPLBATT = "Battery needs replacement";
+        NOCOMM = "UPS not available";
+        NOPARENT = "upsmon parent process died";
+      };
+      description = "Notification message text per UPS event type, overrides NUT defaults";
+    };
+
     startupCommands = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -186,6 +203,7 @@ args@{
         deviceMatch,
         offdelay,
         ondelay,
+        notifyMessages,
         notifyThrottle,
         rbWarnTime,
         noCommWarnTime,
@@ -538,6 +556,10 @@ args@{
           };
 
           upsmon.settings = {
+            NOTIFYMSG = lib.mapAttrsToList (event: msg: [
+              event
+              msg
+            ]) notifyMessages;
             NOTIFYCMD = if enableAutomaticShutdown then "${upsschedWrapper}" else "${notifyScript}";
             SHUTDOWNCMD =
               if enableAutomaticShutdown then
