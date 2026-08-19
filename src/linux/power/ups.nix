@@ -180,6 +180,11 @@ args@{
           tag = "upsd";
           string = "Can't connect to UPS \\[ups\\] \\(/var/lib/nut/usbhid-ups-ups\\): No such file or directory";
         }
+        {
+          service = "upsmon.service";
+          tag = "upsmon";
+          string = "Poll UPS \\[ups@localhost\\] failed - Data stale";
+        }
       ];
     };
 
