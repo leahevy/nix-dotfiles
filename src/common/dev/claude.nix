@@ -388,6 +388,12 @@ in
       default = [ ];
       description = "Extra regexes matched against Bash commands that the built-in guardrail denies.";
     };
+
+    allowedWebFetchDomains = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Extra domain regexes that WebFetch is allowed to access without prompting.";
+    };
   };
 
   submodules = {
@@ -606,6 +612,20 @@ in
           "dmesg"
         ];
 
+        bakedWebDomains = [
+          "github.com"
+          "docs.github.com"
+          "gist.github.com"
+          "api.github.com"
+          "raw.githubusercontent.com"
+          "gitlab.com"
+          "nixos.wiki"
+          "wiki.nixos.org"
+          "mynixos.com"
+          "wiki.archlinux.org"
+          "hackage.haskell.org"
+        ];
+
         guardrailBody = ''
           NXCONFIG = os.path.join(HOME, ".config", "nx", "nxconfig")
 
@@ -627,6 +647,7 @@ in
           READONLY_FILTERS = GREP_FAMILY + (
               "rg", "tree", "sort", "head", "tail", "wc", "cut", "cat",
               "nl", "tac", "rev", "uniq", "comm", "column", "fmt", "fold",
+              "ls", "tr",
           )
 
           def is_readonly_listing(command):
@@ -644,12 +665,11 @@ in
                   return False
               lead = segments[0]
               lead_tokens = lead.split()
+              lead_cmd = lead_tokens[0] if lead_tokens else ""
               if lead_tokens[:1] == ["git"]:
-                  if not re.match(r"^git(\s+-C\s+\S+)*\s+ls-files\b", lead):
+                  if not re.match(r"^git(\s+(--no-pager|-C\s+\S+))*\s+(ls-files|log|status|check-ignore|diff|show)\b", lead):
                       return False
-                  if "=" in lead:
-                      return False
-                  if re.search(r"(^|\s)(-c|--config|--exec-path|--git-dir|--work-tree|--namespace|--bare)\b", lead):
+                  if re.search(r"(^|\s)(-c|--config|--exec-path|--git-dir|--work-tree|--namespace|--bare|--output)(=|\s|$)", lead):
                       return False
               elif lead_tokens[:1] == ["fd"]:
                   for tok in lead_tokens[1:]:
@@ -657,6 +677,23 @@ in
                           return False
                       if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
                           return False
+              elif lead_cmd in READONLY_FILTERS:
+                  for tok in lead_tokens[1:]:
+                      if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
+                          return False
+                  if lead_cmd not in GREP_FAMILY:
+                      for tok in lead_tokens[1:]:
+                          if re.match(r"^(-o|-O|--output|--output-file|--out-file)(=|$)", tok):
+                              return False
+                  if lead_cmd == "rg":
+                      for tok in lead_tokens[1:]:
+                          if re.match(r"^(--pre|--pre-glob|--hostname-bin)(=|$)", tok):
+                              return False
+              elif lead_cmd == "journalctl":
+                  if re.search(r"(^|\s)(--vacuum-(size|time|files)|--rotate|--flush|--sync|--dmesg)\b", lead):
+                      return False
+                  if re.search(r"(^|\s)-(?!-)[a-zA-Z]*k", lead):
+                      return False
               else:
                   return False
               for seg in segments[1:]:
@@ -684,6 +721,24 @@ in
           cwd = data.get("cwd") or os.getcwd()
           path = tool_path(data)
           cmd = tool_input(data).get("command") or ""
+          url = tool_input(data).get("url") or ""
+          tool_name = data.get("tool_name") or ""
+
+          BAKED_WEB_DOMAINS = set(${builtins.toJSON bakedWebDomains})
+          ALLOWED_WEB_PATTERNS = ${builtins.toJSON config.nx.common.dev.claude.allowedWebFetchDomains}
+
+          if tool_name == "WebFetch" and url:
+              try:
+                  from urllib.parse import urlparse
+                  domain = urlparse(url).netloc.lower()
+                  if domain.startswith("www."):
+                      domain = domain[4:]
+              except Exception:
+                  domain = ""
+              if domain and (domain in BAKED_WEB_DOMAINS or any(re.search(p, domain) for p in ALLOWED_WEB_PATTERNS)):
+                  allow("WebFetch to allowed domain: " + domain)
+              else:
+                  ask("WebFetch to unrecognised domain: " + domain)
 
           if path:
               target = resolve(cwd, path)
