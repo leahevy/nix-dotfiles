@@ -668,8 +668,8 @@ in
               s = re.sub(r'\s+2>\s*/dev/null', ''', s).strip()
               if not s:
                   return False
-              if "&&" in s or "||" in s:
-                  parts = re.split(r'\s*(?:&&|\|\|)\s*', s)
+              if "&&" in s or "||" in s or ";" in s:
+                  parts = re.split(r'\s*(?:&&|\|\||\s*;\s*)\s*', s)
                   if any(p.strip() == "" for p in parts):
                       return False
                   return all(_is_simple_echo(p) or is_readonly_listing(p) for p in parts)
