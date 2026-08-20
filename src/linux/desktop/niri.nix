@@ -378,6 +378,7 @@ args@{
         };
         wlsunset = true;
         bongocat = true;
+        virtual-keyboard = true;
         programs = {
           installSystemSettings = true;
         };
