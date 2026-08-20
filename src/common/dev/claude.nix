@@ -404,6 +404,12 @@ in
       description = "Extra regexes matched against resolved tool paths that the built-in guardrail denies.";
     };
 
+    guardrailDisallowedDirectories = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Extra directory paths (prefix-matched, tilde-expanded) that the built-in guardrail denies access to.";
+    };
+
     guardrailDisallowedCommands = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -462,6 +468,24 @@ in
   };
 
   module = {
+    linux.enabled = config: {
+      nx.common.dev.claude.guardrailDisallowedDirectories = [
+        "/boot"
+        "/root"
+        "/run"
+        "/proc"
+        "/sys"
+      ];
+    };
+
+    darwin.enabled = config: {
+      nx.common.dev.claude.guardrailDisallowedDirectories = [
+        "/System"
+        "/Library"
+        "/private"
+      ];
+    };
+
     enabled =
       config:
       let
@@ -700,6 +724,7 @@ in
           SECRET_FILE = re.compile(r"(\.pem|\.key|\.age|/id_rsa|/id_ed25519|/id_ecdsa|/\.env(\.|$))")
           EXTRA_PATH_DENY = ${builtins.toJSON config.nx.common.dev.claude.guardrailDisallowedPaths}
           EXTRA_CMD_DENY = ${builtins.toJSON config.nx.common.dev.claude.guardrailDisallowedCommands}
+          EXTRA_DIR_DENY = [os.path.normpath(os.path.expanduser(d)) for d in ${builtins.toJSON config.nx.common.dev.claude.guardrailDisallowedDirectories}]
           FORBIDDEN_COMMANDS = ${builtins.toJSON forbiddenCommandWords}
 
           GREP_FAMILY = ("grep", "egrep", "fgrep")
@@ -737,82 +762,108 @@ in
                   return [cmd]
 
           def is_readonly_listing(command):
-              def _abs_under_cwd(tok):
+              def _in_allowed_root(tok):
                   part = tok.split("=", 1)[-1] if "=" in tok else tok
-                  return under(os.path.normpath(os.path.expanduser(part)), cwd)
+                  resolved = os.path.normpath(os.path.expanduser(part))
+                  if under(resolved, cwd):
+                      return True
+                  try:
+                      parent = resolved if os.path.isdir(resolved) else os.path.dirname(resolved)
+                      r = subprocess.run([GIT, "-C", parent, "rev-parse", "--show-toplevel"],
+                                         capture_output=True, text=True, timeout=3)
+                      git_root = os.path.normpath(r.stdout.strip())
+                      if not git_root or git_root == ".":
+                          return False
+                      nxconfig_norm = os.path.normpath(NXCONFIG)
+                      if under(git_root, nxconfig_norm) or git_root == nxconfig_norm:
+                          return False
+                      if any(under(git_root, d) or git_root == d for d in EXTRA_DIR_DENY):
+                          return False
+                      return under(resolved, git_root)
+                  except Exception:
+                      return False
               s = command.strip()
               if not s:
-                  return False
+                  return "empty command segment"
               s = re.sub(r'\s+2>\s*/dev/null', ''', s).strip()
               if not s:
-                  return False
-              if "&&" in s or "||" in s or ";" in s:
+                  return "empty command segment"
+              sq = re.sub(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"", "", s)
+              if "&&" in sq or "||" in sq or ";" in sq:
                   parts = re.split(r'\s*(?:&&|\|\||\s*;\s*)\s*', s)
                   if any(p.strip() == "" for p in parts):
-                      return False
-                  return all(_is_simple_echo(p) or is_readonly_listing(p) for p in parts)
-              if re.search(r"[;&<>`(){}\n$]", s):
-                  return False
+                      return "empty segment in compound command"
+                  for p in parts:
+                      if not _is_simple_echo(p):
+                          reason = is_readonly_listing(p)
+                          if reason is not None:
+                              return reason
+                  return None
+              if re.search(r"[;&<>`(){}\n$]", sq):
+                  return "shell metacharacter in command"
               if ".." in s:
-                  return False
+                  return "path traversal (..) in command"
               segments = split_pipes(s)
               if any(seg == "" for seg in segments):
-                  return False
+                  return "empty pipe segment"
               lead = segments[0]
               lead_tokens = lead.split()
               lead_cmd = lead_tokens[0] if lead_tokens else ""
               if lead_tokens[:1] == ["git"]:
                   if not re.match(r"^git(\s+(--no-pager|-C\s+\S+))*\s+(ls-files|log|status|check-ignore|diff|show)\b", lead):
-                      return False
+                      return "git subcommand not in allowlist"
                   if re.search(r"(^|\s)(-c|--config|--exec-path|--git-dir|--work-tree|--namespace|--bare|--output)(=|\s|$)", lead):
-                      return False
+                      return "git command with unsafe flags"
+                  if not re.search(r"(^|\s)--no-ext-diff(\s|$)", lead):
+                      if run([GIT, "-C", cwd, "config", "diff.external"], cwd):
+                          return "diff.external is configured; add --no-ext-diff to use built-in diff"
               elif lead_tokens[:1] == ["fd"]:
                   for tok in lead_tokens[1:]:
                       if tok in ("-x", "-X") or re.match(r"^(--exec|--exec-batch)(=|$)", tok):
-                          return False
+                          return "fd with exec flag"
                       if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
-                          if not _abs_under_cwd(tok):
-                              return False
+                          if not _in_allowed_root(tok):
+                              return "absolute path outside project: " + tok
               elif lead_cmd in READONLY_FILTERS:
                   for tok in lead_tokens[1:]:
                       if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
-                          if not _abs_under_cwd(tok):
-                              return False
+                          if not _in_allowed_root(tok):
+                              return "absolute path outside project: " + tok
                   if lead_cmd not in GREP_FAMILY:
                       for tok in lead_tokens[1:]:
                           if re.match(r"^(-o|-O|--output|--output-file|--out-file)(=|$)", tok):
-                              return False
+                              return "output redirection flag in read-only command"
                   if lead_cmd == "rg":
                       for tok in lead_tokens[1:]:
                           if re.match(r"^(--pre|--pre-glob|--hostname-bin)(=|$)", tok):
-                              return False
+                              return "rg with exec flag"
               elif lead_cmd == "journalctl":
                   if re.search(r"(^|\s)(--vacuum-(size|time|files)|--rotate|--flush|--sync|--dmesg)\b", lead):
-                      return False
+                      return "journalctl with mutating flag"
                   if re.search(r"(^|\s)-(?!-)[a-zA-Z]*k", lead):
-                      return False
+                      return "journalctl with kernel flag"
               else:
-                  return False
+                  return "unrecognised command: " + lead_cmd
               for seg in segments[1:]:
                   tokens = seg.split()
                   if not tokens:
-                      return False
+                      return "empty pipe segment"
                   tool = tokens[0]
                   if tool not in READONLY_FILTERS:
-                      return False
+                      return "unrecognised pipe filter: " + tool
                   for tok in tokens[1:]:
                       if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
-                          if not _abs_under_cwd(tok):
-                              return False
+                          if not _in_allowed_root(tok):
+                              return "absolute path outside project: " + tok
                   if tool not in GREP_FAMILY:
                       for tok in tokens[1:]:
                           if re.match(r"^(-o|-O|--output|--output-file|--out-file)(=|$)", tok):
-                              return False
+                              return "output redirection flag in read-only command"
                   if tool == "rg":
                       for tok in tokens[1:]:
                           if re.match(r"^(--pre|--pre-glob|--hostname-bin)(=|$)", tok):
-                              return False
-              return True
+                              return "rg with exec flag"
+              return None
 
           data = load(strict=True)
 
@@ -842,6 +893,8 @@ in
               target = resolve(cwd, path)
               if under(target, NXCONFIG) and not nxconfig_allowed(target):
                   deny("access to nxconfig is off-limits: " + target)
+              if any(under(target, d) for d in EXTRA_DIR_DENY):
+                  deny("access to disallowed directory: " + target)
               if any(under(target, secret) for secret in SECRET_DIRS):
                   deny("access to secret material is blocked: " + target)
               if SECRET_FILE.search(target):
@@ -871,10 +924,11 @@ in
                   deny("piping a download into a shell or interpreter is blocked")
               if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", cmd) and not re.search(r"\.md(\W|$)|flake\.nix|flake\.lock", cmd):
                   deny("referencing nxconfig from a shell command is blocked")
-              if is_readonly_listing(cmd):
+              pipe_reject = is_readonly_listing(cmd)
+              if pipe_reject is None:
                   allow("read-only file listing")
               if re.search(r"(?<!\|)\|(?!\|)", cmd):
-                  ask("this command contains a pipe, review it before allowing")
+                  ask(pipe_reject or "this command contains a pipe, review it before allowing")
         '';
 
         contextBody = ''
@@ -987,6 +1041,14 @@ in
         nx.common.git.git.globalIgnores = [
           "CLAUDE.md"
           ".claude"
+        ];
+
+        nx.common.dev.claude.guardrailDisallowedDirectories = [
+          "/nix/store"
+          "/dev"
+          "/etc"
+          "/usr"
+          "/var"
         ];
       };
 
