@@ -650,6 +650,14 @@ in
               "ls", "tr",
           )
 
+          def _is_simple_echo(s):
+              s = s.strip()
+              if s == "echo":
+                  return True
+              if not re.match(r'^echo\s', s):
+                  return False
+              return not re.search(r'[$`]', s[5:])
+
           def is_readonly_listing(command):
               def _abs_under_cwd(tok):
                   part = tok.split("=", 1)[-1] if "=" in tok else tok
@@ -657,9 +665,15 @@ in
               s = command.strip()
               if not s:
                   return False
-              if re.search(r"[;&<>`(){}\n\\$]", s):
+              s = re.sub(r'\s+2>\s*/dev/null', ''', s).strip()
+              if not s:
                   return False
-              if "||" in s:
+              if "&&" in s or "||" in s:
+                  parts = re.split(r'\s*(?:&&|\|\|)\s*', s)
+                  if any(p.strip() == "" for p in parts):
+                      return False
+                  return all(_is_simple_echo(p) or is_readonly_listing(p) for p in parts)
+              if re.search(r"[;&<>`(){}\n\\$]", s):
                   return False
               if ".." in s:
                   return False
