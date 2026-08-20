@@ -65,6 +65,11 @@ in
       default = 200;
       description = "Alpha for keyboard background from 0 (transparent) to 255 (opaque).";
     };
+    swipeOpacity = lib.mkOption {
+      type = lib.types.int;
+      default = 0;
+      description = "Alpha for swipe indicator from 0 (hidden) to 255 (opaque).";
+    };
     cornerRadius = lib.mkOption {
       type = lib.types.int;
       default = 0;
@@ -118,6 +123,7 @@ in
         fontSize,
         keyOpacity,
         bgOpacity,
+        swipeOpacity,
         cornerRadius,
         height,
         nonWidescreenScale,
@@ -131,7 +137,7 @@ in
         fg = htmlToRgb c.blocks.primary.background.html;
         high = htmlToRgb c.blocks.accent.background.html;
         text = htmlToRgb c.blocks.primary.foreground.html;
-        swipe = htmlToRgb c.blocks.primary.foreground.html;
+        swipe = htmlToRgb c.blocks.selection.background.html;
 
         isWidescreen = helpers.resolveFromHostOrUser config [ "displays" "mainIsWidescreen" ] false;
         effectiveHeight =
@@ -158,7 +164,7 @@ in
             .bg = ${bgra bg bgOpacity},
             .fg = ${bgra fg keyOpacity},
             .high = ${bgra high keyOpacity},
-            .swipe = ${bgra swipe 64},
+            .swipe = ${bgra swipe swipeOpacity},
             .text = {.color = ${colorVal text keyOpacity}},
             .font = DEFAULT_FONT,
             .rounding = DEFAULT_ROUNDING,
