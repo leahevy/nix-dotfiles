@@ -16,7 +16,7 @@ let
       haUnexpectedResponse = "Sorry, I did not understand the response from Home Assistant.";
       haAgentFailed = "Home Assistant is awake, but I am having trouble thinking right now. Please ask me again in a moment.";
       haToolCallArtifact = "Something went wrong in Home Assistant and the action was not carried out. Please ask me for it again.";
-      statusTemplate = "**{name} status**\n\nsignal-cli account data: {account}\nHome Assistant: {homeAssistant}\n\n**Daily budget:**\n{budget}\n\n**Maybe answers:** {maybeBudget}\n\n**Hooks:**\n{hooks}\n\n**Memory:**\n{memory}";
+      statusTemplate = "**{name} status**\n\n**signal-cli** account data: {account}\n**Home Assistant**: {homeAssistant}\n\n**Daily budget:**\n{budget}\n\n**Maybe answers:** {maybeBudget}\n\n**Hooks:**\n{hooks}\n\n**Memory:**\n{memory}";
       statusBudgetEntryTemplate = "{contact}: {used} of {limit}";
       statusUnknownContactLabel = "Unknown desktop user";
       chatTypingTemplate = "{name} is typing";
@@ -117,7 +117,7 @@ let
       haUnexpectedResponse = "Entschuldigung, ich habe die Antwort von Home Assistant nicht verstanden.";
       haAgentFailed = "Home Assistant ist wach, aber ich habe gerade Schwierigkeiten beim Nachdenken. Bitte frag mich gleich noch einmal.";
       haToolCallArtifact = "In Home Assistant ist etwas schiefgelaufen und die Aktion wurde nicht ausgeführt. Bitte frag mich noch einmal danach.";
-      statusTemplate = "**{name} Status**\n\nsignal-cli Kontodaten: {account}\nHome Assistant: {homeAssistant}\n\n**Tagesbudget:**\n{budget}\n\n**Vielleicht-Antworten:** {maybeBudget}\n\n**Hooks:**\n{hooks}\n\n**Gedächtnis:**\n{memory}";
+      statusTemplate = "**{name} Status**\n\n**signal-cli** Kontodaten: {account}\n**Home Assistant**: {homeAssistant}\n\n**Tagesbudget:**\n{budget}\n\n**Vielleicht-Antworten:** {maybeBudget}\n\n**Hooks:**\n{hooks}\n\n**Gedächtnis:**\n{memory}";
       statusBudgetEntryTemplate = "{contact}: {used} von {limit}";
       statusUnknownContactLabel = "Unbekannter Desktop-Nutzer";
       chatTypingTemplate = "{name} schreibt";
