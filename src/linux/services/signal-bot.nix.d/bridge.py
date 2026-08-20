@@ -25,6 +25,7 @@ GROUP_UPDATE_ATTEMPTS = 3
 GROUP_UPDATE_RETRY_DELAY = 5.0
 HA_AGENT_ERROR_SPEECH = "Error talking to OpenAI"
 HA_AGENT_ERROR_RETRY_DELAYS = (3.0, 10.0)
+HOOK_HA_RETRY_ATTEMPTS = 3
 TOOL_CALL_ARTIFACT_PATTERN = re.compile(
     r"multi_tool_use\.parallel|\bfunctions\.[A-Za-z_]\w*\s*\("
 )
@@ -62,6 +63,10 @@ RECAP_BUDGET_WEIGHT = 0.5
 SENDER_BUDGET_WINDOW_SECONDS = 86400.0
 DAILY_TRANSCRIPT_LIMIT = 200
 HOOK_POLL_SECONDS = 30.0
+MEMORY_FINALIZE_POLL_SECONDS = 60.0
+MEMORY_SUMMARIZE_MAX_ATTEMPTS = 10
+MEMORY_SUMMARIZE_BASE_DELAY_SECONDS = 5.0
+MEMORY_SUMMARIZE_MAX_DELAY_SECONDS = 300.0
 HOOK_MIN_SLEEP_SECONDS = 0.5
 SECONDS_PER_DAY = 86400
 HOOK_BLOCK_POLICY = {"exclusion": "skip", "prerequisite": "wait"}
@@ -1518,16 +1523,48 @@ def with_quote_context(cfg, author, quoted, text):
         return f"{values['author']}: {values['message']}\n{values['text']}"
 
 
+_CHANNEL_LABELS = {
+    "en": {
+        "group": "group chat",
+        "direct": "direct message",
+        "desktop": "desktop",
+        "group_prefix": "Group chat",
+        "direct_prefix": "Direct message from",
+        "desktop_prefix": "Desktop message from",
+    },
+    "de": {
+        "group": "Gruppenchat",
+        "direct": "Direktnachricht",
+        "desktop": "Desktop",
+        "group_prefix": "Gruppenchat",
+        "direct_prefix": "Direktnachricht von",
+        "desktop_prefix": "Desktop-Nachricht von",
+    },
+}
+
+
+def _channel_label(cfg, key):
+    lang = cfg.get("bot_language", "en")
+    return _CHANNEL_LABELS.get(lang, _CHANNEL_LABELS["en"]).get(key, key)
+
+
+def with_direct_sender(cfg, name, text):
+    prefix = _channel_label(cfg, "direct_prefix")
+    return f"[{prefix} {name}]\n{text}"
+
+
 def with_group_speaker(cfg, author, text):
     values = {"author": author, "text": text}
     try:
-        return message_text(cfg, "group_speaker_template").format(**values)
+        formatted = message_text(cfg, "group_speaker_template").format(**values)
     except (KeyError, IndexError):
         print(
             "signal-bot: invalid group speaker template, using the default",
             file=sys.stderr,
         )
-        return f"{values['author']}: {values['text']}"
+        formatted = f"{values['author']}: {values['text']}"
+    prefix = _channel_label(cfg, "group_prefix")
+    return f"[{prefix}]\n{formatted}"
 
 
 def render_recap(cfg, entries, max_chars, keep_newest=True):
@@ -2104,7 +2141,9 @@ def register_command(name, description_key):
 
 
 @register_command("/status", "help_status_description")
-def cmd_status(cfg, ha_token, account, budget_report, maybe_report, hooks_report):
+def cmd_status(
+    cfg, ha_token, account, budget_report, maybe_report, hooks_report, memory_report
+):
     account_ok = not missing_account_files(cfg, account)
     ha_ok = ha_reachable(cfg["ha_url"], ha_token)
     account_key = "status_account_ok" if account_ok else "status_account_missing"
@@ -2121,11 +2160,14 @@ def cmd_status(cfg, ha_token, account, budget_report, maybe_report, hooks_report
         .replace("{budget}", budget_report())
         .replace("{maybeBudget}", maybe_report())
         .replace("{hooks}", hooks_report())
+        .replace("{memory}", memory_report())
     )
 
 
 @register_command("/help", "help_help_description")
-def cmd_help(cfg, ha_token, account, budget_report, maybe_report, hooks_report):
+def cmd_help(
+    cfg, ha_token, account, budget_report, maybe_report, hooks_report, memory_report
+):
     template = message_text(cfg, "help_entry_template")
     entries = {
         name: message_text(cfg, command.description_key)
@@ -2150,13 +2192,20 @@ def cmd_help(cfg, ha_token, account, budget_report, maybe_report, hooks_report):
 
 
 def handle_command(
-    cfg, ha_token, account, text, budget_report, maybe_report, hooks_report
+    cfg,
+    ha_token,
+    account,
+    text,
+    budget_report,
+    maybe_report,
+    hooks_report,
+    memory_report,
 ):
     words = text.strip().split()
     name = words[0] if words else ""
     command = COMMANDS.get(name, COMMANDS["/help"])
     return command.handler(
-        cfg, ha_token, account, budget_report, maybe_report, hooks_report
+        cfg, ha_token, account, budget_report, maybe_report, hooks_report, memory_report
     )
 
 
@@ -2881,6 +2930,238 @@ class HookState:
             self._persist_locked()
 
 
+class MemoryStore:
+    def __init__(self, path, cfg):
+        self.path = path
+        self.cfg = cfg
+        self.lock = threading.Lock()
+        self._finalizing = False
+        self._ha_token = None
+        self._label_fn = None
+        stored = read_json_state(path)
+        if not isinstance(stored, dict):
+            stored = {}
+        day = stored.get("day")
+        self.day = day if isinstance(day, int) else None
+        transcripts = stored.get("transcripts")
+        self.transcripts = (
+            {
+                k: [e for e in v if isinstance(e, list) and len(e) in (2, 3)]
+                for k, v in transcripts.items()
+                if isinstance(k, str) and isinstance(v, list)
+            }
+            if isinstance(transcripts, dict)
+            else {}
+        )
+        summaries = stored.get("summaries")
+        self.summaries = (
+            [
+                s
+                for s in summaries
+                if isinstance(s, dict)
+                and isinstance(s.get("date"), str)
+                and isinstance(s.get("text"), str)
+            ]
+            if isinstance(summaries, list)
+            else []
+        )
+
+    def _persist_locked(self):
+        try:
+            write_json_state(
+                self.path,
+                {
+                    "day": self.day,
+                    "transcripts": self.transcripts,
+                    "summaries": self.summaries,
+                },
+            )
+        except OSError as e:
+            log_error(f"signal-bot: could not persist the memory state: {e}!")
+
+    def maybe_finalize(self, ha_token, label_fn):
+        if not self.cfg.get("memory_enable"):
+            return
+        period = self.cfg["memory_period_seconds"]
+        with self.lock:
+            today = int(time.time() // period)
+            if self._finalizing or self.day is None or self.day == today:
+                return
+            if not any(self.transcripts.values()):
+                self.day = today
+                self._persist_locked()
+                return
+            closing_day = self.day
+            transcripts_snap = {
+                k: [
+                    e[1:] if len(e) == 3 else e
+                    for e in v
+                    if len(e) == 2 or e[0] == closing_day
+                ]
+                for k, v in self.transcripts.items()
+                if v
+            }
+            transcripts_snap = {k: v for k, v in transcripts_snap.items() if v}
+            summaries_snap = list(self.summaries)
+            self._finalizing = True
+        try:
+            date_fmt = "%Y-%m-%d %H:%M" if period < 86400 else "%Y-%m-%d"
+            closing_date = time.strftime(date_fmt, time.localtime(closing_day * period))
+            entry_tpl = self.cfg["memory_entry_template"]
+            chat_tpl = self.cfg["memory_chat_block_template"]
+            prompt_tpl = self.cfg["memory_prompt_template"]
+            instruction = self.cfg["memory_instruction"]
+            prior_parts = [
+                entry_tpl.format(date=s["date"], summary=s["text"])
+                for s in summaries_snap
+            ]
+            prior_text = (
+                "\n\n".join(prior_parts)
+                if prior_parts
+                else message_text(self.cfg, "mem_no_prior_summaries")
+            )
+            chat_parts = []
+            for chat_key, entries in transcripts_snap.items():
+                if not entries:
+                    continue
+                label = label_fn(chat_key)
+                lines = "\n".join(f"{a}: {t}" for a, t in entries)
+                chat_parts.append(chat_tpl.format(chat=label, transcript=lines))
+            today_transcripts = "\n\n".join(chat_parts)
+            try:
+                prompt = prompt_tpl.format(
+                    instruction=instruction,
+                    today=closing_date,
+                    prior_summaries=prior_text,
+                    today_transcripts=today_transcripts,
+                )
+            except (KeyError, IndexError):
+                prompt = (
+                    f"{instruction}\n\n{closing_date}\n\n{prior_text}\n\n"
+                    f"{today_transcripts}"
+                )
+            agent_id = self.cfg.get("memory_agent_id") or self.cfg.get("ha_agent_id")
+            summary_text = None
+            new_id = None
+            for attempt in range(MEMORY_SUMMARIZE_MAX_ATTEMPTS):
+                try:
+                    summary_text, new_id = call_ha_conversation(
+                        self.cfg, ha_token, prompt, None, agent_id
+                    )
+                except Exception as e:
+                    summary_text, new_id = None, None
+                    log_error(
+                        "signal-bot: memory summarize call raised on attempt"
+                        f" {attempt + 1} of {MEMORY_SUMMARIZE_MAX_ATTEMPTS}: {e}!"
+                    )
+                if (
+                    new_id is not None
+                    and isinstance(summary_text, str)
+                    and summary_text.strip()
+                ):
+                    break
+                if attempt + 1 < MEMORY_SUMMARIZE_MAX_ATTEMPTS:
+                    delay = min(
+                        MEMORY_SUMMARIZE_BASE_DELAY_SECONDS * (2**attempt),
+                        MEMORY_SUMMARIZE_MAX_DELAY_SECONDS,
+                    )
+                    time.sleep(delay)
+            else:
+                log_error(
+                    "signal-bot: memory finalize failed after"
+                    f" {MEMORY_SUMMARIZE_MAX_ATTEMPTS} attempts, will retry next tick!"
+                )
+                return
+            retention = self.cfg["memory_retention_days"]
+            with self.lock:
+                self.summaries.append(
+                    {"date": closing_date, "text": summary_text.strip()}
+                )
+                if len(self.summaries) > retention:
+                    self.summaries = self.summaries[-retention:]
+                for key in transcripts_snap:
+                    current = self.transcripts.get(key)
+                    if current is not None:
+                        current[:] = [
+                            e for e in current if len(e) == 3 and e[0] != closing_day
+                        ]
+                        if not current:
+                            del self.transcripts[key]
+                self.day = closing_day + 1
+                self._persist_locked()
+        finally:
+            with self.lock:
+                self._finalizing = False
+
+    def record(self, chat_key, author, text):
+        if not self.cfg.get("memory_enable"):
+            return
+        if not isinstance(text, str) or not text.strip():
+            return
+        period = self.cfg["memory_period_seconds"]
+        with self.lock:
+            today = int(time.time() // period)
+            needs_roll = (
+                self.day is not None
+                and self.day != today
+                and any(self.transcripts.values())
+            )
+        if needs_roll and self._ha_token is not None and self._label_fn is not None:
+            threading.Thread(
+                target=self.maybe_finalize,
+                args=(self._ha_token, self._label_fn),
+                daemon=True,
+            ).start()
+        with self.lock:
+            today = int(time.time() // period)
+            if self.day is None or self.day == today:
+                self.day = today
+            entries = self.transcripts.setdefault(chat_key, [])
+            entries.append([today, author, text])
+            limit = self.cfg["memory_daily_limit"]
+            if len(entries) > limit:
+                del entries[: len(entries) - limit]
+            self._persist_locked()
+
+    def status(self):
+        with self.lock:
+            summaries = len(self.summaries)
+            today_entries = sum(len(v) for v in self.transcripts.values())
+            day = self.day
+        period = self.cfg["memory_period_seconds"]
+        if day is not None:
+            next_ts = (day + 1) * period
+            abs_str = time.strftime("%Y-%m-%d %H:%M", time.localtime(next_ts))
+            remaining = max(0.0, next_ts - time.time())
+            hours = int(remaining // 3600)
+            minutes = int((remaining % 3600) // 60)
+            rel_str = f"in {hours}h {minutes}m" if hours > 0 else f"in {minutes}m"
+            next_str = f"{abs_str} ({rel_str})"
+        else:
+            next_str = None
+        return summaries, today_entries, next_str
+
+    def memory_block(self, channel_key="desktop"):
+        if not self.cfg.get("memory_enable"):
+            return ""
+        with self.lock:
+            summaries = list(self.summaries)
+        if not summaries:
+            return ""
+        lang = self.cfg.get("bot_language", "en")
+        channel = _CHANNEL_LABELS.get(lang, _CHANNEL_LABELS["en"]).get(
+            channel_key, channel_key
+        )
+        entry_tpl = self.cfg["memory_entry_template"]
+        context_tpl = self.cfg["memory_context_template"]
+        parts = [entry_tpl.format(date=s["date"], summary=s["text"]) for s in summaries]
+        memory_text = "\n\n".join(parts)
+        try:
+            return context_tpl.format(memory=memory_text, channel=channel)
+        except (KeyError, IndexError):
+            return memory_text
+
+
 def format_transcript_separator(template, separator):
     try:
         return template.format(separator=separator)
@@ -2906,6 +3187,7 @@ def render_hook_transcript(cfg, head, tail, separator, total_max, block_min):
 
 def hook_prompt(template, system_instruction, instruction, transcript):
     values = {
+        "time": time.strftime("%Y-%m-%d %H:%M"),
         "systemInstruction": system_instruction,
         "instruction": instruction,
         "transcript": transcript,
@@ -2918,7 +3200,7 @@ def hook_prompt(template, system_instruction, instruction, transcript):
             file=sys.stderr,
         )
         return (
-            f"{values['systemInstruction']}\n\n"
+            f"{values['time']}\n\n{values['systemInstruction']}\n\n"
             f"{values['transcript']}\n\n{values['instruction']}"
         )
 
@@ -3143,6 +3425,20 @@ def serve(cfg):
     allowed_uuids = AllowedUuids(cfg["recipients_file"], contact_numbers)
     api_token = require_secret(cfg["api_token_file"], "API token")
     ha_token = require_secret(cfg["ha_token_file"], "Home Assistant token")
+
+    def chat_label(chat_key):
+        if chat_key.startswith("group:"):
+            return cfg["main_group_name"]
+        if chat_key.startswith("desktop:"):
+            return chat_key[len("desktop:") :]
+        if chat_key.startswith("direct:"):
+            uid = chat_key[len("direct:") :]
+            for name, number in contacts_by_name.items():
+                if number == uid:
+                    return name
+            return uid
+        return chat_key
+
     max_age_seconds = cfg["inbound_max_age_seconds"]
     quote_replies = cfg["quote_replies"]
     typing_delay_seconds = cfg["typing_indicator_delay_seconds"]
@@ -3195,6 +3491,10 @@ def serve(cfg):
     }
     bot_label = message_text(cfg, "quote_context_bot")
     daily_transcript = DailyTranscript(cfg["daily_transcript_limit"])
+    memory_store = MemoryStore(cfg.get("memory_state_file", ""), cfg)
+    if cfg.get("memory_enable"):
+        memory_store._ha_token = ha_token
+        memory_store._label_fn = chat_label
     hook_state = HookState(cfg["hook_state_file"]) if hooks_active else None
     scheduler = None
     desktop = None
@@ -3340,6 +3640,8 @@ def serve(cfg):
             bot_activity.mark(f"group:{target['groupId']}")
         if queued and hooks_active and record_transcript and "groupId" in target:
             daily_transcript.record(bot_label, text, is_bot=True)
+        if queued and cfg.get("memory_enable") and record_transcript and transcript_key:
+            memory_store.record(transcript_key, bot_label, text)
         if queued and transcript_key:
             conversations.remember_turn(
                 transcript_key, message_text(cfg, "quote_context_bot"), text, True
@@ -3853,6 +4155,8 @@ def serve(cfg):
 
         if hooks_active and group_info and not message_is_builtin_command:
             daily_transcript.record(sender_label, text, is_bot=False)
+        if cfg.get("memory_enable") and not message_is_builtin_command:
+            memory_store.record(thread_key, sender_label, text)
 
         if transcribed or (group_info and quote_replies):
             reply_quote = build_quote(
@@ -3918,9 +4222,26 @@ def serve(cfg):
                     f"signal-bot: running the script command {command_name}",
                     file=sys.stderr,
                 )
+                script_argument = command_argument
+                if script_command.get("conversational"):
+                    spoken = (
+                        with_group_speaker(cfg, speaker_label, command_argument)
+                        if speaker_label
+                        else with_direct_sender(cfg, sender_label, command_argument)
+                    )
+                    entries = conversations.transcript(thread_key)
+                    recap = render_recap(cfg, entries, context_max_chars)
+                    script_argument = (
+                        with_context_recap(cfg, recap, spoken) if recap else spoken
+                    )
+                    _mem = memory_store.memory_block(
+                        "group" if speaker_label else "direct"
+                    )
+                    if _mem:
+                        script_argument = f"{_mem}\n\n{script_argument}"
                 with typing_indicator(reply_target):
                     reply_text = call_ha_script(
-                        cfg, ha_token, command_name, script_command, command_argument
+                        cfg, ha_token, command_name, script_command, script_argument
                     )
                 conversations.remember_turn(
                     thread_key,
@@ -3937,20 +4258,15 @@ def serve(cfg):
                     )
         elif text.startswith("/"):
 
-            def maybe_report():
-                if not group_filter_enabled:
-                    return message_text(cfg, "status_maybe_budget_disabled")
-                return (
-                    message_text(cfg, "status_maybe_budget_template")
-                    .replace(
-                        "{remaining}",
-                        str(group_filter_maybe_budget.remaining(thread_key)),
-                    )
-                    .replace("{limit}", str(group_filter_maybe_budget.limit))
-                )
-
             reply_text = handle_command(
-                cfg, ha_token, account, text, budget_report, maybe_report, hooks_report
+                cfg,
+                ha_token,
+                account,
+                text,
+                budget_report,
+                group_maybe_report,
+                hooks_report,
+                memory_report,
             )
         else:
             if not claim_budget(
@@ -4028,7 +4344,7 @@ def serve(cfg):
             prompt = (
                 with_group_speaker(cfg, speaker_label, spoken)
                 if speaker_label
-                else spoken
+                else with_direct_sender(cfg, sender_label, spoken)
             )
             print(
                 "signal-bot: handling a "
@@ -4117,6 +4433,9 @@ def serve(cfg):
                 prompt = with_quote_context(cfg, author, quoted, prompt)
             if recap:
                 prompt = with_context_recap(cfg, recap, prompt)
+            _mem = memory_store.memory_block("group" if speaker_label else "direct")
+            if _mem:
+                prompt = f"{_mem}\n\n{prompt}"
             conversations.remember_turn(thread_key, sender_label, text)
 
             with typing_indicator(reply_target, typing_delay_seconds):
@@ -4249,10 +4568,40 @@ def serve(cfg):
                 trigger["instruction"],
                 transcript_text,
             )
+            _hook_mem = memory_store.memory_block("group")
+            if _hook_mem:
+                prompt = f"{_hook_mem}\n\n{prompt}"
             print(f"signal-bot: firing hook {name!r}", file=sys.stderr)
-            speech, new_conversation_id = call_ha_conversation(
-                cfg, ha_token, prompt, None, hook["agent_id"]
-            )
+            speech = None
+            new_conversation_id = None
+            for attempt in range(HOOK_HA_RETRY_ATTEMPTS):
+                try:
+                    speech, new_conversation_id = call_ha_conversation(
+                        cfg, ha_token, prompt, None, hook["agent_id"]
+                    )
+                except Exception as e:
+                    speech, new_conversation_id = None, None
+                    log_error(
+                        f"signal-bot: hook {name!r} HA call raised on attempt "
+                        f"{attempt + 1} of {HOOK_HA_RETRY_ATTEMPTS}: {e}!"
+                    )
+                if (
+                    new_conversation_id is not None
+                    and isinstance(speech, str)
+                    and speech.strip()
+                    and speech not in ha_error_messages
+                ):
+                    break
+                if attempt + 1 < HOOK_HA_RETRY_ATTEMPTS:
+                    delay = HA_AGENT_ERROR_RETRY_DELAYS[
+                        min(attempt, len(HA_AGENT_ERROR_RETRY_DELAYS) - 1)
+                    ]
+                    print(
+                        f"signal-bot: hook {name!r} attempt {attempt + 1} failed, "
+                        f"retrying in {delay:.0f}s",
+                        file=sys.stderr,
+                    )
+                    time.sleep(delay)
             if not isinstance(speech, str) or not speech.strip():
                 print(
                     f"signal-bot: hook {name!r} got an empty reply from Home Assistant, "
@@ -4353,6 +4702,32 @@ def serve(cfg):
             .replace("{entries}", entries)
         )
 
+    def memory_report():
+        if not cfg.get("memory_enable"):
+            return message_text(cfg, "status_memory_disabled")
+        summaries, today_entries, next_str = memory_store.status()
+        next_label = (
+            next_str
+            if next_str is not None
+            else message_text(cfg, "status_memory_no_next")
+        )
+        return (
+            message_text(cfg, "status_memory_template")
+            .replace("{summaries}", str(summaries))
+            .replace("{today_entries}", str(today_entries))
+            .replace("{next}", next_label)
+        )
+
+    def group_maybe_report():
+        if not group_filter_enabled:
+            return message_text(cfg, "status_maybe_budget_disabled")
+        group_key = f"group:{current_group_id()}"
+        return (
+            message_text(cfg, "status_maybe_budget_template")
+            .replace("{remaining}", str(group_filter_maybe_budget.remaining(group_key)))
+            .replace("{limit}", str(group_filter_maybe_budget.limit))
+        )
+
     if hooks_active:
         scheduler = HookScheduler(
             cfg, hooks_config, hook_state, daily_transcript, fire_hook
@@ -4366,6 +4741,15 @@ def serve(cfg):
     threading.Thread(target=sender.run, args=(do_send,), daemon=True).start()
     if scheduler is not None:
         threading.Thread(target=scheduler.run, daemon=True).start()
+    if cfg.get("memory_enable"):
+        memory_store.maybe_finalize(ha_token, chat_label)
+
+        def _memory_finalize_loop():
+            while True:
+                time.sleep(MEMORY_FINALIZE_POLL_SECONDS)
+                memory_store.maybe_finalize(ha_token, chat_label)
+
+        threading.Thread(target=_memory_finalize_loop, daemon=True).start()
 
     rpc.call_checked("subscribeReceive")
 
@@ -4444,9 +4828,6 @@ def serve(cfg):
         desktop_mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(desktop_mod)
 
-        def desktop_maybe_report():
-            return message_text(cfg, "status_maybe_budget_disabled")
-
         def desktop_handle_command(text):
             return handle_command(
                 cfg,
@@ -4454,8 +4835,9 @@ def serve(cfg):
                 account,
                 text,
                 budget_report,
-                desktop_maybe_report,
+                group_maybe_report,
                 hooks_report,
+                memory_report,
             )
 
         def desktop_call_ha(text, conversation_id):
@@ -4478,6 +4860,24 @@ def serve(cfg):
             )
             return reply, with_script_description(cfg, source_text, script_command)
 
+        def desktop_is_conversational_script(text):
+            stripped = text.strip()
+            if stripped.startswith("/"):
+                command_name, command_argument = split_command(stripped)
+                sc = script_commands.get(command_name)
+                if sc is not None and sc.get("conversational"):
+                    return command_name, sc, command_argument
+            else:
+                shortcut_name = script_shortcuts.get(stripped[:1]) if stripped else None
+                if shortcut_name is not None:
+                    sc = script_commands[shortcut_name]
+                    if sc.get("conversational"):
+                        return shortcut_name, sc, stripped[1:].strip()
+            return None
+
+        def desktop_call_script(command_name, script_command, prompt):
+            return call_ha_script(cfg, ha_token, command_name, script_command, prompt)
+
         def desktop_command_reply(text):
             stripped = text.strip()
             if stripped.startswith("/"):
@@ -4485,6 +4885,13 @@ def serve(cfg):
                 script_command = script_commands.get(command_name)
                 if script_command is None:
                     return desktop_handle_command(stripped), None
+                if script_command.get("conversational"):
+                    problem = script_argument_problem(
+                        cfg, command_name, script_command, command_argument
+                    )
+                    if problem is not None:
+                        return problem, None
+                    return None, None
                 return desktop_run_script(
                     command_name, script_command, command_argument, stripped
                 )
@@ -4499,9 +4906,17 @@ def serve(cfg):
                     ).replace("{shortcut}", stripped[:1]),
                     None,
                 )
+            sc = script_commands[shortcut_name]
+            if sc.get("conversational"):
+                problem = script_argument_problem(
+                    cfg, shortcut_name, sc, command_argument
+                )
+                if problem is not None:
+                    return problem, None
+                return None, None
             return desktop_run_script(
                 shortcut_name,
-                script_commands[shortcut_name],
+                sc,
                 command_argument,
                 stripped,
             )
@@ -4537,6 +4952,15 @@ def serve(cfg):
             context_max_messages=cfg["context_max_messages"],
             bot_label=message_text(cfg, "quote_context_bot"),
             follow_up_window=lambda: follow_up_window(cfg),
+            memory_block=lambda: memory_store.memory_block("desktop"),
+            memory_record=memory_store.record,
+            is_builtin_command=lambda value: value.startswith("/")
+            and split_command(value)[0] not in script_commands,
+            is_conversational_script=desktop_is_conversational_script,
+            call_script=desktop_call_script,
+            with_desktop_sender=lambda name, text: (lambda p: f"[{p} {name}]\n{text}")(
+                _channel_label(cfg, "desktop_prefix")
+            ),
         )
         desktop = desktop_mod.DesktopChannel(brain)
         desktop.register(app, jsonify, request)

@@ -9,6 +9,211 @@ args@{
 }:
 let
   audioPlaceholder = "{audio}";
+
+  texts = {
+    en = {
+      haUnreachable = "Sorry, I could not reach Home Assistant right now.";
+      haUnexpectedResponse = "Sorry, I did not understand the response from Home Assistant.";
+      haAgentFailed = "Home Assistant is awake, but I am having trouble thinking right now. Please ask me again in a moment.";
+      haToolCallArtifact = "Something went wrong in Home Assistant and the action was not carried out. Please ask me for it again.";
+      statusTemplate = "**{name} status**\n\nsignal-cli account data: {account}\nHome Assistant: {homeAssistant}\n\n**Daily budget:**\n{budget}\n\n**Maybe answers:** {maybeBudget}\n\n**Hooks:**\n{hooks}\n\n**Memory:**\n{memory}";
+      statusBudgetEntryTemplate = "{contact}: {used} of {limit}";
+      statusUnknownContactLabel = "Unknown desktop user";
+      chatTypingTemplate = "{name} is typing";
+      statusMaybeBudgetTemplate = "{remaining} of {limit} left";
+      statusMaybeBudgetDisabled = "group filter off";
+      statusHooksDisabled = "no hooks configured";
+      statusHooksTemplate = "{used} of {limit} today\n{entries}";
+      statusHookFired = "already fired, window {window}";
+      statusHookScheduled = "scheduled {time}, window {window}";
+      statusHookIdle = "idle, window {window}";
+      statusAccountOk = "ok";
+      statusAccountMissing = "MISSING";
+      statusHaReachable = "reachable";
+      statusHaUnreachable = "UNREACHABLE";
+      statusMemoryDisabled = "off";
+      statusMemoryTemplate = "{summaries} summaries, today: {today_entries} entries, next: {next}";
+      statusMemoryNoNext = "not started";
+      memNoPriorSummaries = "(no earlier memory yet)";
+      helpStatusDescription = "Show whether signal-cli account data is present and Home Assistant is reachable.";
+      helpHelpDescription = "List all available commands.";
+      helpShortcutTemplate = "{command} or {shortcut}";
+      quoteContextTemplate = "[Context - {author} wrote: {message}]\n{text}";
+      quoteContextBot = "the bot";
+      quoteContextUser = "a user";
+      groupSpeakerTemplate = "{author} wrote: {text}";
+      contextRecapTemplate = "[Earlier in this conversation:\n{transcript}]\n{text}";
+      contextRecapEntryTemplate = "{author} wrote: {message}";
+      budgetExhausted = "You have reached your daily request limit. Please try again later.";
+      scriptCompleted = "Done: {command}";
+      scriptFailed = "The command {command} could not be run. Please check Home Assistant.";
+      scriptArgumentRequired = "The command {command} needs a value after the command name.";
+      scriptArgumentNotAllowed = "The command {command} does not take a value.";
+      scriptArgumentTooLong = "The value for {command} is too long.";
+      scriptArgumentInvalid = "The value for {command} contains characters that are not allowed.";
+      scriptShortcutInvalid = "The shortcut {shortcut} must be followed by a letter or a digit. Use {command} instead.";
+      gfContextTemplate = "[Earlier messages, judge only the message after this block:\n{transcript}]\n{prompt}";
+      reInstruction = "The user did not write a message, they only reacted to your last message with an emoji. If the reaction answers a question you asked, carry out the matching action with your normal tools first. Then reply with one very short sentence or with emoji alone. Never write tool calls, function names or code into your reply.";
+      reFallback = "I reacted to your last message like this, I am just being silly and making fun of it.";
+      reMeanings = {
+        heart = "I love your last message. If it was a question, my answer is yes, go ahead.";
+        thumbsUp = "I like your last message and I confirm it. If it was a question, my answer is yes, go ahead.";
+        thumbsDown = "I do not like your last message and I reject it. If it was a question, my answer is no, do not do it.";
+        sad = "Your last message makes me sad.";
+        crying = "Your last message makes me cry.";
+        fear = "Your last message scares me.";
+        anger = "Your last message makes me angry.";
+        laugh = "Your last message makes me laugh.";
+        surprise = "Your last message surprises me.";
+        confused = "I do not understand your last message.";
+        thanks = "Thank you for your last message.";
+        celebrate = "Your last message is worth celebrating.";
+        impressed = "Your last message impresses me.";
+        ok = "I confirm your last message. If it was a question, my answer is yes, go ahead.";
+        disgust = "Your last message disgusts me.";
+        bored = "Your last message bores me.";
+        annoyed = "Your last message annoys me.";
+        playful = "I am teasing you about your last message.";
+        kiss = "I send you a kiss for your last message.";
+        unsure = "I do not know what to say about your last message.";
+      };
+      trFailureMessage = "Sorry, I could not understand that voice message!";
+      trInstruction = "The user did not type this message, it was transcribed from a voice message and can hold recognition errors. Read a word that makes no sense in context as the word it most likely was, and ask a short question back when the intent stays unclear. Never mention the transcription itself in your reply.";
+      hkInstruction = "This is an automatic system trigger, not a message from a user. You are the assistant speaking on your own initiative into the group chat. What follows is a transcript of today's group conversation, the first messages of the day first and the most recent messages last, and when older messages in the middle were left out a marker line separates the two blocks. Use it to ground your message in what happened. Lines are labelled with who wrote them, and your own earlier messages are labelled as {name}. The conversation may be short or empty, in that case proceed sensibly without inventing details. After the transcript comes the task describing what to post. Write only the message to send to the group, in the language the group uses, with no preamble about being triggered.";
+      hkTranscriptSeparator = "older messages skipped, the most recent messages follow";
+      memInstruction = ''
+        You are the shared long term memory of a home assistant. The assistant communicates with its users in one shared group chat and in separate private direct chats, always as a single consistent presence that remembers everything said to it across all of them. You are given your existing memory from earlier periods and the full transcripts of everything said to you in the current period, grouped by the chat each block came from. Write one memory entry for this period.
+
+        Rules:
+        1. Organize this period's entry with one clearly labeled section per chat that had activity, using the chat labels given to you. Attribute every fact to the chat it came from. Never assume something said in one chat was also said in another.
+        2. Capture what is worth remembering: events, plans, decisions, commitments, preferences, facts, and the general mood. Leave out small talk that carries no lasting information.
+        3. Carry forward still relevant facts from your earlier memory so important context is not lost when old entries are dropped. Do not simply copy old entries, fold what still matters into this period's entry.
+        4. Maintain a short section titled People with one concise line per known person, summarizing what you know about them and noting which chat you learned it in.
+        5. Be concise and factual. Do not invent anything. Write plain text with no preamble and no meta commentary.
+      '';
+      memPromptTemplate = ''
+        {instruction}
+
+        Period: {today}.
+
+        Your existing memory from earlier periods is below. Each block is from a DIFFERENT earlier period, not the current one. Use it to decide what to carry forward:
+
+        {prior_summaries}
+
+        Everything said to you in this period, grouped by chat, is below:
+
+        {today_transcripts}
+
+        Write this period's memory entry now.
+      '';
+      memContextTemplate = ''
+        The following is your memory of earlier periods, so you can act as the same person who remembers past conversations. Each block is from a DIFFERENT earlier period, not the current one, and facts are attributed to the chat where they happened. Current channel: {channel}. Keep personal details about individual users confidential: do not share what you know about one person with another. In a group chat you may be more open about facts that were shared in that group.
+
+        {memory}
+      '';
+    };
+    de = {
+      haUnreachable = "Entschuldigung, ich konnte Home Assistant gerade nicht erreichen.";
+      haUnexpectedResponse = "Entschuldigung, ich habe die Antwort von Home Assistant nicht verstanden.";
+      haAgentFailed = "Home Assistant ist wach, aber ich habe gerade Schwierigkeiten beim Nachdenken. Bitte frag mich gleich noch einmal.";
+      haToolCallArtifact = "In Home Assistant ist etwas schiefgelaufen und die Aktion wurde nicht ausgeführt. Bitte frag mich noch einmal danach.";
+      statusTemplate = "**{name} Status**\n\nsignal-cli Kontodaten: {account}\nHome Assistant: {homeAssistant}\n\n**Tagesbudget:**\n{budget}\n\n**Vielleicht-Antworten:** {maybeBudget}\n\n**Hooks:**\n{hooks}\n\n**Gedächtnis:**\n{memory}";
+      statusBudgetEntryTemplate = "{contact}: {used} von {limit}";
+      statusUnknownContactLabel = "Unbekannter Desktop-Nutzer";
+      chatTypingTemplate = "{name} schreibt";
+      statusMaybeBudgetTemplate = "{remaining} von {limit} übrig";
+      statusMaybeBudgetDisabled = "Gruppenfilter aus";
+      statusHooksDisabled = "keine Hooks konfiguriert";
+      statusHooksTemplate = "{used} von {limit} heute\n{entries}";
+      statusHookFired = "bereits ausgelöst, Fenster {window}";
+      statusHookScheduled = "geplant {time}, Fenster {window}";
+      statusHookIdle = "inaktiv, Fenster {window}";
+      statusAccountOk = "ok";
+      statusAccountMissing = "FEHLT";
+      statusHaReachable = "erreichbar";
+      statusHaUnreachable = "NICHT ERREICHBAR";
+      statusMemoryDisabled = "aus";
+      statusMemoryTemplate = "{summaries} Zusammenfassungen, heute: {today_entries} Einträge, nächste: {next}";
+      statusMemoryNoNext = "noch nicht gestartet";
+      memNoPriorSummaries = "(noch kein früheres Gedächtnis)";
+      helpStatusDescription = "Zeigt, ob signal-cli Kontodaten vorhanden sind und Home Assistant erreichbar ist.";
+      helpHelpDescription = "Listet alle verfügbaren Befehle auf.";
+      helpShortcutTemplate = "{command} oder {shortcut}";
+      quoteContextTemplate = "[Kontext - {author} schrieb: {message}]\n{text}";
+      quoteContextBot = "der Bot";
+      quoteContextUser = "ein Nutzer";
+      groupSpeakerTemplate = "{author} schrieb: {text}";
+      contextRecapTemplate = "[Früher in diesem Gespräch:\n{transcript}]\n{text}";
+      contextRecapEntryTemplate = "{author} schrieb: {message}";
+      budgetExhausted = "Du hast dein tägliches Anfragelimit erreicht. Bitte versuche es später noch einmal.";
+      scriptCompleted = "Erledigt: {command}";
+      scriptFailed = "Der Befehl {command} konnte nicht ausgeführt werden. Bitte prüfe Home Assistant.";
+      scriptArgumentRequired = "Der Befehl {command} braucht einen Wert nach dem Befehlsnamen.";
+      scriptArgumentNotAllowed = "Der Befehl {command} nimmt keinen Wert entgegen.";
+      scriptArgumentTooLong = "Der Wert für {command} ist zu lang.";
+      scriptArgumentInvalid = "Der Wert für {command} enthält Zeichen, die nicht erlaubt sind.";
+      scriptShortcutInvalid = "Auf das Kürzel {shortcut} muss ein Buchstabe oder eine Ziffer folgen. Nutze stattdessen {command}.";
+      gfContextTemplate = "[Frühere Nachrichten, beurteile nur die Nachricht nach diesem Block:\n{transcript}]\n{prompt}";
+      reInstruction = "Die Person hat keine Nachricht geschrieben, sondern nur mit einem Emoji auf deine letzte Nachricht reagiert. Wenn die Reaktion eine von dir gestellte Frage beantwortet, führe zuerst die passende Aktion mit deinen normalen Werkzeugen aus. Antworte dann mit einem einzigen sehr kurzen Satz oder nur mit einem Emoji. Schreibe niemals Werkzeugaufrufe, Funktionsnamen oder Code in deine Antwort.";
+      reFallback = "Ich habe so auf deine letzte Nachricht reagiert, ich bin nur albern und mache mich darüber lustig.";
+      reMeanings = {
+        heart = "Ich liebe deine letzte Nachricht. War es eine Frage, ist meine Antwort ja, mach weiter.";
+        thumbsUp = "Ich mag deine letzte Nachricht und bestätige sie. War es eine Frage, ist meine Antwort ja, mach weiter.";
+        thumbsDown = "Ich mag deine letzte Nachricht nicht und lehne sie ab. War es eine Frage, ist meine Antwort nein, tu es nicht.";
+        sad = "Deine letzte Nachricht macht mich traurig.";
+        crying = "Deine letzte Nachricht bringt mich zum Weinen.";
+        fear = "Deine letzte Nachricht macht mir Angst.";
+        anger = "Deine letzte Nachricht macht mich wütend.";
+        laugh = "Deine letzte Nachricht bringt mich zum Lachen.";
+        surprise = "Deine letzte Nachricht überrascht mich.";
+        confused = "Ich verstehe deine letzte Nachricht nicht.";
+        thanks = "Danke für deine letzte Nachricht.";
+        celebrate = "Deine letzte Nachricht ist einen Grund zum Feiern wert.";
+        impressed = "Deine letzte Nachricht beeindruckt mich.";
+        ok = "Ich bestätige deine letzte Nachricht. War es eine Frage, ist meine Antwort ja, mach weiter.";
+        disgust = "Deine letzte Nachricht ekelt mich an.";
+        bored = "Deine letzte Nachricht langweilt mich.";
+        annoyed = "Deine letzte Nachricht nervt mich.";
+        playful = "Ich necke dich wegen deiner letzten Nachricht.";
+        kiss = "Ich schicke dir einen Kuss für deine letzte Nachricht.";
+        unsure = "Ich weiß nicht, was ich zu deiner letzten Nachricht sagen soll.";
+      };
+      trFailureMessage = "Entschuldigung, ich konnte diese Sprachnachricht nicht verstehen!";
+      trInstruction = "Der Nutzer hat diese Nachricht nicht getippt, sie wurde aus einer Sprachnachricht transkribiert und kann Erkennungsfehler enthalten. Lies ein Wort, das im Zusammenhang keinen Sinn ergibt, als das Wort, das es am wahrscheinlichsten war, und stell eine kurze Rückfrage, wenn die Absicht unklar bleibt. Erwähne die Transkription selbst niemals in deiner Antwort.";
+      hkInstruction = "Dies ist ein automatischer System-Auslöser, keine Nachricht von einem Nutzer. Du bist der Assistent, der aus eigener Initiative in den Gruppenchat spricht. Es folgt ein Protokoll des heutigen Gruppengesprächs, die ersten Nachrichten des Tages zuerst und die neuesten Nachrichten zuletzt, und wenn ältere Nachrichten in der Mitte ausgelassen wurden, trennt eine Markierungszeile die beiden Blöcke. Nutze es, um deine Nachricht in dem zu verankern, was passiert ist. Die Zeilen sind damit beschriftet, wer sie geschrieben hat, und deine eigenen früheren Nachrichten sind als {name} beschriftet. Das Gespräch kann kurz oder leer sein, gehe in dem Fall sinnvoll vor, ohne Details zu erfinden. Nach dem Protokoll kommt die Aufgabe, die beschreibt, was zu posten ist. Schreibe nur die Nachricht, die an die Gruppe gesendet werden soll, in der Sprache, die die Gruppe verwendet, ohne Vorrede darüber, ausgelöst worden zu sein.";
+      hkTranscriptSeparator = "ältere Nachrichten übersprungen, die neuesten Nachrichten folgen";
+      memInstruction = ''
+        Du bist das gemeinsame Langzeitgedächtnis eines Home Assistant. Der Assistent kommuniziert in einem gemeinsamen Gruppenchat und in getrennten privaten Direktchats, ist aber eine einzige konsistente Stimme, die sich alles merkt, was in allen Chats gesagt wird. Dir werden dein bestehendes Gedächtnis aus früheren Perioden und die vollständigen Protokolle von allem, was dir in der aktuellen Periode gesagt wurde, gegeben, gruppiert nach dem Chat, aus dem jeder Block stammt. Schreibe einen Gedächtniseintrag für diese Periode.
+
+        Regeln:
+        1. Gliedere den Eintrag dieser Periode mit einem klar beschrifteten Abschnitt pro Chat, in dem etwas passiert ist, und verwende die dir gegebenen Chat-Bezeichnungen. Ordne jede Tatsache dem Chat zu, aus dem sie stammt. Nimm niemals an, dass etwas, das in einem Chat gesagt wurde, auch in einem anderen gesagt wurde.
+        2. Halte fest, was erinnerungswürdig ist: Ereignisse, Pläne, Entscheidungen, Zusagen, Vorlieben, Fakten und die allgemeine Stimmung. Lass Smalltalk weg, der keine bleibende Information trägt.
+        3. Trage weiterhin relevante Fakten aus deinem früheren Gedächtnis fort, damit wichtiger Zusammenhang nicht verloren geht, wenn alte Einträge wegfallen. Kopiere alte Einträge nicht einfach, sondern arbeite ein, was weiterhin wichtig ist, in den Eintrag dieser Periode.
+        4. Pflege einen kurzen Abschnitt mit dem Titel Personen mit einer knappen Zeile pro bekannter Person, die zusammenfasst, was du über sie weißt, und angibt, in welchem Chat du es erfahren hast.
+        5. Sei knapp und sachlich. Erfinde nichts. Schreibe reinen Text ohne Vorrede und ohne Meta-Kommentar.
+      '';
+      memPromptTemplate = ''
+        {instruction}
+
+        Periode: {today}.
+
+        Dein bestehendes Gedächtnis aus früheren Perioden steht unten. Jeder Block stammt von einer ANDEREN früheren Periode, nicht von der aktuellen. Nutze es, um zu entscheiden, was fortzutragen ist:
+
+        {prior_summaries}
+
+        Alles, was dir in dieser Periode gesagt wurde, nach Chat gruppiert, steht unten:
+
+        {today_transcripts}
+
+        Schreibe jetzt den Gedächtniseintrag für diese Periode.
+      '';
+      memContextTemplate = ''
+        Das Folgende ist dein Gedächtnis früherer Perioden, damit du als dieselbe Person handeln kannst, die sich an vergangene Gespräche erinnert. Jeder Block stammt von einer ANDEREN früheren Periode, nicht von der aktuellen, und Fakten sind dem Chat zugeordnet, in dem sie geschehen sind. Aktueller Kanal: {channel}. Halte persönliche Details über einzelne Personen vertraulich: teile nicht, was du über eine Person weißt, mit einer anderen. In einem Gruppenchat kannst du offener über dort geteilte Fakten sprechen.
+
+        {memory}
+      '';
+    };
+  };
 in
 {
   name = "signal-bot";
@@ -229,6 +434,15 @@ in
       description = "Convert a small markdown subset in outbound messages into Signal text styles.";
     };
 
+    botLanguage = lib.mkOption {
+      type = lib.types.enum [
+        "en"
+        "de"
+      ];
+      default = "en";
+      description = "Language used for every built-in bot facing text whose own option is left null.";
+    };
+
     instructionTemplate = lib.mkOption {
       type = lib.types.str;
       default = "[{instruction}]";
@@ -281,8 +495,8 @@ in
           };
 
           contextTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "[Earlier messages, judge only the message after this block:\n{transcript}]\n{prompt}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Format of the judged message with earlier ones in front, with the placeholders {transcript} and {prompt} substituted.";
           };
 
@@ -409,8 +623,8 @@ in
           };
 
           instruction = lib.mkOption {
-            type = lib.types.str;
-            default = "The user did not write a message, they only reacted to your last message with an emoji. If the reaction answers a question you asked, carry out the matching action with your normal tools first. Then reply with one very short sentence or with emoji alone. Never write tool calls, function names or code into your reply.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Instruction prepended to the meaning of a reaction so the answer stays short, wrapped by instructionTemplate.";
           };
 
@@ -421,8 +635,8 @@ in
           };
 
           fallback = lib.mkOption {
-            type = lib.types.str;
-            default = "I reacted to your last message like this, I am just being silly and making fun of it.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Meaning used for a reaction that no emoji entry covers, written in the first person as if the user had sent it, with the placeholder {emoji} substituted.";
           };
 
@@ -560,29 +774,8 @@ in
           };
 
           meanings = lib.mkOption {
-            type = lib.types.attrsOf lib.types.str;
-            default = {
-              heart = "I love your last message. If it was a question, my answer is yes, go ahead.";
-              thumbsUp = "I like your last message and I confirm it. If it was a question, my answer is yes, go ahead.";
-              thumbsDown = "I do not like your last message and I reject it. If it was a question, my answer is no, do not do it.";
-              sad = "Your last message makes me sad.";
-              crying = "Your last message makes me cry.";
-              fear = "Your last message scares me.";
-              anger = "Your last message makes me angry.";
-              laugh = "Your last message makes me laugh.";
-              surprise = "Your last message surprises me.";
-              confused = "I do not understand your last message.";
-              thanks = "Thank you for your last message.";
-              celebrate = "Your last message is worth celebrating.";
-              impressed = "Your last message impresses me.";
-              ok = "I confirm your last message. If it was a question, my answer is yes, go ahead.";
-              disgust = "Your last message disgusts me.";
-              bored = "Your last message bores me.";
-              annoyed = "Your last message annoys me.";
-              playful = "I am teasing you about your last message.";
-              kiss = "I send you a kiss for your last message.";
-              unsure = "I do not know what to say about your last message.";
-            };
+            type = lib.types.nullOr (lib.types.attrsOf lib.types.str);
+            default = null;
             description = "Sentence each reaction is turned into, keyed by the same names as emoji, written in the first person as if the user had sent it, with the placeholder {emoji} substituted.";
           };
         };
@@ -616,20 +809,20 @@ in
     };
 
     hooksInstruction = lib.mkOption {
-      type = lib.types.str;
-      default = "This is an automatic system trigger, not a message from a user. You are the assistant speaking on your own initiative into the group chat. What follows is a transcript of today's group conversation, the first messages of the day first and the most recent messages last, and when older messages in the middle were left out a marker line separates the two blocks. Use it to ground your message in what happened. Lines are labelled with who wrote them, and your own earlier messages are labelled as the bot. The conversation may be short or empty, in that case proceed sensibly without inventing details. After the transcript comes the task describing what to post. Write only the message to send to the group, in the language the group uses, with no preamble about being triggered.";
-      description = "System baseline prepended to every hook prompt to frame the trigger and transcript.";
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "System baseline prepended to every hook prompt to frame the trigger and transcript, with the placeholder {name} substituted by the effective bot label.";
     };
 
     hooksPromptTemplate = lib.mkOption {
       type = lib.types.str;
-      default = "{systemInstruction}\n\n{transcript}\n\n{instruction}";
-      description = "Prompt format for every hook, with {systemInstruction}, {transcript} and {instruction} substituted.";
+      default = "{time}\n\n{systemInstruction}\n\n{transcript}\n\n{instruction}";
+      description = "Prompt format for every hook, with {time} (current wall-clock time), {systemInstruction}, {transcript} and {instruction} substituted.";
     };
 
     hooksTranscriptSeparator = lib.mkOption {
-      type = lib.types.str;
-      default = "older messages skipped, the most recent messages follow";
+      type = lib.types.nullOr lib.types.str;
+      default = null;
       description = "Marker between the first and most recent message blocks, shown only when they do not overlap.";
     };
 
@@ -839,14 +1032,14 @@ in
           };
 
           failureMessage = lib.mkOption {
-            type = lib.types.str;
-            default = "Sorry, I could not understand that voice message!";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent when an audio attachment could not be transcribed.";
           };
 
           instruction = lib.mkOption {
-            type = lib.types.str;
-            default = "The user did not type this message, it was transcribed from a voice message and can hold recognition errors. Read a word that makes no sense in context as the word it most likely was, and ask a short question back when the intent stays unclear. Never mention the transcription itself in your reply.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Instruction prepended to a transcript so the answer tolerates recognition errors, wrapped by instructionTemplate.";
           };
 
@@ -877,74 +1070,74 @@ in
       type = lib.types.submodule {
         options = {
           haUnreachable = lib.mkOption {
-            type = lib.types.str;
-            default = "Sorry, I could not reach Home Assistant right now.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent when the Home Assistant conversation request fails.";
           };
 
           haUnexpectedResponse = lib.mkOption {
-            type = lib.types.str;
-            default = "Sorry, I did not understand the response from Home Assistant.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent when Home Assistant answers with an unexpected payload.";
           };
 
           haAgentFailed = lib.mkOption {
-            type = lib.types.str;
-            default = "Home Assistant is awake, but I am having trouble thinking right now. Please ask me again in a moment.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent when Home Assistant answers but its conversation agent keeps failing after all retries.";
           };
 
           haToolCallArtifact = lib.mkOption {
-            type = lib.types.str;
-            default = "Something went wrong in Home Assistant and the action was not carried out. Please ask me for it again.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent when the conversation agent writes a tool call into its answer instead of running it.";
           };
 
           statusTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "{name} status\n\nsignal-cli account data: {account}\nHome Assistant: {homeAssistant}\n\nDaily budget:\n{budget}\n\nMaybe answers: {maybeBudget}\n\nHooks:\n{hooks}";
-            description = "Body of the status reply, with the placeholders {name}, {account}, {homeAssistant}, {budget}, {maybeBudget} and {hooks} substituted.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Body of the status reply, with the placeholders {name}, {account}, {homeAssistant}, {budget}, {maybeBudget}, {hooks} and {memory} substituted.";
           };
 
           statusBudgetEntryTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "{contact}: {used} of {limit}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Format of a single budget line in the status reply, with the placeholders {contact}, {used} and {limit} substituted.";
           };
 
           statusUnknownContactLabel = lib.mkOption {
-            type = lib.types.str;
-            default = "Unknown desktop user";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Contact label for the shared budget line covering desktop users that map to no configured contact.";
           };
 
           chatTypingTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "{name} is typing";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Desktop chat typing indicator, with the placeholder {name} substituted by the bot given name.";
           };
 
           statusMaybeBudgetTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "{remaining} of {limit} left";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Format of the maybe budget line in the status reply, with the placeholders {remaining} and {limit} substituted.";
           };
 
           statusMaybeBudgetDisabled = lib.mkOption {
-            type = lib.types.str;
-            default = "group filter off";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Maybe budget text in the status reply when the group filter is disabled.";
           };
 
           statusHooksDisabled = lib.mkOption {
-            type = lib.types.str;
-            default = "no hooks configured";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Hooks text in the status reply when no hooks are configured.";
           };
 
           statusHooksTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "{used} of {limit} today\n{entries}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Format of the hooks section in the status reply, with the placeholders {used}, {limit} and {entries} substituted.";
           };
 
@@ -955,45 +1148,69 @@ in
           };
 
           statusHookFired = lib.mkOption {
-            type = lib.types.str;
-            default = "already fired, window {window}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Hook state wording when the hook already fired this window, with {window} substituted.";
           };
 
           statusHookScheduled = lib.mkOption {
-            type = lib.types.str;
-            default = "scheduled {time}, window {window}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Hook state wording when a fire time is rolled, with {time} and {window} substituted.";
           };
 
           statusHookIdle = lib.mkOption {
-            type = lib.types.str;
-            default = "idle, window {window}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Hook state wording when the hook has no fire time this window, with {window} substituted.";
           };
 
           statusAccountOk = lib.mkOption {
-            type = lib.types.str;
-            default = "ok";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Status wording used when the signal-cli account data is complete.";
           };
 
           statusAccountMissing = lib.mkOption {
-            type = lib.types.str;
-            default = "MISSING";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Status wording used when signal-cli account data is missing.";
           };
 
           statusHaReachable = lib.mkOption {
-            type = lib.types.str;
-            default = "reachable";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Status wording used when Home Assistant answers.";
           };
 
           statusHaUnreachable = lib.mkOption {
-            type = lib.types.str;
-            default = "UNREACHABLE";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Status wording used when Home Assistant does not answer.";
+          };
+
+          statusMemoryDisabled = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Memory section text in the status reply when memory recording is disabled.";
+          };
+
+          statusMemoryTemplate = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Memory section text in the status reply, with the placeholders {summaries}, {today_entries} and {next} substituted.";
+          };
+
+          statusMemoryNoNext = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Value substituted for {next} in statusMemoryTemplate when no entries have been recorded yet in the current period.";
+          };
+
+          memNoPriorSummaries = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Placeholder injected into the summarization prompt when no prior period summaries exist yet.";
           };
 
           helpEntryTemplate = lib.mkOption {
@@ -1003,56 +1220,56 @@ in
           };
 
           helpStatusDescription = lib.mkOption {
-            type = lib.types.str;
-            default = "Show whether signal-cli account data is present and Home Assistant is reachable.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Help text describing the status command.";
           };
 
           helpHelpDescription = lib.mkOption {
-            type = lib.types.str;
-            default = "List all available commands.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Help text describing the help command.";
           };
 
           helpShortcutTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "{command} or {shortcut}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Format of the command part of a help line for a command that has a shortcut, with the placeholders {command} and {shortcut} substituted.";
           };
 
           quoteContextTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "[Context - {author} wrote: {message}]\n{text}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Prompt sent to Home Assistant when a reply refers to a message outside the current conversation, with the placeholders {author}, {message} and {text} substituted.";
           };
 
           quoteContextBot = lib.mkOption {
-            type = lib.types.str;
-            default = "the bot";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Wording used for {author} when the referenced message came from the bot itself.";
           };
 
           quoteContextUser = lib.mkOption {
-            type = lib.types.str;
-            default = "a user";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Wording used for {author} when the referenced message came from an unknown sender.";
           };
 
           groupSpeakerTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "{author} wrote: {text}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Prompt sent to Home Assistant for a group message, with the placeholders {author} and {text} substituted.";
           };
 
           contextRecapTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "[Earlier in this conversation:\n{transcript}]\n{text}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Prompt sent to Home Assistant when the earlier conversation has to be restated, with the placeholders {transcript} and {text} substituted.";
           };
 
           contextRecapEntryTemplate = lib.mkOption {
-            type = lib.types.str;
-            default = "{author} wrote: {message}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Format of a single line of the restated conversation, with the placeholders {author} and {message} substituted.";
           };
 
@@ -1063,50 +1280,50 @@ in
           };
 
           budgetExhausted = lib.mkOption {
-            type = lib.types.str;
-            default = "You have reached your daily request limit. Please try again later.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent once when a sender exhausts the daily request budget.";
           };
 
           scriptCompleted = lib.mkOption {
-            type = lib.types.str;
-            default = "Done: {command}";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent when a script command finished and returned no response of its own, with the placeholders {command} and {argument} substituted.";
           };
 
           scriptFailed = lib.mkOption {
-            type = lib.types.str;
-            default = "The command {command} could not be run. Please check Home Assistant.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent when a script command could not be run, with the placeholders {command} and {argument} substituted.";
           };
 
           scriptArgumentRequired = lib.mkOption {
-            type = lib.types.str;
-            default = "The command {command} needs a value after the command name.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent when a script command that requires a value was sent without one, with the placeholder {command} substituted.";
           };
 
           scriptArgumentNotAllowed = lib.mkOption {
-            type = lib.types.str;
-            default = "The command {command} does not take a value.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent when a value was sent to a script command that takes none, with the placeholder {command} substituted.";
           };
 
           scriptArgumentTooLong = lib.mkOption {
-            type = lib.types.str;
-            default = "The value for {command} is too long.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent when the value of a script command exceeds its length limit, with the placeholder {command} substituted.";
           };
 
           scriptShortcutInvalid = lib.mkOption {
-            type = lib.types.str;
-            default = "The shortcut {shortcut} must be followed directly by a letter or a digit. Use {command} instead.";
-            description = "Reply sent when a message starts with a command shortcut that is not followed by a letter or a digit, with the placeholders {command} and {shortcut} substituted.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Reply sent when a message starts with a command shortcut not followed (after optional spaces) by a letter or a digit, with the placeholders {command} and {shortcut} substituted.";
           };
 
           scriptArgumentInvalid = lib.mkOption {
-            type = lib.types.str;
-            default = "The value for {command} contains characters that are not allowed.";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
             description = "Reply sent when the value of a script command contains control characters, with the placeholder {command} substituted.";
           };
         };
@@ -1182,6 +1399,12 @@ in
               description = "Optional single special character that runs this command when a message starts with it followed directly by a letter or a digit, with the rest of the message used as the value.";
             };
 
+            conversational = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "When enabled, the command argument is enriched with the current conversation history and memory before being passed to the Home Assistant script, exactly as if the user sent a normal message.";
+            };
+
           };
         }
       );
@@ -1217,6 +1440,80 @@ in
       type = lib.types.nullOr (lib.types.functionTo lib.types.str);
       default = null;
       description = "Function to generate a signal-bot-send shell command string";
+    };
+
+    memory = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Opt-in switch that enables daily memory recording, summarization, and injection into every conversational reply.";
+          };
+
+          retentionDays = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 3;
+            description = "Number of period summaries kept before the oldest is trimmed.";
+          };
+
+          periodSeconds = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 86400;
+            description = "Length in seconds of one memory period, transcripts are summarized and rolled over at the end of each period.";
+          };
+
+          agentId = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Suffix of the Home Assistant conversation agent used for daily summarization, null falls back to haAgentId.";
+          };
+
+          dailyLimit = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 200;
+            description = "Maximum raw transcript entries buffered per chat per period before older ones are dropped.";
+          };
+
+          instruction = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "System instruction sent to the summarization agent when building the period memory entry.";
+          };
+
+          promptTemplate = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Template for the summarization prompt with placeholders {instruction}, {today}, {prior_summaries} and {today_transcripts}.";
+          };
+
+          chatBlockTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = ''
+              === {chat} ===
+              {transcript}
+            '';
+            description = "Template wrapping one chat's raw transcript with its readable label for the summarization prompt, with placeholders {chat} and {transcript}.";
+          };
+
+          entryTemplate = lib.mkOption {
+            type = lib.types.str;
+            default = ''
+              [{date}]
+              {summary}
+            '';
+            description = "Template rendering a single stored period summary with its date label, with placeholders {date} and {summary}.";
+          };
+
+          contextTemplate = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Template wrapping the joined period summaries injected into every conversational prompt, with placeholders {memory} and {channel} (resolved to the current channel name).";
+          };
+        };
+      };
+      default = { };
+      description = "Daily memory recording, summarization, and context injection.";
     };
   };
 
@@ -1539,6 +1836,7 @@ in
           maxSplitMessages,
           boldTitle,
           markdown,
+          botLanguage,
           instructionTemplate,
           quoteReplies,
           typingIndicatorDelaySeconds,
@@ -1568,6 +1866,7 @@ in
           hooksContextMaxChars,
           hooksBlockMinChars,
           dailyTranscriptLimit,
+          memory,
           hooks,
           script,
           ...
@@ -1581,6 +1880,11 @@ in
           senderBudgetFile = "${stateSubDir}/sender-budget.json";
           hookStateFile = "${stateSubDir}/hooks.json";
           chatThreadsFile = "${stateSubDir}/chat-threads.json";
+          memoryStateFile = "${stateSubDir}/memory.json";
+
+          langTexts = texts.${botLanguage};
+          pickText = value: key: if value != null then value else langTexts.${key};
+          resolvedMeanings = if reactions.meanings != null then reactions.meanings else langTexts.reMeanings;
 
           secretPath = name: config.sops.secrets.${name}.path;
 
@@ -1629,6 +1933,14 @@ in
           effectiveProfileGivenName =
             if profileGivenName != null then profileGivenName else self.host.hostname;
 
+          effectiveBotLabel =
+            if messages.quoteContextBot != null then
+              messages.quoteContextBot
+            else if profileGivenName != null then
+              profileGivenName
+            else
+              pickText null "quoteContextBot";
+
           botConfigJson = pkgs.writeText "signal-bot-config.json" (
             builtins.toJSON {
               socket_path = socketPath;
@@ -1641,6 +1953,17 @@ in
               send_state_file = sendStateFile;
               sender_budget_file = senderBudgetFile;
               hook_state_file = hookStateFile;
+              memory_state_file = memoryStateFile;
+              memory_enable = memory.enable;
+              memory_retention_days = memory.retentionDays;
+              memory_period_seconds = memory.periodSeconds;
+              memory_agent_id = effectiveMemoryAgentId;
+              memory_daily_limit = memory.dailyLimit;
+              memory_instruction = pickText memory.instruction "memInstruction";
+              memory_prompt_template = pickText memory.promptTemplate "memPromptTemplate";
+              memory_chat_block_template = memory.chatBlockTemplate;
+              memory_entry_template = memory.entryTemplate;
+              memory_context_template = pickText memory.contextTemplate "memContextTemplate";
               chat_enable = chatEnable;
               chat_ring_buffer_size = chatRingBufferSize;
               chat_ring_buffer_ttl_hours = chatRingBufferTtlHours;
@@ -1649,9 +1972,9 @@ in
               chat_default_recipient = chatDefaultRecipient;
               chat_font_size = chatFontSize;
               chat_font_family = chatFontFamily;
-              chat_typing_text =
-                lib.replaceStrings [ "{name}" ] [ effectiveProfileGivenName ]
-                  messages.chatTypingTemplate;
+              chat_typing_text = lib.replaceStrings [ "{name}" ] [ effectiveProfileGivenName ] (
+                pickText messages.chatTypingTemplate "chatTypingTemplate"
+              );
               chat_threads_file = chatThreadsFile;
               desktop_module_file = desktopModuleFile;
               chat_page_file = chatPageFile;
@@ -1664,6 +1987,7 @@ in
               group_avatar = if enableGroupAvatar then self.profile.filesPath groupAvatar else null;
               ha_url = haUrl;
               ha_language = haLanguage;
+              bot_language = botLanguage;
               ha_agent_id = haAgentIdResolved;
               ha_timeout_seconds = haTimeoutSeconds;
               ha_token_file = secretPath haTokenSecretName;
@@ -1688,7 +2012,7 @@ in
                 agent_id = if groupFilter.agentId == null then null else "conversation.${groupFilter.agentId}";
                 prompt_template = groupFilter.promptTemplate;
                 context_messages = groupFilter.contextMessages;
-                context_template = groupFilter.contextTemplate;
+                context_template = pickText groupFilter.contextTemplate "gfContextTemplate";
                 silent_answers = groupFilter.silentAnswers;
                 maybe_answers = groupFilter.maybeAnswers;
                 maybe_probability = groupFilter.maybeProbability;
@@ -1709,9 +2033,11 @@ in
               min_seconds_between_hooks = minSecondsBetweenHooks;
               min_seconds_since_bot_message = minSecondsSinceBotMessage;
               min_seconds_since_user_message = minSecondsSinceUserMessage;
-              hooks_instruction = hooksInstruction;
+              hooks_instruction = lib.replaceStrings [ "{name}" ] [ effectiveBotLabel ] (
+                pickText hooksInstruction "hkInstruction"
+              );
               hooks_prompt_template = hooksPromptTemplate;
-              hooks_transcript_separator = hooksTranscriptSeparator;
+              hooks_transcript_separator = pickText hooksTranscriptSeparator "hkTranscriptSeparator";
               hooks_transcript_separator_template = hooksTranscriptSeparatorTemplate;
               hooks_context_max_chars = hooksContextMaxChars;
               hooks_block_min_chars = hooksBlockMinChars;
@@ -1746,12 +2072,12 @@ in
                 enable = reactions.enable;
                 target_max_age_seconds = reactions.targetMaxAgeSeconds;
                 target_max_messages = reactions.targetMaxMessages;
-                instruction = reactions.instruction;
+                instruction = pickText reactions.instruction "reInstruction";
                 prompt_template = reactions.promptTemplate;
-                fallback = reactions.fallback;
+                fallback = pickText reactions.fallback "reFallback";
                 emoji = lib.mapAttrs (name: emoji: {
                   inherit emoji;
-                  meaning = reactions.meanings.${name} or "";
+                  meaning = resolvedMeanings.${name} or "";
                 }) reactions.emoji;
               };
               transcription = {
@@ -1763,49 +2089,53 @@ in
                 timeout_seconds = whisperCfg.timeoutSeconds;
                 max_duration_seconds = whisperCfg.maxDurationSeconds;
                 max_attachment_bytes = transcription.maxAttachmentBytes;
-                failure_message = transcription.failureMessage;
-                instruction = transcription.instruction;
+                failure_message = pickText transcription.failureMessage "trFailureMessage";
+                instruction = pickText transcription.instruction "trInstruction";
                 prompt_template = transcription.promptTemplate;
               };
               messages = {
-                ha_unreachable = messages.haUnreachable;
-                ha_unexpected_response = messages.haUnexpectedResponse;
-                ha_agent_failed = messages.haAgentFailed;
-                ha_tool_call_artifact = messages.haToolCallArtifact;
-                status_template = messages.statusTemplate;
-                status_budget_entry_template = messages.statusBudgetEntryTemplate;
-                status_unknown_contact_label = messages.statusUnknownContactLabel;
-                status_maybe_budget_template = messages.statusMaybeBudgetTemplate;
-                status_maybe_budget_disabled = messages.statusMaybeBudgetDisabled;
-                status_hooks_disabled = messages.statusHooksDisabled;
-                status_hooks_template = messages.statusHooksTemplate;
+                ha_unreachable = pickText messages.haUnreachable "haUnreachable";
+                ha_unexpected_response = pickText messages.haUnexpectedResponse "haUnexpectedResponse";
+                ha_agent_failed = pickText messages.haAgentFailed "haAgentFailed";
+                ha_tool_call_artifact = pickText messages.haToolCallArtifact "haToolCallArtifact";
+                status_template = pickText messages.statusTemplate "statusTemplate";
+                status_budget_entry_template = pickText messages.statusBudgetEntryTemplate "statusBudgetEntryTemplate";
+                status_unknown_contact_label = pickText messages.statusUnknownContactLabel "statusUnknownContactLabel";
+                status_maybe_budget_template = pickText messages.statusMaybeBudgetTemplate "statusMaybeBudgetTemplate";
+                status_maybe_budget_disabled = pickText messages.statusMaybeBudgetDisabled "statusMaybeBudgetDisabled";
+                status_hooks_disabled = pickText messages.statusHooksDisabled "statusHooksDisabled";
+                status_hooks_template = pickText messages.statusHooksTemplate "statusHooksTemplate";
                 status_hook_entry_template = messages.statusHookEntryTemplate;
-                status_hook_fired = messages.statusHookFired;
-                status_hook_scheduled = messages.statusHookScheduled;
-                status_hook_idle = messages.statusHookIdle;
-                status_account_ok = messages.statusAccountOk;
-                status_account_missing = messages.statusAccountMissing;
-                status_ha_reachable = messages.statusHaReachable;
-                status_ha_unreachable = messages.statusHaUnreachable;
+                status_hook_fired = pickText messages.statusHookFired "statusHookFired";
+                status_hook_scheduled = pickText messages.statusHookScheduled "statusHookScheduled";
+                status_hook_idle = pickText messages.statusHookIdle "statusHookIdle";
+                status_account_ok = pickText messages.statusAccountOk "statusAccountOk";
+                status_account_missing = pickText messages.statusAccountMissing "statusAccountMissing";
+                status_ha_reachable = pickText messages.statusHaReachable "statusHaReachable";
+                status_ha_unreachable = pickText messages.statusHaUnreachable "statusHaUnreachable";
+                status_memory_disabled = pickText messages.statusMemoryDisabled "statusMemoryDisabled";
+                status_memory_template = pickText messages.statusMemoryTemplate "statusMemoryTemplate";
+                status_memory_no_next = pickText messages.statusMemoryNoNext "statusMemoryNoNext";
+                mem_no_prior_summaries = pickText messages.memNoPriorSummaries "memNoPriorSummaries";
                 help_entry_template = messages.helpEntryTemplate;
-                help_status_description = messages.helpStatusDescription;
-                help_help_description = messages.helpHelpDescription;
-                help_shortcut_template = messages.helpShortcutTemplate;
-                quote_context_template = messages.quoteContextTemplate;
-                quote_context_bot = messages.quoteContextBot;
-                quote_context_user = messages.quoteContextUser;
-                group_speaker_template = messages.groupSpeakerTemplate;
-                context_recap_template = messages.contextRecapTemplate;
-                context_recap_entry_template = messages.contextRecapEntryTemplate;
+                help_status_description = pickText messages.helpStatusDescription "helpStatusDescription";
+                help_help_description = pickText messages.helpHelpDescription "helpHelpDescription";
+                help_shortcut_template = pickText messages.helpShortcutTemplate "helpShortcutTemplate";
+                quote_context_template = pickText messages.quoteContextTemplate "quoteContextTemplate";
+                quote_context_bot = effectiveBotLabel;
+                quote_context_user = pickText messages.quoteContextUser "quoteContextUser";
+                group_speaker_template = pickText messages.groupSpeakerTemplate "groupSpeakerTemplate";
+                context_recap_template = pickText messages.contextRecapTemplate "contextRecapTemplate";
+                context_recap_entry_template = pickText messages.contextRecapEntryTemplate "contextRecapEntryTemplate";
                 script_recap_template = messages.scriptRecapTemplate;
-                budget_exhausted = messages.budgetExhausted;
-                script_completed = messages.scriptCompleted;
-                script_failed = messages.scriptFailed;
-                script_argument_required = messages.scriptArgumentRequired;
-                script_argument_not_allowed = messages.scriptArgumentNotAllowed;
-                script_argument_too_long = messages.scriptArgumentTooLong;
-                script_argument_invalid = messages.scriptArgumentInvalid;
-                script_shortcut_invalid = messages.scriptShortcutInvalid;
+                budget_exhausted = pickText messages.budgetExhausted "budgetExhausted";
+                script_completed = pickText messages.scriptCompleted "scriptCompleted";
+                script_failed = pickText messages.scriptFailed "scriptFailed";
+                script_argument_required = pickText messages.scriptArgumentRequired "scriptArgumentRequired";
+                script_argument_not_allowed = pickText messages.scriptArgumentNotAllowed "scriptArgumentNotAllowed";
+                script_argument_too_long = pickText messages.scriptArgumentTooLong "scriptArgumentTooLong";
+                script_argument_invalid = pickText messages.scriptArgumentInvalid "scriptArgumentInvalid";
+                script_shortcut_invalid = pickText messages.scriptShortcutInvalid "scriptShortcutInvalid";
               };
               script_commands = lib.mapAttrs' (
                 name: command:
@@ -1820,6 +2150,7 @@ in
                   completed_message = command.completedMessage;
                   failed_message = command.failedMessage;
                   shortcut = command.shortcut;
+                  conversational = command.conversational;
                 }
               ) scriptCommands;
             }
@@ -1956,6 +2287,8 @@ in
           haAgentIdResolved = if haAgentId == null then null else "conversation.${haAgentId}";
           effectiveHooksAgentId =
             if hooksAgentId != null then "conversation.${hooksAgentId}" else haAgentIdResolved;
+          effectiveMemoryAgentId =
+            if memory.agentId != null then "conversation.${memory.agentId}" else haAgentIdResolved;
 
           tokenUsers = lib.unique ([ self.host.mainUser.username ] ++ additionalUsers);
 
@@ -2049,7 +2382,7 @@ in
               message = "linux.services.signal-bot requires every scriptCommands shortcut to be used by only one command!";
             }
             {
-              assertion = lib.attrNames reactions.emoji == lib.attrNames reactions.meanings;
+              assertion = lib.attrNames reactions.emoji == lib.attrNames resolvedMeanings;
               message = "linux.services.signal-bot requires reactions emoji and reactions meanings to use exactly the same names!";
             }
             {
@@ -2057,7 +2390,7 @@ in
               message = "linux.services.signal-bot requires every reactions emoji entry to hold at least one emoji!";
             }
             {
-              assertion = lib.all (meaning: meaning != "") (lib.attrValues reactions.meanings);
+              assertion = lib.all (meaning: meaning != "") (lib.attrValues resolvedMeanings);
               message = "linux.services.signal-bot requires every reactions meaning to be non empty!";
             }
             {

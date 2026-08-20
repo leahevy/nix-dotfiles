@@ -191,9 +191,9 @@ class DesktopChannel:
         self.cfg = cfg
         self.recipients = cfg.get("chat_recipients") or {}
         self.default_recipient = cfg.get("chat_default_recipient")
-        ttl_hours = cfg.get("chat_ring_buffer_ttl_hours", 24)
-        self.ts_format = cfg.get("chat_timestamp_format", "%a %H:%M")
-        self.hub = ChatHub(cfg.get("chat_ring_buffer_size", 50), ttl_hours * 3600)
+        ttl_hours = cfg["chat_ring_buffer_ttl_hours"]
+        self.ts_format = cfg["chat_timestamp_format"]
+        self.hub = ChatHub(cfg["chat_ring_buffer_size"], ttl_hours * 3600)
         self.reactables = DesktopReactables(
             brain.reactions_config["target_max_age_seconds"]
         )
@@ -329,8 +329,8 @@ class DesktopChannel:
                 emoji=self.reaction_buttons(),
                 title=cfg.get("profile_given_name") or "Signal Chat",
                 about=cfg.get("profile_about") or "",
-                fontSize=cfg.get("chat_font_size", 14),
-                fontFamily=cfg.get("chat_font_family", "monospace"),
+                fontSize=cfg["chat_font_size"],
+                fontFamily=cfg["chat_font_family"],
                 typing=cfg.get("chat_typing_text") or "",
                 avatar=avatar_bytes is not None,
             )
@@ -358,12 +358,22 @@ class DesktopChannel:
             def work():
                 try:
                     print("signal-bot: handling a desktop message", file=sys.stderr)
-                    budget_key = brain.budget_key_for(user)
-                    if budget_key is not None:
-                        granted, _ = brain.budget.claim(budget_key, text, notify=False)
-                        if not granted:
-                            self.publish_message(user, "bot", brain.budget_exhausted)
-                            return
+                    is_builtin = brain.is_builtin_command(text)
+                    budget_key = None
+                    if not is_builtin:
+                        brain.memory_record(
+                            f"desktop:{user}", self.speaker_label(user), text
+                        )
+                        budget_key = brain.budget_key_for(user)
+                        if budget_key is not None:
+                            granted, _ = brain.budget.claim(
+                                budget_key, text, notify=False
+                            )
+                            if not granted:
+                                self.publish_message(
+                                    user, "bot", brain.budget_exhausted
+                                )
+                                return
                     hub.publish(
                         user,
                         {"kind": "typing", "role": "bot", "on": True},
@@ -384,43 +394,95 @@ class DesktopChannel:
                                     self.transcripts.remember_turn(
                                         user, brain.bot_label, reply, pending=True
                                     )
+                                    brain.memory_record(
+                                        f"desktop:{user}", brain.bot_label, reply
+                                    )
                         else:
-                            conversation_id = self.threads.resolve(user)
-                            if conversation_id is None or self.transcripts.needs_recap(
-                                user
-                            ):
+                            cs = brain.is_conversational_script(text)
+                            if cs is not None:
+                                command_name, script_command, command_argument = cs
                                 entries = self.transcripts.transcript(user)
-                            else:
-                                entries = self.transcripts.pending_turns(user)
-                            recap = brain.render_recap(
-                                self.cfg, entries, brain.context_max_chars
-                            )
-                            prompt = (
-                                brain.with_context_recap(self.cfg, recap, text)
-                                if recap
-                                else text
-                            )
-                            self.transcripts.remember_turn(
-                                user, self.speaker_label(user), text
-                            )
-                            reply, new_id = brain.call_ha_conversation(
-                                prompt, conversation_id
-                            )
-                            delivered = new_id is not None
-                            drift = bool(
-                                conversation_id and new_id and new_id != conversation_id
-                            )
-                            self.transcripts.mark_recap(
-                                user,
-                                recap_sent=bool(recap) and delivered,
-                                drift=drift,
-                            )
-                            if delivered and isinstance(reply, str):
-                                self.transcripts.remember_turn(
-                                    user, brain.bot_label, reply
+                                recap = brain.render_recap(
+                                    self.cfg, entries, brain.context_max_chars
                                 )
-                            if recap and delivered and budget_key is not None:
-                                brain.budget.charge_context(budget_key, recap)
+                                sender_argument = brain.with_desktop_sender(
+                                    self.speaker_label(user), command_argument
+                                )
+                                prompt = (
+                                    brain.with_context_recap(
+                                        self.cfg, recap, sender_argument
+                                    )
+                                    if recap
+                                    else sender_argument
+                                )
+                                self.transcripts.remember_turn(
+                                    user, self.speaker_label(user), text, pending=True
+                                )
+                                mem = brain.memory_block()
+                                if mem:
+                                    prompt = f"{mem}\n\n{prompt}"
+                                reply = brain.call_script(
+                                    command_name, script_command, prompt
+                                )
+                                new_id = None
+                                if isinstance(reply, str):
+                                    self.transcripts.remember_turn(
+                                        user, brain.bot_label, reply, pending=True
+                                    )
+                                    brain.memory_record(
+                                        f"desktop:{user}", brain.bot_label, reply
+                                    )
+                            else:
+                                conversation_id = self.threads.resolve(user)
+                                if (
+                                    conversation_id is None
+                                    or self.transcripts.needs_recap(user)
+                                ):
+                                    entries = self.transcripts.transcript(user)
+                                else:
+                                    entries = self.transcripts.pending_turns(user)
+                                recap = brain.render_recap(
+                                    self.cfg, entries, brain.context_max_chars
+                                )
+                                sender_text = brain.with_desktop_sender(
+                                    self.speaker_label(user), text
+                                )
+                                prompt = (
+                                    brain.with_context_recap(
+                                        self.cfg, recap, sender_text
+                                    )
+                                    if recap
+                                    else sender_text
+                                )
+                                self.transcripts.remember_turn(
+                                    user, self.speaker_label(user), text
+                                )
+                                mem = brain.memory_block()
+                                if mem:
+                                    prompt = mem + "\n\n" + prompt
+                                reply, new_id = brain.call_ha_conversation(
+                                    prompt, conversation_id
+                                )
+                                delivered = new_id is not None
+                                drift = bool(
+                                    conversation_id
+                                    and new_id
+                                    and new_id != conversation_id
+                                )
+                                self.transcripts.mark_recap(
+                                    user,
+                                    recap_sent=bool(recap) and delivered,
+                                    drift=drift,
+                                )
+                                if delivered and isinstance(reply, str):
+                                    self.transcripts.remember_turn(
+                                        user, brain.bot_label, reply
+                                    )
+                                    brain.memory_record(
+                                        f"desktop:{user}", brain.bot_label, reply
+                                    )
+                                if recap and delivered and budget_key is not None:
+                                    brain.budget.charge_context(budget_key, recap)
                     finally:
                         hub.publish(
                             user,
