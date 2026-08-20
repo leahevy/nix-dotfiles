@@ -92,6 +92,10 @@ let
     "Stop"
   ];
 
+  suppressedNotifications = [
+    "Claude is waiting for your input"
+  ];
+
   hookHandlerType = lib.types.submodule {
     options = {
       enable = lib.mkOption {
@@ -713,6 +717,25 @@ in
                   return False
               return not re.search(r'[$`]', s[5:])
 
+          def split_pipes(cmd):
+              import shlex
+              try:
+                  lex = shlex.shlex(cmd, posix=True)
+                  lex.whitespace_split = False
+                  lex.whitespace = ' \t'
+                  lex.wordchars += '-./=~'
+                  segments, current = [], []
+                  for tok in lex:
+                      if tok == '|':
+                          segments.append(' '.join(current).strip())
+                          current = []
+                      else:
+                          current.append(tok)
+                  segments.append(' '.join(current).strip())
+                  return [s for s in segments if s]
+              except ValueError:
+                  return [cmd]
+
           def is_readonly_listing(command):
               def _abs_under_cwd(tok):
                   part = tok.split("=", 1)[-1] if "=" in tok else tok
@@ -732,7 +755,7 @@ in
                   return False
               if ".." in s:
                   return False
-              segments = [seg.strip() for seg in re.split(r'(?<!\\)\|', s)]
+              segments = split_pipes(s)
               if any(seg == "" for seg in segments):
                   return False
               lead = segments[0]
@@ -900,9 +923,13 @@ in
         notifyBody = ''
           NOTIFY_CMD = ${builtins.toJSON notifyCmd}
 
+          SUPPRESSED_MESSAGES = set(${builtins.toJSON suppressedNotifications})
+
           data = load()
           message = data.get("message") or ""
           if not message:
+              sys.exit(0)
+          if message in SUPPRESSED_MESSAGES:
               sys.exit(0)
 
           subprocess.run(NOTIFY_CMD, shell=True, env=dict(os.environ, NX_CLAUDE_MSG=message))
@@ -1318,41 +1345,75 @@ in
             in
             if sounds.sink == "headset" then pipewireCfg.headsetSinkID else pipewireCfg.speakerSinkID;
 
+        soundHookSuppressedMessages = {
+          Notification = suppressedNotifications;
+        };
+
         mkSoundScript =
-          file:
+          file: suppressed:
           let
             soundPath =
               helpers.packageFile args pkgs.sound-theme-freedesktop
                 "share/sounds/freedesktop/stereo/${file}";
+            name = "nx-claude-sound-${lib.removeSuffix ".oga" file}";
+            playArgs =
+              if self.isLinux then
+                [ "${pkgs.pipewire}/bin/pw-play" ]
+                ++ lib.optionals (resolvedSoundSink != null) [
+                  "--target"
+                  resolvedSoundSink
+                ]
+                ++ [ soundPath ]
+              else
+                [
+                  "${pkgs.sox}/bin/play"
+                  "-q"
+                  soundPath
+                ];
           in
-          if self.isLinux then
-            let
-              targetArg = lib.optionalString (
-                resolvedSoundSink != null
-              ) " --target ${lib.escapeShellArg resolvedSoundSink}";
-            in
-            pkgs.writeShellScript "nx-claude-sound-${lib.removeSuffix ".oga" file}" ''
-              exec ${pkgs.pipewire}/bin/pw-play${targetArg} ${soundPath}
+          if suppressed == [ ] then
+            pkgs.writeShellScript name ''
+              exec ${lib.escapeShellArgs playArgs}
             ''
           else
-            pkgs.writeShellScript "nx-claude-sound-${lib.removeSuffix ".oga" file}" ''
-              exec ${pkgs.sox}/bin/play -q ${soundPath}
-            '';
+            pkgs.writers.writePython3 name
+              {
+                flakeIgnore = [
+                  "E501"
+                  "E302"
+                  "E305"
+                  "E231"
+                  "E401"
+                ];
+              }
+              ''
+                import json, subprocess, sys
+                data = json.loads(sys.stdin.read() or "{}")
+                if (data.get("message") or "") in set(${builtins.toJSON suppressed}):
+                    sys.exit(0)
+                subprocess.run(${builtins.toJSON playArgs})
+              '';
 
         activeSoundHooks = lib.optionalAttrs sounds.enable (
           lib.filterAttrs (event: _: sounds.hooks.${event}) soundFileMap
         );
 
-        soundHookEntries = lib.mapAttrs (_: file: [
-          {
-            hooks = [
-              {
-                type = "command";
-                command = builtins.toString (mkSoundScript file);
-              }
-            ];
-          }
-        ]) activeSoundHooks;
+        soundHookEntries = lib.mapAttrs (
+          event: file:
+          let
+            suppressed = soundHookSuppressedMessages.${event} or [ ];
+          in
+          [
+            {
+              hooks = [
+                {
+                  type = "command";
+                  command = builtins.toString (mkSoundScript file suppressed);
+                }
+              ];
+            }
+          ]
+        ) activeSoundHooks;
 
         allHookEvents = lib.unique (lib.attrNames renderedHooks ++ lib.attrNames soundHookEntries);
         mergedHooks = lib.filterAttrs (_: v: v != [ ]) (
