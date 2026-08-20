@@ -4474,6 +4474,7 @@ def serve(cfg):
             conversation_id,
             quote=current_quote(),
             thread_key=thread_key,
+            transcript_key=thread_key,
             record_transcript=not message_is_builtin_command,
         ):
             print("signal-bot: reply queue full, dropping reply", file=sys.stderr)
