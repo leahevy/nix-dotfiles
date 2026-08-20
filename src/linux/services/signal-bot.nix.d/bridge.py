@@ -3020,11 +3020,19 @@ class MemoryStore:
                 if prior_parts
                 else message_text(self.cfg, "mem_no_prior_summaries")
             )
-            chat_parts = []
+            label_groups = {}
             for chat_key, entries in transcripts_snap.items():
                 if not entries:
                     continue
                 label = label_fn(chat_key)
+                label_groups.setdefault(label, []).extend(entries)
+            print(
+                f"signal-bot: memory finalizing period {closing_date},"
+                f" chats: {list(label_groups)}",
+                file=sys.stderr,
+            )
+            chat_parts = []
+            for label, entries in label_groups.items():
                 lines = "\n".join(f"{a}: {t}" for a, t in entries)
                 chat_parts.append(chat_tpl.format(chat=label, transcript=lines))
             today_transcripts = "\n\n".join(chat_parts)
@@ -3072,6 +3080,10 @@ class MemoryStore:
                     f" {MEMORY_SUMMARIZE_MAX_ATTEMPTS} attempts, will retry next tick!"
                 )
                 return
+            print(
+                f"signal-bot: memory period {closing_date} summarized successfully",
+                file=sys.stderr,
+            )
             retention = self.cfg["memory_retention_days"]
             with self.lock:
                 self.summaries.append(
@@ -3426,17 +3438,22 @@ def serve(cfg):
     api_token = require_secret(cfg["api_token_file"], "API token")
     ha_token = require_secret(cfg["ha_token_file"], "Home Assistant token")
 
+    desktop_recipients_by_user = {
+        oauth_user: name
+        for name, oauth_user in (cfg.get("chat_recipients") or {}).items()
+    }
+    name_by_number = {number: name for name, number in contacts_by_name.items()}
+
     def chat_label(chat_key):
         if chat_key.startswith("group:"):
             return cfg["main_group_name"]
         if chat_key.startswith("desktop:"):
-            return chat_key[len("desktop:") :]
+            user = chat_key[len("desktop:") :]
+            return desktop_recipients_by_user.get(user, user)
         if chat_key.startswith("direct:"):
             uid = chat_key[len("direct:") :]
-            for name, number in contacts_by_name.items():
-                if number == uid:
-                    return name
-            return uid
+            number = allowed_uuids.number_for(uid) or uid
+            return name_by_number.get(number, number)
         return chat_key
 
     max_age_seconds = cfg["inbound_max_age_seconds"]
