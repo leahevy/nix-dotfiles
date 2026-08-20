@@ -357,8 +357,9 @@ class DesktopChannel:
 
             def work():
                 try:
-                    print("signal-bot: handling a desktop message", file=sys.stderr)
                     is_builtin = brain.is_builtin_command(text)
+                    if not is_builtin:
+                        print("signal-bot: handling a desktop message", file=sys.stderr)
                     budget_key = None
                     if not is_builtin:
                         brain.memory_record(
