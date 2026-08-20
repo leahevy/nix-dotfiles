@@ -673,11 +673,11 @@ in
                   if any(p.strip() == "" for p in parts):
                       return False
                   return all(_is_simple_echo(p) or is_readonly_listing(p) for p in parts)
-              if re.search(r"[;&<>`(){}\n\\$]", s):
+              if re.search(r"[;&<>`(){}\n$]", s):
                   return False
               if ".." in s:
                   return False
-              segments = [seg.strip() for seg in s.split("|")]
+              segments = [seg.strip() for seg in re.split(r'(?<!\\)\|', s)]
               if any(seg == "" for seg in segments):
                   return False
               lead = segments[0]
