@@ -395,6 +395,20 @@ with lib;
           description = "Active desktop environment (or headless)";
         };
 
+        machineType = mkOption {
+          type = types.nullOr (
+            types.enum [
+              "desktop"
+              "tablet"
+              "laptop"
+              "convertible"
+              "server"
+            ]
+          );
+          default = null;
+          description = "Machine type (or headless)";
+        };
+
         firmware = mkOption {
           type = types.submodule {
             options = {

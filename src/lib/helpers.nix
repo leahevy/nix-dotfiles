@@ -116,6 +116,18 @@ rec {
     else
       resolveFromUser configOrSelf [ "settings" "desktop" ] null;
 
+  # Resolve the configured machine type (desktop, tablet, laptop, convertible, server)
+  # Usage: getMachineType config / getMachineType self
+  getMachineType =
+    configOrSelf:
+    let
+      hostDesktop = resolveFromHost configOrSelf [ "settings" "system" "machineType" ] null;
+    in
+    if hostDesktop != null then
+      hostDesktop
+    else
+      resolveFromUser configOrSelf [ "settings" "machineType" ] null;
+
   # Resolve the effective desktop tooling preference. A full desktop (gnome or kde) forces its
   # own tooling so apps and portals match the running session, other desktops fall back to the
   # profile's desktopPreference.

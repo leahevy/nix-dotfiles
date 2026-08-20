@@ -17,6 +17,20 @@ with lib;
         default = null;
         description = "Active desktop environment (or headless)";
       };
+
+      machineType = mkOption {
+        type = types.nullOr (
+          types.enum [
+            "desktop"
+            "tablet"
+            "laptop"
+            "convertible"
+            "server"
+          ]
+        );
+        default = null;
+        description = "Machine type (or headless)";
+      };
     };
 
     deploymentMode = mkOption {

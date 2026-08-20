@@ -378,7 +378,10 @@ args@{
         };
         wlsunset = true;
         bongocat = true;
-        virtual-keyboard = true;
+        virtual-keyboard = lib.elem (helpers.getMachineType self) [
+          "tablet"
+          "convertible"
+        ];
         programs = {
           installSystemSettings = true;
         };
