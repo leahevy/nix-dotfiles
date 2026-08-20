@@ -75,6 +75,23 @@ let
     "SessionEnd"
   ];
 
+  soundHookEvents = [
+    "Stop"
+    "StopFailure"
+    "Notification"
+    "PermissionRequest"
+    "PermissionDenied"
+    "PostToolUseFailure"
+    "TaskCompleted"
+    "PreCompact"
+    "PostCompact"
+    "Elicitation"
+  ];
+
+  soundHookEventsDisabledByDefault = [
+    "Stop"
+  ];
+
   hookHandlerType = lib.types.submodule {
     options = {
       enable = lib.mkOption {
@@ -393,6 +410,44 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ ];
       description = "Extra domain regexes that WebFetch is allowed to access without prompting.";
+    };
+
+    sounds = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Play sounds on Claude Code hook events.";
+          };
+          sink = lib.mkOption {
+            type = lib.types.nullOr (
+              lib.types.enum [
+                "headset"
+                "speaker"
+              ]
+            );
+            default = "speaker";
+            description = "Audio sink for hook sounds, null uses the system default sink.";
+          };
+          hooks = lib.mkOption {
+            type = lib.types.submodule {
+              options = lib.genAttrs soundHookEvents (
+                event:
+                lib.mkOption {
+                  type = lib.types.bool;
+                  default = !builtins.elem event soundHookEventsDisabledByDefault;
+                  description = "Play a sound on the ${event} hook.";
+                }
+              );
+            };
+            default = { };
+            description = "Per-hook sound enable flags.";
+          };
+        };
+      };
+      default = { };
+      description = "Sound notifications for Claude Code lifecycle hooks.";
     };
   };
 
@@ -937,6 +992,7 @@ in
         useAutoModeDuringPlan,
         voiceModeEnabled,
         defaultVoiceMode,
+        sounds,
         ...
       }:
       let
@@ -1239,6 +1295,71 @@ in
             )
           ) hookHandlers
         );
+
+        soundFileMap = {
+          Stop = "message-new-instant.oga";
+          StopFailure = "dialog-warning.oga";
+          Notification = "dialog-information.oga";
+          PermissionRequest = "dialog-information.oga";
+          PermissionDenied = "dialog-warning.oga";
+          PostToolUseFailure = "dialog-warning.oga";
+          TaskCompleted = "message-new-instant.oga";
+          PreCompact = "dialog-information.oga";
+          PostCompact = "message-new-instant.oga";
+          Elicitation = "dialog-information.oga";
+        };
+
+        resolvedSoundSink =
+          if sounds.sink == null || !self.isLinux then
+            null
+          else
+            let
+              pipewireCfg = config.nx.linux.sound.pipewire;
+            in
+            if sounds.sink == "headset" then pipewireCfg.headsetSinkID else pipewireCfg.speakerSinkID;
+
+        mkSoundScript =
+          file:
+          let
+            soundPath =
+              helpers.packageFile args pkgs.sound-theme-freedesktop
+                "share/sounds/freedesktop/stereo/${file}";
+          in
+          if self.isLinux then
+            let
+              targetArg = lib.optionalString (
+                resolvedSoundSink != null
+              ) " --target ${lib.escapeShellArg resolvedSoundSink}";
+            in
+            pkgs.writeShellScript "nx-claude-sound-${lib.removeSuffix ".oga" file}" ''
+              exec ${pkgs.pipewire}/bin/pw-play${targetArg} ${soundPath}
+            ''
+          else
+            pkgs.writeShellScript "nx-claude-sound-${lib.removeSuffix ".oga" file}" ''
+              exec ${pkgs.sox}/bin/play -q ${soundPath}
+            '';
+
+        activeSoundHooks = lib.optionalAttrs sounds.enable (
+          lib.filterAttrs (event: _: sounds.hooks.${event}) soundFileMap
+        );
+
+        soundHookEntries = lib.mapAttrs (_: file: [
+          {
+            hooks = [
+              {
+                type = "command";
+                command = builtins.toString (mkSoundScript file);
+              }
+            ];
+          }
+        ]) activeSoundHooks;
+
+        allHookEvents = lib.unique (lib.attrNames renderedHooks ++ lib.attrNames soundHookEntries);
+        mergedHooks = lib.filterAttrs (_: v: v != [ ]) (
+          lib.genAttrs allHookEvents (
+            event: (soundHookEntries.${event} or [ ]) ++ (renderedHooks.${event} or [ ])
+          )
+        );
       in
       {
         programs.claude-code = {
@@ -1268,8 +1389,8 @@ in
             inherit remoteControlAtStartup useAutoModeDuringPlan;
             permissions.defaultMode = permissionMode;
           }
-          // lib.optionalAttrs (renderedHooks != { }) {
-            hooks = renderedHooks;
+          // lib.optionalAttrs (mergedHooks != { }) {
+            hooks = mergedHooks;
           }
           // lib.optionalAttrs voiceModeEnabled {
             voice = {
