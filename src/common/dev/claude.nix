@@ -718,6 +718,7 @@ in
           "haskell.org"
           "docs.anthropic.com"
           "code.claude.com"
+          "platform.claude.com"
           "search.nixos.org"
           "nixos.org"
           "nix.dev"
