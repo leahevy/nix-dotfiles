@@ -1193,5 +1193,11 @@ args@{
 
         services.nginx.virtualHosts."${effectiveSubdomain}.${domain}" = baseVhost;
       };
+
+    ifEnabled.common.dev.claude = {
+      enabled = config: {
+        nx.common.dev.claude.allowedWebFetchDomains = [ "gethomepage\\.dev" ];
+      };
+    };
   };
 }

@@ -3463,5 +3463,11 @@ args@{
 
       security.pam.services.swaylock = { };
     };
+
+    ifEnabled.common.dev.claude = {
+      enabled = config: {
+        nx.common.dev.claude.allowedWebFetchDomains = [ "yalter\\.github\\.io" ];
+      };
+    };
   };
 }

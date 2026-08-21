@@ -689,10 +689,18 @@ in
               return "\n".join(files_out)
         '';
 
+        autoDenyReasons = [
+          "find with side-effecting action"
+          "nix store traversal is blocked"
+        ];
+
         forbiddenCommandWords = [
           "sudo"
           "mkfs"
           "dmesg"
+          "pkill"
+          "poweroff"
+          "reboot"
         ];
 
         bakedWebDomains = [
@@ -707,10 +715,27 @@ in
           "mynixos.com"
           "wiki.archlinux.org"
           "hackage.haskell.org"
+          "haskell.org"
+          "docs.anthropic.com"
+          "code.claude.com"
+          "search.nixos.org"
+          "nixos.org"
+          "nix.dev"
+          "man7.org"
+          "systemd.io"
+          "freedesktop.org"
+          "docs.python.org"
+          "doc.rust-lang.org"
+          "docs.rs"
+          "pkg.go.dev"
+          "nix-community.github.io"
+          "docs.renovatebot.com"
         ];
 
         guardrailBody = ''
           NXCONFIG = os.path.join(HOME, ".config", "nx", "nxconfig")
+          CLAUDE_TMP = os.path.join("/tmp", "claude-" + str(os.getuid()))
+          CLAUDE_HOME = os.path.join(HOME, ".claude")
 
           def nxconfig_allowed(target):
               base = os.path.basename(target)
@@ -731,42 +756,89 @@ in
           READONLY_FILTERS = GREP_FAMILY + (
               "rg", "tree", "sort", "head", "tail", "wc", "cut", "cat",
               "nl", "tac", "rev", "uniq", "comm", "column", "fmt", "fold",
-              "ls", "tr",
+              "ls", "tr", "jq", "yq", "date", "basename", "dirname", "printf", "diff",
           )
 
-          def _is_simple_echo(s):
-              s = s.strip()
-              if s == "echo":
-                  return True
-              if not re.match(r'^echo\s', s):
-                  return False
-              return not re.search(r'[$`]', s[5:])
+          OPERATORS = frozenset(['&&', '||', ';'])
 
-          def split_pipes(cmd):
+          FIND_ACTION_FLAGS = frozenset([
+              '-exec', '-execdir', '-ok', '-okdir', '-delete',
+              '-fprintf', '-fprint', '-fprint0', '-fls',
+          ])
+
+          def _tokenize(cmd):
               import shlex
               try:
                   lex = shlex.shlex(cmd, posix=True)
                   lex.whitespace_split = False
                   lex.whitespace = ' \t'
-                  lex.wordchars += '-./=~'
-                  segments, current = [], []
-                  for tok in lex:
-                      if tok == '|':
-                          segments.append(' '.join(current).strip())
-                          current = []
-                      else:
-                          current.append(tok)
-                  segments.append(' '.join(current).strip())
-                  return [s for s in segments if s]
+                  lex.wordchars += '-./=~%@+:,'
+                  lex.commenters = ""
+                  raw = list(lex)
               except ValueError:
-                  return [cmd]
+                  return None
+              merged, i = [], 0
+              while i < len(raw):
+                  if raw[i] in ('&', '|') and i + 1 < len(raw) and raw[i + 1] == raw[i]:
+                      merged.append(raw[i] * 2)
+                      i += 2
+                  else:
+                      merged.append(raw[i])
+                      i += 1
+              return merged
 
-          def is_readonly_listing(command):
+          def _split_on(tokens, ops):
+              parts, cur = [], []
+              for tok in tokens:
+                  if tok in ops:
+                      if cur:
+                          parts.append(cur)
+                      cur = []
+                  else:
+                      cur.append(tok)
+              if cur:
+                  parts.append(cur)
+              return parts
+
+          def _strip_devnull_redirects(tokens):
+              result, i, n = [], 0, len(tokens)
+              while i < n:
+                  tok = tokens[i]
+                  if tok == '>' and i + 1 < n and tokens[i + 1] == '/dev/null':
+                      i += 2
+                      continue
+                  if ((tok.isdigit() or tok == '&') and i + 2 < n
+                          and tokens[i + 1] == '>' and tokens[i + 2] == '/dev/null'):
+                      i += 3
+                      continue
+                  result.append(tok)
+                  i += 1
+              return result
+
+          def _check_forbidden(tokens):
+              if tokens is None:
+                  return
+              forbidden = set(FORBIDDEN_COMMANDS)
+              for seg in _split_on(tokens, OPERATORS | {'|', '&'}):
+                  while seg and seg[0] == 'command':
+                      seg = seg[1:]
+                  if seg and seg[0] in forbidden:
+                      deny(seg[0] + " is blocked")
+
+          def is_readonly_listing(tokens):
+              if tokens is None:
+                  return "command could not be parsed"
+              tokens = _strip_devnull_redirects(tokens)
+
               def _in_allowed_root(tok):
                   part = tok.split("=", 1)[-1] if "=" in tok else tok
                   resolved = os.path.normpath(os.path.expanduser(part))
                   if under(resolved, cwd):
                       return True
+                  if under(resolved, CLAUDE_TMP):
+                      return True
+                  if under(resolved, CLAUDE_HOME):
+                      ask("access to ~/.claude requires review: " + resolved)
                   try:
                       parent = resolved if os.path.isdir(resolved) else os.path.dirname(resolved)
                       r = subprocess.run([GIT, "-C", parent, "rev-parse", "--show-toplevel"],
@@ -782,87 +854,168 @@ in
                       return under(resolved, git_root)
                   except Exception:
                       return False
-              s = command.strip()
-              if not s:
-                  return "empty command segment"
-              s = re.sub(r'\s+2>\s*/dev/null', ''', s).strip()
-              if not s:
-                  return "empty command segment"
-              sq = re.sub(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"", "", s)
-              if "&&" in sq or "||" in sq or ";" in sq:
-                  parts = re.split(r'\s*(?:&&|\|\||\s*;\s*)\s*', s)
-                  if any(p.strip() == "" for p in parts):
-                      return "empty segment in compound command"
-                  for p in parts:
-                      if not _is_simple_echo(p):
-                          reason = is_readonly_listing(p)
-                          if reason is not None:
-                              return reason
-                  return None
-              if re.search(r"[;&<>`(){}\n$]", sq):
-                  return "shell metacharacter in command"
-              if ".." in s:
-                  return "path traversal (..) in command"
-              segments = split_pipes(s)
-              if any(seg == "" for seg in segments):
-                  return "empty pipe segment"
-              lead = segments[0]
-              lead_tokens = lead.split()
-              lead_cmd = lead_tokens[0] if lead_tokens else ""
-              if lead_tokens[:1] == ["git"]:
-                  if not re.match(r"^git(\s+(--no-pager|-C\s+\S+))*\s+(ls-files|log|status|check-ignore|diff|show)\b", lead):
-                      return "git subcommand not in allowlist"
-                  if re.search(r"(^|\s)(-c|--config|--exec-path|--git-dir|--work-tree|--namespace|--bare|--output)(=|\s|$)", lead):
-                      return "git command with unsafe flags"
-                  if not re.search(r"(^|\s)--no-ext-diff(\s|$)", lead):
-                      if run([GIT, "-C", cwd, "config", "diff.external"], cwd):
-                          return "diff.external is configured; add --no-ext-diff to use built-in diff"
-              elif lead_tokens[:1] == ["fd"]:
-                  for tok in lead_tokens[1:]:
-                      if tok in ("-x", "-X") or re.match(r"^(--exec|--exec-batch)(=|$)", tok):
-                          return "fd with exec flag"
-                      if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
-                          if not _in_allowed_root(tok):
-                              return "absolute path outside project: " + tok
-              elif lead_cmd in READONLY_FILTERS:
-                  for tok in lead_tokens[1:]:
-                      if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
-                          if not _in_allowed_root(tok):
-                              return "absolute path outside project: " + tok
-                  if lead_cmd not in GREP_FAMILY:
-                      for tok in lead_tokens[1:]:
-                          if re.match(r"^(-o|-O|--output|--output-file|--out-file)(=|$)", tok):
-                              return "output redirection flag in read-only command"
-                  if lead_cmd == "rg":
-                      for tok in lead_tokens[1:]:
-                          if re.match(r"^(--pre|--pre-glob|--hostname-bin)(=|$)", tok):
-                              return "rg with exec flag"
-              elif lead_cmd == "journalctl":
-                  if re.search(r"(^|\s)(--vacuum-(size|time|files)|--rotate|--flush|--sync|--dmesg)\b", lead):
-                      return "journalctl with mutating flag"
-                  if re.search(r"(^|\s)-(?!-)[a-zA-Z]*k", lead):
-                      return "journalctl with kernel flag"
-              else:
-                  return "unrecognised command: " + lead_cmd
-              for seg in segments[1:]:
-                  tokens = seg.split()
-                  if not tokens:
+
+              def _check_part(part):
+                  if not part:
+                      return "empty command segment"
+                  pipe_stages = _split_on(part, {'|'})
+                  if not pipe_stages or not pipe_stages[0]:
                       return "empty pipe segment"
-                  tool = tokens[0]
-                  if tool not in READONLY_FILTERS:
-                      return "unrecognised pipe filter: " + tool
-                  for tok in tokens[1:]:
-                      if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
-                          if not _in_allowed_root(tok):
-                              return "absolute path outside project: " + tok
-                  if tool not in GREP_FAMILY:
-                      for tok in tokens[1:]:
-                          if re.match(r"^(-o|-O|--output|--output-file|--out-file)(=|$)", tok):
-                              return "output redirection flag in read-only command"
-                  if tool == "rg":
-                      for tok in tokens[1:]:
-                          if re.match(r"^(--pre|--pre-glob|--hostname-bin)(=|$)", tok):
-                              return "rg with exec flag"
+                  lead_tokens = pipe_stages[0]
+                  lead_cmd = lead_tokens[0]
+                  lead = ' '.join(lead_tokens)
+                  if lead_cmd == 'echo':
+                      pass
+                  elif lead_cmd == 'git':
+                      if not re.match(r"^git(\s+(--no-pager|-C\s+\S+))*\s+(ls-files|log|status|check-ignore|diff|show)\b", lead):
+                          return "git subcommand not in allowlist"
+                      if re.search(r"(^|\s)(-c|--config|--exec-path|--git-dir|--work-tree|--namespace|--bare|--output)(=|\s|$)", lead):
+                          return "git command with unsafe flags"
+                      if re.search(r'\b(diff|show)\b', lead):
+                          if not re.search(r"(^|\s)--no-ext-diff(\s|$)", lead):
+                              if run([GIT, "-C", cwd, "config", "diff.external"], cwd):
+                                  deny("diff.external is configured; add --no-ext-diff to use built-in diff")
+                  elif lead_cmd == 'fd':
+                      for tok in lead_tokens[1:]:
+                          if tok in ('-x', '-X') or re.match(r"^(--exec|--exec-batch)(=|$)", tok):
+                              return "fd with exec flag"
+                          if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
+                              resolved = os.path.normpath(os.path.expanduser(tok.split("=", 1)[-1] if "=" in tok else tok))
+                              if under(resolved, "/nix/store") or resolved == "/nix/store":
+                                  return "nix store traversal is blocked"
+                              if not _in_allowed_root(tok):
+                                  return "absolute path not under a recognised git root: " + tok
+                  elif lead_cmd in READONLY_FILTERS:
+                      for tok in lead_tokens[1:]:
+                          if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
+                              if not _in_allowed_root(tok):
+                                  return "absolute path not under a recognised git root: " + tok
+                      if lead_cmd not in GREP_FAMILY:
+                          for tok in lead_tokens[1:]:
+                              if re.match(r"^(-o|-O|--output|--output-file|--out-file)(=|$)", tok):
+                                  return "output redirection flag in read-only command"
+                      if lead_cmd == 'rg':
+                          for tok in lead_tokens[1:]:
+                              if re.match(r"^(--pre|--pre-glob|--hostname-bin)(=|$)", tok):
+                                  return "rg with exec flag"
+                      if lead_cmd == 'yq':
+                          for tok in lead_tokens[1:]:
+                              if re.match(r"^(-i|--in-place)(=|$)", tok):
+                                  return "yq with in-place flag"
+                  elif lead_cmd == 'command':
+                      if len(lead_tokens) >= 2:
+                          return _check_part(part[1:])
+                      return "bare command builtin"
+                  elif lead_cmd == 'cd':
+                      if len(lead_tokens) < 2:
+                          return "cd to home directory is not allowed"
+                      resolved = os.path.normpath(os.path.expanduser(lead_tokens[1]))
+                      if resolved == HOME:
+                          return "cd to home directory is not allowed"
+                      if under(resolved, CLAUDE_HOME):
+                          ask("cd to ~/.claude requires review: " + resolved)
+                      if not under(resolved, CLAUDE_TMP):
+                          git_root = run([GIT, "-C", cwd, "rev-parse", "--show-toplevel"], cwd)
+                          if not (git_root and under(resolved, os.path.normpath(git_root))):
+                              return "cd to path outside current project: " + lead_tokens[1]
+                  elif lead_cmd == 'nix':
+                      if lead_tokens[1:3] != ['flake', 'prefetch']:
+                          return "nix subcommand not in allowlist: " + ' '.join(lead_tokens[1:3])
+                      for tok in lead_tokens[3:]:
+                          if tok.startswith('--'):
+                              continue
+                          if re.match(r'^github:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)?$', tok):
+                              continue
+                          return "unexpected argument in nix flake prefetch: " + tok
+                  elif re.match(r'^[A-Z_][A-Z0-9_]*=', lead_cmd):
+                      rest = part[:]
+                      env_vars = {}
+                      while rest and re.match(r'^[A-Z_][A-Z0-9_]*=', rest[0]):
+                          k, _, v = rest[0].partition('=')
+                          env_vars[k] = v
+                          rest = rest[1:]
+                      if not rest:
+                          return "env var with no command"
+                      if rest[:3] != ['nix', 'flake', 'prefetch']:
+                          return "unrecognised env-var-prefixed command: " + (rest[0] if rest else "")
+                      for k, v in env_vars.items():
+                          if k == 'XDG_CACHE_HOME':
+                              if not (v == '/tmp' or v.startswith('/tmp/')):
+                                  return "XDG_CACHE_HOME must be under /tmp: " + v
+                          else:
+                              return "unexpected env var for nix flake prefetch: " + k
+                      for tok in rest[3:]:
+                          if tok.startswith('--'):
+                              continue
+                          if re.match(r'^github:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)?$', tok):
+                              continue
+                          return "unexpected argument in nix flake prefetch: " + tok
+                  elif lead_cmd == 'find':
+                      for tok in lead_tokens[1:]:
+                          if tok in FIND_ACTION_FLAGS:
+                              return "find with side-effecting action: " + tok
+                          if re.match(r"^[/~]", tok):
+                              resolved = os.path.normpath(os.path.expanduser(tok))
+                              if under(resolved, "/nix/store") or resolved == "/nix/store":
+                                  return "nix store traversal is blocked"
+                              if not _in_allowed_root(tok):
+                                  return "absolute path not under a recognised git root: " + tok
+                  elif lead_cmd in ('mkdir', 'rmdir'):
+                      for tok in lead_tokens[1:]:
+                          if tok.startswith('-'):
+                              continue
+                          resolved = os.path.normpath(
+                              os.path.join(cwd, tok) if not os.path.isabs(tok) and not tok.startswith('~')
+                              else os.path.expanduser(tok)
+                          )
+                          if not under(resolved, cwd):
+                              return lead_cmd + " outside current directory: " + tok
+                  elif lead_cmd == 'systemctl':
+                      if not re.match(r"^systemctl(\s+(-[a-zA-Z]+|--[a-zA-Z0-9=-]+))*\s+(status|cat|show|is-active|is-enabled|is-failed|get-default|list-units|list-timers|list-sockets|list-jobs|list-unit-files)\b", lead):
+                          return "systemctl subcommand not in allowlist"
+                  elif lead_cmd == 'journalctl':
+                      if re.search(r"(^|\s)(--vacuum-(size|time|files)|--rotate|--flush|--sync|--dmesg)\b", lead):
+                          return "journalctl with mutating flag"
+                      if re.search(r"(^|\s)-(?!-)[a-zA-Z]*k", lead):
+                          return "journalctl with kernel flag"
+                  else:
+                      return "command not auto-allowed, review required: " + lead_cmd
+                  for stage in pipe_stages[1:]:
+                      if not stage:
+                          return "empty pipe segment"
+                      tool = stage[0]
+                      if tool not in READONLY_FILTERS:
+                          return "pipe filter not auto-allowed, review required: " + tool
+                      for tok in stage[1:]:
+                          if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
+                              if not _in_allowed_root(tok):
+                                  return "absolute path not under a recognised git root: " + tok
+                      if tool not in GREP_FAMILY:
+                          for tok in stage[1:]:
+                              if re.match(r"^(-o|-O|--output|--output-file|--out-file)(=|$)", tok):
+                                  return "output redirection flag in read-only command"
+                      if tool == 'rg':
+                          for tok in stage[1:]:
+                              if re.match(r"^(--pre|--pre-glob|--hostname-bin)(=|$)", tok):
+                                  return "rg with exec flag"
+                      if tool == 'yq':
+                          for tok in stage[1:]:
+                              if re.match(r"^(-i|--in-place)(=|$)", tok):
+                                  return "yq with in-place flag"
+                  return None
+
+              BLOCKING_TOKENS = frozenset(['<', '>', '`', '{', '}', '(', ')', '&', '$', '\n'])
+              for tok in tokens:
+                  if tok in OPERATORS or tok == '|':
+                      continue
+                  if tok in BLOCKING_TOKENS:
+                      return "shell metacharacter in command"
+                  if '..' in tok:
+                      return "path traversal (..) in command"
+              for part in _split_on(tokens, OPERATORS):
+                  reason = _check_part(part)
+                  if reason is not None:
+                      return reason
               return None
 
           data = load(strict=True)
@@ -875,6 +1028,14 @@ in
 
           BAKED_WEB_DOMAINS = set(${builtins.toJSON bakedWebDomains})
           ALLOWED_WEB_PATTERNS = ${builtins.toJSON config.nx.common.dev.claude.allowedWebFetchDomains}
+
+          if tool_name == "WebSearch":
+              query = tool_input(data).get("query") or ""
+              if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", query):
+                  ask("WebSearch query references nxconfig: " + query)
+              if SECRET_FILE.search(query):
+                  ask("WebSearch query contains a secret file path: " + query)
+              allow("WebSearch")
 
           if tool_name == "WebFetch" and url:
               try:
@@ -894,6 +1055,8 @@ in
               if under(target, NXCONFIG) and not nxconfig_allowed(target):
                   deny("access to nxconfig is off-limits: " + target)
               if any(under(target, d) for d in EXTRA_DIR_DENY):
+                  if tool_name == "Read" and under(target, "/nix/store"):
+                      ask("reading from nix store: " + target)
                   deny("access to disallowed directory: " + target)
               if any(under(target, secret) for secret in SECRET_DIRS):
                   deny("access to secret material is blocked: " + target)
@@ -902,16 +1065,19 @@ in
               for pattern in EXTRA_PATH_DENY:
                   if re.search(pattern, target):
                       deny("path denied by guardrailDisallowedPaths: " + target)
+              if tool_name == "Read":
+                  cwd_root = run([GIT, "-C", cwd, "rev-parse", "--show-toplevel"], cwd)
+                  if cwd_root and under(target, os.path.normpath(cwd_root)):
+                      allow("read within project")
 
           if cmd:
               for pattern in EXTRA_CMD_DENY:
                   if re.search(pattern, cmd):
                       deny("command denied by guardrailDisallowedCommands")
-              for word in FORBIDDEN_COMMANDS:
-                  if re.search(r"(^|[;&|()\s])" + re.escape(word) + r"\b", cmd):
-                      deny(word + " is blocked")
+              tokens = _tokenize(cmd)
+              _check_forbidden(tokens)
               if re.search(r"(^|[;&|()\s])rm\s", cmd) and re.search(r"-\w*r\w*f|-\w*f\w*r|-r\b.*-f\b|-f\b.*-r\b", cmd):
-                  deny("rm -rf is blocked")
+                  deny("rm -rf is blocked; use individual rm per file and rmdir for empty directories")
               if re.search(r"\bgit\b.*\bpush\b", cmd) and re.search(r"(--force(\W|$)|\s-f(\s|$))", cmd) and not re.search(r"--force-with-lease", cmd):
                   deny("git push --force is blocked")
               if re.search(r"\bgit\b.*\b(commit|push|pull|fetch)\b", cmd):
@@ -924,11 +1090,16 @@ in
                   deny("piping a download into a shell or interpreter is blocked")
               if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", cmd) and not re.search(r"\.md(\W|$)|flake\.nix|flake\.lock", cmd):
                   deny("referencing nxconfig from a shell command is blocked")
-              pipe_reject = is_readonly_listing(cmd)
-              if pipe_reject is None:
+              reason = is_readonly_listing(tokens)
+              if reason is None:
                   allow("read-only file listing")
+              AUTO_DENY_REASONS = ${builtins.toJSON autoDenyReasons}
+              if reason and any(reason.startswith(p) for p in AUTO_DENY_REASONS):
+                  deny(reason)
               if re.search(r"(?<!\|)\|(?!\|)", cmd):
-                  ask(pipe_reject or "this command contains a pipe, review it before allowing")
+                  ask(reason or "this command contains a pipe, review it before allowing")
+              if reason:
+                  ask(reason)
         '';
 
         contextBody = ''
@@ -999,6 +1170,7 @@ in
               "E128"
               "E131"
               "E231"
+              "W503"
             ];
           } (pythonHookLib + "\n" + body);
 
@@ -1477,10 +1649,46 @@ in
           ]
         ) activeSoundHooks;
 
-        allHookEvents = lib.unique (lib.attrNames renderedHooks ++ lib.attrNames soundHookEntries);
+        subagentStyleScript =
+          pkgs.writers.writePython3 "nx-claude-subagent-style"
+            {
+              flakeIgnore = [
+                "E501"
+                "E302"
+                "E305"
+              ];
+            }
+            ''
+              import json
+              import sys
+              json.dump({"hookSpecificOutput": {"hookEventName": "SubagentStart", "additionalContext": ${
+                builtins.toJSON ("Output style (nx):\n\n" + styleText)
+              }}}, sys.stdout)
+              sys.exit(0)
+            '';
+
+        styleHookEntries = lib.optionalAttrs styleEnabled {
+          SubagentStart = [
+            {
+              hooks = [
+                {
+                  type = "command";
+                  command = builtins.toString subagentStyleScript;
+                }
+              ];
+            }
+          ];
+        };
+
+        allHookEvents = lib.unique (
+          lib.attrNames renderedHooks ++ lib.attrNames soundHookEntries ++ lib.attrNames styleHookEntries
+        );
         mergedHooks = lib.filterAttrs (_: v: v != [ ]) (
           lib.genAttrs allHookEvents (
-            event: (soundHookEntries.${event} or [ ]) ++ (renderedHooks.${event} or [ ])
+            event:
+            (soundHookEntries.${event} or [ ])
+            ++ (renderedHooks.${event} or [ ])
+            ++ (styleHookEntries.${event} or [ ])
           )
         );
       in
