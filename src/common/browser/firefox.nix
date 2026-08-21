@@ -315,6 +315,7 @@ let
       nextdnsID,
       enableFingerprintingProtection,
       allowDNSRebinding,
+      enableNova,
     }:
     let
       browserCfg = config.nx.common.browser.browser;
@@ -454,6 +455,7 @@ let
         "dom.security.https_only_mode.upgrade_local" = lockFalse;
         "network.lna.enabled" = lockTrue;
         "network.lna.block_trackers" = lockTrue;
+        "browser.nova.enabled" = if enableNova then lockTrue else lockFalse;
       }
       // lib.optionalAttrs (nextdnsID != null) {
         "network.trr.mode" = lockValue 3;
@@ -647,6 +649,10 @@ in
       type = lib.types.bool;
       default = true;
     };
+    enableNova = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+    };
     firejailExtraRules = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -672,9 +678,13 @@ in
         userContentExcludedDomains,
         userContentDarkReaderExcludedDomains,
         fingerprintingProtectionExcludedDomains,
+        enableNova,
         ...
       }:
       let
+        themeColors = config.nx.preferences.theme.colors;
+        activeTabBg = themeColors.blocks.primary.background.html;
+        activeTabFg = themeColors.blocks.primary.foreground.html;
         allExtensions = lib.filterAttrs (_: ext: !(ext.disabled or false)) (
           (baseExtensions config darkMode enableFingerprintingProtection) // extensions
         );
@@ -709,49 +719,64 @@ in
               .bookmark-item .menu-icon { display: none !important; }
             '';
 
-            forceBlackToolbarBackgroundsCSS = ''
-              #navigator-toolbox,
-              #nav-bar,
-              #PersonalToolbar { background-color: #000000 !important; }
-              .urlbar-background { background-color: #000000 !important; border-color: #000000 !important; }
-              #urlbar-input { background-color: transparent !important; }
-              .urlbarView,
-              .urlbarView-body-inner { background-color: #000000 !important; }
-              .urlbarView { border-color: #000000 !important; }
-              #urlbar-searchmode-switcher,
-              #urlbar .searchmode-switcher {
-                background: #000000 !important;
-                background-color: #000000 !important;
-                border-color: #000000 !important;
-                box-shadow: none !important;
-              }
-              #urlbar .searchmode-switcher {
-                --button-background-color: #000000 !important;
-                --button-border-color: #000000 !important;
-                --button-background-color-hover: #1a1a1a !important;
-                --button-border-color-hover: #1a1a1a !important;
-                --button-background-color-active: #2a2a2a !important;
-                --button-border-color-active: #2a2a2a !important;
-                --button-background-color-selected: #000000 !important;
-                --button-border-color-selected: #000000 !important;
-              }
-              .searchmode-switcher-popup,
-              .searchmode-switcher-panel { background-color: #000000 !important; border-color: #000000 !important; box-shadow: none !important; }
-              .searchmode-switcher-popup-description,
-              .searchmode-switcher-installed,
-              .searchmode-switcher-local,
-              .searchmode-switcher-popup-search-settings-button { background-color: #000000 !important; }
-              .tabs-alltabs-button { background-color: #000000 !important; }
-              .sticky-container,
-              .card-container { background-color: #000000 !important; }
-              .panel-subview-body,
-              .panel-header,
-              .panel-no-padding,
-              .cui-widget-panelview,
-              #unified-extensions-area { background-color: #000000 !important; }
-              #site-information-popup { background-color: #000000 !important; }
-              #toolbar-context-menu { background-color: #000000 !important; }
-            '';
+            forceBlackToolbarBackgroundsCSS =
+              (
+                if enableNova then
+                  ''
+                    #navigator-toolbox,
+                    #nav-bar,
+                    #PersonalToolbar {
+                      background: #000000 !important;
+                      background-image: none !important;
+                    }
+                  ''
+                else
+                  ''
+                    #navigator-toolbox,
+                    #nav-bar,
+                    #PersonalToolbar { background-color: #000000 !important; }
+                  ''
+              )
+              + ''
+                .urlbar-background { background-color: #000000 !important; border-color: #000000 !important; }
+                #urlbar-input { background-color: transparent !important; }
+                .urlbarView,
+                .urlbarView-body-inner { background-color: #000000 !important; }
+                .urlbarView { border-color: #000000 !important; }
+                #urlbar-searchmode-switcher,
+                #urlbar .searchmode-switcher {
+                  background: #000000 !important;
+                  background-color: #000000 !important;
+                  border-color: #000000 !important;
+                  box-shadow: none !important;
+                }
+                #urlbar .searchmode-switcher {
+                  --button-background-color: #000000 !important;
+                  --button-border-color: #000000 !important;
+                  --button-background-color-hover: #1a1a1a !important;
+                  --button-border-color-hover: #1a1a1a !important;
+                  --button-background-color-active: #2a2a2a !important;
+                  --button-border-color-active: #2a2a2a !important;
+                  --button-background-color-selected: #000000 !important;
+                  --button-border-color-selected: #000000 !important;
+                }
+                .searchmode-switcher-popup,
+                .searchmode-switcher-panel { background-color: #000000 !important; border-color: #000000 !important; box-shadow: none !important; }
+                .searchmode-switcher-popup-description,
+                .searchmode-switcher-installed,
+                .searchmode-switcher-local,
+                .searchmode-switcher-popup-search-settings-button { background-color: #000000 !important; }
+                .tabs-alltabs-button { background-color: #000000 !important; }
+                .sticky-container,
+                .card-container { background-color: #000000 !important; }
+                .panel-subview-body,
+                .panel-header,
+                .panel-no-padding,
+                .cui-widget-panelview,
+                #unified-extensions-area { background-color: #000000 !important; }
+                #site-information-popup { background-color: #000000 !important; }
+                #toolbar-context-menu { background-color: #000000 !important; }
+              '';
 
             forceBlackMainCSS = ''
               #browser,
@@ -788,6 +813,76 @@ in
                 background-color: #000000 !important;
                 border-color: #000000 !important;
                 border-radius: 0 !important;
+              }
+            '';
+
+            novaLayoutFixCSS = ''
+              @media -moz-pref("browser.nova.enabled") {
+                :root {
+                  --chrome-window-gap: 0px !important;
+                  --chrome-content-separator-color: transparent !important;
+                }
+                #browser {
+                  padding: 0 !important;
+                  border-radius: 0 !important;
+                }
+                #navigator-toolbox {
+                  margin: 0 !important;
+                  border-radius: 0 !important;
+                }
+                #tabbrowser-tabbox {
+                  border-radius: 0 !important;
+                }
+                #tabbrowser-tabpanels > :not(.split-view-panel) .browserContainer {
+                  border-radius: 0 !important;
+                  border: none !important;
+                }
+                #browser,
+                #tabbrowser-tabbox,
+                #tabbrowser-tabpanels,
+                .browserContainer,
+                .browserStack {
+                  min-width: 0 !important;
+                }
+              }
+            '';
+
+            novaTabsBarCSS = ''
+              #TabsToolbar,
+              #TabsToolbar-customization-target,
+              #tabbrowser-arrowscrollbox,
+              #tabbrowser-tabs {
+                background: #000000 !important;
+                background-color: #000000 !important;
+                border-radius: 0 !important;
+                border: none !important;
+                outline: none !important;
+                box-shadow: none !important;
+                --tabstrip-inner-border: none !important;
+                opacity: 1 !important;
+                transition: none !important;
+              }
+              #TabsToolbar::before,
+              #TabsToolbar::after {
+                background: none !important;
+                display: none !important;
+              }
+              #main-window:not([active]) #TabsToolbar,
+              #main-window:not([active]) #TabsToolbar-customization-target {
+                background: #000000 !important;
+                background-color: #000000 !important;
+                opacity: 1 !important;
+              }
+            '';
+
+            novaUrlbarContainerCSS = ''
+              .urlbar-input-container,
+              .browserStack {
+                border-radius: 0 !important;
+                border: none !important;
+                outline: none !important;
+                background-color: #000000 !important;
+                box-shadow: none !important;
               }
             '';
 
@@ -828,24 +923,70 @@ in
               }
             '';
 
-            squareOffPopupsAndButtonsCSS = ''
-              .urlbarView-row,
-              .urlbarView-row-inner,
-              .urlbarView-action-btn,
-              menuitem,
-              menu,
-              .panel-arrowcontent,
-              .subviewbutton,
-              .toolbarbutton-1 { border-radius: 0 !important; }
-            '';
+            squareOffPopupsAndButtonsCSS =
+              if enableNova then
+                ''
+                  :root {
+                    --panel-border-radius: 0px !important;
+                    --panel-menuitem-border-radius: 0px !important;
+                    --chrome-block-radius: 0px !important;
+                    --tab-border-radius: 0px !important;
+                    --urlbar-border-radius: 0px !important;
+                    --urlbar-inner-border-radius: 0px !important;
+                    --button-border-radius: 0px !important;
+                  }
+                  .urlbarView-row,
+                  .urlbarView-row-inner,
+                  .urlbarView-action-btn,
+                  menuitem,
+                  menu,
+                  menupopup,
+                  panel,
+                  tooltip,
+                  .panel-arrowcontent,
+                  .subviewbutton,
+                  .toolbarbutton-1,
+                  #identity-box,
+                  .identity-box-button { border-radius: 0 !important; }
+                ''
+              else
+                ''
+                  .urlbarView-row,
+                  .urlbarView-row-inner,
+                  .urlbarView-action-btn,
+                  menuitem,
+                  menu,
+                  .panel-arrowcontent,
+                  .subviewbutton,
+                  .toolbarbutton-1 { border-radius: 0 !important; }
+                '';
 
             hideTitlebarCloseButtonCSS = ''
               .titlebar-button.titlebar-close { display: none !important; }
             '';
 
-            activeTabBackgroundCSS = ''
-              .tabbrowser-tab[selected] .tab-background { background-color: #1a1a1a !important; }
-            '';
+            activeTabBackgroundCSS =
+              if enableNova then
+                ''
+                  .tabbrowser-tab[selected] .tab-background {
+                    background-color: ${activeTabBg} !important;
+                    border: none !important;
+                    border-image: none !important;
+                    box-shadow: none !important;
+                    --tab-border-color-accent: transparent !important;
+                    --tab-border-color-selected-leading: transparent !important;
+                    --tab-border-color-selected-trailing: transparent !important;
+                    --tab-selected-shadow: none !important;
+                  }
+                  .tabbrowser-tab[selected] .tab-label,
+                  .tabbrowser-tab[selected] .tab-text {
+                    color: ${activeTabFg} !important;
+                  }
+                ''
+              else
+                ''
+                  .tabbrowser-tab[selected] .tab-background { background-color: #1a1a1a !important; }
+                '';
 
             squareTabBackgroundCSS = ''
               .tab-background { border-radius: 0 !important; }
@@ -998,6 +1139,13 @@ in
               forceBlackToolbarBackgroundsCSS
               forceBlackMainCSS
               forceBlackContextMenuCSS
+            ]
+            ++ lib.optionals enableNova [
+              novaLayoutFixCSS
+              novaTabsBarCSS
+              novaUrlbarContainerCSS
+            ]
+            ++ [
               disableVPNButtonCSS
               disableSidebarButtonCSS
               disableStarIconCSS
@@ -1316,6 +1464,7 @@ in
         nextdnsID,
         enableFingerprintingProtection,
         allowDNSRebinding,
+        enableNova,
         ...
       }:
       let
@@ -1336,6 +1485,7 @@ in
               nextdnsID
               enableFingerprintingProtection
               allowDNSRebinding
+              enableNova
               ;
           };
         };
@@ -1382,6 +1532,7 @@ in
         nextdnsID,
         enableFingerprintingProtection,
         allowDNSRebinding,
+        enableNova,
         ...
       }:
       let
@@ -1410,6 +1561,7 @@ in
               nextdnsID
               enableFingerprintingProtection
               allowDNSRebinding
+              enableNova
               ;
           };
         };
