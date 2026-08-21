@@ -360,6 +360,8 @@ class DesktopChannel:
 
             def work():
                 try:
+                    if not brain.is_known_desktop_user(user):
+                        return
                     is_builtin = brain.is_builtin_command(text)
                     if not is_builtin:
                         print("signal-bot: handling a desktop message", file=sys.stderr)

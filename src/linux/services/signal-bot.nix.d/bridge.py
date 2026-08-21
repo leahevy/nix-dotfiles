@@ -229,7 +229,6 @@ REQUIRED_MESSAGE_KEYS = (
     "ha_tool_call_artifact",
     "status_template",
     "status_budget_entry_template",
-    "status_unknown_contact_label",
     "status_maybe_budget_template",
     "status_maybe_budget_disabled",
     "status_hooks_disabled",
@@ -254,8 +253,6 @@ REQUIRED_MESSAGE_KEYS = (
     "script_recap_template",
     "budget_exhausted",
 )
-
-DESKTOP_UNKNOWN_BUDGET_KEY = "desktop:unknown"
 
 
 def load_config(path):
@@ -3847,16 +3844,6 @@ def serve(cfg):
             .replace("{limit}", str(budget.limit))
             for name, number in sorted(contacts_by_name.items())
         ]
-        lines.append(
-            template.replace(
-                "{contact}",
-                markdown_emphasis(
-                    cfg, message_text(cfg, "status_unknown_contact_label"), "**"
-                ),
-            )
-            .replace("{used}", f"{budget.used(DESKTOP_UNKNOWN_BUDGET_KEY):.1f}")
-            .replace("{limit}", str(budget.limit))
-        )
         return "\n".join(lines)
 
     def claim_budget(
@@ -5169,10 +5156,8 @@ def serve(cfg):
         def desktop_budget_key(user):
             for recipient_name, oauth_user in desktop_recipients.items():
                 if oauth_user == user:
-                    number = contacts_by_name.get(recipient_name)
-                    if number is not None:
-                        return number
-            return DESKTOP_UNKNOWN_BUDGET_KEY
+                    return contacts_by_name.get(recipient_name)
+            return None
 
         brain = pytypes.SimpleNamespace(
             cfg=cfg,
@@ -5186,6 +5171,9 @@ def serve(cfg):
             call_ha_conversation=desktop_call_ha,
             command_reply=desktop_command_reply,
             is_desktop_admin=lambda user: user in desktop_admin_users,
+            is_known_desktop_user=lambda user: any(
+                oauth_user == user for oauth_user in desktop_recipients.values()
+            ),
             reaction_reply=reaction_reply,
             budget=budget,
             budget_key_for=desktop_budget_key,

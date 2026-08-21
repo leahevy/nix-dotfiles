@@ -18,7 +18,6 @@ let
       haToolCallArtifact = "Something went wrong in Home Assistant and the action was not carried out. Please ask me for it again.";
       statusTemplate = "**{name} status**\n\n**signal-cli** account data: {account}\n**Home Assistant**: {homeAssistant}\n\n**Daily budget:**\n{budget}\n\n**Maybe answers:** {maybeBudget}\n\n**Hooks:**\n{hooks}\n\n**Memory:**\n{memory}";
       statusBudgetEntryTemplate = "{contact}: {used} of {limit}";
-      statusUnknownContactLabel = "Unknown desktop user";
       chatTypingTemplate = "{name} is typing";
       statusMaybeBudgetTemplate = "{remaining} of {limit} left";
       statusMaybeBudgetDisabled = "group filter off";
@@ -121,7 +120,6 @@ let
       haToolCallArtifact = "In Home Assistant ist etwas schiefgelaufen und die Aktion wurde nicht ausgeführt. Bitte frag mich noch einmal danach.";
       statusTemplate = "**{name} Status**\n\n**signal-cli** Kontodaten: {account}\n**Home Assistant**: {homeAssistant}\n\n**Tagesbudget:**\n{budget}\n\n**Vielleicht-Antworten:** {maybeBudget}\n\n**Hooks:**\n{hooks}\n\n**Gedächtnis:**\n{memory}";
       statusBudgetEntryTemplate = "{contact}: {used} von {limit}";
-      statusUnknownContactLabel = "Unbekannter Desktop-Nutzer";
       chatTypingTemplate = "{name} schreibt";
       statusMaybeBudgetTemplate = "{remaining} von {limit} übrig";
       statusMaybeBudgetDisabled = "Gruppenfilter aus";
@@ -1113,12 +1111,6 @@ in
             type = lib.types.nullOr lib.types.str;
             default = null;
             description = "Format of a single budget line in the status reply, with the placeholders {contact}, {used} and {limit} substituted.";
-          };
-
-          statusUnknownContactLabel = lib.mkOption {
-            type = lib.types.nullOr lib.types.str;
-            default = null;
-            description = "Contact label for the shared budget line covering desktop users that map to no configured contact.";
           };
 
           chatTypingTemplate = lib.mkOption {
@@ -2129,7 +2121,6 @@ in
                 ha_tool_call_artifact = pickText messages.haToolCallArtifact "haToolCallArtifact";
                 status_template = pickText messages.statusTemplate "statusTemplate";
                 status_budget_entry_template = pickText messages.statusBudgetEntryTemplate "statusBudgetEntryTemplate";
-                status_unknown_contact_label = pickText messages.statusUnknownContactLabel "statusUnknownContactLabel";
                 status_maybe_budget_template = pickText messages.statusMaybeBudgetTemplate "statusMaybeBudgetTemplate";
                 status_maybe_budget_disabled = pickText messages.statusMaybeBudgetDisabled "statusMaybeBudgetDisabled";
                 status_hooks_disabled = pickText messages.statusHooksDisabled "statusHooksDisabled";
