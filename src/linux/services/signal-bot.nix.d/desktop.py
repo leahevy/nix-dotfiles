@@ -264,6 +264,9 @@ class DesktopChannel:
             url=url,
         )
         self.reactables.remember(user, bot_id, None, message)
+        self.transcripts.remember_turn(
+            user, self.brain.bot_label, message, pending=True
+        )
         return True
 
     def register(self, app, jsonify, request):
@@ -365,6 +368,13 @@ class DesktopChannel:
                         brain.memory_record(
                             f"desktop:{user}", self.speaker_label(user), text
                         )
+                        if brain.daily_transcript_record:
+                            brain.daily_transcript_record(
+                                self.speaker_label(user),
+                                text,
+                                is_bot=False,
+                                key=f"desktop:{user}",
+                            )
                         budget_key = brain.budget_key_for(user)
                         if budget_key is not None:
                             granted, _ = brain.budget.claim(
@@ -381,7 +391,11 @@ class DesktopChannel:
                         store=False,
                     )
                     try:
-                        reply, script_turn = brain.command_reply(text)
+                        reply, script_turn = brain.command_reply(
+                            text, is_admin=brain.is_desktop_admin(user)
+                        )
+                        if reply is brain.silent_drop:
+                            return
                         if reply is not None:
                             new_id = None
                             if script_turn is not None:
@@ -422,11 +436,11 @@ class DesktopChannel:
                                 mem = brain.memory_block()
                                 if mem:
                                     prompt = f"{mem}\n\n{prompt}"
-                                reply = brain.call_script(
+                                reply, script_ok = brain.call_script(
                                     command_name, script_command, prompt
                                 )
                                 new_id = None
-                                if isinstance(reply, str):
+                                if script_ok and isinstance(reply, str):
                                     self.transcripts.remember_turn(
                                         user, brain.bot_label, reply, pending=True
                                     )

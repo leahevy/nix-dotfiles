@@ -37,6 +37,8 @@ let
       memNoPriorSummaries = "(no earlier memory yet)";
       helpStatusDescription = "Show whether signal-cli account data is present and Home Assistant is reachable.";
       helpHelpDescription = "List all available commands.";
+      helpMemoryDescription = "Show the current memory block that would be injected into the bot prompt.";
+      memoryEmpty = "No memory stored yet.";
       helpShortcutTemplate = "{command} or {shortcut}";
       quoteContextTemplate = "[Context - {author} wrote: {message}]\n{text}";
       quoteContextBot = "the bot";
@@ -107,7 +109,7 @@ let
         Write this period's memory entry now.
       '';
       memContextTemplate = ''
-        The following is your memory of earlier periods, so you can act as the same person who remembers past conversations. Each block is from a DIFFERENT earlier period, not the current one, and facts are attributed to the chat where they happened. Current channel: {channel}. Keep personal details about individual users confidential: do not share what you know about one person with another. In a group chat you may be more open about facts that were shared in that group.
+        The following is your memory of earlier periods, so you can act as the same person who remembers past conversations. Each block is from a DIFFERENT earlier period, not the current one, and facts are attributed to the chat where they happened. Current channel: {channel}. Keep personal details about individual users confidential: do not share what you know about one person with another. Each participant only knows what was said in conversations they were part of: a direct chat was known only to that one person, a group chat was known to all its members. A person present in both carries knowledge from both. When referencing past context, consider per person what they could plausibly know before assuming it is shared.
 
         {memory}
       '';
@@ -138,6 +140,8 @@ let
       memNoPriorSummaries = "(noch kein früheres Gedächtnis)";
       helpStatusDescription = "Zeigt, ob signal-cli Kontodaten vorhanden sind und Home Assistant erreichbar ist.";
       helpHelpDescription = "Listet alle verfügbaren Befehle auf.";
+      helpMemoryDescription = "Zeigt den aktuellen Gedächtnisblock, der in den Bot-Prompt injiziert werden würde.";
+      memoryEmpty = "Noch kein Gedächtnis gespeichert.";
       helpShortcutTemplate = "{command} oder {shortcut}";
       quoteContextTemplate = "[Kontext - {author} schrieb: {message}]\n{text}";
       quoteContextBot = "der Bot";
@@ -208,7 +212,7 @@ let
         Schreibe jetzt den Gedächtniseintrag für diese Periode.
       '';
       memContextTemplate = ''
-        Das Folgende ist dein Gedächtnis früherer Perioden, damit du als dieselbe Person handeln kannst, die sich an vergangene Gespräche erinnert. Jeder Block stammt von einer ANDEREN früheren Periode, nicht von der aktuellen, und Fakten sind dem Chat zugeordnet, in dem sie geschehen sind. Aktueller Kanal: {channel}. Halte persönliche Details über einzelne Personen vertraulich: teile nicht, was du über eine Person weißt, mit einer anderen. In einem Gruppenchat kannst du offener über dort geteilte Fakten sprechen.
+        Das Folgende ist dein Gedächtnis früherer Perioden, damit du als dieselbe Person handeln kannst, die sich an vergangene Gespräche erinnert. Jeder Block stammt von einer ANDEREN früheren Periode, nicht von der aktuellen, und Fakten sind dem Chat zugeordnet, in dem sie geschehen sind. Aktueller Kanal: {channel}. Halte persönliche Details über einzelne Personen vertraulich: teile nicht, was du über eine Person weißt, mit einer anderen. Jede beteiligte Person weiß nur, was in den Gesprächen gesagt wurde, an denen sie teilgenommen hat: Ein Direktchat war nur der jeweiligen Person bekannt, ein Gruppenchat war allen Mitgliedern bekannt. Eine Person, die an beiden teilgenommen hat, trägt das Wissen aus beiden. Wenn du auf vergangenen Kontext Bezug nimmst, bedenke, was die jeweiligen Teilnehmenden realistischerweise wissen können.
 
         {memory}
       '';
@@ -998,6 +1002,12 @@ in
               description = "Post Home Assistant error replies into the group instead of only logging and skipping.";
             };
 
+            includeMemory = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Prepend the memory context block to the hook prompt before sending it to Home Assistant.";
+            };
+
             runOnlyIfFiredToday = lib.mkOption {
               type = lib.types.listOf lib.types.str;
               default = [ ];
@@ -1231,6 +1241,18 @@ in
             description = "Help text describing the help command.";
           };
 
+          helpMemoryDescription = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Help text describing the memory command shown to admin contacts.";
+          };
+
+          memoryEmpty = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Reply when /memory is called but no memory has been stored yet.";
+          };
+
           helpShortcutTemplate = lib.mkOption {
             type = lib.types.nullOr lib.types.str;
             default = null;
@@ -1403,6 +1425,12 @@ in
               type = lib.types.bool;
               default = false;
               description = "When enabled, the command argument is enriched with the current conversation history and memory before being passed to the Home Assistant script, exactly as if the user sent a normal message.";
+            };
+
+            adminOnly = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Restrict this command to contacts marked as admin, silently ignoring it for all others.";
             };
 
           };
@@ -2065,6 +2093,7 @@ in
                 min_seconds_since_bot_message = hook.minSecondsSinceBotMessage;
                 min_seconds_since_user_message = hook.minSecondsSinceUserMessage;
                 send_errors_into_chat = hook.sendErrorsIntoChat;
+                include_memory = hook.includeMemory;
                 run_only_if_fired_today = hook.runOnlyIfFiredToday;
                 skip_if_fired_today = hook.skipIfFiredToday;
               }) enabledHooks;
@@ -2120,6 +2149,8 @@ in
                 help_entry_template = messages.helpEntryTemplate;
                 help_status_description = pickText messages.helpStatusDescription "helpStatusDescription";
                 help_help_description = pickText messages.helpHelpDescription "helpHelpDescription";
+                help_memory_description = pickText messages.helpMemoryDescription "helpMemoryDescription";
+                memory_empty = pickText messages.memoryEmpty "memoryEmpty";
                 help_shortcut_template = pickText messages.helpShortcutTemplate "helpShortcutTemplate";
                 quote_context_template = pickText messages.quoteContextTemplate "quoteContextTemplate";
                 quote_context_bot = effectiveBotLabel;
@@ -2151,6 +2182,7 @@ in
                   failed_message = command.failedMessage;
                   shortcut = command.shortcut;
                   conversational = command.conversational;
+                  admin_only = command.adminOnly;
                 }
               ) scriptCommands;
             }

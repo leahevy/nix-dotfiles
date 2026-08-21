@@ -2106,8 +2106,11 @@ def call_ha_script(cfg, ha_token, name, command, argument):
             f"signal-bot: the Home Assistant script {command['script']} failed: {e}",
             file=sys.stderr,
         )
-        return command_message(
-            cfg, "script_failed", name, command.get("failed_message"), argument
+        return (
+            command_message(
+                cfg, "script_failed", name, command.get("failed_message"), argument
+            ),
+            False,
         )
     response = (
         None
@@ -2117,24 +2120,28 @@ def call_ha_script(cfg, ha_token, name, command, argument):
         )
     )
     if response is not None:
-        return response
-    return command_message(
-        cfg, "script_completed", name, command.get("completed_message"), argument
+        return response, True
+    return (
+        command_message(
+            cfg, "script_completed", name, command.get("completed_message"), argument
+        ),
+        True,
     )
 
 
 class Command:
-    def __init__(self, description_key, handler):
+    def __init__(self, description_key, handler, admin_only=False):
         self.description_key = description_key
         self.handler = handler
+        self.admin_only = admin_only
 
 
 COMMANDS = {}
 
 
-def register_command(name, description_key):
+def register_command(name, description_key, admin_only=False):
     def decorator(handler):
-        COMMANDS[name] = Command(description_key, handler)
+        COMMANDS[name] = Command(description_key, handler, admin_only=admin_only)
         return handler
 
     return decorator
@@ -2142,7 +2149,15 @@ def register_command(name, description_key):
 
 @register_command("/status", "help_status_description")
 def cmd_status(
-    cfg, ha_token, account, budget_report, maybe_report, hooks_report, memory_report
+    cfg,
+    ha_token,
+    account,
+    budget_report,
+    maybe_report,
+    hooks_report,
+    memory_report,
+    is_admin=False,
+    memory_block=None,
 ):
     account_ok = not missing_account_files(cfg, account)
     ha_ok = ha_reachable(cfg["ha_url"], ha_token)
@@ -2166,12 +2181,21 @@ def cmd_status(
 
 @register_command("/help", "help_help_description")
 def cmd_help(
-    cfg, ha_token, account, budget_report, maybe_report, hooks_report, memory_report
+    cfg,
+    ha_token,
+    account,
+    budget_report,
+    maybe_report,
+    hooks_report,
+    memory_report,
+    is_admin=False,
+    memory_block=None,
 ):
     template = message_text(cfg, "help_entry_template")
     entries = {
         name: message_text(cfg, command.description_key)
         for name, command in COMMANDS.items()
+        if not command.admin_only or is_admin
     }
     labels = {}
     for name, command in (cfg.get("script_commands") or {}).items():
@@ -2191,6 +2215,22 @@ def cmd_help(
     )
 
 
+@register_command("/memory", "help_memory_description", admin_only=True)
+def cmd_memory(
+    cfg,
+    ha_token,
+    account,
+    budget_report,
+    maybe_report,
+    hooks_report,
+    memory_report,
+    is_admin=False,
+    memory_block=None,
+):
+    block = memory_block() if memory_block is not None else ""
+    return block if block else message_text(cfg, "memory_empty")
+
+
 def handle_command(
     cfg,
     ha_token,
@@ -2200,12 +2240,24 @@ def handle_command(
     maybe_report,
     hooks_report,
     memory_report,
+    is_admin=False,
+    memory_block=None,
 ):
     words = text.strip().split()
     name = words[0] if words else ""
     command = COMMANDS.get(name, COMMANDS["/help"])
+    if command.admin_only and not is_admin:
+        command = COMMANDS["/help"]
     return command.handler(
-        cfg, ha_token, account, budget_report, maybe_report, hooks_report, memory_report
+        cfg,
+        ha_token,
+        account,
+        budget_report,
+        maybe_report,
+        hooks_report,
+        memory_report,
+        is_admin=is_admin,
+        memory_block=memory_block,
     )
 
 
@@ -2343,6 +2395,22 @@ class ConversationTracker:
                 entry["pending"].append((author, text))
                 del entry["pending"][: -self.max_messages]
             self._prune_threads()
+
+    def seed(self, mapping):
+        with self.lock:
+            for thread_key, pairs in mapping.items():
+                if thread_key is None:
+                    continue
+                cleaned = [
+                    (author, text)
+                    for author, text in pairs
+                    if isinstance(text, str) and text
+                ]
+                if not cleaned:
+                    continue
+                entry = self._touch_thread(thread_key)
+                entry["log"].extend(cleaned)
+                del entry["log"][: -self.max_messages]
 
     def remember_thread(
         self, thread_key, conversation_id, recap_sent=False, drift=False
@@ -2775,7 +2843,7 @@ class DailyTranscript:
         self.limit = limit
         self.lock = threading.Lock()
         self.day = None
-        self.entries = []
+        self.entries = {}
         self.user_count = 0
         self.last_bot = None
         self.last_user = None
@@ -2785,23 +2853,46 @@ class DailyTranscript:
         today = (lt.tm_year, lt.tm_yday)
         if today != self.day:
             self.day = today
-            self.entries = []
+            self.entries = {}
             self.user_count = 0
 
-    def record(self, author, text, is_bot):
+    def record(self, author, text, is_bot, key=None):
         if not isinstance(text, str) or not text.strip():
             return
         now = time.monotonic()
         with self.lock:
             self._roll_locked()
-            self.entries.append((author, text))
-            if len(self.entries) > self.limit:
-                del self.entries[: len(self.entries) - self.limit]
+            if key is not None:
+                bucket = self.entries.setdefault(key, [])
+                bucket.append((author, text))
+                if len(bucket) > self.limit:
+                    del bucket[: len(bucket) - self.limit]
+            else:
+                print(
+                    "signal-bot: DailyTranscript.record called without key, entry dropped",
+                    file=sys.stderr,
+                )
             if is_bot:
                 self.last_bot = now
             else:
                 self.user_count += 1
                 self.last_user = now
+
+    def seed(self, mapping):
+        with self.lock:
+            self._roll_locked()
+            for key, pairs in mapping.items():
+                cleaned = [
+                    (author, text)
+                    for author, text in pairs
+                    if isinstance(text, str) and text.strip()
+                ]
+                if not cleaned:
+                    continue
+                bucket = self.entries.setdefault(key, [])
+                bucket.extend(cleaned)
+                if len(bucket) > self.limit:
+                    del bucket[: len(bucket) - self.limit]
 
     def user_interactions(self):
         with self.lock:
@@ -2816,10 +2907,10 @@ class DailyTranscript:
             since_user = None if self.last_user is None else now - self.last_user
             return since_bot, since_user
 
-    def slice_blocks(self, first_messages, recent_messages):
+    def slice_blocks(self, first_messages, recent_messages, key=None):
         with self.lock:
             self._roll_locked()
-            entries = list(self.entries)
+            entries = list(self.entries.get(key, []))
         count = len(entries)
         if first_messages + recent_messages >= count:
             return entries, []
@@ -3135,6 +3226,18 @@ class MemoryStore:
                 del entries[: len(entries) - limit]
             self._persist_locked()
 
+    def snapshot_transcripts(self):
+        with self.lock:
+            return {
+                key: [
+                    (entry[-2], entry[-1])
+                    for entry in entries
+                    if len(entry) in (2, 3) and isinstance(entry[-1], str)
+                ]
+                for key, entries in self.transcripts.items()
+                if entries
+            }
+
     def status(self):
         with self.lock:
             summaries = len(self.summaries)
@@ -3432,7 +3535,7 @@ def serve(cfg):
     from waitress import serve as waitress_serve
 
     account = require_secret(cfg["account_file"], "phone number")
-    contacts_by_name, contacts_by_number, _ = load_contacts(cfg, account)
+    contacts_by_name, contacts_by_number, admin_numbers = load_contacts(cfg, account)
     contact_numbers = set(contacts_by_number)
     allowed_uuids = AllowedUuids(cfg["recipients_file"], contact_numbers)
     api_token = require_secret(cfg["api_token_file"], "API token")
@@ -3655,11 +3758,11 @@ def serve(cfg):
         )
         if queued and "groupId" in target:
             bot_activity.mark(f"group:{target['groupId']}")
-        if queued and hooks_active and record_transcript and "groupId" in target:
-            daily_transcript.record(bot_label, text, is_bot=True)
+        if queued and hooks_active and record_transcript:
+            daily_transcript.record(bot_label, text, is_bot=True, key=transcript_key)
         if queued and cfg.get("memory_enable") and record_transcript and transcript_key:
             memory_store.record(transcript_key, bot_label, text)
-        if queued and transcript_key:
+        if queued and transcript_key and record_transcript:
             conversations.remember_turn(
                 transcript_key, message_text(cfg, "quote_context_bot"), text, True
             )
@@ -3751,7 +3854,9 @@ def serve(cfg):
         )
         return "\n".join(lines)
 
-    def claim_budget(budget_key, text, reply_target, reply_quote, thread_key):
+    def claim_budget(
+        budget_key, text, reply_target, reply_quote, thread_key, direct_number=None
+    ):
         granted, first_rejection = budget.claim(budget_key, text)
         if granted:
             return True
@@ -3760,12 +3865,21 @@ def serve(cfg):
                 "signal-bot: a sender reached the daily budget",
                 file=sys.stderr,
             )
-            enqueue_send(
-                reply_target,
-                message_text(cfg, "budget_exhausted"),
-                quote=reply_quote,
-                thread_key=thread_key,
-            )
+            if "groupId" in reply_target and direct_number:
+                enqueue_send(
+                    {"recipient": [direct_number]},
+                    message_text(cfg, "budget_exhausted"),
+                    thread_key=f"direct:{direct_number}",
+                    record_transcript=False,
+                )
+            else:
+                enqueue_send(
+                    reply_target,
+                    message_text(cfg, "budget_exhausted"),
+                    quote=reply_quote,
+                    thread_key=thread_key,
+                    record_transcript=False,
+                )
         return False
 
     def reaction_prompt_text(emoji, reacted_text, conversation_id, speaker_label=None):
@@ -3843,7 +3957,9 @@ def serve(cfg):
             file=sys.stderr,
         )
         if hooks_active and group_info:
-            daily_transcript.record(speaker_label, emoji or "[reaction]", is_bot=False)
+            daily_transcript.record(
+                speaker_label, emoji or "[reaction]", is_bot=False, key=thread_key
+            )
         prompt = reaction_prompt_text(
             emoji, reacted_text, conversation_id, speaker_label
         )
@@ -3967,7 +4083,7 @@ def serve(cfg):
                         )
                         if hooks_active and group_info:
                             daily_transcript.record(
-                                sender_label, "[image]", is_bot=False
+                                sender_label, "[image]", is_bot=False, key=thread_key
                             )
                         conversation_id = conversations.resolve_thread(
                             thread_key, ha_session_seconds
@@ -4017,7 +4133,10 @@ def serve(cfg):
                             )
                             if hooks_active and group_info:
                                 daily_transcript.record(
-                                    sender_label, "[image]", is_bot=False
+                                    sender_label,
+                                    "[image]",
+                                    is_bot=False,
+                                    key=thread_key,
                                 )
                             conversation_id = conversations.resolve_thread(
                                 thread_key, ha_session_seconds
@@ -4102,6 +4221,7 @@ def serve(cfg):
                 transcription_config["failure_message"],
                 None,
                 thread_key=thread_key,
+                record_transcript=False,
             ):
                 print(
                     "signal-bot: reply queue full, dropping a transcription failure",
@@ -4130,7 +4250,7 @@ def serve(cfg):
                 print("signal-bot: handling a group sticker", file=sys.stderr)
                 if hooks_active and group_info:
                     daily_transcript.record(
-                        sender_label, emoji or "[sticker]", is_bot=False
+                        sender_label, emoji or "[sticker]", is_bot=False, key=thread_key
                     )
                 prompt = reaction_prompt_text(
                     emoji, None, conversation_id, speaker_label
@@ -4166,12 +4286,23 @@ def serve(cfg):
             )
             return
 
+        sender_is_admin = sender_number in admin_numbers
+
+        def visible_script_command(command_key):
+            sc = script_commands.get(command_key)
+            if sc is None:
+                return None
+            if sc.get("admin_only") and not sender_is_admin:
+                return None
+            return sc
+
         message_is_builtin_command = (
-            text.startswith("/") and split_command(text)[0] not in script_commands
+            text.startswith("/")
+            and visible_script_command(split_command(text)[0]) is None
         )
 
-        if hooks_active and group_info and not message_is_builtin_command:
-            daily_transcript.record(sender_label, text, is_bot=False)
+        if hooks_active and not message_is_builtin_command:
+            daily_transcript.record(sender_label, text, is_bot=False, key=thread_key)
         if cfg.get("memory_enable") and not message_is_builtin_command:
             memory_store.record(thread_key, sender_label, text)
 
@@ -4214,20 +4345,30 @@ def serve(cfg):
         shortcut_problem = None
         if text.startswith("/"):
             command_name, command_argument = split_command(text)
-            script_command = script_commands.get(command_name)
+            script_command = visible_script_command(command_name)
         else:
             shortcut_name = script_shortcuts.get(text[:1])
             if shortcut_name is not None:
-                command_name = shortcut_name
-                command_argument = text[1:].strip()
-                script_command = script_commands[shortcut_name]
-                if not command_argument[:1].isalnum():
-                    shortcut_problem = command_message(
-                        cfg, "script_shortcut_invalid", command_name
-                    ).replace("{shortcut}", text[:1])
+                candidate = visible_script_command(shortcut_name)
+                if candidate is not None:
+                    command_name = shortcut_name
+                    command_argument = text[1:].strip()
+                    script_command = candidate
+                    if not command_argument[:1].isalnum():
+                        shortcut_problem = command_message(
+                            cfg, "script_shortcut_invalid", command_name
+                        ).replace("{shortcut}", text[:1])
+                else:
+                    return
+        record_bot_reply = not message_is_builtin_command
         if script_command is not None:
             if not claim_budget(
-                budget_key, text, reply_target, current_quote(), thread_key
+                budget_key,
+                text,
+                reply_target,
+                current_quote(),
+                thread_key,
+                direct_number=sender_number,
             ):
                 return
             reply_text = shortcut_problem or script_argument_problem(
@@ -4257,22 +4398,26 @@ def serve(cfg):
                     if _mem:
                         script_argument = f"{_mem}\n\n{script_argument}"
                 with typing_indicator(reply_target):
-                    reply_text = call_ha_script(
+                    reply_text, script_ok = call_ha_script(
                         cfg, ha_token, command_name, script_command, script_argument
                     )
+                if not script_ok:
+                    record_bot_reply = False
                 conversations.remember_turn(
                     thread_key,
                     sender_label,
                     with_script_description(cfg, text, script_command),
                     True,
                 )
-                if isinstance(reply_text, str):
+                if script_ok and isinstance(reply_text, str):
                     conversations.remember_turn(
                         thread_key,
                         message_text(cfg, "quote_context_bot"),
                         reply_text,
                         True,
                     )
+            else:
+                record_bot_reply = False
         elif text.startswith("/"):
 
             reply_text = handle_command(
@@ -4284,10 +4429,19 @@ def serve(cfg):
                 group_maybe_report,
                 hooks_report,
                 memory_report,
+                is_admin=sender_number in admin_numbers,
+                memory_block=lambda: memory_store.memory_block(
+                    "group" if group_info else "direct"
+                ),
             )
         else:
             if not claim_budget(
-                budget_key, text, reply_target, current_quote(), thread_key
+                budget_key,
+                text,
+                reply_target,
+                current_quote(),
+                thread_key,
+                direct_number=sender_number,
             ):
                 return
             charged_key = budget_key
@@ -4471,6 +4625,8 @@ def serve(cfg):
                     file=sys.stderr,
                 )
             delivered = new_conversation_id is not None
+            if not delivered or reply_text in ha_error_messages:
+                record_bot_reply = False
             conversations.remember_thread(
                 thread_key, new_conversation_id, bool(recap) and delivered, drift
             )
@@ -4485,14 +4641,22 @@ def serve(cfg):
         if charged_key is not None and isinstance(reply_text, str):
             budget.charge(charged_key, reply_text)
 
+        send_target = reply_target
+        send_quote = current_quote()
+        send_thread_key = thread_key
+        if message_is_builtin_command and group_info and sender_number:
+            send_target = {"recipient": [sender_number]}
+            send_quote = None
+            send_thread_key = f"direct:{sender_number}"
+
         if not enqueue_send(
-            reply_target,
+            send_target,
             reply_text,
             conversation_id,
-            quote=current_quote(),
-            thread_key=thread_key,
-            transcript_key=thread_key,
-            record_transcript=not message_is_builtin_command,
+            quote=send_quote,
+            thread_key=send_thread_key,
+            transcript_key=send_thread_key,
+            record_transcript=record_bot_reply,
         ):
             print("signal-bot: reply queue full, dropping reply", file=sys.stderr)
 
@@ -4563,90 +4727,105 @@ def serve(cfg):
         ).start()
 
     def fire_hook(name, hook, window_key):
-        head, tail = daily_transcript.slice_blocks(
-            hook["context_first_messages"], hook["context_recent_messages"]
-        )
-        transcript_text = render_hook_transcript(
-            cfg,
-            head,
-            tail,
-            hooks_transcript_separator,
-            hooks_context_max_chars,
-            hooks_block_min_chars,
-        )
         trigger = random.choice(hook["triggers"])
         static_message = trigger.get("message")
-        if static_message is not None:
-            print(f"signal-bot: firing hook {name!r}", file=sys.stderr)
-            speech = static_message
-        else:
-            prompt = hook_prompt(
-                hooks_prompt_template,
-                hooks_instruction,
-                trigger["instruction"],
-                transcript_text,
-            )
-            _hook_mem = memory_store.memory_block("group")
-            if _hook_mem:
-                prompt = f"{_hook_mem}\n\n{prompt}"
-            print(f"signal-bot: firing hook {name!r}", file=sys.stderr)
-            speech = None
-            new_conversation_id = None
-            for attempt in range(HOOK_HA_RETRY_ATTEMPTS):
-                try:
-                    speech, new_conversation_id = call_ha_conversation(
-                        cfg, ha_token, prompt, None, hook["agent_id"]
-                    )
-                except Exception as e:
-                    speech, new_conversation_id = None, None
-                    log_error(
-                        f"signal-bot: hook {name!r} HA call raised on attempt "
-                        f"{attempt + 1} of {HOOK_HA_RETRY_ATTEMPTS}: {e}!"
-                    )
-                if (
-                    new_conversation_id is not None
-                    and isinstance(speech, str)
-                    and speech.strip()
-                    and speech not in ha_error_messages
-                ):
-                    break
-                if attempt + 1 < HOOK_HA_RETRY_ATTEMPTS:
-                    delay = HA_AGENT_ERROR_RETRY_DELAYS[
-                        min(attempt, len(HA_AGENT_ERROR_RETRY_DELAYS) - 1)
-                    ]
-                    print(
-                        f"signal-bot: hook {name!r} attempt {attempt + 1} failed, "
-                        f"retrying in {delay:.0f}s",
-                        file=sys.stderr,
-                    )
-                    time.sleep(delay)
-            if not isinstance(speech, str) or not speech.strip():
-                print(
-                    f"signal-bot: hook {name!r} got an empty reply from Home Assistant, "
-                    "not sending",
-                    file=sys.stderr,
-                )
-                return False
-            errored = new_conversation_id is None or speech in ha_error_messages
-            if errored and not hook["send_errors_into_chat"]:
-                log_error(
-                    f"signal-bot: hook {name!r} got an error reply from Home Assistant, "
-                    f"skipping instead of posting it: {speech.strip()[:200]!r}"
-                )
-                return False
         title = (trigger.get("title") or "").strip()
         url = (trigger.get("url") or "").strip()
-        body = speech.rstrip()
-        text, ranges = format_outbound_text(cfg, title, body, url)
-        group_id = current_group_id()
+
+        def generate(recap_key):
+            if static_message is not None:
+                print(f"signal-bot: firing hook {name!r}", file=sys.stderr)
+                speech = static_message
+                hook_ok = True
+            else:
+                head, tail = daily_transcript.slice_blocks(
+                    hook["context_first_messages"],
+                    hook["context_recent_messages"],
+                    recap_key,
+                )
+                transcript_text = render_hook_transcript(
+                    cfg,
+                    head,
+                    tail,
+                    hooks_transcript_separator,
+                    hooks_context_max_chars,
+                    hooks_block_min_chars,
+                )
+                prompt = hook_prompt(
+                    hooks_prompt_template,
+                    hooks_instruction,
+                    trigger["instruction"],
+                    transcript_text,
+                )
+                if hook.get("include_memory", True):
+                    _hook_mem = memory_store.memory_block("group")
+                    if _hook_mem:
+                        prompt = f"{_hook_mem}\n\n{prompt}"
+                print(f"signal-bot: firing hook {name!r}", file=sys.stderr)
+                speech = None
+                new_conversation_id = None
+                for attempt in range(HOOK_HA_RETRY_ATTEMPTS):
+                    try:
+                        speech, new_conversation_id = call_ha_conversation(
+                            cfg, ha_token, prompt, None, hook["agent_id"]
+                        )
+                    except Exception as e:
+                        speech, new_conversation_id = None, None
+                        log_error(
+                            f"signal-bot: hook {name!r} HA call raised on attempt "
+                            f"{attempt + 1} of {HOOK_HA_RETRY_ATTEMPTS}: {e}!"
+                        )
+                    if (
+                        new_conversation_id is not None
+                        and isinstance(speech, str)
+                        and speech.strip()
+                        and speech not in ha_error_messages
+                    ):
+                        break
+                    if attempt + 1 < HOOK_HA_RETRY_ATTEMPTS:
+                        delay = HA_AGENT_ERROR_RETRY_DELAYS[
+                            min(attempt, len(HA_AGENT_ERROR_RETRY_DELAYS) - 1)
+                        ]
+                        print(
+                            f"signal-bot: hook {name!r} attempt {attempt + 1} failed, "
+                            f"retrying in {delay:.0f}s",
+                            file=sys.stderr,
+                        )
+                        time.sleep(delay)
+                if not isinstance(speech, str) or not speech.strip():
+                    print(
+                        f"signal-bot: hook {name!r} got an empty reply from Home "
+                        "Assistant, not sending",
+                        file=sys.stderr,
+                    )
+                    return None
+                errored = new_conversation_id is None or speech in ha_error_messages
+                hook_ok = not errored
+                if errored and not hook["send_errors_into_chat"]:
+                    log_error(
+                        f"signal-bot: hook {name!r} got an error reply from Home "
+                        f"Assistant, skipping instead of posting it: "
+                        f"{speech.strip()[:200]!r}"
+                    )
+                    return None
+            body = speech.rstrip()
+            text, ranges = format_outbound_text(cfg, title, body, url)
+            return body, text, ranges, hook_ok
 
         def send_group():
+            group_id = current_group_id()
+            recap_key = f"group:{group_id}" if group_id else None
+            gen = generate(recap_key)
+            if gen is None:
+                return False
+            _body, text, ranges, hook_ok = gen
             return enqueue_send(
                 {"groupId": group_id},
                 text,
                 ranges=ranges,
                 notice=True,
-                transcript_key=f"group:{group_id}" if group_id else None,
+                transcript_key=recap_key,
+                record_transcript=hook_ok,
             )
 
         def send_contact(contact_name):
@@ -4658,12 +4837,17 @@ def serve(cfg):
                 )
                 return False
             direct_key = allowed_uuids.uuid_for(number) or number
+            gen = generate(f"direct:{direct_key}")
+            if gen is None:
+                return False
+            _body, text, ranges, hook_ok = gen
             return enqueue_send(
                 {"recipient": [number]},
                 text,
                 ranges=ranges,
                 notice=True,
                 transcript_key=f"direct:{direct_key}",
+                record_transcript=hook_ok,
             )
 
         def send_desktop(contact_name):
@@ -4673,7 +4857,22 @@ def serve(cfg):
                     "not available, skipping"
                 )
                 return False
-            return desktop.deliver(contact_name, body, title, url)
+            resolved_name = contact_name or desktop.default_recipient
+            user = desktop.recipients.get(resolved_name) if resolved_name else None
+            if user is None:
+                return False
+            recap_key = f"desktop:{user}"
+            gen = generate(recap_key)
+            if gen is None:
+                return False
+            body, text, ranges, hook_ok = gen
+            queued = desktop.deliver(contact_name, body, title, url)
+            if queued and hook_ok:
+                if hooks_active:
+                    daily_transcript.record(bot_label, text, is_bot=True, key=recap_key)
+                if cfg.get("memory_enable"):
+                    memory_store.record(recap_key, bot_label, text)
+            return queued
 
         contact = hook["target_contact"]
         reservation = hook_state.mark_fired(name, window_key)
@@ -4750,6 +4949,12 @@ def serve(cfg):
         scheduler = HookScheduler(
             cfg, hooks_config, hook_state, daily_transcript, fire_hook
         )
+
+    if cfg.get("memory_enable"):
+        seed_transcripts = memory_store.snapshot_transcripts()
+        conversations.seed(seed_transcripts)
+        if hooks_active:
+            daily_transcript.seed(seed_transcripts)
 
     rpc.on_receive = dispatch_receive
     rpc.start_reader()
@@ -4846,7 +5051,13 @@ def serve(cfg):
         desktop_mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(desktop_mod)
 
-        def desktop_handle_command(text):
+        desktop_admin_users = {
+            oauth_user
+            for oauth_user, name in desktop_recipients_by_user.items()
+            if contacts_by_name.get(name) in admin_numbers
+        }
+
+        def desktop_handle_command(text, is_admin=False):
             return handle_command(
                 cfg,
                 ha_token,
@@ -4856,6 +5067,8 @@ def serve(cfg):
                 group_maybe_report,
                 hooks_report,
                 memory_report,
+                is_admin=is_admin,
+                memory_block=lambda: memory_store.memory_block("desktop"),
             )
 
         def desktop_call_ha(text, conversation_id):
@@ -4873,10 +5086,14 @@ def serve(cfg):
                 f"signal-bot: running the desktop script command {command_name}",
                 file=sys.stderr,
             )
-            reply = call_ha_script(
+            reply, ok = call_ha_script(
                 cfg, ha_token, command_name, script_command, command_argument
             )
-            return reply, with_script_description(cfg, source_text, script_command)
+            return reply, (
+                with_script_description(cfg, source_text, script_command)
+                if ok
+                else None
+            )
 
         def desktop_is_conversational_script(text):
             stripped = text.strip()
@@ -4893,16 +5110,20 @@ def serve(cfg):
                         return shortcut_name, sc, stripped[1:].strip()
             return None
 
+        _desktop_silent = object()
+
         def desktop_call_script(command_name, script_command, prompt):
             return call_ha_script(cfg, ha_token, command_name, script_command, prompt)
 
-        def desktop_command_reply(text):
+        def desktop_command_reply(text, is_admin=False):
             stripped = text.strip()
             if stripped.startswith("/"):
                 command_name, command_argument = split_command(stripped)
                 script_command = script_commands.get(command_name)
                 if script_command is None:
-                    return desktop_handle_command(stripped), None
+                    return desktop_handle_command(stripped, is_admin=is_admin), None
+                if script_command.get("admin_only") and not is_admin:
+                    return desktop_handle_command(stripped, is_admin=is_admin), None
                 if script_command.get("conversational"):
                     problem = script_argument_problem(
                         cfg, command_name, script_command, command_argument
@@ -4916,6 +5137,9 @@ def serve(cfg):
             shortcut_name = script_shortcuts.get(stripped[:1]) if stripped else None
             if shortcut_name is None:
                 return None, None
+            sc = script_commands[shortcut_name]
+            if sc.get("admin_only") and not is_admin:
+                return _desktop_silent, None
             command_argument = stripped[1:].strip()
             if not command_argument[:1].isalnum():
                 return (
@@ -4924,7 +5148,6 @@ def serve(cfg):
                     ).replace("{shortcut}", stripped[:1]),
                     None,
                 )
-            sc = script_commands[shortcut_name]
             if sc.get("conversational"):
                 problem = script_argument_problem(
                     cfg, shortcut_name, sc, command_argument
@@ -4960,6 +5183,7 @@ def serve(cfg):
             ha_session_seconds=ha_session_seconds,
             call_ha_conversation=desktop_call_ha,
             command_reply=desktop_command_reply,
+            is_desktop_admin=lambda user: user in desktop_admin_users,
             reaction_reply=reaction_reply,
             budget=budget,
             budget_key_for=desktop_budget_key,
@@ -4972,8 +5196,10 @@ def serve(cfg):
             follow_up_window=lambda: follow_up_window(cfg),
             memory_block=lambda: memory_store.memory_block("desktop"),
             memory_record=memory_store.record,
+            daily_transcript_record=daily_transcript.record if hooks_active else None,
             is_builtin_command=lambda value: value.startswith("/")
             and split_command(value)[0] not in script_commands,
+            silent_drop=_desktop_silent,
             is_conversational_script=desktop_is_conversational_script,
             call_script=desktop_call_script,
             with_desktop_sender=lambda name, text: (lambda p: f"[{p} {name}]\n{text}")(
