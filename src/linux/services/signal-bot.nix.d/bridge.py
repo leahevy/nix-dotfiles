@@ -3269,8 +3269,8 @@ class MemoryStore:
         )
         entry_tpl = self.cfg["memory_entry_template"]
         context_tpl = self.cfg["memory_context_template"]
-        parts = [entry_tpl.format(date=s["date"], summary=s["text"]) for s in summaries]
-        memory_text = "\n\n".join(parts)
+        latest = summaries[-1]
+        memory_text = entry_tpl.format(date=latest["date"], summary=latest["text"])
         try:
             return context_tpl.format(memory=memory_text, channel=channel)
         except (KeyError, IndexError):
