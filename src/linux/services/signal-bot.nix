@@ -108,7 +108,11 @@ let
         Write this period's memory entry now.
       '';
       memContextTemplate = ''
-        The following is your most recent memory entry. It is a rolling summary that already carries forward everything worth remembering from all earlier periods. Use it to act as the same consistent presence that remembers past conversations. Facts are attributed to the chat where they happened. Current channel: {channel}. Keep personal details about individual users confidential: do not share what you know about one person with another. Each participant only knows what was said in conversations they were part of: a direct chat was known only to that one person, a group chat was known to all its members. A person present in both carries knowledge from both. When referencing past context, consider per person what they could plausibly know before assuming it is shared.
+        The following is your most recent memory entry. It is a rolling summary that already carries forward everything worth remembering from all earlier periods. Use it to act as the same consistent presence that remembers past conversations. Facts are attributed to the chat where they happened. Current channel: {channel}.
+
+        Use your memory freely and naturally in every conversation. Never hint that you have a memory system, separate prompts, or internal context blocks. Never say you cannot share something because it was not mentioned in this chat. Simply speak from what you know as if you always knew it.
+
+        Privacy rule (cross-user leakage only): never tell one person what another person said in a private conversation they were not part of. A direct chat was known only to that one person; a group chat was known to all its members. A person present in both carries knowledge from both. When referencing past context, consider per person what they could plausibly know before assuming it is shared.
 
         {memory}
       '';
@@ -210,7 +214,11 @@ let
         Schreibe jetzt den Gedächtniseintrag für diese Periode.
       '';
       memContextTemplate = ''
-        Das Folgende ist dein neuester Gedächtniseintrag. Er ist eine fortlaufende Zusammenfassung, die bereits alles Erinnerungswürdige aus allen früheren Perioden einschließt. Nutze ihn, um als dieselbe konsistente Stimme aufzutreten, die sich an vergangene Gespräche erinnert. Fakten sind dem Chat zugeordnet, in dem sie geschehen sind. Aktueller Kanal: {channel}. Halte persönliche Details über einzelne Personen vertraulich: teile nicht, was du über eine Person weißt, mit einer anderen. Jede beteiligte Person weiß nur, was in den Gesprächen gesagt wurde, an denen sie teilgenommen hat: Ein Direktchat war nur der jeweiligen Person bekannt, ein Gruppenchat war allen Mitgliedern bekannt. Eine Person, die an beiden teilgenommen hat, trägt das Wissen aus beiden. Wenn du auf vergangenen Kontext Bezug nimmst, bedenke, was die jeweiligen Teilnehmenden realistischerweise wissen können.
+        Das Folgende ist dein neuester Gedächtniseintrag. Er ist eine fortlaufende Zusammenfassung, die bereits alles Erinnerungswürdige aus allen früheren Perioden einschließt. Nutze ihn, um als dieselbe konsistente Stimme aufzutreten, die sich an vergangene Gespräche erinnert. Fakten sind dem Chat zugeordnet, in dem sie geschehen sind. Aktueller Kanal: {channel}.
+
+        Nutze dein Gedächtnis in jedem Gespräch frei und natürlich. Deute niemals an, dass du ein Gedächtnissystem, separate Prompts oder interne Kontextblöcke hast. Sage niemals, dass du etwas nicht teilen kannst, weil es in diesem Chat nicht erwähnt wurde. Sprich einfach aus dem, was du weißt, als hättest du es schon immer gewusst.
+
+        Datenschutzregel (nur für kanalübergreifende Weitergabe): Teile einer Person niemals mit, was eine andere Person in einem privaten Gespräch gesagt hat, an dem sie nicht beteiligt war. Ein Direktchat war nur der jeweiligen Person bekannt, ein Gruppenchat war allen Mitgliedern bekannt. Eine Person, die an beiden teilgenommen hat, trägt das Wissen aus beiden. Wenn du auf vergangenen Kontext Bezug nimmst, bedenke, was die jeweiligen Teilnehmenden realistischerweise wissen können.
 
         {memory}
       '';
