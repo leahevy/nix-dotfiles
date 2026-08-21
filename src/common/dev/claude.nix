@@ -832,7 +832,7 @@ in
 
               def _in_allowed_root(tok):
                   part = tok.split("=", 1)[-1] if "=" in tok else tok
-                  resolved = os.path.normpath(os.path.expanduser(part))
+                  resolved = os.path.realpath(os.path.expanduser(part))
                   if under(resolved, cwd):
                       return True
                   if under(resolved, CLAUDE_TMP):
@@ -843,10 +843,11 @@ in
                       parent = resolved if os.path.isdir(resolved) else os.path.dirname(resolved)
                       r = subprocess.run([GIT, "-C", parent, "rev-parse", "--show-toplevel"],
                                          capture_output=True, text=True, timeout=3)
-                      git_root = os.path.normpath(r.stdout.strip())
-                      if not git_root or git_root == ".":
+                      git_root = r.stdout.strip()
+                      if not git_root:
                           return False
-                      nxconfig_norm = os.path.normpath(NXCONFIG)
+                      git_root = os.path.realpath(git_root)
+                      nxconfig_norm = os.path.realpath(NXCONFIG)
                       if under(git_root, nxconfig_norm) or git_root == nxconfig_norm:
                           return False
                       if any(under(git_root, d) or git_root == d for d in EXTRA_DIR_DENY):
@@ -909,14 +910,14 @@ in
                   elif lead_cmd == 'cd':
                       if len(lead_tokens) < 2:
                           return "cd to home directory is not allowed"
-                      resolved = os.path.normpath(os.path.expanduser(lead_tokens[1]))
+                      resolved = os.path.realpath(os.path.expanduser(lead_tokens[1]))
                       if resolved == HOME:
                           return "cd to home directory is not allowed"
                       if under(resolved, CLAUDE_HOME):
                           ask("cd to ~/.claude requires review: " + resolved)
                       if not under(resolved, CLAUDE_TMP):
                           git_root = run([GIT, "-C", cwd, "rev-parse", "--show-toplevel"], cwd)
-                          if not (git_root and under(resolved, os.path.normpath(git_root))):
+                          if not (git_root and under(resolved, os.path.realpath(git_root))):
                               return "cd to path outside current project: " + lead_tokens[1]
                   elif lead_cmd == 'nix':
                       if lead_tokens[1:3] != ['flake', 'prefetch']:
@@ -1066,9 +1067,23 @@ in
                   if re.search(pattern, target):
                       deny("path denied by guardrailDisallowedPaths: " + target)
               if tool_name == "Read":
+                  real_target = os.path.realpath(target)
                   cwd_root = run([GIT, "-C", cwd, "rev-parse", "--show-toplevel"], cwd)
-                  if cwd_root and under(target, os.path.normpath(cwd_root)):
+                  if cwd_root and under(real_target, os.path.realpath(cwd_root)):
                       allow("read within project")
+                  try:
+                      parent = real_target if os.path.isdir(real_target) else os.path.dirname(real_target)
+                      r = subprocess.run([GIT, "-C", parent, "rev-parse", "--show-toplevel"],
+                                         capture_output=True, text=True, timeout=3)
+                      raw = r.stdout.strip()
+                      if raw:
+                          git_root = os.path.realpath(raw)
+                          nxconfig_norm = os.path.realpath(NXCONFIG)
+                          if not (under(git_root, nxconfig_norm) or git_root == nxconfig_norm):
+                              if not any(under(git_root, d) or git_root == d for d in EXTRA_DIR_DENY):
+                                  allow("read within git repo")
+                  except Exception:
+                      pass
 
           if cmd:
               for pattern in EXTRA_CMD_DENY:
