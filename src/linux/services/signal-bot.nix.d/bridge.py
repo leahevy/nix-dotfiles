@@ -1618,6 +1618,11 @@ def with_context_recap(cfg, transcript, text):
         return f"{values['transcript']}\n{values['text']}"
 
 
+def time_context_prefix(mem=""):
+    time_line = f"[Current time: {time.strftime('%Y-%m-%d %H:%M')}]"
+    return f"{time_line}\n\n{mem}" if mem else time_line
+
+
 def normalize_emoji(value):
     if not isinstance(value, str):
         return ""
@@ -4392,11 +4397,10 @@ def serve(cfg):
                     script_argument = (
                         with_context_recap(cfg, recap, spoken) if recap else spoken
                     )
-                    _mem = memory_store.memory_block(
-                        "group" if speaker_label else "direct"
+                    script_argument = (
+                        f"{time_context_prefix(memory_store.memory_block('group' if speaker_label else 'direct'))}"
+                        f"\n\n{script_argument}"
                     )
-                    if _mem:
-                        script_argument = f"{_mem}\n\n{script_argument}"
                 with typing_indicator(reply_target):
                     reply_text, script_ok = call_ha_script(
                         cfg, ha_token, command_name, script_command, script_argument
@@ -4604,9 +4608,7 @@ def serve(cfg):
                 prompt = with_quote_context(cfg, author, quoted, prompt)
             if recap:
                 prompt = with_context_recap(cfg, recap, prompt)
-            _mem = memory_store.memory_block("group" if speaker_label else "direct")
-            if _mem:
-                prompt = f"{_mem}\n\n{prompt}"
+            prompt = f"{time_context_prefix(memory_store.memory_block('group' if speaker_label else 'direct'))}\n\n{prompt}"
             conversations.remember_turn(thread_key, sender_label, text)
 
             with typing_indicator(reply_target, typing_delay_seconds):
@@ -4758,9 +4760,9 @@ def serve(cfg):
                     transcript_text,
                 )
                 if hook.get("include_memory", True):
-                    _hook_mem = memory_store.memory_block("group")
-                    if _hook_mem:
-                        prompt = f"{_hook_mem}\n\n{prompt}"
+                    prompt = f"{time_context_prefix(memory_store.memory_block('group'))}\n\n{prompt}"
+                else:
+                    prompt = f"{time_context_prefix()}\n\n{prompt}"
                 print(f"signal-bot: firing hook {name!r}", file=sys.stderr)
                 speech = None
                 new_conversation_id = None
@@ -5195,6 +5197,9 @@ def serve(cfg):
             bot_label=message_text(cfg, "quote_context_bot"),
             follow_up_window=lambda: follow_up_window(cfg),
             memory_block=lambda: memory_store.memory_block("desktop"),
+            context_prefix=lambda: time_context_prefix(
+                memory_store.memory_block("desktop")
+            ),
             memory_record=memory_store.record,
             daily_transcript_record=daily_transcript.record if hooks_active else None,
             is_builtin_command=lambda value: value.startswith("/")

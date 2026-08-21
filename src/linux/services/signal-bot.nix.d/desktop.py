@@ -433,9 +433,7 @@ class DesktopChannel:
                                 self.transcripts.remember_turn(
                                     user, self.speaker_label(user), text, pending=True
                                 )
-                                mem = brain.memory_block()
-                                if mem:
-                                    prompt = f"{mem}\n\n{prompt}"
+                                prompt = f"{brain.context_prefix()}\n\n{prompt}"
                                 reply, script_ok = brain.call_script(
                                     command_name, script_command, prompt
                                 )
@@ -472,9 +470,7 @@ class DesktopChannel:
                                 self.transcripts.remember_turn(
                                     user, self.speaker_label(user), text
                                 )
-                                mem = brain.memory_block()
-                                if mem:
-                                    prompt = mem + "\n\n" + prompt
+                                prompt = f"{brain.context_prefix()}\n\n{prompt}"
                                 reply, new_id = brain.call_ha_conversation(
                                     prompt, conversation_id
                                 )
