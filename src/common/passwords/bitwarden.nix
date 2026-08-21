@@ -642,7 +642,7 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Mod+Ctrl+Alt+K" = {
-              action = spawn-sh "niri-scratchpad --app-id Bitwarden --all-windows --spawn bitwarden";
+              action = spawn-sh "niri-scratchpad --app-id bitwarden --all-windows --spawn bitwarden";
               hotkey-overlay.title = "Apps:Bitwarden";
             };
           };
@@ -651,7 +651,7 @@ args@{
             {
               matches = [
                 {
-                  app-id = "Bitwarden";
+                  app-id = "bitwarden";
                 }
               ];
               open-on-workspace = "scratch";
