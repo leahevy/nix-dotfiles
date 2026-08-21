@@ -825,6 +825,14 @@ in
                   if seg and seg[0] in forbidden:
                       deny(seg[0] + " is blocked")
 
+          def preprocess_cmd(cmd):
+              parts = []
+              for line in cmd.split('\n'):
+                  s = line.strip()
+                  if s and not s.startswith('#'):
+                      parts.append(s)
+              return ' ; '.join(parts)
+
           def is_readonly_listing(tokens):
               if tokens is None:
                   return "command could not be parsed"
@@ -838,6 +846,9 @@ in
                   if under(resolved, CLAUDE_TMP):
                       return True
                   if under(resolved, CLAUDE_HOME):
+                      rel = resolved[len(CLAUDE_HOME):].lstrip(os.sep).split(os.sep)
+                      if len(rel) >= 4 and rel[0] == 'projects' and rel[3] == 'tool-results':
+                          return True
                       ask("access to ~/.claude requires review: " + resolved)
                   try:
                       parent = resolved if os.path.isdir(resolved) else os.path.dirname(resolved)
@@ -865,10 +876,14 @@ in
                   lead_tokens = pipe_stages[0]
                   lead_cmd = lead_tokens[0]
                   lead = ' '.join(lead_tokens)
+                  if lead_cmd != 'git' and any(tok in ('{', '}') for tok in lead_tokens):
+                      return "shell metacharacter in command"
+                  if lead_cmd != 'git' and any('..' in tok for tok in lead_tokens):
+                      return "path traversal (..) in command"
                   if lead_cmd == 'echo':
                       pass
                   elif lead_cmd == 'git':
-                      if not re.match(r"^git(\s+(--no-pager|-C\s+\S+))*\s+(ls-files|log|status|check-ignore|diff|show)\b", lead):
+                      if not re.match(r"^git(\s+(--no-pager|-C\s+\S+))*\s+(ls-files|log|status|check-ignore|diff|show|rev-parse)\b", lead):
                           return "git subcommand not in allowlist"
                       if re.search(r"(^|\s)(-c|--config|--exec-path|--git-dir|--work-tree|--namespace|--bare|--output)(=|\s|$)", lead):
                           return "git command with unsafe flags"
@@ -988,6 +1003,10 @@ in
                       if tool not in READONLY_FILTERS:
                           return "pipe filter not auto-allowed, review required: " + tool
                       for tok in stage[1:]:
+                          if tok in ('{', '}'):
+                              return "shell metacharacter in command"
+                          if '..' in tok:
+                              return "path traversal (..) in command"
                           if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
                               if not _in_allowed_root(tok):
                                   return "absolute path not under a recognised git root: " + tok
@@ -1005,14 +1024,12 @@ in
                                   return "yq with in-place flag"
                   return None
 
-              BLOCKING_TOKENS = frozenset(['<', '>', '`', '{', '}', '(', ')', '&', '$', '\n'])
+              BLOCKING_TOKENS = frozenset(['<', '>', '`', '(', ')', '&', '$'])
               for tok in tokens:
                   if tok in OPERATORS or tok == '|':
                       continue
                   if tok in BLOCKING_TOKENS:
                       return "shell metacharacter in command"
-                  if '..' in tok:
-                      return "path traversal (..) in command"
               for part in _split_on(tokens, OPERATORS):
                   reason = _check_part(part)
                   if reason is not None:
@@ -1089,6 +1106,7 @@ in
               for pattern in EXTRA_CMD_DENY:
                   if re.search(pattern, cmd):
                       deny("command denied by guardrailDisallowedCommands")
+              cmd = preprocess_cmd(cmd)
               tokens = _tokenize(cmd)
               _check_forbidden(tokens)
               if re.search(r"(^|[;&|()\s])rm\s", cmd) and re.search(r"-\w*r\w*f|-\w*f\w*r|-r\b.*-f\b|-f\b.*-r\b", cmd):

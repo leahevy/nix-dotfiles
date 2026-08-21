@@ -440,6 +440,7 @@ args@{
 
           "72 - Available Programs" = [
             "Never attempt to run `ssh`, `rsync`, or `scp`."
+            "Never use `sed`, neither for editing nor for reading. To print or slice file contents use `head`, `tail`, or `cat`; to change a file, edit it directly instead of stream editing."
           ];
 
           "70 - Git" =
