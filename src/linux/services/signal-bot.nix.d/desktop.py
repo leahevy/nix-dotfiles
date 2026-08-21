@@ -472,7 +472,8 @@ class DesktopChannel:
                                 self.transcripts.remember_turn(
                                     user, self.speaker_label(user), text
                                 )
-                                prompt = f"{brain.context_prefix()}\n\n{prompt}"
+                                if conversation_id is None:
+                                    prompt = f"{brain.context_prefix()}\n\n{prompt}"
                                 reply, new_id = brain.call_ha_conversation(
                                     prompt, conversation_id
                                 )

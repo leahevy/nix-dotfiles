@@ -4595,7 +4595,8 @@ def serve(cfg):
                 prompt = with_quote_context(cfg, author, quoted, prompt)
             if recap:
                 prompt = with_context_recap(cfg, recap, prompt)
-            prompt = f"{time_context_prefix(memory_store.memory_block('group' if speaker_label else 'direct'))}\n\n{prompt}"
+            if conversation_id is None:
+                prompt = f"{time_context_prefix(memory_store.memory_block('group' if speaker_label else 'direct'))}\n\n{prompt}"
             conversations.remember_turn(thread_key, sender_label, text)
 
             with typing_indicator(reply_target, typing_delay_seconds):
