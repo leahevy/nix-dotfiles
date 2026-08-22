@@ -90,7 +90,8 @@ let
         2. Capture what is worth remembering: events, plans, decisions, commitments, preferences, facts, and the general mood. Leave out small talk that carries no lasting information.
         3. Carry forward still relevant facts from your earlier memory so important context is not lost when old entries are dropped. Do not simply copy old entries, fold what still matters into this period's entry.
         4. Maintain a section titled People. For each known person write their name followed by compact key: value descriptors covering only persistent identity: role or relationship, recurring personality traits, lasting preferences. Use short phrases or single words per property, separated by commas or semicolons. Never describe what they said or did in a single period; those details belong in the chat sections above. Note which chat you first learned the identity facts in.
-        5. Be concise and factual. Do not invent anything. Write plain text with no preamble and no meta commentary.
+        5. Always include a section titled Ongoing. Write a short paragraph summarizing everything that is currently in progress, unresolved, or worth watching, drawing from both this period's transcripts and your prior memory. Write it even if this period was quiet or had no chat activity at all; in that case base it entirely on prior memory. This section must never be empty or omitted.
+        6. Be concise and factual. Do not invent anything. Write plain text with no preamble and no meta commentary.
       '';
       memPromptTemplate = ''
         {instruction}
@@ -196,7 +197,8 @@ let
         2. Halte fest, was erinnerungswürdig ist: Ereignisse, Pläne, Entscheidungen, Zusagen, Vorlieben, Fakten und die allgemeine Stimmung. Lass Smalltalk weg, der keine bleibende Information trägt.
         3. Trage weiterhin relevante Fakten aus deinem früheren Gedächtnis fort, damit wichtiger Zusammenhang nicht verloren geht, wenn alte Einträge wegfallen. Kopiere alte Einträge nicht einfach, sondern arbeite ein, was weiterhin wichtig ist, in den Eintrag dieser Periode.
         4. Pflege einen Abschnitt mit dem Titel Personen. Schreibe für jede bekannte Person ihren Namen, gefolgt von kompakten Schlüssel: Wert-Beschreibungen, die nur dauerhaft gültige Identitätsmerkmale erfassen: Rolle oder Beziehung, wiederkehrende Charaktereigenschaften, bleibende Vorlieben. Verwende kurze Phrasen oder einzelne Wörter pro Eigenschaft, getrennt durch Komma oder Semikolon. Beschreibe niemals, was die Person in einer einzelnen Periode gesagt oder getan hat; solche Details gehören in die Chat-Abschnitte oben. Gib an, in welchem Chat du die Identitätsfakten erstmals erfahren hast.
-        5. Sei knapp und sachlich. Erfinde nichts. Schreibe reinen Text ohne Vorrede und ohne Meta-Kommentar.
+        5. Füge immer einen Abschnitt mit dem Titel Laufendes ein. Schreibe einen kurzen Absatz, der alles zusammenfasst, was gerade in Bearbeitung ist, noch offen steht oder im Blick behalten werden sollte, und stütze dich dabei auf die Protokolle dieser Periode und dein früheres Gedächtnis. Schreibe diesen Abschnitt auch dann, wenn diese Periode ruhig war oder keine Chat-Aktivität enthielt; in diesem Fall stütze dich ausschließlich auf das frühere Gedächtnis. Dieser Abschnitt darf niemals leer sein oder fehlen.
+        6. Sei knapp und sachlich. Erfinde nichts. Schreibe reinen Text ohne Vorrede und ohne Meta-Kommentar.
       '';
       memPromptTemplate = ''
         {instruction}
