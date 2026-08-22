@@ -377,6 +377,24 @@ in
       description = "Maximum number of subagents to run concurrently when delegation is enabled.";
     };
 
+    allowForkSubagents = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Allow Claude to spawn fork subagents.";
+    };
+
+    allowNestedSubagents = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Allow subagents to spawn further subagents.";
+    };
+
+    defaultSubagentType = lib.mkOption {
+      type = lib.types.str;
+      default = "general-purpose";
+      description = "Default agent type Claude spawns for general subagent work.";
+    };
+
     hookHandlers = lib.mkOption {
       type = lib.types.submodule {
         options = lib.genAttrs hookEvents (
@@ -492,12 +510,16 @@ in
         delegateEnabled = config.nx.common.dev.claude.delegateToSubagents;
         agentModel = config.nx.common.dev.claude.subagentModel;
         maxAgents = config.nx.common.dev.claude.maxConcurrentSubagents;
+        allowFork = config.nx.common.dev.claude.allowForkSubagents;
+        allowNested = config.nx.common.dev.claude.allowNestedSubagents;
+        defaultAgentType = config.nx.common.dev.claude.defaultSubagentType;
         resolvedAgentModel = if agentModel != null then agentModel else config.nx.common.dev.claude.model;
         baseInstructions = {
           "90 - Claude" = [
             "Use the conversation as initial context, then read only the files and local context required to complete the request."
             "Batch all changes into as few operations as possible."
             "Don't analyse too much on first feasibility questions to avoid wasting tokens."
+            "If a background event (task notification, agent message, command result) triggers a turn but you have already reported everything relevant to the user in a prior response this session, run Bash 'true' as a no-op instead of repeating yourself. Use description: 'Background task completed' on the Bash call. Do not also write text; the no-op is the entire response."
             "If a tool call fails only because its approval could not be delivered (a transient approval-path error asking to try again, never a nonzero exit code or other tool error), silently reissue it up to three times before telling the user, and do not print that message."
             [
               "Use the AskUserQuestion tool when:"
@@ -525,7 +547,9 @@ in
           "95 - Subagent Workflow" = [
             "All implementation, review, search, and web search work must be executed in subagents, not inline in the main session."
             "Always pass model: ${resolvedAgentModel} to the Agent tool when spawning subagents."
+            "Always pass subagent_type: ${defaultAgentType} to the Agent tool unless spawning a named custom agent type."
             "Keep no more than ${builtins.toString maxAgents} subagents running concurrently."
+            "When a subagent sends you a message: if it is a progress update, do NOT reply (replying resumes the subagent and causes a redundant extra turn); if it is a blocking question, reply immediately via SendMessage (at minimum 'Continue') so the subagent is not deadlocked. Never leave a waiting subagent without a reply."
           ];
         };
         baseSkills = { };
@@ -733,6 +757,16 @@ in
           "docs.renovatebot.com"
         ];
 
+        forkDenyBlock = lib.optionalString (!allowFork) ''
+          if tool_name == "Agent" and tool_input(data).get("subagent_type") == "fork":
+              deny("Fork subagents are disabled; use subagent_type '${defaultAgentType}' instead")
+        '';
+
+        nestedDenyBlock = lib.optionalString (!allowNested) ''
+          if tool_name == "Agent" and data.get("agent_id"):
+              deny("Subagents may not spawn further subagents")
+        '';
+
         guardrailBody = ''
           NXCONFIG = os.path.join(HOME, ".config", "nx", "nxconfig")
           CLAUDE_TMP = os.path.join("/tmp", "claude-" + str(os.getuid()))
@@ -881,7 +915,7 @@ in
                       return "shell metacharacter in command"
                   if lead_cmd != 'git' and any('..' in tok for tok in lead_tokens):
                       return "path traversal (..) in command"
-                  if lead_cmd == 'echo':
+                  if lead_cmd in ('true', 'false', 'echo'):
                       pass
                   elif lead_cmd == 'git':
                       if not re.match(r"^git(\s+(--no-pager|-C\s+\S+))*\s+(ls-files|log|status|check-ignore|diff|show|rev-parse)\b", lead):
@@ -1048,6 +1082,8 @@ in
           BAKED_WEB_DOMAINS = set(${builtins.toJSON bakedWebDomains})
           ALLOWED_WEB_PATTERNS = ${builtins.toJSON config.nx.common.dev.claude.allowedWebFetchDomains}
 
+          ${forkDenyBlock}
+          ${nestedDenyBlock}
           if tool_name == "WebSearch":
               query = tool_input(data).get("query") or ""
               if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", query):
@@ -1288,6 +1324,8 @@ in
         voiceModeEnabled,
         defaultVoiceMode,
         sounds,
+        delegateToSubagents,
+        allowNestedSubagents,
         ...
       }:
       let
@@ -1683,8 +1721,25 @@ in
           ]
         ) activeSoundHooks;
 
-        subagentStyleScript =
-          pkgs.writers.writePython3 "nx-claude-subagent-style"
+        subagentStartParts = [
+          (
+            "You are a subagent. Your work should be self-contained and drive toward a conclusion without user interaction."
+            + lib.optionalString (!allowNestedSubagents) " You may not spawn further subagents yourself."
+          )
+        ]
+        ++ lib.optional delegateToSubagents (
+          lib.concatStringsSep "\n" [
+            "Communicating with the main agent via SendMessage to \"main\":"
+            "- Progress updates or findings: send and continue working. Do not wait for a reply."
+            "- Blocking uncertainty you cannot resolve alone: send and wait. The main agent will reply to unblock you."
+          ]
+        )
+        ++ lib.optional styleEnabled ("Output style (nx):\n\n" + styleText);
+
+        subagentStartContext = lib.concatStringsSep "\n\n" subagentStartParts;
+
+        subagentStartScript =
+          pkgs.writers.writePython3 "nx-claude-subagent-start"
             {
               flakeIgnore = [
                 "E501"
@@ -1695,19 +1750,17 @@ in
             ''
               import json
               import sys
-              json.dump({"hookSpecificOutput": {"hookEventName": "SubagentStart", "additionalContext": ${
-                builtins.toJSON ("Output style (nx):\n\n" + styleText)
-              }}}, sys.stdout)
+              json.dump({"hookSpecificOutput": {"hookEventName": "SubagentStart", "additionalContext": ${builtins.toJSON subagentStartContext}}}, sys.stdout)
               sys.exit(0)
             '';
 
-        styleHookEntries = lib.optionalAttrs styleEnabled {
+        subagentStartHookEntries = {
           SubagentStart = [
             {
               hooks = [
                 {
                   type = "command";
-                  command = builtins.toString subagentStyleScript;
+                  command = builtins.toString subagentStartScript;
                 }
               ];
             }
@@ -1715,14 +1768,16 @@ in
         };
 
         allHookEvents = lib.unique (
-          lib.attrNames renderedHooks ++ lib.attrNames soundHookEntries ++ lib.attrNames styleHookEntries
+          lib.attrNames renderedHooks
+          ++ lib.attrNames soundHookEntries
+          ++ lib.attrNames subagentStartHookEntries
         );
         mergedHooks = lib.filterAttrs (_: v: v != [ ]) (
           lib.genAttrs allHookEvents (
             event:
             (soundHookEntries.${event} or [ ])
             ++ (renderedHooks.${event} or [ ])
-            ++ (styleHookEntries.${event} or [ ])
+            ++ (subagentStartHookEntries.${event} or [ ])
           )
         );
       in
