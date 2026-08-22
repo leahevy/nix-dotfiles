@@ -771,6 +771,10 @@ in
           NXCONFIG = os.path.join(HOME, ".config", "nx", "nxconfig")
           CLAUDE_TMP = os.path.join("/tmp", "claude-" + str(os.getuid()))
           CLAUDE_HOME = os.path.join(HOME, ".claude")
+          NX_INPUT_ROOTS = [
+              "/etc/nx/inputs",
+              os.path.join(HOME, ".local", "share", "nx", "inputs"),
+          ]
 
           def nxconfig_allowed(target):
               base = os.path.basename(target)
@@ -875,10 +879,13 @@ in
 
               def _in_allowed_root(tok):
                   part = tok.split("=", 1)[-1] if "=" in tok else tok
-                  resolved = os.path.realpath(os.path.expanduser(part))
+                  normalized = os.path.normpath(os.path.expanduser(part))
+                  resolved = os.path.realpath(normalized)
                   if under(resolved, cwd):
                       return True
                   if under(resolved, CLAUDE_TMP):
+                      return True
+                  if any(under(normalized, r) for r in NX_INPUT_ROOTS):
                       return True
                   if under(resolved, CLAUDE_HOME):
                       rel = resolved[len(CLAUDE_HOME):].lstrip(os.sep).split(os.sep)
@@ -1109,6 +1116,8 @@ in
               target = resolve(cwd, path)
               if under(target, NXCONFIG) and not nxconfig_allowed(target):
                   deny("access to nxconfig is off-limits: " + target)
+              if tool_name == "Read" and any(under(target, r) for r in NX_INPUT_ROOTS):
+                  allow("read from nx inputs")
               if any(under(target, d) for d in EXTRA_DIR_DENY):
                   if tool_name == "Read" and under(target, "/nix/store"):
                       ask("reading from nix store: " + target)
