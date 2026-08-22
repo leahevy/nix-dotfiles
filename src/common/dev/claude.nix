@@ -1042,6 +1042,55 @@ in
                       if not stage:
                           return "empty pipe segment"
                       tool = stage[0]
+                      if tool == "xargs":
+                          XARGS_BLOCKED = re.compile(
+                              r'^(-a|--arg-file|-[iI]|--replace|-o|--open-tty|-p|--interactive|--process-slot-var)(=|$)'
+                          )
+                          XARGS_TAKES_ARG = frozenset(['-d', '-E', '-e', '-I', '-L', '-l', '-n', '-P', '-s'])
+                          xargs_cmd = None
+                          xargs_args = stage[1:]
+                          xi = 0
+                          while xi < len(xargs_args):
+                              tok = xargs_args[xi]
+                              if XARGS_BLOCKED.match(tok):
+                                  return "xargs with unsafe flag: " + tok
+                              if tok.startswith('-') and not tok.startswith('--') and tok[1:2] in XARGS_TAKES_ARG:
+                                  xi += 2
+                                  continue
+                              if tok.startswith('--') and '=' not in tok:
+                                  xi += 1
+                                  continue
+                              if tok.startswith('-'):
+                                  xi += 1
+                                  continue
+                              xargs_cmd = tok
+                              break
+                          if xargs_cmd is None:
+                              return "xargs with no command"
+                          if xargs_cmd not in READONLY_FILTERS:
+                              return "xargs command not in read-only set: " + xargs_cmd
+                          xargs_sub = xargs_args[xi + 1:]
+                          for tok in xargs_sub:
+                              if tok in ('{', '}'):
+                                  return "shell metacharacter in command"
+                              if '..' in tok:
+                                  return "path traversal (..) in command"
+                              if re.match(r"^[/~]", tok) or re.search(r"=[/~]", tok):
+                                  if not _in_allowed_root(tok):
+                                      return "absolute path not under a recognised git root: " + tok
+                          if xargs_cmd not in GREP_FAMILY:
+                              for tok in xargs_sub:
+                                  if re.match(r"^(-o|-O|--output|--output-file|--out-file)(=|$)", tok):
+                                      return "output redirection flag in read-only command"
+                          if xargs_cmd == 'rg':
+                              for tok in xargs_sub:
+                                  if re.match(r"^(--pre|--pre-glob|--hostname-bin)(=|$)", tok):
+                                      return "rg with exec flag"
+                          if xargs_cmd == 'yq':
+                              for tok in xargs_sub:
+                                  if re.match(r"^(-i|--in-place)(=|$)", tok):
+                                      return "yq with in-place flag"
+                          continue
                       if tool not in READONLY_FILTERS:
                           return "pipe filter not auto-allowed, review required: " + tool
                       for tok in stage[1:]:
