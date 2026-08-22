@@ -890,6 +890,10 @@ in
               #ipprotection-button { display: none !important; }
             '';
 
+            disableAllTabsButtonCSS = ''
+              #alltabs-button { display: none !important; }
+            '';
+
             disableSidebarButtonCSS = ''
               #sidebar-button { display: none !important; }
             '';
@@ -1147,6 +1151,7 @@ in
             ]
             ++ [
               disableVPNButtonCSS
+              disableAllTabsButtonCSS
               disableSidebarButtonCSS
               disableStarIconCSS
               disableReaderModeButtonCSS
