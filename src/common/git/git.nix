@@ -370,6 +370,8 @@ args@{
             background = "dark";
             color = "always";
             display = "inline";
+            "graph-limit" = "80000000";
+            "byte-limit" = "3000000";
           };
         };
 
