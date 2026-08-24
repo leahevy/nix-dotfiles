@@ -42,6 +42,7 @@
     "codex"
     "claude-code"
     "beeper"
+    "proton-ge-bin"
   ];
   unstableLinuxPackages = [ ];
   unstableDarwinPackages = [ ];
