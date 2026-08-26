@@ -1516,7 +1516,8 @@ in
                       and os.path.realpath(target) == os.path.join(cwd_root, os.path.basename(target))):
                   allow("agent instruction file in current repo root: " + target)
               if under(target, NXCONFIG):
-                  if nxconfig_allowed(target):
+                  real_target = os.path.realpath(target)
+                  if nxconfig_allowed(target) and not any(under(real_target, s) for s in SECRET_DIRS) and not SECRET_FILE.search(real_target):
                       allow("nxconfig markdown or flake file: " + target)
                   else:
                       deny("access to nxconfig is off-limits: " + target)
@@ -1582,7 +1583,7 @@ in
                   deny("writing with dd to a block device is blocked")
               if re.search(r"(curl|wget)[^|]*\|[^|]*(sh|bash|python3?|perl|ruby|node)", cmd):
                   deny("piping a download into a shell or interpreter is blocked")
-              if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", cmd) and not re.search(r"\.md(\W|$)|flake\.nix|flake\.lock", cmd):
+              if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", cmd):
                   deny("referencing nxconfig from a shell command is blocked")
               META = frozenset(['<', '>', '`', '(', ')', '$', '{', '}'])
               if tokens and not any(t in META for t in tokens):
