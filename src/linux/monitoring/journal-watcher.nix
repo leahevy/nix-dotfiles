@@ -1032,11 +1032,20 @@ args@{
 
                 Translate the JSON after `pattern:` to a Nix attrset. Drop non-matcher fields like `priority`.
 
+                ## Precondition for Adding Ignores
+
+                Writing ignore or highlight patterns requires editing nxcore source files.
+                NXCore lives at `~/.config/nx/nxcore`. Before attempting any file edits,
+                check that this directory exists. If it does not, tell the user: "Adding
+                patterns requires nxcore - `~/.config/nx/nxcore` does not exist on this
+                machine." You may still run the journalctl command above and show the user
+                the translated Nix attrset, but do not attempt to write any files.
+
                 ## Placement
 
                 - Known owning module -> add to its `enabled` block via `nx.linux.monitoring.journal-watcher.ignorePatterns`
                 - Generic noise with no owner -> `journal-watcher.nix` base settings (`baseKernelStringsToIgnore`, `baseSystemStringsToIgnore`, `baseUserStringsToIgnore`, `baseStringsToIgnore`)
-                - Machine-specific or private patterns -> anonymize to a generic regex first; if it cannot be meaningfully generalized, add it to the user's profile via `additionalKernelStringsToIgnore` etc. instead. The user can override and request nxcore placement -- anonymization still applies.
+                - Machine-specific or private patterns -> anonymize to a generic regex first and add to nxcore; that is the preferred path. If the pattern cannot be meaningfully generalized, do NOT add it anywhere yourself. Instead show the user the translated Nix attrset and tell them to add it to their private config under `additionalKernelStringsToIgnore` (or the matching scope variant) themselves.
 
                 Always scope as specifically as possible. Combine `service` + `string`, `tag` + `string`, or all three. Never blanket-ignore a tag unless it is entirely noise.
 
@@ -1052,7 +1061,7 @@ args@{
                 { service = "foo.service"; string = "startup"; } # compound AND
                 ```
 
-                `string` is a regex -- escape literal dots, parens, brackets. Plain `{ string }` matches system scope only; add `kernel`, `user`, `unitless`, or `all` for other scopes.
+                `string` is a regex - escape literal dots, parens, brackets. Plain `{ string }` matches system scope only; add `kernel`, `user`, `unitless`, or `all` for other scopes.
 
                 ## Triage
 

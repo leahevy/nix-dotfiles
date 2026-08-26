@@ -384,6 +384,7 @@ args@{
           "Exception, no exceptions: code, commands, paths, errors, version numbers, and option names stay exact and complete. Never compress or paraphrase these."
           "Exception: stay complete and uncompressed for the pre-change disclosure (symptom/goal, root cause, files, expected change), the reason given before a risky or irreversible action or a revert, and a remote-session preview (full diff or content shown before an Edit/Write/Bash call). These are required disclosures, not restating or padding."
           "Plain ASCII prose only. No arrow or symbol shorthand for words."
+          "When an em dash is needed in prose written to the user, write it as three hyphens (---), never as the Unicode em dash character (U+2014). Never use an en dash (U+2013) in prose to the user at all; rewrite the sentence instead. This rule applies only to chat messages --- never introduce --- sequences or dashes-as-punctuation into file contents, code, or any written artifact."
           "If the honest answer is one word or one line, give one word or one line."
         ];
 
@@ -428,7 +429,7 @@ args@{
           ];
           "10 - Work Style" = [
             "Always follow the user's explicit instructions exactly; don't add extra work, refactors, formatting, or \"helpful checks\" unless asked."
-            "Before making any code/content changes, state: (a) the symptom/goal, (b) suspected root cause, (c) exact files to change, (d) expected behaviour change."
+            "Before making any code/content changes, state each of these on its own line with the label in bold: **(a) Goal** (the symptom or goal), **(b) Root cause** (suspected), **(c) Files** (exact files to change), **(d) Expected change** (what behaviour changes)."
             "Keep diffs minimal and localised; prefer the smallest change that achieves the goal."
             "If something is ambiguous or high-risk, stop and ask a concrete question rather than guessing."
             "Don't run long-running, expensive, or side-effectful commands without saying exactly what you'll run and why; default to not running them unless requested."
@@ -456,6 +457,11 @@ args@{
             "Verification is the user's job; do not prompt them about it."
             "Never invent function, variable, or CLI names; verify on the web first."
             "Keep scripts idempotent."
+            [
+              "If a tool call is denied with a message saying the action is forbidden or off-limits: do not attempt to achieve the same action through other means (obfuscated commands, alternative paths, indirect reads, etc.)."
+              "If the denial message tells you how to do it instead, follow that guidance and proceed that way."
+              "You may still continue with the rest of the task through means that do not involve the denied action."
+            ]
           ];
           "80 - Misc" = [
             "Use the `date` command when working with dates or times."
@@ -617,6 +623,10 @@ args@{
                    heavily that a clean separation would be artificial. When suggesting
                    multiple commits, list the files that belong to each commit in
                    parentheses directly after the commit message on the same line.
+                   Order commits so that each one is a fully working, buildable unit on
+                   its own: if applying only the first N commits would produce a broken
+                   or non-building state, the ordering is wrong. If a clean ordering is
+                   not possible, collapse the affected commits into one.
                    Never omit this section.
                  - End the output with exactly one line containing only the verdict:
                    "${readyVerdict}" or "${blockedVerdict}".
@@ -688,24 +698,38 @@ args@{
           "create-nix-module" = {
             description = "Create a new NX module in nxcore.";
             text = ''
+              ## Precondition
+
+              NXCore lives at `~/.config/nx/nxcore`. Before doing anything else, check
+              that this directory exists. If it does not, tell the user: "This skill is
+              not applicable on this machine - `~/.config/nx/nxcore` does not exist."
+              Then stop; do not proceed with any of the steps below.
+
+              All paths in the steps below (e.g. `src/`, `templates/`) are relative to
+              `~/.config/nx/nxcore`. Use that as the working root for every file
+              operation.
+
               ## Steps
 
               1. Check for an existing similar module: `${
-                if ripgrepEnabled then ''rg -l "keyword" ./src/'' else ''grep -rl "keyword" ./src/''
+                if ripgrepEnabled then
+                  ''rg -l "keyword" ~/.config/nx/nxcore/src/''
+                else
+                  ''grep -rl "keyword" ~/.config/nx/nxcore/src/''
               }`
               2. Find the target group and read 1-2 sibling modules to match conventions.
                  Modules-only inputs (`common`, `linux`, `darwin`, `overlays`, `themes`, `groups`) use `src/INPUT/GROUP/`.
                  The `build` input uses `src/build/modules/GROUP/`.
-                 Do not create modules in `config`, `profile`, or `userProfile` -- those live in nxconfig.
-              3. Copy `templates/modules/module.nix` to the correct path -- never write a module from scratch.
-                 - Modules-only: `src/<INPUT>/<GROUP>/<NAME>.nix`
-                 - Build input: `src/build/modules/<GROUP>/<NAME>.nix`
+                 Do not create modules in `config`, `profile`, or `userProfile` - those live in nxconfig.
+              3. Copy `~/.config/nx/nxcore/templates/modules/module.nix` to the correct path - never write a module from scratch.
+                 - Modules-only: `~/.config/nx/nxcore/src/<INPUT>/<GROUP>/<NAME>.nix`
+                 - Build input: `~/.config/nx/nxcore/src/build/modules/<GROUP>/<NAME>.nix`
               4. Set `name`, `group`, and `input` to match the filename, directory, and input path exactly.
               5. Use full store paths in systemd services (`''${pkgs.coreutils}/bin/cat`, not `cat`).
                  Guard `systemd.user.services` with `self.isLinux` in common modules.
               6. Create a companion directory only if config files or secrets are needed:
-                 `src/<INPUT>/<GROUP>/<NAME>.nix.d/`
-              7. Tell the user which profile needs updating to enable the module -- do not read or edit profile files yourself.
+                 `~/.config/nx/nxcore/src/<INPUT>/<GROUP>/<NAME>.nix.d/`
+              7. Tell the user which profile needs updating to enable the module - do not read or edit profile files yourself.
             '';
           };
         };

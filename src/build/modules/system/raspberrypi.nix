@@ -22,12 +22,21 @@ args@{
           text = ''
             # Raspberry Pi Config Changes
 
+            ## Precondition
+
+            NXCore lives at `~/.config/nx/nxcore`. Before doing anything else, check
+            that this directory exists. If it does not, tell the user: "This skill is
+            not applicable on this machine - `~/.config/nx/nxcore` does not exist."
+            Then stop; do not proceed with any of the steps below.
+
+            All paths below are relative to `~/.config/nx/nxcore`.
+
             Two separate files handle Pi configuration. Never mix them:
 
-            - `src/build/config/system/raspberrypi.nix`: infrastructure only (imports, bootloader type, assertions using host.*). No module-system access.
-            - `src/build/modules/system/raspberrypi.nix`: all NixOS option-setting (kernel params, dtparams, dtoverlays, journal-watcher ignores). Full module function access.
+            - `~/.config/nx/nxcore/src/build/config/system/raspberrypi.nix`: infrastructure only (imports, bootloader type, assertions using host.*). No module-system access.
+            - `~/.config/nx/nxcore/src/build/modules/system/raspberrypi.nix`: all NixOS option-setting (kernel params, dtparams, dtoverlays, journal-watcher ignores). Full module function access.
 
-            Never add nx.* options, self.* calls, or module.enabled blocks to src/build/config/system/raspberrypi.nix.
+            Never add nx.* options, self.* calls, or module.enabled blocks to `~/.config/nx/nxcore/src/build/config/system/raspberrypi.nix`.
 
             ## config.txt via nixos-raspberrypi
 

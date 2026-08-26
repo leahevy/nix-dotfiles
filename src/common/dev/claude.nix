@@ -675,9 +675,9 @@ in
                 "Under the agents plans directory (NX_AGENTS_PLANS_DIR), read plan files with the Read tool and create or change their contents only with the Write and Edit tools, never with sed or shell redirection. Read-only shell commands (ls, grep, cat) are allowed there, for example to find still-open plans. mv and rm are allowed only when every path stays inside the plans directory, for example to archive a finished plan into the archive subdirectory or remove a stale one. Do not run other mutating shell commands against plan files."
             )
             [
-              "When asked to look at or modify .nix source files, or to investigate how Claude Code is configured (hooks, skills, agents, settings, permissions, guardrail), find the nix source in the current git repository, never in deployed files."
-              "For .nix files: search the repo (e.g. src/common/dev/claude.nix for Claude config, src/common/dev/agents.nix for shared agent config)."
-              "For Claude Code configuration: the source of truth is the nix files in the repo. Never open ~/.claude/settings.json, ~/.claude/CLAUDE.md, ~/.claude/agents/, ~/.claude/skills/, or any other file under ~/.claude/ to understand how Claude is configured -- those are generated build outputs and reading them instead of the source is always wrong."
+              "When asked to look at or modify .nix source files, find them in the current git repository, never in deployed files."
+              "When asked to investigate or change how Claude Code is configured (hooks, skills, agents, settings, permissions, guardrail): the source lives in nxcore, not in ~/.claude/. If the current git repository is nxcore itself, search it directly (e.g. src/common/dev/claude.nix, src/common/dev/agents.nix). Otherwise look for nxcore at ~/.config/nx/nxcore. If that path does not exist on this machine, tell the user the change cannot be made here."
+              "For Claude Code configuration: the source of truth is the nix files in nxcore. Never read or write ~/.claude/settings.json, ~/.claude/CLAUDE.md, ~/.claude/agents/, ~/.claude/skills/, or any other file under ~/.claude/ - those are generated build outputs. Reading them is wrong, and writing to them directly is wrong. All configuration changes must go through the nxcore nix source and a rebuild."
             ]
             [
               "Use the AskUserQuestion tool when:"
@@ -704,11 +704,6 @@ in
             "$NX_AGENTS_PLANS_DIR is always set by the claude wrapper to the plans directory for the current repo; use it directly without any slug computation."
             "rm -rf is blocked; use individual rm per file and rmdir for empty directories."
             "Never write file content via shell heredocs (e.g. cat >> file <<'EOF' ... EOF). This is a hard rule with no exceptions: always use the Write or Edit tool for file writes."
-            [
-              "If a tool call is denied with a message saying the action is forbidden or off-limits: do not attempt to achieve the same action through other means (obfuscated commands, alternative paths, indirect reads, etc.)."
-              "If the denial message tells you how to do it instead, follow that guidance and proceed that way."
-              "You may still continue with the rest of the task through means that do not involve the denied action."
-            ]
           ]
           ++
             lib.optional (!delegateEnabled || reviewModel == null)
@@ -1354,6 +1349,9 @@ in
                   elif lead_cmd == 'systemctl':
                       if not re.match(r"^systemctl(\s+(-[a-zA-Z]+|--[a-zA-Z0-9=-]+))*\s+(status|cat|show|is-active|is-enabled|is-failed|get-default|list-units|list-timers|list-sockets|list-jobs|list-unit-files)\b", lead):
                           return "systemctl subcommand not in allowlist"
+                  elif lead_cmd == 'date':
+                      if re.search(r"(^|\s)(-[a-zA-Z]*s|--(set)(=|\s|$))", lead):
+                          return "date with clock-setting flag (-s/--set) is blocked"
                   elif lead_cmd == 'journalctl':
                       if re.search(r"(^|\s)(--vacuum-(size|time|files)|--rotate|--flush|--sync|--dmesg)\b", lead):
                           return "journalctl with mutating flag"
@@ -1487,7 +1485,7 @@ in
           ${missingSubagentTypeDenyBlock}
           ${codeReviewDenyBlock}
           if tool_name == "Skill" and tool_input(data).get("skill") == "claude-api":
-              deny("The claude-api skill is disabled. Search docs.anthropic.com or code.claude.com via the web agent instead.")
+              deny("The claude-api skill is disabled. Search docs.anthropic.com or code.claude.com for the information you need.")
           if tool_name == "WebSearch":
               query = tool_input(data).get("query") or ""
               if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", query):
@@ -1673,7 +1671,7 @@ in
           last = pointer_path(data.get("session_id"))
           if event == "PostCompact" and os.path.isfile(last):
               with open(last) as handle:
-                  sections.append("=== Pre-Compact Snapshot ===\n" + handle.read().strip() + "\n(Do not read this file in full with Read or cat -- it may be very large. Use head, tail, or jq with line limits if inspection is needed.)")
+                  sections.append("=== Pre-Compact Snapshot ===\n" + handle.read().strip() + "\n(Do not read this file in full with Read or cat - it may be very large. Use head, tail, or jq with line limits if inspection is needed.)")
           if event == "PostCompact":
               _style_text = ${builtins.toJSON styleText}
               if _style_text:
