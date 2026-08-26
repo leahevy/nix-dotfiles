@@ -14,6 +14,57 @@ args@{
   input = "build";
 
   module = {
+    linux.init =
+      config:
+      lib.mkIf config.nx.common.dev.agents.enable {
+        nx.common.dev.agents.skills."raspberry-pi-config" = {
+          description = "Add or modify Raspberry Pi firmware config, dtparams, dtoverlays, or kernel boot parameters.";
+          text = ''
+            # Raspberry Pi Config Changes
+
+            Two separate files handle Pi configuration. Never mix them:
+
+            - `src/build/config/system/raspberrypi.nix`: infrastructure only (imports, bootloader type, assertions using host.*). No module-system access.
+            - `src/build/modules/system/raspberrypi.nix`: all NixOS option-setting (kernel params, dtparams, dtoverlays, journal-watcher ignores). Full module function access.
+
+            Never add nx.* options, self.* calls, or module.enabled blocks to src/build/config/system/raspberrypi.nix.
+
+            ## config.txt via nixos-raspberrypi
+
+            All config.txt settings go via `hardware.raspberry-pi.config`. Top-level key is a filter section (use `all` unless hardware-model-specific):
+
+            ```nix
+            hardware.raspberry-pi.config.all = {
+              options."arm_boost" = { enable = true; value = true; };          # key=value lines
+              base-dt-params."pciex1_gen" = { enable = true; value = 2; };     # dtparam= lines
+              dt-overlays."pciex1-compat-pi5" = {
+                enable = true;
+                params.no-mip.enable = true;
+              };
+            };
+            ```
+
+            Use `hardware.raspberry-pi.extra-config` for raw verbatim lines only when the structured API cannot express the setting.
+
+            ## Kernel boot parameters
+
+            Go in `boot.kernelParams` inside `module.linux.system` (NOT in config/raspberrypi.nix).
+
+            ## Finding valid dtparam and overlay names
+
+            Always verify names against `/boot/firmware/overlays/README` on the running Pi before adding. Invalid names are silently ignored by firmware.
+
+            In the README: plain indented lines under an overlay = base dtparams (use `base-dt-params`). Lines under a `Name:` header with `Load: dtoverlay=...` = named overlays (use `dt-overlays`).
+
+            ## Inspecting the nixos-raspberrypi flake source
+
+            The input is available at `/etc/nx/inputs/nixos-raspberrypi/`. Key files:
+            - `modules/configtxt-config.nix`: option type definitions (field names and types)
+            - `modules/configtxt.nix`: default values and examples
+          '';
+        };
+      };
+
     linux.system = config: {
       nix.settings.max-jobs = 1;
       nix.settings.cores = 2;

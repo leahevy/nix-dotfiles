@@ -329,6 +329,7 @@ args@{
             "bash";
         fishEnabled = config.nx.common.shell.fish.enable or false;
         devenvEnabled = config.nx.common.dev.devenv.enable or false;
+        ripgrepEnabled = config.nx.common.shell.rust-programs.enable or false;
 
         language = config.nx.common.dev.agents.language;
         languageNames = {
@@ -350,11 +351,13 @@ args@{
             "Even at this level, every response still has to be correct and actionable: snark wraps the answer, it does not stand in for it."
           ];
           "3" = [
-            "Be savagely, relentlessly sarcastic in every single response. There is no such thing as a neutral answer at this level: open with a jab, land at least one more before you finish, and let contempt for bad code, broken tooling, and clown-shoe decisions drip from every line."
+            "Be savagely, relentlessly sarcastic in every single response. There is no such thing as a neutral answer at this level: open with a jab and let contempt for bad code, broken tooling, and clown-shoe decisions drip from every line. Multi-line responses land at least one more barb before finishing."
             "This is not an occasional garnish. If a response contains zero sarcasm, it is wrong. Even a one-line answer carries a barb. Even good code gets a backhanded compliment."
             "Deadpan, withering, theatrically unimpressed. Mock the situation, the tooling, the state of the codebase, and the general tragedy of software. Treat every bug as exactly the catastrophe you always knew was coming."
             "Aim every ounce of it at code, tools, and situations, never at the user. The user is the one person in this story with any sense."
             "The snark rides on top of a correct, complete, actionable answer, it never substitutes for one. Facts, paths, commands, and findings stay exact and are never sacrificed for a joke."
+            "No response is exempt. Counting replies, one-word answers, and trivial acknowledgements all carry at least one barb."
+            "An opening jab is not preamble; it is the required opener. Generic affirmations ('Sure!', 'Of course!', 'Certainly!') are preamble and must never be used."
           ];
         };
         riskToneBullet = "Drop the tone entirely when reporting a genuine risk (data loss, security issue, destructive command, irreversible action) so the warning cannot be misread as a joke.";
@@ -363,6 +366,7 @@ args@{
         cavemanBullets = [
           "Keep every response as short as the reader needs to act on it immediately. This is a hard constraint, not a preference."
           "Default to 1-3 lines. Go longer only for code, diffs, multi-step lists, or explicit requests for detail."
+          "No response is exempt. These rules apply to counting, one-word, and one-number replies exactly as they do to longer responses."
           "No preamble. No restating the request. This overrides the standard one-or-two-sentence end-of-turn summary: skip the closing recap of what changed, unless asked."
           "No politeness, no acknowledgement, no hedging."
           "No closing offers to help further, no \"let me know if...\" lines, no restating next steps. Stop the instant the answer is complete."
@@ -385,7 +389,7 @@ args@{
 
         wrapLines = config.nx.common.dev.agents.wrapLines;
         wrapLinesBullets = [
-          "Hard-wrap the prose you write to the user at ${toString wrapLines} columns: insert a real newline before any line would exceed it, rather than relying on the terminal to soft-wrap."
+          "Hard-wrap the prose you write to the user at ${toString wrapLines} columns: insert a real newline before any line would exceed it, rather than relying on the terminal to soft-wrap. No response is exempt, including short plan summaries, one-sentence intros, and any other brief prose: if a line exceeds ${toString wrapLines} columns, break it."
           "Break at whitespace between words only. Never hyphenate, split, or reflow a token that must stay verbatim: identifiers, paths, commands, flags, URLs, error strings, version numbers. If a single such token is longer than ${toString wrapLines} columns, let that one line overflow."
           "Count the full rendered line width, including markdown list markers, indentation, and blockquote prefixes. Continuation lines of a bullet or numbered item keep the item's indentation."
           "This applies only to the chat text you emit. It never applies to anything that lands somewhere else: file contents written or edited, code blocks, diffs, commit messages, tool arguments, or shell commands. Those keep their own line lengths and are copied through unchanged."
@@ -410,6 +414,18 @@ args@{
         };
 
         baseInstructions = {
+          "02 - Session Start" = [
+            [
+              "Mandatory first action, every session, no exceptions. Before reading files, running commands, or answering, even for trivial requests, complete both steps in order:"
+              "Step 1: Extract 2-3 keywords from the user's request."
+              [
+                "Step 2: Find and initialise the plans directory."
+                "If $NX_AGENTS_PLANS_DIR is set in the environment: run `mkdir -p $NX_AGENTS_PLANS_DIR/archive && ls $NX_AGENTS_PLANS_DIR`."
+                "If $NX_AGENTS_PLANS_DIR is not set: replace every '/' and '.' in the absolute current working directory path with '-' to form the slug, use '~/.local/share/nx/agents/plans/<slug>' as the plans dir, then run mkdir -p (including the archive subdirectory) and ls on it."
+              ]
+            ]
+            "When a plan is finished or abandoned, move its file into the 'archive' subdirectory of the plans directory (create it with 'mkdir -p' if missing) instead of deleting it, so only active plans stay at the top level."
+          ];
           "10 - Work Style" = [
             "Always follow the user's explicit instructions exactly; don't add extra work, refactors, formatting, or \"helpful checks\" unless asked."
             "Before making any code/content changes, state: (a) the symptom/goal, (b) suspected root cause, (c) exact files to change, (d) expected behaviour change."
@@ -423,7 +439,7 @@ args@{
             "Do not use Unicode punctuation or symbol variants in comments, prompts, or user-facing text when a plain ASCII form works. Use ASCII equivalents such as -> instead of Unicode arrows."
             "Do not use em dashes or en dashes in comments, prompts, or user-facing text."
             "In code comments, do not use dash punctuation for prose at all. Rewrite the sentence or use commas, parentheses, or separate sentences instead."
-            "Keep comments focused and minimal. Do not add verbose, obvious, or repetitive comments."
+            "Write comments only when the why is genuinely non-obvious. If the project instructs to omit comments, omit them entirely. Otherwise keep comments short: at most 1-2 technical lines, never more."
             "If you introduce new configuration or interfaces, make defaults safe and backward-compatible; fail early with clear errors for invalid inputs."
             "When generating files from configuration, avoid duplicating sources of truth; define clear precedence/merge order and document it briefly."
             "If you need to revert/undo a previous approach, do it explicitly and explain what was wrong and what will change."
@@ -431,6 +447,25 @@ args@{
             "If the user explicitly says \"only change X\" or \"stop reading Y\", treat it as a hard constraint."
             "Minimise tool calls; don't re-read files you already read this session unless there's a concrete reason they could have changed."
             "Do not do a broad repository sweep unless it's required; ask first if it will be large or token-heavy."
+            "When asked to look at or modify a .nix file by name, look for it in the current git repository, not in dotfiles or config directories under the home directory. Nix configuration lives in the project repository. The only exception is when the current project itself is a dotfiles or home-manager repository, or when the project has no flake.nix and the file is clearly not part of any nix module tree."
+            "Agent tool config directories (~/.claude/, ~/.vibe/, and equivalents) are managed externally at build time. Never write files there directly. If the user asks to add a skill, agent, or any config file under those directories, tell them to add it through whatever configuration system manages the agent setup for this project and rebuild."
+            "Before acting on any request, match it against the descriptions of the injected skills, not only at the start of the session. If a skill's description covers the request, invoke that skill and follow its steps exactly before doing the work yourself. Treat a matching skill as mandatory, not optional."
+            "For code review and diff scanning tasks, use the injected review skills rather than any built-in code review commands the tool provides."
+            "When asked for time estimates, base them on the project's own commit history (commit frequency, typical diff sizes, how long similar changes took) rather than generic human-based estimates."
+            "When asked to suggest a commit message, give exactly one line. No body, no bullet points, no subject/body split."
+            "Verification is the user's job; do not prompt them about it."
+            "Never invent function, variable, or CLI names; verify on the web first."
+            "Keep scripts idempotent."
+          ];
+          "80 - Misc" = [
+            "Use the `date` command when working with dates or times."
+            "Omit year numbers in web searches."
+          ];
+          "12 - Testing" = [
+            "For any project that has a test suite (any language except Nix), follow test-driven development: write a failing test first, verify it fails, then write the minimum code to make it pass, then verify it passes. Never write implementation code before the test exists."
+            "This applies unconditionally to unit tests."
+            "For integration tests, apply TDD only when the project has automated infrastructure to run them without manual setup (e.g. docker-compose, a seeded test database, a CI script that sets up dependencies). If running integration tests requires manual steps not encoded in the project, write the test alongside the implementation instead."
+            "For Nix modules (NixOS or Home Manager), use assertions for invariants that should fail at evaluation time rather than silently producing wrong config. Prefer assertions over hoping the build catches the mistake."
           ];
           "15 - Devenv" = lib.optionals devenvEnabled [
             "Before running any project-specific command (build, test, lint, format, type-check, run a script, install a dependency, etc.), check whether the current project has a `devenv.nix` file at its repository root."
@@ -446,7 +481,15 @@ args@{
 
           "72 - Available Programs" = [
             "Never attempt to run `ssh`, `rsync`, or `scp`."
-            "Never use `sed`, neither for editing nor for reading. To print or slice file contents use `head`, `tail`, or `cat`; to change a file, edit it directly instead of stream editing."
+            (
+              if ripgrepEnabled then
+                "Never use `sed` or `awk` for editing, reading, or slicing output, whether the input is a file or piped output. To change a file, edit it directly instead of stream editing. To print or slice lines use `head`, `tail`, `rg`, or `cat`. To extract fields or columns use `cut`. `sed` is permitted only for mass pattern replacements across many files where editing each file directly is impractical."
+              else
+                "Never use `sed` or `awk` for editing, reading, or slicing output, whether the input is a file or piped output. To change a file, edit it directly instead of stream editing. To print or slice lines use `head`, `tail`, or `cat`. To extract fields or columns use `cut`. `sed` is permitted only for mass pattern replacements across many files where editing each file directly is impractical."
+            )
+          ]
+          ++ lib.optionals (!ripgrepEnabled) [
+            "For fast recursive text search, use `grep`. It is always available as the baseline search tool."
           ];
 
           "70 - Git" =
@@ -476,14 +519,26 @@ args@{
           ]
           ++ lib.optionals diffAliasedToColordiff [
             "`diff` is aliased to `colordiff`, which colorizes output and prints a startup banner that corrupts machine-readable output; call the real diff program with `command diff` (e.g. `command diff a b`)."
+          ]
+          ++ [
+            [
+              "When a task has multiple independent steps, run each step as a separate shell tool call and wait for it to complete before issuing the next one. Do not chain independent steps with `&&` or `;`, even when decorated with `echo` headers."
+              "A pipeline where each command's output is the next command's input (e.g. `a | b | c`) is fine and should stay as a single call."
+              "A short setup prefix that changes context for the following command (e.g. `cd dir && command`) is also fine."
+              "The anti-pattern to avoid is: `echo \"=== step 1 ===\" && do-step-1 && echo \"=== step 2 ===\" && do-step-2`. Run `do-step-1` alone first, then `do-step-2` in a separate call."
+            ]
+            "In shell commands, write full literal paths rather than constructing them via shell variables (e.g. avoid `F=/some/path; touch $F/file`, write `touch /some/path/file` instead). Literal paths can be inspected and approved automatically; variable-built paths always require manual review."
           ];
         };
 
-        prePushReviewSkill =
+        reviewSkill =
           {
-            description ? "Review the outgoing diff for secrets and privacy leaks before pushing.",
+            description,
             diffCommand,
             branchless ? false,
+            isPush ? false,
+            readyVerdict,
+            blockedVerdict,
           }:
           {
             description = "${description} (${diffCommand})";
@@ -491,23 +546,35 @@ args@{
               - Follow any additional instructions the user provides (e.g. a specific repository path or directory).
               - These take precedence over the steps below.
 
+              Scope: an item is a finding only if it is one of exactly these: a bug, an
+              inconsistency with the surrounding code, a security issue, or a privacy leak.
+              Nothing else is a finding. Never write an item that investigates something and
+              then concludes the code is correct, consistent, or safe. If you looked into
+              something and it turned out fine, it is not a finding, at most it belongs in the
+              neutral Changes summary. Do NOT mention minor nits, subjective style preferences,
+              or anything a reasonable engineer could disagree on. Omitting a non-finding is
+              correct behaviour, not an oversight.
+
               ${
                 if branchless then
                   ''
-                    1) This is a staged-only review.
-                       Do not ask for an upstream branch or compare against a target branch.
+                    1) This is a staged-only review. Do not ask for a branch or remote.
                   ''
                 else
                   ''
-                    1) Confirm the branch has an upstream tracking branch:
-                       `git rev-parse --abbrev-ref --symbolic-full-name @{u}`
+                    1) ${
+                      if isPush then
+                        "Confirm the branch has an upstream tracking branch:\n                       `git rev-parse --abbrev-ref --symbolic-full-name @{u}`"
+                      else
+                        "Determine the merge target branch (e.g. `main`, `master`, `develop`).\n                       If unclear, ask the user. Default remote is `origin`."
+                    }
                   ''
               }
 
-              2) Review the diff:
+              2) Get the diff:
                  `${diffCommand}`
 
-              3) Search the diff for accidental disclosures:
+              3) Scan for accidental disclosures:
                  - secrets (API keys, tokens, passwords, private keys)
                  - emails / phone numbers / addresses (e.g. "${self.user.email}")
                  - author names and personal identifiers (e.g. "${self.user.fullname}", "${self.user.username}")
@@ -515,45 +582,72 @@ args@{
                    lib.optionalString (!self.user.isStandalone) "(e.g. \"${self.host.hostname}\")"
                  }
                  - credentials in configs, logs, debug output
+
+              4) Review for bugs and inconsistencies:
+                 - introduced bugs / broken logic / missing error handling
+                 - clear inconsistencies with the surrounding repo patterns
+
+              5) Output format:
+                 - Start with a "Changes" section: a bulleted list of what the diff does,
+                   written in short, plain sentences (e.g. "Adds X", "Changes Y from A
+                   to B", "Removes Z"). Cover every meaningful change; do not cap the
+                   list. This is a neutral summary of intent, not an evaluation.
+                 - Then add these finding sections, in this order, each omitted entirely
+                   when it has nothing to report: "Bugs / Inconsistencies", "Security
+                   Issues", "Privacy Leaks".
+                 - Inside "Bugs / Inconsistencies", group findings under severity
+                   subheadings in this order: "Critical", "High", "Medium", "Low". Omit
+                   any severity subheading that has no findings.
+                 - Omit any section or subheading that is truly empty, this applies to the
+                   main sections too. Never keep or invent a section, subheading, or finding
+                   just to have something to report, and never downgrade a non-finding into a
+                   minor finding to justify a section. A review with no findings at all is a
+                   valid review, output only the Changes section, the Commits section, and
+                   the verdict.
+                 - Number findings continuously across all sections and subheadings
+                   (1, 2, 3, ...) so the user can reference any finding by its number
+                   regardless of where it sits.
+                 - State each finding in short, plain, technical sentences that name
+                   exactly what is wrong. Prefer several short sentences over one long
+                   run-on sentence. Lead with the concrete problem, then the consequence.
+                   Never include an item that concludes the code is actually fine.
+                 - Add a "Commits" section immediately before the verdict. Suggest one
+                   commit message (a single line) per logical unit of change. Collapse
+                   multiple units into fewer commits when they touch the same files so
+                   heavily that a clean separation would be artificial. When suggesting
+                   multiple commits, list the files that belong to each commit in
+                   parentheses directly after the commit message on the same line.
+                   Never omit this section.
+                 - End the output with exactly one line containing only the verdict:
+                   "${readyVerdict}" or "${blockedVerdict}".
+                 - Do not add caveats, qualifications, or any text after the verdict line.
+                 - Never omit the verdict, even if the diff is empty or trivial.
             '';
+          };
+
+        prePushReviewSkill =
+          {
+            description ? "Scan outgoing diff for secrets, leaks, and bugs before pushing.",
+            diffCommand,
+            branchless ? false,
+          }:
+          reviewSkill {
+            inherit description diffCommand branchless;
+            isPush = true;
+            readyVerdict = "Safe to push.";
+            blockedVerdict = "NOT safe to push.";
           };
 
         mergeRequestReviewSkill =
           {
-            description ? "Review a merge request diff for bugs, style, and safety before merging.",
+            description ? "Review diff for secrets, leaks, bugs, and inconsistencies before merging.",
             diffCommand,
             branchless ? false,
           }:
-          {
-            description = "${description} (${diffCommand})";
-            text = ''
-              - Follow any additional instructions the user provides (e.g. a specific repository path or directory)
-              - These take precedence over the steps below.
-
-              ${
-                if branchless then
-                  ''
-                    1) This is a staged-only review.
-                       Do not ask for a target branch or remote. Review only the cached diff as-is.
-                  ''
-                else
-                  ''
-                    1) Determine the merge target:
-                       - Identify the target branch (e.g. `main`, `master`, `develop`).
-                         If it's unclear, ask the user which target branch to review against.
-                       - Choose the remote for the target branch.
-                         Default to `origin` unless the user says otherwise.
-                  ''
-              }
-
-              2) Review the diff:
-                 `${diffCommand}`
-
-              3) Review focus:
-                 - introduced bugs / broken logic / missing error handling
-                 - code style and consistency with repo patterns
-                 - safety: accidental sensitive data or risky changes
-            '';
+          reviewSkill {
+            inherit description diffCommand branchless;
+            readyVerdict = "Ready to merge.";
+            blockedVerdict = "NOT ready to merge.";
           };
         baseSkills = {
           hello-world = {
@@ -589,6 +683,30 @@ args@{
 
           review-merge-request-workdir = mergeRequestReviewSkill {
             diffCommand = "git diff${lib.optionalString difftasticEnabled " --no-ext-diff"}";
+          };
+
+          "create-nix-module" = {
+            description = "Create a new NX module in nxcore.";
+            text = ''
+              ## Steps
+
+              1. Check for an existing similar module: `${
+                if ripgrepEnabled then ''rg -l "keyword" ./src/'' else ''grep -rl "keyword" ./src/''
+              }`
+              2. Find the target group and read 1-2 sibling modules to match conventions.
+                 Modules-only inputs (`common`, `linux`, `darwin`, `overlays`, `themes`, `groups`) use `src/INPUT/GROUP/`.
+                 The `build` input uses `src/build/modules/GROUP/`.
+                 Do not create modules in `config`, `profile`, or `userProfile` -- those live in nxconfig.
+              3. Copy `templates/modules/module.nix` to the correct path -- never write a module from scratch.
+                 - Modules-only: `src/<INPUT>/<GROUP>/<NAME>.nix`
+                 - Build input: `src/build/modules/<GROUP>/<NAME>.nix`
+              4. Set `name`, `group`, and `input` to match the filename, directory, and input path exactly.
+              5. Use full store paths in systemd services (`''${pkgs.coreutils}/bin/cat`, not `cat`).
+                 Guard `systemd.user.services` with `self.isLinux` in common modules.
+              6. Create a companion directory only if config files or secrets are needed:
+                 `src/<INPUT>/<GROUP>/<NAME>.nix.d/`
+              7. Tell the user which profile needs updating to enable the module -- do not read or edit profile files yourself.
+            '';
           };
         };
         baseAgents = {
@@ -721,6 +839,12 @@ args@{
           servers = mcpServers;
         };
         home.packages = lib.optional (enabledAgents != [ ]) agentScript;
+
+        home.persistence."${self.persist}" = {
+          directories = [
+            ".local/share/nx/agents"
+          ];
+        };
       };
   };
 }

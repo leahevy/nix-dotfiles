@@ -35,7 +35,7 @@ let
   modelIdFor = alias: version: "claude-${alias}-${lib.replaceStrings [ "." ] [ "-" ] version}";
 
   modelVersionPins = {
-    opus = "4.8";
+    opus = "4.6";
     sonnet = "4.6";
     haiku = "4.5";
     fable = "5";
@@ -90,6 +90,7 @@ let
 
   soundHookEventsDisabledByDefault = [
     "Stop"
+    "Notification"
   ];
 
   suppressedNotifications = [
@@ -183,6 +184,31 @@ in
                 "Write"
               ];
               description = "Allowed tools.";
+            };
+            model = lib.mkOption {
+              type = lib.types.nullOr (
+                lib.types.enum [
+                  "haiku"
+                  "sonnet"
+                  "opus"
+                  "fable"
+                ]
+              );
+              default = null;
+              description = "Model override for this agent, null uses the session default.";
+            };
+            effort = lib.mkOption {
+              type = lib.types.nullOr (
+                lib.types.enum [
+                  "low"
+                  "medium"
+                  "high"
+                  "xhigh"
+                  "max"
+                ]
+              );
+              default = null;
+              description = "Effort level override for this agent, null inherits from the session.";
             };
           };
         }
@@ -367,7 +393,7 @@ in
           "fable"
         ]
       );
-      default = null;
+      default = "sonnet";
       description = "Model for spawned subagents, null uses the main session model with no override.";
     };
 
@@ -375,6 +401,20 @@ in
       type = lib.types.ints.positive;
       default = 3;
       description = "Maximum number of subagents to run concurrently when delegation is enabled.";
+    };
+
+    subagentEffortLevel = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "low"
+          "medium"
+          "high"
+          "xhigh"
+          "max"
+        ]
+      );
+      default = "medium";
+      description = "Effort level for the built-in general-purpose subagent wrapper, null inherits the session effort.";
     };
 
     allowForkSubagents = lib.mkOption {
@@ -391,8 +431,86 @@ in
 
     defaultSubagentType = lib.mkOption {
       type = lib.types.str;
-      default = "general-purpose";
+      default = "subagent";
       description = "Default agent type Claude spawns for general subagent work.";
+    };
+
+    webSearchAgentModel = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "haiku"
+          "sonnet"
+          "opus"
+          "fable"
+        ]
+      );
+      default = "haiku";
+      description = "Model for the built-in web search agent, null disables the agent.";
+    };
+
+    webSearchAgentEffortLevel = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "low"
+          "medium"
+          "high"
+          "xhigh"
+          "max"
+        ]
+      );
+      default = "low";
+      description = "Effort level for the built-in web search agent.";
+    };
+
+    reviewAgentModel = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "haiku"
+          "sonnet"
+          "opus"
+          "fable"
+        ]
+      );
+      default = "opus";
+      description = "Model for the built-in code review agent, null disables the agent.";
+    };
+
+    reviewAgentEffortLevel = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "low"
+          "medium"
+          "high"
+          "xhigh"
+          "max"
+        ]
+      );
+      default = "high";
+      description = "Effort level for the built-in code review agent.";
+    };
+
+    enableBuiltinCodeReview = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Allow the built-in /code-review and /simplify commands, when false the guardrail hard-denies them in favour of the injected review skills.";
+    };
+
+    styleReminderInterval = lib.mkOption {
+      type = lib.types.nullOr lib.types.ints.positive;
+      default = 10;
+      description = "Inject a style reminder every N user prompt turns, null disables it.";
+    };
+
+    claudeMdReminderInterval = lib.mkOption {
+      type = lib.types.nullOr lib.types.ints.positive;
+      default = 20;
+      description = "Re-inject the global CLAUDE.md every N user prompt turns and after compaction, null disables it.";
+    };
+
+    recentMessagesOnCompact = lib.mkOption {
+      type = lib.types.nullOr lib.types.ints.positive;
+      default = 3000;
+      description = "Maximum characters of recent message pairs to re-inject after compaction, null disables.";
     };
 
     hookHandlers = lib.mkOption {
@@ -438,6 +556,12 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ ];
       description = "Extra domain regexes that WebFetch is allowed to access without prompting.";
+    };
+
+    guardrailAllowedEnvVars = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Extra environment variable names the guardrail expands before path checks, so $VAR and $VAR/... in Bash commands resolve to real paths and are checked against allowed roots instead of being blocked.";
     };
 
     sounds = lib.mkOption {
@@ -514,19 +638,53 @@ in
         allowNested = config.nx.common.dev.claude.allowNestedSubagents;
         defaultAgentType = config.nx.common.dev.claude.defaultSubagentType;
         resolvedAgentModel = if agentModel != null then agentModel else config.nx.common.dev.claude.model;
+        webSearchModel = config.nx.common.dev.claude.webSearchAgentModel;
+        webSearchEffortLevel = config.nx.common.dev.claude.webSearchAgentEffortLevel;
+        reviewModel = config.nx.common.dev.claude.reviewAgentModel;
+        reviewEffortLevel = config.nx.common.dev.claude.reviewAgentEffortLevel;
+        subagentEffortLevel = config.nx.common.dev.claude.subagentEffortLevel;
+        builtinCodeReviewEnabled = config.nx.common.dev.claude.enableBuiltinCodeReview;
+        ripgrepEnabled = config.nx.common.shell.rust-programs.enable or false;
+        styleReminderInterval = config.nx.common.dev.claude.styleReminderInterval;
+        claudeMdReminderInterval = config.nx.common.dev.claude.claudeMdReminderInterval;
+        recentMessagesOnCompact = config.nx.common.dev.claude.recentMessagesOnCompact;
+        renderMerged = self.common.dev.agents.exports.renderMerged;
+        agentsModule = config.nx.common.dev.agents;
+        styleText = renderMerged [
+          agentsModule.style
+          config.nx.common.dev.claude.style
+        ];
         baseInstructions = {
-          "90 - Claude" = [
+          "90 - Claude" =
+          [
             "Use the conversation as initial context, then read only the files and local context required to complete the request."
             "Batch all changes into as few operations as possible."
             "Don't analyse too much on first feasibility questions to avoid wasting tokens."
             "If a background event (task notification, agent message, command result) triggers a turn but you have already reported everything relevant to the user in a prior response this session, run Bash 'true' as a no-op instead of repeating yourself. Use description: 'Background task completed' on the Bash call. Do not also write text; the no-op is the entire response."
             "If a tool call fails only because its approval could not be delivered (a transient approval-path error asking to try again, never a nonzero exit code or other tool error), silently reissue it up to three times before telling the user, and do not print that message."
+            (
+              if ripgrepEnabled then
+                "Make all file writes and edits with the Edit or Write tool. For printing or slicing lines, prefer head, tail, rg, or cat: the guardrail auto-allows them, while sed and awk are not auto-allowed and only trigger a prompt."
+              else
+                "Make all file writes and edits with the Edit or Write tool. For printing or slicing lines, prefer head, tail, or cat: the guardrail auto-allows them, while sed and awk are not auto-allowed and only trigger a prompt."
+            )
+            (
+              if ripgrepEnabled then
+                "Under the agents plans directory (NX_AGENTS_PLANS_DIR), read plan files with the Read tool and create or change their contents only with the Write and Edit tools, never with sed or shell redirection. Read-only shell commands (ls, rg, grep, cat) are allowed there, for example to find still-open plans. mv and rm are allowed only when every path stays inside the plans directory, for example to archive a finished plan into the archive subdirectory or remove a stale one. Do not run other mutating shell commands against plan files."
+              else
+                "Under the agents plans directory (NX_AGENTS_PLANS_DIR), read plan files with the Read tool and create or change their contents only with the Write and Edit tools, never with sed or shell redirection. Read-only shell commands (ls, grep, cat) are allowed there, for example to find still-open plans. mv and rm are allowed only when every path stays inside the plans directory, for example to archive a finished plan into the archive subdirectory or remove a stale one. Do not run other mutating shell commands against plan files."
+            )
+            [
+              "When asked to look at or modify .nix source files, or to investigate how Claude Code is configured (hooks, skills, agents, settings, permissions, guardrail), find the nix source in the current git repository, never in deployed files."
+              "For .nix files: search the repo (e.g. src/common/dev/claude.nix for Claude config, src/common/dev/agents.nix for shared agent config)."
+              "For Claude Code configuration: the source of truth is the nix files in the repo. Never open ~/.claude/settings.json, ~/.claude/CLAUDE.md, ~/.claude/agents/, ~/.claude/skills/, or any other file under ~/.claude/ to understand how Claude is configured -- those are generated build outputs and reading them instead of the source is always wrong."
+            ]
             [
               "Use the AskUserQuestion tool when:"
               "The user needs to pick between 2-4 distinct implementation approaches"
               "A decision has clear trade-offs that benefit from side-by-side comparison"
               "You would otherwise ask a free-form question the user would answer with a one-word reply"
-              "You did a review and we need to make decisions for fixing individual issues one by one"
+              "After completing a review with findings: use AskUserQuestion to present each finding to the user one at a time, asking how they want it resolved. Work through all findings sequentially before making any changes."
               "Even with many choices to present, still use this tool: split them across multiple questions rather than skipping it, since each question accepts at most 4 options and a single call accepts at most 4 questions"
             ]
             [
@@ -541,7 +699,20 @@ in
               "When the user says they are remote or mobile (or using a phone or tablet), show every change verbatim in the chat - as an inline diff or as the full updated content - before issuing the actual Edit/Write/Bash tool call. This lets the user review and approve the changes without needing to inspect the tool call details."
             ]
           ]
-          ++ lib.optional (!delegateEnabled) "Keep sub-agents to a minimum.";
+          ++ lib.optional (!delegateEnabled) "Keep sub-agents to a minimum."
+          ++ [
+            "$NX_AGENTS_PLANS_DIR is always set by the claude wrapper to the plans directory for the current repo; use it directly without any slug computation."
+            "rm -rf is blocked; use individual rm per file and rmdir for empty directories."
+            "Never write file content via shell heredocs (e.g. cat >> file <<'EOF' ... EOF). This is a hard rule with no exceptions: always use the Write or Edit tool for file writes."
+            [
+              "If a tool call is denied with a message saying the action is forbidden or off-limits: do not attempt to achieve the same action through other means (obfuscated commands, alternative paths, indirect reads, etc.)."
+              "If the denial message tells you how to do it instead, follow that guidance and proceed that way."
+              "You may still continue with the rest of the task through means that do not involve the denied action."
+            ]
+          ]
+          ++
+            lib.optional (!delegateEnabled || reviewModel == null)
+              "For code review and diff scanning tasks, use the injected review skills (review-pre-push-head, review-merge-request-head, etc.) instead of the built-in /code-review or /simplify slash commands.";
         }
         // lib.optionalAttrs delegateEnabled {
           "95 - Subagent Workflow" = [
@@ -550,10 +721,71 @@ in
             "Always pass subagent_type: ${defaultAgentType} to the Agent tool unless spawning a named custom agent type."
             "Keep no more than ${builtins.toString maxAgents} subagents running concurrently."
             "When a subagent sends you a message: if it is a progress update, do NOT reply (replying resumes the subagent and causes a redundant extra turn); if it is a blocking question, reply immediately via SendMessage (at minimum 'Continue') so the subagent is not deadlocked. Never leave a waiting subagent without a reply."
-          ];
+          ]
+          ++ lib.optional (webSearchModel != null) (
+            lib.concatStringsSep "\n" [
+              "Never call WebSearch or WebFetch directly in the main session. Always delegate web searches and fetches to a 'web' subagent (subagent_type: web). That agent is restricted to WebSearch and WebFetch only and cannot read files, edit files, or run commands."
+              "To use it: Agent({ subagent_type: \"web\", prompt: \"search/fetch instructions\" })."
+            ]
+          )
+          ++ lib.optional (reviewModel != null) (
+            lib.concatStringsSep "\n" [
+              "For code reviews and diff analysis, delegate to the 'review' subagent (subagent_type: review). The review agent will use the injected review skills internally."
+              "To use it: Agent({ subagent_type: \"review\", prompt: \"review instructions\" })."
+              "When a review subagent finishes, repeat its ENTIRE summary verbatim as plain text in the chat (changes list, findings, commit suggestions, verdict) before doing anything else. Never call ReportFindings in the main session after a delegated review: the card is invisible to the user and loses context."
+            ]
+          );
         };
-        baseSkills = { };
-        baseAgents = { };
+        baseSkills = lib.optionalAttrs (!builtinCodeReviewEnabled) {
+          code-review = "The built-in /code-review is disabled. Use the injected review skills instead (review-merge-request-head, review-pre-push-head, etc.).";
+          simplify = "The built-in /simplify is disabled. Apply simplifications directly as code changes instead.";
+        };
+        baseAgents =
+          lib.optionalAttrs (delegateEnabled && webSearchModel != null) {
+            web = {
+              description = "Web search and fetch agent. Retrieves web content only; no file, edit, or command access.";
+              model = webSearchModel;
+              effort = webSearchEffortLevel;
+              tools = [
+                "WebSearch"
+                "WebFetch"
+              ];
+              text = "Only perform WebSearch and WebFetch operations. Return retrieved content to the main agent. Do not read files, edit files, run commands, or take any other actions.";
+            };
+          }
+          // lib.optionalAttrs (delegateEnabled && reviewModel != null) {
+            review = {
+              description = "Code review agent. Performs thorough code reviews, security scans, and diff analysis.";
+              model = reviewModel;
+              effort = reviewEffortLevel;
+              tools = [
+                "Read"
+                "Bash"
+                "WebFetch"
+                "WebSearch"
+                "Skill"
+                "ReportFindings"
+              ];
+              text = "Perform code reviews using the injected review skills (review-merge-request-head, review-pre-push-head, etc.). Report all findings clearly. Do not apply fixes unless explicitly instructed.";
+            };
+          }
+          //
+            lib.optionalAttrs
+              (
+                delegateEnabled
+                && subagentEffortLevel != null
+                && defaultAgentType != "web"
+                && defaultAgentType != "review"
+              )
+              {
+                ${defaultAgentType} = {
+                  description = "General-purpose agent for implementation, review, search, and multi-step tasks.";
+                  model = resolvedAgentModel;
+                  effort = subagentEffortLevel;
+                  tools = [ ];
+                  text = "Complete the delegated task using all available tools. Work autonomously toward a conclusion.";
+                };
+              };
 
         pythonHookLib = ''
           import json
@@ -713,6 +945,10 @@ in
               return "\n".join(files_out)
         '';
 
+        baseAllowedEnvVars = [
+          "PWD"
+        ];
+
         autoDenyReasons = [
           "find with side-effecting action"
           "nix store traversal is blocked"
@@ -743,6 +979,7 @@ in
           "docs.anthropic.com"
           "code.claude.com"
           "platform.claude.com"
+          "claude.com"
           "search.nixos.org"
           "nixos.org"
           "nix.dev"
@@ -757,6 +994,28 @@ in
           "docs.renovatebot.com"
         ];
 
+        agentDenyBlock = lib.optionalString (!delegateEnabled) ''
+          if tool_name == "Agent":
+              deny("Subagents are disabled. Do this work yourself inline in the current session instead of delegating it.")
+        '';
+
+        generalPurposeDenyBlock =
+          lib.optionalString (delegateEnabled && defaultAgentType != "general-purpose")
+            ''
+              if tool_name == "Agent" and tool_input(data).get("subagent_type") == "general-purpose":
+                  deny("Use subagent_type '${defaultAgentType}' instead of 'general-purpose'; direct general-purpose calls bypass the configured effort level")
+            '';
+
+        missingSubagentTypeDenyBlock = lib.optionalString delegateEnabled ''
+          if tool_name == "Agent" and not (tool_input(data).get("subagent_type") or "").strip():
+              deny("You must pass an explicit subagent_type; choose a concrete agent (e.g. '${defaultAgentType}'). Omitting it falls back to the harness default and bypasses the configured effort level")
+        '';
+
+        codeReviewDenyBlock = lib.optionalString (!builtinCodeReviewEnabled) ''
+          if tool_name == "Skill" and tool_input(data).get("skill") in ("code-review", "simplify"):
+              deny("The built-in /code-review and /simplify commands are disabled. Use the injected review skills (review-merge-request-head, review-pre-push-head, etc.) instead.")
+        '';
+
         forkDenyBlock = lib.optionalString (!allowFork) ''
           if tool_name == "Agent" and tool_input(data).get("subagent_type") == "fork":
               deny("Fork subagents are disabled; use subagent_type '${defaultAgentType}' instead")
@@ -769,7 +1028,7 @@ in
 
         guardrailBody = ''
           NXCONFIG = os.path.join(HOME, ".config", "nx", "nxconfig")
-          CLAUDE_TMP = os.path.join("/tmp", "claude-" + str(os.getuid()))
+          CLAUDE_TMP = os.path.realpath(os.path.join("/tmp", "claude-" + str(os.getuid())))
           CLAUDE_HOME = os.path.join(HOME, ".claude")
           NX_INPUT_ROOTS = [
               "/etc/nx/inputs",
@@ -789,6 +1048,8 @@ in
           EXTRA_PATH_DENY = ${builtins.toJSON config.nx.common.dev.claude.guardrailDisallowedPaths}
           EXTRA_CMD_DENY = ${builtins.toJSON config.nx.common.dev.claude.guardrailDisallowedCommands}
           EXTRA_DIR_DENY = [os.path.normpath(os.path.expanduser(d)) for d in ${builtins.toJSON config.nx.common.dev.claude.guardrailDisallowedDirectories}]
+          BASE_ALLOWED_ENV_VARS = ${builtins.toJSON baseAllowedEnvVars}
+          EXTRA_ALLOWED_ENV_VARS = ${builtins.toJSON config.nx.common.dev.claude.guardrailAllowedEnvVars}
           FORBIDDEN_COMMANDS = ${builtins.toJSON forbiddenCommandWords}
 
           GREP_FAMILY = ("grep", "egrep", "fgrep")
@@ -839,16 +1100,29 @@ in
                   parts.append(cur)
               return parts
 
-          def _strip_devnull_redirects(tokens):
+          def _strip_safe_redirects(tokens):
+              FD = ('1', '2')
+              COMBINED_FD_REDIRECTS = frozenset(['>&1', '>&2', '1>&1', '1>&2', '2>&1', '2>&2'])
               result, i, n = [], 0, len(tokens)
               while i < n:
                   tok = tokens[i]
+                  if tok in COMBINED_FD_REDIRECTS:
+                      i += 1
+                      continue
                   if tok == '>' and i + 1 < n and tokens[i + 1] == '/dev/null':
                       i += 2
                       continue
                   if ((tok.isdigit() or tok == '&') and i + 2 < n
                           and tokens[i + 1] == '>' and tokens[i + 2] == '/dev/null'):
                       i += 3
+                      continue
+                  if (tok == '>' and i + 2 < n
+                          and tokens[i + 1] == '&' and tokens[i + 2] in FD):
+                      i += 3
+                      continue
+                  if (tok in FD and i + 3 < n
+                          and tokens[i + 1] == '>' and tokens[i + 2] == '&' and tokens[i + 3] in FD):
+                      i += 4
                       continue
                   result.append(tok)
                   i += 1
@@ -872,21 +1146,63 @@ in
                       parts.append(s)
               return ' ; '.join(parts)
 
-          def is_readonly_listing(tokens):
+          def is_readonly_listing(tokens, _depth=0):
               if tokens is None:
                   return "command could not be parsed"
-              tokens = _strip_devnull_redirects(tokens)
+              if _depth > 3:
+                  ask("dev run --shell nesting too deep to analyse safely; manual review required")
+
+              def _expand_allowed_vars(toks):
+                  _ALLOWED = {"NX_AGENTS_PLANS_DIR": NX_AGENTS_PLANS_DIR}
+                  for _var in BASE_ALLOWED_ENV_VARS + EXTRA_ALLOWED_ENV_VARS:
+                      _val = cwd if _var == "PWD" else os.environ.get(_var)
+                      if _val:
+                          _ALLOWED[_var] = _val
+                  result, i = [], 0
+                  while i < len(toks):
+                      tok = toks[i]
+                      if tok == '$' and i + 1 < len(toks):
+                          nxt = toks[i + 1]
+                          for var, val in _ALLOWED.items():
+                              if nxt == var:
+                                  result.append(val)
+                                  i += 2
+                                  break
+                              if nxt.startswith(var + '/'):
+                                  result.append(val + nxt[len(var):])
+                                  i += 2
+                                  break
+                          else:
+                              result.append(tok)
+                              i += 1
+                      else:
+                          result.append(tok)
+                          i += 1
+                  return result
+
+              tokens = _expand_allowed_vars(tokens)
+              tokens = _strip_safe_redirects(tokens)
+              if '$' in tokens:
+                  ask("command contains an unexpanded shell variable; write literal paths instead")
 
               def _in_allowed_root(tok):
                   part = tok.split("=", 1)[-1] if "=" in tok else tok
                   normalized = os.path.normpath(os.path.expanduser(part))
                   resolved = os.path.realpath(normalized)
-                  if under(resolved, cwd):
-                      return True
+                  if any(under(resolved, d) or under(normalized, d) for d in EXTRA_DIR_DENY):
+                      deny("access to disallowed directory in shell command: " + resolved)
+                  if any(under(resolved, s) or under(normalized, s) for s in SECRET_DIRS):
+                      deny("access to secret directory in shell command: " + resolved)
+                  if SECRET_FILE.search(resolved):
+                      deny("access to secret material in shell command: " + resolved)
                   if under(resolved, CLAUDE_TMP):
                       return True
                   if any(under(normalized, r) for r in NX_INPUT_ROOTS):
                       return True
+                  if under(resolved, NX_AGENTS_PLANS_DIR):
+                      return True
+                  if not cwd_root:
+                      return False
                   if under(resolved, CLAUDE_HOME):
                       rel = resolved[len(CLAUDE_HOME):].lstrip(os.sep).split(os.sep)
                       if len(rel) >= 4 and rel[0] == 'projects' and rel[3] == 'tool-results':
@@ -922,13 +1238,20 @@ in
                       return "shell metacharacter in command"
                   if lead_cmd != 'git' and any('..' in tok for tok in lead_tokens):
                       return "path traversal (..) in command"
-                  if lead_cmd in ('true', 'false', 'echo'):
+                  if lead_cmd in ('true', 'false', 'echo', 'pwd'):
                       pass
                   elif lead_cmd == 'git':
                       if not re.match(r"^git(\s+(--no-pager|-C\s+\S+))*\s+(ls-files|log|status|check-ignore|diff|show|rev-parse)\b", lead):
                           return "git subcommand not in allowlist"
                       if re.search(r"(^|\s)(-c|--config|--exec-path|--git-dir|--work-tree|--namespace|--bare|--output)(=|\s|$)", lead):
                           return "git command with unsafe flags"
+                      for _gi, _gtok in enumerate(lead_tokens):
+                          if _gtok == '-C' and _gi + 1 < len(lead_tokens):
+                              _cpath = os.path.realpath(os.path.expanduser(lead_tokens[_gi + 1]))
+                              if under(_cpath, os.path.realpath(NXCONFIG)) or _cpath == os.path.realpath(NXCONFIG):
+                                  return "git -C pointing at nxconfig is blocked"
+                              if any(under(_cpath, d) or _cpath == d for d in EXTRA_DIR_DENY):
+                                  return "git -C pointing at disallowed directory: " + lead_tokens[_gi + 1]
                       if re.search(r'\b(diff|show)\b', lead):
                           if not re.search(r"(^|\s)--no-ext-diff(\s|$)", lead):
                               if run([GIT, "-C", cwd, "config", "diff.external"], cwd):
@@ -1026,7 +1349,7 @@ in
                               os.path.join(cwd, tok) if not os.path.isabs(tok) and not tok.startswith('~')
                               else os.path.expanduser(tok)
                           )
-                          if not under(resolved, cwd):
+                          if not under(resolved, cwd) and not under(resolved, NX_AGENTS_PLANS_DIR):
                               return lead_cmd + " outside current directory: " + tok
                   elif lead_cmd == 'systemctl':
                       if not re.match(r"^systemctl(\s+(-[a-zA-Z]+|--[a-zA-Z0-9=-]+))*\s+(status|cat|show|is-active|is-enabled|is-failed|get-default|list-units|list-timers|list-sockets|list-jobs|list-unit-files)\b", lead):
@@ -1036,6 +1359,23 @@ in
                           return "journalctl with mutating flag"
                       if re.search(r"(^|\s)-(?!-)[a-zA-Z]*k", lead):
                           return "journalctl with kernel flag"
+                  elif lead_cmd == 'dev':
+                      sub = lead_tokens[1:2]
+                      if not sub:
+                          return "bare dev command"
+                      if sub[0] != 'run':
+                          return "dev subcommand not in allowlist: " + sub[0]
+                      run_args = lead_tokens[2:]
+                      if not run_args:
+                          return "dev run with no command"
+                      if run_args[0] == '--shell':
+                          if len(run_args) != 2:
+                              return "dev run --shell expects exactly one argument"
+                          inner_cmd = preprocess_cmd(run_args[1])
+                          inner_tokens = _tokenize(inner_cmd)
+                          return is_readonly_listing(inner_tokens, _depth + 1)
+                      else:
+                          return _check_part(run_args)
                   else:
                       return "command not auto-allowed, review required: " + lead_cmd
                   for stage in pipe_stages[1:]:
@@ -1130,6 +1470,8 @@ in
           data = load(strict=True)
 
           cwd = data.get("cwd") or os.getcwd()
+          cwd_root = run([GIT, "-C", cwd, "rev-parse", "--show-toplevel"], cwd)
+          NX_AGENTS_PLANS_DIR = os.environ.get("NX_AGENTS_PLANS_DIR") or os.path.join(HOME, ".local", "share", "nx", "agents", "plans", cwd.replace("/", "-").replace(".", "-"))
           path = tool_path(data)
           cmd = tool_input(data).get("command") or ""
           url = tool_input(data).get("url") or ""
@@ -1140,6 +1482,12 @@ in
 
           ${forkDenyBlock}
           ${nestedDenyBlock}
+          ${agentDenyBlock}
+          ${generalPurposeDenyBlock}
+          ${missingSubagentTypeDenyBlock}
+          ${codeReviewDenyBlock}
+          if tool_name == "Skill" and tool_input(data).get("skill") == "claude-api":
+              deny("The claude-api skill is disabled. Search docs.anthropic.com or code.claude.com via the web agent instead.")
           if tool_name == "WebSearch":
               query = tool_input(data).get("query") or ""
               if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", query):
@@ -1161,12 +1509,23 @@ in
               else:
                   ask("WebFetch to unrecognised domain: " + domain)
 
+          AGENT_INSTRUCTION_FILES = frozenset(("AGENTS.md", "CLAUDE.md"))
           if path:
               target = resolve(cwd, path)
-              if under(target, NXCONFIG) and not nxconfig_allowed(target):
-                  deny("access to nxconfig is off-limits: " + target)
+              if (tool_name in ("Read", "Write", "Edit")
+                      and os.path.basename(target) in AGENT_INSTRUCTION_FILES
+                      and cwd_root
+                      and os.path.realpath(target) == os.path.join(cwd_root, os.path.basename(target))):
+                  allow("agent instruction file in current repo root: " + target)
+              if under(target, NXCONFIG):
+                  if nxconfig_allowed(target):
+                      allow("nxconfig markdown or flake file: " + target)
+                  else:
+                      deny("access to nxconfig is off-limits: " + target)
               if tool_name == "Read" and any(under(target, r) for r in NX_INPUT_ROOTS):
                   allow("read from nx inputs")
+              if under(os.path.realpath(target), CLAUDE_TMP):
+                  allow("access to claude temp directory")
               if any(under(target, d) for d in EXTRA_DIR_DENY):
                   if tool_name == "Read" and under(target, "/nix/store"):
                       ask("reading from nix store: " + target)
@@ -1175,12 +1534,13 @@ in
                   deny("access to secret material is blocked: " + target)
               if SECRET_FILE.search(target):
                   deny("access to secret material is blocked: " + target)
+              if tool_name in ("Read", "Write", "Edit") and under(target, NX_AGENTS_PLANS_DIR):
+                  allow("access to the agents plans dir")
               for pattern in EXTRA_PATH_DENY:
                   if re.search(pattern, target):
                       deny("path denied by guardrailDisallowedPaths: " + target)
               if tool_name == "Read":
                   real_target = os.path.realpath(target)
-                  cwd_root = run([GIT, "-C", cwd, "rev-parse", "--show-toplevel"], cwd)
                   if cwd_root and under(real_target, os.path.realpath(cwd_root)):
                       allow("read within project")
                   try:
@@ -1188,7 +1548,7 @@ in
                       r = subprocess.run([GIT, "-C", parent, "rev-parse", "--show-toplevel"],
                                          capture_output=True, text=True, timeout=3)
                       raw = r.stdout.strip()
-                      if raw:
+                      if raw and cwd_root:
                           git_root = os.path.realpath(raw)
                           nxconfig_norm = os.path.realpath(NXCONFIG)
                           if not (under(git_root, nxconfig_norm) or git_root == nxconfig_norm):
@@ -1206,10 +1566,18 @@ in
               _check_forbidden(tokens)
               if re.search(r"(^|[;&|()\s])rm\s", cmd) and re.search(r"-\w*r\w*f|-\w*f\w*r|-r\b.*-f\b|-f\b.*-r\b", cmd):
                   deny("rm -rf is blocked; use individual rm per file and rmdir for empty directories")
-              if re.search(r"\bgit\b.*\bpush\b", cmd) and re.search(r"(--force(\W|$)|\s-f(\s|$))", cmd) and not re.search(r"--force-with-lease", cmd):
-                  deny("git push --force is blocked")
-              if re.search(r"\bgit\b.*\b(commit|push|pull|fetch)\b", cmd):
-                  deny("git commit, push, pull and fetch are blocked")
+              if re.search(r"\brg\b[^|&;\n]*\s(-(?!-)\w*r\w*|--replace\b)", cmd):
+                  deny("rg -r/--replace rewrites match output; remove the flag (rg is already recursive by default)")
+              if re.search(r'<<', cmd):
+                  if re.search(r'(?<![<])>(?!&)', cmd):
+                      deny("heredoc file writing is blocked; use the Write or Edit tool for file writes")
+                  else:
+                      ask("command contains a heredoc")
+              for _seg in re.split(r'&&|\|\||;', cmd):
+                  if re.search(r"\bgit\b.*\bpush\b", _seg) and re.search(r"(--force(\W|$)|\s-f(\s|$))", _seg) and not re.search(r"--force-with-lease", _seg):
+                      deny("git push --force is blocked")
+                  if re.search(r"\bgit\b.*\b(commit|push|pull|fetch)\b", _seg):
+                      deny("git commit, push, pull and fetch are blocked")
               if re.search(r"(^|[;&|()\s])(ssh|scp|rsync)\b(?!-)", cmd):
                   deny("ssh, scp and rsync are blocked")
               if re.search(r"\bdd\s.*of=/dev/", cmd):
@@ -1218,6 +1586,45 @@ in
                   deny("piping a download into a shell or interpreter is blocked")
               if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", cmd) and not re.search(r"\.md(\W|$)|flake\.nix|flake\.lock", cmd):
                   deny("referencing nxconfig from a shell command is blocked")
+              META = frozenset(['<', '>', '`', '(', ')', '$', '{', '}'])
+              if tokens and not any(t in META for t in tokens):
+                  for _tok in tokens[1:]:
+                      if not _tok.startswith('-') and ('/' in _tok or _tok.startswith('~') or _tok.startswith('.')):
+                          _p = os.path.normpath(os.path.expanduser(_tok))
+                          _r = os.path.realpath(_p)
+                          if any(under(_r, d) or under(_p, d) for d in EXTRA_DIR_DENY):
+                              deny("access to disallowed directory in shell command: " + _r)
+                          if any(under(_r, s) or under(_p, s) for s in SECRET_DIRS):
+                              deny("access to secret directory in shell command: " + _r)
+                          if SECRET_FILE.search(_r):
+                              deny("access to secret material in shell command: " + _r)
+              mutation_parts = _split_on(tokens, OPERATORS | {'|', '&'}) if tokens else []
+              if len(mutation_parts) == 1:
+                  seg = mutation_parts[0]
+                  while seg and seg[0] == 'command':
+                      seg = seg[1:]
+                  META = frozenset(['<', '>', '`', '(', ')', '$', '{', '}'])
+                  if seg and seg[0] in ('mv', 'rm', 'touch'):
+                      _eseg, _i = [], 0
+                      while _i < len(seg):
+                          if seg[_i] == '$' and _i + 1 < len(seg) and (
+                              seg[_i + 1] == 'NX_AGENTS_PLANS_DIR'
+                              or seg[_i + 1].startswith('NX_AGENTS_PLANS_DIR/')
+                          ):
+                              _eseg.append(NX_AGENTS_PLANS_DIR + seg[_i + 1][len('NX_AGENTS_PLANS_DIR'):])
+                              _i += 2
+                          else:
+                              _eseg.append(seg[_i])
+                              _i += 1
+                      if not any(t in META for t in _eseg):
+                          path_toks = [t for t in _eseg[1:] if not t.startswith('-')]
+                          if path_toks and all(
+                              under(resolve(cwd, os.path.expanduser(p)), NX_AGENTS_PLANS_DIR)
+                              for p in path_toks
+                          ):
+                              allow("mv/rm/touch confined to the agents plans dir")
+              if re.search(r'\$\(|`', cmd):
+                  ask("command contains a subshell substitution")
               reason = is_readonly_listing(tokens)
               if reason is None:
                   allow("read-only file listing")
@@ -1235,7 +1642,18 @@ in
           event = data.get("hook_event_name") or "SessionStart"
           cwd = data.get("cwd") or os.getcwd()
 
-          sections = ["Session context (auto-injected):\nDate: " + datetime.now().strftime("%Y-%m-%d %H:%M")]
+          if event == "SessionStart":
+              try:
+                  _cutoff = datetime.now().timestamp() - 7 * 86400
+                  _sd = state_dir()
+                  for _fname in os.listdir(_sd):
+                      _fpath = os.path.join(_sd, _fname)
+                      if os.path.isfile(_fpath) and os.path.getmtime(_fpath) < _cutoff:
+                          os.remove(_fpath)
+              except Exception:
+                  pass
+
+          sections = ["=== Session Context ===\nDate: " + datetime.now().strftime("%Y-%m-%d %H:%M")]
 
           if run([GIT, "-C", cwd, "rev-parse", "--is-inside-work-tree"], cwd) == "true":
               git_lines = ["Branch: " + run([GIT, "-C", cwd, "branch", "--show-current"], cwd)]
@@ -1255,7 +1673,106 @@ in
           last = pointer_path(data.get("session_id"))
           if event == "PostCompact" and os.path.isfile(last):
               with open(last) as handle:
-                  sections.append("Pre-compact transcript snapshot: " + handle.read().strip())
+                  sections.append("=== Pre-Compact Snapshot ===\n" + handle.read().strip() + "\n(Do not read this file in full with Read or cat -- it may be very large. Use head, tail, or jq with line limits if inspection is needed.)")
+          if event == "PostCompact":
+              _style_text = ${builtins.toJSON styleText}
+              if _style_text:
+                  sections.append("=== Style Reminder ===\n\n" + _style_text + "\n\nApply these rules immediately to all your responses, without exception.")
+          ${lib.optionalString (claudeMdReminderInterval != null) ''
+            if event == "PostCompact":
+                _claude_md_path = os.path.join(HOME, ".claude", "CLAUDE.md")
+                try:
+                    with open(_claude_md_path) as fh:
+                        _claude_md = fh.read().strip()
+                    if _claude_md:
+                        sections.append("=== Global CLAUDE.md ===\n\n" + _claude_md)
+                except Exception:
+                    pass
+          ''}
+          ${lib.optionalString (recentMessagesOnCompact != null) ''
+            RECENT_MSGS_LIMIT = ${builtins.toString recentMessagesOnCompact}
+            if event == "PostCompact" and os.path.isfile(last):
+                _snap_path = ""
+                try:
+                    with open(last) as fh:
+                        _snap_path = fh.read().strip()
+                except Exception:
+                    pass
+                if _snap_path and os.path.isfile(_snap_path):
+                    def _extract_text(content):
+                        if isinstance(content, str):
+                            return content.strip()
+                        parts = []
+                        stubs = []
+                        for block in (content or []):
+                            if isinstance(block, dict):
+                                if block.get("type") == "text":
+                                    t = (block.get("text") or "").strip()
+                                    if t:
+                                        parts.append(t)
+                                elif block.get("type") == "tool_use":
+                                    stubs.append("[tool call: " + (block.get("name") or "unknown") + "]")
+                        return "\n".join(parts) if parts else "\n".join(stubs)
+                    _raw = []
+                    try:
+                        with open(_snap_path) as fh:
+                            for _line in fh:
+                                try:
+                                    _obj = json.loads(_line)
+                                    _msg = _obj.get("message")
+                                    if _msg and _msg.get("role") in ("user", "assistant"):
+                                        _text = _extract_text(_msg.get("content") or [])
+                                        if _text and not _text.startswith("[Request interrupted"):
+                                            _raw.append((_msg["role"], _text))
+                                except Exception:
+                                    continue
+                    except Exception:
+                        pass
+                    _pairs = []
+                    _i = len(_raw) - 1
+                    while _i >= 1:
+                        if _raw[_i][0] == "assistant" and _raw[_i - 1][0] == "user":
+                            _pairs.insert(0, (_raw[_i - 1], _raw[_i]))
+                            _i -= 2
+                        else:
+                            _i -= 1
+                    if _pairs:
+                        while len(_pairs) > 1:
+                            if sum(len(u[1]) + len(a[1]) for u, a in _pairs) <= RECENT_MSGS_LIMIT:
+                                break
+                            _pairs.pop(0)
+                        _lines = []
+                        for _u, _a in _pairs:
+                            _lines.append("**User**\n\n" + _u[1])
+                            _lines.append("**Assistant**\n\n" + _a[1])
+                        sections.append("=== Recent Messages ===\n\n" + "\n\n---\n\n".join(_lines))
+          ''}
+          ${lib.optionalString (styleReminderInterval != null || claudeMdReminderInterval != null) ''
+            if event == "PostCompact":
+                _sid = data.get("session_id") or "default"
+                _counter_file = os.path.join(state_dir(), "style-turn-" + safe_id(_sid))
+                try:
+                    with open(_counter_file, "w") as fh:
+                        fh.write("0\n")
+                except Exception:
+                    pass
+          ''}
+          if event == "PostCompact":
+              _plans_dir = os.environ.get("NX_AGENTS_PLANS_DIR", "")
+              if _plans_dir and os.path.isdir(_plans_dir):
+                  _active_plans = [
+                      f for f in os.listdir(_plans_dir)
+                      if f.endswith(".md") and os.path.isfile(os.path.join(_plans_dir, f))
+                  ]
+                  if _active_plans:
+                      _plan_list = "\n".join("- " + p for p in sorted(_active_plans))
+                      sections.append(
+                          "=== Active Plans ===\n\n"
+                          "The following plan files exist in " + _plans_dir + ":\n\n" + _plan_list + "\n\n"
+                          "Only read a plan file if its name appears in the session context above (recent messages or pre-compact snapshot). "
+                          "Do not read plan files speculatively or because they exist. "
+                          "If a plan you were working on is named above, read it on your next turn before continuing."
+                      )
 
           context("\n\n".join(sections), event)
         '';
@@ -1264,6 +1781,81 @@ in
           data = load()
           snapshot(data.get("transcript_path"), data.get("session_id"))
         '';
+
+        userPromptReminderBody =
+          let
+            hasStyle = styleReminderInterval != null && styleText != "";
+            hasClaude = claudeMdReminderInterval != null;
+          in
+          ''
+            ${lib.optionalString hasStyle "STYLE_TEXT = ${builtins.toJSON styleText}"}
+            ${lib.optionalString (
+              styleReminderInterval != null
+            ) "STYLE_INTERVAL = ${builtins.toString styleReminderInterval}"}
+            ${lib.optionalString hasClaude "CLAUDE_MD_INTERVAL = ${builtins.toString claudeMdReminderInterval}"}
+            CLAUDE_MD_PATH = os.path.join(HOME, ".claude", "CLAUDE.md")
+
+            data = load()
+            session_id = data.get("session_id") or "default"
+            counter_file = os.path.join(state_dir(), "style-turn-" + safe_id(session_id))
+
+            try:
+                with open(counter_file) as fh:
+                    count = int(fh.read().strip())
+            except Exception:
+                count = 0
+
+            count += 1
+            with open(counter_file, "w") as fh:
+                fh.write(str(count) + "\n")
+
+            sections = []
+
+            ctx_file = os.path.join(state_dir(), "ctx-" + safe_id(session_id) + ".json")
+            try:
+                with open(ctx_file) as fh:
+                    ctx = json.load(fh)
+                current = ctx.get("current_tokens", 0)
+                compact_threshold = ctx.get("compact_threshold_tokens", 0)
+                compact_pct = ctx.get("compact_threshold_pct", 100)
+                ctx_pct = ctx.get("context_pct", 0)
+                max_tokens = ctx.get("max_tokens", 0)
+                if current > 0:
+                    token_line = "Context: " + str(current) + " tokens used"
+                    if compact_threshold > 0:
+                        remaining = compact_threshold - current
+                        token_line += " (" + str(ctx_pct) + "% toward compaction at " + str(compact_threshold) + " / " + str(compact_pct) + "% of " + str(max_tokens) + ")"
+                        token_line += ", " + str(remaining) + " tokens remaining before auto-compact"
+                    sections.append(token_line)
+                    if ctx_pct >= 75:
+                        sections.append(
+                            "Context notice: " + str(ctx_pct) + "% of the compaction threshold is used. "
+                            "Keep all active plans, task lists, and notes current as you work: "
+                            "reflect any new findings, decisions, or progress in them as each change happens, "
+                            "so nothing is lost if compaction occurs mid-session."
+                        )
+            except Exception:
+                pass
+
+            ${lib.optionalString hasStyle ''
+              if count % STYLE_INTERVAL == 0:
+                  sections.append("Style reminder (periodic re-injection every " + str(STYLE_INTERVAL) + " turns):\n\n" + STYLE_TEXT + "\n\nApply these rules immediately to all your responses, without exception.")
+            ''}
+            ${lib.optionalString hasClaude ''
+              if count % CLAUDE_MD_INTERVAL == 0:
+                  try:
+                      with open(CLAUDE_MD_PATH) as fh:
+                          claude_md = fh.read().strip()
+                      if claude_md:
+                          sections.append("Global CLAUDE.md re-injection (periodic, every " + str(CLAUDE_MD_INTERVAL) + " turns):\n\n" + claude_md)
+                  except Exception:
+                      pass
+            ''}
+
+            if sections:
+                sys.stdout.write("\n\n".join(sections) + "\n")
+            sys.exit(0)
+          '';
 
         notifyCmd = self.notifyUser {
           inherit pkgs;
@@ -1306,6 +1898,7 @@ in
         contextInjectScript = mkPythonHook "nx-claude-context" contextBody;
         precompactScript = mkPythonHook "nx-claude-precompact" precompactBody;
         notifyScript = mkPythonHook "nx-claude-notify" notifyBody;
+        userPromptReminderScript = mkPythonHook "nx-claude-prompt-reminder" userPromptReminderBody;
 
         rawDefaultHookHandlers = {
           PreToolUse = {
@@ -1322,6 +1915,11 @@ in
           };
           Notification = {
             command = notifyScript;
+          };
+        }
+        // lib.optionalAttrs (userPromptReminderScript != null) {
+          UserPromptSubmit = {
+            command = userPromptReminderScript;
           };
         };
         defaultHookHandlers = lib.mapAttrs (_event: lib.mkDefault) rawDefaultHookHandlers;
@@ -1394,8 +1992,18 @@ in
         renderMerged = self.common.dev.agents.exports.renderMerged;
         renderPrograms = self.common.dev.agents.exports.renderPrograms;
 
+        sharedInstructionsForClaude = sharedAgents.instructions // {
+          "02 - Session Start" = (sharedAgents.instructions."02 - Session Start" or [ ]) ++ [
+            [
+              "After completing the mandatory session-start steps, check whether the current working directory is inside a git repo whose root contains AGENTS.md but no CLAUDE.md."
+              "If so, read AGENTS.md immediately as the next action before responding."
+              "No action needed if CLAUDE.md is present, if neither file exists, or if the working directory is not inside a git repo."
+            ]
+          ];
+        };
+
         mergedContext = renderMerged [
-          sharedAgents.instructions
+          sharedInstructionsForClaude
           instructions
           (renderPrograms sharedAgents.programs)
         ];
@@ -1408,6 +2016,8 @@ in
         mergedSkills = sharedAgents.skills // skills;
 
         mergedAgents = sharedAgents.agents // agents;
+        defaultSubagentType = config.nx.common.dev.claude.defaultSubagentType;
+        validSubagentTypes = builtins.attrNames mergedAgents;
 
         compactWindowValue = if autoCompactWindow == null then "" else builtins.toString autoCompactWindow;
         compactPercentValue = builtins.toString (
@@ -1467,10 +2077,25 @@ in
           paths = [ pkgs.claude-code ];
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postBuild = ''
-            wrapProgram $out/bin/claude ${lib.concatStringsSep " " claudeWrapperArgs}
+            wrapProgram $out/bin/claude \
+              ${lib.concatStringsSep " " claudeWrapperArgs}
           '';
         };
-        claude-package = if claudeWrapperArgs != [ ] then claude-code-wrapped else pkgs.claude-code;
+        baseClaude = if claudeWrapperArgs != [ ] then claude-code-wrapped else pkgs.claude-code;
+        claude-with-plans = pkgs.writeShellScriptBin "claude" ''
+          if ! ${pkgs.git}/bin/git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            printf "\033[1;31m\033[1mError: claude must be run from inside a git repository.\033[0m\n" >&2
+            exit 1
+          fi
+          if [ -z "''${NX_AGENTS_PLANS_DIR:-}" ]; then
+            slug="''${PWD//[\/.]/-}"
+            NX_AGENTS_PLANS_DIR="$HOME/.local/share/nx/agents/plans/$slug"
+          fi
+          mkdir -p "$NX_AGENTS_PLANS_DIR/archive"
+          export NX_AGENTS_PLANS_DIR
+          exec ${baseClaude}/bin/claude "$@"
+        '';
+        claude-package = claude-with-plans;
 
         statusline-command = pkgs.writeShellScript "statusline-command" ''
           input=$(cat)
@@ -1485,9 +2110,11 @@ in
           cost=""
           tokens=""
           exceeds="false"
+          session_id=""
           if command -v jq >/dev/null 2>&1; then
             model=$(printf '%s' "$input" | jq -r '.model.display_name // "Claude"')
             dir=$(printf '%s' "$input" | jq -r '.workspace.current_dir // .cwd // ""')
+            session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
             ctx_pct=$(printf '%s' "$input" | jq -r '.context_window.used_percentage // empty' | cut -d. -f1)
             five_h=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty' | cut -d. -f1)
             five_h_reset=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
@@ -1623,6 +2250,19 @@ in
             [ "$tokens" -ge "$ctx_warn_tokens" ] && ctx_alert=1
           else
             [ -n "$ctx_pct" ] && [ "$ctx_pct" -gt "$WARN_PCT" ] && ctx_alert=1
+          fi
+
+          if [ -n "$session_id" ] && [ -n "$tokens" ]; then
+            _safe_sid=$(printf '%s' "$session_id" | tr -cs 'A-Za-z0-9_-' '_')
+            _state_dir="''${XDG_RUNTIME_DIR:-''${XDG_STATE_HOME:-$HOME/.local/state}}/nx-claude"
+            mkdir -p "$_state_dir"
+            printf '{"current_tokens":%s,"max_tokens":%s,"compact_threshold_tokens":%s,"compact_threshold_pct":%s,"context_pct":%s}\n' \
+              "''${tokens:-0}" \
+              "''${model_window:-0}" \
+              "''${threshold_tokens:-0}" \
+              "''${COMPACT_PCT:-100}" \
+              "''${ctx_pct:-0}" \
+              > "$_state_dir/ctx-$_safe_sid.json"
           fi
 
           ctx_fg="$VAL_FG"; ctx_bg="$BODY_BG"
@@ -1840,6 +2480,11 @@ in
         );
       in
       {
+        assertions = lib.optional delegateToSubagents {
+          assertion = lib.elem defaultSubagentType validSubagentTypes;
+          message = "nx.common.dev.claude.defaultSubagentType must be a name injected via nx.common.dev.claude.agents or nx.common.dev.agents.agents (got \"${defaultSubagentType}\"; available: ${builtins.concatStringsSep ", " validSubagentTypes})!";
+        };
+
         programs.claude-code = {
           enable = true;
           package = claude-package;
@@ -1865,7 +2510,7 @@ in
             inherit editorMode askUserQuestionTimeout;
             inherit spinnerTipsEnabled awaySummaryEnabled autoScrollEnabled;
             inherit remoteControlAtStartup useAutoModeDuringPlan;
-            permissions.defaultMode = permissionMode;
+            permissions.defaultMode = if permissionMode == "manual" then "default" else permissionMode;
           }
           // lib.optionalAttrs (mergedHooks != { }) {
             hooks = mergedHooks;
@@ -1904,13 +2549,16 @@ in
             name: value:
             let
               desc = value.description or "Custom agent ${name}.";
-              toolsLine = lib.concatStringsSep ", " value.tools;
+              toolsPart = lib.optionalString (
+                value.tools != [ ]
+              ) "\ntools: ${lib.concatStringsSep ", " value.tools}";
+              modelLine = lib.optionalString (value.model != null) "\nmodel: ${value.model}";
+              effortLine = lib.optionalString (value.effort != null) "\neffort: ${value.effort}";
             in
             ''
               ---
               name: ${builtins.toJSON name}
-              description: ${builtins.toJSON desc}
-              tools: ${toolsLine}
+              description: ${builtins.toJSON desc}${toolsPart}${modelLine}${effortLine}
               ---
 
               # ${name}

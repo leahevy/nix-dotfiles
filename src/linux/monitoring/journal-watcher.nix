@@ -1010,5 +1010,56 @@ args@{
           nx.linux.server.healthchecks.requireServicesUp = [ "nx-journal-watcher.service" ];
         };
       };
+
+      ifEnabled.common.dev.agents = {
+        enabled =
+          config:
+          let
+            ripgrepEnabled = config.nx.common.shell.rust-programs.enable or false;
+          in
+          {
+            nx.common.dev.agents.skills."journal-watcher" = {
+              description = "Add ignore or highlight patterns to the journal-watcher module.";
+              text = ''
+                ## Finding Patterns
+
+                Pull pre-populated pattern JSON from the watcher log:
+
+                ```bash
+                journalctl -u nx-journal-watcher.service --since "1 day ago" --no-pager --output=cat --all \
+                  | ${if ripgrepEnabled then "rg" else "grep"} "Send notification pattern:"
+                ```
+
+                Translate the JSON after `pattern:` to a Nix attrset. Drop non-matcher fields like `priority`.
+
+                ## Placement
+
+                - Known owning module -> add to its `enabled` block via `nx.linux.monitoring.journal-watcher.ignorePatterns`
+                - Generic noise with no owner -> `journal-watcher.nix` base settings (`baseKernelStringsToIgnore`, `baseSystemStringsToIgnore`, `baseUserStringsToIgnore`, `baseStringsToIgnore`)
+                - Machine-specific or private patterns -> anonymize to a generic regex first; if it cannot be meaningfully generalized, add it to the user's profile via `additionalKernelStringsToIgnore` etc. instead. The user can override and request nxcore placement -- anonymization still applies.
+
+                Always scope as specifically as possible. Combine `service` + `string`, `tag` + `string`, or all three. Never blanket-ignore a tag unless it is entirely noise.
+
+                ## Pattern Syntax
+
+                ```nix
+                { service = "my-service.service"; }              # system service (exact unit)
+                { service = "my-app.service"; user = true; }     # user service
+                { tag = "my-tag"; }                              # syslog tag, all non-kernel scopes
+                { string = "transient noise.*"; }                # system scope only
+                { string = "firmware error"; kernel = true; }    # kernel only
+                { string = "noise"; all = true; }                # all scopes
+                { service = "foo.service"; string = "startup"; } # compound AND
+                ```
+
+                `string` is a regex -- escape literal dots, parens, brackets. Plain `{ string }` matches system scope only; add `kernel`, `user`, `unitless`, or `all` for other scopes.
+
+                ## Triage
+
+                Don't suppress everything. Keep patterns that could signal hardware degradation, security issues, or persistent failures. Present recommendations before writing.
+              '';
+            };
+          };
+      };
     };
 }
