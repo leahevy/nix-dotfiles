@@ -343,6 +343,12 @@ in
           user = true;
           unitless = true;
         }
+        {
+          tag = "pipewire-pulse";
+          string = "mod\\.protocol-pulse: client 0x[0-9a-f]+ \\[.*\\]: stream 0x[0-9a-f]+ OVERFLOW channel:[0-9]+";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 
