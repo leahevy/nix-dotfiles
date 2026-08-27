@@ -1290,6 +1290,10 @@ in
                       if len(lead_tokens) >= 2:
                           return _check_part(part[1:])
                       return "bare command builtin"
+                  elif lead_cmd == 'time':
+                      if len(lead_tokens) >= 2:
+                          return _check_part(part[1:])
+                      return "bare time builtin"
                   elif lead_cmd == 'cd':
                       if len(lead_tokens) < 2:
                           return "cd to home directory is not allowed"
