@@ -386,6 +386,7 @@ args@{
           "Plain ASCII prose only. No arrow or symbol shorthand for words."
           "When an em dash is needed in prose written to the user, write it as three hyphens (---), never as the Unicode em dash character (U+2014). Never use an en dash (U+2013) in prose to the user at all; rewrite the sentence instead. This rule applies only to chat messages --- never introduce --- sequences or dashes-as-punctuation into file contents, code, or any written artifact."
           "If the honest answer is one word or one line, give one word or one line."
+          "Each bullet point must contain one tight idea, expressed in as few words as possible. If a point needs more than a short sentence or two to express, write it as a plain paragraph without a bullet marker instead; separate adjacent paragraphs with one blank line. This rule does not license more content - it only governs how unavoidably long content is formatted."
         ];
 
         wrapLines = config.nx.common.dev.agents.wrapLines;
@@ -421,11 +422,12 @@ args@{
               "Step 1: Extract 2-3 keywords from the user's request."
               [
                 "Step 2: Find and initialise the plans directory."
-                "If $NX_AGENTS_PLANS_DIR is set in the environment: run `mkdir -p $NX_AGENTS_PLANS_DIR/archive && ls $NX_AGENTS_PLANS_DIR`."
-                "If $NX_AGENTS_PLANS_DIR is not set: replace every '/' and '.' in the absolute current working directory path with '-' to form the slug, use '~/.local/share/nx/agents/plans/<slug>' as the plans dir, then run mkdir -p (including the archive subdirectory) and ls on it."
+                "If $NX_AGENTS_PLANS_DIR is set in the environment: run `mkdir -p $NX_AGENTS_PLANS_DIR/archive && mkdir -p $NX_AGENTS_PLANS_DIR/tmp && ls $NX_AGENTS_PLANS_DIR`."
+                "If $NX_AGENTS_PLANS_DIR is not set: replace every '/' and '.' in the absolute current working directory path with '-' to form the slug, use '~/.local/share/nx/agents/plans/<slug>' as the plans dir, then run mkdir -p (including the archive and tmp subdirectories) and ls on it."
               ]
             ]
             "When a plan is finished or abandoned, move its file into the 'archive' subdirectory of the plans directory (create it with 'mkdir -p' if missing) instead of deleting it, so only active plans stay at the top level."
+            "The 'tmp' subdirectory of the plans directory is a session-spanning scratch area for this project. Use it when you need to create intermediate files that must survive across sessions (for example, partial outputs or state files for a long-running multi-session task). Do not use it for one-off scripts or ephemeral working files you will discard within the same session."
           ];
           "10 - Work Style" = [
             "Always follow the user's explicit instructions exactly; don't add extra work, refactors, formatting, or \"helpful checks\" unless asked."
@@ -453,7 +455,7 @@ args@{
             "Before acting on any request, match it against the descriptions of the injected skills, not only at the start of the session. If a skill's description covers the request, invoke that skill and follow its steps exactly before doing the work yourself. Treat a matching skill as mandatory, not optional."
             "For code review and diff scanning tasks, use the injected review skills rather than any built-in code review commands the tool provides."
             "When asked for time estimates, base them on the project's own commit history (commit frequency, typical diff sizes, how long similar changes took) rather than generic human-based estimates."
-            "When asked to suggest a commit message, give exactly one line. No body, no bullet points, no subject/body split."
+            "When asked to suggest a commit message, first run `git --no-pager log --oneline -10` to read the ten most recent commit messages, then write exactly one line in the same style and capitalisation. No body, no bullet points, no subject/body split."
             "Verification is the user's job; do not prompt them about it."
             "Never invent function, variable, or CLI names; verify on the web first."
             "Keep scripts idempotent."
@@ -533,7 +535,9 @@ args@{
               "A short setup prefix that changes context for the following command (e.g. `cd dir && command`) is also fine."
               "The anti-pattern to avoid is: `echo \"=== step 1 ===\" && do-step-1 && echo \"=== step 2 ===\" && do-step-2`. Run `do-step-1` alone first, then `do-step-2` in a separate call."
             ]
-            "In shell commands, write full literal paths rather than constructing them via shell variables (e.g. avoid `F=/some/path; touch $F/file`, write `touch /some/path/file` instead). Literal paths can be inspected and approved automatically; variable-built paths always require manual review."
+            "In shell commands, write full literal values rather than assigning them to shell variables first. Never define a variable inline to hold a path or any other value and then use it in the same command chain: both `F=/some/path; ls $F` and `F=/some/path && ls $F` are forbidden. Write `ls /some/path` directly. Inline variable assignments followed by variable use will be denied."
+            "Never create or write files via shell output redirection (`>` or `>>`), including empty-file creation patterns like `cat > file < /dev/null`. To create an empty file use `touch /path/to/file`; to write content use the available file write tools."
+            "Never run Python scripts inline (e.g. `python3 -c '...'`) or by writing a `.py` script file and executing it. Use dedicated file-reading tools, jq/yq/rg, and simple targeted shell commands instead, one at a time."
           ];
         };
 
@@ -617,16 +621,18 @@ args@{
                    exactly what is wrong. Prefer several short sentences over one long
                    run-on sentence. Lead with the concrete problem, then the consequence.
                    Never include an item that concludes the code is actually fine.
-                 - Add a "Commits" section immediately before the verdict. Suggest one
-                   commit message (a single line) per logical unit of change. Collapse
-                   multiple units into fewer commits when they touch the same files so
-                   heavily that a clean separation would be artificial. When suggesting
-                   multiple commits, list the files that belong to each commit in
-                   parentheses directly after the commit message on the same line.
-                   Order commits so that each one is a fully working, buildable unit on
-                   its own: if applying only the first N commits would produce a broken
-                   or non-building state, the ordering is wrong. If a clean ordering is
-                   not possible, collapse the affected commits into one.
+                 - Add a "Commits" section immediately before the verdict. Before writing
+                   any commit message, run `git --no-pager log --oneline -10` to read
+                   the ten most recent commits and match their style and capitalisation
+                   exactly. Suggest one commit message (a single line) per logical unit
+                   of change. Collapse multiple units into fewer commits when they touch
+                   the same files so heavily that a clean separation would be artificial.
+                   When suggesting multiple commits, list the files that belong to each
+                   commit in parentheses directly after the commit message on the same
+                   line. Order commits so that each one is a fully working, buildable
+                   unit on its own: if applying only the first N commits would produce a
+                   broken or non-building state, the ordering is wrong. If a clean
+                   ordering is not possible, collapse the affected commits into one.
                    Never omit this section.
                  - End the output with exactly one line containing only the verdict:
                    "${readyVerdict}" or "${blockedVerdict}".

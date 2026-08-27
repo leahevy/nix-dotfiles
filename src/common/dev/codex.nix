@@ -165,7 +165,6 @@ args@{
           ];
 
           codexOnlyRules = [
-            "Do not run inline Python scripts for code checks or repository analysis. Prefer dedicated tools or manual reasoning; only run scripting languages when explicitly requested or clearly necessary."
             "Always state what you will do before running any edit tool calls."
             "Never auto-accept edits."
             "If `functions.apply_patch` reports `Success. Updated the following files:` for the intended file path, trust that result and do not read the file again just to confirm the patch was applied."

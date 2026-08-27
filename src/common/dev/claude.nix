@@ -702,8 +702,9 @@ in
           ++ lib.optional (!delegateEnabled) "Keep sub-agents to a minimum."
           ++ [
             "$NX_AGENTS_PLANS_DIR is always set by the claude wrapper to the plans directory for the current repo; use it directly without any slug computation."
+            "For one-off scripts and ephemeral working files you will discard within the same session, use the session scratchpad path the harness injects at the top of the system prompt (the /tmp/claude-<uid>/... path) instead of $NX_AGENTS_PLANS_DIR/tmp. The session scratchpad (/tmp/claude-<uid>/...) is NOT the plans directory. They are completely separate. Never use the session scratchpad path as the plans directory or create archive/tmp subdirectories inside it."
             "rm -rf is blocked; use individual rm per file and rmdir for empty directories."
-            "Never write file content via shell heredocs (e.g. cat >> file <<'EOF' ... EOF). This is a hard rule with no exceptions: always use the Write or Edit tool for file writes."
+            "Never write file content via shell heredocs (e.g. cat >> file <<'EOF' ... EOF) or via shell output redirection (`>` or `>>`). These are hard rules with no exceptions: always use the Write or Edit tool for file writes."
           ]
           ++
             lib.optional (!delegateEnabled || reviewModel == null)
@@ -727,7 +728,9 @@ in
             lib.concatStringsSep "\n" [
               "For code reviews and diff analysis, delegate to the 'review' subagent (subagent_type: review). The review agent will use the injected review skills internally."
               "To use it: Agent({ subagent_type: \"review\", prompt: \"review instructions\" })."
-              "When a review subagent finishes, repeat its ENTIRE summary verbatim as plain text in the chat (changes list, findings, commit suggestions, verdict) before doing anything else. Never call ReportFindings in the main session after a delegated review: the card is invisible to the user and loses context."
+              "When a single review subagent finishes, repeat its ENTIRE summary verbatim as plain text in the chat, including every section it produced (Changes, Bugs/Inconsistencies, Security Issues, Privacy Leaks, Commits, verdict), before doing anything else. Never omit a section the subagent produced, even if it contains only a single item."
+              "When the user requests multiple review agents, launch all simultaneously (up to the configured concurrency cap), then wait until ALL have finished before posting anything. Once all are done: verify each conflicting claim in the main session by reading the relevant source (a claim found by only one agent, or where agents directly contradict each other). Then produce ONE combined summary using the same section order and layout as a single review (Changes, Bugs/Inconsistencies grouped by severity, Security Issues, Privacy Leaks, Commits, verdict). Merge agreed findings as-is; include resolved conflicts with a one-sentence note on what you verified. Omit any finding section entirely if no agent reported anything for it. Never post individual per-agent summaries."
+              "Never call ReportFindings in the main session after a delegated review: the card is invisible to the user and loses context."
             ]
           );
         };
@@ -967,6 +970,7 @@ in
           "gitlab.com"
           "nixos.wiki"
           "wiki.nixos.org"
+          "discourse.nixos.org"
           "mynixos.com"
           "wiki.archlinux.org"
           "hackage.haskell.org"
@@ -1052,6 +1056,7 @@ in
               "rg", "tree", "sort", "head", "tail", "wc", "cut", "cat",
               "nl", "tac", "rev", "uniq", "comm", "column", "fmt", "fold",
               "ls", "tr", "jq", "yq", "date", "basename", "dirname", "printf", "diff",
+              "test", "which",
           )
 
           OPERATORS = frozenset(['&&', '||', ';'])
@@ -1067,7 +1072,7 @@ in
                   lex = shlex.shlex(cmd, posix=True)
                   lex.whitespace_split = False
                   lex.whitespace = ' \t'
-                  lex.wordchars += '-./=~%@+:,'
+                  lex.wordchars += '-./=~%@+:,*?'
                   lex.commenters = ""
                   raw = list(lex)
               except ValueError:
@@ -1177,21 +1182,23 @@ in
 
               tokens = _expand_allowed_vars(tokens)
               tokens = _strip_safe_redirects(tokens)
+              if re.search(r'[A-Za-z_][A-Za-z_0-9]*=[^\s;|&]+\s*[;&|].*\$[A-Za-z_{]', cmd):
+                  deny("inline shell variable assignment followed by variable use is blocked; write literal values directly instead")
               if '$' in tokens:
-                  ask("command contains an unexpanded shell variable; write literal paths instead")
+                  ask("command contains an unexpanded shell variable; write literal values directly instead")
 
               def _in_allowed_root(tok):
                   part = tok.split("=", 1)[-1] if "=" in tok else tok
                   normalized = os.path.normpath(os.path.expanduser(part))
                   resolved = os.path.realpath(normalized)
+                  if under(resolved, CLAUDE_TMP):
+                      return True
                   if any(under(resolved, d) or under(normalized, d) for d in EXTRA_DIR_DENY):
                       deny("access to disallowed directory in shell command: " + resolved)
                   if any(under(resolved, s) or under(normalized, s) for s in SECRET_DIRS):
                       deny("access to secret directory in shell command: " + resolved)
                   if SECRET_FILE.search(resolved):
                       deny("access to secret material in shell command: " + resolved)
-                  if under(resolved, CLAUDE_TMP):
-                      return True
                   if any(under(normalized, r) for r in NX_INPUT_ROOTS):
                       return True
                   if under(resolved, NX_AGENTS_PLANS_DIR):
@@ -1238,7 +1245,8 @@ in
                   elif lead_cmd == 'git':
                       if not re.match(r"^git(\s+(--no-pager|-C\s+\S+))*\s+(ls-files|log|status|check-ignore|diff|show|rev-parse)\b", lead):
                           return "git subcommand not in allowlist"
-                      if re.search(r"(^|\s)(-c|--config|--exec-path|--git-dir|--work-tree|--namespace|--bare|--output)(=|\s|$)", lead):
+                      _lead_stripped = re.sub(r'\s+-c\s+diff\.external=(?=\s|$)', ' ', lead)
+                      if re.search(r"(^|\s)(-c|--config|--exec-path|--git-dir|--work-tree|--namespace|--bare|--output)(=|\s|$)", _lead_stripped):
                           return "git command with unsafe flags"
                       for _gi, _gtok in enumerate(lead_tokens):
                           if _gtok == '-C' and _gi + 1 < len(lead_tokens):
@@ -1344,7 +1352,7 @@ in
                               os.path.join(cwd, tok) if not os.path.isabs(tok) and not tok.startswith('~')
                               else os.path.expanduser(tok)
                           )
-                          if not under(resolved, cwd) and not under(resolved, NX_AGENTS_PLANS_DIR):
+                          if not under(resolved, cwd) and not under(resolved, NX_AGENTS_PLANS_DIR) and not under(resolved, CLAUDE_TMP):
                               return lead_cmd + " outside current directory: " + tok
                   elif lead_cmd == 'systemctl':
                       if not re.match(r"^systemctl(\s+(-[a-zA-Z]+|--[a-zA-Z0-9=-]+))*\s+(status|cat|show|is-active|is-enabled|is-failed|get-default|list-units|list-timers|list-sockets|list-jobs|list-unit-files)\b", lead):
@@ -1484,6 +1492,8 @@ in
           ${generalPurposeDenyBlock}
           ${missingSubagentTypeDenyBlock}
           ${codeReviewDenyBlock}
+          if tool_name == "Agent" and tool_input(data).get("subagent_type") == "claude-code-guide":
+              deny("The claude-code-guide agent is disabled. Search docs.anthropic.com or code.claude.com for the information you need.")
           if tool_name == "Skill" and tool_input(data).get("skill") == "claude-api":
               deny("The claude-api skill is disabled. Search docs.anthropic.com or code.claude.com for the information you need.")
           if tool_name == "WebSearch":
@@ -1567,7 +1577,7 @@ in
                   deny("rm -rf is blocked; use individual rm per file and rmdir for empty directories")
               if re.search(r"\brg\b[^|&;\n]*\s(-(?!-)\w*r\w*|--replace\b)", cmd):
                   deny("rg -r/--replace rewrites match output; remove the flag (rg is already recursive by default)")
-              if re.search(r'<<', cmd):
+              if re.search(r'(?<![<])<<(?!<)', cmd):
                   if re.search(r'(?<![<])>(?!&)', cmd):
                       deny("heredoc file writing is blocked; use the Write or Edit tool for file writes")
                   else:
@@ -1581,6 +1591,8 @@ in
                   deny("ssh, scp and rsync are blocked")
               if re.search(r"\bdd\s.*of=/dev/", cmd):
                   deny("writing with dd to a block device is blocked")
+              if re.search(r'\bpython3?\b[^|&;]*\s-c\b', cmd):
+                  deny("python inline scripts are blocked; use jq/yq/rg and dedicated tools instead")
               if re.search(r"(curl|wget)[^|]*\|[^|]*(sh|bash|python3?|perl|ruby|node)", cmd):
                   deny("piping a download into a shell or interpreter is blocked")
               if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", cmd):
@@ -1588,14 +1600,17 @@ in
               META = frozenset(['<', '>', '`', '(', ')', '$', '{', '}'])
               if tokens and not any(t in META for t in tokens):
                   for _tok in tokens[1:]:
-                      if not _tok.startswith('-') and ('/' in _tok or _tok.startswith('~') or _tok.startswith('.')):
+                      if not _tok.startswith('-') and ('/' in _tok or _tok.startswith('~') or _tok.startswith('.') or '*' in _tok or '?' in _tok):
+                          if ('*' in _tok or '?' in _tok) and SECRET_FILE.search(_tok):
+                              deny("access to secret material in shell command: " + _tok)
                           _p = os.path.normpath(os.path.expanduser(_tok))
                           _r = os.path.realpath(_p)
                           if any(under(_r, d) or under(_p, d) for d in EXTRA_DIR_DENY):
-                              deny("access to disallowed directory in shell command: " + _r)
+                              if not under(_r, CLAUDE_TMP):
+                                  deny("access to disallowed directory in shell command: " + _r)
                           if any(under(_r, s) or under(_p, s) for s in SECRET_DIRS):
                               deny("access to secret directory in shell command: " + _r)
-                          if SECRET_FILE.search(_r):
+                          if SECRET_FILE.search(_r) and not under(_r, CLAUDE_TMP):
                               deny("access to secret material in shell command: " + _r)
               mutation_parts = _split_on(tokens, OPERATORS | {'|', '&'}) if tokens else []
               if len(mutation_parts) == 1:
@@ -1612,6 +1627,12 @@ in
                           ):
                               _eseg.append(NX_AGENTS_PLANS_DIR + seg[_i + 1][len('NX_AGENTS_PLANS_DIR'):])
                               _i += 2
+                          elif seg[_i] == '$' and _i + 1 < len(seg) and (
+                              seg[_i + 1] == 'CLAUDE_TMP'
+                              or seg[_i + 1].startswith('CLAUDE_TMP/')
+                          ):
+                              _eseg.append(CLAUDE_TMP + seg[_i + 1][len('CLAUDE_TMP'):])
+                              _i += 2
                           else:
                               _eseg.append(seg[_i])
                               _i += 1
@@ -1619,9 +1640,10 @@ in
                           path_toks = [t for t in _eseg[1:] if not t.startswith('-')]
                           if path_toks and all(
                               under(resolve(cwd, os.path.expanduser(p)), NX_AGENTS_PLANS_DIR)
+                              or under(resolve(cwd, os.path.expanduser(p)), CLAUDE_TMP)
                               for p in path_toks
                           ):
-                              allow("mv/rm/touch confined to the agents plans dir")
+                              allow("mv/rm/touch confined to the agents plans dir or session scratchpad")
               if re.search(r'\$\(|`', cmd):
                   ask("command contains a subshell substitution")
               reason = is_readonly_listing(tokens)
@@ -2091,7 +2113,9 @@ in
             NX_AGENTS_PLANS_DIR="$HOME/.local/share/nx/agents/plans/$slug"
           fi
           mkdir -p "$NX_AGENTS_PLANS_DIR/archive"
+          mkdir -p "$NX_AGENTS_PLANS_DIR/tmp"
           export NX_AGENTS_PLANS_DIR
+          export CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1
           exec ${baseClaude}/bin/claude "$@"
         '';
         claude-package = claude-with-plans;
