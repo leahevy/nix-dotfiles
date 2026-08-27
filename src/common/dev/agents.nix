@@ -449,6 +449,9 @@ args@{
             "Do not read or search additional files beyond what is required to complete the user's request."
             "If the user explicitly says \"only change X\" or \"stop reading Y\", treat it as a hard constraint."
             "Minimise tool calls; don't re-read files you already read this session unless there's a concrete reason they could have changed."
+            "If ${
+              if ripgrepEnabled then "grep or rg" else "grep"
+            } does not find a string that strong contextual evidence says should be present, assume the string is slightly off rather than absent: read the file in full before drawing conclusions or giving up."
             "Do not do a broad repository sweep unless it's required; ask first if it will be large or token-heavy."
             "When asked to look at or modify a .nix file by name, look for it in the current git repository, not in dotfiles or config directories under the home directory. Nix configuration lives in the project repository. The only exception is when the current project itself is a dotfiles or home-manager repository, or when the project has no flake.nix and the file is clearly not part of any nix module tree."
             "Agent tool config directories (~/.claude/, ~/.vibe/, and equivalents) are managed externally at build time. Never write files there directly. If the user asks to add a skill, agent, or any config file under those directories, tell them to add it through whatever configuration system manages the agent setup for this project and rebuild."
