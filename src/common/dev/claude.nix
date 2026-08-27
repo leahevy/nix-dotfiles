@@ -1751,6 +1751,8 @@ in
                                             _text
                                             and not _text.startswith("[Request interrupted")
                                             and not _text.startswith("<task-notification")
+                                            and not (_msg["role"] == "user" and _text.startswith("/"))
+                                            and not _text.startswith("[Your previous response had no visible output")
                                         ):
                                             _raw.append((_msg["role"], _text))
                                 except Exception:
@@ -1773,11 +1775,18 @@ in
                         _selected.insert(0, _group)
                         _total_chars += _gc
                     if _selected:
-                        _lines = []
+                        _merged = []
                         for _group in _selected:
                             for _gr, _gt in _group:
-                                _label = "**User**" if _gr == "user" else "**Assistant**"
-                                _lines.append(_label + "\n\n" + _gt)
+                                if _merged and _merged[-1][0] == _gr:
+                                    _sep = "\n" if _gt.startswith("[") and _merged[-1][1].split("\n")[-1].startswith("[") else "\n\n"
+                                    _merged[-1] = (_gr, _merged[-1][1] + _sep + _gt)
+                                else:
+                                    _merged.append((_gr, _gt))
+                        _lines = []
+                        for _gr, _gt in _merged:
+                            _label = "**User**" if _gr == "user" else "**Assistant**"
+                            _lines.append(_label + "\n\n" + _gt)
                         sections.append("=== Recent Messages ===\n\n" + "\n\n---\n\n".join(_lines))
           ''}
           ${lib.optionalString (styleReminderInterval != null || claudeMdReminderInterval != null) ''
