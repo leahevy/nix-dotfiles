@@ -1747,29 +1747,37 @@ in
                                     _msg = _obj.get("message")
                                     if _msg and _msg.get("role") in ("user", "assistant"):
                                         _text = _extract_text(_msg.get("content") or [])
-                                        if _text and not _text.startswith("[Request interrupted"):
+                                        if (
+                                            _text
+                                            and not _text.startswith("[Request interrupted")
+                                            and not _text.startswith("<task-notification")
+                                        ):
                                             _raw.append((_msg["role"], _text))
                                 except Exception:
                                     continue
                     except Exception:
                         pass
-                    _pairs = []
-                    _i = len(_raw) - 1
-                    while _i >= 1:
-                        if _raw[_i][0] == "assistant" and _raw[_i - 1][0] == "user":
-                            _pairs.insert(0, (_raw[_i - 1], _raw[_i]))
-                            _i -= 2
-                        else:
-                            _i -= 1
-                    if _pairs:
-                        while len(_pairs) > 1:
-                            if sum(len(u[1]) + len(a[1]) for u, a in _pairs) <= RECENT_MSGS_LIMIT:
-                                break
-                            _pairs.pop(0)
+                    _group_starts = []
+                    for _gi, (_gr, _gt) in enumerate(_raw):
+                        if _gr == "user" and (_gi == 0 or _raw[_gi - 1][0] != "user"):
+                            _group_starts.append(_gi)
+                    _selected = []
+                    _total_chars = 0
+                    for _gk in range(len(_group_starts) - 1, -1, -1):
+                        _gs = _group_starts[_gk]
+                        _ge = _group_starts[_gk + 1] if _gk + 1 < len(_group_starts) else len(_raw)
+                        _group = _raw[_gs:_ge]
+                        _gc = sum(len(_gt) for _, _gt in _group)
+                        if _total_chars + _gc > RECENT_MSGS_LIMIT and _selected:
+                            break
+                        _selected.insert(0, _group)
+                        _total_chars += _gc
+                    if _selected:
                         _lines = []
-                        for _u, _a in _pairs:
-                            _lines.append("**User**\n\n" + _u[1])
-                            _lines.append("**Assistant**\n\n" + _a[1])
+                        for _group in _selected:
+                            for _gr, _gt in _group:
+                                _label = "**User**" if _gr == "user" else "**Assistant**"
+                                _lines.append(_label + "\n\n" + _gt)
                         sections.append("=== Recent Messages ===\n\n" + "\n\n---\n\n".join(_lines))
           ''}
           ${lib.optionalString (styleReminderInterval != null || claudeMdReminderInterval != null) ''
