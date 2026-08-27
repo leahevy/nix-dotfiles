@@ -148,6 +148,24 @@ let
         echo "AIDE integrity check skipped, pending post boot commit"
         exit "$link_status"
       fi
+      if [ -f ${stateDir}/boot-commit-early-this-boot ]; then
+        _btime2=$(${pkgs.gawk}/bin/awk '/^btime/{print $2}' /proc/stat)
+        _early_mtime=$(${pkgs.coreutils}/bin/stat -c %Y ${stateDir}/boot-commit-early-this-boot)
+        if [ "$_early_mtime" -gt "$_btime2" ]; then
+          _late_pending=1
+          if [ -f ${stateDir}/boot-commit-this-boot ]; then
+            _late_mtime=$(${pkgs.coreutils}/bin/stat -c %Y ${stateDir}/boot-commit-this-boot)
+            if [ "$_late_mtime" -gt "$_btime2" ]; then
+              _late_pending=0
+            fi
+          fi
+          if [ "$_late_pending" = "1" ]; then
+            ${pkgs.coreutils}/bin/cat "$failfile"
+            echo "AIDE check skipped: late boot-commit pending"
+            exit "$link_status"
+          fi
+        fi
+      fi
       if [ ! -f ${dbDir}/active/aide.db ]; then
         echo "AIDE database missing, initializing baseline"
         ${aideBin} --init --config ${confPath} || true
@@ -350,6 +368,38 @@ let
         exit 0
       fi
       ${commitBin}/bin/aide-commit --force
+      ${pkgs.coreutils}/bin/touch ${stateDir}/boot-commit-early-this-boot
+    '';
+
+  mkCheckBootScript =
+    config:
+    pkgs.writeShellScript "nx-aide-check-boot" ''
+      set -uo pipefail
+      if [ -f ${stateDir}/boot-commit-this-boot ]; then
+        _btime=$(${pkgs.gawk}/bin/awk '/^btime/{print $2}' /proc/stat)
+        _mtime=$(${pkgs.coreutils}/bin/stat -c %Y ${stateDir}/boot-commit-this-boot)
+        if [ "$_mtime" -gt "$_btime" ]; then
+          echo "AIDE check skipped: boot-commit ran this boot session"
+          exit 0
+        fi
+      fi
+      exec ${checkCoreScript config}
+    '';
+
+  mkPostBootCommitLateScript =
+    commitBin:
+    pkgs.writeShellScript "nx-aide-post-boot-commit-late" ''
+      set -euo pipefail
+      if [ ! -f ${stateDir}/boot-commit-early-this-boot ]; then
+        exit 0
+      fi
+      _btime=$(${pkgs.gawk}/bin/awk '/^btime/{print $2}' /proc/stat)
+      _mtime=$(${pkgs.coreutils}/bin/stat -c %Y ${stateDir}/boot-commit-early-this-boot)
+      if [ "$_mtime" -le "$_btime" ]; then
+        exit 0
+      fi
+      ${commitBin}/bin/aide-commit --force
+      ${pkgs.coreutils}/bin/touch ${stateDir}/boot-commit-this-boot
     '';
 
   mkUpgradeCommitScript =
@@ -1233,7 +1283,7 @@ in
             Persistent = true;
           }
           // lib.optionalAttrs isHeadless {
-            OnActiveSec = 50;
+            OnActiveSec = 90;
           };
         };
 
@@ -1242,7 +1292,7 @@ in
           serviceConfig = {
             Type = "oneshot";
             TimeoutStartSec = checkTimeoutSec;
-            ExecStart = checkCoreScript config;
+            ExecStart = mkCheckBootScript config;
             SuccessExitStatus = [
               1
               2
@@ -1260,7 +1310,7 @@ in
           wantedBy = [ "timers.target" ];
           after = [ "multi-user.target" ];
           timerConfig = {
-            OnActiveSec = 30;
+            OnActiveSec = 240;
           };
         };
 
@@ -1279,6 +1329,24 @@ in
           after = [ "multi-user.target" ];
           timerConfig = {
             OnActiveSec = 10;
+          };
+        };
+
+        systemd.services.nx-aide-post-boot-commit-late = lib.mkIf (!testingMode) {
+          description = "AIDE database second commit after boot to capture runtime files";
+          serviceConfig = {
+            Type = "oneshot";
+            TimeoutStartSec = checkTimeoutSec;
+            ExecStart = mkPostBootCommitLateScript commitBin;
+          };
+        };
+
+        systemd.timers.nx-aide-post-boot-commit-late = lib.mkIf (!testingMode) {
+          description = "AIDE database second commit timer after boot";
+          wantedBy = [ "timers.target" ];
+          after = [ "multi-user.target" ];
+          timerConfig = {
+            OnActiveSec = if isHeadless then 60 else 120;
           };
         };
 
