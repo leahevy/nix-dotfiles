@@ -115,19 +115,19 @@
     # -----------------------------------------------------------------------------
 
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/nixos-26.05";
+      url = "https://channels.nixos.org/nixos-26.05/nixexprs.tar.zst";
     };
 
     nixpkgs-nix = {
-      url = "github:NixOS/nixpkgs/nixos-26.05";
+      url = "https://channels.nixos.org/nixos-26.05/nixexprs.tar.zst";
     };
 
     nixpkgs-darwin = {
-      url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
+      url = "https://channels.nixos.org/nixpkgs-26.05-darwin/nixexprs.tar.zst";
     };
 
     nixpkgs-unstable = {
-      url = "github:NixOS/nixpkgs/nixos-unstable";
+      url = "https://channels.nixos.org/nixos-unstable/nixexprs.tar.zst";
     };
 
     # -----------------------------------------------------------------------------
