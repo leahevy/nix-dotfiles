@@ -380,8 +380,29 @@ let
         _mtime=$(${pkgs.coreutils}/bin/stat -c %Y ${stateDir}/boot-commit-this-boot)
         if [ "$_mtime" -gt "$_btime" ]; then
           echo "AIDE check skipped: boot-commit ran this boot session"
+          ${pkgs.coreutils}/bin/touch ${stateDir}/check-boot-ran-this-boot
           exit 0
         fi
+      fi
+      _status=0
+      ${checkCoreScript config} || _status=$?
+      ${pkgs.coreutils}/bin/touch ${stateDir}/check-boot-ran-this-boot
+      exit "$_status"
+    '';
+
+  mkCheckPeriodicScript =
+    config:
+    pkgs.writeShellScript "nx-aide-check-periodic" ''
+      set -uo pipefail
+      if [ ! -f ${stateDir}/check-boot-ran-this-boot ]; then
+        echo "AIDE check skipped: boot check has not run this boot session"
+        exit 0
+      fi
+      _btime=$(${pkgs.gawk}/bin/awk '/^btime/{print $2}' /proc/stat)
+      _mtime=$(${pkgs.coreutils}/bin/stat -c %Y ${stateDir}/check-boot-ran-this-boot)
+      if [ "$_mtime" -le "$_btime" ]; then
+        echo "AIDE check skipped: boot check has not run this boot session"
+        exit 0
       fi
       exec ${checkCoreScript config}
     '';
@@ -1258,7 +1279,7 @@ in
           serviceConfig = {
             Type = "oneshot";
             TimeoutStartSec = checkTimeoutSec;
-            ExecStart = checkCoreScript config;
+            ExecStart = if isHeadless then checkCoreScript config else mkCheckPeriodicScript config;
           }
           // lib.optionalAttrs (!hcEnabled) {
             SuccessExitStatus = [
