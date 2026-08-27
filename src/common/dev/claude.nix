@@ -2139,21 +2139,35 @@ in
           exceeds="false"
           session_id=""
           if command -v jq >/dev/null 2>&1; then
-            model=$(printf '%s' "$input" | jq -r '.model.display_name // "Claude"')
-            dir=$(printf '%s' "$input" | jq -r '.workspace.current_dir // .cwd // ""')
-            session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
-            ctx_pct=$(printf '%s' "$input" | jq -r '.context_window.used_percentage // empty' | cut -d. -f1)
-            five_h=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty' | cut -d. -f1)
-            five_h_reset=$(printf '%s' "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
-            week=$(printf '%s' "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty' | cut -d. -f1)
-            week_reset=$(printf '%s' "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')
-            exceeds=$(printf '%s' "$input" | jq -r '.exceeds_200k_tokens // false')
-            tokens=$(printf '%s' "$input" | jq -r '.context_window.total_input_tokens // empty')
-            cost=$(printf '%s' "$input" | jq -r '.cost.total_cost_usd // empty')
-            model_window=$(printf '%s' "$input" | jq -r '
-              if ((.context_window.used_percentage // 0) > 0) and ((.context_window.total_input_tokens // 0) > 0)
-              then (.context_window.total_input_tokens * 100 / .context_window.used_percentage / 1000 | ceil) * 1000
-              else empty end')
+            {
+              IFS= read -r model
+              IFS= read -r dir
+              IFS= read -r session_id
+              IFS= read -r ctx_pct
+              IFS= read -r five_h
+              IFS= read -r five_h_reset
+              IFS= read -r week
+              IFS= read -r week_reset
+              IFS= read -r exceeds
+              IFS= read -r tokens
+              IFS= read -r cost
+              IFS= read -r model_window
+            } <<< "$(printf '%s' "$input" | jq -r '
+              (.model.display_name // "Claude"),
+              (.workspace.current_dir // .cwd // ""),
+              (.session_id // ""),
+              (.context_window.used_percentage | if . then (. | floor | tostring) else "" end),
+              (.rate_limits.five_hour.used_percentage | if . then (. | floor | tostring) else "" end),
+              (.rate_limits.five_hour.resets_at | if . then tostring else "" end),
+              (.rate_limits.seven_day.used_percentage | if . then (. | floor | tostring) else "" end),
+              (.rate_limits.seven_day.resets_at | if . then tostring else "" end),
+              (.exceeds_200k_tokens // false | tostring),
+              (.context_window.total_input_tokens | if . then tostring else "" end),
+              (.cost.total_cost_usd | if . then tostring else "" end),
+              (if ((.context_window.used_percentage // 0) > 0) and ((.context_window.total_input_tokens // 0) > 0)
+               then ((.context_window.total_input_tokens * 100 / .context_window.used_percentage / 1000 | ceil) * 1000 | tostring)
+               else "" end)
+            ')"
           else
             model="Claude"
             dir=""
@@ -2168,9 +2182,8 @@ in
           esac
 
           branch=""
-          if git -C "$dir" --no-optional-locks rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+          if repo_root=$(git -C "$dir" --no-optional-locks rev-parse --show-toplevel 2>/dev/null); then
             branch=$(git -C "$dir" --no-optional-locks branch --show-current 2>/dev/null)
-            repo_root=$(git -C "$dir" --no-optional-locks rev-parse --show-toplevel 2>/dev/null)
             [ -n "$repo_root" ] && disp_dir=$(basename "$repo_root")
           fi
 
