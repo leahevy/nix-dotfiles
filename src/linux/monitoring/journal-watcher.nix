@@ -1055,13 +1055,13 @@ args@{
                 { service = "my-service.service"; }              # system service (exact unit)
                 { service = "my-app.service"; user = true; }     # user service
                 { tag = "my-tag"; }                              # syslog tag, all non-kernel scopes
-                { string = "transient noise.*"; }                # system scope only
+                { string = "transient noise.*"; }                # system + user scopes (any unit present)
                 { string = "firmware error"; kernel = true; }    # kernel only
-                { string = "noise"; all = true; }                # all scopes
+                { string = "noise"; all = true; }                # system + user + kernel + unitless
                 { service = "foo.service"; string = "startup"; } # compound AND
                 ```
 
-                `string` is a regex - escape literal dots, parens, brackets. Plain `{ string }` matches system scope only; add `kernel`, `user`, `unitless`, or `all` for other scopes.
+                `string` is a regex - escape literal dots, parens, brackets. Plain `{ string }` matches any message that has a systemd unit (system services, user@UID.service, inner user services) but NOT kernel transport or truly unitless messages. Use `kernel = true` for kernel-only, `unitless = true` for no-unit messages, or `all = true` (expands to four patterns at build time) when the noise genuinely appears across kernel and unitless scopes too.
 
                 ## Triage
 
