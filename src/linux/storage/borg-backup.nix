@@ -897,6 +897,7 @@ args@{
 
           preHook = ''
             ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped /tmp/nx-backup-completed /tmp/nx-backup-no-success
+            ${pkgs.coreutils}/bin/touch /var/lib/nx-borgbackup/backup-in-progress
             ${checkDailyBackupCompleteScript}
             check_daily_backup_complete
             ${pkgs.coreutils}/bin/echo "Waiting 10 minutes for system readiness..."
@@ -927,6 +928,7 @@ args@{
           exclude = allExcludes;
 
           postHook = ''
+            ${pkgs.coreutils}/bin/rm -f /var/lib/nx-borgbackup/backup-in-progress
             ${pkgs.coreutils}/bin/touch /tmp/nx-backup-completed
             ${cleanupSnapshotScript {
               snapshotName = rootSnapshotName;
@@ -991,6 +993,7 @@ args@{
             ReadWritePaths = [
               snapshotBase
               "/tmp"
+              "/var/lib/nx-borgbackup"
             ]
             ++ lib.optional self.settings.withData "${self.settings.dataPath}/.snapshots";
 
@@ -1004,10 +1007,42 @@ args@{
           };
         };
 
+        systemd.services.borgbackup-reboot-catchup = {
+          description = "Borg Backup reboot catchup";
+          wantedBy = [ "multi-user.target" ];
+          after = [
+            "network-online.target"
+            "borgbackup-job-system.timer"
+          ];
+          wants = [ "network-online.target" ];
+          serviceConfig = {
+            Type = "oneshot";
+            User = "root";
+            RemainAfterExit = false;
+          };
+          script = ''
+            ${pkgs.coreutils}/bin/sleep 5
+            if ${pkgs.systemd}/bin/systemctl is-active --quiet borgbackup-job-system.service; then
+              exit 0
+            fi
+            if [[ ! -f "/var/lib/nx-borgbackup/backup-in-progress" ]]; then
+              exit 0
+            fi
+            ${pkgs.systemd}/bin/systemctl start borgbackup-job-system.service || true
+          '';
+        };
+
+        systemd.tmpfiles.settings."nx-borgbackup"."/var/lib/nx-borgbackup".d = {
+          mode = "0700";
+          user = "root";
+          group = "root";
+        };
+
         environment.persistence."${self.persist}" = {
           directories = [
             "/root/.config/borg"
             "/root/.cache/borg"
+            "/var/lib/nx-borgbackup"
           ];
         };
 
