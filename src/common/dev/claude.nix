@@ -893,7 +893,7 @@ in
               for current, dirs, files in os.walk(root):
                   rel = os.path.relpath(current, root)
                   depth = 0 if rel == "." else rel.count(os.sep) + 1
-                  dirs[:] = sorted(d for d in dirs if not d.startswith("."))
+                  dirs[:] = sorted(d for d in dirs if depth == 0 or not d.startswith("."))
                   if depth >= max_depth:
                       dirs[:] = []
                   if rel != "." and any(not f.startswith(".") for f in files):
@@ -1692,7 +1692,7 @@ in
               if full is not None and len(full) <= 3500:
                   sections.append("Project files (COMPLETE list of every file, full paths, dotfiles excluded):\n" + full)
               else:
-                  sections.append("Project directories (COMPLETE list of every dir containing files, dotfiles excluded):\n" + project_tree(cwd))
+                  sections.append("Project directories (COMPLETE list of every dir containing files, dotfiles excluded, root dotdirs included):\n" + project_tree(cwd))
                   sections.append("Files in the top two levels only (repo root and one level deep; this is NOT the full file list, deeper files are omitted, use the directory list above to locate them):\n" + shallow_files(cwd))
 
           last = pointer_path(data.get("session_id"))
