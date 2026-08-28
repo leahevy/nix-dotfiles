@@ -62,6 +62,12 @@ args@{
             }
           ) graphicalSessionServices
         );
+
+        xdg.configFile."systemd/user/xdg-desktop-portal.service.d/portal-ordering.conf".text = ''
+          [Unit]
+          After=xdg-desktop-portal-gtk.service xdg-desktop-portal-gnome.service xdg-desktop-portal-kde.service
+          Wants=xdg-desktop-portal-gtk.service xdg-desktop-portal-gnome.service xdg-desktop-portal-kde.service
+        '';
       };
 
     enabled = config: {
