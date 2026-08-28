@@ -7,11 +7,14 @@ import threading
 import time
 from queue import Empty, Full, Queue
 
+_STREAM_CLOSED = object()
+
 
 class ChatHub:
-    def __init__(self, ring_size, ttl_seconds):
+    def __init__(self, ring_size, ttl_seconds, max_connections):
         self.ring_size = ring_size
         self.ttl_seconds = ttl_seconds
+        self.max_connections = max_connections
         self.lock = threading.Lock()
         self.subscribers = {}
         self.rings = {}
@@ -31,17 +34,25 @@ class ChatHub:
     def subscribe(self, user):
         q = Queue(maxsize=100)
         cutoff = time.time() - self.ttl_seconds
+        evicted = []
         with self.lock:
             raw = self.rings.get(user, ())
             backlog = [ev for ts, ev in raw if ts >= cutoff]
-            self.subscribers.setdefault(user, set()).add(q)
+            subs = self.subscribers.setdefault(user, [])
+            subs.append(q)
+            while len(subs) > self.max_connections:
+                evicted.append(subs.pop(0))
+        for old in evicted:
+            with contextlib.suppress(Full):
+                old.put_nowait(_STREAM_CLOSED)
         return q, backlog
 
     def unsubscribe(self, user, q):
         with self.lock:
             subs = self.subscribers.get(user)
             if subs:
-                subs.discard(q)
+                with contextlib.suppress(ValueError):
+                    subs.remove(q)
                 if not subs:
                     del self.subscribers[user]
 
@@ -193,7 +204,11 @@ class DesktopChannel:
         self.default_recipient = cfg.get("chat_default_recipient")
         ttl_hours = cfg["chat_ring_buffer_ttl_hours"]
         self.ts_format = cfg["chat_timestamp_format"]
-        self.hub = ChatHub(cfg["chat_ring_buffer_size"], ttl_hours * 3600)
+        self.hub = ChatHub(
+            cfg["chat_ring_buffer_size"],
+            ttl_hours * 3600,
+            cfg.get("chat_max_stream_connections") or 3,
+        )
         self.reactables = DesktopReactables(
             brain.reactions_config["target_max_age_seconds"]
         )
@@ -590,7 +605,10 @@ class DesktopChannel:
                         yield f"data: {json.dumps(event)}\n\n"
                     while True:
                         try:
-                            yield f"data: {json.dumps(q.get(timeout=15))}\n\n"
+                            event = q.get(timeout=3)
+                            if event is _STREAM_CLOSED:
+                                return
+                            yield f"data: {json.dumps(event)}\n\n"
                         except Empty:
                             yield ": keepalive\n\n"
                 finally:

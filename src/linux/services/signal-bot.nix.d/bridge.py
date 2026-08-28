@@ -5203,7 +5203,7 @@ def serve(cfg):
         desktop = desktop_mod.DesktopChannel(brain)
         desktop.register(app, jsonify, request)
 
-    waitress_serve(app, host="127.0.0.1", port=cfg["api_port"], threads=4, ident=None)
+    waitress_serve(app, host="127.0.0.1", port=cfg["api_port"], threads=16, ident=None)
 
 
 def main():

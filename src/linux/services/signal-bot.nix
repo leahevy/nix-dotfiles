@@ -356,6 +356,12 @@ in
       description = "Hours after which a message is dropped from the ring buffer and no longer replayed on reconnect.";
     };
 
+    chatMaxStreamConnections = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 3;
+      description = "Maximum simultaneous SSE stream connections per user; the oldest is evicted when the limit is exceeded.";
+    };
+
     chatTimestampFormat = lib.mkOption {
       type = lib.types.str;
       default = "%a %H:%M";
@@ -1851,6 +1857,7 @@ in
           chatEnable,
           chatRingBufferSize,
           chatRingBufferTtlHours,
+          chatMaxStreamConnections,
           chatTimestampFormat,
           chatRecipients,
           chatDefaultRecipient,
@@ -1997,6 +2004,7 @@ in
               chat_enable = chatEnable;
               chat_ring_buffer_size = chatRingBufferSize;
               chat_ring_buffer_ttl_hours = chatRingBufferTtlHours;
+              chat_max_stream_connections = chatMaxStreamConnections;
               chat_timestamp_format = chatTimestampFormat;
               chat_recipients = chatRecipients;
               chat_default_recipient = chatDefaultRecipient;
