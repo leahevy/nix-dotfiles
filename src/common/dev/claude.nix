@@ -1581,6 +1581,8 @@ in
                   deny("rm -rf is blocked; use individual rm per file and rmdir for empty directories")
               if re.search(r"\brg\b[^|&;\n]*\s(-(?!-)\w*r\w*|--replace\b)", cmd):
                   deny("rg -r/--replace rewrites match output; remove the flag (rg is already recursive by default)")
+              if re.search(r'\brg\b[^;#\n]*\\\|', cmd):
+                  deny("rg \\| is grep syntax; use bare | for alternation: rg 'foo|bar' not rg 'foo\\|bar'")
               if re.search(r'(?<![<])<<(?!<)', cmd):
                   if re.search(r'(?<![<])>(?!&)', cmd):
                       deny("heredoc file writing is blocked; use the Write or Edit tool for file writes")

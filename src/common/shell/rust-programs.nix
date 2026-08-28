@@ -16,7 +16,7 @@ let
       notes = [
         "`rg` searches recursively by default, so a plain `rg PATTERN` or `rg PATTERN .` already walks the tree, no recursion flag needed."
         "`-r` is `--replace`, not recursive. Never use `-r` or `--replace` with `rg` for any purpose; both rewrite match output instead of searching. There is no recursion flag; `rg` is already recursive."
-        "For alternation use bare `|` (e.g. `rg 'foo|bar'`), never `\\|`; `\\|` is grep syntax and in rg matches a literal pipe character, silently finding nothing."
+        "CRITICAL: For alternation always use bare `|` (e.g. `rg 'foo|bar'`), NEVER `\\|`. The `\\|` form is grep syntax; in rg it matches a literal pipe character and silently finds nothing. Using `\\|` will not error - it will just return wrong results."
       ];
     };
     fd = {
