@@ -1032,10 +1032,19 @@ args@{
           '';
         };
 
-        systemd.tmpfiles.settings."nx-borgbackup"."/var/lib/nx-borgbackup".d = {
-          mode = "0700";
-          user = "root";
-          group = "root";
+        systemd.tmpfiles.settings."nx-borgbackup" = {
+          "/var/lib/nx-borgbackup".d = {
+            mode = "0700";
+            user = "root";
+            group = "root";
+          };
+        }
+        // lib.optionalAttrs impermanence {
+          "${self.persist}/var/lib/nx-borgbackup".d = {
+            mode = "0700";
+            user = "root";
+            group = "root";
+          };
         };
 
         environment.persistence."${self.persist}" = {
