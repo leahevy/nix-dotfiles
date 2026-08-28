@@ -332,6 +332,32 @@ let
         ".config/libfm"
         ".config/pcmanfm"
       ];
+      journalPatternsToIgnore = [
+        {
+          tag = "pcmanfm";
+          string = "terminal ghostty isn't known, consider report it to LibFM developers";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "pcmanfm";
+          string = "Theme parsing error: <data>:[0-9]+:[0-9]+: The style property GtkWidget:focus-padding is deprecated.*";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "pcmanfm";
+          string = "Theme parsing error: <data>:[0-9]+:[0-9]+: The style property GtkWidget:focus-line-width is deprecated.*";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "pcmanfm";
+          string = "gtk_menu_detach\\(\\): menu is not attached";
+          user = true;
+          unitless = true;
+        }
+      ];
     };
     archiver = mkKdeProgram {
       name = "ark";

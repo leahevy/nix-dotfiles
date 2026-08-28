@@ -465,6 +465,7 @@ let
       // lib.optionalAttrs self.isLinux {
         "widget.use-xdg-desktop-portal.mime-handler" = lockValue 1;
         "widget.use-xdg-desktop-portal.open-uri" = lockValue 1;
+        "widget.use-xdg-desktop-portal.file-picker" = lockValue 1;
         "media.webspeech.synth.enabled" = lockFalse;
       }
       // lib.optionalAttrs self.isDarwin {
@@ -1591,6 +1592,7 @@ in
           let
             generalRules = [
               "dbus-user.talk org.freedesktop.portal.Desktop"
+              "dbus-user.talk org.freedesktop.FileManager1"
               "env GIO_USE_PORTALS=1"
             ];
             screensaverRules = [
