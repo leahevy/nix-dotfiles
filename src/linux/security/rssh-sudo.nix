@@ -28,8 +28,6 @@ args@{
         {
           tag = "pam_rssh";
           string = "No such file or directory \\(os error 2\\)";
-          user = true;
-          unitless = true;
         }
       ];
     };
