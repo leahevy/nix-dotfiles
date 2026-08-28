@@ -1193,14 +1193,14 @@ in
                   resolved = os.path.realpath(normalized)
                   if under(resolved, CLAUDE_TMP):
                       return True
+                  if any(under(normalized, r) for r in NX_INPUT_ROOTS):
+                      return True
                   if any(under(resolved, d) or under(normalized, d) for d in EXTRA_DIR_DENY):
                       deny("access to disallowed directory in shell command: " + resolved)
                   if any(under(resolved, s) or under(normalized, s) for s in SECRET_DIRS):
                       deny("access to secret directory in shell command: " + resolved)
                   if SECRET_FILE.search(resolved):
                       deny("access to secret material in shell command: " + resolved)
-                  if any(under(normalized, r) for r in NX_INPUT_ROOTS):
-                      return True
                   if under(resolved, NX_AGENTS_PLANS_DIR):
                       return True
                   if not cwd_root:
@@ -1617,6 +1617,8 @@ in
                               deny("access to secret material in shell command: " + _tok)
                           _p = os.path.normpath(os.path.expanduser(_tok))
                           _r = os.path.realpath(_p)
+                          if any(under(_p, r) for r in NX_INPUT_ROOTS):
+                              continue
                           if any(under(_r, d) or under(_p, d) for d in EXTRA_DIR_DENY):
                               if not under(_r, CLAUDE_TMP):
                                   deny("access to disallowed directory in shell command: " + _r)
