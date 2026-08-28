@@ -1063,6 +1063,10 @@ args@{
 
                 `string` is a regex - escape literal dots, parens, brackets. Plain `{ string }` matches any message that has a systemd unit (system services, user@UID.service, inner user services) but NOT kernel transport or truly unitless messages. Use `kernel = true` for kernel-only, `unitless = true` for no-unit messages, or `all = true` (expands to four patterns at build time) when the noise genuinely appears across kernel and unitless scopes too.
 
+                ## Advanced Features
+
+                For highlight patterns, tag mappings, channel overrides, rate limiting, extract/replace, and rebuild-window scoping: read `src/linux/monitoring/journal-watcher.nix` in the nxcore repository for the full option set and usage examples. For precise matching semantics (how scopes, flags, and compound patterns are evaluated at runtime): consult `src/linux/monitoring/journal-watcher.nix.d/monitor.py` in the same repository.
+
                 ## Triage
 
                 Don't suppress everything. Keep patterns that could signal hardware degradation, security issues, or persistent failures. Present recommendations before writing.
