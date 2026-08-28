@@ -1600,7 +1600,15 @@ in
               if re.search(r"(curl|wget)[^|]*\|[^|]*(sh|bash|python3?|perl|ruby|node)", cmd):
                   deny("piping a download into a shell or interpreter is blocked")
               if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", cmd):
-                  deny("referencing nxconfig from a shell command is blocked")
+                  _cp_to_nxconfig_md = bool(re.fullmatch(
+                      r'command\s+cp\s+(-f\s+)*[^/\s;&|`$<>(){}\n]+\.md\s+[^\s;&|`$<>(){}\n]*(\.config/nx/nxconfig|\.\./nxconfig)/[^/\s;&|`$<>(){}\n]+\.md',
+                      cmd.strip(),
+                      re.ASCII
+                  ))
+                  if _cp_to_nxconfig_md:
+                      ask("cp of local .md file into nxconfig: " + cmd)
+                  else:
+                      deny("referencing nxconfig from a shell command is blocked")
               META = frozenset(['<', '>', '`', '(', ')', '$', '{', '}'])
               if tokens and not any(t in META for t in tokens):
                   for _tok in tokens[1:]:
