@@ -357,12 +357,56 @@ let
           user = true;
           unitless = true;
         }
+        {
+          tag = "pcmanfm";
+          string = "gdk_window_get_device_position_double: assertion 'GDK_IS_DEVICE \\(device\\)' failed";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "pcmanfm";
+          string = "gdk_wayland_window_handle_configure_popup: assertion 'impl->transient_for' failed";
+          user = true;
+          unitless = true;
+        }
       ];
     };
     archiver = mkKdeProgram {
       name = "ark";
       dirsToPersist = [ ".local/share/ark" ];
       filesToPersist = [ ".config/arkrc" ];
+      journalPatternsToIgnore = [
+        {
+          tag = "ark";
+          string = ''Icon theme ".*" not found\.'';
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "ark";
+          string = ''Failed to check which JobView API is supported ".*"'';
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "ark";
+          string = ''Couldn't write ".*" \. Disk full\?'';
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "ark";
+          string = ''Couldn't write to config: ".*"'';
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "ark";
+          string = ''Couldn't lock global file: ".*"'';
+          user = true;
+          unitless = true;
+        }
+      ];
     };
     textEditor = mkKdeProgram {
       name = "kate";
