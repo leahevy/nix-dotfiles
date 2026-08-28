@@ -1601,7 +1601,7 @@ in
                   deny("piping a download into a shell or interpreter is blocked")
               if re.search(r"/\.config/nx/nxconfig|\.\./nxconfig", cmd):
                   _cp_to_nxconfig_md = bool(re.fullmatch(
-                      r'command\s+cp\s+(-f\s+)*[^/\s;&|`$<>(){}\n]+\.md\s+[^\s;&|`$<>(){}\n]*(\.config/nx/nxconfig|\.\./nxconfig)/[^/\s;&|`$<>(){}\n]+\.md',
+                      r'command\s+cp\s+(-f\s+)*[^/\s;&|`$<>(){}\n]+\.md\s+(\.\./nxconfig|[^/\s;&|`$<>(){}\n]+/\.config/nx/nxconfig)/[^/\s;&|`$<>(){}\n]+\.md',
                       cmd.strip(),
                       re.ASCII
                   ))
