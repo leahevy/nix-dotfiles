@@ -511,8 +511,8 @@ args@{
               "Prefer `git --no-pager diff${lib.optionalString difftasticEnabled " --no-ext-diff"}` for consistent output."
               "Never stage, commit, push, pull, or rebase unless the user explicitly asks."
               [
-                "When you need to find a file whose location you do not already know, search the current repo with `git ls-files | grep \"{{SEARCH-TERM}}\" | tree --fromfile`. If you already know where a file lives, open it directly instead."
-                "To search a different repo, do not `cd` into it. Point git at it with `-C` and an absolute path: `git -C {{REPO_ROOT}} ls-files | grep \"{{SEARCH-TERM}}\" | tree --fromfile`."
+                "When you need to find a file whose location you do not already know, search the current repo with `git ls-files | grep \"{{SEARCH-TERM}}\" | tree -a --fromfile`. The `-a` flag is required: without it, `tree` silently hides entries inside hidden directories. If you already know where a file lives, open it directly instead."
+                "To search a different repo, do not `cd` into it. Point git at it with `-C` and an absolute path: `git -C {{REPO_ROOT}} ls-files | grep \"{{SEARCH-TERM}}\" | tree -a --fromfile`."
               ]
             ];
           "71 - Shell" = [
