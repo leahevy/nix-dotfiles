@@ -129,7 +129,7 @@ subcommand_check() {
 		local item_rel="${item_path#/}"
 		local item_home_rel="${item_path#"$user_home"/}"
 
-		if echo "$system_dirs $system_files $user_dirs $user_files" | grep -Fq "$item_rel" || echo "$user_dirs $user_files" | grep -Fq "$item_home_rel" || echo "$mount_output" | grep -Fq " on $item_path type "; then
+		if grep -Fq "$item_rel" <<<"$system_dirs $system_files $user_dirs $user_files" || grep -Fq "$item_home_rel" <<<"$user_dirs $user_files" || grep -Fq " on $item_path type " <<<"$mount_output"; then
 			return 0
 		fi
 
@@ -211,7 +211,7 @@ subcommand_check() {
 	local mount_output
 	mount_output="$(mount)"
 
-	if [[ -z "$mount_output" ]] || ! echo "$mount_output" | grep -q "on / type"; then
+	if [[ -z "$mount_output" ]] || ! grep -q "on / type" <<<"$mount_output"; then
 		echo -e "${RED}Error: Failed to get mount information${RESET}" >&2
 		echo -e "Mount command output appears invalid or empty" >&2
 		exit 1
