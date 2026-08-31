@@ -311,6 +311,12 @@ in
       description = "Enable file-state checkpoints for /rewind.";
     };
 
+    autoMemoryEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable automatic memory saving across sessions.";
+    };
+
     disableWorkflows = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -2021,6 +2027,7 @@ in
         notifyEnabled,
         alwaysThinkingEnabled,
         fileCheckpointingEnabled,
+        autoMemoryEnabled,
         disableWorkflows,
         enableArtifact,
         editorMode,
@@ -2573,6 +2580,7 @@ in
             inherit
               alwaysThinkingEnabled
               fileCheckpointingEnabled
+              autoMemoryEnabled
               disableWorkflows
               enableArtifact
               ;
