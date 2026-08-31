@@ -373,8 +373,9 @@ jobs:
             fi
 
             if [[ -z "$owner" || -z "$repo" ]]; then
-              local url=$(jq -r --arg node "$node" '.nodes[$node].locked.url // empty' flake.lock)
-              if [[ "$url" == *"channels.nixos.org"* ]]; then
+              local orig_url=$(jq -r --arg node "$node" '.nodes[$node].original.url // empty' flake.lock)
+              local lock_url=$(jq -r --arg node "$node" '.nodes[$node].locked.url // empty' flake.lock)
+              if [[ "$orig_url" == *"channels.nixos.org"* || "$lock_url" == *"releases.nixos.org"* ]]; then
                 owner="NixOS"; repo="nixpkgs"
               fi
             fi
