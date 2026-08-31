@@ -707,7 +707,7 @@ in
           ]
           ++ lib.optional (!delegateEnabled) "Keep sub-agents to a minimum."
           ++ [
-            "$NX_AGENTS_PLANS_DIR is always set by the claude wrapper to the plans directory for the current repo; use it directly without any slug computation."
+            "$NX_AGENTS_PLANS_DIR is always set by the claude wrapper to the full repo-scoped plans directory (e.g. ~/.local/share/nx/agents/plans/-home-user--project); it already contains the slug and is the plans dir itself, not a parent. Use it directly: `mkdir -p $NX_AGENTS_PLANS_DIR/archive && mkdir -p $NX_AGENTS_PLANS_DIR/tmp && ls $NX_AGENTS_PLANS_DIR`. Never create archive or tmp outside this path."
             "For one-off scripts and ephemeral working files you will discard within the same session, use the session scratchpad path the harness injects at the top of the system prompt (the /tmp/claude-<uid>/... path) instead of $NX_AGENTS_PLANS_DIR/tmp. The session scratchpad (/tmp/claude-<uid>/...) is NOT the plans directory. They are completely separate. Never use the session scratchpad path as the plans directory or create archive/tmp subdirectories inside it."
             "rm -rf is blocked; use individual rm per file and rmdir for empty directories."
             "Never write file content via shell heredocs (e.g. cat >> file <<'EOF' ... EOF) or via shell output redirection (`>` or `>>`). These are hard rules with no exceptions: always use the Write or Edit tool for file writes."

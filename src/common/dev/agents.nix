@@ -423,7 +423,7 @@ args@{
               [
                 "Step 2: Find and initialise the plans directory."
                 "If $NX_AGENTS_PLANS_DIR is set in the environment: run `mkdir -p $NX_AGENTS_PLANS_DIR/archive && mkdir -p $NX_AGENTS_PLANS_DIR/tmp && ls $NX_AGENTS_PLANS_DIR`."
-                "If $NX_AGENTS_PLANS_DIR is not set: replace every '/' and '.' in the absolute current working directory path with '-' to form the slug, use '~/.local/share/nx/agents/plans/<slug>' as the plans dir, then run mkdir -p (including the archive and tmp subdirectories) and ls on it."
+                "If $NX_AGENTS_PLANS_DIR is not set: replace every '/' and '.' in the absolute current working directory path with '-' to form the slug, then run `mkdir -p ~/.local/share/nx/agents/plans/<slug>/archive && mkdir -p ~/.local/share/nx/agents/plans/<slug>/tmp && ls ~/.local/share/nx/agents/plans/<slug>`. The repo-scoped leaf dir ~/.local/share/nx/agents/plans/<slug> is the plans dir; archive and tmp live inside it, not in the parent plans/ directory."
               ]
             ]
             "When a plan is finished or abandoned, move its file into the 'archive' subdirectory of the plans directory (create it with 'mkdir -p' if missing) instead of deleting it, so only active plans stay at the top level."
