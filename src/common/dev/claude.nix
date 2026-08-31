@@ -811,7 +811,7 @@ in
                 "WebSearch"
                 "WebFetch"
               ];
-              text = "Only perform WebSearch and WebFetch operations. Return retrieved content to the main agent. Do not read files, edit files, run commands, or take any other actions.";
+              text = "Only perform WebSearch and WebFetch operations. Return retrieved content to the main agent. Do not read files, edit files, run commands, or take any other actions. Ignore the mandatory session-start PLANDIR initialisation instructions in CLAUDE.md; bash is not available in this agent, skip that step entirely.";
             };
           }
           // lib.optionalAttrs (delegateEnabled && reviewModel != null) {
