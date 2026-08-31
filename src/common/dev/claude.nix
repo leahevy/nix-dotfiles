@@ -119,6 +119,33 @@ let
       };
     };
   };
+  sandboxHomePaths = [
+    ".claude"
+    ".claude.json"
+    ".cache/nix"
+    ".local/share/nx/inputs"
+    ".local/state/nx-claude"
+  ];
+  sandboxRunUserDirs = [
+    "nx-claude"
+    "nvim-sockets"
+    "pipewire-0"
+    "pipewire-0.lock"
+    "pipewire-0-manager"
+    "pipewire-0-manager.lock"
+    "pulse"
+    "wayland-0"
+    "wayland-1"
+  ];
+  sandboxAbsPaths = [
+    "/nix/store"
+    "/etc/nx"
+  ];
+  sandboxRunDirWhitelist = [
+    "current-system"
+    "firejail"
+    "user"
+  ];
 in
 {
   name = "claude";
@@ -634,6 +661,36 @@ in
       ];
     };
 
+    linux.system = { config, ... }: {
+      programs.firejail.enable = true;
+      environment.etc."firejail/claude-code.profile".text = ''
+        whitelist ''${HOME}/.claude
+        whitelist ''${HOME}/.claude.json
+        read-only ''${HOME}/.claude/.credentials.json
+        read-only ''${HOME}/.claude/settings.json
+        read-only ''${HOME}/.claude/CLAUDE.md
+        read-only ''${HOME}/.claude/agents
+        read-only ''${HOME}/.claude/skills
+        read-only ''${HOME}/.claude/keybindings.json
+        whitelist ''${HOME}/.cache/nix
+        whitelist ''${HOME}/${defs.binDir}/mcp-neovim-server-wrapper
+        whitelist ''${HOME}/.local/share/nx/inputs
+        read-only ''${HOME}/.local/share/nx/inputs
+        whitelist ''${HOME}/.local/state/nx-claude
+        dbus-user filter
+        dbus-user.talk org.freedesktop.Notifications
+        private-dev
+        private-etc ssl,nx,machine-id,nix
+        private-tmp
+        blacklist /var
+        blacklist /persist
+        blacklist /root
+        blacklist /sys
+        blacklist /boot
+        blacklist /srv
+      '';
+    };
+
     enabled =
       config:
       let
@@ -1053,6 +1110,9 @@ in
           EXTRA_PATH_DENY = ${builtins.toJSON config.nx.common.dev.claude.guardrailDisallowedPaths}
           EXTRA_CMD_DENY = ${builtins.toJSON config.nx.common.dev.claude.guardrailDisallowedCommands}
           EXTRA_DIR_DENY = [os.path.normpath(os.path.expanduser(d)) for d in ${builtins.toJSON config.nx.common.dev.claude.guardrailDisallowedDirectories}]
+          ISOLATION = os.environ.get("CLAUDE_ISOLATION_CONTEXT", "none")
+          _SANDBOX_HOME_PATHS = ${builtins.toJSON sandboxHomePaths}
+          _SANDBOX_ABS_PATHS = ${builtins.toJSON sandboxAbsPaths}
           BASE_ALLOWED_ENV_VARS = ${builtins.toJSON baseAllowedEnvVars}
           EXTRA_ALLOWED_ENV_VARS = ${builtins.toJSON config.nx.common.dev.claude.guardrailAllowedEnvVars}
           FORBIDDEN_COMMANDS = ${builtins.toJSON forbiddenCommandWords}
@@ -1221,17 +1281,33 @@ in
                       r = subprocess.run([GIT, "-C", parent, "rev-parse", "--show-toplevel"],
                                          capture_output=True, text=True, timeout=3)
                       git_root = r.stdout.strip()
-                      if not git_root:
-                          return False
-                      git_root = os.path.realpath(git_root)
-                      nxconfig_norm = os.path.realpath(NXCONFIG)
-                      if under(git_root, nxconfig_norm) or git_root == nxconfig_norm:
-                          return False
-                      if any(under(git_root, d) or git_root == d for d in EXTRA_DIR_DENY):
-                          return False
-                      return under(resolved, git_root)
+                      if git_root:
+                          git_root = os.path.realpath(git_root)
+                          nxconfig_norm = os.path.realpath(NXCONFIG)
+                          if not (under(git_root, nxconfig_norm) or git_root == nxconfig_norm):
+                              if not any(under(git_root, d) or git_root == d for d in EXTRA_DIR_DENY):
+                                  if under(resolved, git_root):
+                                      return True
                   except Exception:
-                      return False
+                      pass
+                  if ISOLATION == "sandbox":
+                      _home = os.path.expanduser("~")
+                      _nxcore = os.path.join(_home, ".config", "nx", "nxcore")
+                      _sb = (
+                          ([cwd_root] if cwd_root else [])
+                          + [NX_AGENTS_PLANS_DIR]
+                          + [os.path.join(_home, p) for p in _SANDBOX_HOME_PATHS]
+                          + _SANDBOX_ABS_PATHS
+                          + ([_nxcore] if os.path.isdir(_nxcore) else [])
+                      )
+                      if not any(under(resolved, r) or resolved == r for r in _sb):
+                          deny(
+                              "path " + resolved + " is not accessible in the firejail sandbox. "
+                              "Tell the user to restart this session with claude-unsafe if "
+                              "they need host-wide access, or ask them to run this step themselves "
+                              "outside the sandbox."
+                          )
+                  return False
 
               def _check_part(part):
                   if not part:
@@ -1558,6 +1634,23 @@ in
               for pattern in EXTRA_PATH_DENY:
                   if re.search(pattern, target):
                       deny("path denied by guardrailDisallowedPaths: " + target)
+              if ISOLATION == "sandbox" and tool_name in ("Read", "Write", "Edit"):
+                  _home = os.path.expanduser("~")
+                  _nxcore = os.path.join(_home, ".config", "nx", "nxcore")
+                  _sandbox_roots = (
+                      ([cwd_root] if cwd_root else [])
+                      + [NX_AGENTS_PLANS_DIR]
+                      + [os.path.join(_home, p) for p in _SANDBOX_HOME_PATHS]
+                      + _SANDBOX_ABS_PATHS
+                      + ([_nxcore] if os.path.isdir(_nxcore) else [])
+                  )
+                  if not any(under(target, r) or target == r for r in _sandbox_roots):
+                      deny(
+                          "path " + target + " is not accessible in the firejail sandbox. "
+                          "Tell the user to restart this session with claude-unsafe if "
+                          "they need host-wide access, or ask them to run this step themselves "
+                          "outside the sandbox."
+                      )
               if tool_name == "Read":
                   real_target = os.path.realpath(target)
                   if cwd_root and under(real_target, os.path.realpath(cwd_root)):
@@ -1696,7 +1789,12 @@ in
               except Exception:
                   pass
 
-          sections = ["=== Session Context ===\nDate: " + datetime.now().strftime("%Y-%m-%d %H:%M")]
+          _isolation = os.environ.get("CLAUDE_ISOLATION_CONTEXT", "none")
+          _isolation_map = {
+              "sandbox": "firejail sandbox (project repo + nxcore + ~/.claude + nx inputs only; /etc and /var restricted; D-Bus filtered to notifications)",
+          }
+          _isolation_label = _isolation_map.get(_isolation, "none (full host access)")
+          sections = ["=== Session Context ===\nDate: " + datetime.now().strftime("%Y-%m-%d %H:%M") + "\nSession context: " + _isolation_label]
 
           if run([GIT, "-C", cwd, "rev-parse", "--is-inside-work-tree"], cwd) == "true":
               git_lines = ["Branch: " + run([GIT, "-C", cwd, "branch", "--show-current"], cwd)]
@@ -2143,7 +2241,16 @@ in
           '';
         };
         baseClaude = if claudeWrapperArgs != [ ] then claude-code-wrapped else pkgs.claude-code;
-        claude-with-plans = pkgs.writeShellScriptBin "claude" ''
+
+        runWhitelists = lib.concatMapStrings (
+          d: "              --whitelist=\"/run/user/\$_uid/${d}\" \\\n"
+        ) sandboxRunUserDirs;
+
+        commonSetupScript = ''
+          if [ "$EUID" -eq 0 ]; then
+            printf "\033[1;31m\033[1mError: claude must not be run as root.\033[0m\n" >&2
+            exit 1
+          fi
           if ! ${pkgs.git}/bin/git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
             printf "\033[1;31m\033[1mError: claude must be run from inside a git repository.\033[0m\n" >&2
             exit 1
@@ -2154,11 +2261,81 @@ in
           fi
           mkdir -p "$NX_AGENTS_PLANS_DIR/archive"
           mkdir -p "$NX_AGENTS_PLANS_DIR/tmp"
+          mkdir -p "$HOME/.local/state/nx-claude"
+          ${lib.optionalString self.isLinux ''
+            mkdir -p "''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}/nvim-sockets"
+          ''}
           export NX_AGENTS_PLANS_DIR
           export CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1
+        '';
+        claude-with-plans = pkgs.writeShellScriptBin "claude" ''
+          ${commonSetupScript}
+          export CLAUDE_ISOLATION_CONTEXT=none
           exec ${baseClaude}/bin/claude "$@"
         '';
-        claude-package = claude-with-plans;
+        sandboxExecBody = ''
+          git_root=$(${pkgs.git}/bin/git rev-parse --show-toplevel 2>/dev/null)
+          if [ -z "$git_root" ]; then
+            git_root="$PWD"
+          fi
+          if [ "$git_root" = "$HOME" ]; then
+            printf "\033[1;31m\033[1mError: refusing to sandbox with home dir as git root; use claude-unsafe\033[0m\n" >&2
+            exit 1
+          fi
+          export CLAUDE_ISOLATION_CONTEXT=sandbox
+          _uid=$(id -u)
+          mkdir -p "/tmp/claude-$_uid"
+          _rpath=$(realpath "$git_root" 2>/dev/null || printf '%s' "$git_root")
+          case "$_rpath" in
+            /data|/data/*) _data_bl="" ;;
+            *) _data_bl="--blacklist=/data" ;;
+          esac
+          _run_bl=""
+          for _d in /run/*/; do
+            _n="''${_d%/}"
+            _n="''${_n##*/}"
+            case "$_n" in
+              ${lib.concatStringsSep "|" sandboxRunDirWhitelist}) ;;
+              *) _run_bl="$_run_bl --blacklist=/run/$_n" ;;
+            esac
+          done
+          if [ -d "$HOME/.config/nx/nxcore" ] && [ "$git_root" != "$HOME/.config/nx/nxcore" ]; then
+            exec /run/wrappers/bin/firejail \
+              --quiet \
+              --profile=/etc/firejail/claude-code.profile \
+              --whitelist="$git_root" \
+              --whitelist="$NX_AGENTS_PLANS_DIR" \
+              --whitelist="$HOME/.config/nx/nxcore" \
+              --read-only="$HOME/.config/nx/nxcore" \
+              --whitelist="/tmp/claude-$_uid" \
+              ${runWhitelists}              $_data_bl $_run_bl \
+              -- "$@" \
+              2> >(grep -vF "Warning: /usr/bin/bwrap was not disabled" >&2)
+          else
+            exec /run/wrappers/bin/firejail \
+              --quiet \
+              --profile=/etc/firejail/claude-code.profile \
+              --whitelist="$git_root" \
+              --whitelist="$NX_AGENTS_PLANS_DIR" \
+              --whitelist="/tmp/claude-$_uid" \
+              ${runWhitelists}              $_data_bl $_run_bl \
+              -- "$@" \
+              2> >(grep -vF "Warning: /usr/bin/bwrap was not disabled" >&2)
+          fi
+        '';
+        claude-firejail = pkgs.writeShellScriptBin "claude" ''
+          ${commonSetupScript}
+          set -- ${baseClaude}/bin/claude "$@"
+          ${sandboxExecBody}
+        '';
+        claude-test-sandbox-exec = pkgs.writeShellScriptBin "claude-test-sandbox-exec" ''
+          ${commonSetupScript}
+          ${sandboxExecBody}
+        '';
+        claude-unsafe-pkg = pkgs.writeShellScriptBin "claude-unsafe" ''
+          exec ${claude-with-plans}/bin/claude "$@"
+        '';
+        claude-package = if self.isLinux then claude-firejail else claude-with-plans;
 
         statusline-command = pkgs.writeShellScript "statusline-command" ''
           input=$(cat)
@@ -2679,6 +2856,10 @@ in
               };
             };
 
+          packages = lib.optionals self.isLinux [
+            claude-unsafe-pkg
+            claude-test-sandbox-exec
+          ];
           persistence."${self.persist}" = {
             directories = [
               ".claude"
