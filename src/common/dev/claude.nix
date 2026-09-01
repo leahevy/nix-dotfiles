@@ -2315,9 +2315,59 @@ in
                   printf '\033[1;31m\033[1mError: --add-dir requires a directory argument\033[0m\n' >&2
                   exit 1
                 fi
-                _resolved_dir=$(${pkgs.coreutils}/bin/realpath -m "$1")
-                _extra_wl_args+=("--whitelist=$_resolved_dir")
-                _extra_dirs+=("$_resolved_dir")
+                _expanded="''${1/#\~/$HOME}"
+                _current=$(${pkgs.coreutils}/bin/realpath -sm "$_expanded")
+                _normalized="$_current"
+                _seen_links=("$_current")
+                _add_extra_dir() {
+                  case "$1" in
+                    /nix|/nix/*) ;;
+                    *) _extra_wl_args+=("--whitelist=$1") ; _extra_dirs+=("$1") ;;
+                  esac
+                }
+                _fail_outside_home() {
+                  printf '\033[1;31mError:\033[0m --add-dir %s: symlink %s -> %s escapes $HOME\n\033[1mUse real path:\033[0m %s\n' \
+                    "$1" "$2" "$3" "$4" >&2
+                  exit 1
+                }
+                _add_extra_dir "$_current"
+                while [ -L "$_current" ]; do
+                  _prev_current="$_current"
+                  _link=$(${pkgs.coreutils}/bin/readlink "$_current")
+                  [[ "$_link" != /* ]] && _link="$(${pkgs.coreutils}/bin/dirname "$_current")/$_link"
+                  _current=$(${pkgs.coreutils}/bin/realpath -sm "$_link")
+                  _loop=0
+                  for _s in "''${_seen_links[@]}"; do [[ "$_s" == "$_current" ]] && { _loop=1; break; }; done
+                  [[ $_loop -eq 1 ]] && break
+                  if [[ ("$_prev_current" == "$HOME" || "$_prev_current" == "$HOME"/*) && "$_current" != "$HOME" && "$_current" != "$HOME"/* ]]; then
+                    _fail_outside_home "$1" "$_prev_current" "$_current" "$(${pkgs.coreutils}/bin/realpath -m "$_expanded")"
+                  fi
+                  _seen_links+=("$_current")
+                  _add_extra_dir "$_current"
+                done
+                _fully_resolved=$(${pkgs.coreutils}/bin/realpath -m "$_expanded")
+                _loop=0
+                for _s in "''${_seen_links[@]}"; do [[ "$_s" == "$_fully_resolved" ]] && { _loop=1; break; }; done
+                [[ $_loop -eq 0 ]] && _add_extra_dir "$_fully_resolved"
+                if [[ "$_normalized" != "$_fully_resolved" ]]; then
+                  _p="$_normalized"
+                  while [[ "$_p" != "/" && "$_p" != "." ]]; do
+                    _p=$(${pkgs.coreutils}/bin/dirname "$_p")
+                    [[ "$_p" == "/" ]] && break
+                    if [ -L "$_p" ]; then
+                      _p_target=$(${pkgs.coreutils}/bin/realpath -m "$_p")
+                      if [[ "$_p_target" != "$HOME" && "$_p_target" != "$HOME"/* ]]; then
+                        _fail_outside_home "$1" "$_p" "$_p_target" "$_fully_resolved"
+                      fi
+                      _loop=0
+                      for _s in "''${_seen_links[@]}"; do [[ "$_s" == "$_p" ]] && { _loop=1; break; }; done
+                      if [[ $_loop -eq 0 ]]; then
+                        _seen_links+=("$_p")
+                        _add_extra_dir "$_p"
+                      fi
+                    fi
+                  done
+                fi
                 shift
                 ;;
               --help|-h)
@@ -2365,9 +2415,16 @@ in
           _uid=$(id -u)
           mkdir -p "/tmp/claude-$_uid"
           _rpath=$(realpath "$git_root" 2>/dev/null || printf '%s' "$git_root")
+          _data_bl="--blacklist=/data"
           case "$_rpath" in
             /data|/data/*) _data_bl="" ;;
-            *) _data_bl="--blacklist=/data" ;;
+            *)
+              for _ed in "''${_extra_dirs[@]}"; do
+                case "$_ed" in
+                  /data|/data/*) _data_bl="" ; break ;;
+                esac
+              done
+              ;;
           esac
           _run_bl=""
           for _d in /run/*/; do
