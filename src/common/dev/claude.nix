@@ -2396,7 +2396,7 @@ in
               "''${_extra_wl_args[@]}" \
               ${runWhitelists}              $_data_bl $_run_bl \
               -- "$@" \
-              2>"$_stderr_tmp"
+              2>"$_stderr_tmp" &
           else
             /run/wrappers/bin/firejail \
               --quiet \
@@ -2407,9 +2407,13 @@ in
               "''${_extra_wl_args[@]}" \
               ${runWhitelists}              $_data_bl $_run_bl \
               -- "$@" \
-              2>"$_stderr_tmp"
+              2>"$_stderr_tmp" &
           fi
+          _fj_pid=$!
+          trap '[ -n "$_fj_pid" ] && kill "$_fj_pid" 2>/dev/null; rm -f "$_stderr_tmp"' EXIT TERM
+          wait "$_fj_pid"
           _exit=$?
+          _fj_pid=""
           grep -vF "Warning: /usr/bin/bwrap was not disabled" "$_stderr_tmp" >&2
           exit $_exit
         '';
