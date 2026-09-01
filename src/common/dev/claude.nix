@@ -142,6 +142,7 @@ let
     "/etc/nx"
   ];
   sandboxRunDirWhitelist = [
+    "booted-system"
     "current-system"
     "firejail"
     "user"
@@ -2296,7 +2297,11 @@ in
             _n="''${_n##*/}"
             case "$_n" in
               ${lib.concatStringsSep "|" sandboxRunDirWhitelist}) ;;
-              *) _run_bl="$_run_bl --blacklist=/run/$_n" ;;
+              *)
+                if [ ! -L "/run/$_n" ]; then
+                  _run_bl="$_run_bl --blacklist=/run/$_n"
+                fi
+                ;;
             esac
           done
           if [ -d "$HOME/.config/nx/nxcore" ] && [ "$git_root" != "$HOME/.config/nx/nxcore" ]; then
