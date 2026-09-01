@@ -1114,6 +1114,11 @@ in
           ISOLATION = os.environ.get("CLAUDE_ISOLATION_CONTEXT", "none")
           _SANDBOX_HOME_PATHS = ${builtins.toJSON sandboxHomePaths}
           _SANDBOX_ABS_PATHS = ${builtins.toJSON sandboxAbsPaths}
+          _SANDBOX_EXTRA_DIRS = [
+              os.path.normpath(d)
+              for d in os.environ.get("CLAUDE_SANDBOX_EXTRA_DIRS", "").split(":")
+              if d
+          ]
           BASE_ALLOWED_ENV_VARS = ${builtins.toJSON baseAllowedEnvVars}
           EXTRA_ALLOWED_ENV_VARS = ${builtins.toJSON config.nx.common.dev.claude.guardrailAllowedEnvVars}
           FORBIDDEN_COMMANDS = ${builtins.toJSON forbiddenCommandWords}
@@ -1300,6 +1305,7 @@ in
                           + [os.path.join(_home, p) for p in _SANDBOX_HOME_PATHS]
                           + _SANDBOX_ABS_PATHS
                           + ([_nxcore] if os.path.isdir(_nxcore) else [])
+                          + _SANDBOX_EXTRA_DIRS
                       )
                       if not any(under(resolved, r) or resolved == r for r in _sb):
                           deny(
@@ -1644,6 +1650,7 @@ in
                       + [os.path.join(_home, p) for p in _SANDBOX_HOME_PATHS]
                       + _SANDBOX_ABS_PATHS
                       + ([_nxcore] if os.path.isdir(_nxcore) else [])
+                      + _SANDBOX_EXTRA_DIRS
                   )
                   if not any(under(target, r) or target == r for r in _sandbox_roots):
                       deny(
@@ -2274,6 +2281,55 @@ in
           export CLAUDE_ISOLATION_CONTEXT=none
           exec ${baseClaude}/bin/claude "$@"
         '';
+        wrapperOptionParsingScript = ''
+          _extra_wl_args=()
+          _extra_dirs=()
+          _passthrough_args=()
+          while [[ $# -gt 0 ]]; do
+            case "$1" in
+              --add-dir|-D)
+                shift
+                if [[ $# -eq 0 ]]; then
+                  printf '\033[1;31m\033[1mError: --add-dir requires a directory argument\033[0m\n' >&2
+                  exit 1
+                fi
+                _resolved_dir=$(${pkgs.coreutils}/bin/realpath -m "$1")
+                _extra_wl_args+=("--whitelist=$_resolved_dir")
+                _extra_dirs+=("$_resolved_dir")
+                shift
+                ;;
+              --help|-h)
+                printf 'Usage: claude [WRAPPER OPTIONS] [-- CLAUDE OPTIONS...]\n'
+                printf '\n'
+                printf 'Wrapper options:\n'
+                printf '  --add-dir DIR, -D DIR  Add DIR to the firejail sandbox whitelist\n'
+                printf '  --help         Show this help\n'
+                printf '\n'
+                printf 'Separate wrapper options from Claude options with --.\n'
+                exit 0
+                ;;
+              --plugin-dir)
+                _passthrough_args+=("$1" "$2")
+                shift 2
+                ;;
+              --)
+                shift
+                _passthrough_args+=("$@")
+                break
+                ;;
+              *)
+                _passthrough_args+=("$1")
+                shift
+                ;;
+            esac
+          done
+          set -- "''${_passthrough_args[@]}"
+          if [[ ''${#_extra_dirs[@]} -gt 0 ]]; then
+            printf -v CLAUDE_SANDBOX_EXTRA_DIRS '%s:' "''${_extra_dirs[@]}"
+            CLAUDE_SANDBOX_EXTRA_DIRS="''${CLAUDE_SANDBOX_EXTRA_DIRS%:}"
+            export CLAUDE_SANDBOX_EXTRA_DIRS
+          fi
+        '';
         sandboxExecBody = ''
           git_root=$(${pkgs.git}/bin/git rev-parse --show-toplevel 2>/dev/null)
           if [ -z "$git_root" ]; then
@@ -2313,6 +2369,7 @@ in
               --whitelist="$HOME/.config/nx/nxcore" \
               --read-only="$HOME/.config/nx/nxcore" \
               --whitelist="/tmp/claude-$_uid" \
+              "''${_extra_wl_args[@]}" \
               ${runWhitelists}              $_data_bl $_run_bl \
               -- "$@" \
               2> >(grep -vF "Warning: /usr/bin/bwrap was not disabled" >&2)
@@ -2323,17 +2380,20 @@ in
               --whitelist="$git_root" \
               --whitelist="$NX_AGENTS_PLANS_DIR" \
               --whitelist="/tmp/claude-$_uid" \
+              "''${_extra_wl_args[@]}" \
               ${runWhitelists}              $_data_bl $_run_bl \
               -- "$@" \
               2> >(grep -vF "Warning: /usr/bin/bwrap was not disabled" >&2)
           fi
         '';
         claude-firejail = pkgs.writeShellScriptBin "claude" ''
+          ${wrapperOptionParsingScript}
           ${commonSetupScript}
           set -- ${baseClaude}/bin/claude "$@"
           ${sandboxExecBody}
         '';
         claude-test-sandbox-exec = pkgs.writeShellScriptBin "claude-test-sandbox-exec" ''
+          ${wrapperOptionParsingScript}
           ${commonSetupScript}
           ${sandboxExecBody}
         '';
