@@ -1247,6 +1247,15 @@ in
                           else:
                               result.append(tok)
                               i += 1
+                      elif tok.startswith('$'):
+                          suffix = tok[1:]
+                          for var, val in _ALLOWED.items():
+                              if suffix == var or suffix.startswith(var + '/'):
+                                  result.append(val + suffix[len(var):])
+                                  break
+                          else:
+                              result.append(tok)
+                          i += 1
                       else:
                           result.append(tok)
                           i += 1
@@ -1437,6 +1446,19 @@ in
                                   return "nix store traversal is blocked"
                               if not _in_allowed_root(tok):
                                   return "absolute path not under a recognised git root: " + tok
+                  elif lead_cmd == 'mv':
+                      mv_paths = [tok for tok in lead_tokens[1:] if not tok.startswith('-')]
+                      if not mv_paths:
+                          return "mv with no paths"
+
+                      def _mv_in_allowed(tok):
+                          r = os.path.normpath(
+                              os.path.join(cwd, tok) if not os.path.isabs(tok) and not tok.startswith('~')
+                              else os.path.expanduser(tok)
+                          )
+                          return under(r, NX_AGENTS_PLANS_DIR) or under(r, CLAUDE_TMP)
+                      if not all(_mv_in_allowed(tok) for tok in mv_paths):
+                          return "mv outside plans directory or temp: review required"
                   elif lead_cmd in ('mkdir', 'rmdir'):
                       for tok in lead_tokens[1:]:
                           if tok.startswith('-'):
