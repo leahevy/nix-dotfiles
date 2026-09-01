@@ -2382,8 +2382,10 @@ in
                 ;;
             esac
           done
+          _stderr_tmp=$(mktemp "/run/user/$_uid/nx-claude-stderr-XXXXXX")
+          trap 'rm -f "$_stderr_tmp"' EXIT
           if [ -d "$HOME/.config/nx/nxcore" ] && [ "$git_root" != "$HOME/.config/nx/nxcore" ]; then
-            exec /run/wrappers/bin/firejail \
+            /run/wrappers/bin/firejail \
               --quiet \
               --profile=/etc/firejail/claude-code.profile \
               --whitelist="$git_root" \
@@ -2394,9 +2396,9 @@ in
               "''${_extra_wl_args[@]}" \
               ${runWhitelists}              $_data_bl $_run_bl \
               -- "$@" \
-              2> >(grep -vF "Warning: /usr/bin/bwrap was not disabled" >&2)
+              2>"$_stderr_tmp"
           else
-            exec /run/wrappers/bin/firejail \
+            /run/wrappers/bin/firejail \
               --quiet \
               --profile=/etc/firejail/claude-code.profile \
               --whitelist="$git_root" \
@@ -2405,8 +2407,11 @@ in
               "''${_extra_wl_args[@]}" \
               ${runWhitelists}              $_data_bl $_run_bl \
               -- "$@" \
-              2> >(grep -vF "Warning: /usr/bin/bwrap was not disabled" >&2)
+              2>"$_stderr_tmp"
           fi
+          _exit=$?
+          grep -vF "Warning: /usr/bin/bwrap was not disabled" "$_stderr_tmp" >&2
+          exit $_exit
         '';
         claude-firejail = pkgs.writeShellScriptBin "claude" ''
           ${wrapperOptionParsingScript}
