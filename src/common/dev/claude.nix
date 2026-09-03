@@ -667,7 +667,6 @@ in
       environment.etc."firejail/claude-code.profile".text = ''
         whitelist ''${HOME}/.claude
         whitelist ''${HOME}/.claude.json
-        read-only ''${HOME}/.claude/.credentials.json
         read-only ''${HOME}/.claude/settings.json
         read-only ''${HOME}/.claude/CLAUDE.md
         read-only ''${HOME}/.claude/agents
