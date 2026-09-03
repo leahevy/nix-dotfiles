@@ -900,8 +900,11 @@ args@{
             ${pkgs.coreutils}/bin/touch /var/lib/nx-borgbackup/backup-in-progress
             ${checkDailyBackupCompleteScript}
             check_daily_backup_complete
+            ${pkgs.coreutils}/bin/sleep 10
+            check_daily_backup_complete
             ${pkgs.coreutils}/bin/echo "Waiting 10 minutes for system readiness..."
             ${pkgs.coreutils}/bin/sleep 600
+            check_daily_backup_complete
             ${checkAutoUpgradeRunningScript}
             check_auto_upgrade_running
             ${networkWaitScript}
