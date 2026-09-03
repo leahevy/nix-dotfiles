@@ -484,6 +484,12 @@ let
           user = true;
           unitless = true;
         }
+        {
+          tag = "okular";
+          string = "This plugin supports grabbing the mouse only for popup windows";
+          user = true;
+          unitless = true;
+        }
       ];
     };
     videoPlayer = mkKdeProgram { name = "dragon"; };
