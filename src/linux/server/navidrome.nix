@@ -41,12 +41,10 @@ args@{
       description = "Extra settings passed to services.navidrome.settings.";
     };
 
-    lastFm = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = "Enable Last.fm integration for album art and scrobbling metadata.";
-      };
+    lastFmIntegration = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable Last.fm integration for album art and scrobbling metadata.";
     };
   };
 
@@ -68,13 +66,13 @@ args@{
         port,
         dataDir,
         extraSettings,
-        lastFm,
+        lastFmIntegration,
       }:
       {
         users.groups.navidrome-sync = { };
         users.users.navidrome.extraGroups = [ "navidrome-sync" ];
 
-        sops.secrets = lib.optionalAttrs lastFm.enable {
+        sops.secrets = lib.optionalAttrs lastFmIntegration {
           "navidrome-lastfm-apikey" = {
             format = "binary";
             sopsFile = self.profile.secretsPath "navidrome-lastfm-apikey";
@@ -87,7 +85,7 @@ args@{
           };
         };
 
-        systemd.services.nx-navidrome-lastfm = lib.mkIf lastFm.enable {
+        systemd.services.nx-navidrome-lastfm = lib.mkIf lastFmIntegration {
           description = "Prepare Navidrome Last.fm environment";
           before = [ "navidrome.service" ];
           wantedBy = [ "navidrome.service" ];
@@ -130,11 +128,11 @@ args@{
             Port = port;
             Address = "127.0.0.1";
             EnableInsightsCollector = false;
-            "LastFM.Enabled" = lastFm.enable;
+            "LastFM.Enabled" = lastFmIntegration;
           }
           // extraSettings;
         }
-        // lib.optionalAttrs lastFm.enable {
+        // lib.optionalAttrs lastFmIntegration {
           environmentFile = "/run/nx-navidrome-lastfm/env";
         };
 
