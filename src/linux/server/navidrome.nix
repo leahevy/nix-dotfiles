@@ -71,7 +71,6 @@ args@{
       {
         users.groups.navidrome-sync = { };
         users.users.navidrome.extraGroups = [ "navidrome-sync" ];
-        services.navidrome.group = "navidrome-sync";
         systemd.services.navidrome.serviceConfig.StateDirectoryMode = "0750";
 
         sops.secrets = lib.optionalAttrs lastFmIntegration {
@@ -124,6 +123,7 @@ args@{
 
         services.navidrome = {
           enable = true;
+          group = "navidrome-sync";
           settings = {
             MusicFolder = "${dataDir}/music";
             DataFolder = dataDir;
