@@ -2010,6 +2010,12 @@ def call_ha_conversation(
         speech, new_id = request_ha_conversation(
             cfg, ha_token, text, conversation_id, agent_override
         )
+        if isinstance(speech, str) and "OpenAI response" in speech:
+            log_error(
+                f"signal-bot: OpenAI response error from Home Assistant agent: "
+                f"{speech.strip()[:200]}"
+            )
+            return message_text(cfg, "ha_agent_failed"), None
         if not isinstance(speech, str) or speech.strip() != HA_AGENT_ERROR_SPEECH:
             if contains_tool_call_artifact(speech):
                 log_error(
