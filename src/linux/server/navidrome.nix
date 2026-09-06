@@ -40,6 +40,14 @@ args@{
       default = { };
       description = "Extra settings passed to services.navidrome.settings.";
     };
+
+    lastFm = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable Last.fm integration for album art and scrobbling metadata.";
+      };
+    };
   };
 
   module = {
@@ -60,10 +68,59 @@ args@{
         port,
         dataDir,
         extraSettings,
+        lastFm,
       }:
       {
         users.groups.navidrome-sync = { };
         users.users.navidrome.extraGroups = [ "navidrome-sync" ];
+
+        sops.secrets = lib.optionalAttrs lastFm.enable {
+          "navidrome-lastfm-apikey" = {
+            format = "binary";
+            sopsFile = self.profile.secretsPath "navidrome-lastfm-apikey";
+            mode = "0400";
+          };
+          "navidrome-lastfm-secret" = {
+            format = "binary";
+            sopsFile = self.profile.secretsPath "navidrome-lastfm-secret";
+            mode = "0400";
+          };
+        };
+
+        systemd.services.nx-navidrome-lastfm = lib.mkIf lastFm.enable {
+          description = "Prepare Navidrome Last.fm environment";
+          before = [ "navidrome.service" ];
+          wantedBy = [ "navidrome.service" ];
+          partOf = [ "navidrome.service" ];
+          restartTriggers = [
+            config.sops.secrets."navidrome-lastfm-apikey".sopsFile
+            config.sops.secrets."navidrome-lastfm-secret".sopsFile
+          ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            RuntimeDirectory = "nx-navidrome-lastfm";
+            RuntimeDirectoryMode = "0700";
+            ExecStart = toString (
+              pkgs.writeShellScript "nx-navidrome-lastfm" ''
+                set -euo pipefail
+                umask 077
+                {
+                  printf 'ND_LASTFM_APIKEY='
+                  ${pkgs.coreutils}/bin/tr -d '\n' < ${
+                    lib.escapeShellArg config.sops.secrets."navidrome-lastfm-apikey".path
+                  }
+                  printf '\n'
+                  printf 'ND_LASTFM_SECRET='
+                  ${pkgs.coreutils}/bin/tr -d '\n' < ${
+                    lib.escapeShellArg config.sops.secrets."navidrome-lastfm-secret".path
+                  }
+                  printf '\n'
+                } > /run/nx-navidrome-lastfm/env
+              ''
+            );
+          };
+        };
 
         services.navidrome = {
           enable = true;
@@ -73,8 +130,12 @@ args@{
             Port = port;
             Address = "127.0.0.1";
             EnableInsightsCollector = false;
+            "LastFM.Enabled" = lastFm.enable;
           }
           // extraSettings;
+        }
+        // lib.optionalAttrs lastFm.enable {
+          environmentFile = "/run/nx-navidrome-lastfm/env";
         };
 
         systemd.tmpfiles.settings."navidromeDirs" = {
