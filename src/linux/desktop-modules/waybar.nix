@@ -61,6 +61,12 @@ args@{
           string = "Failed with result 'core-dump'\.";
           user = true;
         }
+        {
+          tag = "waybar";
+          string = "The child-display variable is set to '\\(null\\)' but there's a menu, odd\\?";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 
