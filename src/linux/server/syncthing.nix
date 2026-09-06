@@ -152,6 +152,18 @@ in
       description = "Named Syncthing devices to declaratively assign to the Paperless import and export folders.";
     };
 
+    navidromeIntegration = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Inject a navidrome-music syncthing folder when the navidrome module is enabled.";
+    };
+
+    navidromeMusicFolderDevices = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Named Syncthing devices to declaratively assign to the Navidrome music folder, or all declared devices if empty.";
+    };
+
     enablePullErrorsHealthCheck = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -509,81 +521,121 @@ in
         };
     };
 
-    when = {
-      option.paperlessIntegration = true;
-      modules.linux.server.paperless-ngx = true;
-      do.linux.system =
-        { config, ... }:
-        let
-          basePath = config.nx.linux.server.paperless-ngx.paperlessDataBasePath;
-          folderDevices =
-            if config.nx.linux.server.syncthing.paperlessFolderDevices == [ ] then
-              lib.attrNames config.services.syncthing.settings.devices
-            else
-              config.nx.linux.server.syncthing.paperlessFolderDevices;
-        in
-        {
-          users.groups.paperless-sync = { };
-          users.users.syncthing.extraGroups = [ "paperless-sync" ];
-          users.users.paperless.extraGroups = [ "paperless-sync" ];
+    when = [
+      {
+        option.paperlessIntegration = true;
+        modules.linux.server.paperless-ngx = true;
+        do.linux.system =
+          { config, ... }:
+          let
+            basePath = config.nx.linux.server.paperless-ngx.paperlessDataBasePath;
+            folderDevices =
+              if config.nx.linux.server.syncthing.paperlessFolderDevices == [ ] then
+                lib.attrNames config.services.syncthing.settings.devices
+              else
+                config.nx.linux.server.syncthing.paperlessFolderDevices;
+          in
+          {
+            users.groups.paperless-sync = { };
+            users.users.syncthing.extraGroups = [ "paperless-sync" ];
+            users.users.paperless.extraGroups = [ "paperless-sync" ];
 
-          systemd.tmpfiles.settings."10-paperless" = {
-            "${basePath}".d = lib.mkOverride 75 {
-              mode = "0750";
-              user = "paperless";
-              group = "paperless-sync";
+            systemd.tmpfiles.settings."10-paperless" = {
+              "${basePath}".d = lib.mkOverride 75 {
+                mode = "0750";
+                user = "paperless";
+                group = "paperless-sync";
+              };
+              "${basePath}/import".d = lib.mkOverride 75 {
+                mode = "2770";
+                user = "paperless";
+                group = "paperless-sync";
+              };
+            }
+            // lib.optionalAttrs self.host.impermanence {
+              "${self.persist}${basePath}".d = lib.mkOverride 75 {
+                mode = "0750";
+                user = "paperless";
+                group = "paperless-sync";
+              };
+              "${self.persist}${basePath}/import".d = lib.mkOverride 75 {
+                mode = "2770";
+                user = "paperless";
+                group = "paperless-sync";
+              };
             };
-            "${basePath}/import".d = lib.mkOverride 75 {
-              mode = "2770";
-              user = "paperless";
-              group = "paperless-sync";
+            systemd.tmpfiles.settings."10-paperless-export" = {
+              "${basePath}/export".d = lib.mkOverride 75 {
+                mode = "2770";
+                user = "paperless";
+                group = "paperless-sync";
+              };
+            }
+            // lib.optionalAttrs self.host.impermanence {
+              "${self.persist}${basePath}/export".d = lib.mkOverride 75 {
+                mode = "2770";
+                user = "paperless";
+                group = "paperless-sync";
+              };
             };
-          }
-          // lib.optionalAttrs self.host.impermanence {
-            "${self.persist}${basePath}".d = lib.mkOverride 75 {
-              mode = "0750";
-              user = "paperless";
-              group = "paperless-sync";
-            };
-            "${self.persist}${basePath}/import".d = lib.mkOverride 75 {
-              mode = "2770";
-              user = "paperless";
-              group = "paperless-sync";
-            };
-          };
-          systemd.tmpfiles.settings."10-paperless-export" = {
-            "${basePath}/export".d = lib.mkOverride 75 {
-              mode = "2770";
-              user = "paperless";
-              group = "paperless-sync";
-            };
-          }
-          // lib.optionalAttrs self.host.impermanence {
-            "${self.persist}${basePath}/export".d = lib.mkOverride 75 {
-              mode = "2770";
-              user = "paperless";
-              group = "paperless-sync";
-            };
-          };
 
-          services.syncthing.settings.folders = {
-            "paperless-import" = {
-              path = "${basePath}/import";
-              label = "Paperless Import";
+            services.syncthing.settings.folders = {
+              "paperless-import" = {
+                path = "${basePath}/import";
+                label = "Paperless Import";
+                devices = folderDevices;
+              };
+              "paperless-export" = {
+                path = "${basePath}/export";
+                label = "Paperless Export";
+                devices = folderDevices;
+              };
+            };
+
+            systemd.services.syncthing.restartTriggers = [
+              (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless" or { }))
+              (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless-export" or { }))
+            ];
+          };
+      }
+      {
+        option.navidromeIntegration = true;
+        modules.linux.server.navidrome = true;
+        do.linux.system =
+          { config, ... }:
+          let
+            dataDir = config.nx.linux.server.navidrome.dataDir;
+            folderDevices =
+              if config.nx.linux.server.syncthing.navidromeMusicFolderDevices == [ ] then
+                lib.attrNames config.services.syncthing.settings.devices
+              else
+                config.nx.linux.server.syncthing.navidromeMusicFolderDevices;
+          in
+          {
+            users.users.syncthing.extraGroups = [ "navidrome-sync" ];
+
+            systemd.tmpfiles.settings."navidromeDirs" = {
+              "${dataDir}/music".d = lib.mkOverride 75 {
+                mode = "2770";
+                user = "navidrome";
+                group = "navidrome-sync";
+              };
+            }
+            // lib.optionalAttrs self.host.impermanence {
+              "${self.persist}${dataDir}/music".d = lib.mkOverride 75 {
+                mode = "2770";
+                user = "navidrome";
+                group = "navidrome-sync";
+              };
+            };
+
+            services.syncthing.settings.folders."navidrome-music" = {
+              path = "${dataDir}/music";
+              label = "Navidrome Music";
               devices = folderDevices;
             };
-            "paperless-export" = {
-              path = "${basePath}/export";
-              label = "Paperless Export";
-              devices = folderDevices;
-            };
           };
-
-          systemd.services.syncthing.restartTriggers = [
-            (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless" or { }))
-            (builtins.toJSON (config.systemd.tmpfiles.settings."10-paperless-export" or { }))
-          ];
-        };
-    };
+      }
+    ];
   };
 }

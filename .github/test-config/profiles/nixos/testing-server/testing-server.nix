@@ -27,6 +27,7 @@
       exposedServices = {
         auth = true;
         dashboard = true;
+        navidrome = true;
         paperless-ngx = "paperless";
         syncthing = true;
         searxng = true;
@@ -177,6 +178,7 @@
           nginx = {
             serverOwnsBaseDomain = true;
           };
+          navidrome = true;
           paperless-ngx = true;
           pocket-id = true;
           postgresql = true;

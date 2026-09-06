@@ -696,6 +696,10 @@ with lib;
                     type = types.either types.str types.bool;
                     default = false;
                   };
+                  navidrome = mkOption {
+                    type = types.either types.str types.bool;
+                    default = false;
+                  };
                   paperless-ngx = mkOption {
                     type = types.either types.str types.bool;
                     default = false;
