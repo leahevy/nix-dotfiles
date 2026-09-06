@@ -71,6 +71,8 @@ args@{
       {
         users.groups.navidrome-sync = { };
         users.users.navidrome.extraGroups = [ "navidrome-sync" ];
+        services.navidrome.group = "navidrome-sync";
+        systemd.services.navidrome.serviceConfig.StateDirectoryMode = "0750";
 
         sops.secrets = lib.optionalAttrs lastFmIntegration {
           "navidrome-lastfm-apikey" = {
@@ -137,11 +139,6 @@ args@{
         };
 
         systemd.tmpfiles.settings."navidromeDirs" = {
-          "${dataDir}".d = lib.mkOverride 90 {
-            mode = "0750";
-            user = "navidrome";
-            group = "navidrome-sync";
-          };
           "${dataDir}/music".d = lib.mkOverride 90 {
             mode = "0750";
             user = "navidrome";
