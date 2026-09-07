@@ -436,7 +436,7 @@ in
 
     maxSplitMessages = lib.mkOption {
       type = lib.types.ints.positive;
-      default = 3;
+      default = 5;
       description = "Maximum number of Signal messages a long outbound message is split into before the last part is truncated.";
     };
 
