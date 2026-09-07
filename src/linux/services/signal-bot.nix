@@ -436,8 +436,14 @@ in
 
     maxSplitMessages = lib.mkOption {
       type = lib.types.ints.positive;
-      default = 5;
+      default = 3;
       description = "Maximum number of Signal messages a long outbound message is split into before the last part is truncated.";
+    };
+
+    maxSplitMessagesCommands = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 10;
+      description = "Maximum number of Signal messages a long builtin command reply is split into before the last part is truncated.";
     };
 
     boldTitle = lib.mkOption {
@@ -1871,6 +1877,7 @@ in
           budgetOutputChars,
           inboundMaxAgeMinutes,
           maxSplitMessages,
+          maxSplitMessagesCommands,
           boldTitle,
           markdown,
           botLanguage,
@@ -2040,6 +2047,7 @@ in
               budget_output_chars = budgetOutputChars;
               inbound_max_age_seconds = inboundMaxAgeMinutes * 60;
               max_split_messages = maxSplitMessages;
+              max_split_messages_commands = maxSplitMessagesCommands;
               bold_title = boldTitle;
               inherit markdown;
               instruction_template = instructionTemplate;

@@ -120,6 +120,7 @@ REQUIRED_CONFIG_KEYS = (
     "budget_output_chars",
     "inbound_max_age_seconds",
     "max_split_messages",
+    "max_split_messages_commands",
     "bold_title",
     "markdown",
     "quote_replies",
@@ -3598,6 +3599,7 @@ def serve(cfg):
     ha_session_seconds = cfg["ha_session_seconds"]
     context_max_chars = cfg["context_max_chars"]
     max_split_messages = cfg["max_split_messages"]
+    max_split_messages_commands = cfg["max_split_messages_commands"]
     instruction_template = cfg["instruction_template"]
     reactions_config = cfg["reactions"]
     reactions_enabled = bool(reactions_config["enable"])
@@ -3746,6 +3748,7 @@ def serve(cfg):
         transcript_key=None,
         reactable=True,
         record_transcript=True,
+        max_messages=None,
     ):
         if not isinstance(text, str) or not text.strip():
             print(
@@ -3755,7 +3758,9 @@ def serve(cfg):
             return True
         if ranges is None:
             text, ranges = render_markdown(cfg, text)
-        chunks = split_message(text, max_split_messages)
+        chunks = split_message(
+            text, max_messages if max_messages is not None else max_split_messages
+        )
         styles = [
             chunk_text_styles(chunk, offset, span, ranges)
             for chunk, offset, span in chunks
@@ -4661,6 +4666,9 @@ def serve(cfg):
             thread_key=send_thread_key,
             transcript_key=send_thread_key,
             record_transcript=record_bot_reply,
+            max_messages=(
+                max_split_messages_commands if message_is_builtin_command else None
+            ),
         ):
             print("signal-bot: reply queue full, dropping reply", file=sys.stderr)
 
