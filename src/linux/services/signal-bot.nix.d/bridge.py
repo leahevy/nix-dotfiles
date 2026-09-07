@@ -3179,6 +3179,12 @@ class MemoryStore:
                     f" {MEMORY_SUMMARIZE_MAX_ATTEMPTS} attempts, will retry next tick!"
                 )
                 return
+            if summary_text.count("\n") < 2:
+                log_error(
+                    f"signal-bot: memory summary for {closing_date} looks like an error "
+                    f"response (fewer than 2 newlines), discarding and will retry next tick!"
+                )
+                return
             print(
                 f"signal-bot: memory period {closing_date} summarized successfully",
                 file=sys.stderr,
