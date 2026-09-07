@@ -2235,7 +2235,7 @@ def cmd_memory(
     is_admin=False,
     memory_block=None,
 ):
-    block = memory_block() if memory_block is not None else ""
+    block = memory_block(raw=True) if memory_block is not None else ""
     return block if block else message_text(cfg, "memory_empty")
 
 
@@ -3264,21 +3264,23 @@ class MemoryStore:
             next_str = None
         return summaries, today_entries, next_str
 
-    def memory_block(self, channel_key="desktop"):
+    def memory_block(self, channel_key="desktop", raw=False):
         if not self.cfg.get("memory_enable"):
             return ""
         with self.lock:
             summaries = list(self.summaries)
         if not summaries:
             return ""
+        entry_tpl = self.cfg["memory_entry_template"]
+        latest = summaries[-1]
+        memory_text = entry_tpl.format(date=latest["date"], summary=latest["text"])
+        if raw:
+            return memory_text
         lang = self.cfg.get("bot_language", "en")
         channel = _CHANNEL_LABELS.get(lang, _CHANNEL_LABELS["en"]).get(
             channel_key, channel_key
         )
-        entry_tpl = self.cfg["memory_entry_template"]
         context_tpl = self.cfg["memory_context_template"]
-        latest = summaries[-1]
-        memory_text = entry_tpl.format(date=latest["date"], summary=latest["text"])
         try:
             return context_tpl.format(memory=memory_text, channel=channel)
         except (KeyError, IndexError):
@@ -4427,8 +4429,8 @@ def serve(cfg):
                 hooks_report,
                 memory_report,
                 is_admin=sender_number in admin_numbers,
-                memory_block=lambda: memory_store.memory_block(
-                    "group" if group_info else "direct"
+                memory_block=lambda raw=False: memory_store.memory_block(
+                    "group" if group_info else "direct", raw=raw
                 ),
             )
         else:
@@ -5064,7 +5066,9 @@ def serve(cfg):
                 hooks_report,
                 memory_report,
                 is_admin=is_admin,
-                memory_block=lambda: memory_store.memory_block("desktop"),
+                memory_block=lambda raw=False: memory_store.memory_block(
+                    "desktop", raw=raw
+                ),
             )
 
         def desktop_call_ha(text, conversation_id):
@@ -5191,7 +5195,9 @@ def serve(cfg):
             context_max_messages=cfg["context_max_messages"],
             bot_label=message_text(cfg, "quote_context_bot"),
             follow_up_window=lambda: follow_up_window(cfg),
-            memory_block=lambda: memory_store.memory_block("desktop"),
+            memory_block=lambda raw=False: memory_store.memory_block(
+                "desktop", raw=raw
+            ),
             context_prefix=lambda: time_context_prefix(
                 memory_store.memory_block("desktop")
             ),
