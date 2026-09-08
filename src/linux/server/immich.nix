@@ -156,6 +156,7 @@ args@{
 
         services.immich = {
           enable = true;
+          host = "127.0.0.1";
           group = "immich-sync";
           mediaLocation = mediaLocation;
           port = port;
