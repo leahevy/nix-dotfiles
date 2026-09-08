@@ -24,6 +24,7 @@ let
       callbackPaths = [
         "/auth/login"
         "/user-settings"
+        "/api/oauth/mobile-redirect"
       ];
       additionalCallbackUrls = [ "app.immich:///oauth-callback" ];
       pkceEnabled = true;
