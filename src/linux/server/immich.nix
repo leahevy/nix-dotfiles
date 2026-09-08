@@ -152,7 +152,8 @@ args@{
           duration = 30;
           transition = "fade";
           image_fit = "contain";
-          image_effect = "smart-zoom";
+          image_effect = "zoom";
+          image_effect_amount = 120;
           show_time = true;
           show_date = true;
           show_image_time = false;
