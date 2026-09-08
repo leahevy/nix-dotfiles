@@ -102,6 +102,11 @@ args@{
                     default = false;
                     description = "Show clock and date overlay on this album's gallery vhost.";
                   };
+                  disableZoom = lib.mkOption {
+                    type = lib.types.bool;
+                    default = true;
+                    description = "Disable zoom effect and use cover fit for this album's gallery vhost.";
+                  };
                 };
               }
             );
@@ -203,11 +208,16 @@ args@{
             albumId,
             port,
             enableWidgets,
+            disableZoom,
           }:
           let
             staticConfig = (pkgs.formats.json { }).generate "immich-kiosk-${name}.json" (
               sharedKioskSettings
               // lib.optionalAttrs (!enableWidgets) { disable_ui = true; }
+              // lib.optionalAttrs disableZoom {
+                image_effect = "none";
+                image_fit = "cover";
+              }
               // {
                 immich_url = "https://${subdomain}.${domain}";
                 kiosk.port = port;
@@ -341,6 +351,7 @@ args@{
                 albumId = album.albumId;
                 port = galleries.kioskPort + 1 + index;
                 enableWidgets = album.enableWidgets;
+                disableZoom = album.disableZoom;
               })
             ) galleries.albums
           )
