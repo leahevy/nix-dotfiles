@@ -58,6 +58,52 @@ args@{
       description = "Extra settings merged into services.immich.settings.";
     };
 
+    enableOIDC = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable OIDC authentication via the active auth provider.";
+    };
+
+    disableOIDCEnforcement = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Opt this service out of OIDC login enforcement even when linux.server.auth.enforceOIDC is true.";
+    };
+
+    oidcConfiguration = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          providerId = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Resolved OIDC provider id injected by the auth integration.";
+          };
+          providerName = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Resolved OIDC provider display name injected by the auth integration.";
+          };
+          serverUrl = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Resolved OIDC issuer URL injected by the auth integration.";
+          };
+          logoutUrl = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Resolved logout redirect URL injected by the auth integration.";
+          };
+          enforceOIDC = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Whether Immich should disable regular login and force SSO.";
+          };
+        };
+      };
+      default = { };
+      description = "Resolved OIDC settings injected by the auth integration.";
+    };
+
     galleries = lib.mkOption {
       type = lib.types.submodule {
         options = {
@@ -145,6 +191,8 @@ args@{
         externalLibraryPath,
         libraryScanIntervalHours,
         extraSettings,
+        enableOIDC,
+        oidcConfiguration,
         galleries,
       }:
       let
@@ -267,6 +315,14 @@ args@{
             assertion = !galleries.enable || galleries.albums != [ ];
             message = "linux.server.immich: galleries.enable is true but galleries.albums is empty!";
           }
+          {
+            assertion = !enableOIDC || config.nx.linux.server.auth.enable;
+            message = "linux.server.immich: enableOIDC requires linux.server.auth to be enabled!";
+          }
+          {
+            assertion = !enableOIDC || oidcConfiguration.serverUrl != null;
+            message = "linux.server.immich: enableOIDC requires oidcConfiguration.serverUrl to be set by the auth integration!";
+          }
         ];
 
         users.groups.immich-sync = { };
@@ -277,20 +333,38 @@ args@{
           group = "immich-sync";
           mediaLocation = mediaLocation;
           port = port;
-          settings = lib.recursiveUpdate {
-            server = {
-              publicUsers = true;
+          secretsFile = lib.mkIf enableOIDC "/run/immich-oidc/env";
+          settings = lib.recursiveUpdate (
+            {
+              server = {
+                publicUsers = true;
+              }
+              // lib.optionalAttrs (domain != null) {
+                externalDomain = "https://${subdomain}.${domain}";
+              };
+              newVersionCheck.enabled = false;
+              ffmpeg.accel = "qsv";
+              library.scan = {
+                enabled = true;
+                cronExpression = "*/${toString libraryScanIntervalHours} * * * *";
+              };
             }
-            // lib.optionalAttrs (domain != null) {
-              externalDomain = "https://${subdomain}.${domain}";
-            };
-            newVersionCheck.enabled = false;
-            ffmpeg.accel = "qsv";
-            library.scan = {
-              enabled = true;
-              cronExpression = "*/${toString libraryScanIntervalHours} * * * *";
-            };
-          } extraSettings;
+            // lib.optionalAttrs enableOIDC {
+              oauth = {
+                enabled = true;
+                issuerUrl = oidcConfiguration.serverUrl;
+                scope = "openid email profile";
+                buttonText = oidcConfiguration.providerName;
+                autoRegister = true;
+                autoLaunch = oidcConfiguration.enforceOIDC;
+                mobileOverrideEnabled = true;
+                mobileRedirectUri = "https://${subdomain}.${domain}/api/oauth/mobile-redirect";
+              }
+              // lib.optionalAttrs (oidcConfiguration.logoutUrl != null) {
+                endSessionEndpoint = oidcConfiguration.logoutUrl;
+              };
+            }
+          ) extraSettings;
         };
 
         systemd.tmpfiles.settings."immichDirs" = {
@@ -323,19 +397,42 @@ args@{
           };
         };
 
+        systemd.tmpfiles.settings."immich-oidc" = lib.mkIf enableOIDC {
+          "/run/immich-oidc".d = {
+            mode = "0700";
+            user = "root";
+            group = "root";
+          };
+        };
+
         environment.persistence."${self.persist}".directories = [
           "/var/lib/immich"
           mediaLocation
           externalLibraryPath
         ];
 
-        sops.secrets = lib.optionalAttrs galleries.enable {
-          "immich-kiosk-api-key" = {
-            format = "binary";
-            sopsFile = self.profile.secretsPath "immich-kiosk-api-key";
-            mode = "0400";
+        sops.secrets =
+          lib.optionalAttrs galleries.enable {
+            "immich-kiosk-api-key" = {
+              format = "binary";
+              sopsFile = self.profile.secretsPath "immich-kiosk-api-key";
+              mode = "0400";
+            };
+          }
+          // lib.optionalAttrs enableOIDC {
+            "immich-oidc-id" = {
+              format = "binary";
+              sopsFile = self.profile.secretsPath "immich-oidc-id";
+              owner = "root";
+              mode = "0400";
+            };
+            "immich-oidc-secret" = {
+              format = "binary";
+              sopsFile = self.profile.secretsPath "immich-oidc-secret";
+              owner = "root";
+              mode = "0400";
+            };
           };
-        };
 
         services.immich-kiosk = lib.mkIf galleries.enable {
           enable = true;
@@ -347,20 +444,55 @@ args@{
           // sharedKioskSettings;
         };
 
-        systemd.services = lib.optionalAttrs (galleries.enable && galleries.albums != [ ]) (
-          lib.listToAttrs (
-            lib.imap0 (
-              index: album:
-              lib.nameValuePair "immich-kiosk-${album.name}" (mkAlbumKioskService {
-                name = album.name;
-                albumId = album.albumId;
-                port = galleries.kioskPort + 1 + index;
-                enableWidgets = album.enableWidgets;
-                disableZoom = album.disableZoom;
-              })
-            ) galleries.albums
-          )
-        );
+        systemd.services = lib.mkMerge [
+          (lib.optionalAttrs (galleries.enable && galleries.albums != [ ]) (
+            lib.listToAttrs (
+              lib.imap0 (
+                index: album:
+                lib.nameValuePair "immich-kiosk-${album.name}" (mkAlbumKioskService {
+                  name = album.name;
+                  albumId = album.albumId;
+                  port = galleries.kioskPort + 1 + index;
+                  enableWidgets = album.enableWidgets;
+                  disableZoom = album.disableZoom;
+                })
+              ) galleries.albums
+            )
+          ))
+          (lib.mkIf enableOIDC {
+            nx-immich-oidc-prep = {
+              description = "Prepare Immich OIDC credentials environment";
+              before = [ "immich-server.service" ];
+              wantedBy = [ "immich-server.service" ];
+              partOf = [ "immich-server.service" ];
+              restartTriggers = [
+                config.sops.secrets."immich-oidc-id".sopsFile
+                config.sops.secrets."immich-oidc-secret".sopsFile
+              ];
+              serviceConfig = {
+                Type = "oneshot";
+                RemainAfterExit = true;
+                ExecStart = toString (
+                  pkgs.writeShellScript "nx-immich-oidc-prep" ''
+                    set -euo pipefail
+                    umask 077
+                    {
+                      printf 'IMMICH_OAUTH_CLIENT_ID='
+                      ${pkgs.coreutils}/bin/tr -d '\n' < ${lib.escapeShellArg config.sops.secrets."immich-oidc-id".path}
+                      printf '\n'
+                      printf 'IMMICH_OAUTH_CLIENT_SECRET='
+                      ${pkgs.coreutils}/bin/tr -d '\n' < ${
+                        lib.escapeShellArg config.sops.secrets."immich-oidc-secret".path
+                      }
+                      printf '\n'
+                    } > /run/immich-oidc/env
+                    ${pkgs.coreutils}/bin/chmod 600 /run/immich-oidc/env
+                  ''
+                );
+              };
+            };
+          })
+        ];
       };
 
     ifEnabled.linux.server.nginx = {

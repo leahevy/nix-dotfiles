@@ -13,7 +13,19 @@ let
       moduleName = "paperless-ngx";
       clientName = "Paperless";
       allowedUserGroup = "paperless-users";
-      callbackPath = "/accounts/oidc/{providerId}/login/callback/";
+      callbackPaths = [ "/accounts/oidc/{providerId}/login/callback/" ];
+      additionalCallbackUrls = [ ];
+      pkceEnabled = true;
+    }
+    {
+      moduleName = "immich";
+      clientName = "Immich";
+      allowedUserGroup = "immich-users";
+      callbackPaths = [
+        "/auth/login"
+        "/user-settings"
+      ];
+      additionalCallbackUrls = [ "app.immich:///oauth-callback" ];
       pkceEnabled = true;
     }
   ];
@@ -291,7 +303,8 @@ in
             {
               nx.linux.server.auth.clients.${svc.moduleName} = lib.mkIf (active && domain != null) {
                 name = svc.clientName;
-                callbackUrls = [ "https://${sub}.${domain}${svc.callbackPath}" ];
+                callbackUrls =
+                  map (path: "https://${sub}.${domain}${path}") svc.callbackPaths ++ svc.additionalCallbackUrls;
                 allowedUserGroup = svc.allowedUserGroup;
                 launchUrl = "https://${sub}.${domain}";
                 pkceEnabled = svc.pkceEnabled;
