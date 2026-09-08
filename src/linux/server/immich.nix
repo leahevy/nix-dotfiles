@@ -141,6 +141,89 @@ args@{
         exposedService = self.host.remote.exposedServices.immich;
         isExposed = exposedService != false;
         exposedSubdomain = if builtins.isString exposedService then exposedService else subdomain;
+        sharedKioskSettings = {
+          disable_ui = true;
+          duration = 30;
+          transition = "fade";
+          image_fit = "cover";
+          show_time = true;
+          show_date = true;
+          background_blur = true;
+        }
+        // galleries.kioskSettings;
+        kioskHardening = {
+          DynamicUser = true;
+          Restart = "on-failure";
+          RestartSec = 10;
+          RuntimeDirectoryMode = "0700";
+          Type = "simple";
+          CapabilityBoundingSet = [ "" ];
+          LockPersonality = true;
+          NoNewPrivileges = true;
+          PrivateDevices = true;
+          PrivateTmp = true;
+          PrivateUsers = true;
+          ProtectClock = true;
+          ProtectControlGroups = true;
+          ProtectHome = true;
+          ProtectHostname = true;
+          ProtectKernelLogs = true;
+          ProtectKernelModules = true;
+          ProtectKernelTunables = true;
+          ProtectProc = "invisible";
+          RestrictAddressFamilies = [
+            "AF_INET"
+            "AF_INET6"
+          ];
+          RestrictNamespaces = true;
+          RestrictRealtime = true;
+          RestrictSUIDSGID = true;
+          SystemCallArchitectures = "native";
+          SystemCallFilter = [
+            "@system-service"
+            "~@privileged"
+            "~@resources"
+          ];
+        };
+        mkAlbumKioskService =
+          {
+            name,
+            albumId,
+            port,
+          }:
+          let
+            secretPath = lib.escapeShellArg config.sops.secrets."immich-kiosk-api-key".path;
+            staticConfig = (pkgs.formats.json { }).generate "immich-kiosk-${name}.json" (
+              sharedKioskSettings
+              // {
+                immich_url = "https://${subdomain}.${domain}";
+                kiosk.port = port;
+                albums = [ albumId ];
+              }
+            );
+          in
+          {
+            description = "Immich Kiosk - ${name}";
+            after = [
+              "network.target"
+              "immich-server.service"
+            ];
+            wantedBy = [ "multi-user.target" ];
+            preStart = ''
+              ${pkgs.jq}/bin/jq \
+                --arg key "$(${pkgs.coreutils}/bin/tr -d '\n' < ${secretPath})" \
+                '. + {immich_api_key: $key}' \
+                ${staticConfig} \
+                > /run/immich-kiosk-${name}/config.yaml
+              ${pkgs.coreutils}/bin/chmod 600 /run/immich-kiosk-${name}/config.yaml
+            '';
+            serviceConfig = kioskHardening // {
+              RuntimeDirectory = "immich-kiosk-${name}";
+              WorkingDirectory = "/run/immich-kiosk-${name}";
+              ExecStart = lib.getExe pkgs.immich-kiosk;
+              SyslogIdentifier = "immich-kiosk-${name}";
+            };
+          };
       in
       {
         assertions = [
@@ -230,16 +313,23 @@ args@{
           settings = {
             immich_api_key._secret = config.sops.secrets."immich-kiosk-api-key".path;
             kiosk.port = galleries.kioskPort;
-            disable_ui = true;
-            duration = 30;
-            transition = "fade";
-            image_fit = "cover";
-            show_time = true;
-            show_date = true;
-            background_blur = true;
+            albums = map (a: a.albumId) galleries.albums;
           }
-          // galleries.kioskSettings;
+          // sharedKioskSettings;
         };
+
+        systemd.services = lib.optionalAttrs (galleries.enable && galleries.albums != [ ]) (
+          lib.listToAttrs (
+            lib.imap0 (
+              index: album:
+              lib.nameValuePair "immich-kiosk-${album.name}" (mkAlbumKioskService {
+                name = album.name;
+                albumId = album.albumId;
+                port = galleries.kioskPort + 1 + index;
+              })
+            ) galleries.albums
+          )
+        );
       };
 
     ifEnabled.linux.server.nginx = {
@@ -284,13 +374,13 @@ args@{
           }
           // lib.optionalAttrs (galleries.enable && galleries.albums != [ ]) (
             lib.listToAttrs (
-              map (
-                album:
+              lib.imap0 (
+                index: album:
                 lib.nameValuePair "${subdomain}-gallery-${album.name}.${domain}" {
                   useACMEHost = domain;
                   forceSSL = true;
                   locations."/" = {
-                    proxyPass = "http://127.0.0.1:${toString galleries.kioskPort}/?album=${album.albumId}";
+                    proxyPass = "http://127.0.0.1:${toString (galleries.kioskPort + 1 + index)}";
                     recommendedProxySettings = false;
                     extraConfig = ''
                       ${lib.optionalString galleries.restrictToInternalNetwork "if ($nx_is_internal = 0) { return 403; }"}
@@ -308,9 +398,7 @@ args@{
                 useACMEHost = domain;
                 forceSSL = true;
                 locations."/" = {
-                  proxyPass = "http://127.0.0.1:${toString galleries.kioskPort}/?${
-                    lib.concatMapStringsSep "&" (a: "album=${a.albumId}") galleries.albums
-                  }";
+                  proxyPass = "http://127.0.0.1:${toString galleries.kioskPort}";
                   recommendedProxySettings = false;
                   extraConfig = ''
                     ${lib.optionalString galleries.restrictToInternalNetwork "if ($nx_is_internal = 0) { return 403; }"}
@@ -368,9 +456,10 @@ args@{
           "immich-server.service"
           "immich-machine-learning.service"
         ]
-        ++ lib.optionals config.nx.linux.server.immich.galleries.enable [
-          "immich-kiosk.service"
-        ];
+        ++ lib.optionals config.nx.linux.server.immich.galleries.enable (
+          [ "immich-kiosk.service" ]
+          ++ map (album: "immich-kiosk-${album.name}.service") config.nx.linux.server.immich.galleries.albums
+        );
       };
     };
 
