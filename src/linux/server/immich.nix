@@ -192,7 +192,6 @@ args@{
             port,
           }:
           let
-            secretPath = lib.escapeShellArg config.sops.secrets."immich-kiosk-api-key".path;
             staticConfig = (pkgs.formats.json { }).generate "immich-kiosk-${name}.json" (
               sharedKioskSettings
               // {
@@ -211,7 +210,7 @@ args@{
             wantedBy = [ "multi-user.target" ];
             preStart = ''
               ${pkgs.jq}/bin/jq \
-                --rawfile key ${secretPath} \
+                --rawfile key "$CREDENTIALS_DIRECTORY/immich-kiosk-api-key" \
                 '. + {immich_api_key: ($key | rtrimstr("\n"))}' \
                 ${staticConfig} \
                 > /run/immich-kiosk-${name}/config.yaml
@@ -222,6 +221,7 @@ args@{
               WorkingDirectory = "/run/immich-kiosk-${name}";
               ExecStart = lib.getExe pkgs.immich-kiosk;
               SyslogIdentifier = "immich-kiosk-${name}";
+              LoadCredential = [ "immich-kiosk-api-key:${config.sops.secrets."immich-kiosk-api-key".path}" ];
             };
           };
       in
