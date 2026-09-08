@@ -865,6 +865,7 @@ in
           code-review = "The built-in /code-review is disabled. Use the injected review skills instead (review-merge-request-head, review-pre-push-head, etc.).";
           simplify = "The built-in /simplify is disabled. Apply simplifications directly as code changes instead.";
         };
+        baseAgentText = "Complete the delegated task using all available tools. Work autonomously toward a conclusion. If a tool call is denied and the denial suggests the user intentionally blocked it to redirect you, do not give up: use SendMessage to ask the main agent for clarification, then wait for a reply before continuing.";
         baseAgents =
           lib.optionalAttrs (delegateEnabled && webSearchModel != null) {
             web = {
@@ -908,7 +909,7 @@ in
                   model = resolvedAgentModel;
                   effort = subagentEffortLevel;
                   tools = [ ];
-                  text = "Complete the delegated task using all available tools. Work autonomously toward a conclusion.";
+                  text = baseAgentText;
                 };
               }
           // lib.optionalAttrs (delegateEnabled && expertModel != null) {
@@ -917,7 +918,7 @@ in
               model = expertModel;
               effort = expertEffortLevel;
               tools = [ ];
-              text = "Complete the delegated task using all available tools. Work autonomously toward a conclusion.";
+              text = baseAgentText;
             };
           }
           // lib.optionalAttrs (delegateEnabled && scoutModel != null) {
@@ -926,7 +927,7 @@ in
               model = scoutModel;
               effort = scoutEffortLevel;
               tools = [ ];
-              text = "Complete the delegated task using all available tools. Work autonomously toward a conclusion.";
+              text = baseAgentText;
             };
           };
 
