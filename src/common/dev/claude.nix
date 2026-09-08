@@ -451,6 +451,60 @@ in
       description = "Effort level for the built-in general-purpose subagent wrapper, null inherits the session effort.";
     };
 
+    expertAgentModel = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "haiku"
+          "sonnet"
+          "opus"
+          "fable"
+        ]
+      );
+      default = "opus";
+      description = "Model for the built-in high-effort expert subagent, null disables the agent.";
+    };
+
+    expertAgentEffortLevel = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "low"
+          "medium"
+          "high"
+          "xhigh"
+          "max"
+        ]
+      );
+      default = "high";
+      description = "Effort level for the built-in high-effort expert subagent.";
+    };
+
+    scoutAgentModel = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "haiku"
+          "sonnet"
+          "opus"
+          "fable"
+        ]
+      );
+      default = "haiku";
+      description = "Model for the built-in low-effort scout subagent, null disables the agent.";
+    };
+
+    scoutAgentEffortLevel = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "low"
+          "medium"
+          "high"
+          "xhigh"
+          "max"
+        ]
+      );
+      default = "medium";
+      description = "Effort level for the built-in low-effort scout subagent.";
+    };
+
     allowForkSubagents = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -465,7 +519,7 @@ in
 
     defaultSubagentType = lib.mkOption {
       type = lib.types.str;
-      default = "subagent";
+      default = "worker";
       description = "Default agent type Claude spawns for general subagent work.";
     };
 
@@ -706,6 +760,10 @@ in
         reviewModel = config.nx.common.dev.claude.reviewAgentModel;
         reviewEffortLevel = config.nx.common.dev.claude.reviewAgentEffortLevel;
         subagentEffortLevel = config.nx.common.dev.claude.subagentEffortLevel;
+        expertModel = config.nx.common.dev.claude.expertAgentModel;
+        expertEffortLevel = config.nx.common.dev.claude.expertAgentEffortLevel;
+        scoutModel = config.nx.common.dev.claude.scoutAgentModel;
+        scoutEffortLevel = config.nx.common.dev.claude.scoutAgentEffortLevel;
         builtinCodeReviewEnabled = config.nx.common.dev.claude.enableBuiltinCodeReview;
         ripgrepEnabled = config.nx.common.shell.rust-programs.enable or false;
         styleReminderInterval = config.nx.common.dev.claude.styleReminderInterval;
@@ -781,6 +839,12 @@ in
             "Keep no more than ${builtins.toString maxAgents} subagents running concurrently."
             "When a subagent sends you a message: if it is a progress update, do NOT reply (replying resumes the subagent and causes a redundant extra turn); if it is a blocking question, reply immediately via SendMessage (at minimum 'Continue') so the subagent is not deadlocked. Never leave a waiting subagent without a reply."
           ]
+          ++
+            lib.optional (expertModel != null)
+              "Use subagent_type 'expert' only when the user explicitly requests high effort, says 'ultrathink' (any capitalisation), a system-reminder containing 'requesting deeper reasoning on this turn' is present in this turn's context, or the user asks for deeper or more thorough analysis. Never use it by default."
+          ++
+            lib.optional (scoutModel != null)
+              "Use subagent_type 'scout' automatically for small local search tasks, single-file lookups, and other low-effort operations that do not need the full general agent."
           ++ lib.optional (webSearchModel != null) (
             lib.concatStringsSep "\n" [
               "Never call WebSearch or WebFetch directly in the main session. Always delegate web searches and fetches to a 'web' subagent (subagent_type: web). That agent is restricted to WebSearch and WebFetch only and cannot read files, edit files, or run commands."
@@ -846,7 +910,25 @@ in
                   tools = [ ];
                   text = "Complete the delegated task using all available tools. Work autonomously toward a conclusion.";
                 };
-              };
+              }
+          // lib.optionalAttrs (delegateEnabled && expertModel != null) {
+            expert = {
+              description = "High-effort agent for deep analysis, complex multi-step tasks, and requests requiring extended thinking.";
+              model = expertModel;
+              effort = expertEffortLevel;
+              tools = [ ];
+              text = "Complete the delegated task using all available tools. Work autonomously toward a conclusion.";
+            };
+          }
+          // lib.optionalAttrs (delegateEnabled && scoutModel != null) {
+            scout = {
+              description = "Low-effort agent for quick local searches, file lookups, and simple single-step tasks.";
+              model = scoutModel;
+              effort = scoutEffortLevel;
+              tools = [ ];
+              text = "Complete the delegated task using all available tools. Work autonomously toward a conclusion.";
+            };
+          };
 
         pythonHookLib = ''
           import json
