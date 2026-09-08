@@ -302,6 +302,9 @@ in
               continue
             fi
 
+            IS_GROUP_RESTRICTED="false"
+            [[ -n "$GROUP_ID" ]] && IS_GROUP_RESTRICTED="true"
+
             PAYLOAD_FILE="$WORK_DIR/payload_$KEY"
             if [[ -n "$LAUNCH_URL" ]]; then
               "$JQ" -n \
@@ -309,15 +312,17 @@ in
                 --argjson urls "$CALLBACK_URLS" \
                 --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
                 --argjson pkce "$PKCE_ENABLED" \
+                --argjson groupRestricted "$IS_GROUP_RESTRICTED" \
                 --arg launchUrl "$LAUNCH_URL" \
-                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: $pkce, requiresReauthentication: false, launchURL: $launchUrl}' > "$PAYLOAD_FILE"
+                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: $pkce, requiresReauthentication: false, isGroupRestricted: $groupRestricted, launchURL: $launchUrl}' > "$PAYLOAD_FILE"
             else
               "$JQ" -n \
                 --arg name "$CLIENT_NAME" \
                 --argjson urls "$CALLBACK_URLS" \
                 --argjson logoutUrls "$LOGOUT_CALLBACK_URLS" \
                 --argjson pkce "$PKCE_ENABLED" \
-                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: $pkce, requiresReauthentication: false}' > "$PAYLOAD_FILE"
+                --argjson groupRestricted "$IS_GROUP_RESTRICTED" \
+                '{name: $name, callbackURLs: $urls, logoutCallbackURLs: $logoutUrls, isPublic: false, pkceEnabled: $pkce, requiresReauthentication: false, isGroupRestricted: $groupRestricted}' > "$PAYLOAD_FILE"
             fi
             ${pkgs.coreutils}/bin/chmod 600 "$PAYLOAD_FILE"
 
