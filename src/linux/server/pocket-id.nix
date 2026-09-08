@@ -93,6 +93,12 @@ in
   };
 
   module = {
+    init =
+      config:
+      lib.mkIf config.nx.common.dev.claude.enable {
+        nx.common.dev.claude.allowedWebFetchDomains = [ "pocket-id\\.org" ];
+      };
+
     ifEnabled.linux.security.aide = {
       enabled = config: {
         nx.linux.security.aide.fileChecks = [ "/var/lib/pocket-id/encryption-key" ];

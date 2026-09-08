@@ -108,7 +108,10 @@ args@{
     init =
       config:
       lib.mkIf config.nx.common.dev.claude.enable {
-        nx.common.dev.claude.allowedWebFetchDomains = [ "immich\\.app" ];
+        nx.common.dev.claude.allowedWebFetchDomains = [
+          "immich\\.app"
+          "docs\\.immich\\.app"
+        ];
       };
 
     enabled = config: {
