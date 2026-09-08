@@ -30,7 +30,8 @@ te_secrets nixos:testing-server binary \
 	todoist-api-token \
 	signal-bot-phone-number \
 	signal-bot-ha-token \
-	signal-bot-api-token
+	signal-bot-api-token \
+	immich-kiosk-api-key
 te_secrets nixos:testing-server yaml signal-bot-contacts.yaml
 te_files nixos:testing-server signal-profile-picture.jpg signal-group-picture.jpg
 te_eval nixos "testing-server--x86_64-linux"

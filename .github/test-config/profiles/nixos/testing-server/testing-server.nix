@@ -28,6 +28,7 @@
         auth = true;
         dashboard = true;
         navidrome = true;
+        immich = true;
         paperless-ngx = "paperless";
         syncthing = true;
         searxng = true;
@@ -179,6 +180,21 @@
             serverOwnsBaseDomain = true;
           };
           navidrome = true;
+          immich = {
+            galleries = {
+              enable = true;
+              albums = [
+                {
+                  name = "family";
+                  albumId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+                }
+                {
+                  name = "travel";
+                  albumId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+                }
+              ];
+            };
+          };
           paperless-ngx = true;
           pocket-id = true;
           postgresql = true;

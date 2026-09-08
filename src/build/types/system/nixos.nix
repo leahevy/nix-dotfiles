@@ -700,6 +700,10 @@ with lib;
                     type = types.either types.str types.bool;
                     default = false;
                   };
+                  immich = mkOption {
+                    type = types.either types.str types.bool;
+                    default = false;
+                  };
                   paperless-ngx = mkOption {
                     type = types.either types.str types.bool;
                     default = false;

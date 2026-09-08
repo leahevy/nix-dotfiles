@@ -164,6 +164,18 @@ in
       description = "Named Syncthing devices to declaratively assign to the Navidrome music folder, or all declared devices if empty.";
     };
 
+    immichIntegration = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Inject an immich-library syncthing folder when the immich module is enabled.";
+    };
+
+    immichLibraryFolderDevices = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Named Syncthing devices to declaratively assign to the Immich library folder, or all declared devices if empty.";
+    };
+
     enablePullErrorsHealthCheck = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -634,6 +646,48 @@ in
               label = "Navidrome Music";
               devices = folderDevices;
             };
+          };
+      }
+      {
+        option.immichIntegration = true;
+        modules.linux.server.immich = true;
+        do.linux.system =
+          { config, ... }:
+          let
+            externalLibraryPath = config.nx.linux.server.immich.externalLibraryPath;
+            folderDevices =
+              if config.nx.linux.server.syncthing.immichLibraryFolderDevices == [ ] then
+                lib.attrNames config.services.syncthing.settings.devices
+              else
+                config.nx.linux.server.syncthing.immichLibraryFolderDevices;
+          in
+          {
+            users.users.syncthing.extraGroups = [ "immich-sync" ];
+
+            systemd.tmpfiles.settings."immichDirs" = {
+              "${externalLibraryPath}".d = lib.mkOverride 75 {
+                mode = "2770";
+                user = "immich";
+                group = "immich-sync";
+              };
+            }
+            // lib.optionalAttrs self.host.impermanence {
+              "${self.persist}${externalLibraryPath}".d = lib.mkOverride 75 {
+                mode = "2770";
+                user = "immich";
+                group = "immich-sync";
+              };
+            };
+
+            services.syncthing.settings.folders."immich-library" = {
+              path = externalLibraryPath;
+              label = "Immich Library";
+              devices = folderDevices;
+            };
+
+            systemd.services.syncthing.restartTriggers = [
+              (builtins.toJSON (config.systemd.tmpfiles.settings."immichDirs" or { }))
+            ];
           };
       }
     ];
