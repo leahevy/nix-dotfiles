@@ -646,6 +646,10 @@ in
               label = "Navidrome Music";
               devices = folderDevices;
             };
+
+            systemd.services.syncthing.restartTriggers = [
+              (builtins.toJSON (config.systemd.tmpfiles.settings."navidromeDirs" or { }))
+            ];
           };
       }
       {
