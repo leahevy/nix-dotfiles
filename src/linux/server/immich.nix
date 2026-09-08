@@ -146,7 +146,7 @@ args@{
           disable_navigation = true;
           duration = 30;
           transition = "fade";
-          image_fit = "cover";
+          image_fit = "contain";
           image_effect = "smart-zoom";
           show_time = true;
           show_date = true;
