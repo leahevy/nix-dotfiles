@@ -278,9 +278,14 @@ args@{
           mediaLocation = mediaLocation;
           port = port;
           settings = lib.recursiveUpdate {
-            server = lib.optionalAttrs (domain != null) {
+            server = {
+              publicUsers = true;
+            }
+            // lib.optionalAttrs (domain != null) {
               externalDomain = "https://${subdomain}.${domain}";
             };
+            newVersionCheck.enabled = false;
+            ffmpeg.accel = "qsv";
             library.scan = {
               enabled = true;
               cronExpression = "*/${toString libraryScanIntervalHours} * * * *";
