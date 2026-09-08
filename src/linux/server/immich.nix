@@ -333,7 +333,6 @@ args@{
           group = "immich-sync";
           mediaLocation = mediaLocation;
           port = port;
-          secretsFile = lib.mkIf enableOIDC "/run/immich-oidc/env";
           settings = lib.recursiveUpdate (
             {
               server = {
@@ -352,6 +351,8 @@ args@{
             // lib.optionalAttrs enableOIDC {
               oauth = {
                 enabled = true;
+                clientId._secret = config.sops.secrets."immich-oidc-id".path;
+                clientSecret._secret = config.sops.secrets."immich-oidc-secret".path;
                 issuerUrl = oidcConfiguration.serverUrl;
                 scope = "openid email profile";
                 buttonText = oidcConfiguration.providerName;
@@ -397,14 +398,6 @@ args@{
           };
         };
 
-        systemd.tmpfiles.settings."immich-oidc" = lib.mkIf enableOIDC {
-          "/run/immich-oidc".d = {
-            mode = "0700";
-            user = "root";
-            group = "root";
-          };
-        };
-
         environment.persistence."${self.persist}".directories = [
           "/var/lib/immich"
           mediaLocation
@@ -444,55 +437,20 @@ args@{
           // sharedKioskSettings;
         };
 
-        systemd.services = lib.mkMerge [
-          (lib.optionalAttrs (galleries.enable && galleries.albums != [ ]) (
-            lib.listToAttrs (
-              lib.imap0 (
-                index: album:
-                lib.nameValuePair "immich-kiosk-${album.name}" (mkAlbumKioskService {
-                  name = album.name;
-                  albumId = album.albumId;
-                  port = galleries.kioskPort + 1 + index;
-                  enableWidgets = album.enableWidgets;
-                  disableZoom = album.disableZoom;
-                })
-              ) galleries.albums
-            )
-          ))
-          (lib.mkIf enableOIDC {
-            nx-immich-oidc-prep = {
-              description = "Prepare Immich OIDC credentials environment";
-              before = [ "immich-server.service" ];
-              wantedBy = [ "immich-server.service" ];
-              partOf = [ "immich-server.service" ];
-              restartTriggers = [
-                config.sops.secrets."immich-oidc-id".sopsFile
-                config.sops.secrets."immich-oidc-secret".sopsFile
-              ];
-              serviceConfig = {
-                Type = "oneshot";
-                RemainAfterExit = true;
-                ExecStart = toString (
-                  pkgs.writeShellScript "nx-immich-oidc-prep" ''
-                    set -euo pipefail
-                    umask 077
-                    {
-                      printf 'IMMICH_OAUTH_CLIENT_ID='
-                      ${pkgs.coreutils}/bin/tr -d '\n' < ${lib.escapeShellArg config.sops.secrets."immich-oidc-id".path}
-                      printf '\n'
-                      printf 'IMMICH_OAUTH_CLIENT_SECRET='
-                      ${pkgs.coreutils}/bin/tr -d '\n' < ${
-                        lib.escapeShellArg config.sops.secrets."immich-oidc-secret".path
-                      }
-                      printf '\n'
-                    } > /run/immich-oidc/env
-                    ${pkgs.coreutils}/bin/chmod 600 /run/immich-oidc/env
-                  ''
-                );
-              };
-            };
-          })
-        ];
+        systemd.services = lib.optionalAttrs (galleries.enable && galleries.albums != [ ]) (
+          lib.listToAttrs (
+            lib.imap0 (
+              index: album:
+              lib.nameValuePair "immich-kiosk-${album.name}" (mkAlbumKioskService {
+                name = album.name;
+                albumId = album.albumId;
+                port = galleries.kioskPort + 1 + index;
+                enableWidgets = album.enableWidgets;
+                disableZoom = album.disableZoom;
+              })
+            ) galleries.albums
+          )
+        );
       };
 
     ifEnabled.linux.server.nginx = {
