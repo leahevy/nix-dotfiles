@@ -211,8 +211,8 @@ args@{
             wantedBy = [ "multi-user.target" ];
             preStart = ''
               ${pkgs.jq}/bin/jq \
-                --arg key "$(${pkgs.coreutils}/bin/tr -d '\n' < ${secretPath})" \
-                '. + {immich_api_key: $key}' \
+                --rawfile key ${secretPath} \
+                '. + {immich_api_key: ($key | rtrimstr("\n"))}' \
                 ${staticConfig} \
                 > /run/immich-kiosk-${name}/config.yaml
               ${pkgs.coreutils}/bin/chmod 600 /run/immich-kiosk-${name}/config.yaml
