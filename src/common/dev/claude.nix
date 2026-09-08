@@ -2260,6 +2260,7 @@ in
         sounds,
         delegateToSubagents,
         allowNestedSubagents,
+        maxConcurrentSubagents,
         ...
       }:
       let
@@ -2341,6 +2342,10 @@ in
           ++ lib.optional (
             autoCompactPercent != null
           ) "--set CLAUDE_AUTOCOMPACT_PCT_OVERRIDE ${builtins.toString autoCompactPercent}";
+        subagentWrapperArgs = [
+          "--set CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS ${builtins.toString maxConcurrentSubagents}"
+          "--set CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH ${if allowNestedSubagents then "3" else "1"}"
+        ];
         modelVersionWrapperArgs = lib.mapAttrsToList (
           alias: versions:
           let
@@ -2348,7 +2353,8 @@ in
           in
           "--set ${modelAliasEnvVars.${alias}} ${modelIdFor alias version}"
         ) modelVersionsByAlias;
-        claudeWrapperArgs = sshWrapperArgs ++ autoCompactWrapperArgs ++ modelVersionWrapperArgs;
+        claudeWrapperArgs =
+          sshWrapperArgs ++ autoCompactWrapperArgs ++ subagentWrapperArgs ++ modelVersionWrapperArgs;
 
         claude-code-wrapped = pkgs.symlinkJoin {
           name = "claude-code-wrapped";
