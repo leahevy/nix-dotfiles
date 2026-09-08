@@ -69,7 +69,7 @@ args@{
 
           kioskPort = lib.mkOption {
             type = lib.types.port;
-            default = 3001;
+            default = 3100;
             description = "Port immich-kiosk listens on.";
           };
 
