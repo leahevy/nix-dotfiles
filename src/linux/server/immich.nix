@@ -97,6 +97,11 @@ args@{
                     type = lib.types.str;
                     description = "Immich album UUID.";
                   };
+                  enableWidgets = lib.mkOption {
+                    type = lib.types.bool;
+                    default = false;
+                    description = "Show clock and date overlay on this album's gallery vhost.";
+                  };
                 };
               }
             );
@@ -153,6 +158,7 @@ args@{
           show_image_time = false;
           show_image_date = false;
           hide_cursor = true;
+          font_size = 200;
           background_blur = true;
         }
         // galleries.kioskSettings;
@@ -195,10 +201,12 @@ args@{
             name,
             albumId,
             port,
+            enableWidgets,
           }:
           let
             staticConfig = (pkgs.formats.json { }).generate "immich-kiosk-${name}.json" (
               sharedKioskSettings
+              // lib.optionalAttrs (!enableWidgets) { disable_ui = true; }
               // {
                 immich_url = "https://${subdomain}.${domain}";
                 kiosk.port = port;
@@ -331,6 +339,7 @@ args@{
                 name = album.name;
                 albumId = album.albumId;
                 port = galleries.kioskPort + 1 + index;
+                enableWidgets = album.enableWidgets;
               })
             ) galleries.albums
           )
