@@ -147,6 +147,7 @@ args@{
           duration = 30;
           transition = "fade";
           image_fit = "cover";
+          image_effect = "smart-zoom";
           show_time = true;
           show_date = true;
           show_image_time = false;
