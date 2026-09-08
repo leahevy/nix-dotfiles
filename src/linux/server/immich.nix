@@ -46,6 +46,12 @@ args@{
       description = "Directory for the syncthing-managed external library, added as an External Library in the Immich web UI.";
     };
 
+    libraryScanIntervalHours = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 1;
+      description = "How often to scan external libraries, in hours.";
+    };
+
     extraSettings = lib.mkOption {
       type = lib.types.attrs;
       default = { };
@@ -126,6 +132,7 @@ args@{
         port,
         mediaLocation,
         externalLibraryPath,
+        libraryScanIntervalHours,
         extraSettings,
         galleries,
       }:
@@ -166,6 +173,10 @@ args@{
           settings = lib.recursiveUpdate {
             server = lib.optionalAttrs (domain != null) {
               externalDomain = "https://${subdomain}.${domain}";
+            };
+            library.scan = {
+              enabled = true;
+              cronExpression = "*/${toString libraryScanIntervalHours} * * * *";
             };
           } extraSettings;
         };
