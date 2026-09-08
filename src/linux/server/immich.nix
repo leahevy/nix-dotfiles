@@ -117,6 +117,7 @@ args@{
         nx.common.dev.claude.allowedWebFetchDomains = [
           "immich\\.app"
           "docs\\.immich\\.app"
+          "docs\\.immichkiosk\\.app"
         ];
       };
 
@@ -142,12 +143,15 @@ args@{
         isExposed = exposedService != false;
         exposedSubdomain = if builtins.isString exposedService then exposedService else subdomain;
         sharedKioskSettings = {
-          disable_ui = true;
+          disable_navigation = true;
           duration = 30;
           transition = "fade";
           image_fit = "cover";
           show_time = true;
           show_date = true;
+          show_image_time = false;
+          show_image_date = false;
+          hide_cursor = true;
           background_blur = true;
         }
         // galleries.kioskSettings;
