@@ -399,6 +399,7 @@ args@{
         "uvcvideo.*Failed to query \\([0-9]+\\) UVC probe control.*\\(exp\\. [0-9]+\\)\\."
         "uvcvideo.*Failed to set UVC probe control.*\\(exp\\. [0-9]+\\)\\."
         "uvcvideo.*Failed to initialize the device \\(-[0-9]+\\)\\."
+        "uvcvideo.*: Failed to resubmit video URB \\(-[0-9]+\\)\\."
         "usb.*Failed to query.*UVC control.*"
         "usb.*cannot set freq [0-9]+ to ep"
         "usb.*failed to get current value for ch [0-9]+ \\(-[0-9]+\\)"
