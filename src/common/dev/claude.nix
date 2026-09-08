@@ -833,7 +833,14 @@ in
         }
         // lib.optionalAttrs delegateEnabled {
           "95 - Subagent Workflow" = [
-            "All implementation, review, search, and web search work must be executed in subagents, not inline in the main session."
+            (
+              if resolvedAgentModel == config.nx.common.dev.claude.model && maxAgents == 1 then
+                "Prefer doing implementation and local search work inline in the main session. Only spawn a subagent when there is a genuine reason to bring fresh context: an independent review, open-ended exploration that would flood your context with raw output you will not need again, or a long parallel task.${
+                  lib.optionalString (webSearchModel != null) " Always use a subagent for web searches."
+                } Never spawn just to delegate routine reads, edits, or lookups."
+              else
+                "All implementation, review, search, and web search work must be executed in subagents, not inline in the main session. Exception: trivial tasks that require only a handful of tool calls (a few reads and edits, nothing exploratory or multi-step) may be done inline without spawning a subagent."
+            )
             "Always pass model: ${resolvedAgentModel} to the Agent tool when spawning subagents."
             "Always pass subagent_type: ${defaultAgentType} to the Agent tool unless spawning a named custom agent type."
             "Keep no more than ${builtins.toString maxAgents} subagents running concurrently."
