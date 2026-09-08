@@ -139,6 +139,11 @@ args@{
         };
 
         systemd.tmpfiles.settings."navidromeDirs" = {
+          "${dataDir}".d = lib.mkOverride 90 {
+            mode = "0750";
+            user = "navidrome";
+            group = "navidrome-sync";
+          };
           "${dataDir}/music".d = lib.mkOverride 90 {
             mode = "0750";
             user = "navidrome";
