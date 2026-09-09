@@ -97,6 +97,10 @@ args@{
           tag = "systemd-coredump";
           string = "Process [0-9]+ \\(wine64-preloade\\) of user [0-9]+ dumped core\\.";
         }
+        {
+          string = "hid-steam [0-9a-fA-F:.]+: steam_send_report: error -[0-9]+ \\([0-9a-fA-F ]+\\)";
+          kernel = true;
+        }
       ];
     };
 
