@@ -37,11 +37,22 @@ args@{
     home = config: {
       home.packages = with pkgs; [
         ente-desktop
+        (symlinkJoin {
+          name = "ente-cli-wrapped";
+          paths = [ ente-cli ];
+          buildInputs = [ makeWrapper ];
+          postBuild = ''
+            wrapProgram $out/bin/ente \
+              --run 'mkdir -p "${self.user.home}/.cache/ente-cli"' \
+              --set TMPDIR "${self.user.home}/.cache/ente-cli"
+          '';
+        })
       ];
 
       home.persistence."${self.persist}" = {
         directories = [
           ".config/ente"
+          ".ente"
         ];
       };
     };
