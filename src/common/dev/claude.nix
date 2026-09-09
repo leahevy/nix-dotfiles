@@ -776,8 +776,7 @@ in
           config.nx.common.dev.claude.style
         ];
         baseInstructions = {
-          "90 - Claude" =
-          [
+          "90 - Claude" = [
             "Use the conversation as initial context, then read only the files and local context required to complete the request."
             "Batch all changes into as few operations as possible."
             "Don't analyse too much on first feasibility questions to avoid wasting tokens."
@@ -827,9 +826,14 @@ in
             "rm -rf is blocked; use individual rm per file and rmdir for empty directories."
             "Never write file content via shell heredocs (e.g. cat >> file <<'EOF' ... EOF) or via shell output redirection (`>` or `>>`). These are hard rules with no exceptions: always use the Write or Edit tool for file writes."
           ]
-          ++
-            lib.optional (!delegateEnabled || reviewModel == null)
-              "For code review and diff scanning tasks, use the injected review skills (review-pre-push-head, review-merge-request-head, etc.) instead of the built-in /code-review or /simplify slash commands.";
+          ++ [
+            (
+              [
+                "For code review and diff scanning tasks, use the injected review skills instead of the built-in /code-review or /simplify slash commands."
+              ]
+              ++ reviewSkillGuidanceItems
+            )
+          ];
         }
         // lib.optionalAttrs delegateEnabled {
           "95 - Subagent Workflow" = [
@@ -1151,6 +1155,14 @@ in
           "docs.renovatebot.com"
         ];
 
+        reviewSkillGuidanceItems = [
+          "use `review-pre-push-head` to scan commits about to be pushed"
+          "use `review-merge-request-head` to review a branch before merging"
+          "use the `-cached` variants for staged-only reviews when no upstream branch is available"
+          "use the `-workdir` variants to review uncommitted working directory changes"
+        ];
+        reviewSkillGuidance = lib.concatStringsSep ", " reviewSkillGuidanceItems;
+
         agentGuidance =
           let
             entries =
@@ -1185,7 +1197,7 @@ in
 
         codeReviewDenyBlock = lib.optionalString (!builtinCodeReviewEnabled) ''
           if tool_name == "Skill" and tool_input(data).get("skill") in ("code-review", "simplify"):
-              deny("The built-in /code-review and /simplify commands are disabled. Use the injected review skills (review-merge-request-head, review-pre-push-head, etc.) instead.")
+              deny("The built-in /code-review and /simplify commands are disabled; ${reviewSkillGuidance}")
         '';
 
         forkDenyBlock = lib.optionalString (!allowFork) ''
