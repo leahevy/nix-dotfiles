@@ -553,9 +553,13 @@ in
         }:
         let
           ldap = config.nx.linux.server.ldap;
-          usersWithPhotos = map (u: u // { photo = self.profile.filesPath u.photo; }) (
-            lib.filter (u: u.photo != null) ldap.users
-          );
+          userPhotos = lib.concatMap (
+            u:
+            lib.optional (u.photo != null) {
+              username = u.username;
+              photoStr = u.photo;
+            }
+          ) ldap.users;
 
           syncPhotosScript = pkgs.writeShellScript "nx-pocket-id-sync-photos" ''
             set -euo pipefail
@@ -587,22 +591,22 @@ in
                 "$@" "$LOCAL_URL$path"
             }
 
-            ${lib.concatMapStrings (u: ''
-              USERS_JSON=$(api GET '/api/users?search=${u.username}&pagination%5Blimit%5D=100') || {
-                printf 'Failed to list users while syncing photo for ${u.username}\n' >&2
+            ${lib.concatMapStrings (entry: ''
+              USERS_JSON=$(api GET '/api/users?search=${entry.username}&pagination%5Blimit%5D=100') || {
+                printf 'Failed to list users while syncing photo for ${entry.username}\n' >&2
                 exit 1
               }
-              USER_ID=$("$JQ" -r --arg u '${u.username}' '.data[] | select(.username == $u) | .id' <<< "$USERS_JSON")
+              USER_ID=$("$JQ" -r --arg u '${entry.username}' '.data[] | select(.username == $u) | .id' <<< "$USERS_JSON")
               if [[ -z "$USER_ID" ]]; then
-                printf 'User ${u.username} not found in Pocket-ID, skipping photo sync\n' >&2
+                printf 'User ${entry.username} not found in Pocket-ID, skipping photo sync\n' >&2
               else
                 "$CURL" -sSf -X PUT \
                   -H @"$HEADER_FILE" \
-                  -F 'file=@${u.photo}' \
+                  -F 'file=@${self.profile.filesPath entry.photoStr}' \
                   "$LOCAL_URL/api/users/$USER_ID/profile-picture" >/dev/null
-                printf 'Synced profile picture for ${u.username}\n'
+                printf 'Synced profile picture for ${entry.username}\n'
               fi
-            '') usersWithPhotos}
+            '') userPhotos}
           '';
         in
         {
@@ -635,7 +639,7 @@ in
             LDAP_ATTRIBUTE_GROUP_MEMBER = ldap.groupMemberAttribute;
           };
         }
-        // lib.optionalAttrs (usersWithPhotos != [ ]) {
+        // lib.optionalAttrs (userPhotos != [ ]) {
           systemd.services.nx-pocket-id-sync-photos = {
             description = "Pocket-ID user profile picture sync";
             after = [
@@ -650,10 +654,9 @@ in
             wantedBy = [ "pocket-id.service" ];
             restartTriggers = [
               (builtins.toJSON (
-                map (u: {
-                  inherit (u) username;
-                  photo = toString u.photo;
-                }) usersWithPhotos
+                map (entry: {
+                  inherit (entry) username photoStr;
+                }) userPhotos
               ))
             ];
             serviceConfig = {
