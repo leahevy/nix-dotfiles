@@ -638,8 +638,7 @@ in
             LDAP_ATTRIBUTE_GROUP_NAME = "cn";
             LDAP_ATTRIBUTE_GROUP_MEMBER = ldap.groupMemberAttribute;
           };
-        }
-        // lib.optionalAttrs (userPhotos != [ ]) {
+
           systemd.services.nx-pocket-id-sync-photos = {
             description = "Pocket-ID user profile picture sync";
             after = [
