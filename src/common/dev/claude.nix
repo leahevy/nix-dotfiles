@@ -843,6 +843,11 @@ in
             )
             "Always pass model: ${resolvedAgentModel} to the Agent tool when spawning subagents."
             "Always pass subagent_type: ${defaultAgentType} to the Agent tool unless spawning a named custom agent type."
+          ]
+          ++ lib.optional (
+            !allowFork
+          ) "Never use subagent_type 'fork'; it is disabled and will be rejected by the guardrail."
+          ++ [
             "Keep no more than ${builtins.toString maxAgents} subagents running concurrently."
             "When a subagent sends you a message: if it is a progress update, do NOT reply (replying resumes the subagent and causes a redundant extra turn); if it is a blocking question, reply immediately via SendMessage (at minimum 'Continue') so the subagent is not deadlocked. Never leave a waiting subagent without a reply."
           ]
@@ -1146,6 +1151,21 @@ in
           "docs.renovatebot.com"
         ];
 
+        agentGuidance =
+          let
+            entries =
+              lib.optional (
+                subagentEffortLevel != null && defaultAgentType != "web" && defaultAgentType != "review"
+              ) "use subagent_type '${defaultAgentType}' for general tasks"
+              ++ lib.optional (
+                expertModel != null
+              ) "use subagent_type 'expert' only when the user explicitly requests deeper analysis"
+              ++ lib.optional (scoutModel != null) "use subagent_type 'scout' for quick lookups"
+              ++ lib.optional (webSearchModel != null) "use subagent_type 'web' for web searches"
+              ++ lib.optional (reviewModel != null) "use subagent_type 'review' for code reviews";
+          in
+          lib.concatStringsSep ", " entries;
+
         agentDenyBlock = lib.optionalString (!delegateEnabled) ''
           if tool_name == "Agent":
               deny("Subagents are disabled. Do this work yourself inline in the current session instead of delegating it.")
@@ -1155,12 +1175,12 @@ in
           lib.optionalString (delegateEnabled && defaultAgentType != "general-purpose")
             ''
               if tool_name == "Agent" and tool_input(data).get("subagent_type") == "general-purpose":
-                  deny("Use subagent_type '${defaultAgentType}' instead of 'general-purpose'; direct general-purpose calls bypass the configured effort level")
+                  deny("'general-purpose' is not a valid subagent type and bypasses the configured effort level; ${agentGuidance}")
             '';
 
         missingSubagentTypeDenyBlock = lib.optionalString delegateEnabled ''
           if tool_name == "Agent" and not (tool_input(data).get("subagent_type") or "").strip():
-              deny("You must pass an explicit subagent_type; choose a concrete agent (e.g. '${defaultAgentType}'). Omitting it falls back to the harness default and bypasses the configured effort level")
+              deny("You must pass an explicit subagent_type; ${agentGuidance}")
         '';
 
         codeReviewDenyBlock = lib.optionalString (!builtinCodeReviewEnabled) ''
@@ -1170,7 +1190,7 @@ in
 
         forkDenyBlock = lib.optionalString (!allowFork) ''
           if tool_name == "Agent" and tool_input(data).get("subagent_type") == "fork":
-              deny("Fork subagents are disabled; use subagent_type '${defaultAgentType}' instead")
+              deny("Fork subagents are disabled; ${agentGuidance}")
         '';
 
         nestedDenyBlock = lib.optionalString (!allowNested) ''
