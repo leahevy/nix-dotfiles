@@ -77,6 +77,11 @@ args@{
               default = [ ];
               description = "Groups this user belongs to.";
             };
+            photo = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Relative path to a profile picture file under the host files directory (PNG, JPG, or JPEG).";
+            };
           };
         }
       );

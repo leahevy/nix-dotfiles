@@ -547,9 +547,63 @@ in
       };
 
       linux.system =
-        config:
+        {
+          config,
+          port,
+        }:
         let
           ldap = config.nx.linux.server.ldap;
+          usersWithPhotos = map (u: u // { photo = self.profile.filesPath u.photo; }) (
+            lib.filter (u: u.photo != null) ldap.users
+          );
+
+          syncPhotosScript = pkgs.writeShellScript "nx-pocket-id-sync-photos" ''
+            set -euo pipefail
+
+            LOCAL_URL="http://127.0.0.1:${toString port}"
+            JQ="${pkgs.jq}/bin/jq"
+            CURL="${pkgs.curl}/bin/curl"
+
+            API_KEY="''${STATIC_API_KEY:-}"
+            if [[ ! "$API_KEY" =~ ^[a-zA-Z0-9]{32}$ ]]; then
+              printf 'STATIC_API_KEY absent or invalid, skipping photo sync\n' >&2
+              exit 0
+            fi
+
+            WORK_DIR=$(${pkgs.coreutils}/bin/mktemp -d -p /run/pocket-id)
+            trap '${pkgs.coreutils}/bin/rm -rf "$WORK_DIR"' EXIT
+            ${pkgs.coreutils}/bin/chmod 700 "$WORK_DIR"
+
+            HEADER_FILE="$WORK_DIR/headers"
+            printf 'X-API-KEY: %s\n' "$API_KEY" > "$HEADER_FILE"
+            ${pkgs.coreutils}/bin/chmod 600 "$HEADER_FILE"
+
+            api() {
+              local method="$1" path="$2"
+              shift 2
+              "$CURL" -sSf -X "$method" \
+                -H @"$HEADER_FILE" \
+                -H "Content-Type: application/json" \
+                "$@" "$LOCAL_URL$path"
+            }
+
+            ${lib.concatMapStrings (u: ''
+              USERS_JSON=$(api GET '/api/users?search=${u.username}&pagination%5Blimit%5D=100') || {
+                printf 'Failed to list users while syncing photo for ${u.username}\n' >&2
+                exit 1
+              }
+              USER_ID=$("$JQ" -r --arg u '${u.username}' '.data[] | select(.username == $u) | .id' <<< "$USERS_JSON")
+              if [[ -z "$USER_ID" ]]; then
+                printf 'User ${u.username} not found in Pocket-ID, skipping photo sync\n' >&2
+              else
+                "$CURL" -sSf -X PUT \
+                  -H @"$HEADER_FILE" \
+                  -F 'file=@${u.photo}' \
+                  "$LOCAL_URL/api/users/$USER_ID/profile-picture" >/dev/null
+                printf 'Synced profile picture for ${u.username}\n'
+              fi
+            '') usersWithPhotos}
+          '';
         in
         {
           systemd.services.pocket-id = {
@@ -579,6 +633,35 @@ in
             LDAP_ATTRIBUTE_GROUP_UNIQUE_IDENTIFIER = "cn";
             LDAP_ATTRIBUTE_GROUP_NAME = "cn";
             LDAP_ATTRIBUTE_GROUP_MEMBER = ldap.groupMemberAttribute;
+          };
+        }
+        // lib.optionalAttrs (usersWithPhotos != [ ]) {
+          systemd.services.nx-pocket-id-sync-photos = {
+            description = "Pocket-ID user profile picture sync";
+            after = [
+              "nx-pocket-id-env.service"
+              "nx-pocket-id-ensure-apps.service"
+            ];
+            requires = [
+              "nx-pocket-id-env.service"
+              "nx-pocket-id-ensure-apps.service"
+            ];
+            partOf = [ "pocket-id.service" ];
+            wantedBy = [ "pocket-id.service" ];
+            restartTriggers = [
+              (builtins.toJSON (
+                map (u: {
+                  inherit (u) username;
+                  photo = toString u.photo;
+                }) usersWithPhotos
+              ))
+            ];
+            serviceConfig = {
+              Type = "oneshot";
+              RemainAfterExit = true;
+              EnvironmentFile = "/run/pocket-id-env/env";
+              ExecStart = "${syncPhotosScript}";
+            };
           };
         };
     };
