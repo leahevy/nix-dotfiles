@@ -741,7 +741,14 @@ in
           ++ (getProgramHighlightPatterns prefs.drawingProgram);
       in
       {
-        nx.linux.monitoring.journal-watcher.ignorePatterns = allIgnorePatterns;
+        nx.linux.monitoring.journal-watcher.ignorePatterns = allIgnorePatterns ++ [
+          {
+            tag = "xdg-desktop-portal-gtk";
+            string = "Could not init tracker3 search engine: The name is not activatable";
+            unitless = true;
+            user = true;
+          }
+        ];
         nx.linux.monitoring.journal-watcher.highlightPatterns = allHighlightPatterns;
 
         nx.preferences.desktop.programs = {
