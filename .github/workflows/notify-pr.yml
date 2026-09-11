@@ -117,3 +117,14 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository_owner }}/nx-personal-config/dispatches" \
             -d '{"event_type":"nxcore-merged"}'
+
+      - name: Trigger update-flake-lock on nix-dotfiles-config-template
+        if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'update-flake-inputs'
+        env:
+          TEMPLATE_PAT: ${{ secrets.TEMPLATE_PAT }}
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: token ${TEMPLATE_PAT}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/leahevy/nix-dotfiles-config-template/actions/workflows/update-flake-lock.yml/dispatches" \
+            -d '{"ref":"main"}'
