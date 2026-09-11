@@ -118,14 +118,14 @@ args@{
     };
 
     loadMaxPerCore = lib.mkOption {
-      type = lib.types.int;
-      default = 1;
+      type = lib.types.float;
+      default = 1.25;
       description = "Maximum 5-minute load average per CPU core before the load check fails.";
     };
 
     loadBuildMultiplier = lib.mkOption {
       type = lib.types.float;
-      default = 3.25;
+      default = 2.6;
       description = "Multiplier applied to the load threshold during and shortly after detected nix builds.";
     };
 
@@ -186,7 +186,7 @@ args@{
 
     highLoadMultiplier = lib.mkOption {
       type = lib.types.float;
-      default = 2.0;
+      default = 1.6;
       description = "Load limit multiplier applied when high-load-exempt mode is active.";
     };
 
