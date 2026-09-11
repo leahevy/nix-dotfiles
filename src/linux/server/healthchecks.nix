@@ -125,7 +125,7 @@ args@{
 
     loadBuildMultiplier = lib.mkOption {
       type = lib.types.float;
-      default = 2.6;
+      default = 3.0;
       description = "Multiplier applied to the load threshold during and shortly after detected nix builds.";
     };
 
