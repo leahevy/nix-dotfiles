@@ -28,6 +28,7 @@
 
   temporarilyAllowedInsecurePackages = [
     "electron-39.8.10"
+    "immich-2.7.5"
     "pnpm-9.15.9"
   ];
 
