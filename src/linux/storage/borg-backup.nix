@@ -908,6 +908,7 @@ args@{
             ${checkAutoUpgradeRunningScript}
             check_auto_upgrade_running
             ${networkWaitScript}
+            ${pkgs.borgbackup}/bin/borg break-lock || true
             ${logScript "info" "STARTED: System backup starting"}
             ${createSnapshotScript {
               volume = if impermanence then self.persist else "/";
