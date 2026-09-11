@@ -291,7 +291,6 @@ args@{
 
               cpu = {
                 format = "{usage}% 󰍛";
-                tooltip = false;
                 interval = 2;
                 on-click = terminalRunCmd "htop";
               };
