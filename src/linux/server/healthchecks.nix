@@ -184,9 +184,21 @@ args@{
       description = "Minimum CPU percentage a sensitive-matched process must consume to activate high-load-exempt mode.";
     };
 
+    loadHighCpuExemptProcessCmdlines = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Process substrings matched against the full command (fields 12+ of top output) that activate high-load-exempt mode when CPU usage exceeds requiredCPUForHighLoadDetection.";
+    };
+
+    loadHighCpuExemptProcessCmdlinesSensitive = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Process substrings matched against the full command (fields 12+ of top output) that activate high-load-exempt mode at the sensitive CPU threshold.";
+    };
+
     highLoadMultiplier = lib.mkOption {
       type = lib.types.float;
-      default = 1.6;
+      default = 1.8;
       description = "Load limit multiplier applied when high-load-exempt mode is active.";
     };
 
@@ -773,6 +785,8 @@ args@{
         requiredCPUForHighLoadDetection,
         loadHighCpuExemptCommandsSensitive,
         requiredCPUForSensitiveHighLoadDetection,
+        loadHighCpuExemptProcessCmdlines,
+        loadHighCpuExemptProcessCmdlinesSensitive,
         highLoadMultiplier,
         memoryFreeThresholdPct,
         memoryRamUsedMaxPct,
@@ -1145,6 +1159,17 @@ args@{
             awkCondSensitive = lib.concatStringsSep " || " (
               map (p: "index($NF, \"${p}\") > 0") loadHighCpuExemptCommandsSensitive
             );
+            awkCondCmdline = lib.concatStringsSep " || " (
+              map (p: "index(cmd, \"${p}\") > 0") loadHighCpuExemptProcessCmdlines
+            );
+            awkCondCmdlineSensitive = lib.concatStringsSep " || " (
+              map (p: "index(cmd, \"${p}\") > 0") loadHighCpuExemptProcessCmdlinesSensitive
+            );
+            anyHighLoadList =
+              loadHighCpuExemptCommands != [ ]
+              || loadHighCpuExemptCommandsSensitive != [ ]
+              || loadHighCpuExemptProcessCmdlines != [ ]
+              || loadHighCpuExemptProcessCmdlinesSensitive != [ ];
           in
           ''
             _build_marker=/run/nx-healthcheck/build-active
@@ -1181,16 +1206,34 @@ args@{
                 _high_load_mode=high-load-exempt
               fi
             ''}
-            ${lib.optionalString (loadHighCpuExemptCommands != [ ] || loadHighCpuExemptCommandsSensitive != [ ])
-              ''
-                if [[ "$_high_load_mode" != "high-load-exempt" && -e "$_high_load_marker" ]]; then
-                  _hl_marker_mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$_high_load_marker" 2>/dev/null || echo 0)
-                  if [[ $((_now - _hl_marker_mtime)) -le ${toString loadHighLoadGraceSeconds} ]]; then
-                    _high_load_mode=high-load-exempt
-                  fi
+            ${lib.optionalString (loadHighCpuExemptProcessCmdlines != [ ]) ''
+              if ${pkgs.gawk}/bin/awk -v thr=${toString requiredCPUForHighLoadDetection} '
+                  {cmd=""; for(i=12;i<=NF;i++) cmd=cmd (i>12?" ":"") $i}
+                  ($9+0 >= thr && (${awkCondCmdline})) {found=1}
+                  END{exit !found}
+                ' "$TMPDIR_HC/top-data" 2>/dev/null; then
+                ${pkgs.coreutils}/bin/touch "$_high_load_marker"
+                _high_load_mode=high-load-exempt
+              fi
+            ''}
+            ${lib.optionalString (loadHighCpuExemptProcessCmdlinesSensitive != [ ]) ''
+              if ${pkgs.gawk}/bin/awk -v thr=${toString requiredCPUForSensitiveHighLoadDetection} '
+                  {cmd=""; for(i=12;i<=NF;i++) cmd=cmd (i>12?" ":"") $i}
+                  ($9+0 >= thr && (${awkCondCmdlineSensitive})) {found=1}
+                  END{exit !found}
+                ' "$TMPDIR_HC/top-data" 2>/dev/null; then
+                ${pkgs.coreutils}/bin/touch "$_high_load_marker"
+                _high_load_mode=high-load-exempt
+              fi
+            ''}
+            ${lib.optionalString anyHighLoadList ''
+              if [[ "$_high_load_mode" != "high-load-exempt" && -e "$_high_load_marker" ]]; then
+                _hl_marker_mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$_high_load_marker" 2>/dev/null || echo 0)
+                if [[ $((_now - _hl_marker_mtime)) -le ${toString loadHighLoadGraceSeconds} ]]; then
+                  _high_load_mode=high-load-exempt
                 fi
-              ''
-            }
+              fi
+            ''}
             _nproc=$(${pkgs.coreutils}/bin/nproc 2>/dev/null || echo 1)
             ${pkgs.gawk}/bin/awk \
               -v max=${toString loadMaxPerCore} \

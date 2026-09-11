@@ -581,6 +581,9 @@ args@{
           [ "immich-kiosk.service" ]
           ++ map (album: "immich-kiosk-${album.name}.service") config.nx.linux.server.immich.galleries.albums
         );
+        nx.linux.server.healthchecks.loadHighCpuExemptProcessCmdlines = [
+          "immich_ml.main:app"
+        ];
       };
     };
 
