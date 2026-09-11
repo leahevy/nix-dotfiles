@@ -126,5 +126,5 @@ jobs:
           curl -fsS -X POST \
             -H "Authorization: token ${TEMPLATE_PAT}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/leahevy/nix-dotfiles-config-template/actions/workflows/update-flake-lock.yml/dispatches" \
+            "https://api.github.com/repos/${{ github.repository_owner }}/nix-dotfiles-config-template/actions/workflows/update-flake-lock.yml/dispatches" \
             -d '{"ref":"main"}'
