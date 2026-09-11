@@ -26,4 +26,6 @@ else
 	exit 1
 fi
 
+prompt_aide_commit "Boot"
+
 mark_aide_post_boot_commit "Boot"
