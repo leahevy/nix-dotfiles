@@ -477,32 +477,32 @@ args@{
           // sharedKioskSettings;
         };
 
-        systemd.services.immich-kiosk = lib.mkIf galleries.enable {
-          preStart = lib.mkAfter ''
-            ${pkgs.coreutils}/bin/printf '%s' ${lib.escapeShellArg mainKioskCssContent} \
-              > /run/immich-kiosk/custom.css
-          '';
-        };
-
-        systemd.services = lib.optionalAttrs (galleries.enable && galleries.albums != [ ]) (
-          lib.listToAttrs (
-            lib.imap0 (
-              index: album:
-              lib.nameValuePair "immich-kiosk-${album.name}" (mkAlbumKioskService {
-                name = album.name;
-                albumId = album.albumId;
-                port = galleries.kioskPort + 1 + index;
-                enableWidgets = album.enableWidgets;
-                disableZoom = album.disableZoom;
-                imageChangeDuration =
-                  if album.imageChangeDuration != null then
-                    album.imageChangeDuration
-                  else
-                    galleries.imageChangeDuration;
-              })
-            ) galleries.albums
-          )
-        );
+        systemd.services =
+          lib.optionalAttrs galleries.enable {
+            immich-kiosk.preStart = lib.mkAfter ''
+              ${pkgs.coreutils}/bin/printf '%s' ${lib.escapeShellArg mainKioskCssContent} \
+                > /run/immich-kiosk/custom.css
+            '';
+          }
+          // lib.optionalAttrs (galleries.enable && galleries.albums != [ ]) (
+            lib.listToAttrs (
+              lib.imap0 (
+                index: album:
+                lib.nameValuePair "immich-kiosk-${album.name}" (mkAlbumKioskService {
+                  name = album.name;
+                  albumId = album.albumId;
+                  port = galleries.kioskPort + 1 + index;
+                  enableWidgets = album.enableWidgets;
+                  disableZoom = album.disableZoom;
+                  imageChangeDuration =
+                    if album.imageChangeDuration != null then
+                      album.imageChangeDuration
+                    else
+                      galleries.imageChangeDuration;
+                })
+              ) galleries.albums
+            )
+          );
       };
 
     ifEnabled.linux.server.nginx = {
