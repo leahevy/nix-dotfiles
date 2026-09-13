@@ -241,8 +241,8 @@ args@{
           font_size = galleries.clockFontSize;
           background_blur = true;
         }
-        // lib.optionalAttrs (galleries.clockPosition == "bottom") {
-          custom_css = "#clock-weather-container { top: auto; bottom: 0; }";
+        // {
+          custom_css = true;
         }
         // galleries.kioskSettings;
         kioskHardening = {
@@ -289,6 +289,10 @@ args@{
             imageChangeDuration,
           }:
           let
+            customCssRules = lib.optional (
+              galleries.clockPosition == "bottom"
+            ) "#clock-weather-container { top: auto; bottom: 0; }";
+            customCssContent = lib.concatStringsSep "\n" customCssRules;
             staticConfig = (pkgs.formats.json { }).generate "immich-kiosk-${name}.json" (
               sharedKioskSettings
               // lib.optionalAttrs (!enableWidgets) { disable_ui = true; }
@@ -320,6 +324,8 @@ args@{
                 ${staticConfig} \
                 > /run/immich-kiosk-${name}/config.yaml
               ${pkgs.coreutils}/bin/chmod 600 /run/immich-kiosk-${name}/config.yaml
+              ${pkgs.coreutils}/bin/printf '%s' ${lib.escapeShellArg customCssContent} \
+                > /run/immich-kiosk-${name}/custom.css
             '';
             serviceConfig = kioskHardening // {
               RuntimeDirectory = "immich-kiosk-${name}";
