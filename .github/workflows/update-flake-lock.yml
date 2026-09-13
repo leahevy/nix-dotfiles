@@ -213,7 +213,7 @@ jobs:
 
       - name: Install Nix
         if: env.IS_UPDATE_RUN == 'true' || env.RE_EVAL_ONLY == 'true' || (env.CYCLE_MODE == 'merge' && env.PR_EXISTS == 'true' && env.TEST_EVAL_ENABLED == 'true')
-        uses: DeterminateSystems/nix-installer-action@v22
+        uses: DeterminateSystems/nix-installer-action@v23
 
       - name: Extract commit hashes before update
         if: env.IS_UPDATE_RUN == 'true'
