@@ -131,6 +131,12 @@ args@{
             description = "Restrict gallery vhosts to internal network IPs via the nginx nx_is_internal geo variable.";
           };
 
+          imageChangeDuration = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 30;
+            description = "Seconds between image changes for all album galleries, unless overridden per album.";
+          };
+
           albums = lib.mkOption {
             type = lib.types.listOf (
               lib.types.submodule {
@@ -152,6 +158,11 @@ args@{
                     type = lib.types.bool;
                     default = true;
                     description = "Disable zoom effect and use cover fit for this album's gallery vhost.";
+                  };
+                  imageChangeDuration = lib.mkOption {
+                    type = lib.types.nullOr lib.types.ints.positive;
+                    default = null;
+                    description = "Seconds between image changes for this album's gallery vhost, overriding the global galleries.imageChangeDuration.";
                   };
                 };
               }
@@ -202,7 +213,7 @@ args@{
         exposedSubdomain = if builtins.isString exposedService then exposedService else subdomain;
         sharedKioskSettings = {
           disable_navigation = true;
-          duration = 30;
+          duration = galleries.imageChangeDuration;
           transition = "fade";
           image_fit = "contain";
           image_effect = "zoom";
@@ -257,6 +268,7 @@ args@{
             port,
             enableWidgets,
             disableZoom,
+            imageChangeDuration,
           }:
           let
             staticConfig = (pkgs.formats.json { }).generate "immich-kiosk-${name}.json" (
@@ -265,6 +277,9 @@ args@{
               // lib.optionalAttrs disableZoom {
                 image_effect = "none";
                 image_fit = "cover";
+              }
+              // {
+                duration = imageChangeDuration;
               }
               // {
                 immich_url = "https://${subdomain}.${domain}";
@@ -447,6 +462,11 @@ args@{
                 port = galleries.kioskPort + 1 + index;
                 enableWidgets = album.enableWidgets;
                 disableZoom = album.disableZoom;
+                imageChangeDuration =
+                  if album.imageChangeDuration != null then
+                    album.imageChangeDuration
+                  else
+                    galleries.imageChangeDuration;
               })
             ) galleries.albums
           )
