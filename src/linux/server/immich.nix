@@ -291,7 +291,7 @@ args@{
           let
             customCssRules = lib.optional (
               galleries.clockPosition == "bottom"
-            ) "#clock-weather-container { top: auto; bottom: 0; }";
+            ) "#clock-weather-container { top: auto !important; bottom: 0 !important; }";
             customCssContent = lib.concatStringsSep "\n" customCssRules;
             staticConfig = (pkgs.formats.json { }).generate "immich-kiosk-${name}.json" (
               sharedKioskSettings
