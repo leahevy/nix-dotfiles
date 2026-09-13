@@ -137,6 +137,12 @@ args@{
             description = "Seconds between image changes for all album galleries, unless overridden per album.";
           };
 
+          clockFontSize = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 400;
+            description = "Font size percentage for the clock and date overlay on gallery vhosts.";
+          };
+
           albums = lib.mkOption {
             type = lib.types.listOf (
               lib.types.submodule {
@@ -223,7 +229,7 @@ args@{
           show_image_time = false;
           show_image_date = false;
           hide_cursor = true;
-          font_size = 200;
+          font_size = galleries.clockFontSize;
           background_blur = true;
         }
         // galleries.kioskSettings;
