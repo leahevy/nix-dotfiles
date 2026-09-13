@@ -226,6 +226,10 @@ args@{
         exposedService = self.host.remote.exposedServices.immich;
         isExposed = exposedService != false;
         exposedSubdomain = if builtins.isString exposedService then exposedService else subdomain;
+        kioskCssRules = lib.optional (
+          galleries.clockPosition == "bottom"
+        ) "#clock-weather-container { top: auto !important; bottom: 0 !important; }";
+        mainKioskCssContent = lib.concatStringsSep "\n" kioskCssRules;
         sharedKioskSettings = {
           disable_navigation = true;
           duration = galleries.imageChangeDuration;
@@ -289,10 +293,7 @@ args@{
             imageChangeDuration,
           }:
           let
-            customCssRules = lib.optional (
-              galleries.clockPosition == "bottom"
-            ) "#clock-weather-container { top: auto !important; bottom: 0 !important; }";
-            customCssContent = lib.concatStringsSep "\n" customCssRules;
+            customCssContent = mainKioskCssContent;
             staticConfig = (pkgs.formats.json { }).generate "immich-kiosk-${name}.json" (
               sharedKioskSettings
               // lib.optionalAttrs (!enableWidgets) { disable_ui = true; }
@@ -474,6 +475,13 @@ args@{
             albums = map (a: a.albumId) galleries.albums;
           }
           // sharedKioskSettings;
+        };
+
+        systemd.services.immich-kiosk = lib.mkIf galleries.enable {
+          preStart = lib.mkAfter ''
+            ${pkgs.coreutils}/bin/printf '%s' ${lib.escapeShellArg mainKioskCssContent} \
+              > /run/immich-kiosk/custom.css
+          '';
         };
 
         systemd.services = lib.optionalAttrs (galleries.enable && galleries.albums != [ ]) (
