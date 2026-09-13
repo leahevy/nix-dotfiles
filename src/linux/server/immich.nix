@@ -143,6 +143,15 @@ args@{
             description = "Font size percentage for the clock and date overlay on gallery vhosts.";
           };
 
+          clockPosition = lib.mkOption {
+            type = lib.types.enum [
+              "top"
+              "bottom"
+            ];
+            default = "bottom";
+            description = "Vertical anchor for the clock and date overlay on gallery vhosts.";
+          };
+
           albums = lib.mkOption {
             type = lib.types.listOf (
               lib.types.submodule {
@@ -225,12 +234,15 @@ args@{
           image_effect = "zoom";
           image_effect_amount = 120;
           show_time = true;
-          show_date = true;
+          show_date = false;
           show_image_time = false;
           show_image_date = false;
           hide_cursor = true;
           font_size = galleries.clockFontSize;
           background_blur = true;
+        }
+        // lib.optionalAttrs (galleries.clockPosition == "bottom") {
+          custom_css = "#clock-weather-container { top: auto; bottom: 0; }";
         }
         // galleries.kioskSettings;
         kioskHardening = {
