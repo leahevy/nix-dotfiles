@@ -154,7 +154,7 @@ args@{
 
           clockTextShadow = lib.mkOption {
             type = lib.types.str;
-            default = "0 2px 6px rgba(0,0,0,1), 0 0 2rem rgba(0,0,0,0.85)";
+            default = "0 2px 9px rgba(0,0,0,1), 0 0 3rem rgba(0,0,0,1)";
             description = "CSS text-shadow value applied to the clock widget to ensure readability without a background.";
           };
 
