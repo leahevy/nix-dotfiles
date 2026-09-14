@@ -283,6 +283,7 @@ args@{
     ifEnabled.linux.server.healthchecks = {
       enabled = config: {
         nx.linux.server.healthchecks.requireServicesUp = [ "jellyfin.service" ];
+        nx.linux.server.healthchecks.loadHighCpuExemptProcessCmdlines = [ "jellyfin-ffmpeg" ];
       };
     };
 
