@@ -25,6 +25,7 @@ args@{
           storage = lib.optionals self.isPhysical [ "smartd" ];
           system = [
             "gc"
+            "mnt"
             "timesyncd"
             "tmp"
           ];
