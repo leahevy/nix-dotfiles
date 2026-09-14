@@ -133,7 +133,7 @@ args@{
 
           imageChangeDuration = lib.mkOption {
             type = lib.types.ints.positive;
-            default = 30;
+            default = 60;
             description = "Seconds between image changes for all album galleries, unless overridden per album.";
           };
 
@@ -150,6 +150,12 @@ args@{
             ];
             default = "bottom";
             description = "Vertical anchor for the clock and date overlay on gallery vhosts.";
+          };
+
+          clockTextShadow = lib.mkOption {
+            type = lib.types.str;
+            default = "0 2px 6px rgba(0,0,0,1), 0 0 2rem rgba(0,0,0,0.85)";
+            description = "CSS text-shadow value applied to the clock widget to ensure readability without a background.";
           };
 
           albums = lib.mkOption {
@@ -226,14 +232,19 @@ args@{
         exposedService = self.host.remote.exposedServices.immich;
         isExposed = exposedService != false;
         exposedSubdomain = if builtins.isString exposedService then exposedService else subdomain;
-        kioskCssRules = lib.optional (
-          galleries.clockPosition == "bottom"
-        ) "#clock-weather-container { top: auto !important; bottom: 0 !important; }";
+        kioskCssRules =
+          lib.optional (
+            galleries.clockPosition == "bottom"
+          ) "#clock-weather-container { top: auto !important; bottom: 0 !important; }"
+          ++ [
+            "[class*='clock--theme-']::before { display: none !important; }"
+            "#clock { text-shadow: ${galleries.clockTextShadow} !important; }"
+          ];
         mainKioskCssContent = lib.concatStringsSep "\n" kioskCssRules;
         sharedKioskSettings = {
           disable_navigation = true;
           duration = galleries.imageChangeDuration;
-          transition = "fade";
+          transition = "cross-fade";
           image_fit = "contain";
           image_effect = "zoom";
           image_effect_amount = 120;
