@@ -176,6 +176,18 @@ in
       description = "Named Syncthing devices to declaratively assign to the Immich library folder, or all declared devices if empty.";
     };
 
+    jellyfinIntegration = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Inject a jellyfin-media syncthing folder when the jellyfin module is enabled.";
+    };
+
+    jellyfinMediaFolderDevices = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Named Syncthing devices to declaratively assign to the Jellyfin media folder, or all declared devices if empty.";
+    };
+
     enablePullErrorsHealthCheck = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -691,6 +703,48 @@ in
 
             systemd.services.syncthing.restartTriggers = [
               (builtins.toJSON (config.systemd.tmpfiles.settings."immichDirs" or { }))
+            ];
+          };
+      }
+      {
+        option.jellyfinIntegration = true;
+        modules.linux.server.jellyfin = true;
+        do.linux.system =
+          { config, ... }:
+          let
+            dataDir = config.nx.linux.server.jellyfin.dataDir;
+            folderDevices =
+              if config.nx.linux.server.syncthing.jellyfinMediaFolderDevices == [ ] then
+                lib.attrNames config.services.syncthing.settings.devices
+              else
+                config.nx.linux.server.syncthing.jellyfinMediaFolderDevices;
+          in
+          {
+            users.users.syncthing.extraGroups = [ "jellyfin-sync" ];
+
+            systemd.tmpfiles.settings."jellyfinDirs" = {
+              "${dataDir}/media".d = lib.mkOverride 75 {
+                mode = "2770";
+                user = "jellyfin";
+                group = "jellyfin-sync";
+              };
+            }
+            // lib.optionalAttrs self.host.impermanence {
+              "${self.persist}${dataDir}/media".d = lib.mkOverride 75 {
+                mode = "2770";
+                user = "jellyfin";
+                group = "jellyfin-sync";
+              };
+            };
+
+            services.syncthing.settings.folders."jellyfin-media" = {
+              path = "${dataDir}/media";
+              label = "Jellyfin Media";
+              devices = folderDevices;
+            };
+
+            systemd.services.syncthing.restartTriggers = [
+              (builtins.toJSON (config.systemd.tmpfiles.settings."jellyfinDirs" or { }))
             ];
           };
       }

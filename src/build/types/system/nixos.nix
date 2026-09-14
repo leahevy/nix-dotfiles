@@ -712,6 +712,10 @@ with lib;
                     type = types.either types.str types.bool;
                     default = false;
                   };
+                  jellyfin = mkOption {
+                    type = types.either types.str types.bool;
+                    default = false;
+                  };
                   glances = mkOption {
                     type = types.either types.str types.bool;
                     default = false;

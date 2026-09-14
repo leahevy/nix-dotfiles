@@ -31,6 +31,7 @@
         immich = true;
         paperless-ngx = "paperless";
         syncthing = true;
+        jellyfin = true;
         searxng = true;
         proxy = true;
       };
@@ -180,6 +181,7 @@
             serverOwnsBaseDomain = true;
           };
           navidrome = true;
+          jellyfin = true;
           immich = {
             galleries = {
               enable = true;
