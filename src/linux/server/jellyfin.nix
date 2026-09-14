@@ -109,12 +109,23 @@ args@{
             user = "jellyfin";
             group = "jellyfin-sync";
           };
+          "${self.persist}/var/cache/jellyfin".d = lib.mkOverride 90 {
+            mode = "0750";
+            user = "jellyfin";
+            group = "jellyfin-sync";
+          };
         };
 
         environment.persistence = lib.mkIf self.host.impermanence {
           "${self.persist}".directories = [
             {
               directory = dataDir;
+              user = "jellyfin";
+              group = "jellyfin-sync";
+              mode = "0750";
+            }
+            {
+              directory = "/var/cache/jellyfin";
               user = "jellyfin";
               group = "jellyfin-sync";
               mode = "0750";
