@@ -998,6 +998,7 @@ in
           "/var/lib/systemd"
           "/var/lib/nixos"
           "/root/.cache"
+          "/root/.local"
           dbDir
           stateDir
           logDir
