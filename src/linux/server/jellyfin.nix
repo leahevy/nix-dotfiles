@@ -163,8 +163,8 @@ args@{
             fi
           ''
           + ''
-            ${pkgs.coreutils}/bin/install -d -m 750 -o jellyfin -g jellyfin-sync "${dataDir}/config"
-            ${pkgs.coreutils}/bin/install -m 640 -o jellyfin -g jellyfin-sync ${networkXml} "${dataDir}/config/network.xml"
+            ${pkgs.coreutils}/bin/install -d -m 750 "${dataDir}/config"
+            ${pkgs.coreutils}/bin/install -m 640 ${networkXml} "${dataDir}/config/network.xml"
           '';
 
         systemd.tmpfiles.settings."jellyfinDirs" = {
