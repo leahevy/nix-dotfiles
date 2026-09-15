@@ -46,6 +46,42 @@ args@{
       default = "/mnt/jellyfin";
       description = "Optional extra media path created at boot and readable by jellyfin, e.g. for a USB drive.";
     };
+
+    httpsPort = lib.mkOption {
+      type = lib.types.port;
+      default = 8920;
+      description = "HTTPS port jellyfin listens on.";
+    };
+
+    enableRemoteAccess = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Allow remote access from outside the local network.";
+    };
+
+    localNetworkSubnets = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Subnets treated as local by jellyfin.";
+    };
+
+    knownProxies = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional known proxy addresses; 127.0.0.1 is always included.";
+    };
+
+    enableIPv6 = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable IPv6 in jellyfin.";
+    };
+
+    declarativelyManageNetwork = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Always overwrite network.xml on service start; set false to only write when absent.";
+    };
   };
 
   module = {
@@ -64,10 +100,51 @@ args@{
         config,
         subdomain,
         port,
+        httpsPort,
         dataDir,
         extraConfig,
         extraMediaPath,
+        enableRemoteAccess,
+        localNetworkSubnets,
+        knownProxies,
+        enableIPv6,
+        declarativelyManageNetwork,
       }:
+      let
+        boolStr = b: if b then "true" else "false";
+        mkXmlStrings = items: lib.concatMapStrings (s: "    <string>${s}</string>\n") items;
+        allProxies = [ "127.0.0.1" ] ++ knownProxies;
+        networkXml = pkgs.writeText "jellyfin-network.xml" ''
+          <?xml version="1.0" encoding="utf-8"?>
+          <!-- Managed declaratively via Nix; do not edit manually -->
+          <NetworkConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <BaseUrl />
+            <EnableHttps>false</EnableHttps>
+            <RequireHttps>false</RequireHttps>
+            <InternalHttpPort>${toString port}</InternalHttpPort>
+            <InternalHttpsPort>${toString httpsPort}</InternalHttpsPort>
+            <PublicHttpPort>${toString port}</PublicHttpPort>
+            <PublicHttpsPort>${toString httpsPort}</PublicHttpsPort>
+            <AutoDiscovery>true</AutoDiscovery>
+            <EnableIPv4>true</EnableIPv4>
+            <EnableIPv6>${boolStr enableIPv6}</EnableIPv6>
+            <EnableRemoteAccess>${boolStr enableRemoteAccess}</EnableRemoteAccess>
+            <LocalNetworkSubnets>
+          ${mkXmlStrings localNetworkSubnets}  </LocalNetworkSubnets>
+            <LocalNetworkAddresses />
+            <KnownProxies>
+          ${mkXmlStrings allProxies}  </KnownProxies>
+            <IgnoreVirtualInterfaces>true</IgnoreVirtualInterfaces>
+            <VirtualInterfaceNames>
+              <string>veth</string>
+            </VirtualInterfaceNames>
+            <EnablePublishedServerUriByRequest>false</EnablePublishedServerUriByRequest>
+            <PublishedServerUriBySubnet />
+            <RemoteIPFilter />
+            <IsRemoteIPFilterBlacklist>false</IsRemoteIPFilterBlacklist>
+          </NetworkConfiguration>
+        '';
+      in
       {
         users.groups.jellyfin-sync = { };
         users.users.jellyfin.extraGroups = [ "jellyfin-sync" ];
@@ -78,6 +155,17 @@ args@{
           openFirewall = false;
           dataDir = dataDir;
         };
+
+        systemd.services.jellyfin.preStart =
+          lib.optionalString (!declarativelyManageNetwork) ''
+            if [ -f "${dataDir}/config/network.xml" ]; then
+              exit 0
+            fi
+          ''
+          + ''
+            ${pkgs.coreutils}/bin/install -d -m 750 -o jellyfin -g jellyfin-sync "${dataDir}/config"
+            ${pkgs.coreutils}/bin/install -m 640 -o jellyfin -g jellyfin-sync ${networkXml} "${dataDir}/config/network.xml"
+          '';
 
         systemd.tmpfiles.settings."jellyfinDirs" = {
           "${dataDir}".d = lib.mkOverride 90 {
@@ -131,36 +219,6 @@ args@{
               mode = "0750";
             }
           ];
-        };
-
-        systemd.services.jellyfin-init-network = {
-          description = "Write jellyfin network.xml with KnownProxies if absent";
-          before = [ "jellyfin.service" ];
-          wantedBy = [ "jellyfin.service" ];
-          serviceConfig = {
-            Type = "oneshot";
-            User = "jellyfin";
-            Group = "jellyfin-sync";
-            ExecStart = toString (
-              pkgs.writeShellScript "jellyfin-init-network" ''
-                set -euo pipefail
-                config_dir="${dataDir}/config"
-                network_xml="$config_dir/network.xml"
-                if [ ! -f "$network_xml" ]; then
-                  ${pkgs.coreutils}/bin/mkdir -p "$config_dir"
-                  ${pkgs.coreutils}/bin/cat > "$network_xml" <<'XMLEOF'
-                <?xml version="1.0" encoding="utf-8"?>
-                <NetworkConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-                  <InternalHttpPort>${toString port}</InternalHttpPort>
-                  <KnownProxies>
-                    <string>127.0.0.1</string>
-                  </KnownProxies>
-                </NetworkConfiguration>
-                XMLEOF
-                fi
-              ''
-            );
-          };
         };
       };
 

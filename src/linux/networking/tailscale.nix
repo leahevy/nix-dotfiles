@@ -126,6 +126,12 @@ args@{
         };
       };
 
+    ifEnabled.linux.server.jellyfin = {
+      enabled = config: {
+        nx.linux.server.jellyfin.localNetworkSubnets = [ "100.64.0.0/10" ];
+      };
+    };
+
     ifEnabled.linux.server.dashboard = {
       enabled =
         config:
