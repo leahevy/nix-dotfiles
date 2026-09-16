@@ -393,6 +393,12 @@ in
       description = "Enable Remote Control for all sessions at startup.";
     };
 
+    disableAgentView = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Disable the fleet/agent switcher view and suppress the left-arrow shortcut that opens it.";
+    };
+
     permissionMode = lib.mkOption {
       type = lib.types.enum [
         "manual"
@@ -2285,6 +2291,7 @@ in
         awaySummaryEnabled,
         autoScrollEnabled,
         remoteControlAtStartup,
+        disableAgentView,
         permissionMode,
         useAutoModeDuringPlan,
         voiceModeEnabled,
@@ -3043,7 +3050,7 @@ in
               ;
             inherit editorMode askUserQuestionTimeout;
             inherit spinnerTipsEnabled awaySummaryEnabled autoScrollEnabled;
-            inherit remoteControlAtStartup useAutoModeDuringPlan;
+            inherit remoteControlAtStartup disableAgentView useAutoModeDuringPlan;
             permissions.defaultMode = if permissionMode == "manual" then "default" else permissionMode;
           }
           // lib.optionalAttrs (mergedHooks != { }) {
