@@ -1446,9 +1446,8 @@ in
                       if not any(under(resolved, r) or resolved == r for r in _sb):
                           deny(
                               "path " + resolved + " is not accessible in the firejail sandbox. "
-                              "Tell the user to restart this session with claude-unsafe if "
-                              "they need host-wide access, or ask them to run this step themselves "
-                              "outside the sandbox."
+                              "Tell the user they can add the path with: claude --add-dir " + resolved + ". "
+                              "For full host access, the user can restart this session with claude-unsafe."
                           )
                   return False
 
@@ -1804,9 +1803,8 @@ in
                   if not any(under(target, r) or target == r for r in _sandbox_roots):
                       deny(
                           "path " + target + " is not accessible in the firejail sandbox. "
-                          "Tell the user to restart this session with claude-unsafe if "
-                          "they need host-wide access, or ask them to run this step themselves "
-                          "outside the sandbox."
+                          "Tell the user they can add the path with: claude --add-dir " + target + ". "
+                          "For full host access, the user can restart this session with claude-unsafe."
                       )
               if tool_name == "Read":
                   real_target = os.path.realpath(target)
@@ -1948,7 +1946,7 @@ in
 
           _isolation = os.environ.get("CLAUDE_ISOLATION_CONTEXT", "none")
           _isolation_map = {
-              "sandbox": "firejail sandbox (project repo + nxcore + ~/.claude + nx inputs only; /etc and /var restricted; D-Bus filtered to notifications)",
+              "sandbox": "firejail sandbox (project repo + nxcore + ~/.claude + nx inputs only; /etc and /var restricted; D-Bus filtered to notifications). If the user explicitly grants access to a path or says they have added it to the sandbox, attempt the access directly - do not preemptively refuse. The guardrail enforces the actual boundary; Claude should not second-guess it.",
           }
           _isolation_label = _isolation_map.get(_isolation, "none (full host access)")
           sections = ["=== Session Context ===\nDate: " + datetime.now().strftime("%Y-%m-%d %H:%M") + "\nSession context: " + _isolation_label]
