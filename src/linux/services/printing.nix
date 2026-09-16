@@ -113,6 +113,12 @@ args@{
           tag = "systemctl";
           unitless = true;
         }
+        {
+          tag = "systemd";
+          user = true;
+          unitless = true;
+          string = "Failed to enqueue SYSTEMD_USER_WANTS job, ignoring: Transaction for printer\\.target/start is destructive";
+        }
       ]
       ++ lib.optionals self.settings.withAvahi [
         {

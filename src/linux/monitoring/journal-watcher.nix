@@ -356,6 +356,7 @@ args@{
         "ENERGY_PERF_BIAS: Set to '.*', was '.*'"
         "CPU bug present and SMT on"
         "ata.*supports DRM functions and may not be fully accessible"
+        "sd [0-9]+:[0-9]+:[0-9]+:[0-9]+: Power-on or device reset occurred"
         "sd.*No Caching mode page found"
         "sd.*Assuming drive cache: write through"
         "usb.*Warning! Unlikely big volume range.*cval->res is probably wrong"
