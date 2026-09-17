@@ -45,6 +45,12 @@ args@{
       default = [ ];
       description = "CIDR ranges considered internal or trusted, exposed as the nginx variable nx_is_internal (1 for matching clients, 0 otherwise).";
     };
+
+    clientCIDRs = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "CIDR ranges permitted to access user-facing services, exposed as the nginx variable nx_is_allowed (1 for matching clients, 0 otherwise). trustedCIDRs are automatically included.";
+    };
   };
 
   module = {
@@ -79,6 +85,7 @@ args@{
         enableTestDomain,
         serverOwnsBaseDomain,
         trustedCIDRs,
+        clientCIDRs,
         ...
       }:
       let
@@ -97,6 +104,8 @@ args@{
           "127.0.0.1/32"
           "::1/128"
         ];
+
+        effectiveClientCIDRs = lib.unique (effectiveTrustedCIDRs ++ map normalizeCIDR clientCIDRs);
 
         uncoveredVhosts = lib.filterAttrs (
           name: vh:
@@ -149,6 +158,10 @@ args@{
             geo $nx_is_internal {
               default 0;
               ${lib.concatMapStringsSep "\n      " (cidr: "${cidr} 1;") effectiveTrustedCIDRs}
+            }
+            geo $nx_is_allowed {
+              default 0;
+              ${lib.concatMapStringsSep "\n      " (cidr: "${cidr} 1;") effectiveClientCIDRs}
             }
           '';
           appendHttpConfig = ''

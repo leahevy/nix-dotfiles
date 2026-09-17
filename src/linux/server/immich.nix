@@ -128,7 +128,7 @@ args@{
           restrictToInternalNetwork = lib.mkOption {
             type = lib.types.bool;
             default = true;
-            description = "Restrict gallery vhosts to internal network IPs via the nginx nx_is_internal geo variable.";
+            description = "Restrict gallery vhosts to permitted client IPs via the nginx nx_is_allowed geo variable.";
           };
 
           imageChangeDuration = lib.mkOption {
@@ -567,7 +567,7 @@ args@{
                     proxyPass = "http://127.0.0.1:${toString (galleries.kioskPort + 1 + index)}";
                     recommendedProxySettings = false;
                     extraConfig = ''
-                      ${lib.optionalString galleries.restrictToInternalNetwork "if ($nx_is_internal = 0) { return 403; }"}
+                      ${lib.optionalString galleries.restrictToInternalNetwork "if ($nx_is_allowed = 0) { return 403; }"}
                       proxy_set_header Host $host;
                       proxy_set_header X-Real-IP $remote_addr;
                       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -585,7 +585,7 @@ args@{
                   proxyPass = "http://127.0.0.1:${toString galleries.kioskPort}";
                   recommendedProxySettings = false;
                   extraConfig = ''
-                    ${lib.optionalString galleries.restrictToInternalNetwork "if ($nx_is_internal = 0) { return 403; }"}
+                    ${lib.optionalString galleries.restrictToInternalNetwork "if ($nx_is_allowed = 0) { return 403; }"}
                     proxy_set_header Host $host;
                     proxy_set_header X-Real-IP $remote_addr;
                     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
