@@ -198,8 +198,14 @@ args@{
 
     highLoadMultiplier = lib.mkOption {
       type = lib.types.float;
-      default = 1.8;
+      default = 3.8;
       description = "Load limit multiplier applied when high-load-exempt mode is active.";
+    };
+
+    loadCombinedModeMultiplier = lib.mkOption {
+      type = lib.types.float;
+      default = 1.25;
+      description = "Extra multiplier applied on top of the winning threshold when both build-active and high-load-exempt modes are simultaneously active.";
     };
 
     memoryFreeThresholdPct = lib.mkOption {
@@ -788,6 +794,7 @@ args@{
         loadHighCpuExemptProcessCmdlines,
         loadHighCpuExemptProcessCmdlinesSensitive,
         highLoadMultiplier,
+        loadCombinedModeMultiplier,
         memoryFreeThresholdPct,
         memoryRamUsedMaxPct,
         enableDailyHealthCheck,
@@ -1239,6 +1246,7 @@ args@{
               -v max=${toString loadMaxPerCore} \
               -v build_multiplier=${toString effectiveBuildMultiplier} \
               -v high_multiplier=${toString highLoadMultiplier} \
+              -v combined_multiplier=${toString loadCombinedModeMultiplier} \
               -v nproc="$_nproc" \
               -v build_mode="$_build_mode" \
               -v high_load_mode="$_high_load_mode" '
@@ -1253,6 +1261,9 @@ args@{
                 if (high_load_mode == "high-load-exempt") {
                   t = max * nproc * high_multiplier
                   if (t > threshold) { threshold = t; mode = "high-load-exempt" }
+                }
+                if (build_mode == "build-active" && high_load_mode == "high-load-exempt") {
+                  threshold = threshold * combined_multiplier; mode = "combined"
                 }
                 if (load5 >= 1.0 || mode != "normal") printf "load 5m: %.2f (%s cores, limit: %.1f, mode: %s)\n", load5, nproc, threshold, mode > "/dev/fd/3"
                 exit (load5 > threshold)
