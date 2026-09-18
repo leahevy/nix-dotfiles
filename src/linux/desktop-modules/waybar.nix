@@ -45,6 +45,18 @@ args@{
         }
         {
           tag = "waybar";
+          string = "Getting layout failed: GDBus\\.Error:org\\.freedesktop\\.DBus\\.Error\\.UnknownMethod: Method \"GetLayout\" with signature \"iias\" on interface \"com\\.canonical\\.dbusmenu\" doesn't exist";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "waybar";
+          string = "dbusmenu_menuitem_send_about_to_show: assertion 'DBUSMENU_IS_MENUITEM\\(mi\\)' failed";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "waybar";
           string = "unhandled exception \\(type std::exception\\) in signal handler:";
           user = true;
           unitless = true;
