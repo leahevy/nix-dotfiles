@@ -98,7 +98,6 @@ let
   baseLinuxModules = {
     common = {
       proton = [ "mail" ];
-      photos = [ "ente" ];
       chat = [ "fluffychat" ];
       dev = [ "vscodium" ];
       git = [
