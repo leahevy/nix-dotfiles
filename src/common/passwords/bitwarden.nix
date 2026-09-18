@@ -124,7 +124,7 @@ args@{
             ExecStart = pkgs.writeShellScript "bitwarden-sync" ''
               set -euo pipefail
 
-              attempts=5
+              attempts=11
               attempt=1
               sleep_seconds=1
               last_rc=0
