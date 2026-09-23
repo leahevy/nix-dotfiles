@@ -46,6 +46,15 @@ in
           matches = [ { app-id = "^dev-nohus-rift-MainKt$"; } ];
           open-floating = false;
         }
+        {
+          matches = [
+            {
+              app-id = "^dev-nohus-rift-MainKt$";
+              title = "^Notification$";
+            }
+          ];
+          open-floating = true;
+        }
       ];
     };
 
