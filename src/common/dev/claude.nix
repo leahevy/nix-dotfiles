@@ -377,8 +377,14 @@ in
 
     awaySummaryEnabled = lib.mkOption {
       type = lib.types.bool;
-      default = true;
+      default = false;
       description = "Show a recap when returning to a session.";
+    };
+
+    promptSuggestionEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Show prompt suggestions in the input box.";
     };
 
     autoScrollEnabled = lib.mkOption {
@@ -2287,6 +2293,7 @@ in
         askUserQuestionTimeout,
         spinnerTipsEnabled,
         awaySummaryEnabled,
+        promptSuggestionEnabled,
         autoScrollEnabled,
         remoteControlAtStartup,
         disableAgentView,
@@ -3047,7 +3054,12 @@ in
               enableArtifact
               ;
             inherit editorMode askUserQuestionTimeout;
-            inherit spinnerTipsEnabled awaySummaryEnabled autoScrollEnabled;
+            inherit
+              spinnerTipsEnabled
+              awaySummaryEnabled
+              promptSuggestionEnabled
+              autoScrollEnabled
+              ;
             inherit remoteControlAtStartup disableAgentView useAutoModeDuringPlan;
             permissions.defaultMode = if permissionMode == "manual" then "default" else permissionMode;
           }
