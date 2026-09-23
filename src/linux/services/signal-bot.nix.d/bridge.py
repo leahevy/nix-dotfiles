@@ -5053,6 +5053,14 @@ def serve(cfg):
             return jsonify(status="queued"), 202
         return jsonify(error="send queue is full"), 503
 
+    @app.route("/v1/context", methods=["GET"])
+    def http_context():
+        if not authorized():
+            return jsonify(error="unauthorized"), 401
+        channel = request.args.get("channel", "group")
+        prefix = time_context_prefix(memory_store.memory_block(channel))
+        return prefix, 200, {"Content-Type": "text/plain; charset=utf-8"}
+
     if bool(cfg.get("chat_enable")):
         import importlib.util
         import types as pytypes
