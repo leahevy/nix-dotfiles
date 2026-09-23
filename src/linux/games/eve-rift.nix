@@ -54,6 +54,12 @@ in
             }
           ];
           open-floating = true;
+          open-focused = false;
+          default-floating-position = {
+            x = 10;
+            y = 10;
+            relative-to = "bottom-left";
+          };
         }
       ];
     };
