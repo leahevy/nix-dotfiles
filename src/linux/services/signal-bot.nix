@@ -2720,6 +2720,11 @@ in
                   recommendedProxySettings = false;
                   extraConfig = internalGuard + proxyHeaders;
                 };
+                locations."/v1/context" = {
+                  proxyPass = "http://127.0.0.1:${toString apiPort}/v1/context";
+                  recommendedProxySettings = false;
+                  extraConfig = internalGuard + proxyHeaders;
+                };
                 locations."/".return = "404";
               };
             }
