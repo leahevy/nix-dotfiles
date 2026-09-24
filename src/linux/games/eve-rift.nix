@@ -40,28 +40,79 @@ in
   input = "linux";
 
   module = {
+    ifEnabled.linux.desktop.niri.linux.enabled = config: {
+      nx.linux.desktop.niri.autostartPrograms = [ "eve-rift" ];
+    };
+
     ifEnabled.linux.desktop.niri.home = config: {
-      programs.niri.settings.window-rules = [
-        {
-          matches = [ { app-id = "^dev-nohus-rift-MainKt$"; } ];
-          open-floating = false;
-        }
-        {
-          matches = [
-            {
-              app-id = "^dev-nohus-rift-MainKt$";
-              title = "^Notification$";
-            }
-          ];
-          open-floating = true;
-          open-focused = false;
-          default-floating-position = {
-            x = 10;
-            y = 10;
-            relative-to = "bottom-left";
+      programs.niri.settings = {
+        binds = with config.lib.niri.actions; {
+          "Mod+Ctrl+Alt+E" = {
+            action = spawn-sh "niri-scratchpad --title RIFT --spawn eve-rift";
+            hotkey-overlay.title = "Apps:RIFT Intel Fusion Tool";
           };
-        }
-      ];
+        };
+
+        window-rules = [
+          {
+            matches = [
+              {
+                app-id = "^dev-nohus-rift-MainKt$";
+                title = "^RIFT Intel Fusion Tool$";
+              }
+            ];
+            open-on-workspace = "scratch";
+            open-focused = false;
+          }
+          {
+            matches = [
+              {
+                app-id = "^dev-nohus-rift-MainKt$";
+                title = "^RIFT$";
+              }
+            ];
+            open-on-workspace = "scratch";
+            open-floating = true;
+            open-focused = false;
+            min-width = 200;
+            max-width = 200;
+            min-height = 800;
+            max-height = 800;
+          }
+          {
+            matches = [
+              {
+                app-id = "^dev-nohus-rift-MainKt$";
+                title = "^About RIFT$";
+              }
+              {
+                app-id = "^dev-nohus-rift-MainKt$";
+                title = "^RIFT Settings$";
+              }
+              {
+                app-id = "^dev-nohus-rift-MainKt$";
+                title = "^Jukebox$";
+              }
+            ];
+            open-floating = false;
+          }
+          {
+            matches = [
+              {
+                app-id = "^dev-nohus-rift-MainKt$";
+                title = "^Notification$";
+              }
+            ];
+            open-floating = true;
+            open-focused = false;
+            default-floating-position = {
+              x = 10;
+              y = 10;
+              relative-to = "bottom-left";
+            };
+          }
+        ];
+      };
     };
 
     home = config: {
