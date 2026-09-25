@@ -3062,6 +3062,11 @@ in
               ;
             inherit remoteControlAtStartup disableAgentView useAutoModeDuringPlan;
             permissions.defaultMode = if permissionMode == "manual" then "default" else permissionMode;
+            attribution = {
+              commit = "";
+              pr = "";
+              sessionUrl = false;
+            };
           }
           // lib.optionalAttrs (mergedHooks != { }) {
             hooks = mergedHooks;
