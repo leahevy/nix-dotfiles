@@ -174,7 +174,10 @@ args@{
                 !config.boot.loader.supportsInitrdSecrets && hostKey != null
               ) "/bin/chmod 0600 /etc/ssh/initrd_host_key";
 
-              boot.initrd.systemd.storePaths = [ initrdShell ];
+              boot.initrd.systemd.storePaths = [
+                initrdShell
+                "${pkgs.systemd}/bin/systemd-tty-ask-password-agent"
+              ];
               boot.initrd.systemd.users.root.shell = toString initrdShell;
 
               system.extraDependencies = lib.optional (hostKey != null && pubKey != null) keypairCheck;
