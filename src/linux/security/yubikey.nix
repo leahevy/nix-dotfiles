@@ -15,6 +15,13 @@ args@{
 
   disableOnVirtual = true;
 
+  assertions = [
+    {
+      assertion = !self.isModuleEnabled "linux.security.yubikey-server";
+      message = "yubikey and yubikey-server modules are mutually exclusive!";
+    }
+  ];
+
   settings = {
     modelId = null;
     lockSessionOnUnplug = false;
