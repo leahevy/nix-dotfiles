@@ -46,6 +46,16 @@ in
   input = "linux";
 
   module = {
+    enabled = config: {
+      nx.common.browser.browser.bookmarks = {
+        "Games" = {
+          "EVE Online" = {
+            "EveLens" = "https://github.com/aliacollins/EveLens";
+          };
+        };
+      };
+    };
+
     home = config: {
       home.packages = [ eveLens ];
 

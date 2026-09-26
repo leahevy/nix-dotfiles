@@ -40,6 +40,16 @@ in
   input = "linux";
 
   module = {
+    enabled = config: {
+      nx.common.browser.browser.bookmarks = {
+        "Games" = {
+          "EVE Online" = {
+            "Rift" = "https://riftforeve.online/";
+          };
+        };
+      };
+    };
+
     ifEnabled.linux.desktop.niri.linux.enabled = config: {
       nx.linux.desktop.niri.autostartPrograms = [ "eve-rift" ];
     };

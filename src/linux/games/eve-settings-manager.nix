@@ -34,6 +34,16 @@ in
   input = "linux";
 
   module = {
+    enabled = config: {
+      nx.common.browser.browser.bookmarks = {
+        "Games" = {
+          "EVE Online" = {
+            "Settings Manager" = "https://github.com/mintnick/eve-settings-manager";
+          };
+        };
+      };
+    };
+
     home = config: {
       home.packages = [ eveSettingsManager ];
 
