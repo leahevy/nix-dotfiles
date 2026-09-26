@@ -1437,6 +1437,12 @@ in
               user = true;
               unitless = true;
             }
+            {
+              tag = "firefox";
+              string = "Error writing selection data: Error writing to file descriptor: Broken pipe";
+              user = true;
+              unitless = true;
+            }
           ];
         }
       ];
