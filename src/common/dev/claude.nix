@@ -369,6 +369,72 @@ in
       description = "Auto-continue timeout for AskUserQuestion prompts.";
     };
 
+    cleanupPeriodDays = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 30;
+      description = "Days to retain sessions, worktrees, tasks, shell snapshots, and backups.";
+    };
+
+    inputNeededNotifEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Send a Remote Control push notification when a permission prompt or question is waiting for input.";
+    };
+
+    showTurnDuration = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Show turn duration messages after responses.";
+    };
+
+    verboseMode = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable verbose mode (full tool output, expanded view). False uses focus mode.";
+    };
+
+    respondToBashCommands = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Whether Claude responds after an input-box ! shell command runs. Set false to add output to context silently.";
+    };
+
+    prefersReducedMotion = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Reduce or disable UI animations, spinners, shimmer, and flash effects.";
+    };
+
+    syntaxHighlightingDisabled = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Disable syntax highlighting in diffs, code blocks, and file previews.";
+    };
+
+    showThinkingSummaries = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Show thinking summaries in the transcript view.";
+    };
+
+    language = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = "english";
+      description = "Preferred response language for Claude, null lets Claude infer it.";
+    };
+
+    wheelScrollAccelerationEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable mouse wheel scroll acceleration in the TUI.";
+    };
+
+    terminalProgressBarEnabled = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Show a terminal progress bar during long operations.";
+    };
+
     spinnerTipsEnabled = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -2305,6 +2371,17 @@ in
         delegateToSubagents,
         allowNestedSubagents,
         maxConcurrentSubagents,
+        cleanupPeriodDays,
+        inputNeededNotifEnabled,
+        showTurnDuration,
+        verboseMode,
+        respondToBashCommands,
+        prefersReducedMotion,
+        syntaxHighlightingDisabled,
+        showThinkingSummaries,
+        language,
+        wheelScrollAccelerationEnabled,
+        terminalProgressBarEnabled,
         ...
       }:
       let
@@ -2397,8 +2474,18 @@ in
           in
           "--set ${modelAliasEnvVars.${alias}} ${modelIdFor alias version}"
         ) modelVersionsByAlias;
+        privacyWrapperArgs =
+          lib.optional (!remoteControlAtStartup) "--set CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC 1"
+          ++ [
+            "--set DISABLE_ERROR_REPORTING 1"
+            "--set CLAUDE_CODE_DISABLE_ADVISOR_TOOL 1"
+          ];
         claudeWrapperArgs =
-          sshWrapperArgs ++ autoCompactWrapperArgs ++ subagentWrapperArgs ++ modelVersionWrapperArgs;
+          sshWrapperArgs
+          ++ autoCompactWrapperArgs
+          ++ subagentWrapperArgs
+          ++ modelVersionWrapperArgs
+          ++ privacyWrapperArgs;
 
         claude-code-wrapped = pkgs.symlinkJoin {
           name = "claude-code-wrapped";
@@ -3062,11 +3149,42 @@ in
               ;
             inherit remoteControlAtStartup disableAgentView useAutoModeDuringPlan;
             permissions.defaultMode = if permissionMode == "manual" then "default" else permissionMode;
+            includeGitInstructions = false;
+            disableDeepLinkRegistration = "disable";
+            disableClaudeAiConnectors = true;
+            disableBundledSkills = true;
+            autoConnectIde = false;
+            autoInstallIdeExtension = false;
+            fallbackModel = [ model ];
+            verbose = verboseMode;
+            viewMode = if verboseMode then "verbose" else "focus";
+            emojiCompletionEnabled = false;
+            workflowKeywordTriggerEnabled = false;
+            permissionExplainerEnabled = true;
+            fastMode = false;
+            fastModePerSessionOptIn = false;
+            axScreenReader = false;
+            skillOverrides = { };
+            defaultShell = "bash";
+            inherit
+              cleanupPeriodDays
+              inputNeededNotifEnabled
+              showTurnDuration
+              respondToBashCommands
+              prefersReducedMotion
+              syntaxHighlightingDisabled
+              showThinkingSummaries
+              wheelScrollAccelerationEnabled
+              terminalProgressBarEnabled
+              ;
             attribution = {
               commit = "";
               pr = "";
               sessionUrl = false;
             };
+          }
+          // lib.optionalAttrs (language != null) {
+            inherit language;
           }
           // lib.optionalAttrs (mergedHooks != { }) {
             hooks = mergedHooks;
