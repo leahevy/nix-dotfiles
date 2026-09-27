@@ -56,6 +56,11 @@ args@{
               default = 5;
               description = "Number of days before expiry at which the healthchecks.io timed check starts failing.";
             };
+            triggerOnDayOfExpiry = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "When true, notifications and healthchecks only fire on or after the expiry date, ignoring notifyThresholdDays and healthchecksWarnDays.";
+            };
             rotatedAt = lib.mkOption {
               type = lib.types.submodule {
                 options = {
@@ -108,7 +113,7 @@ args@{
                 "10 - Key expiry" = ''
                   ROTATED_AT=${lib.escapeShellArg rotationDate}
                   LIFETIME_DAYS=${toString keyCfg.lifetimeDays}
-                  WARN_DAYS=${toString keyCfg.healthchecksWarnDays}
+                  WARN_DAYS=${if keyCfg.triggerOnDayOfExpiry then "0" else toString keyCfg.healthchecksWarnDays}
                   DISPLAY_NAME=${lib.escapeShellArg keyCfg.displayName}
                   ROTATED_EPOCH=$(${pkgs.coreutils}/bin/date -d "$ROTATED_AT" +%s 2>/dev/null || true)
                   if [[ -z "$ROTATED_EPOCH" ]]; then
@@ -151,11 +156,11 @@ args@{
             message = "linux.security.api-keys: key '${keyId}' (${keyCfg.displayName}) lifetimeDays (${toString keyCfg.lifetimeDays}) must be at least 10 to allow a valid notifyThresholdDays!";
           }) keys
           ++ lib.mapAttrsToList (keyId: keyCfg: {
-            assertion = keyCfg.notifyThresholdDays >= 5;
+            assertion = keyCfg.triggerOnDayOfExpiry || keyCfg.notifyThresholdDays >= 5;
             message = "linux.security.api-keys: key '${keyId}' (${keyCfg.displayName}) notifyThresholdDays (${toString keyCfg.notifyThresholdDays}) must be at least 5!";
           }) keys
           ++ lib.mapAttrsToList (keyId: keyCfg: {
-            assertion = keyCfg.notifyThresholdDays * 2 <= keyCfg.lifetimeDays;
+            assertion = keyCfg.triggerOnDayOfExpiry || keyCfg.notifyThresholdDays * 2 <= keyCfg.lifetimeDays;
             message = "linux.security.api-keys: key '${keyId}' (${keyCfg.displayName}) notifyThresholdDays (${toString keyCfg.notifyThresholdDays}) must not exceed 50% of lifetimeDays (${toString keyCfg.lifetimeDays})!";
           }) keys;
 
@@ -205,7 +210,7 @@ args@{
 
                 ROTATED_AT=${lib.escapeShellArg rotationDate}
                 LIFETIME_DAYS=${toString keyCfg.lifetimeDays}
-                THRESHOLD_DAYS=${toString keyCfg.notifyThresholdDays}
+                THRESHOLD_DAYS=${if keyCfg.triggerOnDayOfExpiry then "0" else toString keyCfg.notifyThresholdDays}
                 MARKER_FILE=${lib.escapeShellArg markerFile}
                 ROTATED_EPOCH=$(${pkgs.coreutils}/bin/date -d "$ROTATED_AT" +%s 2>/dev/null || true)
 
