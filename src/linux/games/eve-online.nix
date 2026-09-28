@@ -63,6 +63,7 @@ args@{
               "Dotlan" = "https://evemaps.dotlan.net/route";
               "PI Planner" = "https://evepitool.com/";
               "Nexum" = "https://eve-nexum.com";
+              "Anoikis" = "https://anoik.is/systems";
             };
           };
         };
