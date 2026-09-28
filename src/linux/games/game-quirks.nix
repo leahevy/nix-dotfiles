@@ -34,6 +34,17 @@ args@{
         (lib.mkIf config.nx.linux.games.game-quirks.eveOnline {
           nx.linux.sound.pipewire.rules.speaker.nodeNames = [ "exefile.exe" ];
         })
+        (lib.mkIf config.nx.linux.games.game-quirks.eveOnline {
+          nx.linux.desktop.niri.lateWindowRules = [
+            {
+              match = {
+                app-id = "steam_app_8500";
+                is-floating = false;
+              };
+              apply.workspace = "3";
+            }
+          ];
+        })
         (lib.mkIf config.nx.linux.games.game-quirks.albionOnline {
           nx.linux.sound.pipewire.rules.speaker.nodeNames = [ "Wwise" ];
         })

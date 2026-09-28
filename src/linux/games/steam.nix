@@ -52,6 +52,11 @@ args@{
                 relative-to = "bottom-right";
               };
             }
+            {
+              matches = [ { app-id = "steam"; } ];
+              excludes = [ { title = "^notificationtoasts_\\d+_desktop$"; } ];
+              open-on-workspace = "3";
+            }
           ];
         };
       };
