@@ -234,6 +234,10 @@ in
             string = "geo-ip-drop: .*PROTO=TCP.*ACK RST URGP=0";
             kernel = true;
           }
+          {
+            string = "geo-ip-drop: .*PROTO=UDP SPT=443 DPT=[1-9][0-9]{3,}";
+            kernel = true;
+          }
         ];
 
         nx.linux.server.healthchecks.dailyHealthChecks = lib.mkIf (geo.geoActive && cfg.enableGeoIPBlocks) {
