@@ -143,6 +143,7 @@ let
   ];
   sandboxRunDirWhitelist = [
     "booted-system"
+    "credentials"
     "current-system"
     "firejail"
     "user"
