@@ -3157,7 +3157,7 @@ in
             autoInstallIdeExtension = false;
             fallbackModel = [ model ];
             verbose = verboseMode;
-            viewMode = if verboseMode then "verbose" else "focus";
+            viewMode = if verboseMode then "verbose" else "default";
             emojiCompletionEnabled = false;
             workflowKeywordTriggerEnabled = false;
             permissionExplainerEnabled = true;
