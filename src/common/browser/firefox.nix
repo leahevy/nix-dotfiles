@@ -753,6 +753,7 @@ in
                 }
                 #urlbar .searchmode-switcher {
                   --button-background-color: #000000 !important;
+                  --button-background-color-muted: #000000 !important;
                   --button-border-color: #000000 !important;
                   --button-background-color-hover: #1a1a1a !important;
                   --button-border-color-hover: #1a1a1a !important;
