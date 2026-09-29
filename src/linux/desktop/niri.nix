@@ -416,6 +416,16 @@ args@{
     enabled = config: {
       nx.linux.desktop.niri.autoTiler.ignoredAppIds = [ "org.nx.scratchpad" ];
       nx.linux.desktop.niri.blurAppIdsNoXray = [ "org.nx.scratchpad" ];
+      nx.linux.desktop.niri.lateWindowRules = [
+        {
+          match = {
+            app-id = "";
+            title = "";
+            is-floating = true;
+          };
+          apply.workspace = "scratch";
+        }
+      ];
     };
 
     home =
@@ -627,11 +637,11 @@ args@{
                   mfloating = m.get("is-floating")
                   if mid is None and mregex is None and mtitle is None:
                       return False
-                  if mid is not None and mid != app_id:
+                  if mid is not None and mid != (app_id or ""):
                       return False
                   if mregex is not None and not re.search(mregex, app_id or ""):
                       return False
-                  if mtitle is not None and mtitle != title:
+                  if mtitle is not None and mtitle != (title or ""):
                       return False
                   if mfloating is not None and mfloating != is_floating:
                       return False
