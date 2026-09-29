@@ -57,6 +57,7 @@ args@{
               "Zkillboard" = zkillboardUrl;
               "Account Management" = "https://secure.eveonline.com/account";
               "Official Store" = "https://store.eveonline.com/";
+              "Authorized Apps" = "https://developers.eveonline.com/authorized-apps";
               "Gatecheck" = "https://eve-gatecheck.space/eve/";
               "EVE Scout" = "https://www.eve-scout.com/#/";
               "EVE-University Wiki" = "https://wiki.eveuniversity.org/Main_Page";
