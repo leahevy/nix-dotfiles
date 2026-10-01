@@ -610,6 +610,7 @@ let
       ''
         mkdir -p $out/share/glib-2.0/schemas
         cp ${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/*/glib-2.0/schemas/*.xml $out/share/glib-2.0/schemas/
+        cp ${pkgs.gtk3}/share/gsettings-schemas/*/glib-2.0/schemas/*.xml $out/share/glib-2.0/schemas/
         cp ${pkgs.gtk4}/share/gsettings-schemas/*/glib-2.0/schemas/*.xml $out/share/glib-2.0/schemas/
         glib-compile-schemas $out/share/glib-2.0/schemas
       '';
