@@ -41,6 +41,8 @@ in
 
   module = {
     enabled = config: {
+      nx.linux.sound.pipewire.rules.speaker.nodeNames = [ "alsa_playback.rift" ];
+
       nx.common.browser.browser.bookmarks = {
         "Games" = {
           "EVE Online" = {
