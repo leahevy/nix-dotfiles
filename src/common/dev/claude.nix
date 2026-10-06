@@ -701,6 +701,17 @@ in
       description = "Install the built-in default hook handlers.";
     };
 
+    pluginHooks = lib.mkOption {
+      type = lib.types.listOf (
+        lib.types.oneOf [
+          lib.types.path
+          lib.types.package
+        ]
+      );
+      default = [ ];
+      description = "TypeScript register.ts plugin hooks written to anonymous skill directories.";
+    };
+
     guardrailDisallowedPaths = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -2383,6 +2394,7 @@ in
         language,
         wheelScrollAccelerationEnabled,
         terminalProgressBarEnabled,
+        pluginHooks,
         ...
       }:
       let
@@ -3242,6 +3254,25 @@ in
             ''
           ) mergedAgents;
           outputStyles = lib.mkIf styleEnabled { nx = nxOutputStyle; };
+          plugins = lib.imap0 (
+            i: hook:
+            let
+              manifest = pkgs.writeText "plugin.json" (
+                builtins.toJSON {
+                  name = "nx-plugin-${toString i}";
+                  version = "0.1.0";
+                  description = "nx plugin hook ${toString i}";
+                  hooks = "./hooks/hooks.json";
+                }
+              );
+              hooksJson = pkgs.writeText "hooks.json" (builtins.toJSON { modules = [ "./register.ts" ]; });
+            in
+            pkgs.runCommand "nx-claude-plugin-${toString i}" { } ''
+              install -Dm644 ${manifest} $out/.claude-plugin/plugin.json
+              install -Dm644 ${hooksJson} $out/hooks/hooks.json
+              install -Dm644 ${hook} $out/hooks/register.ts
+            ''
+          ) pluginHooks;
         };
 
         home = {
