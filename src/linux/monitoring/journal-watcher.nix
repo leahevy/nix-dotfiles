@@ -1032,7 +1032,13 @@ args@{
                   | ${if ripgrepEnabled then "rg" else "grep"} "Send notification pattern:"
                 ```
 
-                Translate the JSON after `pattern:` to a Nix attrset. Drop non-matcher fields like `priority`.
+                Translate the JSON after `pattern:` to a Nix attrset. The matcher fields are
+                `service`, `tag`, `string`, `user`, `kernel`, `unitless`, `all` - include
+                every one of these that is present and non-null in the JSON. Drop everything
+                else (`priority`, and any routing/display fields). The pattern must be as
+                specific as the source data allows: never drop a matcher field to simplify.
+                Note: `tag` in the notification JSON is the `SYSLOG_IDENTIFIER` from the
+                original journal entry - it maps directly to the `tag` pattern field.
 
                 ## Precondition for Adding Ignores
 
