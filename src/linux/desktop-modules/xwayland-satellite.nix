@@ -28,6 +28,12 @@ args@{
           user = true;
           unitless = true;
         }
+        {
+          tag = "system";
+          string = "xwayland-satellite.*Window with same serial.*has been destroyed";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 

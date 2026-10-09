@@ -749,6 +749,11 @@ in
             unitless = true;
             user = true;
           }
+          {
+            string = "^object_ref: assertion '!object_already_finalized' failed$";
+            unitless = true;
+            user = true;
+          }
         ];
         nx.linux.monitoring.journal-watcher.highlightPatterns = allHighlightPatterns;
 
