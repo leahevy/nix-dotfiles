@@ -22,7 +22,7 @@ args@{
           unitless = true;
         }
         {
-          string = "xwayland-satellite.*unrecognized message: \"_NET_REQUEST_FRAME_EXTENTS\"";
+          string = "xwayland-satellite.*unrecognized message:";
           user = true;
           unitless = true;
         }
