@@ -144,12 +144,13 @@ args@{
         usesDataPath = self.settings.dataPath != null;
       in
       {
-        home.persistence."${self.persist}" = lib.mkIf (!usesDataPath) {
-          directories = [
-            ".local/share/Steam"
-            ".steam"
-          ];
-        };
+        home.persistence."${self.persist}".directories = [
+          ".local/share/steam-data"
+        ]
+        ++ lib.optionals (!usesDataPath) [
+          ".local/share/Steam"
+          ".steam"
+        ];
       };
 
     system =
