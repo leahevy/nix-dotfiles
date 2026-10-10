@@ -1039,6 +1039,10 @@ args@{
                 specific as the source data allows: never drop a matcher field to simplify.
                 Note: `tag` in the notification JSON is the `SYSLOG_IDENTIFIER` from the
                 original journal entry - it maps directly to the `tag` pattern field.
+                CRITICAL EXCEPTION: `tag = "system"` in the notification JSON is a display
+                fallback for messages with no `SYSLOG_IDENTIFIER`. The filter path reads
+                `SYSLOG_IDENTIFIER` raw with no default, so matching `tag = "system"` will
+                never fire for those messages. Drop `tag` whenever its value is `"system"`.
 
                 ## Precondition for Adding Ignores
 
