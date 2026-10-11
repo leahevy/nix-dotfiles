@@ -31,6 +31,11 @@ args@{
           user = true;
           unitless = true;
         }
+        {
+          string = "xwayland-satellite.*Couldn't find output .*, primary output will be wrong";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 
