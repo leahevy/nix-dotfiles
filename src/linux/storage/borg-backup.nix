@@ -632,6 +632,15 @@ args@{
           else
             self.settings.repository.server;
 
+        borgConnectionCheckScript = ''
+          ${pkgs.coreutils}/bin/echo "Verifying Borg repository connection..."
+          if ! ${pkgs.coreutils}/bin/timeout 60 ${pkgs.borgbackup}/bin/borg info >/dev/null 2>&1; then
+            ${pkgs.coreutils}/bin/echo "Borg repository connection failed or timed out after 60s"
+            exit 1
+          fi
+          ${pkgs.coreutils}/bin/echo "Borg repository connection verified"
+        '';
+
         networkWaitScript = lib.optionalString self.settings.waitForNetwork ''
           ${pkgs.coreutils}/bin/echo "Waiting for network connectivity..."
           retries=0
@@ -908,6 +917,7 @@ args@{
             ${checkAutoUpgradeRunningScript}
             check_auto_upgrade_running
             ${networkWaitScript}
+            ${borgConnectionCheckScript}
             ${pkgs.borgbackup}/bin/borg break-lock || true
             ${logScript "info" "STARTED: System backup starting"}
             ${createSnapshotScript {
