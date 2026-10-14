@@ -197,6 +197,11 @@ args@{
             mode = "0400";
             owner = "root";
             group = "root";
+            restartUnits = [
+              "homepage-dashboard-env.service"
+              "homepage-dashboard.service"
+              "homepage-dashboard-restricted.service"
+            ];
           };
         };
     };

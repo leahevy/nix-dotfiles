@@ -2707,6 +2707,11 @@ args@{
             entryName = sanitizeName key;
             endpointName = "${hostname}-${entryName}";
             unitName = "nx-healthchecks-timed-${entryName}";
+            execStart = makeTimerScript {
+              inherit endpointName;
+              checks = entry.checks;
+              networkTimeoutSec = entry.networkTimeoutSec;
+            };
           in
           acc
           // {
@@ -2714,16 +2719,13 @@ args@{
               description = "Standalone health check ${key}";
               wants = [ "network-online.target" ];
               after = [ "network-online.target" ];
+              restartTriggers = [ execStart ];
               serviceConfig = {
                 Type = "oneshot";
                 User = "root";
                 TimeoutStartSec = entry.timeoutSec;
                 SuccessExitStatus = 1;
-                ExecStart = makeTimerScript {
-                  inherit endpointName;
-                  checks = entry.checks;
-                  networkTimeoutSec = entry.networkTimeoutSec;
-                };
+                ExecStart = execStart;
               }
               // (mkLogFilterAttrs entry.logFilterPatterns);
             };
