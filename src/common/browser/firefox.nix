@@ -260,7 +260,8 @@ let
             disabledFor =
               let
                 normalized = map (d: lib.toLower (lib.removeSuffix "/" d)) (
-                  firefoxCfg.userContentExcludedDomains ++ firefoxCfg.userContentDarkReaderExcludedDomains
+                  (builtinUserContentExcludedDomains ++ firefoxCfg.userContentExcludedDomains)
+                  ++ (builtinUserContentDarkReaderExcludedDomains ++ firefoxCfg.userContentDarkReaderExcludedDomains)
                 );
                 isPlainDomain =
                   d:
@@ -507,6 +508,19 @@ let
       ) thirdPartyExtensions;
     }
     // extraPolicies;
+
+  builtinUserContentExcludedDomains = [
+    "docs.google.com"
+    "teams.microsoft.com"
+    "microsoftonline.com"
+    "localhost"
+    "zoom.us"
+    "bitwarden.com"
+    "bitwarden.eu"
+  ];
+
+  builtinUserContentDarkReaderExcludedDomains = [
+  ];
 
   firefoxSpecificCSS = "";
 
@@ -1184,7 +1198,7 @@ in
           );
         userContentCSS = mkUserContentCSS {
           browserUserContent = config.nx.common.browser.browser.final.userContentCSS;
-          inherit userContentExcludedDomains;
+          userContentExcludedDomains = builtinUserContentExcludedDomains ++ userContentExcludedDomains;
         };
       in
       {
@@ -1693,7 +1707,7 @@ in
                 cp "${
                   pkgs.writeText "browser-user-content.css" (mkUserContentCSS {
                     browserUserContent = userCSS;
-                    inherit userContentExcludedDomains;
+                    userContentExcludedDomains = builtinUserContentExcludedDomains ++ userContentExcludedDomains;
                   })
                 }" "$css_dir/userContent.css"
                fi
