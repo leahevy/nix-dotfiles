@@ -80,7 +80,22 @@ export PRIMARY_UPDATE_INPUTS=(
 	"nixpkgs"
 )
 
-export PACKAGES_TO_HIGHLIGHT_EXTRA=()
+export PACKAGES_TO_HIGHLIGHT_EXTRA=(
+	"perl"
+	"gcc"
+	"gcc14"
+	"gcc15"
+	"gcc16"
+	"binutils"
+	"llvm"
+	"clang"
+	"clang18"
+	"clang19"
+	"clang20"
+	"clang21"
+	"clang22"
+	"clang23"
+)
 
 export NIXPKGS_INPUTS=(
 	"nixpkgs"

@@ -387,6 +387,7 @@ jobs:
 
           REBOOT_NORMAL_PACKAGES=(
             "^linux[-_][0-9]"
+            "^linux_[a-z]"
             "^linux/"
             "^linuxKernel\.kernels\.linux:[[:space:]]"
             "^linuxKernel\.kernels\.linux[-_][0-9]"
@@ -397,6 +398,13 @@ jobs:
             "^glibc"
             "^microcode"
             "^linux-firmware"
+            "^gcc[[:space:]:]"
+            "^gcc[0-9]"
+            "^binutils[[:space:]:]"
+            "^binutils-"
+            "^llvm[[:space:]:]"
+            "^perl[[:space:]:]"
+            "^perl[0-9]"
           )
 
           REBOOT_NIX_PACKAGES=(
@@ -456,7 +464,7 @@ jobs:
           DESKTOP_REBOOT_PATTERNS="${DESKTOP_REBOOT_PATTERNS%|}"
 
           BACKPORT_FILTER='^(backport:|Backport:)|\[(backport|Backport)[ -][0-9]{2}\.[0-9]{2}\]|\[[Bb]ackport( to)? ([Rr]elease|[Ss]taging)-|\[(release|staging)-.* backport\]|^- [Bb]ackport '
-          STAGING_FILTER='^- Merge (remote-tracking branch |branch )?'"'"'?(staging-nixos|staging-next|staging|release)-[0-9]{2}\.[0-9]{2}'"'"'? into '"'"'?(staging-nixos|staging-next|staging|release)-[0-9]{2}\.[0-9]{2}|\[(staging|release|Staging|Release)[- ][0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]|^- (staging-next|release)-[0-9]{2}\.[0-9]{2}|^- staging-[a-zA-Z]+-[0-9]{2}\.[0-9]{2} merge for [0-9]{4}-[0-9]{2}-[0-9]{2}'
+          STAGING_FILTER='^- Merge (remote-tracking branch |branch )?'"'"'?(staging-nixos|staging-next|staging|release)-[0-9]{2}\.[0-9]{2}'"'"'? into '"'"'?(staging-nixos|staging-next|staging|release)-[0-9]{2}\.[0-9]{2}|\[(staging-next|staging|release|Staging|Release)[- ][0-9]{2}\.[0-9]{2}\]|\[[0-9]{2}\.[0-9]{2}\]|^- (staging-next|release)-[0-9]{2}\.[0-9]{2}|^- staging-[a-zA-Z]+-[0-9]{2}\.[0-9]{2} merge for [0-9]{4}-[0-9]{2}-[0-9]{2}'
           REVERT_FILTER='^- [Rr]evert "'
           COMMIT_FILTER_PATTERN="$BACKPORT_FILTER|$STAGING_FILTER|$REVERT_FILTER"
 
@@ -581,14 +589,14 @@ jobs:
                         fi
 
                         if [ "$should_check_reboot_normal" = "true" ]; then
-                          if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_NORMAL_PATTERNS" > /dev/null 2>&1; then
+                          if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | gsub("^\\[[^\\]]+\\] "; "") | split(":")[0]' | grep -iE "$REBOOT_NORMAL_PATTERNS" > /dev/null 2>&1; then
                             requires_reboot="true"
-                            found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$REBOOT_NORMAL_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                            found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | gsub("^\\[[^\\]]+\\] "; "") | split(":")[0]' | grep -iEo "$REBOOT_NORMAL_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
                             if [ -n "$found_packages" ]; then
                               reboot_packages="$reboot_packages$found_packages, "
                             fi
 
-                            input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_NORMAL_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                            input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_NORMAL_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | gsub("^\\[[^\\]]+\\] "; "") | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
                             if [ -n "$input_reboot_commits" ]; then
                               reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
                             fi
@@ -596,14 +604,14 @@ jobs:
                         fi
 
                         if [ "$should_check_reboot_nix" = "true" ]; then
-                          if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$REBOOT_NIX_PATTERNS" > /dev/null 2>&1; then
+                          if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | gsub("^\\[[^\\]]+\\] "; "") | split(":")[0]' | grep -iE "$REBOOT_NIX_PATTERNS" > /dev/null 2>&1; then
                             requires_reboot="true"
-                            found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$REBOOT_NIX_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                            found_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | gsub("^\\[[^\\]]+\\] "; "") | split(":")[0]' | grep -iEo "$REBOOT_NIX_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
                             if [ -n "$found_packages" ]; then
                               reboot_packages="$reboot_packages$found_packages, "
                             fi
 
-                            input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_NIX_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                            input_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$REBOOT_NIX_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | gsub("^\\[[^\\]]+\\] "; "") | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
                             if [ -n "$input_reboot_commits" ]; then
                               reboot_commits="$reboot_commits"$'\n\n'"#### $input (System)"$'\n'"$input_reboot_commits"
                             fi
@@ -611,14 +619,14 @@ jobs:
                         fi
 
                         if [ "$should_check_reboot_normal" = "true" ]; then
-                          if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iE "$DESKTOP_REBOOT_PATTERNS" > /dev/null 2>&1; then
+                          if echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | gsub("^\\[[^\\]]+\\] "; "") | split(":")[0]' | grep -iE "$DESKTOP_REBOOT_PATTERNS" > /dev/null 2>&1; then
                             requires_desktop_reboot="true"
-                            found_desktop_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | split(":")[0]' | grep -iEo "$DESKTOP_REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
+                            found_desktop_packages=$(echo "$commits_json" | jq -r '.commits[]?.commit.message | split("\n")[0] | gsub("^\\[[^\\]]+\\] "; "") | split(":")[0]' | grep -iEo "$DESKTOP_REBOOT_PATTERNS" | sort -u | tr '\n' ', ' | sed 's/,$//')
                             if [ -n "$found_desktop_packages" ]; then
                               desktop_reboot_packages="$desktop_reboot_packages$found_desktop_packages, "
                             fi
 
-                            input_desktop_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$DESKTOP_REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
+                            input_desktop_reboot_commits=$(echo "$commits_json" | jq -r --arg patterns "$DESKTOP_REBOOT_PATTERNS" '.commits[]? | select(.commit.message | split("\n")[0] | gsub("^\\[[^\\]]+\\] "; "") | split(":")[0] | test($patterns; "i")) | "- \(.commit.message | split("\n")[0]) ([\(.sha[0:7])](\(.html_url)))"' 2>/dev/null)
                             if [ -n "$input_desktop_reboot_commits" ]; then
                               reboot_commits="$reboot_commits"$'\n\n'"#### $input (Desktop)"$'\n'"$input_desktop_reboot_commits"
                             fi
