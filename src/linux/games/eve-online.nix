@@ -65,6 +65,7 @@ args@{
               "PI Planner" = "https://evepitool.com/";
               "Nexum" = "https://eve-nexum.com";
               "Anoikis" = "https://anoik.is/systems";
+              "LP Store" = "https://www.fuzzwork.co.uk/lpstore";
             };
           };
         };
