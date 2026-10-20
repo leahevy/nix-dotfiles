@@ -303,6 +303,12 @@ in
                     null
                 else if lib.hasPrefix "NOTICE:" message then
                   "Auto-Upgrade (notice)"
+                else if lib.hasPrefix "RELEASE-BEHIND:" message then
+                  "Auto-Upgrade (release check)"
+                else if lib.hasPrefix "RELEASE-RESUMED:" message then
+                  "Auto-Upgrade (release check)"
+                else if lib.hasPrefix "RELEASE-CONFIRMED:" message then
+                  "Auto-Upgrade (release check)"
                 else
                   "Auto-Upgrade"
               else
@@ -337,6 +343,12 @@ in
                     null
                 else if lib.hasPrefix "NOTICE:" message then
                   lib.removePrefix "NOTICE: " message
+                else if lib.hasPrefix "RELEASE-BEHIND:" message then
+                  lib.removePrefix "RELEASE-BEHIND: " message
+                else if lib.hasPrefix "RELEASE-RESUMED:" message then
+                  lib.removePrefix "RELEASE-RESUMED: " message
+                else if lib.hasPrefix "RELEASE-CONFIRMED:" message then
+                  lib.removePrefix "RELEASE-CONFIRMED: " message
                 else
                   message
               else
@@ -371,6 +383,12 @@ in
                     null
                 else if lib.hasPrefix "NOTICE:" message then
                   "system-reboot"
+                else if lib.hasPrefix "RELEASE-BEHIND:" message then
+                  "dialog-warning"
+                else if lib.hasPrefix "RELEASE-RESUMED:" message then
+                  "checkmark"
+                else if lib.hasPrefix "RELEASE-CONFIRMED:" message then
+                  "checkmark"
                 else
                   "system-reboot"
               else
@@ -401,6 +419,12 @@ in
                 "failed"
               else if lib.hasPrefix "WARNING:" message then
                 "warn"
+              else if lib.hasPrefix "RELEASE-BEHIND:" message then
+                "warn"
+              else if lib.hasPrefix "RELEASE-RESUMED:" message then
+                "success"
+              else if lib.hasPrefix "RELEASE-CONFIRMED:" message then
+                "info"
               else
                 null;
 
@@ -435,6 +459,12 @@ in
                 lib.removePrefix "FAILURE: " message
               else if lib.hasPrefix "WARNING:" message then
                 lib.removePrefix "WARNING: " message
+              else if lib.hasPrefix "RELEASE-BEHIND:" message then
+                lib.removePrefix "RELEASE-BEHIND: " message
+              else if lib.hasPrefix "RELEASE-RESUMED:" message then
+                lib.removePrefix "RELEASE-RESUMED: " message
+              else if lib.hasPrefix "RELEASE-CONFIRMED:" message then
+                lib.removePrefix "RELEASE-CONFIRMED: " message
               else
                 message;
           in
@@ -461,6 +491,82 @@ in
               }
             )}
             echo "${message}" ${if level == "err" then ">&2" else ""}
+          '';
+
+        releaseCheckScript =
+          let
+            currentRelease = self.variables."current-release";
+          in
+          ''
+            check_release_status() {
+              local current_month
+              local current_year
+              local expected_year
+              local expected_month
+              local expected_release
+              local current_num
+              local expected_num
+
+              current_month=$(${pkgs.coreutils}/bin/date +%m)
+              current_year=$(${pkgs.coreutils}/bin/date +%y)
+
+              if [[ "$current_month" -ge 1 && "$current_month" -le 5 ]]; then
+                expected_year=$(printf '%02d' $((current_year - 1)))
+                expected_month="11"
+              elif [[ "$current_month" -ge 6 && "$current_month" -le 11 ]]; then
+                expected_year=$current_year
+                expected_month="05"
+              else
+                expected_year=$current_year
+                expected_month="11"
+              fi
+              expected_release="$expected_year.$expected_month"
+
+              current_num=$(printf '%s' "${currentRelease}" | ${pkgs.coreutils}/bin/tr -d '.')
+              expected_num=$(printf '%s' "$expected_release" | ${pkgs.coreutils}/bin/tr -d '.')
+
+              local marker="/var/lib/nx-auto-upgrade/release-behind-notified-$expected_release"
+              local had_behind_marker=false
+
+              if [[ "$current_num" -lt "$expected_num" ]]; then
+                if [[ ! -f "$marker" ]]; then
+                  ${pkgs.coreutils}/bin/mkdir -p /var/lib/nx-auto-upgrade
+                  ${pkgs.coreutils}/bin/touch "$marker"
+                  ${pkgs.coreutils}/bin/chown root:root "$marker"
+                  ${pkgs.coreutils}/bin/chmod 600 "$marker"
+                  ${logScript "warn" "RELEASE-BEHIND: Auto-upgrades disabled: system follows ${currentRelease}, upgrade required to resume auto-upgrades!"}
+                else
+                  ${pkgs.coreutils}/bin/echo "Auto-upgrades paused: system follows ${currentRelease}, upgrade to $expected_release required (already notified)"
+                fi
+                exit 0
+              fi
+
+              for f in /var/lib/nx-auto-upgrade/release-behind-notified-*; do
+                if [[ -f "$f" ]]; then
+                  had_behind_marker=true
+                  ${pkgs.coreutils}/bin/rm -f /var/lib/nx-auto-upgrade/release-behind-notified-*
+                  ${pkgs.coreutils}/bin/rm -f /var/lib/nx-auto-upgrade/release-confirmed-*
+                  ${pkgs.coreutils}/bin/touch "/var/lib/nx-auto-upgrade/release-confirmed-${currentRelease}"
+                  ${pkgs.coreutils}/bin/chown root:root "/var/lib/nx-auto-upgrade/release-confirmed-${currentRelease}"
+                  ${pkgs.coreutils}/bin/chmod 600 "/var/lib/nx-auto-upgrade/release-confirmed-${currentRelease}"
+                  ${logScript "info" "RELEASE-RESUMED: Auto-upgrades resumed: system now follows ${currentRelease}, upgrade requirement met!"}
+                  break
+                fi
+              done
+
+              if [[ "$had_behind_marker" == "false" ]]; then
+                local confirmed_marker="/var/lib/nx-auto-upgrade/release-confirmed-${currentRelease}"
+                if [[ ! -f "$confirmed_marker" ]]; then
+                  ${pkgs.coreutils}/bin/mkdir -p /var/lib/nx-auto-upgrade
+                  ${pkgs.coreutils}/bin/rm -f /var/lib/nx-auto-upgrade/release-confirmed-*
+                  ${pkgs.coreutils}/bin/touch "$confirmed_marker"
+                  ${pkgs.coreutils}/bin/chown root:root "$confirmed_marker"
+                  ${pkgs.coreutils}/bin/chmod 600 "$confirmed_marker"
+                  ${logScript "info" "RELEASE-CONFIRMED: Auto-upgrades active: system follows ${currentRelease}!"}
+                fi
+              fi
+            }
+            check_release_status
           '';
 
         createPersistentRebootMarkerScript =
@@ -1326,6 +1432,8 @@ in
             "exec ${pkgs.systemd}/bin/systemd-inhibit --who=\"nx-auto-upgrade\" --what=\"idle:sleep:shutdown\" --why=\"System upgrade in progress\" "
             + pkgs.writeShellScript "nx-auto-upgrade-main" ''
               set -euo pipefail
+
+              ${releaseCheckScript}
 
               lock_dir="/tmp/.nx-deployment-lock"
               cleanup_paths=("$lock_dir")
