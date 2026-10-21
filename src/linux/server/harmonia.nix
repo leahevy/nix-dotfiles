@@ -129,7 +129,7 @@ args@{
               target = "_self";
               siteMonitor = "https://${subdomain}.${domain}/nix-cache-info";
               description = "Harmonia binary cache";
-              icon = "cachet";
+              icon = "nixos";
               group = "admin";
             }
           ];
