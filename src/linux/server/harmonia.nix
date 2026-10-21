@@ -234,11 +234,27 @@ args@{
                   fi
                 done
 
-                if [[ $_prefetch_ok -gt 0 ]]; then
+                _path_min=999999999
+                _path_max=0
+                _path_sum=0
+                for _gc_root in "${prefetchStateDir}"/prefetch-*; do
+                  [[ -L "$_gc_root" ]] || continue
+                  [[ "$_gc_root" == *.drv ]] && continue
+                  _n=$(${config.nix.package.out}/bin/nix path-info --recursive \
+                    "$(${pkgs.coreutils}/bin/readlink -f "$_gc_root")" 2>/dev/null \
+                    | ${pkgs.coreutils}/bin/wc -l)
+                  _path_sum=$((_path_sum + _n))
+                  [[ $_n -lt $_path_min ]] && _path_min=$_n
+                  [[ $_n -gt $_path_max ]] && _path_max=$_n
+                done
+
+                if [[ $_path_sum -eq 0 ]]; then _path_min=0; fi
+                ${pkgs.coreutils}/bin/printf 'Min: %d Max: %d Sum: %d paths\n' \
+                  "$_path_min" "$_path_max" "$_path_sum" \
+                  | ${pkgs.coreutils}/bin/tee "${prefetchStateDir}/last-success-stats" > /dev/null
+                if [[ $_prefetch_total -gt 0 ]]; then
                   ${pkgs.coreutils}/bin/date +%s | ${pkgs.coreutils}/bin/tee "${prefetchStateDir}/last-success" > /dev/null
                 fi
-                ${pkgs.coreutils}/bin/printf '%d/%d\n' "$_prefetch_ok" "$_prefetch_total" \
-                  | ${pkgs.coreutils}/bin/tee "${prefetchStateDir}/last-success-stats" > /dev/null
                 ${pkgs.coreutils}/bin/echo "Prefetch complete: $_prefetch_ok/$_prefetch_total profiles succeeded."
               ''
             );
@@ -254,6 +270,7 @@ args@{
             bash
             coreutils
             curl
+            gawk
             git
             gnugrep
             gnused
@@ -326,7 +343,7 @@ args@{
             _minutes=$(((_age % 3600) / 60))
             _stats=""
             if [[ -f "$_stats_file" ]]; then
-              _stats=" ($(${pkgs.coreutils}/bin/cat "$_stats_file") profiles)"
+              _stats=" ($(${pkgs.coreutils}/bin/cat "$_stats_file"))"
             fi
             printf '%d days %d hours %d minutes%s\n' "$_days" "$_hours" "$_minutes" "$_stats" >&3
           '';

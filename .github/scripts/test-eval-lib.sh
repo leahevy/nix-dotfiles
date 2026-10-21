@@ -246,15 +246,24 @@ te_build() {
 		;;
 	esac
 
+	nix flake lock \
+		--update-input core \
+		--override-input core "git+file://$TE_CORE_DIR" \
+		"$TE_WORKDIR/config" 2>/dev/null || true
+
 	te_git_commit_config
 
 	local gc_root="$TE_BUILD_STATE_DIR/prefetch-$(echo "$target" | tr . -)"
+	local drv_root="${gc_root}.drv"
+
+	nix-instantiate --add-root "$drv_root" --indirect \
+		--expr "(builtins.getFlake \"git+file://$TE_WORKDIR/config\").$attr" \
+		2>/dev/null || true
+
 	echo "Building $attr..."
 	nix build \
 		--max-jobs 0 \
 		--keep-going \
-		--no-write-lock-file \
-		--override-input core "git+file://$TE_CORE_DIR" \
 		--out-link "$gc_root" \
 		"git+file://$TE_WORKDIR/config#$attr" 2>&1 &&
 		echo "OK: $target" ||
