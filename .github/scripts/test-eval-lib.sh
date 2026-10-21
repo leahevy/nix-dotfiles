@@ -228,3 +228,35 @@ te_eval() {
 	printf '%s\tOK\t%s\n' "$TE_CASE_NAME" "$drv" >>"$TE_RESULTS_TSV"
 	te_collect_packages "$kind" "$target"
 }
+
+te_build() {
+	local kind="$1"
+	local target="$2"
+
+	: "${TE_BUILD_STATE_DIR:?TE_BUILD_STATE_DIR must be set by the prefetch service}"
+
+	local attr
+	case "$kind" in
+	nixos) attr="nixosConfigurations.$target.config.system.build.toplevel" ;;
+	nixos-vm) attr="nixosConfigurations.$target.config.system.build.vm" ;;
+	home) attr="homeConfigurations.$target.activationPackage" ;;
+	*)
+		echo "te_build: unknown kind '$kind' (use nixos, nixos-vm or home)" >&2
+		return 1
+		;;
+	esac
+
+	te_git_commit_config
+
+	local gc_root="$TE_BUILD_STATE_DIR/prefetch-$(echo "$target" | tr . -)"
+	echo "Building $attr..."
+	nix build \
+		--max-jobs 0 \
+		--keep-going \
+		--no-write-lock-file \
+		--override-input core "git+file://$TE_CORE_DIR" \
+		--out-link "$gc_root" \
+		"git+file://$TE_WORKDIR/config#$attr" 2>&1 &&
+		echo "OK: $target" ||
+		echo "WARN: build failed for $target - non-fatal."
+}

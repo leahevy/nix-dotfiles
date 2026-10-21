@@ -161,6 +161,7 @@
           };
         };
         server = {
+          harmonia = true;
           auth = {
             enableOAuthProxy = true;
           };
