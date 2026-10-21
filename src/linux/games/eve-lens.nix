@@ -50,7 +50,9 @@ in
       nx.common.browser.browser.bookmarks = {
         "Games" = {
           "EVE Online" = {
-            "EveLens" = "https://github.com/aliacollins/EveLens";
+            "Community" = {
+              "EveLens" = "https://github.com/aliacollins/EveLens";
+            };
           };
         };
       };

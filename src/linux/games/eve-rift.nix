@@ -46,7 +46,9 @@ in
       nx.common.browser.browser.bookmarks = {
         "Games" = {
           "EVE Online" = {
-            "Rift" = "https://riftforeve.online/";
+            "Community" = {
+              "Rift" = "https://riftforeve.online/";
+            };
           };
         };
       };
