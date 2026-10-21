@@ -54,18 +54,23 @@ args@{
         nx.common.browser.browser.bookmarks = {
           "Games" = {
             "EVE Online" = {
-              "Zkillboard" = zkillboardUrl;
-              "Account Management" = "https://secure.eveonline.com/account";
-              "Official Store" = "https://store.eveonline.com/";
-              "Authorized Apps" = "https://developers.eveonline.com/authorized-apps";
-              "Gatecheck" = "https://eve-gatecheck.space/eve/";
-              "EVE Scout" = "https://www.eve-scout.com/#/";
-              "EVE-University Wiki" = "https://wiki.eveuniversity.org/Main_Page";
-              "Dotlan" = "https://evemaps.dotlan.net/route";
-              "PI Planner" = "https://evepitool.com/";
-              "Nexum" = "https://eve-nexum.com";
-              "Anoikis" = "https://anoik.is/systems";
-              "LP Store" = "https://www.fuzzwork.co.uk/lpstore";
+              "Official" = {
+                "Account" = "https://secure.eveonline.com/account";
+                "Store" = "https://store.eveonline.com/";
+                "Status" = "https://status.eveonline.com/";
+                "Apps" = "https://developers.eveonline.com/authorized-apps";
+              };
+              "Community" = {
+                "Zkillboard" = zkillboardUrl;
+                "Gatecheck" = "https://eve-gatecheck.space/eve/";
+                "EVE Scout" = "https://www.eve-scout.com/#/";
+                "EVE-University Wiki" = "https://wiki.eveuniversity.org/Main_Page";
+                "Dotlan" = "https://evemaps.dotlan.net/route";
+                "PI Planner" = "https://evepitool.com/";
+                "Nexum" = "https://eve-nexum.com";
+                "Anoikis" = "https://anoik.is/systems";
+                "LP Store" = "https://www.fuzzwork.co.uk/lpstore";
+              };
             };
           };
         };
