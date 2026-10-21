@@ -234,23 +234,16 @@ args@{
                   fi
                 done
 
-                _path_min=999999999
-                _path_max=0
-                _path_sum=0
-                for _gc_root in "${prefetchStateDir}"/prefetch-*; do
+                _drv_count=0
+                _now=$(${pkgs.coreutils}/bin/date +%s)
+                for _gc_root in "${prefetchStateDir}"/prefetch-*.drv; do
                   [[ -L "$_gc_root" ]] || continue
-                  [[ "$_gc_root" == *.drv ]] && continue
-                  _n=$(${config.nix.package.out}/bin/nix path-info --recursive \
-                    "$(${pkgs.coreutils}/bin/readlink -f "$_gc_root")" 2>/dev/null \
-                    | ${pkgs.coreutils}/bin/wc -l)
-                  _path_sum=$((_path_sum + _n))
-                  [[ $_n -lt $_path_min ]] && _path_min=$_n
-                  [[ $_n -gt $_path_max ]] && _path_max=$_n
+                  _mtime=$(${pkgs.coreutils}/bin/stat --format='%Y' "$_gc_root" 2>/dev/null) || continue
+                  if [[ $((_now - _mtime)) -le 43200 ]]; then
+                    _drv_count=$((_drv_count + 1))
+                  fi
                 done
-
-                if [[ $_path_sum -eq 0 ]]; then _path_min=0; fi
-                ${pkgs.coreutils}/bin/printf 'Min: %d Max: %d Sum: %d paths\n' \
-                  "$_path_min" "$_path_max" "$_path_sum" \
+                ${pkgs.coreutils}/bin/printf '%d/%d profiles rooted\n' "$_drv_count" "$_prefetch_total" \
                   | ${pkgs.coreutils}/bin/tee "${prefetchStateDir}/last-success-stats" > /dev/null
                 if [[ $_prefetch_total -gt 0 ]]; then
                   ${pkgs.coreutils}/bin/date +%s | ${pkgs.coreutils}/bin/tee "${prefetchStateDir}/last-success" > /dev/null
