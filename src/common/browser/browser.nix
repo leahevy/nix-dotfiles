@@ -46,7 +46,13 @@ let
                   serviceName:
                   let
                     val = knownServices.${serviceName};
-                    subdomain = if val == true then serviceName else val;
+                    subdomain =
+                      if builtins.isAttrs val then
+                        val.subdomain or serviceName
+                      else if val == true then
+                        serviceName
+                      else
+                        val;
                     suffix = serviceSuffixes.${serviceName} or "";
                   in
                   lib.optional (val != false) (

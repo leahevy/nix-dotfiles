@@ -34,6 +34,10 @@
         jellyfin = true;
         searxng = true;
         proxy = true;
+        harmonia = {
+          subdomain = "cache";
+          signingKeyPublicKey = "testing-server-harmonia:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+        };
       };
     };
 

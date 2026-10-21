@@ -728,6 +728,25 @@ with lib;
                     type = types.either types.str types.bool;
                     default = false;
                   };
+                  harmonia = mkOption {
+                    type = types.nullOr (
+                      types.submodule {
+                        options = {
+                          subdomain = mkOption {
+                            type = types.str;
+                            default = "cache";
+                            description = "Subdomain under baseDomain serving the harmonia cache.";
+                          };
+                          signingKeyPublicKey = mkOption {
+                            type = types.str;
+                            description = "Nix store signing public key string for this cache (name:base64).";
+                          };
+                        };
+                      }
+                    );
+                    default = null;
+                    description = "Harmonia binary cache configuration exposed to other hosts.";
+                  };
                   additionalServices = mkOption {
                     type = types.attrsOf (
                       types.submodule {

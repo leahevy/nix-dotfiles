@@ -73,6 +73,8 @@ DESIRED_NIX_CONF_KEYS=(
 	"auto-optimise-store:true"
 )
 
+UNMANAGED_NIX_CONF_KEYS=(substituters trusted-public-keys)
+
 get_nix_conf_value() {
 	local key="$1"
 	grep -E "^\s*${key}\s*=" "$NX_CONF" 2>/dev/null | tail -1 | sed 's/^[^=]*=//' | sed 's/^ *//' | sed 's/ *$//' || true
@@ -136,6 +138,14 @@ configure_nix_conf() {
 	for entry in "${DESIRED_NIX_CONF_KEYS[@]}"; do
 		key="${entry%%:*}"
 		desired="${entry#*:}"
+
+		for unmanaged in "${UNMANAGED_NIX_CONF_KEYS[@]}"; do
+			if [[ "$key" == "$unmanaged" ]]; then
+				echo -e "${RED}BUG: '${key}' must not appear in DESIRED_NIX_CONF_KEYS${RESET}" >&2
+				exit 1
+			fi
+		done
+
 		current="$(get_nix_conf_value "$key")"
 
 		if [[ "$current" != "$desired" ]]; then
@@ -192,11 +202,24 @@ configure_nix_conf() {
 	fi
 }
 
+show_cache_hints() {
+	if [[ ! -f "$NX_CONF" ]]; then
+		return 0
+	fi
+	echo -e "${CYAN}${NX_CONF}: substituters and trusted-public-keys are not managed automatically.${RESET}"
+	echo -e "${CYAN}To add a harmonia binary cache, ensure lines like these are present:${RESET}"
+	echo -e ""
+	echo -e "  ${WHITE}substituters = https://cache.nixos.org https://cache.YOUR-DOMAIN${RESET}"
+	echo -e "  ${WHITE}trusted-public-keys = <existing-keys> YOUR-CACHE-NAME:BASE64==${RESET}"
+	echo -e ""
+	echo -e "${CYAN}Restart the Nix daemon to apply any changes.${RESET}"
+}
+
 DARWIN_OS_TASKS=(configure_zshrc_darwin)
 LINUX_OS_TASKS=()
 
 NIXOS_TYPE_TASKS=()
-ALL_STANDALONE_TYPE_TASKS=(configure_nix_conf)
+ALL_STANDALONE_TYPE_TASKS=(configure_nix_conf show_cache_hints)
 
 TYPE="standalone"
 if [[ "$OS" == "Linux" ]] && [[ -e "/etc/NIXOS" ]]; then
