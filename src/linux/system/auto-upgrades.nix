@@ -253,6 +253,7 @@ in
         effectiveBranchNxcore = self.host.branch;
         effectiveBranchNxconfig = self.host.branch;
         hasLuks = (config.boot.initrd.luks.devices or { }) != { };
+        hasDesktopCheck = helpers.hasDesktop self;
 
         profileName = "${self.host.hostname}--${self.host.architecture}";
 
@@ -905,6 +906,7 @@ in
             ''}
               ${logScript "info" "INFO: No remote changes detected, skipping upgrade"}
             ${lib.optionalString isDevelopMode "fi"}
+            ${syncCoreStateHashOnSkipScript}
             exit 0
           fi
         '';
@@ -977,7 +979,6 @@ in
 
         checkForceRebootScript =
           let
-            hasDesktopCheck = helpers.hasDesktop self;
             rebootRequiredMsg =
               kind:
               if self.settings.allowReboot then
@@ -987,12 +988,16 @@ in
           in
           ''
             FORCE_REBOOT=false
-            CURRENT_HASH=""
+            CURRENT_SYSTEM_HASH=""
+            CURRENT_DESKTOP_HASH=""
             LAST_CORE_STATE_HASH=$(${pkgs.coreutils}/bin/cat /var/lib/nx-auto-upgrade/last-core-state-hash 2>/dev/null || ${pkgs.coreutils}/bin/echo "")
+            ${lib.optionalString hasDesktopCheck ''
+              LAST_DESKTOP_CORE_STATE_HASH=$(${pkgs.coreutils}/bin/cat /var/lib/nx-auto-upgrade/last-desktop-core-state-hash 2>/dev/null || ${pkgs.coreutils}/bin/echo "")
+            ''}
 
             if [[ -f "${nxconfigDir}/.core-state/reboot-required" ]]; then
-              CURRENT_HASH=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
-              if [[ -n "$CURRENT_HASH" && -n "$LAST_CORE_STATE_HASH" && "$CURRENT_HASH" != "$LAST_CORE_STATE_HASH" ]]; then
+              CURRENT_SYSTEM_HASH=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
+              if [[ -n "$CURRENT_SYSTEM_HASH" && -n "$LAST_CORE_STATE_HASH" && "$CURRENT_SYSTEM_HASH" != "$LAST_CORE_STATE_HASH" ]]; then
                 ${logScript "info" (rebootRequiredMsg "system")}
                 FORCE_REBOOT=true
               fi
@@ -1000,8 +1005,8 @@ in
 
             ${lib.optionalString hasDesktopCheck ''
               if [[ "$FORCE_REBOOT" == "false" && -f "${nxconfigDir}/.core-state/desktop-reboot-required" ]]; then
-                CURRENT_HASH=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/desktop-reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
-                if [[ -n "$CURRENT_HASH" && -n "$LAST_CORE_STATE_HASH" && "$CURRENT_HASH" != "$LAST_CORE_STATE_HASH" ]]; then
+                CURRENT_DESKTOP_HASH=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/desktop-reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
+                if [[ -n "$CURRENT_DESKTOP_HASH" && -n "$LAST_DESKTOP_CORE_STATE_HASH" && "$CURRENT_DESKTOP_HASH" != "$LAST_DESKTOP_CORE_STATE_HASH" ]]; then
                   ${logScript "info" (rebootRequiredMsg "desktop")}
                   FORCE_REBOOT=true
                 fi
@@ -1009,13 +1014,46 @@ in
             ''}
           '';
 
-        saveMarkerStateScript = lib.optionalString (!effectiveDryRun) ''
-          if [[ -n "$CURRENT_HASH" ]]; then
+        syncCoreStateHashOnSkipScript = lib.optionalString (!effectiveDryRun) ''
+          _skip_system_hash=""
+          if [[ -f "${nxconfigDir}/.core-state/reboot-required" ]]; then
+            _skip_system_hash=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
+          fi
+          if [[ -n "$_skip_system_hash" ]]; then
             ${pkgs.coreutils}/bin/mkdir -p /var/lib/nx-auto-upgrade
-            ${pkgs.coreutils}/bin/echo "$CURRENT_HASH" > /var/lib/nx-auto-upgrade/last-core-state-hash
+            ${pkgs.coreutils}/bin/echo "$_skip_system_hash" > /var/lib/nx-auto-upgrade/last-core-state-hash
             ${pkgs.coreutils}/bin/chown root:root /var/lib/nx-auto-upgrade/last-core-state-hash
             ${pkgs.coreutils}/bin/chmod 600 /var/lib/nx-auto-upgrade/last-core-state-hash
           fi
+          ${lib.optionalString hasDesktopCheck ''
+            _skip_desktop_hash=""
+            if [[ -f "${nxconfigDir}/.core-state/desktop-reboot-required" ]]; then
+              _skip_desktop_hash=$(${pkgs.coreutils}/bin/cat "${nxconfigDir}/.core-state/desktop-reboot-required" | ${pkgs.coreutils}/bin/tr -d '[:space:]')
+            fi
+            if [[ -n "$_skip_desktop_hash" ]]; then
+              ${pkgs.coreutils}/bin/mkdir -p /var/lib/nx-auto-upgrade
+              ${pkgs.coreutils}/bin/echo "$_skip_desktop_hash" > /var/lib/nx-auto-upgrade/last-desktop-core-state-hash
+              ${pkgs.coreutils}/bin/chown root:root /var/lib/nx-auto-upgrade/last-desktop-core-state-hash
+              ${pkgs.coreutils}/bin/chmod 600 /var/lib/nx-auto-upgrade/last-desktop-core-state-hash
+            fi
+          ''}
+        '';
+
+        saveMarkerStateScript = lib.optionalString (!effectiveDryRun) ''
+          if [[ -n "$CURRENT_SYSTEM_HASH" ]]; then
+            ${pkgs.coreutils}/bin/mkdir -p /var/lib/nx-auto-upgrade
+            ${pkgs.coreutils}/bin/echo "$CURRENT_SYSTEM_HASH" > /var/lib/nx-auto-upgrade/last-core-state-hash
+            ${pkgs.coreutils}/bin/chown root:root /var/lib/nx-auto-upgrade/last-core-state-hash
+            ${pkgs.coreutils}/bin/chmod 600 /var/lib/nx-auto-upgrade/last-core-state-hash
+          fi
+          ${lib.optionalString hasDesktopCheck ''
+            if [[ -n "$CURRENT_DESKTOP_HASH" ]]; then
+              ${pkgs.coreutils}/bin/mkdir -p /var/lib/nx-auto-upgrade
+              ${pkgs.coreutils}/bin/echo "$CURRENT_DESKTOP_HASH" > /var/lib/nx-auto-upgrade/last-desktop-core-state-hash
+              ${pkgs.coreutils}/bin/chown root:root /var/lib/nx-auto-upgrade/last-desktop-core-state-hash
+              ${pkgs.coreutils}/bin/chmod 600 /var/lib/nx-auto-upgrade/last-desktop-core-state-hash
+            fi
+          ''}
         '';
 
         setupGitSafeDirectoriesScript = ''
