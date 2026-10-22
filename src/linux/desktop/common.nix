@@ -366,6 +366,12 @@ args@{
           string = ".*: Unable to connect to [0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+:[0-9]+: Host is down";
           all = true;
         }
+        {
+          tag = "xdg-desktop-portal-gnome";
+          string = "Failed to close GNOME screen cast session: GDBus\\.Error:org\\.freedesktop\\.DBus\\.Error\\.UnknownObject: Unknown object '/org/gnome/Mutter/ScreenCast/Session/u[0-9]+'";
+          user = true;
+          unitless = true;
+        }
       ]
       ++
         lib.optional
