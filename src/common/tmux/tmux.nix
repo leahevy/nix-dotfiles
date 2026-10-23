@@ -28,11 +28,7 @@ args@{
     headlessPrefix = "C-a";
     tmuxinatorConfigs = { };
     additionalMainConfigWindows = [ ];
-    tmuxinatorPackage =
-      if lib.versionOlder pkgs.tmuxinator.version "3.4.1" then
-        pkgs.unstable.tmuxinator
-      else
-        helpers.requireMinimumPackageVersion args "tmuxinator" "3.3.7";
+    tmuxinatorPackage = helpers.requireMinimumPackageVersion args "tmuxinator" "3.4.1";
   };
 
   module =
