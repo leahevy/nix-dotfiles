@@ -79,6 +79,18 @@ args@{
           user = true;
           unitless = true;
         }
+        {
+          tag = "waybar";
+          string = "Group Properties error: GDBus\.Error:org\.freedesktop\.DBus\.Error\.NoReply: Remote peer disconnected";
+          user = true;
+          unitless = true;
+        }
+        {
+          tag = "waybar";
+          string = "Unable to replace properties on [0-9]+: GDBus\.Error:org\.freedesktop\.DBus\.Error\.NoReply: Remote peer disconnected";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 
