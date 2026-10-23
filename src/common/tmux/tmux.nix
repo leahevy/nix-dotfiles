@@ -28,7 +28,7 @@ args@{
     headlessPrefix = "C-a";
     tmuxinatorConfigs = { };
     additionalMainConfigWindows = [ ];
-    tmuxinatorPackage = helpers.requireMinimumPackageVersion args "tmuxinator" "3.4.1";
+    tmuxinatorPackage = helpers.requirePackageVersionInRange args "tmuxinator" "3.4.1" "4.0.0";
   };
 
   module =
