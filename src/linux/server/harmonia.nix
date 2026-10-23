@@ -319,7 +319,7 @@ args@{
 
     ifEnabled.linux.server.healthchecks = {
       enabled = config: {
-        nx.linux.server.healthchecks.requireServicesUp = [ "harmonia.service" ];
+        nx.linux.server.healthchecks.requireServicesUp = [ "harmonia.socket" ];
         nx.linux.server.healthchecks.dailyHealthChecks = {
           "-70 - Prefetch cache age" = ''
             _ts_file="${config.nx.linux.server.harmonia.prefetchStateDir}/last-success"
