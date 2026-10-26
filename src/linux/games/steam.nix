@@ -107,6 +107,12 @@ args@{
           string = "hid-steam [0-9a-fA-F:.]+: steam_send_report: error -[0-9]+ \\([0-9a-fA-F ]+\\)";
           kernel = true;
         }
+        {
+          tag = "steam-runtime-steam-remote";
+          string = "E: Steam is not running: No such device or address";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 
