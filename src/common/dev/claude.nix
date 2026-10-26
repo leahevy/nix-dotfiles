@@ -2487,6 +2487,9 @@ in
           in
           "--set ${modelAliasEnvVars.${alias}} ${modelIdFor alias version}"
         ) modelVersionsByAlias;
+        behaviourWrapperArgs = [
+          "--set CLAUDE_CODE_THRIFTY_SONIC 0"
+        ];
         privacyWrapperArgs =
           lib.optional (!remoteControlAtStartup) "--set CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC 1"
           ++ [
@@ -2498,6 +2501,7 @@ in
           ++ autoCompactWrapperArgs
           ++ subagentWrapperArgs
           ++ modelVersionWrapperArgs
+          ++ behaviourWrapperArgs
           ++ privacyWrapperArgs;
 
         claude-code-wrapped = pkgs.symlinkJoin {
