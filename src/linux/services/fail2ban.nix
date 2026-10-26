@@ -19,20 +19,61 @@ args@{
       default = false;
       description = "Send a Pushover notification when fail2ban bans an IP.";
     };
+    restartOnDSTChange = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Restart fail2ban after EU DST transitions to clear cached log-line timezone offsets.";
+    };
   };
 
   module = {
-    linux.system = config: {
-      services.fail2ban = {
-        enable = true;
-      };
+    linux.system =
+      { config, restartOnDSTChange, ... }:
+      {
+        services.fail2ban = {
+          enable = true;
+        };
 
-      environment.persistence."${self.persist}" = {
-        directories = [
-          "/var/lib/fail2ban"
-        ];
+        environment.persistence."${self.persist}" = {
+          directories = [
+            "/var/lib/fail2ban"
+          ];
+        };
+
+        systemd.services = lib.mkIf restartOnDSTChange {
+          fail2ban-dst-restart = {
+            description = "Restart fail2ban after DST transition";
+            serviceConfig = {
+              Type = "oneshot";
+              User = "root";
+            };
+            script = ''
+              ${lib.optionalString (config.nx.linux.notifications.pushover.send != null) (
+                config.nx.linux.notifications.pushover.send {
+                  title = "Fail2ban";
+                  message = "Restarting fail2ban due to DST transition";
+                  type = "info";
+                }
+              )}
+              ${pkgs.systemd}/bin/systemctl try-restart fail2ban.service
+            '';
+          };
+        };
+
+        systemd.timers = lib.mkIf restartOnDSTChange {
+          fail2ban-dst-restart = {
+            description = "Restart fail2ban after EU DST transitions";
+            wantedBy = [ "timers.target" ];
+            timerConfig = {
+              OnCalendar = [
+                "Sun *-03-25..31 03:30:00"
+                "Sun *-10-25..31 03:30:00"
+              ];
+              Persistent = false;
+            };
+          };
+        };
       };
-    };
 
     ifEnabled.linux.server.healthchecks = {
       enabled =
