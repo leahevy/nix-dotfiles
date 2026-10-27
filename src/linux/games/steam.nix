@@ -113,6 +113,11 @@ args@{
           user = true;
           unitless = true;
         }
+        {
+          tag = "steam-runtime-steam-remote";
+          string = "E: Steam is not running: No such device or address";
+          unitless = true;
+        }
       ];
     };
 

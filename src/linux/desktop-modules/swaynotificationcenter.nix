@@ -42,6 +42,12 @@ args@{
           tag = "swaync";
         }
         {
+          string = "gdk_surface_get_device_position: assertion 'GDK_IS_SURFACE \\(surface\\)' failed";
+          user = true;
+          unitless = true;
+          tag = "swaync";
+        }
+        {
           string = "Main process exited, code=dumped, status=11/SEGV";
           user = true;
           service = "swaync.service";
