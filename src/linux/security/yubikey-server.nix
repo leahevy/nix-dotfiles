@@ -86,9 +86,7 @@ args@{
           crypttabExtraOpts = [ "fido2-device=auto" ];
         });
 
-        boot.initrd.systemd.settings.Manager.DefaultDeviceTimeoutSec = lib.mkIf hasLuks (
-          lib.mkDefault "infinity"
-        );
+        boot.initrd.systemd.settings.Manager.DefaultDeviceTimeoutSec = lib.mkIf hasLuks (lib.mkForce "15s");
 
         environment.systemPackages = [ enrollScript ];
       };
