@@ -82,8 +82,6 @@ args@{
         '';
       in
       {
-        boot.initrd.kernelModules = lib.mkIf hasLuks [ "hidraw" ];
-
         boot.initrd.luks.devices = lib.genAttrs luksNames (_: {
           crypttabExtraOpts = [ "fido2-device=auto" ];
         });
