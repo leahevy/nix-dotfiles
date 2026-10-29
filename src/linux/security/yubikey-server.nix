@@ -82,11 +82,15 @@ args@{
         '';
       in
       {
+        boot.initrd.kernelModules = lib.mkIf hasLuks [ "hidraw" ];
+
         boot.initrd.luks.devices = lib.genAttrs luksNames (_: {
           crypttabExtraOpts = [ "fido2-device=auto" ];
         });
 
-        boot.initrd.systemd.settings.Manager.DefaultDeviceTimeoutSec = lib.mkIf hasLuks (lib.mkForce "15s");
+        boot.initrd.systemd.settings.Manager.DefaultDeviceTimeoutSec = lib.mkIf hasLuks (
+          lib.mkDefault "infinity"
+        );
 
         environment.systemPackages = [ enrollScript ];
       };
