@@ -36,6 +36,11 @@ args@{
           user = true;
           unitless = true;
         }
+        {
+          string = "xwayland-satellite.*Mixed output scales detected, choosing to give apps the smallest detected scale";
+          user = true;
+          unitless = true;
+        }
       ];
     };
 
