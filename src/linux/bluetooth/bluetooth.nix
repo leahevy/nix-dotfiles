@@ -40,6 +40,22 @@ args@{
           tag = "dbus-broker";
           string = "A security policy denied [^ ]+ to send method call /midi/profile:org\\.bluez\\.GattProfile1\\.Release to [^ ]+\\.";
         }
+        {
+          string = "Bluetooth: hci[0-9]+: Opcode 0x[0-9a-f]+ failed: -[0-9]+";
+          kernel = true;
+        }
+        {
+          string = "Bluetooth: hci[0-9]+: command 0x[0-9a-f]+ tx timeout";
+          kernel = true;
+        }
+        {
+          string = "Bluetooth: hci[0-9]+: urb [0-9a-f]+ failed to resubmit";
+          kernel = true;
+        }
+        {
+          string = "Bluetooth: hci[0-9]+: unexpected event for opcode";
+          kernel = true;
+        }
       ];
     };
 
