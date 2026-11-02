@@ -23,6 +23,15 @@ args@{
   ];
 
   module = {
+    enabled = config: {
+      nx.linux.monitoring.journal-watcher.ignorePatterns = [
+        {
+          tag = "kernel";
+          kernel = true;
+          string = "xone-wired \\S+: xone_wired_complete_data_in: process failed: -16";
+        }
+      ];
+    };
     linux.system = config: {
       hardware.xone.enable = self.settings.enableXone;
     };
