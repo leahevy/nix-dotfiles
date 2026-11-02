@@ -18,6 +18,8 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  hardware.enableRedistributableFirmware = true;
+
   environment.systemPackages = [ pkgs.borgbackup ];
 
   isoImage.squashfsCompression = "gzip -Xcompression-level 1";
