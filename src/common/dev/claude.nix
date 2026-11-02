@@ -10,19 +10,24 @@ args@{
 let
   modelVersionsByAlias = {
     opus = [
+      "5.5"
       "5"
       "4.8"
       "4.7"
       "4.6"
-      "4.5"
     ];
     sonnet = [
+      "5.5"
       "5"
       "4.6"
-      "4.5"
     ];
-    haiku = [ "4.5" ];
-    fable = [ "5" ];
+    haiku = [
+      "5.5"
+    ];
+    fable = [
+      "5.1"
+      "5"
+    ];
   };
 
   modelAliasEnvVars = {
@@ -37,7 +42,7 @@ let
   modelVersionPins = {
     opus = "4.6";
     sonnet = "4.6";
-    haiku = "4.5";
+    haiku = "5.5";
     fable = "5";
   };
 
