@@ -153,6 +153,31 @@ let
     "firejail"
     "user"
   ];
+  firejailProfileText = ''
+    whitelist ''${HOME}/.claude
+    whitelist ''${HOME}/.claude.json
+    read-only ''${HOME}/.claude/settings.json
+    read-only ''${HOME}/.claude/CLAUDE.md
+    read-only ''${HOME}/.claude/agents
+    read-only ''${HOME}/.claude/skills
+    read-only ''${HOME}/.claude/keybindings.json
+    whitelist ''${HOME}/.cache/nix
+    whitelist ''${HOME}/${defs.binDir}/mcp-neovim-server-wrapper
+    whitelist ''${HOME}/.local/share/nx/inputs
+    read-only ''${HOME}/.local/share/nx/inputs
+    whitelist ''${HOME}/.local/state/nx-claude
+    dbus-user filter
+    dbus-user.talk org.freedesktop.Notifications
+    private-dev
+    private-etc ssl,nx,machine-id,nix
+    private-tmp
+    blacklist /var
+    blacklist /persist
+    blacklist /root
+    blacklist /sys
+    blacklist /boot
+    blacklist /srv
+  '';
 in
 {
   name = "claude";
@@ -813,31 +838,11 @@ in
 
     linux.system = { config, ... }: {
       programs.firejail.enable = true;
-      environment.etc."firejail/claude-code.profile".text = ''
-        whitelist ''${HOME}/.claude
-        whitelist ''${HOME}/.claude.json
-        read-only ''${HOME}/.claude/settings.json
-        read-only ''${HOME}/.claude/CLAUDE.md
-        read-only ''${HOME}/.claude/agents
-        read-only ''${HOME}/.claude/skills
-        read-only ''${HOME}/.claude/keybindings.json
-        whitelist ''${HOME}/.cache/nix
-        whitelist ''${HOME}/${defs.binDir}/mcp-neovim-server-wrapper
-        whitelist ''${HOME}/.local/share/nx/inputs
-        read-only ''${HOME}/.local/share/nx/inputs
-        whitelist ''${HOME}/.local/state/nx-claude
-        dbus-user filter
-        dbus-user.talk org.freedesktop.Notifications
-        private-dev
-        private-etc ssl,nx,machine-id,nix
-        private-tmp
-        blacklist /var
-        blacklist /persist
-        blacklist /root
-        blacklist /sys
-        blacklist /boot
-        blacklist /srv
-      '';
+      environment.etc."firejail/claude-code.profile".text = firejailProfileText;
+    };
+
+    linux.standalone = { config, ... }: {
+      home.file.".config/firejail/claude-code.profile".text = firejailProfileText;
     };
 
     enabled =
@@ -2523,6 +2528,12 @@ in
         runWhitelists = lib.concatMapStrings (
           d: "              --whitelist=\"/run/user/\$_uid/${d}\" \\\n"
         ) sandboxRunUserDirs;
+        fjBin = if self.user.isStandalone then "/usr/bin/firejail" else "/run/wrappers/bin/firejail";
+        fjProfile =
+          if self.user.isStandalone then
+            "$HOME/.config/firejail/claude-code.profile"
+          else
+            "/etc/firejail/claude-code.profile";
 
         commonSetupScript = ''
           if [ "$EUID" -eq 0 ]; then
@@ -2690,9 +2701,9 @@ in
           _stderr_tmp=$(mktemp "/run/user/$_uid/nx-claude-stderr-XXXXXX")
           trap 'rm -f "$_stderr_tmp"' EXIT
           if [ -d "$HOME/.config/nx/nxcore" ] && [ "$git_root" != "$HOME/.config/nx/nxcore" ]; then
-            /run/wrappers/bin/firejail \
+            ${fjBin} \
               --quiet \
-              --profile=/etc/firejail/claude-code.profile \
+              --profile=${fjProfile} \
               --whitelist="$git_root" \
               --whitelist="$NX_AGENTS_PLANS_DIR" \
               --whitelist="$HOME/.config/nx/nxcore" \
@@ -2703,9 +2714,9 @@ in
               -- "$@" \
               2>"$_stderr_tmp" &
           else
-            /run/wrappers/bin/firejail \
+            ${fjBin} \
               --quiet \
-              --profile=/etc/firejail/claude-code.profile \
+              --profile=${fjProfile} \
               --whitelist="$git_root" \
               --whitelist="$NX_AGENTS_PLANS_DIR" \
               --whitelist="/tmp/claude-$_uid" \
