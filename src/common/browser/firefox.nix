@@ -1531,17 +1531,7 @@ in
         ...
       }:
       let
-        firefoxBin = pkgs.symlinkJoin {
-          name = "firefox-standalone-shim";
-          paths = [ pkgs.firefox ];
-          postBuild = ''
-            cat > $out/bin/firefox << 'EOF'
-            #!/bin/sh
-            exec /usr/bin/firefox "$@"
-            EOF
-            chmod +x $out/bin/firefox
-          '';
-        };
+        firefoxBin = pkgs.writeShellScriptBin "firefox" ''exec /usr/bin/firefox "$@"'';
       in
       {
         programs.firefox = {
