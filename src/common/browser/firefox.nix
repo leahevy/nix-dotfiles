@@ -303,6 +303,92 @@ let
       }
     ) allExtensions;
 
+  mkPreferenceValues =
+    {
+      config,
+      darkMode,
+      downloadDir,
+      nextdnsID,
+      allowDNSRebinding,
+      enableNova,
+      hasExternalPasswordManager,
+      isLinux ? true,
+      isDarwin ? false,
+    }:
+    {
+      "browser.startup.page" = 3;
+      "browser.aboutConfig.showWarning" = false;
+      "browser.tabs.closeWindowWithLastTab" = false;
+      "browser.warnOnQuit" = false;
+      "browser.tabs.warnOnClose" = false;
+      "browser.tabs.warnOnCloseOtherTabs" = true;
+      "media.autoplay.default" = 5;
+      "dom.disable_open_during_load" = true;
+      "pdfjs.disabled" = false;
+      "network.dns.disablePrefetch" = true;
+      "network.dns.disablePrefetchFromHTTPS" = true;
+      "network.prefetch-next" = false;
+      "network.predictor.enabled" = false;
+      "network.http.speculative-parallel-limit" = 0;
+      "network.captive-portal-service.enabled" = false;
+      "network.connectivity-service.enabled" = false;
+      "network.IDN_show_punycode" = true;
+      "network.http.referer.XOriginPolicy" = 1;
+      "network.http.referer.XOriginTrimmingPolicy" = 2;
+      "media.peerconnection.ice.default_address_only" = true;
+      "media.peerconnection.ice.no_host" = true;
+      "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+      "browser.topsites.contile.enabled" = false;
+      "browser.newtabpage.activity-stream.showSponsored" = false;
+      "browser.newtabpage.activity-stream.system.showSponsored" = false;
+      "browser.newtabpage.activity-stream.showSponsoredTopSites" = false;
+      "browser.newtabpage.activity-stream.feeds.topsites" = false;
+      "browser.newtabpage.activity-stream.showSearch" = false;
+      "browser.tabs.firefox-view" = false;
+      "browser.translations.enable" = false;
+      "browser.translations.automaticallyPopup" = false;
+      "browser.toolbars.bookmarks.visibility" = "never";
+      "browser.bookmarks.file" = "${mkBookmarksHtml config}";
+      "browser.download.dir" = downloadDir;
+      "browser.download.folderList" = 2;
+      "browser.download.useDownloadDir" = true;
+      "dom.security.https_only_mode" = true;
+      "dom.security.https_only_mode.upgrade_local" = false;
+      "network.lna.enabled" = true;
+      "network.lna.block_trackers" = true;
+      "browser.nova.enabled" = enableNova;
+    }
+    // lib.optionalAttrs (nextdnsID != null) {
+      "network.trr.mode" = 3;
+      "network.trr.uri" = "https://dns.nextdns.io/${nextdnsID}";
+      "network.trr.allow-rfc1918" = allowDNSRebinding;
+    }
+    // lib.optionalAttrs isLinux {
+      "widget.use-xdg-desktop-portal.mime-handler" = 1;
+      "widget.use-xdg-desktop-portal.open-uri" = 1;
+      "widget.use-xdg-desktop-portal.file-picker" = 1;
+      "media.webspeech.synth.enabled" = false;
+    }
+    // lib.optionalAttrs isDarwin {
+      "ui.key.accelKey" = 17;
+    }
+    // lib.optionalAttrs darkMode {
+      "ui.systemUsesDarkTheme" = 1;
+      "layout.css.prefers-color-scheme.content-override" = 0;
+    }
+    // lib.optionalAttrs hasExternalPasswordManager {
+      "signon.rememberSignons" = false;
+      "signon.autofillForms" = false;
+      "signon.generation.enabled" = false;
+      "signon.generation.available" = false;
+      "signon.formlessCapture.enabled" = false;
+      "signon.formRemovalCapture.enabled" = false;
+      "signon.capture.inputChanges.enabled" = false;
+      "signon.privateBrowsingCapture.enabled" = false;
+      "signon.storeWhenAutocompleteOff" = false;
+      "browser.contextual-password-manager.enabled" = false;
+    };
+
   mkPolicies =
     {
       config,
@@ -416,84 +502,21 @@ let
       AutofillCreditCardEnabled = false;
 
       ExtensionSettings = mkExtensionSettings allExtensions;
-      Preferences = {
-        "browser.aboutConfig.showWarning" = lockFalse;
-        "browser.tabs.closeWindowWithLastTab" = lockFalse;
-        "browser.startup.page" = lockValue 3;
-        "browser.warnOnQuit" = lockFalse;
-        "browser.tabs.warnOnClose" = lockFalse;
-        "browser.tabs.warnOnCloseOtherTabs" = lockTrue;
-        "media.autoplay.default" = lockValue 5;
-        "dom.disable_open_during_load" = lockTrue;
-        "pdfjs.disabled" = lockFalse;
-        "network.dns.disablePrefetch" = lockTrue;
-        "network.dns.disablePrefetchFromHTTPS" = lockTrue;
-        "network.prefetch-next" = lockFalse;
-        "network.predictor.enabled" = lockFalse;
-        "network.http.speculative-parallel-limit" = lockValue 0;
-        "network.captive-portal-service.enabled" = lockFalse;
-        "network.connectivity-service.enabled" = lockFalse;
-        "network.IDN_show_punycode" = lockTrue;
-        "network.http.referer.XOriginPolicy" = lockValue 1;
-        "network.http.referer.XOriginTrimmingPolicy" = lockValue 2;
-        "media.peerconnection.ice.default_address_only" = lockTrue;
-        "media.peerconnection.ice.no_host" = lockTrue;
-        "toolkit.legacyUserProfileCustomizations.stylesheets" = lockTrue;
-        "browser.topsites.contile.enabled" = lockFalse;
-        "browser.newtabpage.activity-stream.showSponsored" = lockFalse;
-        "browser.newtabpage.activity-stream.system.showSponsored" = lockFalse;
-        "browser.newtabpage.activity-stream.showSponsoredTopSites" = lockFalse;
-        "browser.newtabpage.activity-stream.feeds.topsites" = lockFalse;
-        "browser.newtabpage.activity-stream.showSearch" = lockFalse;
-        "browser.tabs.firefox-view" = lockFalse;
-        "browser.translations.enable" = lockFalse;
-        "browser.translations.automaticallyPopup" = lockFalse;
-        "browser.toolbars.bookmarks.visibility" = lockValue "never";
-        "browser.bookmarks.file" = lockValue "${mkBookmarksHtml config}";
-        "browser.download.dir" = lockValue downloadDir;
-        "browser.download.folderList" = lockValue 2;
-        "browser.download.useDownloadDir" = lockTrue;
-        "dom.security.https_only_mode" = lockTrue;
-        "dom.security.https_only_mode.upgrade_local" = lockFalse;
-        "network.lna.enabled" = lockTrue;
-        "network.lna.block_trackers" = lockTrue;
-        "browser.nova.enabled" = if enableNova then lockTrue else lockFalse;
-      }
-      // lib.optionalAttrs (nextdnsID != null) {
-        "network.trr.mode" = lockValue 3;
-        "network.trr.uri" = lockValue "https://dns.nextdns.io/${nextdnsID}";
-        "network.trr.allow-rfc1918" = lockValue allowDNSRebinding;
-      }
-      // lib.optionalAttrs self.isLinux {
-        "widget.use-xdg-desktop-portal.mime-handler" = lockValue 1;
-        "widget.use-xdg-desktop-portal.open-uri" = lockValue 1;
-        "widget.use-xdg-desktop-portal.file-picker" = lockValue 1;
-        "media.webspeech.synth.enabled" = lockFalse;
-      }
-      // lib.optionalAttrs self.isDarwin {
-        "ui.key.accelKey" =
-          let
-            ctrlKey = 17;
-          in
-          lockValue ctrlKey;
-      }
-      // lib.optionalAttrs darkMode {
-        "ui.systemUsesDarkTheme" = lockValue 1;
-        "layout.css.prefers-color-scheme.content-override" = lockValue 0;
-      }
-      // lib.optionalAttrs hasExternalPasswordManager {
-        "signon.rememberSignons" = lockFalse;
-        "signon.autofillForms" = lockFalse;
-        "signon.generation.enabled" = lockFalse;
-        "signon.generation.available" = lockFalse;
-        "signon.formlessCapture.enabled" = lockFalse;
-        "signon.formRemovalCapture.enabled" = lockFalse;
-        "signon.capture.inputChanges.enabled" = lockFalse;
-        "signon.privateBrowsingCapture.enabled" = lockFalse;
-        "signon.storeWhenAutocompleteOff" = lockFalse;
-        "browser.contextual-password-manager.enabled" = lockFalse;
-      }
-      // lockedPreferences;
+      Preferences =
+        lib.mapAttrs (_: lockValue) (mkPreferenceValues {
+          inherit
+            config
+            darkMode
+            downloadDir
+            nextdnsID
+            allowDNSRebinding
+            enableNova
+            hasExternalPasswordManager
+            ;
+          isLinux = self.isLinux;
+          isDarwin = self.isDarwin;
+        })
+        // lockedPreferences;
     }
     // lib.optionalAttrs hasExternalPasswordManager {
       PasswordManagerEnabled = false;
@@ -1529,11 +1552,31 @@ in
         extraPolicies,
         extensions,
         defaultDownloadsName,
+        profileName,
+        nextdnsID,
+        allowDNSRebinding,
+        enableNova,
         ...
       }:
+      let
+        downloadDir = getDownloadDir config self.user.home defaultDownloadsName;
+        hasExternalPasswordManager =
+          config.nx.common.passwords.bitwarden.enable || config.nx.common.passwords.keepassxc.enable;
+      in
       {
         programs.firefox = {
           package = lib.mkDefault pkgs.firefox;
+          profiles.${profileName}.settings = mkPreferenceValues {
+            inherit
+              config
+              darkMode
+              downloadDir
+              nextdnsID
+              allowDNSRebinding
+              enableNova
+              hasExternalPasswordManager
+              ;
+          };
         };
         home.file."${defs.binDir}/firefox-wrapper" = {
           text = ''
