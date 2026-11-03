@@ -3155,7 +3155,7 @@ args@{
                     hotkey-overlay.title = "Monitor:Move column to next monitor";
                   };
 
-                  "Mod+Ctrl+Shift+Space" = {
+                  "Mod+Shift+Ctrl+Space" = {
                     action = spawn-sh "niri-workspace-action --change-wallpaper focus-monitor-next";
                     hotkey-overlay.title = "Monitor:Cycle monitor focus";
                   };
