@@ -59,9 +59,6 @@ let
         ++ (lib.optionals (helpers.isLinuxArch arch && isNiriDesktop) [
           inputs.niri-flake.homeModules.niri
           inputs.niri-flake.homeModules.stylix
-          {
-            programs.niri.package = lib.mkDefault (pkgs.writeShellScriptBin "niri" ''exec /usr/bin/niri "$@"'');
-          }
         ])
         ++ (lib.optionals (helpers.isDarwinArch arch || !isNiriDesktop) [
           (

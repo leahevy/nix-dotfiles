@@ -2352,7 +2352,7 @@ args@{
           });
 
         programs.niri = {
-          package = niriBin;
+          package = pkgs.niri;
           settings = {
             includes = [
               (toString (
