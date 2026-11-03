@@ -32,7 +32,7 @@ if [[ ! -f "$TARGET_FILE" ]]; then
 	exit 1
 fi
 
-if ! age-keygen -y "$TARGET_FILE" >/dev/null 2>&1; then
+if ! nix-shell -p age --run "age-keygen -y '$TARGET_FILE'" >/dev/null 2>&1; then
 	echo -e "${RED}Error: SOPS key at ${WHITE}$TARGET_FILE${RED} is not a valid age key!${RESET}" >&2
 	exit 1
 fi
