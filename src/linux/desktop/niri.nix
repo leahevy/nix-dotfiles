@@ -367,7 +367,11 @@ args@{
           turnOffMonitorsCommand = "${pkgs.niri}/bin/niri msg action power-off-monitors";
           turnOnMonitorsCommand = "${pkgs.niri}/bin/niri msg action power-on-monitors";
           package = pkgs.swaylock-effects;
-          commandline = "swaylock --daemonize --clock --indicator --indicator-idle-visible --grace-no-mouse --effect-blur 8x2 --ring-color <RING_COLOR> --indicator-radius 110 --effect-greyscale --submit-on-touch --screenshots --inside-wrong-color <INSIDE_WRONG_COLOR> --text-wrong-color <TEXT_WRONG_COLOR> --inside-ver-color <INSIDE_VER_COLOR> --text-ver-color <TEXT_VER_COLOR> --ring-ver-color <RING_VER_COLOR> --ring-wrong-color <RING_WRONG_COLOR> --ring-clear-color <RING_CLEAR_COLOR> --text-clear-color <TEXT_CLEAR_COLOR> --inside-clear-color <INSIDE_CLEAR_COLOR> --line-uses-inside --line-uses-ring";
+          commandline =
+            if self.user.isStandalone then
+              "swaylock --daemonize --indicator-idle-visible --ring-color <RING_COLOR> --indicator-radius 110 --inside-wrong-color <INSIDE_WRONG_COLOR> --text-wrong-color <TEXT_WRONG_COLOR> --inside-ver-color <INSIDE_VER_COLOR> --text-ver-color <TEXT_VER_COLOR> --ring-ver-color <RING_VER_COLOR> --ring-wrong-color <RING_WRONG_COLOR> --ring-clear-color <RING_CLEAR_COLOR> --text-clear-color <TEXT_CLEAR_COLOR> --inside-clear-color <INSIDE_CLEAR_COLOR> --line-uses-inside --line-uses-ring"
+            else
+              "swaylock --daemonize --clock --indicator --indicator-idle-visible --grace-no-mouse --effect-blur 8x2 --ring-color <RING_COLOR> --indicator-radius 110 --effect-greyscale --submit-on-touch --screenshots --inside-wrong-color <INSIDE_WRONG_COLOR> --text-wrong-color <TEXT_WRONG_COLOR> --inside-ver-color <INSIDE_VER_COLOR> --text-ver-color <TEXT_VER_COLOR> --ring-ver-color <RING_VER_COLOR> --ring-wrong-color <RING_WRONG_COLOR> --ring-clear-color <RING_CLEAR_COLOR> --text-clear-color <TEXT_CLEAR_COLOR> --inside-clear-color <INSIDE_CLEAR_COLOR> --line-uses-inside --line-uses-ring";
         };
         swaylock = {
           useEffects = true;
