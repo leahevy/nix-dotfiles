@@ -105,10 +105,6 @@ args@{
         {
           home.packages = [ pkgs.swaybg ];
 
-          home.file = lib.mkIf (stylixWallpaper.source != null && stylixWallpaper.extension != null) {
-            ".config/swaybg/wallpapers/stylix.${stylixWallpaper.extension}".source = stylixWallpaper.source;
-          };
-
           home.file."${defs.binDir}/swaybg-next-wallpaper" = {
             executable = true;
             text = ''
@@ -588,5 +584,14 @@ args@{
           home.file = seasonWallpaperFiles;
         }
       ];
+
+    ifEnabled.common.style.stylix.home =
+      config:
+      let
+        w = config.nx.common.style.stylix.resolvedWallpaper;
+      in
+      {
+        home.file.".config/swaybg/wallpapers/stylix.${w.extension}".source = w.source;
+      };
   };
 }
