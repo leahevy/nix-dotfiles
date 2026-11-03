@@ -419,6 +419,7 @@ let
       Preferences = {
         "browser.aboutConfig.showWarning" = lockFalse;
         "browser.tabs.closeWindowWithLastTab" = lockFalse;
+        "browser.startup.page" = lockValue 3;
         "browser.warnOnQuit" = lockFalse;
         "browser.tabs.warnOnClose" = lockFalse;
         "browser.tabs.warnOnCloseOtherTabs" = lockTrue;
