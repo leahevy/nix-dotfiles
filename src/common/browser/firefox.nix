@@ -1530,22 +1530,16 @@ in
         defaultDownloadsName,
         ...
       }:
-      let
-        firefoxBin = pkgs.symlinkJoin {
-          name = "firefox-standalone-shim";
-          paths = [ pkgs.firefox ];
-          postBuild = ''
-            cat > $out/bin/firefox << 'EOF'
-            #!/bin/sh
-            exec /usr/bin/firefox "$@"
-            EOF
-            chmod +x $out/bin/firefox
-          '';
-        };
-      in
       {
         programs.firefox = {
-          package = lib.mkDefault firefoxBin;
+          package = lib.mkDefault pkgs.firefox;
+        };
+        home.file."${defs.binDir}/firefox" = {
+          text = ''
+            #!/bin/sh
+            exec /usr/bin/firefox "$@"
+          '';
+          executable = true;
         };
         home.file."${defs.binDir}/firefox-wrapper" = {
           text = ''
