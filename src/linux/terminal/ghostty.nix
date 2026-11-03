@@ -28,13 +28,31 @@ args@{
   };
 
   module = {
-    linux.enabled = config: {
-      nx.preferences.desktop.programs.additionalTerminal.package = lib.mkDefault pkgs.ghostty;
-      nx.preferences.desktop.programs.terminal.package = lib.mkForce pkgs.ghostty;
-    };
+    linux.enabled =
+      config:
+      let
+        ghosttyBin =
+          if self.user.isStandalone then
+            pkgs.writeShellScriptBin "ghostty" ''exec /usr/bin/ghostty "$@"''
+          else
+            pkgs.ghostty;
+      in
+      {
+        nx.preferences.desktop.programs.additionalTerminal.package = lib.mkDefault ghosttyBin;
+        nx.preferences.desktop.programs.terminal.package = lib.mkForce ghosttyBin;
+      };
 
-    linux.home = config: {
-      programs.ghostty.package = lib.mkForce pkgs.ghostty;
-    };
+    linux.home =
+      config:
+      let
+        ghosttyBin =
+          if self.user.isStandalone then
+            pkgs.writeShellScriptBin "ghostty" ''exec /usr/bin/ghostty "$@"''
+          else
+            pkgs.ghostty;
+      in
+      {
+        programs.ghostty.package = lib.mkForce ghosttyBin;
+      };
   };
 }
