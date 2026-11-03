@@ -1956,9 +1956,19 @@ args@{
           saturation = "1.5";
         };
 
-        generateStartupCommands = apps: map (app: { sh = "sleep 1 && uwsm app -- ${app}"; }) apps;
+        generateStartupCommands =
+          apps:
+          if self.user.isStandalone then
+            map (app: { sh = "sleep 1 && ${app}"; }) apps
+          else
+            map (app: { sh = "sleep 1 && uwsm app -- ${app}"; }) apps;
 
-        generateDelayedStartupCommands = apps: map (app: { sh = "sleep 6 && uwsm app -- ${app}"; }) apps;
+        generateDelayedStartupCommands =
+          apps:
+          if self.user.isStandalone then
+            map (app: { sh = "sleep 6 && ${app}"; }) apps
+          else
+            map (app: { sh = "sleep 6 && uwsm app -- ${app}"; }) apps;
 
         startupApps = requiredApps ++ (self.options config).applicationsToStart;
         autostartPrograms = (self.options config).autostartPrograms;
@@ -2121,7 +2131,7 @@ args@{
 
             case "$choice" in
               "Yes")
-                ${pkgs.uwsm}/bin/uwsm stop
+                ${if self.user.isStandalone then "niri msg action quit" else "${pkgs.uwsm}/bin/uwsm stop"}
                 ;;
               "No"|"")
                 exit 0
