@@ -353,6 +353,10 @@ args@{
         bemoji = true;
         waybar = {
           niri = true;
+          showBattery = lib.elem (helpers.getMachineType self) [
+            "laptop"
+            "convertible"
+          ];
           output =
             if self.host ? displays && self.host.displays ? main then
               self.host.displays.main
