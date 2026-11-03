@@ -149,7 +149,19 @@ args@{
               layer = "overlay";
               width = 40;
               lines = 15;
-              font = lib.mkForce "monospace:size=17";
+              font = lib.mkForce "monospace:size=${
+                toString (
+                  if
+                    lib.elem (helpers.getMachineType self) [
+                      "laptop"
+                      "convertible"
+                    ]
+                  then
+                    9
+                  else
+                    17
+                )
+              }";
               prompt = "⇒  ";
               line-height = 25;
               fields = "name,generic,comment,categories,filename,keywords";
