@@ -156,6 +156,7 @@ args@{
                       "laptop"
                       "convertible"
                     ]
+                    && !(helpers.resolveFromHostOrUser self [ "displays" "mainIsExternal" ] false)
                   then
                     7
                   else

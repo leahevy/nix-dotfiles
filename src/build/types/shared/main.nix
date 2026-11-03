@@ -69,6 +69,11 @@ with lib;
             default = false;
             description = "Whether the main display is widescreen";
           };
+          mainIsExternal = mkOption {
+            type = types.bool;
+            default = false;
+            description = "Whether the main display is an external monitor";
+          };
         };
       };
       default = { };
