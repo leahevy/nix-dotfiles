@@ -431,6 +431,11 @@ args@{
     home =
       config:
       let
+        niriBin =
+          if self.user.isStandalone then
+            pkgs.writeShellScriptBin "niri" ''exec /usr/bin/niri "$@"''
+          else
+            pkgs.niri;
         parseKdlShader =
           kdlContent: sectionName:
           let
@@ -586,7 +591,7 @@ args@{
               import sys
               import time
 
-              NIRI = "${pkgs.niri}/bin/niri"
+              NIRI = "${niriBin}/bin/niri"
               logging.basicConfig(
                   level=logging.INFO,
                   format="%(asctime)s %(levelname)s %(message)s",
@@ -913,7 +918,7 @@ args@{
               import threading
               import time
 
-              NIRI = "${pkgs.niri}/bin/niri"
+              NIRI = "${niriBin}/bin/niri"
               logging.basicConfig(
                   level=logging.INFO,
                   format="%(asctime)s %(levelname)s %(message)s",
@@ -2204,7 +2209,7 @@ args@{
               esac
             done
 
-            ${pkgs.niri}/bin/niri msg action "''${ARGS[@]}"
+            ${niriBin}/bin/niri msg action "''${ARGS[@]}"
 
             ${
               let
@@ -2238,15 +2243,15 @@ args@{
             STATE_FILE="''${XDG_RUNTIME_DIR:-/tmp}/niri-center-on-focus"
 
             case "''${1:-}" in
-              left) ${pkgs.niri}/bin/niri msg action focus-column-left ;;
-              right) ${pkgs.niri}/bin/niri msg action focus-column-right ;;
+              left) ${niriBin}/bin/niri msg action focus-column-left ;;
+              right) ${niriBin}/bin/niri msg action focus-column-right ;;
               *) echo "Usage: niri-focus-column left|right" >&2; exit 1 ;;
             esac
 
             STATE="0"
             [[ -f "$STATE_FILE" ]] && read -r STATE < "$STATE_FILE" || true
             if [[ "$STATE" != "0" ]]; then
-              ${pkgs.niri}/bin/niri msg action center-column
+              ${niriBin}/bin/niri msg action center-column
             fi
           '';
         };
@@ -2266,7 +2271,7 @@ args@{
               echo "0" > "$STATE_FILE"
             else
               echo "1" > "$STATE_FILE"
-              ${pkgs.niri}/bin/niri msg action center-column
+              ${niriBin}/bin/niri msg action center-column
             fi
             ${lib.optionalString (self.isModuleEnabled "desktop-modules.waybar") "${pkgs.procps}/bin/pkill -RTMIN+1 waybar || true"}
           '';
@@ -2347,7 +2352,7 @@ args@{
           });
 
         programs.niri = {
-          package = pkgs.niri;
+          package = niriBin;
           settings = {
             includes = [
               (toString (

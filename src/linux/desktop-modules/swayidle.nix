@@ -149,6 +149,12 @@ args@{
           else
             resolvedCommandline;
 
+        resolvedPackage =
+          if self.user.isStandalone then
+            pkgs.writeShellScriptBin "swaylock" ''exec /usr/bin/swaylock "$@"''
+          else
+            package;
+
         wrapTimeoutCommand =
           command:
           pkgs.writeShellScript "swayidle-timeout-wrapper" ''
@@ -247,7 +253,7 @@ args@{
 
         services.swayidle =
           let
-            wrapperCommand = "${self.binDir}/scripts/swaylock-wrapper-daemon ${package}/bin/${commandlineValidated}";
+            wrapperCommand = "${self.binDir}/scripts/swaylock-wrapper-daemon ${resolvedPackage}/bin/${commandlineValidated}";
             wrappedLockCommand = toString (wrapTimeoutCommand wrapperCommand);
             wrappedMonitorOffCommand = toString (
               wrapTimeoutCommand (lib.concatStringsSep ";" [ turnOffMonitorsCommand ])
@@ -315,7 +321,9 @@ args@{
             Type = "oneshot";
             RemainAfterExit = true;
             ExecStartPre = [
-              "/bin/sh -c 'for i in {1..30}; do ${pkgs.niri}/bin/niri msg workspaces >/dev/null 2>&1 && exit 0 || sleep 1; done; exit 1'"
+              "/bin/sh -c 'for i in {1..30}; do ${
+                if self.user.isStandalone then "/usr/bin/niri" else "${pkgs.niri}/bin/niri"
+              } msg workspaces >/dev/null 2>&1 && exit 0 || sleep 1; done; exit 1'"
               "/bin/sh -c 'sleep 2'"
             ];
             ExecStart = "loginctl lock-session";

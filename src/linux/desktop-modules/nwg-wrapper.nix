@@ -507,7 +507,9 @@ args@{
                 if config.nx.linux.desktop.niri.enable then
                   ''
                     EXPECTED_SURFACES=${if niriKeybindings then "2" else "1"}
-                    ACTIVE_SURFACES=$(${pkgs.niri}/bin/niri msg --json layers 2>/dev/null | ${pkgs.jq}/bin/jq '[.[] | select(.namespace == "gtk-layer-shell")] | length' 2>/dev/null || echo 0)
+                    ACTIVE_SURFACES=$(${
+                      if self.user.isStandalone then "/usr/bin/niri" else "${pkgs.niri}/bin/niri"
+                    } msg --json layers 2>/dev/null | ${pkgs.jq}/bin/jq '[.[] | select(.namespace == "gtk-layer-shell")] | length' 2>/dev/null || echo 0)
                     if [[ "$ACTIVE_SURFACES" -lt "$EXPECTED_SURFACES" ]]; then
                       ${restartCommands}
                     fi
