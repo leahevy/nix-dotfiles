@@ -100,6 +100,19 @@ args@{
       };
     };
 
+    linux.standalone =
+      { config, enableDockerHost, ... }:
+      {
+        home.sessionVariables = lib.mkIf enableDockerHost {
+          DOCKER_HOST = "unix:///run/user/$UID/podman/podman.sock";
+        };
+
+        xdg.configFile."containers/containers.conf".text = ''
+          [containers]
+          log_driver = "journald"
+        '';
+      };
+
     ifEnabled.linux.security.aide = {
       enabled = config: {
         nx.linux.security.aide.skipPaths = [
