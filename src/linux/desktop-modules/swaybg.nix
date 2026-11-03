@@ -105,8 +105,8 @@ args@{
         {
           home.packages = [ pkgs.swaybg ];
 
-          home.file.".config/swaybg/wallpapers/stylix.${stylixWallpaper.extension}" = {
-            source = stylixWallpaper.source;
+          home.file = lib.mkIf (stylixWallpaper.source != null && stylixWallpaper.extension != null) {
+            ".config/swaybg/wallpapers/stylix.${stylixWallpaper.extension}".source = stylixWallpaper.source;
           };
 
           home.file."${defs.binDir}/swaybg-next-wallpaper" = {

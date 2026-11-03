@@ -2505,9 +2505,9 @@ args@{
 
               keyboard = {
                 xkb = {
-                  layout = self.host.settings.system.keymap.x11.layout;
-                  variant = self.host.settings.system.keymap.x11.variant;
-                  options = self.host.settings.system.keymap.x11.options;
+                  layout = self.host.settings.system.keymap.x11.layout or self.user.settings.keymap.x11.layout;
+                  variant = self.host.settings.system.keymap.x11.variant or self.user.settings.keymap.x11.variant;
+                  options = self.host.settings.system.keymap.x11.options or self.user.settings.keymap.x11.options;
                 };
                 repeat-delay = 600;
                 repeat-rate = 25;

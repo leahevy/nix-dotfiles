@@ -88,6 +88,25 @@ with lib;
         default = "ghostty";
         description = "Terminal application";
       };
+      keymap = {
+        x11 = {
+          layout = mkOption {
+            type = types.str;
+            default = "us";
+            description = "X11 keyboard layout";
+          };
+          variant = mkOption {
+            type = types.str;
+            default = "";
+            description = "X11 keyboard variant";
+          };
+          options = mkOption {
+            type = types.str;
+            default = "";
+            description = "X11 keyboard options";
+          };
+        };
+      };
       browser = mkOption {
         type = types.nullOr (
           types.enum [
