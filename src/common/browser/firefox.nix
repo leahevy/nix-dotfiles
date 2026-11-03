@@ -1530,17 +1530,14 @@ in
         defaultDownloadsName,
         ...
       }:
-      let
-        firefoxBin = pkgs.writeShellScriptBin "firefox" ''exec /usr/bin/firefox "$@"'';
-      in
       {
         programs.firefox = {
-          package = lib.mkDefault firefoxBin;
+          package = lib.mkDefault pkgs.firefox;
         };
         home.file."${defs.binDir}/firefox-wrapper" = {
           text = ''
             #!/bin/sh
-            exec /usr/bin/firefox "$@"
+            exec ${pkgs.firefox}/bin/firefox "$@"
           '';
           executable = true;
         };
