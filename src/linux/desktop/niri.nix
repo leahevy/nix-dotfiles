@@ -2130,48 +2130,62 @@ args@{
           '';
         };
 
-        home.file."${defs.binDir}/power-menu" = {
-          executable = true;
-          text = ''
-            #!/usr/bin/env bash
+        home.file."${defs.binDir}/power-menu" =
+          let
+            isPortable = lib.elem (helpers.getMachineType self) [
+              "laptop"
+              "convertible"
+            ];
+            menuOptions = lib.optionals isPortable [ "Suspend" ] ++ [
+              "Poweroff"
+              "Reboot"
+            ];
+            menuStr = lib.concatStringsSep "\\n" menuOptions;
+            menuLines = lib.length menuOptions;
+          in
+          {
+            executable = true;
+            text = ''
+              #!/usr/bin/env bash
 
-            # Power menu using app launcher
-            # Usage: power-menu.sh
+              # Power menu using app launcher
+              # Usage: power-menu.sh
 
-            set -euo pipefail
+              set -euo pipefail
 
-            ${powerMenuChecksScript}
+              ${powerMenuChecksScript}
 
-            action=$(echo -e "Poweroff\nReboot" | ${
-              dmenuCmd {
-                prompt = "Power actions: ";
-                width = 25;
-                lines = 2;
-              }
-            })
+              action=$(echo -e "${menuStr}" | ${
+                dmenuCmd {
+                  prompt = "Power actions: ";
+                  width = 25;
+                  lines = menuLines;
+                }
+              })
 
-            if [[ -z "$action" ]]; then
-                exit 0
-            fi
+              if [[ -z "$action" ]]; then
+                  exit 0
+              fi
 
-            declare -A commands=(
-                ["Poweroff"]="systemctl poweroff"
-                ["Reboot"]="systemctl reboot"
-            )
+              declare -A commands=(
+                  ["Poweroff"]="systemctl poweroff"
+                  ["Reboot"]="systemctl reboot"
+                  ${lib.optionalString isPortable ''["Suspend"]="systemctl suspend"''}
+              )
 
-            confirm=$(echo -e "Yes\nNo" | ${
-              dmenuCmdRaw {
-                prompt = "$action? ";
-                width = 20;
-                lines = 2;
-              }
-            })
+              confirm=$(echo -e "Yes\nNo" | ${
+                dmenuCmdRaw {
+                  prompt = "$action? ";
+                  width = 20;
+                  lines = 2;
+                }
+              })
 
-            if [[ "$confirm" == "Yes" ]]; then
-                ''${commands[$action]}
-            fi
-          '';
-        };
+              if [[ "$confirm" == "Yes" ]]; then
+                  ''${commands[$action]}
+              fi
+            '';
+          };
 
         home.file."${defs.binDir}/scratchpad-terminal" =
           let
