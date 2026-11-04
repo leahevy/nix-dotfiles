@@ -25,5 +25,14 @@ args@{
         ];
       };
     };
+
+    ifEnabled.linux.desktop.niri.home = config: {
+      programs.niri.settings.window-rules = [
+        {
+          matches = [ { app-id = "teams-for-linux"; } ];
+          open-on-workspace = "1";
+        }
+      ];
+    };
   };
 }
