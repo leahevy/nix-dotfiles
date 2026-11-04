@@ -50,22 +50,55 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
 	if [[ -e "$BREWFILE" ]]; then
 		if [[ ! -f "$BREWFILE_ACTIVE" ]]; then
 			echo
-			echo -e "${YELLOW}Brewfile created, you should run: ${GREEN}nx brew${YELLOW} to sync Homebrew packages${RESET}"
+			echo -e "${YELLOW}Brewfile created, you should run: ${GREEN}nx install${YELLOW} to sync Homebrew packages${RESET}"
 		elif [[ -f "$BREWFILE_ACTIVE" ]]; then
 			CHECKSUM_NEW=$(shasum -a 256 "$BREWFILE" | cut -d' ' -f1)
 			CHECKSUM_ACTIVE=$(shasum -a 256 "$BREWFILE_ACTIVE" | cut -d' ' -f1)
 
 			if [[ "$CHECKSUM_NEW" != "$CHECKSUM_ACTIVE" ]]; then
 				echo
-				echo -e "${YELLOW}Brewfile was updated, you should run: ${GREEN}nx brew${RESET}"
+				echo -e "${YELLOW}Brewfile was updated, you should run: ${GREEN}nx install${RESET}"
 			else
 				WEEK_AGO=$(date -v-7d +%s)
 				LAST_BREW_RUN=$(stat -f %m "$BREWFILE_ACTIVE")
 				if [[ "$LAST_BREW_RUN" -lt "$WEEK_AGO" ]]; then
 					DAYS_AGO=$((($(date +%s) - LAST_BREW_RUN) / 86400))
 					echo
-					echo -e "${RED} > It's been ${BLUE}${DAYS_AGO} days${RED} since you last updated Homebrew - you should run ${GREEN}nx brew${RED}${RESET}"
+					echo -e "${RED} > It's been ${BLUE}${DAYS_AGO} days${RED} since you last updated Homebrew - you should run ${GREEN}nx install${RED}${RESET}"
 				fi
+			fi
+		fi
+	fi
+fi
+
+if [[ "$(uname -s)" == "Linux" && ! -e /etc/NIXOS ]]; then
+	APT_HINTS="$HOME/.local/bin-nx/apt-hints"
+	if [[ -x "$APT_HINTS" ]]; then
+		APT_HINTS_OUTPUT="$("$APT_HINTS" 2>/dev/null || true)"
+		if [[ -n "$APT_HINTS_OUTPUT" ]]; then
+			echo
+			echo -e "${YELLOW}Apt hints:${RESET}"
+			echo "$APT_HINTS_OUTPUT"
+		fi
+	fi
+
+	PKGFILE="$HOME/.local/state/apt/packages.list"
+	PKGFILE_ACTIVE="$HOME/.local/state/apt/packages.active"
+
+	if [[ -e "$PKGFILE" ]]; then
+		if [[ ! -f "$PKGFILE_ACTIVE" ]]; then
+			echo
+			echo -e "${YELLOW}Package list created, run: ${GREEN}nx install${YELLOW} to install packages${RESET}"
+		elif ! command diff -q "$PKGFILE" "$PKGFILE_ACTIVE" &>/dev/null; then
+			echo
+			echo -e "${YELLOW}Package list updated, run: ${GREEN}nx install${RESET}"
+		else
+			WEEK_AGO=$(date -d "7 days ago" +%s)
+			LAST_APT_RUN=$(stat -c %Y "$PKGFILE_ACTIVE")
+			if [[ "$LAST_APT_RUN" -lt "$WEEK_AGO" ]]; then
+				DAYS_AGO=$((($(date +%s) - LAST_APT_RUN) / 86400))
+				echo
+				echo -e "${RED} > It's been ${BLUE}${DAYS_AGO} days${RED} since you last ran nx install - you should run ${GREEN}nx install${RED}${RESET}"
 			fi
 		fi
 	fi

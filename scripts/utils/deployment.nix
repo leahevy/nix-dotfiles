@@ -150,14 +150,14 @@
         arguments = [ (arg "version" "Target NixOS version (XX.XX)" "nixVersion") ];
       };
 
-      brew = {
-        description = "Sync Homebrew packages";
+      install = {
+        description = "Sync system packages (Homebrew on Darwin, apt on Linux)";
         group = "switch";
+        scope = "standalone";
         modes = [
           "local"
           "develop"
         ];
-        system = "darwin";
       };
 
       configure-nix = {
