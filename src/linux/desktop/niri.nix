@@ -329,6 +329,16 @@ args@{
       default = [ ];
       description = "Layer-shell namespaces for which to enable blur without xray via layer rules.";
     };
+    mouseNaturalScroll = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Whether to enable natural scroll direction for the mouse.";
+    };
+    touchpadNaturalScroll = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Whether to enable natural scroll direction for the touchpad.";
+    };
   };
 
   submodules = {
@@ -2571,13 +2581,13 @@ args@{
               };
 
               mouse = {
-                natural-scroll = true;
+                natural-scroll = (self.options config).mouseNaturalScroll;
                 accel-speed = 0.0;
                 accel-profile = "adaptive";
               };
 
               touchpad = {
-                natural-scroll = true;
+                natural-scroll = (self.options config).touchpadNaturalScroll;
                 accel-speed = 0.0;
                 accel-profile = "adaptive";
               };
