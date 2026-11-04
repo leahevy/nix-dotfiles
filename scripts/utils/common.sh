@@ -1669,28 +1669,6 @@ cleanup_deployment_lock() {
 	fi
 }
 
-check_nix_daemon_activity() {
-	local build_processes
-	build_processes=$(ps ax -o stat,command | tail -n +2 | grep "nix-daemon" | grep -v -- "--daemon" | grep -v grep | awk '$1 ~ /^(R|Rs|Rl|Ssl|S\+)$/' | wc -l) || build_processes=0
-
-	if [[ "$build_processes" -gt 0 && ! -e /etc/NIXOS ]]; then
-		echo -en "${GREEN}Nix-daemon is active, continue anyway? ${RESET}[Y/n]: " >&2
-		read -r response
-		case "$response" in
-		[nN] | [nN][oO])
-			echo
-			echo -e "${RED}Aborted due to nix daemon activity${RESET}" >&2
-			exit 1
-			;;
-		*)
-			return 0
-			;;
-		esac
-	fi
-
-	return 0
-}
-
 check_nix_tool_activity() {
 	local nix_tool_processes
 	if [[ "$(uname)" == "Darwin" ]]; then
@@ -1812,7 +1790,6 @@ check_deployment_conflicts() {
 	local command_name="$1"
 	setup_deployment_lock "$command_name"
 
-	check_nix_daemon_activity
 	check_nix_tool_activity
 	check_nh_activity
 
