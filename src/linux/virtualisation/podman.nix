@@ -90,6 +90,11 @@ args@{
         tag = "podman-container";
         user = true;
       };
+
+      nx.apt.packages = [ "podman" ];
+      nx.apt.hints = [
+        "Enable rootless podman socket: systemctl --user enable --now podman.socket"
+      ];
     };
 
     linux.home = config: {
@@ -103,6 +108,8 @@ args@{
     linux.standalone =
       { config, enableDockerHost, ... }:
       {
+        home.packages = [ pkgs.docker ];
+
         home.sessionVariables = lib.mkIf enableDockerHost {
           DOCKER_HOST = "unix:///run/user/$UID/podman/podman.sock";
         };
