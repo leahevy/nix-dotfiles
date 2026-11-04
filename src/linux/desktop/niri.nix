@@ -438,6 +438,14 @@ args@{
   ];
 
   module = {
+    linux.enabled = config: {
+      nx.apt.packages = [ "niri" ];
+      nx.apt.hints = [
+        "sudo add-apt-repository ppa:avengemedia/danklinux"
+        "sudo add-apt-repository ppa:avengemedia/dms"
+      ];
+    };
+
     enabled = config: {
       nx.linux.desktop.niri.autoTiler.ignoredAppIds = [ "org.nx.scratchpad" ];
       nx.linux.desktop.niri.blurAppIdsNoXray = [ "org.nx.scratchpad" ];
