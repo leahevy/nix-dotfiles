@@ -86,6 +86,15 @@ args@{
       };
     };
 
+    when = {
+      modules.common.proton.mail = false;
+      do.enabled = config: {
+        nx.linux.desktop.niri.autostartPrograms = lib.mkIf (self.linux.isModuleEnabled "desktop.niri") [
+          "thunderbird"
+        ];
+      };
+    };
+
     home = config: {
       home.packages = with pkgs; [
         thunderbird
