@@ -645,7 +645,18 @@ in
     additionalPrograms = [
       pkgs.easytag
       pkgs.popsicle
-      pkgs.cheese
+      (
+        if self.user.isStandalone then
+          pkgs.writeShellScriptBin "cheese" ''
+            if [[ ! -x /snap/bin/cheese ]]; then
+              echo "cheese is not installed. Install it with: sudo snap install cheese" >&2
+              exit 1
+            fi
+            exec /snap/bin/cheese "$@"
+          ''
+        else
+          pkgs.cheese
+      )
     ];
     additionalDirsToPersist = [
       ".cache/easytag"
@@ -742,6 +753,8 @@ in
           ++ (getProgramHighlightPatterns prefs.drawingProgram);
       in
       {
+        nx.apt.hints = [ "Install cheese via snap: sudo snap install cheese" ];
+
         nx.linux.monitoring.journal-watcher.ignorePatterns = allIgnorePatterns ++ [
           {
             tag = "xdg-desktop-portal-gtk";
