@@ -30,7 +30,6 @@ args@{
         "nx-config"
         "firmware"
         "sysctl"
-        "homebrew"
         "profile"
         "nixos-label"
       ]
