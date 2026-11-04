@@ -153,6 +153,11 @@ let
     "firejail"
     "user"
   ];
+  fjPrivateEtc =
+    if self.user.isStandalone then
+      "ssl,nx,machine-id,nix,resolv.conf,nsswitch.conf,hosts,passwd,group,hostname,localtime,locale.conf,login.defs,protocols,alsa,pipewire,fonts"
+    else
+      "ssl,nx,machine-id,nix";
   firejailProfileText = ''
     whitelist ''${HOME}/.claude
     whitelist ''${HOME}/.claude.json
@@ -169,10 +174,10 @@ let
     dbus-user filter
     dbus-user.talk org.freedesktop.Notifications
     private-dev
-    private-etc ssl,nx,machine-id,nix
+    private-etc ${fjPrivateEtc}
     private-tmp
     blacklist /var
-    blacklist /persist
+    ${if !self.user.isStandalone then "blacklist /persist" else "# standalone: no /persist"}
     blacklist /root
     blacklist /sys
     blacklist /boot
