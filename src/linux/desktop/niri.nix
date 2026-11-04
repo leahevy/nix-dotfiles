@@ -358,12 +358,29 @@ args@{
             "convertible"
           ];
           output =
-            if self.host ? displays && self.host.displays ? main then
-              self.host.displays.main
-            else if self.user ? displays && self.user.displays ? main then
-              self.user.displays.main
+            let
+              mainOut =
+                if self.host ? displays && self.host.displays ? main then
+                  self.host.displays.main
+                else if self.user ? displays && self.user.displays ? main then
+                  self.user.displays.main
+                else
+                  null;
+              secondaryOut =
+                if self.host ? displays && self.host.displays ? secondary then
+                  self.host.displays.secondary
+                else if self.user ? displays && self.user.displays ? secondary then
+                  self.user.displays.secondary
+                else
+                  null;
+            in
+            if mainOut != null && secondaryOut != null then
+              [
+                mainOut
+                secondaryOut
+              ]
             else
-              null;
+              mainOut;
         };
         swaynotificationcenter = true;
         mako = false;
