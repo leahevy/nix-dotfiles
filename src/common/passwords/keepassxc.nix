@@ -83,6 +83,19 @@ args@{
       };
     };
 
+    linux.standalone = config: {
+      programs.keepassxc.package = pkgs.symlinkJoin {
+        name = "keepassxc-xcb";
+        paths = [ pkgs.keepassxc ];
+        buildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/keepassxc \
+            --set GDK_BACKEND x11 \
+            --set QT_QPA_PLATFORM xcb
+        '';
+      };
+    };
+
     ifEnabled.common.browser.firefox = {
       enabled =
         config:
@@ -103,32 +116,67 @@ args@{
         };
     };
 
-    ifEnabled.linux.desktop.niri.home = config: {
-      programs.niri = {
-        settings = {
-          binds = with config.lib.niri.actions; {
-            "Mod+Ctrl+Alt+U" = {
-              action = spawn-sh "niri-scratchpad --app-id org.keepassxc.KeePassXC --all-windows --spawn keepassxc";
-              hotkey-overlay.title = "Apps:KeepassXC";
-            };
+    ifEnabled.linux.desktop.niri.home =
+      config:
+      let
+        appId = if self.user.isStandalone then "KeePassXC" else "org.keepassxc.KeePassXC";
+      in
+      {
+        programs.niri = {
+          settings = {
+            window-rules = [
+              {
+                matches = [
+                  {
+                    app-id = appId;
+                    title = ".*\\.kdbx.* - KeePassXC";
+                  }
+                ];
+                open-on-workspace = "scratch";
+                open-floating = true;
+                open-focused = false;
+                block-out-from = "screencast";
+              }
+            ];
           };
-
-          window-rules = [
-            {
-              matches = [
-                {
-                  app-id = "org.keepassxc.KeePassXC";
-                  title = ".*\\.kdbx.* - KeePassXC";
-                }
-              ];
-              open-on-workspace = "scratch";
-              open-floating = true;
-              open-focused = false;
-              block-out-from = "screencast";
-            }
-          ];
         };
       };
-    };
+
+    when = [
+      {
+        modules.linux.desktop.niri = true;
+        modules.common.passwords.bitwarden = false;
+        do.home =
+          config:
+          let
+            appId = if self.user.isStandalone then "KeePassXC" else "org.keepassxc.KeePassXC";
+          in
+          {
+            programs.niri.settings.binds = with config.lib.niri.actions; {
+              "Mod+Ctrl+Alt+K" = {
+                action = spawn-sh "niri-scratchpad --app-id ${appId} --all-windows --spawn keepassxc";
+                hotkey-overlay.title = "Apps:KeepassXC";
+              };
+            };
+          };
+      }
+      {
+        modules.linux.desktop.niri = true;
+        modules.common.passwords.bitwarden = true;
+        do.home =
+          config:
+          let
+            appId = if self.user.isStandalone then "KeePassXC" else "org.keepassxc.KeePassXC";
+          in
+          {
+            programs.niri.settings.binds = with config.lib.niri.actions; {
+              "Mod+Ctrl+Alt+U" = {
+                action = spawn-sh "niri-scratchpad --app-id ${appId} --all-windows --spawn keepassxc";
+                hotkey-overlay.title = "Apps:KeepassXC";
+              };
+            };
+          };
+      }
+    ];
   };
 }
