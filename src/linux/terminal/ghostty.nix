@@ -40,6 +40,7 @@ args@{
       {
         nx.preferences.desktop.programs.additionalTerminal.package = lib.mkDefault ghosttyBin;
         nx.preferences.desktop.programs.terminal.package = lib.mkForce ghosttyBin;
+        nx.apt.packages = [ "ghostty" ];
       };
 
     linux.home =
