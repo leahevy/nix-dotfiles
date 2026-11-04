@@ -172,6 +172,7 @@ args@{
               if [[ -f "$WALLPAPERS_DIR/$WALLPAPER_NAME" ]]; then
                 WALLPAPER_PATH="$WALLPAPERS_DIR/$WALLPAPER_NAME"
               else
+                ${if expandedAdditionalDirs == [ ] then ":" else ""}
                 ${lib.concatMapStringsSep "\n" (dir: ''
                   if [[ -z "$WALLPAPER_PATH" && -d "${dir}" && -f "${dir}/$WALLPAPER_NAME" ]]; then
                     WALLPAPER_PATH="${dir}/$WALLPAPER_NAME"
@@ -278,6 +279,7 @@ args@{
               if [[ -f "$WALLPAPERS_DIR/$SOURCE_BASENAME" ]]; then
                 NAME_EXISTS="$WALLPAPERS_DIR/$SOURCE_BASENAME"
               else
+                ${if expandedAdditionalDirs == [ ] then ":" else ""}
                 ${lib.concatMapStringsSep "\n" (dir: ''
                   if [[ -z "$NAME_EXISTS" && -d "${dir}" && -f "${dir}/$SOURCE_BASENAME" ]]; then
                     NAME_EXISTS="${dir}/$SOURCE_BASENAME"
