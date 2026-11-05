@@ -49,8 +49,19 @@ args@{
     let
       ollamaHost = self.settings.host;
       ollamaPort = self.settings.port;
+      ollamaBin =
+        if self.isLinux && self.user.isStandalone then
+          "/usr/local/bin/ollama"
+        else
+          "${pkgs.ollama}/bin/ollama";
     in
     {
+      linux.enabled = config: {
+        nx.apt.hints = [
+          "Install ollama: curl -fsSL https://ollama.com/install.sh | sh"
+        ];
+      };
+
       darwin.overlays = [
         (final: prev: {
           ollama = prev.ollama.overrideAttrs (old: {
@@ -89,34 +100,36 @@ args@{
               self.variables.cudaArchitectures;
           useNvidiaCuda = self.linux.isModuleEnabled "graphics.nvidia-setup" && effectiveCudaArches != [ ];
         in
-        {
-          services.ollama = {
-            enable = true;
-            package = pkgs.ollama.override (
-              {
-                acceleration =
-                  if !self.settings.allowGPU then
-                    false
-                  else if self.isLinux then
-                    if useNvidiaCuda then "cuda" else "vulkan"
-                  else
-                    null;
+        lib.mkMerge [
+          (lib.mkIf (!self.isLinux || !self.user.isStandalone) {
+            services.ollama = {
+              enable = true;
+              package = pkgs.ollama.override (
+                {
+                  acceleration =
+                    if !self.settings.allowGPU then
+                      false
+                    else if self.isLinux then
+                      if useNvidiaCuda then "cuda" else "vulkan"
+                    else
+                      null;
+                }
+                // lib.optionalAttrs (effectiveCudaArches != [ ]) {
+                  cudaArches = effectiveCudaArches;
+                }
+              );
+              host = ollamaHost;
+              port = ollamaPort;
+              environmentVariables = {
+                OLLAMA_KEEP_ALIVE = self.settings.keepAlive;
               }
-              // lib.optionalAttrs (effectiveCudaArches != [ ]) {
-                cudaArches = effectiveCudaArches;
+              // lib.optionalAttrs (self.isLinux && self.settings.allowGPU && self.settings.gpuOverheadGB > 0) {
+                OLLAMA_GPU_OVERHEAD = toString gpuOverheadBytes;
               }
-            );
-            host = ollamaHost;
-            port = ollamaPort;
-            environmentVariables = {
-              OLLAMA_KEEP_ALIVE = self.settings.keepAlive;
-            }
-            // lib.optionalAttrs (self.isLinux && self.settings.allowGPU && self.settings.gpuOverheadGB > 0) {
-              OLLAMA_GPU_OVERHEAD = toString gpuOverheadBytes;
-            }
-            // self.settings.environmentVariables;
-          };
-        };
+              // self.settings.environmentVariables;
+            };
+          })
+        ];
 
       physical.home =
         config:
@@ -172,7 +185,7 @@ args@{
               success=false
 
               while [ $retries -lt $MODEL_PULL_RETRIES ]; do
-                if ${pkgs.ollama}/bin/ollama pull "$model"; then
+                if ${ollamaBin} pull "$model"; then
                   echo "Successfully pulled model: $model"
                   success=true
                   break
@@ -266,8 +279,13 @@ args@{
           systemd.user.services.ollama-pull-models = lib.mkIf self.isLinux {
             Unit = {
               Description = "Pull Ollama models";
+            }
+            // lib.optionalAttrs (!self.user.isStandalone) {
               After = [ "ollama.service" ];
               Requires = [ "ollama.service" ];
+            }
+            // lib.optionalAttrs (self.isLinux && self.user.isStandalone) {
+              ConditionPathExists = "/usr/local/bin/ollama";
             };
             Service = {
               Type = "oneshot";
