@@ -1993,7 +1993,14 @@ rec {
   mergeModulesWithPrecedence =
     modules1: modules2:
     let
-      normalizeInput = v: if v == true then { } else v;
+      normalizeInput =
+        v:
+        if v == true then
+          { }
+        else if builtins.isList v then
+          lib.genAttrs v (_: true)
+        else
+          v;
     in
     zipWithMerge (
       inputA: inputB:
@@ -2018,7 +2025,9 @@ rec {
           ) inputGroups
         ) modules;
 
-      normalizedListSyntax = normalizeListsToAttrsets (lib.recursiveUpdate initialModules buildModules);
+      normalizedListSyntax = lib.recursiveUpdate (normalizeListsToAttrsets initialModules) (
+        normalizeListsToAttrsets buildModules
+      );
       filteredInitialModules = filterFalseValues normalizedListSyntax;
       normalizedInitialModules = normalizeModules filteredInitialModules;
 
