@@ -1483,6 +1483,9 @@ in
               unitless = true;
             }
           ];
+          nx.apt.hints = [
+            "Firefox sandbox: echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/60-nix-userns.conf && sudo sysctl --system"
+          ];
         }
       ];
 
