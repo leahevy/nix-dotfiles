@@ -193,6 +193,13 @@ args@{
                 echo
               fi
 
+              echo -e "''${WHITE}Upgrading system packages...''${RESET}"
+              sudo -A apt-get full-upgrade -y
+              echo
+              echo -e "''${WHITE}Removing unused packages...''${RESET}"
+              sudo -A apt-get autoremove -y
+              echo
+
               install -m 644 "''${NEW_PKGFILE}" "''${ACTIVE_PKGFILE}"
               echo -e "''${GREEN}Apt packages synced.''${RESET}"
             '';
