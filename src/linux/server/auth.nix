@@ -553,33 +553,40 @@ in
             };
 
             systemd.services.oauth2-proxy = {
-              wants = [ "redis-oauth.service" ];
+              wants = [
+                "redis-oauth.service"
+                "network-online.target"
+              ];
               after = [
                 "nx-oauth2-proxy-env.service"
                 "redis-oauth.service"
+                "network-online.target"
               ]
               ++ lib.optional (
                 config.nx.linux.server.auth.oidcProviderSystemdService != null
               ) config.nx.linux.server.auth.oidcProviderSystemdService;
               bindsTo = [ "nx-oauth2-proxy-env.service" ];
-              serviceConfig.ExecStartPre = lib.mkIf (config.nx.linux.server.auth.oidcDiscoveryUrl != null) (
-                toString (
+              serviceConfig = {
+                TimeoutStartSec = 300;
+              }
+              // lib.optionalAttrs (config.nx.linux.server.auth.oidcDiscoveryUrl != null) {
+                ExecStartPre = toString (
                   pkgs.writeShellScript "nx-oauth2-proxy-wait-oidc" ''
-                    _elapsed=0
+                    _start=$(${pkgs.coreutils}/bin/date +%s)
                     _sleep=1
                     while ! ${pkgs.curl}/bin/curl -sf --max-time 5 \
                         ${lib.escapeShellArg config.nx.linux.server.auth.oidcDiscoveryUrl} >/dev/null 2>&1; do
-                      if [[ $_elapsed -ge 120 ]]; then
+                      _elapsed=$(( $(${pkgs.coreutils}/bin/date +%s) - _start ))
+                      if [[ $_elapsed -ge 240 ]]; then
                         printf 'OIDC provider not ready after %ss\n' "$_elapsed" >&2
                         exit 1
                       fi
                       ${pkgs.coreutils}/bin/sleep "$_sleep"
-                      _elapsed=$((_elapsed + _sleep))
                       [[ $_sleep -lt 10 ]] && _sleep=$((_sleep + 1))
                     done
                   ''
-                )
-              );
+                );
+              };
             };
 
             systemd.services.nginx.restartTriggers = [
