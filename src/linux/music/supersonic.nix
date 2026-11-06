@@ -14,18 +14,32 @@ args@{
   group = "music";
   input = "linux";
 
+  submodules = lib.optionalAttrs self.isLinux {
+    linux.software.flatpak = true;
+  };
+
   module = {
     home = config: {
-      home.packages = with pkgs; [
-        supersonic
-      ];
-
       home.persistence."${self.persist}" = {
         directories = [
           ".config/supersonic"
           ".cache/supersonic"
         ];
       };
+    };
+
+    integrated = config: {
+      home.packages = [ pkgs.supersonic ];
+    };
+
+    standalone = config: {
+      services.flatpak.packages = [ "io.github.dweymouth.supersonic" ];
+
+      home.packages = [
+        (pkgs.writeShellScriptBin "supersonic" ''
+          exec ${pkgs.flatpak}/bin/flatpak run io.github.dweymouth.supersonic "$@"
+        '')
+      ];
     };
 
     ifEnabled.linux.desktop.niri.linux.enabled = config: {
@@ -39,7 +53,9 @@ args@{
         settings = {
           binds = with config.lib.niri.actions; {
             "Mod+Ctrl+Alt+T" = {
-              action = spawn-sh "niri-scratchpad --app-id Supersonic --all-windows --spawn supersonic";
+              action = spawn-sh "niri-scratchpad --app-id ${
+                if self.user.isStandalone then "io.github.supersonic-app.supersonic" else "Supersonic"
+              } --all-windows --spawn supersonic";
               hotkey-overlay.title = "Apps:Supersonic";
             };
           };
@@ -48,7 +64,7 @@ args@{
             {
               matches = [
                 {
-                  app-id = "Supersonic";
+                  app-id = if self.user.isStandalone then "io.github.supersonic-app.supersonic" else "Supersonic";
                 }
               ];
               open-on-workspace = "scratch";
