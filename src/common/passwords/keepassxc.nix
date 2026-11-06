@@ -13,6 +13,14 @@ args@{
   group = "passwords";
   input = "common";
 
+  options = {
+    lockIdleSeconds = lib.mkOption {
+      type = lib.types.ints.unsigned;
+      default = 900;
+      description = "Seconds of idle time before locking the database. Set to 0 to disable idle lock.";
+    };
+  };
+
   module = {
     darwin.enabled = config: {
       nx.homebrew.casks = [ "keepassxc" ];
@@ -24,7 +32,7 @@ args@{
       };
     };
 
-    home = config: {
+    home = { config, lockIdleSeconds, ... }: {
       programs.keepassxc = {
         enable = true;
         settings = {
@@ -71,6 +79,8 @@ args@{
             ClearSearch = true;
             IconDownloadFallback = true;
             LockDatabaseScreenLock = false;
+            LockDatabaseIdle = lockIdleSeconds > 0;
+            LockDatabaseIdleSeconds = lockIdleSeconds;
           };
         };
       };
