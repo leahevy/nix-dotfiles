@@ -16,7 +16,7 @@ args@{
   options = {
     lockIdleSeconds = lib.mkOption {
       type = lib.types.ints.unsigned;
-      default = 900;
+      default = 1200;
       description = "Seconds of idle time before locking the database. Set to 0 to disable idle lock.";
     };
   };
