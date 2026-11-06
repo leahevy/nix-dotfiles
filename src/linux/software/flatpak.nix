@@ -24,6 +24,7 @@ args@{
   module = {
     enabled = config: {
       nx.lib.icons = [ "system-software-install" ];
+      nx.apt.packages = lib.optionals self.user.isStandalone [ "flatpak" ];
 
       nx.linux.monitoring.journal-watcher.ignorePatterns = [
         {
@@ -164,9 +165,7 @@ args@{
       };
 
     standalone = config: {
-      home.packages = [
-        pkgs.flatpak
-      ];
+      systemd.user.services.flatpak-managed-install.Unit.ConditionPathExists = "/usr/bin/flatpak";
     };
 
     system = config: {
