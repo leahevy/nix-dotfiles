@@ -1,8 +1,8 @@
 name: Update Flake.lock
 on:
   schedule:
-    - cron: '5 22 * 4-10 0,1,2,4,5,6'
-    - cron: '5 23 * 11,12,1,2,3 0,1,2,4,5,6'
+    - cron: '5 22 * 4-10 0,1,2,3,4,6'
+    - cron: '5 23 * 11,12,1,2,3 0,1,2,3,4,6'
   workflow_dispatch:
   pull_request:
     types: [closed]
@@ -73,17 +73,17 @@ jobs:
 
           IS_FIRST_MERGE_DAY=false
 
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "$dow" -lt 5 ]; then
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "$dow" -lt 6 ]; then
             CYCLE_MODE=update
           else
             CYCLE_MODE=merge
-            if [ "$dow" -eq 5 ]; then IS_FIRST_MERGE_DAY=true; fi
+            if [ "$dow" -eq 6 ]; then IS_FIRST_MERGE_DAY=true; fi
           fi
 
           echo "CYCLE_MODE=$CYCLE_MODE" >> $GITHUB_ENV
           echo "IS_FIRST_MERGE_DAY=$IS_FIRST_MERGE_DAY" >> $GITHUB_ENV
 
-          if [ "$dow" -ge 5 ]; then
+          if [ "$dow" -ge 6 ]; then
             MERGE_CYCLE_ID="$(date +%GW%V)"
           else
             MERGE_CYCLE_ID=""
