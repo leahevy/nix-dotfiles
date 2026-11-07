@@ -49,18 +49,14 @@ args@{
     let
       ollamaHost = self.settings.host;
       ollamaPort = self.settings.port;
-      ollamaBin =
-        if self.isLinux && self.user.isStandalone then
-          "/usr/local/bin/ollama"
-        else
-          "${pkgs.ollama}/bin/ollama";
+      ollamaBin = "${pkgs.ollama}/bin/ollama";
     in
     {
-      linux.enabled = config: {
-        nx.apt.hints = [
-          "Install ollama: curl -fsSL https://ollama.com/install.sh | sh"
-        ];
-      };
+      linux.enabled =
+        config:
+        lib.mkIf self.user.isStandalone {
+          nx.apt.packages = [ "vulkan-tools" ];
+        };
 
       darwin.overlays = [
         (final: prev: {
@@ -100,36 +96,52 @@ args@{
               self.variables.cudaArchitectures;
           useNvidiaCuda = self.linux.isModuleEnabled "graphics.nvidia-setup" && effectiveCudaArches != [ ];
         in
-        lib.mkMerge [
-          (lib.mkIf (!self.isLinux || !self.user.isStandalone) {
-            services.ollama = {
-              enable = true;
-              package = pkgs.ollama.override (
+        {
+          services.ollama = {
+            enable = true;
+            package = pkgs.ollama.override (
+              {
+                acceleration =
+                  if !self.settings.allowGPU then
+                    false
+                  else if self.isLinux then
+                    if useNvidiaCuda then "cuda" else "vulkan"
+                  else
+                    null;
+              }
+              // lib.optionalAttrs (effectiveCudaArches != [ ]) {
+                cudaArches = effectiveCudaArches;
+              }
+            );
+            host = ollamaHost;
+            port = ollamaPort;
+            environmentVariables = {
+              OLLAMA_KEEP_ALIVE = self.settings.keepAlive;
+            }
+            // lib.optionalAttrs (self.isLinux && self.settings.allowGPU && self.settings.gpuOverheadGB > 0) {
+              OLLAMA_GPU_OVERHEAD = toString gpuOverheadBytes;
+            }
+            // lib.optionalAttrs (self.user.isStandalone && self.user.hardware.gpu == "amd") {
+              VK_ICD_FILENAMES =
+                helpers.packageFile args pkgs.mesa
+                  "share/vulkan/icd.d/radeon_icd.${pkgs.stdenv.hostPlatform.linuxArch}.json";
+            }
+            //
+              lib.optionalAttrs
+                (
+                  self.user.isStandalone
+                  && self.user.hardware.gpu == "amd"
+                  && builtins.elem (helpers.getMachineType self) [
+                    "laptop"
+                    "convertible"
+                  ]
+                )
                 {
-                  acceleration =
-                    if !self.settings.allowGPU then
-                      false
-                    else if self.isLinux then
-                      if useNvidiaCuda then "cuda" else "vulkan"
-                    else
-                      null;
+                  OLLAMA_IGPU_ENABLE = "1";
                 }
-                // lib.optionalAttrs (effectiveCudaArches != [ ]) {
-                  cudaArches = effectiveCudaArches;
-                }
-              );
-              host = ollamaHost;
-              port = ollamaPort;
-              environmentVariables = {
-                OLLAMA_KEEP_ALIVE = self.settings.keepAlive;
-              }
-              // lib.optionalAttrs (self.isLinux && self.settings.allowGPU && self.settings.gpuOverheadGB > 0) {
-                OLLAMA_GPU_OVERHEAD = toString gpuOverheadBytes;
-              }
-              // self.settings.environmentVariables;
-            };
-          })
-        ];
+            // self.settings.environmentVariables;
+          };
+        };
 
       physical.home =
         config:
@@ -279,13 +291,8 @@ args@{
           systemd.user.services.ollama-pull-models = lib.mkIf self.isLinux {
             Unit = {
               Description = "Pull Ollama models";
-            }
-            // lib.optionalAttrs (!self.user.isStandalone) {
               After = [ "ollama.service" ];
               Requires = [ "ollama.service" ];
-            }
-            // lib.optionalAttrs (self.isLinux && self.user.isStandalone) {
-              ConditionPathExists = "/usr/local/bin/ollama";
             };
             Service = {
               Type = "oneshot";
