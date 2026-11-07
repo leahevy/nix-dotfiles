@@ -20,6 +20,13 @@ args@{
     "nvidia-kernel-modules"
   ];
 
+  assertions = [
+    {
+      assertion = self.host.hardware.gpu != "amd";
+      message = "linux.graphics.nvidia-setup cannot be enabled when host.hardware.gpu is set to amd!";
+    }
+  ];
+
   settings = {
     withPowerManagement = false;
     disableGspFirmware = false;
