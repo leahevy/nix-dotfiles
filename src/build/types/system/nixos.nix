@@ -195,7 +195,12 @@ with lib;
             description = "CPU type for microcode and CPU-specific configuration";
           };
           gpu = mkOption {
-            type = types.nullOr (types.enum [ "nvidia" ]);
+            type = types.nullOr (
+              types.enum [
+                "nvidia"
+                "amd"
+              ]
+            );
             default = null;
             description = "GPU type for driver and graphics configuration";
           };
