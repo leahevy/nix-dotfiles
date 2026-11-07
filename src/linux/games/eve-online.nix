@@ -19,6 +19,7 @@ args@{
       eve-lens = true;
       eve-rift = true;
       eve-settings-manager = true;
+      eve-preview-manager = false;
       steam = true;
       game-quirks = {
         eveOnline = true;
