@@ -1898,7 +1898,7 @@ run_bump() {
 	fi
 	echo
 
-	if [[ "$commit" == "true" ]] && ! git diff --quiet HEAD -- flake.lock .label; then
+	if [[ "$commit" == "true" ]] && { ! git diff --quiet HEAD -- flake.lock .label || [[ -n "$(git ls-files --others --exclude-standard -- flake.lock .label .core-state 2>/dev/null)" ]]; }; then
 		local STASH_POP
 		if git diff --cached --quiet -- flake.lock .label; then
 			STASH_POP="git stash pop --index"
