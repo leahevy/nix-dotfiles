@@ -981,8 +981,13 @@ verify_commit_range() {
 		local commits
 		commits=$(git rev-list "$range" 2>/dev/null || echo "")
 		if [[ -z "$commits" ]]; then
-			echo -e "${GRAY}No commits to verify in $repo_name range $range${RESET}" >&2
-			return 0
+			local head
+			head=$(git rev-parse --verify HEAD 2>/dev/null || echo "")
+			if [[ -z "$head" ]]; then
+				echo -e "${GRAY}No commits to verify in $repo_name range $range${RESET}" >&2
+				return 0
+			fi
+			commits="$head"
 		fi
 
 		local failed_commits=()
