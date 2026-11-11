@@ -2218,6 +2218,10 @@ args@{
                   ${lib.optionalString isPortable ''["Suspend"]="systemctl suspend"''}
               )
 
+              if [[ -z "''${commands[$action]+x}" ]]; then
+                  exit 0
+              fi
+
               confirm=$(echo -e "Yes\nNo" | ${
                 dmenuCmdRaw {
                   prompt = "$action? ";
