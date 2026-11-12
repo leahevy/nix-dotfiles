@@ -1693,6 +1693,7 @@ in
             ++ lib.optionals (config.nx.linux.security.yubikey.enable) [
               "ignore noinput"
               "ignore nou2f"
+              "ignore private-dev"
             ]
             ++ lib.optionals (config.nx.linux.location.geoclue2.enable || config.hardware.bluetooth.enable) [
               "ignore dbus-system none"
