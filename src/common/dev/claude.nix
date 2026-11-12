@@ -820,7 +820,17 @@ in
     common = {
       dev = [ "agents" ];
     };
-  };
+  }
+  // (
+    if self.isLinux then
+      {
+        linux = {
+          sound = [ "pipewire" ];
+        };
+      }
+    else
+      { }
+  );
 
   module = {
     linux.enabled = config: {

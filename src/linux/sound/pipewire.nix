@@ -461,6 +461,12 @@ in
         }
       ];
 
+    standalone =
+      { config, ... }:
+      {
+        home.sessionVariables.ALSA_PLUGIN_DIR = "${pkgs.pipewire}/lib/alsa-lib";
+      };
+
     linux.system =
       {
         config,
