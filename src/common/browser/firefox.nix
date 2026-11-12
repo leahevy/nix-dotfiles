@@ -1315,7 +1315,7 @@ in
             "privacy.resistFingerprinting" = false;
             "privacy.resistFingerprinting.letterboxing" = true;
             "privacy.fingerprintingProtection" = true;
-            "privacy.fingerprintingProtection.overrides" = "+AllTargets,-CSSPrefersColorScheme";
+            "privacy.fingerprintingProtection.overrides" = "+AllTargets,-CSSPrefersColorScheme,-JSDateTimeUTC";
           }
           // lib.optionalAttrs (fingerprintingProtectionExcludedDomains != [ ]) (
             let
