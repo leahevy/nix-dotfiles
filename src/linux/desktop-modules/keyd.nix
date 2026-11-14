@@ -182,6 +182,7 @@ in
           done
 
           echo -e "''${WHITE}Reloading keyd service...''${RESET}"
+          sudo systemctl daemon-reload
           if systemctl is-active --quiet keyd 2>/dev/null; then
             sudo systemctl restart keyd
           else
