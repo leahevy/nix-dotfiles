@@ -93,12 +93,21 @@ if [[ "$(uname -s)" == "Linux" && ! -e /etc/NIXOS ]]; then
 			echo
 			echo -e "${YELLOW}Package list updated, run: ${GREEN}nx install${RESET}"
 		else
-			WEEK_AGO=$(date -d "7 days ago" +%s)
-			LAST_APT_RUN=$(stat -c %Y "$PKGFILE_ACTIVE")
-			if [[ "$LAST_APT_RUN" -lt "$WEEK_AGO" ]]; then
-				DAYS_AGO=$((($(date +%s) - LAST_APT_RUN) / 86400))
+			UPGRADABLE=0
+			if command -v apt &>/dev/null; then
+				UPGRADABLE=$(apt list --upgradable 2>/dev/null | grep -c "upgradable" || true)
+			fi
+			if [[ "${UPGRADABLE}" -gt 0 ]]; then
 				echo
-				echo -e "${RED} > It's been ${BLUE}${DAYS_AGO} days${RED} since you last ran nx install - you should run ${GREEN}nx install${RED}${RESET}"
+				echo -e "${YELLOW}${UPGRADABLE} package(s) can be upgraded, run: ${GREEN}nx install${RESET}"
+			else
+				WEEK_AGO=$(date -d "7 days ago" +%s)
+				LAST_APT_RUN=$(stat -c %Y "$PKGFILE_ACTIVE")
+				if [[ "$LAST_APT_RUN" -lt "$WEEK_AGO" ]]; then
+					DAYS_AGO=$((($(date +%s) - LAST_APT_RUN) / 86400))
+					echo
+					echo -e "${RED} > It's been ${BLUE}${DAYS_AGO} days${RED} since you last ran nx install - you should run ${GREEN}nx install${RED}${RESET}"
+				fi
 			fi
 		fi
 	fi
