@@ -94,8 +94,8 @@ if [[ "$(uname -s)" == "Linux" && ! -e /etc/NIXOS ]]; then
 			echo -e "${YELLOW}Package list updated, run: ${GREEN}nx install${RESET}"
 		else
 			UPGRADABLE=0
-			if command -v apt &>/dev/null; then
-				UPGRADABLE=$(apt list --upgradable 2>/dev/null | grep -c "upgradable" || true)
+			if command -v apt-get &>/dev/null; then
+				UPGRADABLE=$(apt-get -s full-upgrade 2>/dev/null | grep -c "^Inst " || true)
 			fi
 			if [[ "${UPGRADABLE}" -gt 0 ]]; then
 				echo
