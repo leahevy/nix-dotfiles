@@ -148,6 +148,19 @@ args@{
         lib.concatStringsSep "\n\n" (map renderRule askExecpolicyPatterns);
     in
     {
+      linux.overlays = [
+        (final: prev: {
+          codex = prev.codex.overrideAttrs (old: {
+            buildInputs = old.buildInputs ++ [
+              final.aws-lc
+              final.zstd
+              final.oniguruma
+              final.sqlite
+            ];
+          });
+        })
+      ];
+
       enabled =
         config:
         let
