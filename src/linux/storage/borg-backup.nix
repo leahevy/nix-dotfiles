@@ -533,19 +533,28 @@ args@{
                   sudo systemctl start borgbackup-job-system.service
                   echo "Success: Backup triggered manually"
 
-                  ${
-                    if isHeadless then
-                      ""
+                  ${lib.optionalString (!isHeadless) ''
+                    _uptime_seconds=$(${pkgs.coreutils}/bin/cut -d. -f1 /proc/uptime)
+                    if [[ $_uptime_seconds -gt 900 ]]; then
+                      ${self.notifyUser {
+                        inherit pkgs;
+                        title = "Backup Triggered";
+                        body = "Manual backup triggered - starting shortly";
+                        icon = "drive-harddisk-system";
+                        urgency = "normal";
+                        validation = { inherit config; };
+                      }}
                     else
-                      "${self.notifyUser {
+                      ${self.notifyUser {
                         inherit pkgs;
                         title = "Backup Triggered";
                         body = "Manual backup triggered - will start in 10 minutes";
                         icon = "drive-harddisk-system";
                         urgency = "normal";
                         validation = { inherit config; };
-                      }}"
-                  }
+                      }}
+                    fi
+                  ''}
                 '';
                 executable = true;
               };
@@ -700,12 +709,18 @@ args@{
             if [[ ! -f "/tmp/nx-force-backup" ]]; then
               TODAY=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
               if ${pkgs.systemd}/bin/journalctl -u borg-backup-log-success.service --since="$TODAY 00:00:00" --until="$TODAY 23:59:59" -q --grep="SUCCESS: System backup completed successfully" >/dev/null 2>&1; then
-                ${pkgs.coreutils}/bin/touch /tmp/nx-backup-skipped
-                ${pkgs.coreutils}/bin/touch /tmp/nx-backup-no-success
-                exit 0
+                local _last_script=""
+                if [[ -f /var/lib/nx-borgbackup/last-success-script ]]; then
+                  _last_script=$(${pkgs.coreutils}/bin/cat /var/lib/nx-borgbackup/last-success-script)
+                fi
+                if [[ "$_last_script" == "$0" ]]; then
+                  ${pkgs.coreutils}/bin/touch /tmp/nx-backup-skipped
+                  ${pkgs.coreutils}/bin/touch /tmp/nx-backup-no-success
+                  exit 0
+                fi
+                ${pkgs.coreutils}/bin/echo "Backup script changed since last run, allowing re-run."
               fi
             fi
-            ${pkgs.coreutils}/bin/rm -f /tmp/nx-force-backup
           }
         '';
 
@@ -911,15 +926,25 @@ args@{
             check_daily_backup_complete
             ${pkgs.coreutils}/bin/sleep 10
             check_daily_backup_complete
-            ${pkgs.coreutils}/bin/echo "Waiting 10 minutes for system readiness..."
-            ${pkgs.coreutils}/bin/sleep 600
-            check_daily_backup_complete
+            _uptime_seconds=$(${pkgs.coreutils}/bin/cut -d. -f1 /proc/uptime)
+            if [[ $_uptime_seconds -gt 900 ]]; then
+              ${pkgs.coreutils}/bin/echo "System uptime $_uptime_seconds seconds (>15 min), skipping startup wait."
+            else
+              ${pkgs.coreutils}/bin/echo "Waiting 10 minutes for system readiness (uptime: $_uptime_seconds seconds)..."
+              ${pkgs.coreutils}/bin/sleep 600
+              check_daily_backup_complete
+            fi
             ${checkAutoUpgradeRunningScript}
             check_auto_upgrade_running
             ${networkWaitScript}
             ${borgConnectionCheckScript}
+            ${pkgs.coreutils}/bin/rm -f /tmp/nx-force-backup
             ${pkgs.borgbackup}/bin/borg break-lock || true
-            ${logScript "info" "STARTED: System backup starting"}
+            if [[ $_uptime_seconds -gt 900 ]]; then
+              ${logScript "info" "STARTED: System backup starting (startup wait skipped)"}
+            else
+              ${logScript "info" "STARTED: System backup starting"}
+            fi
             ${createSnapshotScript {
               volume = if impermanence then self.persist else "/";
               snapshotName = rootSnapshotName;
@@ -985,6 +1010,7 @@ args@{
               fi
               ${pkgs.coreutils}/bin/echo "Running repository check for up to $_repo_check_duration seconds..."
               ${pkgs.borgbackup}/bin/borg check --repository-only --verbose --max-duration=$_repo_check_duration
+              ${pkgs.coreutils}/bin/echo "$0" > /var/lib/nx-borgbackup/last-success-script
             fi
           '';
 
