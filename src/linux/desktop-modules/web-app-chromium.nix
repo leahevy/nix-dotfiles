@@ -42,40 +42,74 @@ args@{
       mkChromiumAppId =
         webAppSettings:
         let
-          host = "${webAppSettings.subdomain}.${webAppSettings.domain}";
-          path = builtins.head (lib.splitString "#" (lib.removePrefix "/" webAppSettings.args));
+          host =
+            if webAppSettings ? localhostPort then
+              "127.0.0.1"
+            else
+              "${webAppSettings.subdomain}.${webAppSettings.domain}";
+          path =
+            if webAppSettings ? localhostPort then
+              ""
+            else
+              builtins.head (lib.splitString "#" (lib.removePrefix "/" webAppSettings.args));
           pathEncoded = builtins.replaceStrings [ "/" ] [ "_" ] path;
         in
         "chrome-${host}__${pathEncoded}-Default";
 
-      buildWebAppFn = config: webAppSettings: {
-        appIds = [ (mkChromiumAppId webAppSettings) ];
-        homeFiles = {
-          "${defs.binDir}/${webAppSettings.webapp}-webapp" = {
-            executable = true;
-            text = ''
-              #!/usr/bin/env bash
-              set -euo pipefail
+      buildWebAppFn =
+        config: webAppSettings:
+        let
+          webAppUrl =
+            if webAppSettings ? localhostPort then
+              "http://127.0.0.1:${toString webAppSettings.localhostPort}"
+            else
+              "${webAppSettings.protocol}://${webAppSettings.subdomain}.${webAppSettings.domain}${webAppSettings.args}";
+        in
+        {
+          appIds = [ (mkChromiumAppId webAppSettings) ];
+          homeFiles = {
+            "${defs.binDir}/${webAppSettings.webapp}-webapp" = {
+              executable = true;
+              text =
+                if webAppSettings ? tokenFile then
+                  ''
+                    #!/usr/bin/env bash
+                    set -euo pipefail
 
-              DATA_DIR="$HOME/${self.settings.dataBaseDir}/${webAppSettings.webapp}"
-              CACHE_DIR="$HOME/${self.settings.cacheBaseDir}/${webAppSettings.webapp}"
-              ${pkgs.coreutils}/bin/mkdir -p "$DATA_DIR" "$CACHE_DIR"
+                    DATA_DIR="$HOME/${self.settings.dataBaseDir}/${webAppSettings.webapp}"
+                    CACHE_DIR="$HOME/${self.settings.cacheBaseDir}/${webAppSettings.webapp}"
+                    ${pkgs.coreutils}/bin/mkdir -p "$DATA_DIR" "$CACHE_DIR"
 
-              exec ${bin} --user-data-dir="$DATA_DIR" --disk-cache-dir="$CACHE_DIR" ${chromiumArgs}"${webAppSettings.protocol}://${webAppSettings.subdomain}.${webAppSettings.domain}${webAppSettings.args}"
-            '';
+                    WEBAPP_URL="${webAppUrl}"
+                    if [[ -f "$HOME/${webAppSettings.tokenFile}" ]]; then
+                      WEBAPP_URL="${webAppUrl}?token=$(${pkgs.coreutils}/bin/cat "$HOME/${webAppSettings.tokenFile}")"
+                    fi
+                    exec ${bin} --user-data-dir="$DATA_DIR" --disk-cache-dir="$CACHE_DIR" ${chromiumArgs}"$WEBAPP_URL"
+                  ''
+                else
+                  ''
+                    #!/usr/bin/env bash
+                    set -euo pipefail
+
+                    DATA_DIR="$HOME/${self.settings.dataBaseDir}/${webAppSettings.webapp}"
+                    CACHE_DIR="$HOME/${self.settings.cacheBaseDir}/${webAppSettings.webapp}"
+                    ${pkgs.coreutils}/bin/mkdir -p "$DATA_DIR" "$CACHE_DIR"
+
+                    exec ${bin} --user-data-dir="$DATA_DIR" --disk-cache-dir="$CACHE_DIR" ${chromiumArgs}"${webAppUrl}"
+                  '';
+            };
+          };
+          desktopEntries = {
+            "${webAppSettings.webapp}" = {
+              name = webAppSettings.name;
+              comment = "${webAppSettings.name} Web-App";
+              exec = "${self.binDir}/${webAppSettings.webapp}-webapp %U";
+              icon = webAppSettings.iconPath;
+              terminal = false;
+              categories = webAppSettings.categories;
+            };
           };
         };
-        desktopEntries = {
-          "${webAppSettings.webapp}" = {
-            name = webAppSettings.name;
-            comment = "${webAppSettings.name} Web-App";
-            exec = "${self.binDir}/${webAppSettings.webapp}-webapp %U";
-            icon = webAppSettings.iconPath;
-            terminal = false;
-            categories = webAppSettings.categories;
-          };
-        };
-      };
     in
     {
       linux.enabled = config: {

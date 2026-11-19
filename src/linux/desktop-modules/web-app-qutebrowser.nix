@@ -70,7 +70,11 @@ args@{
       buildWebAppFn =
         config: webAppSettings:
         let
-          webAppUrl = "${webAppSettings.protocol}://${webAppSettings.subdomain}.${webAppSettings.domain}${webAppSettings.args}";
+          webAppUrl =
+            if webAppSettings ? localhostPort then
+              "http://127.0.0.1:${toString webAppSettings.localhostPort}"
+            else
+              "${webAppSettings.protocol}://${webAppSettings.subdomain}.${webAppSettings.domain}${webAppSettings.args}";
           appName = webAppSettings.webapp;
           dataDir = ".local/state/web-apps/${appName}";
           configPath = ".config/qutebrowser/web-app-${appName}-config.py";
@@ -229,17 +233,35 @@ args@{
           homeFiles = {
             "${defs.binDir}/${appName}-webapp" = {
               executable = true;
-              text = ''
-                #!/usr/bin/env bash
-                set -euo pipefail
+              text =
+                if webAppSettings ? tokenFile then
+                  ''
+                    #!/usr/bin/env bash
+                    set -euo pipefail
 
-                exec ${config.nx.linux.browser.qutebrowser.package}/bin/qutebrowser \
-                  --target window \
-                  --desktop-file-name "org.qutebrowser.${appName}" \
-                  --basedir "${self.user.home}/${dataDir}" \
-                  --config-py "${self.user.home}/${configPath}" \
-                  "${webAppUrl}"
-              '';
+                    WEBAPP_URL="${webAppUrl}"
+                    if [[ -f "$HOME/${webAppSettings.tokenFile}" ]]; then
+                      WEBAPP_URL="${webAppUrl}?token=$(${pkgs.coreutils}/bin/cat "$HOME/${webAppSettings.tokenFile}")"
+                    fi
+                    exec ${config.nx.linux.browser.qutebrowser.package}/bin/qutebrowser \
+                      --target window \
+                      --desktop-file-name "org.qutebrowser.${appName}" \
+                      --basedir "${self.user.home}/${dataDir}" \
+                      --config-py "${self.user.home}/${configPath}" \
+                      "$WEBAPP_URL"
+                  ''
+                else
+                  ''
+                    #!/usr/bin/env bash
+                    set -euo pipefail
+
+                    exec ${config.nx.linux.browser.qutebrowser.package}/bin/qutebrowser \
+                      --target window \
+                      --desktop-file-name "org.qutebrowser.${appName}" \
+                      --basedir "${self.user.home}/${dataDir}" \
+                      --config-py "${self.user.home}/${configPath}" \
+                      "${webAppUrl}"
+                  '';
             };
             "${configPath}" = {
               text = webAppConfig;
