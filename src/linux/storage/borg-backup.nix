@@ -905,7 +905,7 @@ args@{
           prune.keep = self.settings.prune.keep;
 
           preHook = ''
-            ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped /tmp/nx-backup-completed /tmp/nx-backup-no-success
+            ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped /tmp/nx-backup-completed /tmp/nx-backup-no-success /tmp/nx-backup-start-time
             ${pkgs.coreutils}/bin/touch /var/lib/nx-borgbackup/backup-in-progress
             ${checkDailyBackupCompleteScript}
             check_daily_backup_complete
@@ -935,6 +935,7 @@ args@{
               snapshotName = "data";
               snapshotDir = "${self.settings.dataPath}/.snapshots";
             })}
+            ${pkgs.coreutils}/bin/date +%s > /tmp/nx-backup-start-time
             ${pkgs.coreutils}/bin/echo "Snapshots created - starting backup..."
           '';
 
@@ -964,7 +965,26 @@ args@{
             fi
             ${pkgs.coreutils}/bin/rm -f /tmp/nx-backup-skipped
             if [ "$exitStatus" -eq 0 ] && [ ! -f "/tmp/nx-backup-no-success" ]; then
-              ${pkgs.borgbackup}/bin/borg check --repository-only --verbose --max-duration=${toString self.settings.repoCheckMaxDuration}
+              if [[ -f /tmp/nx-backup-start-time ]]; then
+                _backup_duration=$(( $(${pkgs.coreutils}/bin/date +%s) - $(${pkgs.coreutils}/bin/cat /tmp/nx-backup-start-time) ))
+              else
+                ${pkgs.coreutils}/bin/echo "Warning: backup start time not recorded, assuming 5 minutes."
+                _backup_duration=300
+              fi
+              ${pkgs.coreutils}/bin/echo "Backup completed in $_backup_duration seconds."
+              if [[ $_backup_duration -lt 60 ]]; then
+                _repo_check_duration=30
+              else
+                _repo_check_duration=$(( _backup_duration / 10 ))
+                if [[ $_repo_check_duration -lt 60 ]]; then
+                  _repo_check_duration=60
+                fi
+                if [[ $_repo_check_duration -gt ${toString self.settings.repoCheckMaxDuration} ]]; then
+                  _repo_check_duration=${toString self.settings.repoCheckMaxDuration}
+                fi
+              fi
+              ${pkgs.coreutils}/bin/echo "Running repository check for up to $_repo_check_duration seconds..."
+              ${pkgs.borgbackup}/bin/borg check --repository-only --verbose --max-duration=$_repo_check_duration
             fi
           '';
 
