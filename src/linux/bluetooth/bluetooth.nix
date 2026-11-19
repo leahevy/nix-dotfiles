@@ -56,6 +56,16 @@ args@{
           string = "Bluetooth: hci[0-9]+: unexpected event for opcode";
           kernel = true;
         }
+        {
+          service = "bluetooth.service";
+          tag = "bluetoothd";
+          string = "Failed to set device class: Failed \\(0x03\\)";
+        }
+        {
+          service = "bluetooth.service";
+          tag = "bluetoothd";
+          string = "Failed to add UUID: Failed \\(0x03\\)";
+        }
       ];
     };
 
