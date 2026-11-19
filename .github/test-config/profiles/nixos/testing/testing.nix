@@ -24,6 +24,9 @@
 
     modules = {
       linux = {
+        web-apps = {
+          jupyter = true;
+        };
         desktop-modules = {
           keyd = {
             enableDevices = {
