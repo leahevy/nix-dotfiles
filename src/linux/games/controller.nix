@@ -30,6 +30,14 @@ args@{
           kernel = true;
           string = "xone-wired \\S+: xone_wired_complete_data_in: process failed: -16";
         }
+        {
+          kernel = true;
+          string = "BUG: KFENCE: memory corruption in gip_auth_get_transcript.*\\[xone_gip\\]";
+        }
+        {
+          kernel = true;
+          string = "gip_dispatch_pkt\\.isra\\.[0-9]+\\+0x[0-9a-f]+/0x[0-9a-f]+ \\[xone_gip\\]";
+        }
       ];
     };
     linux.system = config: {
