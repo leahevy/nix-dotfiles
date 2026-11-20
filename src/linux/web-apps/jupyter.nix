@@ -14,6 +14,19 @@ args@{
 
   description = "JupyterLab web-app launcher";
 
+  options = {
+    extraPackages = lib.mkOption {
+      type = lib.types.functionTo (lib.types.listOf lib.types.package);
+      default = _: [ ];
+      description = "Extra Python packages available in the JupyterLab environment.";
+    };
+    extraTools = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = [ ];
+      description = "Extra non-Python tools added to the service PATH.";
+    };
+  };
+
   submodules = {
     linux.services.jupyter = true;
     linux.desktop-modules.web-app = true;
@@ -32,6 +45,8 @@ args@{
             localhostPort = port;
             webapp = "jupyter";
           }).appIds;
+        nx.linux.services.jupyter.extraWebAppPackages = config.nx.linux.web-apps.jupyter.extraPackages;
+        nx.linux.services.jupyter.extraWebAppTools = config.nx.linux.web-apps.jupyter.extraTools;
       };
 
     linux.home =
