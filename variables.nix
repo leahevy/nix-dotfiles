@@ -30,6 +30,7 @@
     "electron-39.8.10"
     "immich-2.7.5"
     "pnpm-9.15.9"
+    "python3.13-python-jose-3.5.0"
   ];
 
   persist = "/persist";
