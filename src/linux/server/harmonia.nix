@@ -50,6 +50,12 @@ args@{
       default = "/var/lib/nx-harmonia-builds";
       description = "Directory for GC root symlinks from the prefetch service.";
     };
+
+    pushoverNotifications = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Send Pushover notifications on prefetch success and failure.";
+    };
   };
 
   module = {
@@ -66,12 +72,14 @@ args@{
         prefetchBranch,
         prefetchSchedule,
         prefetchStateDir,
+        pushoverNotifications,
         ...
       }:
       let
         exposedService = self.host.remote.exposedServices.harmonia or null;
         nxcoreURL = self.variables.coreRepoURL or "";
         dummyAge = "age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
+        pushover = config.nx.linux.notifications.pushover;
 
         prefetchEvalLibWrapper = pkgs.writeShellScript "nx-harmonia-te-eval-lib" ''
           source "$REAL_TE_LIB_PATH"
@@ -143,6 +151,10 @@ args@{
           description = "Harmonia pre-fetch: pull NixOS closures into local cache";
           after = [ "network-online.target" ];
           wants = [ "network-online.target" ];
+          unitConfig = {
+            OnFailure = "nx-harmonia-prefetch-log-failure.service";
+            OnSuccess = "nx-harmonia-prefetch-log-success.service";
+          };
           serviceConfig = {
             Type = "oneshot";
             User = "nx-harmonia-prefetch";
@@ -278,6 +290,48 @@ args@{
             Persistent = true;
             RandomizedDelaySec = "30min";
           };
+        };
+
+        systemd.services.nx-harmonia-prefetch-log-failure = {
+          description = "Log Harmonia prefetch failure";
+          serviceConfig = {
+            Type = "oneshot";
+            User = "root";
+          };
+          script = ''
+            ${pkgs.coreutils}/bin/echo "FAILURE: Harmonia prefetch failed - check journalctl -u nx-harmonia-prefetch"
+            ${lib.optionalString pushoverNotifications (
+              pushover.send {
+                title = "Harmonia Prefetch";
+                message = "Harmonia prefetch failed";
+                type = "failed";
+                shellVars = false;
+              }
+            )}
+          '';
+        };
+
+        systemd.services.nx-harmonia-prefetch-log-success = {
+          description = "Log Harmonia prefetch success";
+          serviceConfig = {
+            Type = "oneshot";
+            User = "root";
+          };
+          script = ''
+            _stats=""
+            if [[ -f "${prefetchStateDir}/last-success-stats" ]]; then
+              _stats=$(${pkgs.coreutils}/bin/cat "${prefetchStateDir}/last-success-stats")
+            fi
+            ${pkgs.coreutils}/bin/echo "SUCCESS: Harmonia prefetch completed: $_stats"
+            ${lib.optionalString pushoverNotifications (
+              pushover.send {
+                title = "Harmonia Prefetch";
+                message = "Prefetch complete: $_stats";
+                type = "success";
+                shellVars = true;
+              }
+            )}
+          '';
         };
       };
 
