@@ -41,7 +41,7 @@ args@{
 
     prefetchSchedule = lib.mkOption {
       type = lib.types.str;
-      default = "Fri *-*-* 19:00:00";
+      default = "Thu *-*-* 19:00:00";
       description = "OnCalendar expression for the prefetch timer (systemd calendar format).";
     };
 

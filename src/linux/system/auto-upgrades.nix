@@ -36,6 +36,7 @@ in
     borgMonitoringTimeoutMinutes = 180;
     borgCheckIntervalMinutes = 15;
     healthcheckUUID = null;
+    skipDays = [ "Friday" ];
   };
 
   exports = { ... }: { inherit completedMarkerFile; };
@@ -598,6 +599,18 @@ in
               ${pkgs.coreutils}/bin/chmod 600 ${pendingUpgradeMarkerFile}.tmp
               ${pkgs.coreutils}/bin/mv ${pendingUpgradeMarkerFile}.tmp ${pendingUpgradeMarkerFile}
             '';
+
+        skipDaysCheckScript = lib.optionalString (self.settings.skipDays != [ ]) ''
+          if [[ ! -f "/tmp/nx-force-upgrade" ]]; then
+            _today=$(${pkgs.coreutils}/bin/date +%A)
+            ${lib.concatMapStringsSep "\n" (day: ''
+              if [[ "$_today" == "${day}" ]]; then
+                ${logScript "info" "INFO: Today is ${day} (skipped day), skipping upgrade"}
+                exit 0
+              fi
+            '') self.settings.skipDays}
+          fi
+        '';
 
         checkBorgRunningScript = ''
           check_borg_running() {
@@ -1470,6 +1483,8 @@ in
             "exec ${pkgs.systemd}/bin/systemd-inhibit --who=\"nx-auto-upgrade\" --what=\"idle:sleep:shutdown\" --why=\"System upgrade in progress\" "
             + pkgs.writeShellScript "nx-auto-upgrade-main" ''
               set -euo pipefail
+
+              ${skipDaysCheckScript}
 
               ${releaseCheckScript}
 
