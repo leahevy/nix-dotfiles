@@ -39,6 +39,7 @@ args@{
         ps.matplotlib
         ps.seaborn
         ps.scikit-learn
+        ps.networkx
         ps.ipywidgets
         ps.requests
         ps.tqdm
