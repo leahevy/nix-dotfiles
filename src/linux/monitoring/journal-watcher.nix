@@ -360,6 +360,7 @@ args@{
         "sd.*No Caching mode page found"
         "sd.*Assuming drive cache: write through"
         "usb.*Warning! Unlikely big volume range.*cval->res is probably wrong"
+        "endpoint_set_interface: [0-9]+ callbacks suppressed"
         "usb.*current rate.*is different from the runtime rate"
         "usb.*\\[.*\\] FU \\[.*Volume\\] ch ="
         "module .*taints kernel"
